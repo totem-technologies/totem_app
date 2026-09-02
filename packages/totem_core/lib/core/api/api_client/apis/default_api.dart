@@ -172,6 +172,9 @@ final class DefaultApi with ApiExecutor {
   ///
   /// Validate PIN and issue token pair.
   ///
+  /// Atomic like the web verify view: if anything throws after the PIN
+  /// validates, the rollback un-consumes it so the same code works on retry.
+  ///
   /// `POST /api/mobile/auth/validate-pin`
   Future<ApiResult<TokenResponse, ErrorResponse>> totemApiAuthValidatePin({
     required ValidatePinSchema body,
@@ -243,7 +246,7 @@ final class DefaultApi with ApiExecutor {
   /// Logout by invalidating a refresh token.
   ///
   /// `POST /api/mobile/auth/logout`
-  Future<ApiResult<MessageResponse, ErrorResponse>> totemApiAuthLogout({
+  Future<ApiResult<MessageResponse, Never>> totemApiAuthLogout({
     required RefreshTokenSchema body,
     RequestOptions? options,
   }) async {
@@ -262,11 +265,6 @@ final class DefaultApi with ApiExecutor {
       request,
       onSuccess: (response) {
         return MessageResponse.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
-      },
-      onError: (response) {
-        return ErrorResponse.fromJson(
           jsonDecode(response.body) as Map<String, dynamic>,
         );
       },

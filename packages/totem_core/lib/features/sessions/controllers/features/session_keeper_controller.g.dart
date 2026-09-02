@@ -60,7 +60,7 @@ final class SessionKeeperControllerProvider
 }
 
 String _$sessionKeeperControllerHash() =>
-    r'1ea7786619305af83670919a889688a0a23f108e';
+    r'ea215a6b7eeef7ae979130733f50347beed5a50b';
 
 final class SessionKeeperControllerFamily extends $Family
     with
@@ -94,7 +94,7 @@ abstract class _$SessionKeeperController extends $Notifier<void> {
   void build(SessionController session);
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<void, void>;
     final element =
         ref.element
@@ -104,6 +104,6 @@ abstract class _$SessionKeeperController extends $Notifier<void> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, () => build(_$args));
+    return element.handleCreate(ref, () => build(_$args));
   }
 }

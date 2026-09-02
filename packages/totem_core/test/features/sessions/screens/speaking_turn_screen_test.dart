@@ -1,22 +1,28 @@
-// ignore_for_file: avoid_dynamic_calls
+import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
@@ -26,6 +32,9 @@ import '../livekit_mocks.dart';
 
 class MockSessionKeeperController extends Mock
     implements SessionKeeperController {}
+
+class MockSessionMessagingController extends Mock
+    implements SessionMessagingController {}
 
 class _TestSessionCuesService extends SessionCuesService {
   int swipePulseCount = 0;
@@ -88,7 +97,6 @@ SessionDetailSchema _createTestSession() {
 
 MockRemoteParticipant _mockRemote(String id, String name) {
   final participant = MockRemoteParticipant(id, name);
-  when(participant.createListener).thenReturn(MockParticipantEventsListener());
   when(() => participant.getTrackPublicationBySource(any())).thenReturn(null);
   return participant;
 }
@@ -154,6 +162,7 @@ void main() {
   late MockSessionController session;
   late MockSessionKeeperController keeper;
   late MockSessionDeviceController devices;
+  late MockSessionMessagingController messaging;
   late MockLocalParticipant localParticipant;
   late FakeRoom room;
 
@@ -163,15 +172,18 @@ void main() {
   });
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     session = MockSessionController();
     keeper = MockSessionKeeperController();
     devices = MockSessionDeviceController();
+    messaging = MockSessionMessagingController();
     localParticipant = MockLocalParticipant('user-1');
     room = FakeRoom(localParticipant);
 
     when(() => session.room).thenReturn(room);
     when(() => session.keeper).thenReturn(keeper);
     when(() => session.devices).thenReturn(devices);
+    when(() => session.messaging).thenReturn(messaging);
     when(() => session.isCurrentUserKeeper()).thenReturn(true);
     when(() => devices.isCameraEnabled).thenReturn(false);
     when(() => devices.isMicrophoneEnabled).thenReturn(false);
@@ -183,6 +195,7 @@ void main() {
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
     when(() => devices.enableCamera()).thenAnswer((_) async {});
     when(() => devices.disableCamera()).thenAnswer((_) async {});
+    when(() => messaging.sendReaction(any())).thenAnswer((_) async {});
 
     when(
       () =>
@@ -191,9 +204,6 @@ void main() {
     when(
       () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
     ).thenReturn(null);
-    when(
-      () => localParticipant.createListener(),
-    ).thenReturn(MockParticipantEventsListener());
   });
 
   Future<void> pumpSpeakingTurn(
@@ -233,10 +243,13 @@ void main() {
               dateCreated: DateTime(2024),
             );
           }),
+          selfViewSettingsProvider.overrideWith(SelfViewSettings.new),
         ],
         child: MaterialApp(
-          home: Scaffold(
-            body: SpeakingTurnScreen(event: _createTestSession()),
+          home: SessionKeyboardShortcuts(
+            child: Scaffold(
+              body: SpeakingTurnScreen(session: _createTestSession()),
+            ),
           ),
         ),
       ),
@@ -246,6 +259,15 @@ void main() {
   }
 
   group('SpeakingTurn', () {
+    Future<void> runOnDesktop(Future<void> Function() body) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        await body();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    }
+
     testWidgets('renders the participant grid for room sizes up to 12', (
       tester,
     ) async {
@@ -329,6 +351,35 @@ void main() {
       verify(() => devices.enableCamera()).called(1);
     });
 
+    testWidgets('disables shortcuts while the prompt field is focused', (
+      tester,
+    ) async {
+      await runOnDesktop(() async {
+        final state = _buildState(
+          keeper: 'user-1',
+          currentSpeaker: 'user-1',
+          nextSpeaker: 'user-2',
+        );
+
+        await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+        await tester.pump();
+        verify(() => devices.enableMicrophone()).called(1);
+
+        await tester.tap(find.byType(TextField));
+        await tester.pumpAndSettle();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+        await tester.pump();
+
+        verifyNever(() => devices.enableCamera());
+        verifyNever(() => messaging.sendReaction(any()));
+      });
+    });
+
     testWidgets('passes the Totem with a trimmed round message', (
       tester,
     ) async {
@@ -354,9 +405,14 @@ void main() {
         find.byType(TextField),
         '  A round message  ',
       );
-      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
-      await actionSlider.widget.onActionCompleted();
-      await tester.pump();
+      final actionSlider =
+          tester.state(find.byType(ActionSlider)) as ActionSliderState;
+      unawaited(actionSlider.widget.onActionCompleted());
+      await tester.pumpAndSettle();
+
+      // The confirmation dialog should now be visible.
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Pass to User Two'));
+      await tester.pumpAndSettle();
 
       verify(
         () => keeper.passTotem(roundMessage: 'A round message'),
@@ -400,6 +456,86 @@ void main() {
       expect(find.byType(TextField), findsNothing);
       expect(find.byType(ActionSlider), findsNothing);
       expect(find.byType(SessionActionBar), findsOneWidget);
+    });
+
+    testWidgets('does not render SelfView when disabled by default', (
+      tester,
+    ) async {
+      final state = _buildState(
+        keeper: 'user-1',
+        currentSpeaker: 'user-1',
+        nextSpeaker: 'user-2',
+      );
+
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SelfView), findsNothing);
+    });
+
+    testWidgets('SelfView Settings enables and persists', (
+      tester,
+    ) async {
+      final state = _buildState(
+        keeper: 'user-1',
+        currentSpeaker: 'user-1',
+        nextSpeaker: 'user-2',
+      );
+
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+      await tester.pumpAndSettle();
+
+      final container = tester.element(find.byType(SpeakingTurnScreen));
+      final ref = ProviderScope.containerOf(container);
+
+      ref.read(selfViewSettingsProvider.notifier).setEnabled(true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SelfView), findsOneWidget);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool(AppConsts.storageSelfViewEnabledKey), true);
+    });
+
+    testWidgets('renders SelfView when enabled and handles dragging', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        AppConsts.storageSelfViewEnabledKey: true,
+        AppConsts.storageSelfViewPositionKey: 'end',
+      });
+
+      final state = _buildState(
+        keeper: 'user-1',
+        currentSpeaker: 'user-1',
+        nextSpeaker: 'user-2',
+      );
+
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SelfView), findsOneWidget);
+
+      final cardFinder = find.bySemanticsLabel('Your self view, draggable');
+      final initialOffset = tester.getTopLeft(cardFinder);
+      expect(initialOffset.dx, equals(714.0)); // 800 - 70 - 16
+
+      await tester.drag(cardFinder, const Offset(-500, 0));
+      await tester.pumpAndSettle();
+
+      final newOffset = tester.getTopLeft(cardFinder);
+      expect(newOffset.dx, equals(16.0)); // _padding is 16
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(AppConsts.storageSelfViewPositionKey), 'start');
+
+      // Drag back past the midpoint
+      await tester.drag(cardFinder, const Offset(500, 0));
+      await tester.pumpAndSettle();
+
+      final backOffset = tester.getTopLeft(cardFinder);
+      expect(backOffset.dx, equals(714.0)); // Should snap back to end
+      expect(prefs.getString(AppConsts.storageSelfViewPositionKey), 'end');
     });
   });
 }

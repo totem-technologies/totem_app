@@ -1,12 +1,9 @@
-// We are not importing firebase_core_platform_interface directly
-// ignore_for_file: depend_on_referenced_packages
-
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_core_platform_interface/src/pigeon/mocks.dart'
-    show setupFirebaseCoreMocks;
-import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/shared/router.dart';
 
 /// Assigns [AppConfig.instance] to a test-friendly default. Any overrides
 /// passed in replace the defaults — required for tests that exercise code
@@ -48,18 +45,37 @@ void silenceLogger() {
   Logger.level = Level.off;
 }
 
-Future<void> setupFirebase() async {
-  TestWidgetsFlutterBinding.ensureInitialized();
+/// A minimal [TotemRouter] implementation for use in unit tests.
+/// All methods are no-ops except [GlobalKey] and [baseUri] accessors.
+class FakeTotemRouter extends TotemRouter {
+  @override
+  final navigatorKey = GlobalKey<NavigatorState>();
 
-  setupFirebaseCoreMocks();
+  @override
+  Uri get baseUri => Uri.parse('https://test.example.com/');
 
-  await Firebase.initializeApp(
-    name: 'test_app',
-    options: const FirebaseOptions(
-      apiKey: 'test_api_key',
-      appId: 'test_app_id',
-      messagingSenderId: 'test_messaging_sender_id',
-      projectId: 'test_project_id',
-    ),
-  );
+  @override
+  void popOrHome([BuildContext? context]) {}
+
+  @override
+  void toHome([HomeRoutes route = HomeRoutes.initialRoute]) {}
+
+  @override
+  Future<void> toKeeperProfile(BuildContext context, String userSlug) async {}
+
+  @override
+  Future<void> toSpaceSession(
+    BuildContext context,
+    String spaceSlug,
+    String? sessionSlug, [
+    bool replacement = false,
+  ]) async {}
+
+  @override
+  GoRouter createRouter(WidgetRef ref) {
+    throw UnsupportedError('createRouter should not be called in tests');
+  }
+
+  @override
+  void setTabCloseConfirmationEnabled(bool enabled) {}
 }

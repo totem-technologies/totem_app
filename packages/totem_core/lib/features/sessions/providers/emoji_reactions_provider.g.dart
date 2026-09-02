@@ -41,13 +41,13 @@ final class EmojiReactionsProvider
   }
 }
 
-String _$emojiReactionsHash() => r'ea98eb7d7c620310074e4591c698c4b29d73be2e';
+String _$emojiReactionsHash() => r'3ac97a11dd378b687b56f7e67c170306f978c01c';
 
 abstract class _$EmojiReactions extends $Notifier<List<SessionEmojiReaction>> {
   List<SessionEmojiReaction> build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref =
         this.ref
             as $Ref<List<SessionEmojiReaction>, List<SessionEmojiReaction>>;
@@ -62,7 +62,7 @@ abstract class _$EmojiReactions extends $Notifier<List<SessionEmojiReaction>> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }
 

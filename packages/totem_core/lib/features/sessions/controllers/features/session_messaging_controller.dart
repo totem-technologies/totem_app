@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
@@ -64,9 +65,9 @@ class SessionMessagingController extends _$SessionMessagingController {
   @override
   void build(SessionController session) {}
 
-  SessionRoomState get _state => this.session.state;
+  SessionRoomState get _state => session.state;
 
-  Room? get _room => this.session.room;
+  Room? get _room => session.room;
 
   void handleDataReceived(DataReceivedEvent event) {
     if (event.topic == SessionCommunicationTopics.emoji.topic) {
@@ -86,7 +87,7 @@ class SessionMessagingController extends _$SessionMessagingController {
           jsonDecode(data) as Map<String, dynamic>,
           event.participant,
         );
-        this.session.addSessionChatMessage(message);
+        session.addSessionChatMessage(message);
       } catch (error, stackTrace) {
         ErrorHandler.logError(
           error,
@@ -104,9 +105,6 @@ class SessionMessagingController extends _$SessionMessagingController {
       );
 
       try {
-        final json = jsonDecode(data) as Map<String, dynamic>;
-        final identity = json['identity'] as String?;
-
         // If participant identity is null, message is server-originated.
         if (event.participant?.identity != null &&
             event.participant?.identity != _state.roomState.keeper) {
@@ -116,10 +114,16 @@ class SessionMessagingController extends _$SessionMessagingController {
           return;
         }
 
-        if (identity == _room?.localParticipant?.identity) {
-          logger.d('Received participant removed event for local participant.');
-          this.session.markParticipantRemoved();
-          unawaited(this.session.disconnectFromRoom());
+        final json = jsonDecode(data) as Map<String, dynamic>;
+        final payload = RemoveParticipantPayload.fromJson(json);
+
+        if (payload.identity == _room?.localParticipant?.identity) {
+          logger.d(
+            'Received participant removed event for local participant. '
+            'Reason: ${payload.reason.value}',
+          );
+          session.markParticipantRemoved(payload.reason);
+          unawaited(session.disconnectFromRoom());
         }
       } catch (error, stackTrace) {
         ErrorHandler.logError(
@@ -173,7 +177,7 @@ class SessionMessagingController extends _$SessionMessagingController {
   }
 
   Future<void> sendMessage(String text) async {
-    if (!this.session.isCurrentUserKeeper()) {
+    if (!session.isCurrentUserKeeper()) {
       logger.w(
         'Attempted to send chat message without being the keeper, ignoring',
       );
@@ -190,7 +194,7 @@ class SessionMessagingController extends _$SessionMessagingController {
     );
 
     try {
-      this.session.addSessionChatMessage(message);
+      session.addSessionChatMessage(message);
       await room?.localParticipant
           ?.publishData(
             const Utf8Encoder().convert(message.toJson()),

@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
 Future<void> showBackgroundActivityDialog(BuildContext context) async {
@@ -89,6 +91,74 @@ class BackgroundActivityDialog extends StatelessWidget {
   }
 }
 
+/// Shows a dialog on web when browser permissions are denied, allowing
+/// the user to retry granting permissions or go back.
+///
+/// Returns true if permissions were eventually granted, false if the
+/// user chose to go back without granting.
+Future<bool> showWebPermissionsDeniedDialog(
+  BuildContext context, {
+  Future<bool> Function()? retryPermissions,
+}) async {
+  final container = ProviderScope.containerOf(context, listen: false);
+
+  if (!context.mounted) return false;
+
+  final tryAgain = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return ConfirmationDialog(
+        icon: TotemIcons.lock,
+        title: 'Permissions Required',
+        content:
+            'Totem needs access to your camera and microphone to join this session. '
+            'Please grant permissions and try again.',
+        confirmButtonText: 'Try again',
+        onConfirm: () async {
+          Navigator.of(context).pop(true);
+        },
+      );
+    },
+  );
+
+  if (!context.mounted) return false;
+
+  if (tryAgain != true) {
+    if (context.canPop()) {
+      context.pop();
+    }
+    return false;
+  }
+
+  final permissionsGranted = await (() async {
+    if (retryPermissions != null) {
+      return retryPermissions();
+    }
+
+    // Native and legacy callers still use the permissions controller. The
+    // Session pre-join flow supplies [retryPermissions] on web so the real
+    // preview tracks request access without opening throwaway media streams.
+    final controller = container.read(
+      permissionsControllerProvider.notifier,
+    );
+    await controller.requestPermissions();
+    return (await controller.currentStatuses).requiredPermissionsGranted;
+  })();
+
+  if (!context.mounted) return false;
+
+  if (permissionsGranted) {
+    return true;
+  }
+
+  // Permissions still not granted - show dialog again.
+  return showWebPermissionsDeniedDialog(
+    context,
+    retryPermissions: retryPermissions,
+  );
+}
+
 Future<bool> showPermissionsRequestSheet(BuildContext context) async {
   final container = ProviderScope.containerOf(context, listen: false);
 
@@ -130,9 +200,7 @@ Future<bool> showPermissionsRequestSheet(BuildContext context) async {
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
         builder: (context) {
-          return const SafeArea(
-            child: PermissionsRequestSheet(),
-          );
+          return const SafeArea(child: PermissionsRequestSheet());
         },
       ) ??
       false;

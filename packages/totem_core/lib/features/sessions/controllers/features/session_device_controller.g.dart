@@ -60,7 +60,7 @@ final class SessionDeviceControllerProvider
 }
 
 String _$sessionDeviceControllerHash() =>
-    r'0f6c33b24ab4e80b7738b45c7cece5ce81cd29c0';
+    r'42b1a3afef611ae25d25680198f48844b81916f2';
 
 final class SessionDeviceControllerFamily extends $Family
     with
@@ -94,7 +94,7 @@ abstract class _$SessionDeviceController extends $Notifier<SessionDeviceState> {
   SessionDeviceState build(SessionController session);
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<SessionDeviceState, SessionDeviceState>;
     final element =
         ref.element
@@ -104,6 +104,6 @@ abstract class _$SessionDeviceController extends $Notifier<SessionDeviceState> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, () => build(_$args));
+    return element.handleCreate(ref, () => build(_$args));
   }
 }

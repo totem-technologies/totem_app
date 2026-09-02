@@ -5,7 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:totem_app/features/auth/controllers/auth_controller.dart';
+import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -65,7 +65,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
     setState(() => _loading = true);
 
     final updated = await ref
-        .read(mobileAuthControllerProvider)
+        .read(userProfileControllerProvider.notifier)
         .updateUserProfile(
           profileAvatarType: _state,
           profileImage:

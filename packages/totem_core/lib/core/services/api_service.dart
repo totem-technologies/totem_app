@@ -33,12 +33,18 @@ final apiServiceProvider = Provider<ClientApi>((ref) {
   );
 }, name: 'Totem API Service Provider');
 
-final _dio = Dio();
+final _dio = Dio(BaseOptions(responseType: ResponseType.json));
 
 void addSharedApiInterceptors(Dio dio) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onError: (error, handler) {
+        // A preceding interceptor may already have classified this failure.
+        // Preserve that exception instance so RepositoryUtils can avoid
+        // reporting the same failure again at another layer.
+        if (error.error is AppException) {
+          return handler.next(error);
+        }
         final appException = _handleDioError(error);
 
         return handler.reject(
@@ -112,16 +118,19 @@ Dio _initDio(Ref ref) {
                 key: AppConsts.refreshTokenKey,
                 value: response.refreshToken,
               );
-            } on DioException catch (error, stackTrace) {
+            } on Exception catch (error, stackTrace) {
               // This is the critical part: if token refresh fails due to
               // network, we don't want to log the user out.
-              if (error.type != DioExceptionType.badResponse) {
+              if (error is DioException &&
+                  error.type != DioExceptionType.badResponse) {
                 // It's a network error, not an auth error.
                 // Let the original request fail with a network error.
                 return handler.next(options);
               }
 
-              // If it's a bad response (like 401), then it's a real auth issue.
+              // If it's a bad response (like 401, REAUTH_REQUIRED), or a
+              // non-Dio exception (e.g. ApiError from degenerate_runtime),
+              // then it's a real auth issue. Clear tokens.
               await secureStorage.delete(key: AppConsts.accessTokenKey);
               await secureStorage.delete(key: AppConsts.refreshTokenKey);
 

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/widgets.dart';
 import 'package:totem_core/core/config/theme.dart';
 
@@ -32,12 +34,16 @@ class _GroundingMarqueeState extends State<GroundingMarquee>
 
   late final AnimationController _fadeController;
   late final Animation<double> _opacity;
-  var _currentIndex = 0;
+  int _currentIndex = Random().nextInt(messages.length);
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(vsync: this, duration: _fadeDuration);
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: _fadeDuration,
+      animationBehavior: AnimationBehavior.preserve,
+    );
     _opacity = CurvedAnimation(
       parent: _fadeController,
       curve: Curves.easeInOut,
@@ -71,13 +77,16 @@ class _GroundingMarqueeState extends State<GroundingMarquee>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _opacity,
-      child: _Tip(text: messages[_currentIndex]),
+      child: _Tip(
+        key: ValueKey('tip_$_currentIndex'),
+        text: messages[_currentIndex],
+      ),
     );
   }
 }
 
 class _Tip extends StatelessWidget {
-  const _Tip({required this.text});
+  const _Tip({required this.text, super.key});
 
   final String text;
 

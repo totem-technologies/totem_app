@@ -5,7 +5,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/popups.dart';
+import 'package:totem_core/shared/widgets/notifications.dart';
 
 class ActionBarChatButton extends ConsumerStatefulWidget {
   const ActionBarChatButton({super.key});
@@ -18,11 +18,11 @@ class ActionBarChatButton extends ConsumerStatefulWidget {
 class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
   bool _chatSheetOpen = false;
   bool _hasPendingSessionChatMessages = false;
-  PopupRequest? _notificationPopup;
+  NotificationRequest? _notification;
 
   @override
   void dispose() {
-    _notificationPopup?.dismissActive();
+    _notification?.dismissActive();
     super.dispose();
   }
 
@@ -33,8 +33,8 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       (previous, next) {
         if (next == null || identical(previous, next)) return;
         if (!mounted || _chatSheetOpen || next.sender) return;
-        _notificationPopup?.dismissActive();
-        _notificationPopup = showNotificationPopup(
+        _notification?.dismissActive();
+        _notification = NotificationController().showTimed(
           context,
           icon: TotemIcons.chat,
           title: 'New message',
@@ -48,7 +48,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       active: _chatSheetOpen,
       onPressed: () async {
         if (!mounted) return;
-        _notificationPopup?.dismissActive();
+        _notification?.dismissActive();
         setState(() {
           _hasPendingSessionChatMessages = false;
           _chatSheetOpen = true;

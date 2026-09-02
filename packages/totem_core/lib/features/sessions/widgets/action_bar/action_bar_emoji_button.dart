@@ -13,34 +13,38 @@ class ActionBarEmojiButton extends StatefulWidget {
 }
 
 class _ActionBarEmojiButtonState extends State<ActionBarEmojiButton> {
+  final _portalController = OverlayPortalController();
+  final GlobalKey _buttonKey = GlobalKey();
   var _isOpen = false;
 
-  Future<void> _openPicker(BuildContext buttonContext) async {
+  void _openPicker() {
     if (_isOpen) return;
-
     setState(() => _isOpen = true);
-    try {
-      await showEmojiBar(
-        buttonContext,
-        onEmojiSelected: widget.onEmojiSelected,
-      );
-    } finally {
-      if (mounted) setState(() => _isOpen = false);
-    }
+    _portalController.show();
+  }
+
+  void _dismiss() {
+    _portalController.hide();
+    if (mounted) setState(() => _isOpen = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Builder(
-      builder: (buttonContext) {
-        return ActionBarButton(
-          semanticsLabel: 'Send reaction',
-          semanticsHint: 'Open emoji selection overlay',
-          active: _isOpen,
-          onPressed: () => _openPicker(buttonContext),
-          child: const TotemIcon(TotemIcons.reaction),
-        );
-      },
+    return OverlayPortal(
+      controller: _portalController,
+      overlayChildBuilder: (_) => EmojiBarOverlay(
+        buttonKey: _buttonKey,
+        onEmojiSelected: widget.onEmojiSelected,
+        onDismissed: _dismiss,
+      ),
+      child: ActionBarButton(
+        key: _buttonKey,
+        semanticsLabel: 'Send reaction',
+        semanticsHint: 'Open emoji selection overlay',
+        active: _isOpen,
+        onPressed: _openPicker,
+        child: const TotemIcon(TotemIcons.reaction),
+      ),
     );
   }
 }

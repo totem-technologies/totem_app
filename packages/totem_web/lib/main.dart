@@ -4,21 +4,27 @@ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/services/api_service.dart';
+import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
 import 'package:totem_web/auth/controllers/auth_controller.dart';
 import 'package:totem_web/core/navigation/web_router.dart';
 import 'package:totem_web/core/services/web_api_service.dart';
-import 'package:totem_web/firebase_options.dart';
+import 'package:web/web.dart' as web;
 
 void main() {
+  RoomBackground.onBackgroundChanged = (color) {
+    final hex =
+        '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+    web.document.body?.style.setProperty('background-color', hex);
+  };
+
   sharedMain(
     const TotemWebApp(),
     () async {
       TotemRouter.instance = WebTotemRouter();
       usePathUrlStrategy();
     },
-    firebaseOptions: DefaultFirebaseOptions.currentPlatform,
     providerOverrides: [
       authControllerProvider.overrideWith(() => WebAuthController()),
       apiServiceProvider.overrideWith((ref) => ref.read(webApiServiceProvider)),

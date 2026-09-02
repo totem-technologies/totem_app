@@ -20,44 +20,8 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Check java found
-      id: check_java
-      shell: bash
-      run: |
-        if java --version; then
-            echo "installed=true" >> "$GITHUB_OUTPUT"
-        else
-            echo "installed=false" >> "$GITHUB_OUTPUT"
-        fi
-
-    - name: Install java
-      if: steps.check_java.outputs.installed == 'false'
-      uses: actions/setup-java@v5
-      with:
-        distribution: "zulu"
-        java-version: "17.x"
-        cache: "gradle"
-
-    - name: Check flutter found
-      id: check_flutter
-      shell: bash
-      run: |
-        if flutter --version; then
-            echo "installed=true" >> "$GITHUB_OUTPUT"
-        else
-            echo "installed=false" >> "$GITHUB_OUTPUT"
-        fi
-
-    - name: Setup flutter
-      if: steps.check_flutter.outputs.installed == 'false'
-      uses: subosito/flutter-action@v2.23.0
-      with:
-        channel: "stable"
-        cache: true
-
-    - run: flutter --version
-      shell: bash
-
+    # Assumes the Flutter/Java toolchain is already set up by the calling
+    # workflow (see .github/actions/setup-environment).
     - name: Decode keystore and create jks and properties file for signing the app
       shell: bash
       run: |

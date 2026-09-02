@@ -184,6 +184,42 @@ void main() {
       expect(find.text('🔥'), findsNothing);
     });
 
+    testWidgets('displayReaction drops the reaction while the app is hidden', (
+      tester,
+    ) async {
+      final container = await pumpOverlayHost(tester);
+      final notifier = container.read(emojiReactionsProvider.notifier);
+
+      await notifier.emitIncomingReaction('user1', '👏');
+      final reaction = container.read(emojiReactionsProvider).first;
+
+      final context = tester.element(
+        find.byKey(EmojiReactions.emojiOverlayKey),
+      );
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      try {
+        await notifier.displayReaction(context, reaction, false);
+
+        expect(
+          container.read(emojiReactionsProvider),
+          isEmpty,
+          reason: 'Hidden app should drop the reaction without presenting it',
+        );
+      } finally {
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+      }
+
+      await tester.pump();
+      expect(
+        find.text('👏'),
+        findsNothing,
+        reason: 'No overlay entry should be queued for when the app resumes',
+      );
+    });
+
     testWidgets('displayReaction renders emoji in not-my-turn mode too', (
       tester,
     ) async {

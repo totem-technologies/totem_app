@@ -9,7 +9,6 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
     as mobile_api
     show RoomStatus, SessionDetailSchema, TurnState;
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -22,21 +21,6 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
-
-Future<bool?> showLeaveDialog(BuildContext context) {
-  return showDialog<bool>(
-    context: context,
-    builder: (context) {
-      return ConfirmationDialog(
-        content: 'Are you sure you want to leave the session?',
-        confirmButtonText: 'Yes',
-        onConfirm: () async {
-          Navigator.of(context).pop(true);
-        },
-      );
-    },
-  );
-}
 
 Future<void> showOptionsSheet(
   BuildContext context,
@@ -66,7 +50,7 @@ Future<void> showOptionsSheet(
       right: 24,
     ),
     isScrollControlled: true,
-    smallScreenBuilder: (context) {
+    bottomSheetBuilder: (context) {
       return SafeArea(
         child: MoreOptions(session: session, isDialog: false),
       );
@@ -100,226 +84,372 @@ class MoreOptions extends ConsumerWidget {
     final deviceState = ref.watch(
       sessionDeviceControllerProvider(currentSession),
     );
+    final isSelfViewEnabled = ref.watch(
+      selfViewSettingsProvider.select((s) => s.enabled),
+    );
 
     final isKeeper = currentSession.isCurrentUserKeeper();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (!isDialog) const SheetDragHandle(),
-        Flexible(
-          child: ListView(
-            padding: EdgeInsetsDirectional.only(
-              start: 20,
-              end: 20,
-              bottom: isDialog ? 20 : 36,
-              top: isDialog ? 24 : 0,
-            ),
-            shrinkWrap: true,
-            physics: const ClampingScrollPhysics(),
-            children: <Widget>[
-              ?MoreOptionsTile.camera(
-                currentSession.devices.localVideoTrack?.currentOptions
-                    as CameraCaptureOptions?,
-                () {
-                  currentSession.devices.switchCameraPosition();
-                  Navigator.of(context).pop();
-                },
-              ),
-              ?MoreOptionsTile.output(
-                AudioOutputOptions(
-                  speakerOn: deviceState.isSpeakerphoneEnabled,
-                  deviceId: deviceState.selectedAudioOutputDeviceId,
+    Widget buildContent([ScrollController? scrollController]) {
+      final cameraTile = MoreOptionsTile.camera(
+        currentSession.devices.localVideoTrack?.currentOptions
+            as CameraCaptureOptions?,
+        () {
+          currentSession.devices.switchCameraPosition();
+          Navigator.of(context).pop();
+        },
+      );
+
+      final outputTile = MoreOptionsTile.output(
+        AudioOutputOptions(
+          speakerOn: deviceState.isSpeakerphoneEnabled,
+          deviceId: deviceState.selectedAudioOutputDeviceId,
+        ),
+        (options) {
+          if (options.speakerOn != null) {
+            currentSession.devices.setSpeakerphone(
+              options.speakerOn ?? false,
+            );
+          }
+        },
+        currentSession.devices.selectAudioOutputDevice,
+      );
+
+      final content = SingleChildScrollView(
+        controller: scrollController,
+        padding: EdgeInsetsDirectional.only(
+          start: 20,
+          end: 20,
+          bottom: isDialog ? 20 : 36,
+          top: isDialog ? 24 : 10,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ?cameraTile,
+            ?outputTile,
+            MoreOptionsTile<void>(
+              title: 'Self-view',
+              icon: TotemIcons.selfView,
+              trailing: IgnorePointer(
+                child: Switch.adaptive(
+                  value: isSelfViewEnabled,
+                  onChanged: (value) {},
                 ),
-                (options) {
-                  if (options.speakerOn != null) {
-                    currentSession.devices.setSpeakerphone(
-                      options.speakerOn ?? false,
+              ),
+              onTap: () {
+                ref
+                    .read(selfViewSettingsProvider.notifier)
+                    .setEnabled(
+                      !isSelfViewEnabled,
                     );
-                  }
-                },
-                currentSession.devices.selectAudioOutputDevice,
+              },
+            ),
+            MoreOptionsTile<void>(
+              title: 'Leave Session',
+              icon: TotemIcons.leaveCall,
+              type: MoreOptionsTileType.destructive,
+              onTap: () async {
+                final navigator = Navigator.of(context)..pop();
+                final shouldLeave = await showLeaveDialog(context) ?? false;
+                if (shouldLeave && navigator.mounted) {
+                  TotemRouter.instance.popOrHome(navigator.context);
+                  currentSession.leave();
+                }
+              },
+            ),
+
+            if (isKeeper) ...[
+              Text(
+                'Keeper Options',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
               MoreOptionsTile<void>(
-                title: 'Leave Session',
-                icon: TotemIcons.leaveCall,
-                type: MoreOptionsTileType.destructive,
-                onTap: () async {
-                  final navigator = Navigator.of(context)..pop();
-                  final shouldLeave = await showLeaveDialog(context) ?? false;
-                  if (shouldLeave && navigator.mounted) {
-                    TotemRouter.instance.popOrHome(navigator.context);
-                    currentSession.leave();
-                  }
+                title: 'Reorder Participants',
+                icon: TotemIcons.reorderParticipants,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showParticipantReorderModals(context);
                 },
               ),
-
-              if (isKeeper) ...[
-                Text(
-                  'Keeper Options',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
+              MoreOptionsTile<void>(
+                title:
+                    'Banned Participants'
+                    '${state.roomState.bannedParticipants.isNotEmpty ? ' (${state.roomState.bannedParticipants.length})' : ''}',
+                icon: TotemIcons.removePerson,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showBannedParticipantsModal(
+                    context,
+                    currentSession,
+                    state,
+                  );
+                },
+              ),
+              if (state.roomState.status == mobile_api.RoomStatus.active)
                 MoreOptionsTile<void>(
-                  title: 'Reorder Participants',
-                  icon: TotemIcons.reorderParticipants,
+                  title: 'Set Prompt',
+                  icon: TotemIcons.edit,
                   onTap: () {
                     Navigator.of(context).pop();
-                    showParticipantReorderModals(context);
+                    _onSetPrompt(
+                      context,
+                      currentSession,
+                      state.roomState.roundMessage,
+                    );
                   },
                 ),
-                MoreOptionsTile<void>(
-                  title:
-                      'Banned Participants'
-                      '${state.roomState.bannedParticipants.isNotEmpty ? ' (${state.roomState.bannedParticipants.length})' : ''}',
-                  icon: TotemIcons.removePerson,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    showBannedParticipantsModal(context, currentSession, state);
-                  },
-                ),
-                MoreOptionsTile<void>(
-                  title: 'Mute everyone',
-                  icon: TotemIcons.microphoneOff,
-                  type: MoreOptionsTileType.destructive,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _onMuteEveryone(currentSession);
-                  },
-                ),
-                if (state.roomState.status == mobile_api.RoomStatus.active)
-                  Builder(
-                    builder: (context) {
-                      final next =
-                          state.roomState.nextParticipantForcePassIdentity;
-                      final nextParticipantName = next != null
-                          ? state.participantsList
-                                .firstWhereOrNull((p) => p.identity == next)
-                                ?.name
-                          : null;
-                      return MoreOptionsTile<void>(
-                        title:
-                            'Force pass to ${nextParticipantName ?? 'the next'}',
-                        icon: TotemIcons.passToNext,
-                        type: MoreOptionsTileType.destructive,
-                        onTap:
-                            state.roomState.turnState !=
-                                mobile_api.TurnState.idle
-                            ? () {
-                                Navigator.of(context).pop();
-                                _onNextTotemAction(
-                                  context,
-                                  currentSession,
-                                  state,
-                                );
-                              }
-                            : null,
-                      );
-                    },
-                  ),
-                if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
-                  MoreOptionsTile<void>(
-                    title: 'Start Session',
-                    icon: TotemIcons.arrowForward,
-                    type: MoreOptionsTileType.destructive,
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      _onStartSession(context, currentSession);
-                    },
-                  )
-                else if (state.roomState.status != mobile_api.RoomStatus.ended)
-                  MoreOptionsTile<void>(
-                    title: 'End Session',
-                    icon: TotemIcons.cameraOff,
-                    type: MoreOptionsTileType.destructive,
-                    onTap:
-                        state.roomState.status == mobile_api.RoomStatus.active
-                        ? () {
-                            Navigator.of(context).pop();
-                            _onEndSession(context, currentSession);
-                          }
-                        : null,
-                  ),
-                Text(
-                  'Session State',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                MoreOptionsTile<void>(
-                  title: switch (state.roomState.status) {
-                    mobile_api.RoomStatus.waitingRoom =>
-                      'Session Status: Waiting Room',
-                    mobile_api.RoomStatus.active => 'Session Status: Active',
-                    mobile_api.RoomStatus.ended => 'Session Status: Ended',
-                    _ => 'Session Status: Unknown',
-                  },
-                  icon: TotemIcons.checkboxOutlined,
-                ),
-                MoreOptionsTile<void>(
-                  title:
-                      'Totem Status: '
-                      '${state.roomState.turnState.value.uppercaseFirst()}',
-                  icon: TotemIcons.feedback,
-                ),
+              MoreOptionsTile<void>(
+                title: 'Mute everyone',
+                icon: TotemIcons.microphoneOff,
+                type: MoreOptionsTileType.destructive,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _onMuteEveryone(currentSession);
+                },
+              ),
+              if (state.roomState.status == mobile_api.RoomStatus.active)
                 Builder(
                   builder: (context) {
-                    final String? userName =
-                        state.roomState.currentSpeaker != null
+                    final next = state.roomState
+                        .nextParticipantForcePassIdentity(
+                          participants: state.participantsList,
+                        );
+                    final nextParticipantName = next != null
                         ? state.participantsList
-                              .firstWhereOrNull(
-                                (p) =>
-                                    p.identity ==
-                                    state.roomState.currentSpeaker,
-                              )
+                              .firstWhereOrNull((p) => p.identity == next)
                               ?.name
                         : null;
                     return MoreOptionsTile<void>(
                       title:
-                          'Speaking now: '
-                          '${userName ?? 'None'}',
-                      icon: TotemIcons.community,
+                          'Force pass to ${nextParticipantName ?? 'the next'}',
+                      icon: TotemIcons.passToNext,
+                      type: MoreOptionsTileType.destructive,
+                      onTap:
+                          state.roomState.turnState != mobile_api.TurnState.idle
+                          ? () {
+                              Navigator.of(context).pop();
+                              onForcePass(
+                                context,
+                                nextParticipantName,
+                                currentSession,
+                                state,
+                              );
+                            }
+                          : null,
                     );
                   },
                 ),
-              ],
-            ].expand((child) => [const SizedBox(height: 10), child]).skip(1).toList(),
-          ),
+              if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
+                MoreOptionsTile<void>(
+                  title: 'Start Session',
+                  icon: TotemIcons.arrowForward,
+                  type: MoreOptionsTileType.destructive,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _onStartSession(context, currentSession);
+                  },
+                )
+              else if (state.roomState.status != mobile_api.RoomStatus.ended)
+                MoreOptionsTile<void>(
+                  title: 'End Session',
+                  icon: TotemIcons.cameraOff,
+                  type: MoreOptionsTileType.destructive,
+                  onTap: state.roomState.status == mobile_api.RoomStatus.active
+                      ? () {
+                          Navigator.of(context).pop();
+                          _onEndSession(context, currentSession);
+                        }
+                      : null,
+                ),
+              Text(
+                'Session State',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              MoreOptionsTile<void>(
+                title: switch (state.roomState.status) {
+                  mobile_api.RoomStatus.waitingRoom =>
+                    'Session Status: Waiting Room',
+                  mobile_api.RoomStatus.active => 'Session Status: Active',
+                  mobile_api.RoomStatus.ended => 'Session Status: Ended',
+                  _ => 'Session Status: Unknown',
+                },
+                icon: TotemIcons.checkboxOutlined,
+              ),
+              MoreOptionsTile<void>(
+                title:
+                    'Totem Status: '
+                    '${state.roomState.turnState.value.uppercaseFirst()}',
+                icon: TotemIcons.feedback,
+              ),
+              Builder(
+                builder: (context) {
+                  final String? userName =
+                      state.roomState.currentSpeaker != null
+                      ? state.participantsList
+                            .firstWhereOrNull(
+                              (p) =>
+                                  p.identity == state.roomState.currentSpeaker,
+                            )
+                            ?.name
+                      : null;
+                  return MoreOptionsTile<void>(
+                    title:
+                        'Speaking now: '
+                        '${userName ?? 'None'}',
+                    icon: TotemIcons.community,
+                  );
+                },
+              ),
+            ],
+          ].expand((child) => [const SizedBox(height: 10), child]).skip(1).toList(),
         ),
-      ],
+      );
+
+      if (isDialog) return content;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ColoredBox(
+            color: theme.colorScheme.surface,
+            child: const SheetDragHandle(),
+          ),
+          Flexible(child: content),
+        ],
+      );
+    }
+
+    if (isDialog || !isKeeper) {
+      return buildContent();
+    } else {
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.95,
+        minChildSize: 0.25,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) {
+          return buildContent(scrollController);
+        },
+      );
+    }
+  }
+
+  static Future<bool?> showLeaveDialog(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      useRootNavigator: false,
+      builder: (context) {
+        return Consumer(
+          builder: (context, ref, child) {
+            final currentSession = ref.watch(currentSessionProvider)!;
+            final isKeeper = currentSession.isCurrentUserKeeper();
+            final isEnded = ref.watch(
+              currentSessionStateProvider.select(
+                (s) => s?.roomState.status == mobile_api.RoomStatus.ended,
+              ),
+            );
+            return ConfirmationDialog(
+              content: 'Are you sure you want to leave the session?',
+              confirmButtonText: 'Leave Session',
+              onConfirm: () async {
+                TotemRouter.instance.setTabCloseConfirmationEnabled(false);
+                Navigator.of(context).pop(true);
+              },
+              extraButtons: [
+                if (isKeeper && !isEnded)
+                  ConfirmationDialogButton.outlined(
+                    onConfirm: () async {
+                      await _endSession(context, currentSession);
+                      TotemRouter.instance.setTabCloseConfirmationEnabled(
+                        false,
+                      );
+                      if (context.mounted) Navigator.of(context).pop(true);
+                    },
+                    type: ConfirmationDialogType.destructive,
+                    child: const Text('End Session and Leave'),
+                  ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
   Future<void> _onMuteEveryone(SessionController session) =>
       session.keeper.muteEveryone();
 
-  Future<void> _onNextTotemAction(
+  Future<void> _onSetPrompt(
     BuildContext context,
+    SessionController session,
+    String? currentPrompt,
+  ) async {
+    final controller = TextEditingController(text: currentPrompt);
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<String>(
+      context: context,
+      useRootNavigator: false,
+      builder: (context) => ConfirmationDialog(
+        title: 'Update Round Prompt',
+        content: 'Enter a prompt for this round',
+        confirmButtonText: 'Update',
+        type: ConfirmationDialogType.standard,
+        contentWidget: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            autofocus: true,
+            maxLines: 3,
+            minLines: 1,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter a prompt';
+              }
+              return null;
+            },
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ),
+        onConfirm: () async {
+          if (!formKey.currentState!.validate()) return;
+          final message = controller.text.trim();
+          await session.keeper.setPrompt(message);
+          if (context.mounted) Navigator.of(context).pop(message);
+        },
+      ),
+    );
+    controller.dispose();
+    if (result != null && result.isNotEmpty && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Prompt set successfully')),
+      );
+    }
+  }
+
+  @visibleForTesting
+  Future<void> onForcePass(
+    BuildContext context,
+    String? nextParticipantName,
     SessionController session,
     SessionRoomState state,
   ) async {
-    if (state.roomState.nextParticipantIdentity == null) return;
+    if (state.roomState.nextSpeaker == null) return;
 
     await showDialog<void>(
       context: context,
+      useRootNavigator: false,
       builder: (context) {
         final theme = Theme.of(context);
-        final nextParticipantIdentity =
-            state.roomState.nextParticipantIdentity!;
 
         return Consumer(
           builder: (context, ref, child) {
-            final nextParticipantName =
-                state.participantsList
-                    .firstWhereOrNull(
-                      (p) => p.identity == nextParticipantIdentity,
-                    )
-                    ?.name ??
-                ref
-                    .watch(userProfileProvider(nextParticipantIdentity))
-                    .whenData((user) => user.name)
-                    .value;
             return ConfirmationDialog(
               title: 'Are you sure?',
               confirmButtonText: 'Force pass',
@@ -357,8 +487,65 @@ class MoreOptions extends ConsumerWidget {
     BuildContext context,
     SessionController session,
   ) async {
+    final controller = TextEditingController();
+    await showDialog<void>(
+      context: context,
+      useRootNavigator: false,
+      builder: (context) => ConfirmationDialog(
+        title: 'Start Session',
+        content: 'Are you sure you want to start the session?',
+        confirmButtonText: 'Start Session',
+        type: ConfirmationDialogType.standard,
+        contentWidget: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Optional: enter a prompt for the first round',
+          ),
+          maxLines: 3,
+          minLines: 1,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        onConfirm: () async {
+          final prompt = controller.text.trim();
+          final success = await session.keeper.startSession(
+            prompt: prompt.isEmpty ? null : prompt,
+          );
+          if (success && context.mounted) Navigator.of(context).pop();
+        },
+      ),
+    );
+    controller.dispose();
+  }
+
+  static Future<void> _onEndSession(
+    BuildContext context,
+    SessionController session,
+  ) async {
+    return showDialog<void>(
+      context: context,
+      useRootNavigator: false,
+      builder: (context) {
+        return ConfirmationDialog(
+          title: 'End Session',
+          content: 'Are you sure you want to end the session?',
+          confirmButtonText: 'End Session',
+          onConfirm: () async {
+            await _endSession(context, session);
+            if (context.mounted) Navigator.of(context).pop();
+          },
+        );
+      },
+    );
+  }
+
+  static Future<void> _endSession(
+    BuildContext context,
+    SessionController session,
+  ) async {
     try {
-      await session.keeper.startSession();
+      await session.keeper.endSession();
     } catch (error) {
       if (!context.mounted) return;
       await ErrorHandler.handleApiError(
@@ -366,50 +553,13 @@ class MoreOptions extends ConsumerWidget {
         error,
         onRetry: () async {
           try {
-            await session.keeper.startSession();
+            await session.keeper.endSession();
           } catch (e) {
             // Error already handled by handleApiError
           }
         },
       );
     }
-  }
-
-  Future<void> _onEndSession(
-    BuildContext context,
-    SessionController session,
-  ) async {
-    return showDialog<void>(
-      context: context,
-      builder: (context) {
-        return ConfirmationDialog(
-          title: 'End Session',
-          content: 'Are you sure you want to end the session?',
-          confirmButtonText: 'End Session',
-          onConfirm: () async {
-            try {
-              await session.keeper.endSession();
-              if (!context.mounted) return;
-              Navigator.of(context).pop();
-            } catch (error) {
-              if (!context.mounted) return;
-              Navigator.of(context).pop();
-              await ErrorHandler.handleApiError(
-                context,
-                error,
-                onRetry: () async {
-                  try {
-                    await session.keeper.endSession();
-                  } catch (e) {
-                    // Error already handled by handleApiError
-                  }
-                },
-              );
-            }
-          },
-        );
-      },
-    );
   }
 }
 

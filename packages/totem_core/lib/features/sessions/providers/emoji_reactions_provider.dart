@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_core/shared/utils.dart';
 import 'package:uuid/uuid.dart';
 
 part 'emoji_reactions_provider.g.dart';
@@ -96,6 +97,14 @@ class EmojiReactions extends _$EmojiReactions {
     SessionEmojiReaction reaction,
     bool isInListeningTurnScreen,
   ) async {
+    // While the app is hidden (e.g. a backgrounded browser tab) no frames
+    // are rendered, so overlay entries would accumulate unbuilt and all
+    // animate at once on refocus. Nobody can see the reaction anyway.
+    if (isAppHidden()) {
+      state = state.where((e) => e != reaction).toList();
+      return;
+    }
+
     state = state
         .map((r) => r == reaction ? r.copyWith(displayed: true) : r)
         .toList();

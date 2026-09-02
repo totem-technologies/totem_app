@@ -76,6 +76,17 @@ ApiResponse _staleVersionResponse() {
   );
 }
 
+ApiResponse _invalidTransitionResponse() {
+  return ApiResponse(
+    statusCode: 400,
+    body: jsonEncode(<String, dynamic>{
+      'code': 'invalid_transition',
+      'message': 'No stick to accept right now',
+      'detail': null,
+    }),
+  );
+}
+
 ClientApi _createApi(_ScriptedApiClient client) {
   return ClientApi(ApiConfig(client: client));
 }
@@ -135,35 +146,181 @@ void main() {
       expect(client.requests, hasLength(3));
     });
 
-    test('does not retry indefinitely when stale version persists', () async {
-      final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
-        (_) => _staleVersionResponse(),
-        (_) => _roomStateResponse(10),
-        (_) => _staleVersionResponse(),
-      ]);
+    test(
+      'staleVersion: retries up to max attempts, throws on last failure',
+      () async {
+        final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
+          // Attempt 0
+          (_) => _staleVersionResponse(),
+          (_) => _roomStateResponse(10),
+          // Attempt 1
+          (_) => _staleVersionResponse(),
+          (_) => _roomStateResponse(15),
+          // Attempt 2 (last) — rethrows immediately, no GET
+          (_) => _staleVersionResponse(),
+        ]);
 
-      final container = ProviderContainer(
-        retry: (_, _) => null,
-        overrides: [
-          apiServiceProvider.overrideWithValue(_createApi(client)),
-        ],
-      );
-      final subscription = container.listen(
-        passTotemProvider('test-session', 5),
-        (_, _) {},
-        fireImmediately: true,
-      );
-      addTearDown(subscription.close);
-      addTearDown(container.dispose);
+        final container = ProviderContainer(
+          retry: (_, _) => null,
+          overrides: [
+            apiServiceProvider.overrideWithValue(_createApi(client)),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      try {
-        await container.read(passTotemProvider('test-session', 5).future);
-        fail('Expected passTotemProvider to throw a stale version error');
-      } on ApiError<RoomState, RoomErrorResponse> catch (error) {
-        expect(error.error?.code, ErrorCode.staleVersion);
-      }
+        try {
+          await container.read(passTotemProvider('test-session', 5).future);
+          fail('Expected passTotemProvider to throw a stale version error');
+        } on ApiError<RoomState, RoomErrorResponse> catch (error) {
+          expect(error.error?.code, ErrorCode.staleVersion);
+        }
 
-      expect(client.requests, hasLength(3));
-    });
+        // 3 POSTs + 2 GETs = 5
+        expect(client.requests, hasLength(5));
+      },
+    );
+
+    test(
+      'staleVersion: succeeds after multiple version bumps',
+      () async {
+        final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
+          (_) => _staleVersionResponse(),
+          (_) => _roomStateResponse(10),
+          (_) => _staleVersionResponse(),
+          (_) => _roomStateResponse(15),
+          (_) => _roomStateResponse(16),
+        ]);
+
+        final container = ProviderContainer(
+          retry: (_, _) => null,
+          overrides: [
+            apiServiceProvider.overrideWithValue(_createApi(client)),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final roomState = await container.read(
+          passTotemProvider('test-session', 5).future,
+        );
+
+        expect(roomState.version, 16);
+        expect(client.requests, hasLength(5));
+      },
+    );
+
+    test(
+      'invalidTransition: refreshes state and retries exactly once',
+      () async {
+        final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
+          (request) {
+            expect(request.method, 'POST');
+            expect(
+              request.path,
+              '/api/mobile/protected/rooms/test-session/event',
+            );
+            final body = _decodeJsonBody(request.body);
+            expect(body['last_seen_version'], 5);
+            return _invalidTransitionResponse();
+          },
+          (request) {
+            expect(request.method, 'GET');
+            expect(
+              request.path,
+              '/api/mobile/protected/rooms/test-session/state',
+            );
+            return _roomStateResponse(6);
+          },
+          (request) {
+            expect(request.method, 'POST');
+            expect(
+              request.path,
+              '/api/mobile/protected/rooms/test-session/event',
+            );
+            final body = _decodeJsonBody(request.body);
+            expect(body['last_seen_version'], 6);
+            return _roomStateResponse(7);
+          },
+        ]);
+
+        final container = ProviderContainer(
+          retry: (_, _) => null,
+          overrides: [
+            apiServiceProvider.overrideWithValue(_createApi(client)),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final roomState = await container.read(
+          acceptTotemProvider('test-session', 5).future,
+        );
+
+        expect(roomState.version, 7);
+        expect(client.requests, hasLength(3));
+      },
+    );
+
+    test(
+      'invalidTransition: surfaces error after one refresh + retry',
+      () async {
+        final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
+          (_) => _invalidTransitionResponse(),
+          (_) => _roomStateResponse(6),
+          (_) => _invalidTransitionResponse(),
+        ]);
+
+        final container = ProviderContainer(
+          retry: (_, _) => null,
+          overrides: [
+            apiServiceProvider.overrideWithValue(_createApi(client)),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        try {
+          await container.read(acceptTotemProvider('test-session', 5).future);
+          fail('Expected acceptTotemProvider to throw');
+        } on ApiError<RoomState, RoomErrorResponse> catch (error) {
+          expect(error.error?.code, ErrorCode.invalidTransition);
+        }
+
+        // 1 POST + 1 GET + 1 POST = 3 (one refresh, no loop)
+        expect(client.requests, hasLength(3));
+      },
+    );
+
+    test(
+      'does not retry on non-recoverable errors like room_not_active',
+      () async {
+        final client = _ScriptedApiClient(
+          <ApiResponse Function(ApiRequest)>[
+            (_) => ApiResponse(
+              statusCode: 400,
+              body: jsonEncode(<String, dynamic>{
+                'code': 'room_not_active',
+                'message': 'Room is not active',
+                'detail': null,
+              }),
+            ),
+          ],
+        );
+
+        final container = ProviderContainer(
+          retry: (_, _) => null,
+          overrides: [
+            apiServiceProvider.overrideWithValue(_createApi(client)),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        try {
+          await container.read(acceptTotemProvider('test-session', 5).future);
+          fail('Expected acceptTotemProvider to throw');
+        } on ApiError<RoomState, RoomErrorResponse> catch (error) {
+          expect(error.error?.code, ErrorCode.roomNotActive);
+        }
+
+        expect(client.requests, hasLength(1));
+      },
+    );
   });
 }

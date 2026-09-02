@@ -11,6 +11,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/core/services/screen_protection_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
@@ -25,10 +26,10 @@ import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/error_screen.dart';
-import 'package:totem_core/shared/widgets/popups.dart';
+import 'package:totem_core/shared/widgets/notifications.dart';
 
 class VideoSessionScreen extends ConsumerStatefulWidget {
   const VideoSessionScreen({
@@ -50,12 +51,14 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   static var _didWarmEmojiGlyphs = false;
 
   final _roomNavigatorKey = GlobalKey<NavigatorState>();
-  final _notificationController = PopupController();
+  final _notificationController = NotificationController();
 
-  PopupRequest? _closeKeeperLeftNotification;
+  NotificationRequest? _closeKeeperLeftNotification;
+  NotificationRequest? _offlineNotification;
   Timer? _timeRemainingWarningTimer;
   String? _timeRemainingWarningSessionSlug;
   bool _hasShownTimeRemainingWarning = false;
+  bool? _lastIsOffline;
   bool? _lastKeeperDisconnectedState;
   RoomStatus? _lastKeeperDisconnectedRoomStatus;
 
@@ -72,13 +75,25 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
   @override
   void dispose() {
-    _closeKeeperDisconnectedNotification();
-    _clearSessionPopups();
+    _notificationController.dismissAll();
     _clearTimeRemainingWarningTimer();
-    _disableScreenProtection();
+    _setScreenProtection(false);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
+    TotemRouter.instance.setTabCloseConfirmationEnabled(false);
     super.dispose();
+  }
+
+  void _setScreenProtection(bool enabled) {
+    try {
+      ScreenProtectionService.setCaptureProtectionEnabled(enabled);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error setting screen capture policy to $enabled',
+      );
+    }
   }
 
   void _applyScreenCapturePolicy() {
@@ -88,24 +103,12 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       final email = ref.read(authControllerProvider).user?.email;
       final shouldProtect =
           !ScreenProtectionService.shouldAllowScreenCaptureForEmail(email);
-      ScreenProtectionService.setCaptureProtectionEnabled(shouldProtect);
+      _setScreenProtection(shouldProtect);
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Error applying screen capture policy',
-      );
-    }
-  }
-
-  void _disableScreenProtection() {
-    try {
-      ScreenProtectionService.setCaptureProtectionEnabled(false);
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error disabling screen capture policy',
       );
     }
   }
@@ -148,13 +151,41 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     });
   }
 
-  void _closeKeeperDisconnectedNotification() {
-    _closeKeeperLeftNotification?.dismissActive();
-    _closeKeeperLeftNotification = null;
+  void _onConnectivityChanged(bool isOffline, {bool? wasOffline}) {
+    if (!mounted) return;
+
+    final previousIsOffline = wasOffline ?? _lastIsOffline;
+    _lastIsOffline = isOffline;
+
+    if (!isOffline) {
+      _dismissOfflineNotification();
+      return;
+    }
+
+    if (previousIsOffline != false || _offlineNotification != null) {
+      return;
+    }
+
+    _offlineNotification = _notificationController.showPermanent(
+      context,
+      icon: TotemIcons.wifiOff,
+      title: "You're Offline",
+      message: 'Check your Wi-Fi or mobile data to continue.',
+    );
   }
 
-  void _clearSessionPopups() {
-    _notificationController.dismissAll();
+  void _dismissOfflineNotification({bool immediately = false}) {
+    if (immediately) {
+      _offlineNotification?.dismissImmediately();
+    } else {
+      _offlineNotification?.dismissActive();
+    }
+    _offlineNotification = null;
+  }
+
+  void _dismissKeeperLeftNotification() {
+    _closeKeeperLeftNotification?.dismissActive();
+    _closeKeeperLeftNotification = null;
   }
 
   void _clearTimeRemainingWarningTimer() {
@@ -162,19 +193,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _timeRemainingWarningTimer = null;
   }
 
-  void _scheduleTimeRemainingWarning(
-    SessionDetailSchema? sessionEvent,
-    RoomConnectionState connectionState,
-    RoomStatus roomStatus,
-  ) {
-    if (sessionEvent == null ||
-        connectionState != RoomConnectionState.connected ||
-        roomStatus != RoomStatus.active ||
-        sessionEvent.ended) {
-      _clearTimeRemainingWarningTimer();
-      return;
-    }
-
+  void _scheduleTimeRemainingWarning(SessionDetailSchema sessionEvent) {
     if (_timeRemainingWarningSessionSlug != sessionEvent.slug) {
       _timeRemainingWarningSessionSlug = sessionEvent.slug;
       _hasShownTimeRemainingWarning = false;
@@ -203,12 +222,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     if (!mounted || _hasShownTimeRemainingWarning) return;
 
     _hasShownTimeRemainingWarning = true;
-    showNotificationPopup(
+    _notificationController.showTimed(
       context,
       icon: TotemIcons.clockCircle,
       title: 'Time Remaining 5 min',
       message: 'Thanks for your participation in this session today',
-      controller: _notificationController,
     );
   }
 
@@ -230,12 +248,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
               _shouldShowLowBatteryWarning = true;
               if (mounted) {
                 setState(() {});
-                showNotificationPopup(
+                _notificationController.showTimed(
                   context,
                   icon: TotemIcons.person,
                   title: 'Your battery is running low',
                   message: 'You might want to plug in.',
-                  controller: _notificationController,
                 );
               }
             }
@@ -259,12 +276,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       // These errors are shown in the error screen
     } else {
       if (mounted) {
-        showErrorPopup(
+        _notificationController.showError(
           context,
           icon: TotemIcons.errorOutlined,
           title: 'Something went wrong',
           message: 'Check your connection and try again.',
-          controller: _notificationController,
         );
       }
     }
@@ -275,14 +291,13 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         ? 'Audio is now playing through speaker.'
         : 'Audio is now routed to another output device.';
 
-    showNotificationPopup(
+    _notificationController.showTimed(
       context,
       icon: next.isSpeakerphoneEnabled
           ? TotemIcons.speakerOn
           : TotemIcons.speakerOff,
       title: 'Audio route changed',
       message: message,
-      controller: _notificationController,
     );
   }
 
@@ -291,7 +306,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     RoomStatus roomStatus,
   ) {
     if (!mounted || !hasKeeperDisconnected || roomStatus != RoomStatus.active) {
-      _closeKeeperDisconnectedNotification();
+      _dismissKeeperLeftNotification();
       return;
     }
 
@@ -300,27 +315,18 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       return;
     }
 
-    _closeKeeperLeftNotification?.dismissActive();
-    _closeKeeperLeftNotification = null;
-    _closeKeeperLeftNotification = showPermanentNotificationPopup(
+    _closeKeeperLeftNotification = _notificationController.showPermanent(
       context,
       icon: TotemIcons.pause,
       title: 'The session has been paused.',
       message: 'The keeper will be right back.',
-      controller: _notificationController,
     );
   }
 
   void _syncKeeperDisconnectedNotification(
     bool hasKeeperDisconnected,
     RoomStatus roomStatus,
-    RoomConnectionState connectionState,
   ) {
-    if (connectionState != RoomConnectionState.connected) {
-      _closeKeeperDisconnectedNotification();
-      return;
-    }
-
     if (_lastKeeperDisconnectedState == hasKeeperDisconnected &&
         _lastKeeperDisconnectedRoomStatus == roomStatus) {
       return;
@@ -331,6 +337,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      if (ref.read(connectionStateProvider) != RoomConnectionState.connected) {
+        return;
+      }
       _setKeeperDisconnectedNotification(hasKeeperDisconnected, roomStatus);
     });
   }
@@ -344,6 +353,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
     final disconnectReason = ref.watch(disconnectionReasonProvider);
+
+    final cuesService = ref.read(sessionCuesServiceProvider);
+    final emojiNotifier = ref.read(emojiReactionsProvider.notifier);
 
     // Early transient join recovery check: keep showing the loading screen
     // when a join attempt failed transiently (e.g. signaling hiccup). This
@@ -359,17 +371,31 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       return widget.loadingScreen;
     }
 
-    _scheduleTimeRemainingWarning(
-      currentSessionEvent,
-      connectionState,
-      roomStatus,
+    final showingDisconnectedScreen =
+        currentSessionEvent?.ended == true ||
+        roomStatus == RoomStatus.ended ||
+        currentRoomScreen == RoomScreen.disconnected ||
+        currentRoomScreen == RoomScreen.error;
+    _notificationController.blocked = showingDisconnectedScreen;
+    TotemRouter.instance.setTabCloseConfirmationEnabled(
+      roomStatus != RoomStatus.waitingRoom && !showingDisconnectedScreen,
     );
 
-    _syncKeeperDisconnectedNotification(
-      hasKeeperDisconnected,
-      roomStatus,
-      connectionState,
-    );
+    if (currentSessionEvent != null &&
+        connectionState == RoomConnectionState.connected &&
+        roomStatus == RoomStatus.active &&
+        !currentSessionEvent.ended) {
+      _scheduleTimeRemainingWarning(currentSessionEvent);
+    } else {
+      _clearTimeRemainingWarningTimer();
+    }
+
+    if (connectionState == RoomConnectionState.connected &&
+        roomStatus != RoomStatus.ended) {
+      _syncKeeperDisconnectedNotification(hasKeeperDisconnected, roomStatus);
+    } else {
+      _dismissKeeperLeftNotification();
+    }
 
     ref
       ..listen(
@@ -378,14 +404,16 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           if (!mounted) return;
 
           final isListeningTurnScreen =
-              ref.read(resolveCurrentScreenProvider) == RoomScreen.listening;
+              currentRoomScreen == RoomScreen.listening;
 
           for (final reaction in next.where(
             (reaction) => !reaction.displayed,
           )) {
-            ref
-                .read(emojiReactionsProvider.notifier)
-                .displayReaction(context, reaction, isListeningTurnScreen);
+            emojiNotifier.displayReaction(
+              context,
+              reaction,
+              isListeningTurnScreen,
+            );
           }
         },
       )
@@ -393,18 +421,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         sessionLivekitErrorProvider,
         (previous, next) {
           if (next == null) return;
-          if (previous?.toString() == next.toString()) return;
+          if (identical(previous, next)) return;
           _onLivekitError(next);
-        },
-      )
-      ..listen(
-        hasKeeperDisconnectedProvider,
-        (previous, next) {
-          _syncKeeperDisconnectedNotification(
-            next,
-            ref.read(roomStatusProvider),
-            ref.read(connectionStateProvider),
-          );
         },
       )
       ..listen(
@@ -412,12 +430,12 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         (previous, next) {
           if (previous != RoomScreen.receiving &&
               next == RoomScreen.receiving) {
-            ref.read(sessionCuesServiceProvider).playTotemReceivedCue();
+            cuesService.playTotemReceivedCue();
           }
 
           if (next == RoomScreen.disconnected || next == RoomScreen.error) {
-            _clearSessionPopups();
             _clearTimeRemainingWarningTimer();
+            _dismissOfflineNotification(immediately: true);
           }
         },
       )
@@ -430,12 +448,15 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
               previous == RoomStatus.active && next == RoomStatus.ended;
 
           if (isRoomOpeningTransition || isRoomClosingTransition) {
-            ref.read(sessionCuesServiceProvider).playSessionTransitionCue();
+            cuesService.playSessionTransitionCue();
           }
 
-          if (next == RoomStatus.ended) {
-            _clearSessionPopups();
-            _clearTimeRemainingWarningTimer();
+          switch (next) {
+            case RoomStatus.waitingRoom:
+            case RoomStatus.active:
+              break;
+            case RoomStatus.ended:
+              _clearTimeRemainingWarningTimer();
           }
         },
       )
@@ -444,25 +465,37 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         (previous, next) {
           if (next == RoomConnectionState.disconnected ||
               next == RoomConnectionState.error) {
-            _clearSessionPopups();
             _clearTimeRemainingWarningTimer();
           }
+        },
+      )
+      ..listen(
+        isOfflineProvider,
+        (previous, next) {
+          if (!next.hasValue) return;
+          _onConnectivityChanged(
+            next.value!,
+            wasOffline: previous?.value,
+          );
         },
       );
 
     if (currentSession != null) {
+      final audioRouteNotifier = ref.read(
+        sessionDeviceControllerProvider(currentSession).notifier,
+      );
+
       ref.listen(
         sessionDeviceControllerProvider(currentSession),
         (previous, next) {
           if (!mounted || previous == null) return;
 
-          final audioRouteController = ref.read(
-            sessionDeviceControllerProvider(currentSession).notifier,
-          );
-          if (!audioRouteController.audioRouteNotificationsEnabled) return;
+          if (!audioRouteNotifier.audioRouteNotificationsEnabled) return;
 
-          final currentConnectionState = ref.read(connectionStateProvider);
-          if (currentConnectionState != RoomConnectionState.connected) return;
+          if (ref.read(connectionStateProvider) !=
+              RoomConnectionState.connected) {
+            return;
+          }
 
           final routeChanged =
               previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
@@ -480,49 +513,18 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       return widget.loadingScreen;
     }
 
+    final isOffline = ref.watch(isOfflineProvider).value ?? _lastIsOffline;
+
     if (currentSessionEvent.ended || roomStatus == RoomStatus.ended) {
-      return RoomBackground(
-        status: roomStatus,
-        child: SessionDisconnectedScreen(
-          session: currentSessionEvent,
-          disconnectReason: disconnectReason,
-        ),
+      return SessionDisconnectedScreen(
+        session: currentSessionEvent,
+        disconnectReason: disconnectReason,
       );
     }
 
-    // transient join recovery handled earlier
-
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-
-        // Checks if there is any other route above the first route.
-        //   This route would be a modal sheet or a dialog.
-        final navigator = _roomNavigatorKey.currentState;
-        if (navigator?.canPop() ?? false) {
-          navigator?.pop();
-          return;
-        }
-
-        // If there is no other route above the first route, the user is
-        // trying to leave the session.
-
-        // If the session is not connected or connecting, leave the session.
-        if (connectionState != RoomConnectionState.connecting &&
-            connectionState != RoomConnectionState.connected) {
-          TotemRouter.instance.popOrHome(context);
-          return;
-        }
-
-        // If the session is connected, show a dialog to confirm the action.
-        final shouldPop = await showLeaveDialog(context) ?? false;
-        if (context.mounted && shouldPop) {
-          await currentSession.leave();
-          if (!context.mounted) return;
-          TotemRouter.instance.popOrHome(context);
-        }
-      },
+    return SessionKeyboardShortcuts(
+      navigatorKey: _roomNavigatorKey,
+      enableEmojiReactions: currentRoomScreen == RoomScreen.listening,
       child: RoomBackground(
         status: roomStatus,
         child: Navigator(
@@ -535,11 +537,21 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
                 children: [
                   Positioned.fill(
                     child: RepaintBoundary(
-                      child: _buildBody(
-                        currentSession,
-                        currentRoomScreen,
-                        currentSessionEvent,
-                        disconnectReason,
+                      child: PopScope(
+                        canPop: false,
+                        onPopInvokedWithResult: (didPop, result) async {
+                          await _handleBackNavigation(
+                            currentSession,
+                            connectionState,
+                          );
+                        },
+                        child: _buildBody(
+                          currentSession,
+                          currentRoomScreen,
+                          currentSessionEvent,
+                          disconnectReason,
+                          isOffline: isOffline ?? false,
+                        ),
                       ),
                     ),
                   ),
@@ -557,18 +569,67 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     );
   }
 
+  Future<void> _handleBackNavigation(
+    SessionController session,
+    RoomConnectionState connectionState,
+  ) async {
+    // Checks if there is any other route above the first route.
+    //   This route would be a modal sheet or a dialog.
+    final navigator = _roomNavigatorKey.currentState;
+    if (navigator?.canPop() ?? false) {
+      navigator?.pop();
+      return;
+    }
+
+    // If there is no other route above the first route, the user is
+    // trying to leave the session.
+
+    // If the session is not connected or connecting, leave the session.
+    if (connectionState != RoomConnectionState.connecting &&
+        connectionState != RoomConnectionState.connected) {
+      TotemRouter.instance.popOrHome(context);
+      return;
+    }
+
+    // If the session is connected, show a dialog to confirm the action.
+    final shouldPop = await MoreOptions.showLeaveDialog(context) ?? false;
+    if (mounted && shouldPop) {
+      await session.leave();
+      if (!mounted) return;
+      TotemRouter.instance.popOrHome(context);
+    }
+  }
+
   Widget _buildBody(
     SessionController session,
     RoomScreen screen,
     SessionDetailSchema sessionEvent,
-    DisconnectReason? disconnectReason,
-  ) {
+    DisconnectReason? disconnectReason, {
+    required bool isOffline,
+  }) {
+    final isInternetDisconnect =
+        isInternetDisconnectReason(disconnectReason) ||
+        (isOffline &&
+            canOfflineStateOverrideDisconnectReason(disconnectReason));
+    final disconnectionError = disconnectReason == null
+        ? null
+        : RoomDisconnectionError(disconnectReason);
+
     switch (screen) {
       case RoomScreen.error:
-        return SessionErrorScreen(onRetry: session.join);
+        return SessionErrorScreen(
+          onRetry: session.join,
+          error: disconnectionError,
+        );
       case RoomScreen.loading:
         return widget.loadingScreen;
       case RoomScreen.disconnected:
+        if (isInternetDisconnect) {
+          return SessionErrorScreen(
+            onRetry: session.join,
+            error: disconnectionError,
+          );
+        }
         return SessionDisconnectedScreen(
           session: sessionEvent,
           disconnectReason: disconnectReason,
@@ -579,12 +640,12 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       case RoomScreen.passing:
         return Builder(
           builder: (context) {
-            return SpeakingTurnScreen(event: session.event!);
+            return SpeakingTurnScreen(session: session.session!);
           },
         );
       case RoomScreen.listening:
         return ListeningTurnScreen(
-          event: session.event!,
+          session: session.session!,
         );
     }
   }

@@ -7,14 +7,13 @@ import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/screens/loading_screen.dart';
+import 'package:totem_core/features/sessions/widgets/loading_video_placeholder.dart';
+import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
 import 'package:totem_core/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
@@ -147,6 +146,9 @@ class FeaturedParticipantCard extends ConsumerWidget {
                         spacing: 12,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          if (amKeeper &&
+                              session.roomState.status == RoomStatus.active)
+                            const _ElapsedTimer(),
                           Container(
                             width: 24,
                             height: 24,
@@ -202,6 +204,80 @@ class FeaturedParticipantCard extends ConsumerWidget {
   }
 }
 
+class _ElapsedTimer extends ConsumerStatefulWidget {
+  const _ElapsedTimer();
+
+  @override
+  ConsumerState<_ElapsedTimer> createState() => _ElapsedTimerState();
+}
+
+class _ElapsedTimerState extends ConsumerState<_ElapsedTimer> {
+  Timer? _tick;
+  DateTime? _start;
+
+  @override
+  void initState() {
+    super.initState();
+    _start = ref.read(featuredTurnStartTimeProvider);
+    _syncTimer();
+    ref.listenManual(featuredTurnStartTimeProvider, (_, next) {
+      setState(() => _start = next);
+      _syncTimer();
+    });
+  }
+
+  void _syncTimer() {
+    _tick?.cancel();
+    if (_start != null) {
+      _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  String _format(Duration d) {
+    final hours = d.inHours;
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    if (hours > 0) {
+      return '$hours:$minutes:$seconds';
+    }
+    return '$minutes:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_start == null) return const SizedBox.shrink();
+
+    final elapsed = DateTime.now().difference(_start!);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(42),
+        color: Colors.black54,
+      ),
+      child: Text(
+        _format(elapsed),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Colors.white70,
+          fontWeight: FontWeight.w600,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
+}
+
 class ParticipantCard extends ConsumerWidget {
   const ParticipantCard({
     required this.participant,
@@ -220,11 +296,12 @@ class ParticipantCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final session = ref.watch(currentSessionStateProvider);
-    final currentUserIsKeeper = session?.isKeeper(currentUserSlug) ?? false;
+    final amKeeper = session?.isKeeper(currentUserSlug) ?? false;
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
 
     const overlayPadding = 10.0;
     final isKeeper = session?.isKeeper(participant.identity) ?? false;
+    final isSpeaking = participant.identity == session?.speakingNow;
 
     const borderRadius = 20.0;
 
@@ -243,10 +320,20 @@ class ParticipantCard extends ConsumerWidget {
             PositionedDirectional(
               top: overlayPadding,
               start: overlayPadding,
-              child: SpeakingIndicatorOrEmoji(participant: participant),
+              child: Row(
+                spacing: 8,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SpeakingIndicatorOrEmoji(participant: participant),
+                  if (amKeeper &&
+                      isSpeaking &&
+                      session?.roomState.status == RoomStatus.active)
+                    const _ElapsedTimer(),
+                ],
+              ),
             ),
             if (session != null &&
-                currentUserIsKeeper &&
+                amKeeper &&
                 currentUserSlug != participant.identity)
               PositionedDirectional(
                 end: overlayPadding,
@@ -301,284 +388,7 @@ class ParticipantCard extends ConsumerWidget {
   }
 }
 
-class ParticipantControlButton extends ConsumerWidget {
-  const ParticipantControlButton({
-    required this.participant,
-    required this.overlayPadding,
-    this.backgroundColor = Colors.black54,
-    super.key,
-  });
-
-  final Participant participant;
-  final double overlayPadding;
-
-  final Color backgroundColor;
-
-  static const _menuTextStyle = TextStyle(
-    color: Colors.white,
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-  );
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
-      onTap: () => _showParticipantMenu(context),
-      child: Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: backgroundColor,
-        ),
-        padding: const EdgeInsetsDirectional.all(2),
-        alignment: AlignmentDirectional.center,
-        child: const TotemIcon(
-          TotemIcons.moreVertical,
-          size: 16,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showParticipantMenu(BuildContext context) async {
-    final box = context.findRenderObject() as RenderBox?;
-    if (box == null) return;
-
-    final buttonTopLeft = box.localToGlobal(Offset.zero);
-    final buttonRect = buttonTopLeft & box.size;
-
-    final position = _calculateMenuPosition(
-      buttonRect: buttonRect,
-      screenSize: MediaQuery.sizeOf(context),
-    );
-
-    await showMenu(
-      context: context,
-      useRootNavigator: false,
-      constraints: const BoxConstraints(),
-      position: position,
-      color: Colors.black.withValues(alpha: 0.8),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(16)),
-      ),
-      elevation: 0,
-      menuPadding: EdgeInsetsDirectional.zero,
-      clipBehavior: Clip.hardEdge,
-      items: _buildMenuItems(context),
-    );
-  }
-
-  RelativeRect _calculateMenuPosition({
-    required Rect buttonRect,
-    required Size screenSize,
-  }) {
-    const menuWidth = 170.0;
-    const verticalGap = 8.0;
-    const screenPadding = 8.0;
-
-    final maxLeft = (screenSize.width - menuWidth - screenPadding).clamp(
-      screenPadding,
-      double.infinity,
-    );
-
-    final left = (buttonRect.right - menuWidth).clamp(screenPadding, maxLeft);
-    final top = (buttonRect.bottom + verticalGap).clamp(
-      screenPadding,
-      screenSize.height - screenPadding,
-    );
-
-    return RelativeRect.fromLTRB(
-      left,
-      top,
-      screenSize.width - left - menuWidth,
-      screenSize.height - top,
-    );
-  }
-
-  List<PopupMenuEntry<void>> _buildMenuItems(
-    BuildContext context,
-  ) {
-    return [
-      if (participant.hasAudio)
-        PopupMenuItem<void>(
-          enabled: !participant.isMuted,
-          onTap: () => _onMuteParticipant(context),
-          textStyle: _menuTextStyle,
-          child: Row(
-            spacing: 8,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const TotemIcon(
-                TotemIcons.microphoneOff,
-                size: 20,
-                color: Colors.white,
-              ),
-              Text(
-                participant.isMuted ? 'Muted' : 'Mute',
-                style: _menuTextStyle,
-              ),
-            ],
-          ),
-        ),
-      PopupMenuItem<void>(
-        onTap: () => _onRemoveParticipant(context),
-        textStyle: _menuTextStyle,
-        child: const Row(
-          spacing: 8,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TotemIcon(
-              TotemIcons.removePerson,
-              size: 20,
-              color: Colors.white,
-            ),
-            Text('Remove', style: _menuTextStyle),
-          ],
-        ),
-      ),
-      PopupMenuItem<void>(
-        onTap: () => _onBanParticipant(context),
-        textStyle: _menuTextStyle,
-        child: const Row(
-          spacing: 8,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TotemIcon(
-              TotemIcons.removePerson,
-              size: 20,
-              color: Colors.white,
-            ),
-            Text('Ban', style: _menuTextStyle),
-          ],
-        ),
-      ),
-    ];
-  }
-
-  Future<void> _onMuteParticipant(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      useRootNavigator: false,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final user = ref.watch(userProfileProvider(participant.identity));
-            final currentSession = ref.watch(currentSessionProvider);
-            return ConfirmationDialog(
-              iconWidget: user
-                  .whenData(
-                    (user) => UserAvatar.fromUserSchema(user, radius: 40),
-                  )
-                  .value,
-              confirmButtonText: 'Mute',
-              title: 'Mute ${participant.name}',
-              content: 'They can unmute themselves anytime.',
-              onConfirm: () async {
-                try {
-                  await currentSession?.keeper.muteParticipant(
-                    participant.identity,
-                  );
-                } catch (error) {
-                  if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(context, error);
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
-              type: ConfirmationDialogType.standard,
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _onRemoveParticipant(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      useRootNavigator: false,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final user = ref.watch(userProfileProvider(participant.identity));
-            final currentSession = ref.watch(currentSessionProvider);
-            return ConfirmationDialog(
-              iconWidget: user
-                  .whenData(
-                    (user) => UserAvatar.fromUserSchema(user, radius: 40),
-                  )
-                  .value,
-              confirmButtonText: 'Remove',
-              content:
-                  'Are you sure you want to remove '
-                  '${participant.name}?',
-              onConfirm: () async {
-                try {
-                  await currentSession?.keeper.removeParticipant(
-                    participant.identity,
-                  );
-                } catch (error) {
-                  if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(context, error);
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _onBanParticipant(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      useRootNavigator: false,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final user = ref.watch(userProfileProvider(participant.identity));
-            final currentSession = ref.watch(currentSessionProvider);
-            return ConfirmationDialog(
-              iconWidget: user
-                  .whenData(
-                    (user) => UserAvatar.fromUserSchema(user, radius: 40),
-                  )
-                  .value,
-              confirmButtonText: 'Ban',
-              content:
-                  'Are you sure you want to ban '
-                  '${participant.name}? They will not be able to rejoin the session.',
-              onConfirm: () async {
-                try {
-                  await currentSession?.keeper.banParticipant(
-                    participant.identity,
-                  );
-                } catch (error) {
-                  if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(context, error);
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class LocalParticipantCard extends ConsumerStatefulWidget {
+class LocalParticipantCard extends ConsumerWidget {
   const LocalParticipantCard({
     this.isCameraOn = true,
     this.audioTrack,
@@ -590,38 +400,17 @@ class LocalParticipantCard extends ConsumerStatefulWidget {
   final AudioTrack? audioTrack;
   final VideoTrack? videoTrack;
 
-  @override
-  ConsumerState<LocalParticipantCard> createState() =>
-      _LocalParticipantCardState();
-}
-
-class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
   bool get _isVideoTrackVisible =>
-      widget.videoTrack != null &&
-      widget.videoTrack!.isActive &&
-      !widget.videoTrack!.muted;
+      videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
 
   @override
-  void didUpdateWidget(LocalParticipantCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // TODO(totem): Show a placeholder while video initializes
-    // Investigate better ways to display the video only when the video is initialized
-    // This delay is necessary because the native video view needs a moment to initialize and display
-    // the first frame after the track is unmuted or becomes active. Without this, we might see a brief
-    // flash of the avatar before the video appears.
-    // https://github.com/livekit/client-sdk-flutter/issues/1061
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final user = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
 
-    final showAvatar = !widget.isCameraOn || !_isVideoTrackVisible;
-
-    final isVideoTrackVisible = _isVideoTrackVisible;
+    final showVideo = isCameraOn && _isVideoTrackVisible;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
@@ -630,47 +419,40 @@ class _LocalParticipantCardState extends ConsumerState<LocalParticipantCard> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            const Positioned.fill(child: ColoredBox(color: Colors.black)),
-            if (isVideoTrackVisible)
-              IgnorePointer(
-                child: VideoTrackRenderer(
-                  widget.videoTrack!,
-                  key: ValueKey(widget.videoTrack!.sid),
-                  fit: VideoViewFit.cover,
-                  renderMode: VideoRenderMode.platformView,
+            Positioned.fill(
+              child: IgnorePointer(
+                child: UserAvatar.currentUser(
+                  radius: 0,
+                  borderRadius: BorderRadius.zero,
+                  borderWidth: 0,
                 ),
-              )
-            else if (!showAvatar)
-              const LoadingVideoPlaceholder(),
-            AnimatedOpacity(
-              opacity: showAvatar ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 250),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: UserAvatar.currentUser(
-                        radius: 0,
-                        borderRadius: BorderRadius.zero,
-                        borderWidth: 0,
+              ),
+            ),
+            AnimatedSwitcher(
+              duration: kThemeAnimationDuration,
+              child: showVideo
+                  ? IgnorePointer(
+                      child: VideoTrackRenderer(
+                        videoTrack!,
+                        key: ValueKey(videoTrack!.sid),
+                        fit: VideoViewFit.cover,
+                        renderMode: VideoRenderMode.platformView,
                       ),
-                    ),
-                  ),
-                  PositionedDirectional(
-                    bottom: 14,
-                    start: 14,
-                    end: 14,
-                    child: SmartNameText(
-                      name: user?.name ?? 'You',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        shadows: kElevationToShadow[6],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
+                    )
+                  : const SizedBox(),
+            ),
+            PositionedDirectional(
+              bottom: 14,
+              start: 14,
+              end: 14,
+              child: SmartNameText(
+                name: user?.name ?? 'You',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  shadows: kElevationToShadow[6],
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -690,19 +472,43 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 }
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
-  // --- Debug Stats State ---
-  int _currentBitrate = 0;
-  num frameHeight = 0;
-  num frameWidth = 0;
-  num fps = 0;
-  String? qualityLimitationReason;
-  String? decoderImplementation;
-  String? mimeType;
+  final GlobalKey videoKey = GlobalKey();
 
-  void resetStats() {
-    _currentBitrate = frameHeight = frameWidth = 0;
-    qualityLimitationReason = decoderImplementation = mimeType = null;
-    fps = 0;
+  EventsListener<ParticipantEvent>? _listener;
+  void _setupListeners() {
+    _listener?.dispose();
+    _listener = widget.participant.createListener()
+      ..on<TrackMutedEvent>(_onTrackMuted)
+      ..on<TrackUnmutedEvent>(_onTrackUnmuted)
+      ..on<ParticipantEvent>(_onParticipantUpdated);
+  }
+
+  void _onTrackMuted(TrackMutedEvent event) {
+    if (event.publication.source != TrackSource.camera) return;
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _onTrackUnmuted(TrackUnmutedEvent event) {
+    if (event.publication.source != TrackSource.camera) return;
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _onParticipantUpdated(ParticipantEvent _) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _setupListeners();
+  }
+
+  @override
+  void dispose() {
+    _listener?.dispose();
+    super.dispose();
   }
 
   TrackPublication<Track>? get videoTrack {
@@ -723,23 +529,116 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     }
   }
 
-  EventsListener<ParticipantEvent>? _listener;
+  @override
+  Widget build(BuildContext context) {
+    final currentUser = ref.watch(
+      authControllerProvider.select((auth) => auth.user),
+    );
+    final user = ref.watch(userProfileProvider(widget.participant.identity));
+    final trackPublication = videoTrack;
+
+    /// The user avatar is always rendered behind the video.
+    ///
+    ///  1. If the user swipes the app away or close the browser tab and stops emitting data,
+    ///     the video turns transparent and the user avatar remains visible.
+    ///  2. If the user disabled their camera (muted track), the user avatar remains visible.
+    ///  3. In all other cases, the video is displayed normally.
+    final content = Stack(
+      children: [
+        Positioned.fill(
+          child: IgnorePointer(
+            child: widget.participant.identity == currentUser?.slug
+                ? UserAvatar.currentUser(
+                    radius: 0,
+                    borderRadius: BorderRadius.zero,
+                    borderWidth: 0,
+                  )
+                : user.when(
+                    data: (user) => UserAvatar.fromUserSchema(
+                      user,
+                      borderRadius: BorderRadius.zero,
+                      borderWidth: 0,
+                    ),
+                    error: (error, stackTrace) => const ColoredBox(
+                      color: AppTheme.mauve,
+                      child: Center(
+                        child: TotemIcon(
+                          TotemIcons.person,
+                          size: 24,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    loading: () =>
+                        const LoadingVideoPlaceholder(borderRadius: 0),
+                  ),
+          ),
+        ),
+        if (trackPublication != null &&
+            trackPublication.track != null &&
+            trackPublication.subscribed &&
+            !trackPublication.muted)
+          IgnorePointer(
+            child: VideoTrackRenderer(
+              key: videoKey,
+              trackPublication.track! as VideoTrack,
+              fit: VideoViewFit.cover,
+              renderMode: VideoRenderMode.platformView,
+            ),
+          ),
+      ],
+    );
+
+    if (kDebugMode || currentUser?.isStaff == true) {
+      return _ParticipantVideoStatistics(
+        participant: widget.participant,
+        trackPublication: trackPublication,
+        child: content,
+      );
+    }
+
+    return content;
+  }
+}
+
+class _ParticipantVideoStatistics extends StatefulWidget {
+  const _ParticipantVideoStatistics({
+    required this.participant,
+    required this.trackPublication,
+    required this.child,
+  });
+
+  final Participant<TrackPublication<Track>> participant;
+  final TrackPublication<Track>? trackPublication;
+  final Widget child;
+
+  @override
+  State<_ParticipantVideoStatistics> createState() =>
+      _ParticipantVideoStatisticsState();
+}
+
+class _ParticipantVideoStatisticsState
+    extends State<_ParticipantVideoStatistics> {
+  // --- Debug Stats State ---
+  int _currentBitrate = 0;
+  num frameHeight = 0;
+  num frameWidth = 0;
+  num fps = 0;
+  String? qualityLimitationReason;
+  String? decoderImplementation;
+  String? mimeType;
+
+  void resetStats() {
+    _currentBitrate = frameHeight = frameWidth = 0;
+    qualityLimitationReason = decoderImplementation = mimeType = null;
+    fps = 0;
+  }
+
   EventsListener<TrackEvent>? _trackListener;
   String? _listenedTrackSid;
 
   void _setupListeners() {
-    _listener?.dispose();
-    _listener = widget.participant.createListener()
-      ..on<TrackMutedEvent>(_onTrackMuted)
-      ..on<TrackUnmutedEvent>(_onTrackUnmuted)
-      ..on<ParticipantEvent>(_onParticipantUpdated);
-
-    _bindTrackListener();
-  }
-
-  void _bindTrackListener() {
-    final publication = videoTrack;
-    final track = publication?.track;
+    final track = widget.trackPublication?.track;
     final trackSid = track?.sid;
 
     if (_listenedTrackSid == trackSid && _trackListener != null) {
@@ -758,25 +657,17 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   @override
   void initState() {
     super.initState();
+    // When user is a local participant, the track is not inactive by default.
+    if (widget.participant is LocalParticipant) {
+      _isTrackInactive = false;
+    } else {
+      _isTrackInactive = true;
+    }
     _setupListeners();
   }
 
-  void _onTrackMuted(TrackMutedEvent event) {
-    if (event.publication.source != TrackSource.camera) return;
-    if (!mounted) return;
-    _bindTrackListener();
-    setState(() {});
-  }
-
-  void _onTrackUnmuted(TrackUnmutedEvent event) {
-    if (event.publication.source != TrackSource.camera) return;
-    if (!mounted) return;
-    _bindTrackListener();
-    setState(() {});
-  }
-
   // Whether the track is inactive due to poor network conditions.
-  bool _isTrackInactive = false;
+  late bool _isTrackInactive;
 
   void _onTrackEvent(TrackEvent event) {
     if (!mounted) return;
@@ -793,7 +684,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         mimeType = event.stats.mimeType;
 
         _currentBitrate = bitrate.round();
-        _isTrackInactive = bitrate < 10;
+        _isTrackInactive = bitrate <= 0;
       });
     } else if (event is VideoSenderStatsEvent) {
       resetStats();
@@ -805,28 +696,23 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         fps = stats?.framesPerSecond ?? 0;
         qualityLimitationReason = stats?.qualityLimitationReason;
         mimeType = stats?.mimeType;
-
         _currentBitrate = event.currentBitrate.round();
       });
     }
   }
 
-  void _onParticipantUpdated(ParticipantEvent _) {
-    _bindTrackListener();
-    if (mounted) setState(() {});
-  }
-
   @override
-  void didUpdateWidget(covariant ParticipantVideo oldWidget) {
+  void didUpdateWidget(covariant _ParticipantVideoStatistics oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant.sid != widget.participant.sid) {
+    if (oldWidget.participant.sid != widget.participant.sid ||
+        oldWidget.trackPublication?.track?.sid !=
+            widget.trackPublication?.track?.sid) {
       _setupListeners();
     }
   }
 
   @override
   void dispose() {
-    _listener?.dispose();
     _trackListener?.dispose();
     super.dispose();
   }
@@ -835,129 +721,46 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = ref.watch(
-      authControllerProvider.select((auth) => auth.user),
-    );
-    final user = ref.watch(userProfileProvider(widget.participant.identity));
-    final trackPublication = videoTrack;
-
-    final shouldShowAvatar = () {
-      if (trackPublication == null ||
-          !trackPublication.subscribed ||
-          trackPublication.muted ||
-          _isTrackInactive) {
-        return true;
-      }
-      return false;
-    }();
-
-    final content = Stack(
-      children: [
-        if (trackPublication != null &&
-            trackPublication.subscribed &&
-            !trackPublication.muted &&
-            !_isTrackInactive)
-          IgnorePointer(
-            child: ColoredBox(
-              color: Colors.black,
-              child: VideoTrackRenderer(
-                key: ValueKey(trackPublication.track!.sid),
-                trackPublication.track! as VideoTrack,
-                fit: VideoViewFit.cover,
-                renderMode: VideoRenderMode.platformView,
-              ),
-            ),
-          ),
-        if (shouldShowAvatar)
-          Positioned.fill(
-            child: Builder(
-              builder: (context) {
-                final localUserSlug = ref.watch(
-                  authControllerProvider.select((auth) => auth.user?.slug),
-                );
-                if (widget.participant.identity == localUserSlug) {
-                  return IgnorePointer(
-                    child: UserAvatar.currentUser(
-                      radius: 0,
-                      borderRadius: BorderRadius.zero,
-                      borderWidth: 0,
-                    ),
-                  );
-                } else {
-                  return IgnorePointer(
-                    child: user.when(
-                      data: (user) {
-                        return UserAvatar.fromUserSchema(
-                          user,
-                          borderRadius: BorderRadius.zero,
-                          borderWidth: 0,
-                        );
-                      },
-                      error: (error, stackTrace) {
-                        return const ColoredBox(
-                          color: AppTheme.mauve,
-                          child: Center(
-                            child: TotemIcon(
-                              TotemIcons.person,
-                              size: 24,
-                              color: Colors.white,
-                            ),
-                          ),
-                        );
-                      },
-                      loading: () =>
-                          const LoadingVideoPlaceholder(borderRadius: 0),
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
-      ],
-    );
-
-    if (kDebugMode || currentUser?.isStaff == true) {
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => setState(
-          () => _shouldShowStatistics = !_shouldShowStatistics,
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            content,
-            if (_shouldShowStatistics)
-              Positioned(
-                left: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'Bitrate: $_currentBitrate\n'
-                    'Res: ${frameWidth}x$frameHeight\n'
-                    'FPS: $fps\n'
-                    'Mime: ${mimeType ?? 'None'}\n'
-                    'Is off: $_isTrackInactive',
-                    style: const TextStyle(
-                      color: Colors.greenAccent,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      height: 1.3,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(
+        () => _shouldShowStatistics = !_shouldShowStatistics,
+      ),
+      child: _shouldShowStatistics
+          ? Stack(
+              fit: StackFit.expand,
+              children: [
+                widget.child,
+                Positioned.fill(
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Bitrate: $_currentBitrate\n'
+                        'Res: ${frameWidth}x$frameHeight\n'
+                        'FPS: $fps\n'
+                        'Mime: ${mimeType ?? 'None'}\n'
+                        'Is off: $_isTrackInactive',
+                        style: const TextStyle(
+                          color: Colors.greenAccent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          height: 1.3,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
-        ),
-      );
-    }
-
-    return content;
+              ],
+            )
+          : widget.child,
+    );
   }
 }

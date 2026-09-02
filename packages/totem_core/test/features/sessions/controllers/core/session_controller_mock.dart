@@ -77,7 +77,7 @@ class FakeSessionController implements SessionController {
   }
 
   @override
-  void markParticipantRemoved() {}
+  void markParticipantRemoved(RemoveReason reason) {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

@@ -11,6 +11,7 @@ import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
@@ -18,16 +19,6 @@ import 'package:totem_core/shared/widgets/totem_icon.dart';
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../livekit_mocks.dart';
-
-class FakeTrackEventsListener extends MockTrackEventsListener {
-  void Function(TrackEvent)? capturedListener;
-
-  @override
-  CancelListenFunc listen(void Function(TrackEvent event) listener) {
-    capturedListener = listener;
-    return () async {};
-  }
-}
 
 void main() {
   late MockRemoteParticipant remoteParticipant;
@@ -47,10 +38,6 @@ void main() {
   setUp(() {
     remoteParticipant = MockRemoteParticipant('user-2', 'John Doe');
     fakeSessionState = FakeSessionController();
-
-    when(
-      () => remoteParticipant.createListener(),
-    ).thenReturn(MockParticipantEventsListener());
   });
 
   Future<void> pumpWidget(
@@ -146,9 +133,6 @@ void main() {
       tester,
     ) async {
       final keeperParticipant = MockRemoteParticipant('keeper-1', 'The Keeper');
-      when(
-        keeperParticipant.createListener,
-      ).thenReturn(MockParticipantEventsListener());
 
       // Add keeper-1 as keeper to the room state
       fakeSessionState.mockState = SessionRoomState(
@@ -233,19 +217,29 @@ void main() {
   });
 
   group('ParticipantVideo', () {
-    testWidgets('hides track when connection is lost (isTrackInactive)', (
+    testWidgets('hides track when muted', (
       tester,
     ) async {
       final mockParticipant = MockRemoteParticipant('user-2', 'John Doe');
-      final mockPublication = MockRemoteTrackPublication();
+      Future<void> show() {
+        return pumpWidget(
+          tester,
+          authState: AuthState.unauthenticated(),
+          overrides: [
+            currentSessionStateProvider.overrideWithValue(
+              fakeSessionState.mockState,
+            ),
+          ],
+          child: ParticipantVideo(participant: mockParticipant),
+        );
+      }
+
+      final mockPublication = MockRemoteTrackPublication<RemoteVideoTrack>();
       final mockTrack = MockRemoteVideoTrack();
 
       when(
         () => mockParticipant.getTrackPublicationBySource(TrackSource.camera),
       ).thenReturn(mockPublication);
-      when(
-        mockParticipant.createListener,
-      ).thenReturn(MockParticipantEventsListener());
 
       when(() => mockPublication.track).thenReturn(mockTrack);
       when(() => mockPublication.source).thenReturn(TrackSource.camera);
@@ -253,34 +247,102 @@ void main() {
       when(() => mockPublication.subscribed).thenReturn(true);
       when(() => mockPublication.muted).thenReturn(false);
 
-      final trackListener = FakeTrackEventsListener();
-      when(mockTrack.createListener).thenReturn(trackListener);
       when(() => mockTrack.sid).thenReturn('track-sid');
       when(() => mockTrack.isActive).thenReturn(true);
       when(() => mockTrack.muted).thenReturn(false);
 
-      await pumpWidget(
-        tester,
-        authState: AuthState.unauthenticated(),
-        overrides: [
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
-          ),
-        ],
-        child: ParticipantVideo(participant: mockParticipant),
-      );
-
+      await show();
       await tester.pumpAndSettle();
 
       expect(find.byType(VideoTrackRenderer), findsOneWidget);
 
-      final event = MockVideoReceiverStatsEvent();
-      when(() => event.currentBitrate).thenReturn(5);
-      trackListener.capturedListener?.call(event);
+      when(() => mockPublication.muted).thenReturn(true);
+      when(() => mockTrack.muted).thenReturn(true);
 
+      await show();
       await tester.pumpAndSettle();
 
       expect(find.byType(VideoTrackRenderer), findsNothing);
     });
   });
+
+  group('ParticipantControlButton', () {
+    testWidgets('closes menu when unmounted', (tester) async {
+      // Use a StatefulWidget wrapper to toggle button visibility.
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => FakeAuthController(AuthState.unauthenticated()),
+            ),
+            userProfileProvider.overrideWith(
+              (ref, slug) => Future.value(
+                PublicUserSchema(
+                  slug: slug,
+                  name: 'Mocked User $slug',
+                  profileAvatarType: ProfileAvatarTypeEnum.td,
+                  circleCount: 0,
+                  dateCreated: DateTime.now(),
+                ),
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: _MenuCloseTestWrapper(
+                participant: remoteParticipant,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Tap the control button to open the menu.
+      await tester.tap(find.byType(ParticipantControlButton));
+      await tester.pumpAndSettle();
+
+      // The menu should be visible.
+      expect(find.text('Remove'), findsOneWidget);
+      expect(find.text('Ban'), findsOneWidget);
+
+      // Unmount the control button by toggling visibility.
+      final _ = tester
+          .state<_MenuCloseTestWrapperState>(
+            find.byType(_MenuCloseTestWrapper),
+          )
+          .hide();
+      await tester.pumpAndSettle();
+
+      // The menu should be gone.
+      expect(find.text('Remove'), findsNothing);
+      expect(find.text('Ban'), findsNothing);
+    });
+  });
+}
+
+class _MenuCloseTestWrapper extends StatefulWidget {
+  const _MenuCloseTestWrapper({required this.participant});
+
+  final Participant participant;
+
+  @override
+  State<_MenuCloseTestWrapper> createState() => _MenuCloseTestWrapperState();
+}
+
+class _MenuCloseTestWrapperState extends State<_MenuCloseTestWrapper> {
+  bool _visible = true;
+
+  void hide() => setState(() => _visible = false);
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: _visible
+          ? ParticipantControlButton(
+              participant: widget.participant,
+              overlayPadding: 10,
+            )
+          : const SizedBox.shrink(),
+    );
+  }
 }

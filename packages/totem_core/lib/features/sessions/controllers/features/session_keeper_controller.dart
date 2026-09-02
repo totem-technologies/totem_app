@@ -5,8 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_core/features/sessions/controllers/core/session_controller.dart'
-    hide session;
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/shared/logger.dart';
 
@@ -24,7 +23,7 @@ class SessionKeeperController extends _$SessionKeeperController {
 
   SessionRoomState get _state => session.state;
 
-  String get _eventSlug => session.options.eventSlug;
+  String get _sessionSlug => session.options.sessionSlug;
 
   int get _roomVersion => _state.roomState.version;
 
@@ -57,7 +56,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   }
 
   Future<T> _run<T>({
-    required Future<T> Function() action,
+    required AsyncValueGetter<T> action,
     required String errorMessage,
     Duration? timeout,
   }) async {
@@ -98,7 +97,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final roomState = await _run(
       action: () => ref.read(
         passTotemProvider(
-          _eventSlug,
+          _sessionSlug,
           _roomVersion,
           roundMessage: roundMessage,
         ).future,
@@ -109,27 +108,41 @@ class SessionKeeperController extends _$SessionKeeperController {
     logger.i('Passed totem successfully');
   }
 
+  /// Accepts the totem and enables the microphone.
+  ///
+  /// Throws a [StateError] if the user is not the next participant or there is no keeper.
   Future<void> acceptTotem() async {
     final room = session.room;
     if (room == null || !_state.amNext(room)) {
       throw StateError("Not the user's turn to accept the totem");
     }
     if (!_state.hasKeeper) {
-      throw StateError('No keeper in the session to accept the totem');
+      throw StateError('There is no Keeper in the session to accept the totem');
     }
 
-    final roomState = await _run(
-      action: () => ref.read(
-        acceptTotemProvider(
-          _eventSlug,
-          _roomVersion,
-        ).future,
-      ),
-      errorMessage: 'Error accepting totem',
-    );
-    session.applyRoomState(roomState);
-    await session.devices.enableMicrophone();
-    logger.i('Accepted totem successfully');
+    final wasMicEnabled = session.devices.isMicrophoneEnabled;
+    final micFuture = session.devices.enableMicrophone();
+
+    try {
+      final roomState = await _run(
+        action: () => ref.read(
+          acceptTotemProvider(
+            _sessionSlug,
+            _roomVersion,
+          ).future,
+        ),
+        errorMessage: 'Error accepting totem',
+      );
+      session.applyRoomState(roomState);
+      await micFuture;
+      logger.i('Accepted totem successfully');
+    } catch (e) {
+      await micFuture.catchError((_) {});
+      if (!wasMicEnabled) {
+        await session.devices.disableMicrophone();
+      }
+      rethrow;
+    }
   }
 
   Future<void> reorder(List<String> newOrder) async {
@@ -137,7 +150,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final roomState = await _run(
       action: () => ref.read(
         reorderParticipantsProvider(
-          _eventSlug,
+          _sessionSlug,
           newOrder,
           _roomVersion,
         ).future,
@@ -153,7 +166,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final roomState = await _run(
       action: () => ref.read(
         forcePassTotemProvider(
-          _eventSlug,
+          _sessionSlug,
           _roomVersion,
         ).future,
       ),
@@ -168,7 +181,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     await _run<void>(
       action: () => ref.read(
         removeParticipantProvider(
-          _eventSlug,
+          _sessionSlug,
           participantSlug,
         ).future,
       ),
@@ -178,14 +191,15 @@ class SessionKeeperController extends _$SessionKeeperController {
     logger.i('Removed participant $participantSlug successfully');
   }
 
-  Future<bool> startSession() async {
+  Future<bool> startSession({String? prompt}) async {
     if (!session.isCurrentUserKeeper()) return false;
     try {
       final roomState = await _run(
         action: () => ref.read(
           startSessionProvider(
-            _eventSlug,
+            _sessionSlug,
             _roomVersion,
+            prompt: prompt,
           ).future,
         ),
         errorMessage: 'Error starting session',
@@ -204,7 +218,7 @@ class SessionKeeperController extends _$SessionKeeperController {
       final roomState = await _run(
         action: () => ref.read(
           endSessionProvider(
-            _eventSlug,
+            _sessionSlug,
             _roomVersion,
           ).future,
         ),
@@ -223,7 +237,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final roomState = await _run(
       action: () => ref.read(
         banParticipantProvider(
-          _eventSlug,
+          _sessionSlug,
           participantSlug,
           _roomVersion,
         ).future,
@@ -242,7 +256,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final roomState = await _run(
       action: () => ref.read(
         unbanParticipantProvider(
-          _eventSlug,
+          _sessionSlug,
           participantSlug,
           _roomVersion,
         ).future,
@@ -254,12 +268,27 @@ class SessionKeeperController extends _$SessionKeeperController {
     logger.i('Unbanned participant $participantSlug successfully');
   }
 
+  Future<void> disableParticipantCamera(String participantSlug) async {
+    if (!session.isCurrentUserKeeper()) return;
+    await _run<void>(
+      action: () => ref.read(
+        disableParticipantCameraProvider(
+          _sessionSlug,
+          participantSlug,
+        ).future,
+      ),
+      errorMessage: 'Error disable participant camera $participantSlug',
+      timeout: const Duration(seconds: 20),
+    );
+    logger.i('Disabled participant $participantSlug camera successfully');
+  }
+
   Future<void> muteParticipant(String participantSlug) async {
     if (!session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(
         muteParticipantProvider(
-          _eventSlug,
+          _sessionSlug,
           participantSlug,
         ).future,
       ),
@@ -272,9 +301,25 @@ class SessionKeeperController extends _$SessionKeeperController {
   Future<void> muteEveryone() async {
     if (!session.isCurrentUserKeeper()) return;
     await _run<void>(
-      action: () => ref.read(muteEveryoneProvider(_eventSlug).future),
+      action: () => ref.read(muteEveryoneProvider(_sessionSlug).future),
       errorMessage: 'Error muting everyone',
       timeout: const Duration(seconds: 20),
     );
+  }
+
+  Future<void> setPrompt(String prompt) async {
+    if (!session.isCurrentUserKeeper()) return;
+    final roomState = await _run(
+      action: () => ref.read(
+        setPromptProvider(
+          _sessionSlug,
+          _roomVersion,
+          prompt,
+        ).future,
+      ),
+      errorMessage: 'Error setting prompt',
+    );
+    session.applyRoomState(roomState);
+    logger.i('Set prompt successfully');
   }
 }

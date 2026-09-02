@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:livekit_client/src/core/engine.dart';
-import 'package:livekit_client/src/stats/stats.dart' show VideoReceiverStats;
+
 import 'package:livekit_client/src/track/video_track_view_registration.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -57,11 +57,15 @@ VoidCallback stubFlutterWebRtcChannels() {
 }
 
 class MockLocalParticipant extends Mock implements LocalParticipant {
-  MockLocalParticipant([this.id = 'local-participant']);
+  MockLocalParticipant([
+    this.id = 'local-participant',
+    this.participantName = 'Local Participant',
+  ]);
   final String id;
+  final String participantName;
 
   @override
-  String get name => 'Local Participant';
+  String get name => participantName;
 
   @override
   String get identity => id;
@@ -76,7 +80,17 @@ class MockLocalParticipant extends Mock implements LocalParticipant {
   List<LocalTrackPublication<LocalVideoTrack>> get videoTrackPublications => [];
 
   @override
-  List<LocalTrackPublication<LocalTrack>> getTrackPublications() => [];
+  List<LocalTrackPublication<LocalTrack>> getTrackPublications() =>
+      localTrackPublications;
+
+  List<LocalTrackPublication<LocalTrack>> localTrackPublications = [];
+
+  final listener = _MockParticipantEventsListener();
+
+  @override
+  EventsListener<ParticipantEvent> createListener({
+    bool synchronized = false,
+  }) => listener;
 }
 
 class FakeRoom extends Fake implements Room {
@@ -111,7 +125,10 @@ class FakeEngine extends Fake implements Engine {
   }
 }
 
-class FakeCameraCaptureOptions extends Fake implements CameraCaptureOptions {}
+class FakeCameraCaptureOptions extends Fake implements CameraCaptureOptions {
+  @override
+  CameraPosition get cameraPosition => CameraPosition.front;
+}
 
 class MockRemoteParticipant extends Mock implements RemoteParticipant {
   MockRemoteParticipant(this.id, this.name);
@@ -130,6 +147,9 @@ class MockRemoteParticipant extends Mock implements RemoteParticipant {
   bool get hasAudio => true;
 
   @override
+  bool get hasVideo => false;
+
+  @override
   bool get isMuted => false;
 
   @override
@@ -138,6 +158,13 @@ class MockRemoteParticipant extends Mock implements RemoteParticipant {
 
   @override
   List<RemoteTrackPublication<RemoteTrack>> getTrackPublications() => [];
+
+  final listener = _MockParticipantEventsListener();
+
+  @override
+  EventsListener<ParticipantEvent> createListener({
+    bool synchronized = false,
+  }) => listener;
 }
 
 class MockRemoteAudioTrack extends Mock implements RemoteAudioTrack {
@@ -162,16 +189,10 @@ class MockRemoteAudioTrack extends Mock implements RemoteAudioTrack {
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #createListener) {
-      return trackListener;
-    }
-    return super.noSuchMethod(invocation);
-  }
+  EventsListener<TrackEvent> createListener({
+    bool synchronized = false,
+  }) => trackListener;
 }
-
-class MockRemoteAudioTrackPublication extends Mock
-    implements RemoteTrackPublication<RemoteAudioTrack> {}
 
 class MockTrackMutedEvent extends Mock implements TrackMutedEvent {}
 
@@ -179,17 +200,36 @@ class MockTrackUnmutedEvent extends Mock implements TrackUnmutedEvent {}
 
 class MockTrackEvent extends Mock implements TrackEvent {}
 
-class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {}
+class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {
+  MockMediaStreamTrack() {
+    when(getSettings).thenReturn({});
+  }
 
-class MockParticipantEventsListener extends Mock
+  @override
+  webrtc.StreamTrackCallback? onEnded;
+}
+
+class _MockParticipantEventsListener extends Mock
     implements EventsListener<ParticipantEvent> {
+  void Function(TrackMutedEvent event)? onMuted;
+  void Function(TrackUnmutedEvent event)? onUnmuted;
+
   @override
   CancelListenFunc on<E>(
     FutureOr<void> Function(E event) listener, {
     bool Function(E)? filter,
   }) {
+    if (E == TrackMutedEvent) {
+      onMuted = listener as void Function(TrackMutedEvent);
+    } else if (E == TrackUnmutedEvent) {
+      onUnmuted = listener as void Function(TrackUnmutedEvent);
+    }
     return () async {};
   }
+
+  void emitMuted(TrackMutedEvent event) => onMuted?.call(event);
+
+  void emitUnmuted(TrackUnmutedEvent event) => onUnmuted?.call(event);
 
   @override
   Future<bool> dispose() async {
@@ -197,18 +237,22 @@ class MockParticipantEventsListener extends Mock
   }
 }
 
-class MockRemoteTrackPublication extends Mock
-    implements RemoteTrackPublication<RemoteVideoTrack> {}
+class MockRemoteTrackPublication<T extends RemoteTrack> extends Mock
+    implements RemoteTrackPublication<T> {}
 
 class MockLocalTrackPublication extends Mock
     implements LocalTrackPublication<LocalVideoTrack> {
   MockLocalTrackPublication({
     bool muted = false,
     bool isActive = true,
+    LocalVideoTrack? videoTrack,
   }) {
     when(
       () => track,
-    ).thenAnswer((_) => MockLocalVideoTrack(muted: muted, isActive: isActive));
+    ).thenAnswer(
+      (_) =>
+          videoTrack ?? MockLocalVideoTrack(muted: muted, isActive: isActive),
+    );
   }
 }
 
@@ -227,8 +271,14 @@ dynamic _videoTrackDefaults(Invocation invocation) {
       return null;
     case #source:
       return TrackSource.camera;
+    case #currentOptions:
+      return FakeCameraCaptureOptions();
     case #mediaStream:
       return MockMediaStream();
+    case #mediaStreamTrack:
+      final track = MockMediaStreamTrack();
+      when(track.getSettings).thenReturn({});
+      return track;
   }
   return null;
 }
@@ -236,7 +286,10 @@ dynamic _videoTrackDefaults(Invocation invocation) {
 // Members that legitimately return null from the defaults above; without
 // this allowlist they would fall through to mocktail's noSuchMethod and
 // throw for being unstubbed.
-const _videoTrackVoidMembers = {#unregisterVideoView, #removeViewRegistration};
+const _videoTrackVoidMembers = {
+  #unregisterVideoView,
+  #removeViewRegistration,
+};
 
 class MockRemoteVideoTrack extends Mock implements RemoteVideoTrack {
   @override
@@ -247,6 +300,11 @@ class MockRemoteVideoTrack extends Mock implements RemoteVideoTrack {
       return defaulted;
     }
     return super.noSuchMethod(invocation);
+  }
+
+  @override
+  EventsListener<TrackEvent> createListener({bool synchronized = false}) {
+    return MockTrackEventsListener();
   }
 }
 
@@ -263,6 +321,11 @@ class MockLocalVideoTrack extends Mock implements LocalVideoTrack {
 
   bool _muted;
   bool _isActive;
+
+  @override
+  EventsListener<TrackEvent> createListener({bool synchronized = false}) {
+    return MockTrackEventsListener();
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
@@ -299,6 +362,20 @@ class MockLocalAudioTrack extends Mock implements LocalAudioTrack {
   bool _isActive;
 }
 
+class MockPreJoinLocalVideoTrack extends MockLocalVideoTrack {
+  final mockMediaStreamTrack = MockMediaStreamTrack();
+
+  @override
+  webrtc.MediaStreamTrack get mediaStreamTrack => mockMediaStreamTrack;
+}
+
+class MockPreJoinLocalAudioTrack extends MockLocalAudioTrack {
+  final mockMediaStreamTrack = MockMediaStreamTrack();
+
+  @override
+  webrtc.MediaStreamTrack get mediaStreamTrack => mockMediaStreamTrack;
+}
+
 class MockTrackEventsListener extends Mock
     implements EventsListener<TrackEvent> {
   @override
@@ -320,28 +397,6 @@ class MockTrackEventsListener extends Mock
   }
 }
 
-class CapturingParticipantEventsListener extends MockParticipantEventsListener {
-  void Function(TrackMutedEvent event)? onMuted;
-  void Function(TrackUnmutedEvent event)? onUnmuted;
-
-  @override
-  CancelListenFunc on<E>(
-    FutureOr<void> Function(E event) listener, {
-    bool Function(E)? filter,
-  }) {
-    if (E == TrackMutedEvent) {
-      onMuted = listener as void Function(TrackMutedEvent);
-    } else if (E == TrackUnmutedEvent) {
-      onUnmuted = listener as void Function(TrackUnmutedEvent);
-    }
-    return () async {};
-  }
-
-  void emitMuted(TrackMutedEvent event) => onMuted?.call(event);
-
-  void emitUnmuted(TrackUnmutedEvent event) => onUnmuted?.call(event);
-}
-
 class CapturingTrackEventsListener extends MockTrackEventsListener {
   void Function(TrackEvent event)? capturedListener;
 
@@ -352,15 +407,4 @@ class CapturingTrackEventsListener extends MockTrackEventsListener {
   }
 
   void emit(TrackEvent event) => capturedListener?.call(event);
-}
-
-class MockVideoReceiverStats extends Mock implements VideoReceiverStats {}
-
-class MockVideoReceiverStatsEvent extends Mock
-    implements VideoReceiverStatsEvent {
-  @override
-  dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #stats) return MockVideoReceiverStats();
-    return super.noSuchMethod(invocation);
-  }
 }

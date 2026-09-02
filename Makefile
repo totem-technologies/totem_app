@@ -6,6 +6,7 @@ WEB_DIR := packages/totem_web
 
 clean:
 	@echo "Cleaning build artifacts..."
+	cd $(CORE_DIR) && flutter clean
 	cd $(APP_DIR) && flutter clean
 	rm -rf $(APP_DIR)/build/
 	rm -rf $(APP_DIR)/.dart_tool/build/
@@ -17,18 +18,63 @@ clean:
 	rm -rf $(APP_DIR)/ios/Flutter/Flutter.framework
 	rm -rf $(APP_DIR)/ios/Flutter/App.framework
 # 	rm -rf ~/Library/Developer/Xcode/DerivedData/*
+	cd $(WEB_DIR) && flutter clean
 
-run:
+# Compose packages/*/.env from the layered sources in config/ for a flavor.
+# This is the single source of truth for runtime config; see config/README.md.
+# A deploy overwrites .env with the deployed flavor, so run `make env-dev` to
+# get back to your local development config.
+env-dev:
+	dart scripts/setup_env.dart development
+
+env-staging:
+	dart scripts/setup_env.dart staging
+
+env-prod:
+	dart scripts/setup_env.dart production
+
+run: env-dev
 	@echo "Running app..."
 	cd $(APP_DIR) && flutter run
 
-run-chrome:
+# ASSET_BASE is empty in dev: the splash assets in web/index.html use the
+# {{ASSET_BASE}} placeholder, so define it (to "") here or the token leaks into
+# the splash <img>/background URLs. Empty means relative, which resolves fine
+# against the dev server's "/" base href.
+run-chrome: env-dev
 	@echo "Running app in Chrome..."
-	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173 --web-hostname=0.0.0.0
+	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
 
-run-web:
+run-web: env-dev
 	@echo "Running app in Web Server..."
-	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173 --web-hostname=0.0.0.0 --release
+	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
+
+# Build the web app the way it deploys: mounted at /room/, assets fetched from
+# a separate origin (here the local serve-web "CDN" on :5173). The `development`
+# flavor maps to that local CDN and composes the development .env.
+build-web-release: env-dev
+	@echo "Building web app..."
+	dart scripts/web_build.dart
+	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
+
+# Serve the built bundle with CORS headers so an HTML document on another origin
+# (e.g. Django at :8000) can fetch these assets via ASSET_BASE. Plain
+# `python3 -m http.server` can't set headers, so use the helper script.
+serve-web:
+	dart scripts/serve_web.dart 5173 $(WEB_DIR)/build/web
+
+# Build with the staging worker as ASSET_BASE and deploy it to Cloudflare.
+# Requires wrangler auth (bunx wrangler login, or CLOUDFLARE_API_TOKEN +
+# CLOUDFLARE_ACCOUNT_ID).
+deploy-web-staging: env-staging
+	@echo "Building web app (staging)"
+	dart scripts/web_build.dart
+	cd $(WEB_DIR) && bunx wrangler deploy --env staging
+
+deploy-web-production: env-prod
+	@echo "Building web app (production)"
+	dart scripts/web_build.dart
+	cd $(WEB_DIR) && bunx wrangler deploy --env production
 
 build-runner:
 	@echo "Running build_runner for code generation..."
@@ -48,7 +94,19 @@ test:
 	@echo "Running tests..."
 	cd $(APP_DIR) && flutter test
 	cd $(CORE_DIR) && flutter test
-# 	cd $(WEB_DIR) && flutter test # Web doesn't have tests now
+	cd $(WEB_DIR) && flutter test --platform chrome
+
+test-app:
+	@echo "Running app tests..."
+	cd $(APP_DIR) && flutter test
+
+test-web:
+	@echo "Running web tests..."
+	cd $(WEB_DIR) && flutter test --platform chrome
+
+test-core:
+	@echo "Running core tests..."
+	cd $(CORE_DIR) && flutter test
 
 lint:
 	@echo "Running linter..."
@@ -61,6 +119,7 @@ format:
 	dart format .
 
 generate_api_models:
+	# cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose --clean; dart format .
 	cd $(CORE_DIR) && curl -L https://totem.org/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose --clean; dart format .
 
 githooks:
@@ -75,8 +134,8 @@ flutterfire:
 	@test -d $(WEB_DIR) || { echo "Error: $(WEB_DIR) not found."; exit 1; }
 	@echo "Configuring Firebase for app package (android + ios)..."
 	cd $(APP_DIR) && flutterfire configure --platforms=android,ios,windows,macos
-	@echo "Configuring Firebase for web package..."
-	cd $(WEB_DIR) && flutterfire configure --platforms=web
+	# @echo "Configuring Firebase for web package..."
+	# cd $(WEB_DIR) && flutterfire configure --platforms=web
 
 release:
 	@echo "Creating release..."

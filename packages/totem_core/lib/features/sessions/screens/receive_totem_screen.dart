@@ -7,9 +7,10 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/error_screen.dart';
+import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class ReceiveTotemScreen extends ConsumerWidget {
@@ -17,7 +18,6 @@ class ReceiveTotemScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final sessionStatus = ref.watch(roomStatusProvider);
     final session = ref.watch(currentSessionProvider);
     final roundPrompt = ref.watch(roundMessageProvider);
@@ -34,7 +34,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
           message: 'Accept Totem failed',
         );
         if (context.mounted) {
-          showErrorPopup(
+          NotificationController().showError(
             context,
             icon: TotemIcons.errorOutlined,
             title: 'Something went wrong',
@@ -51,6 +51,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
       child: SafeArea(
         child: ViewportResolver(
           builder: (context, viewportKind) {
+            final theme = Theme.of(context);
             final titleWidget = Column(
               spacing: 16,
               children: [
@@ -83,21 +84,11 @@ class ReceiveTotemScreen extends ConsumerWidget {
                 aspectRatio: 16 / 21,
                 child: ParticipantCard(
                   participant: session!.room!.localParticipant!,
-                  session: session.event,
+                  session: session.session,
                   participantIdentity: session.room!.localParticipant!.identity,
                 ),
               ),
             );
-
-            final roundPromptText = roundPrompt != null
-                ? Text(
-                    '"$roundPrompt"',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontStyle: FontStyle.italic,
-                    ),
-                    textAlign: TextAlign.center,
-                  )
-                : null;
 
             final receiveSlider = Padding(
               padding: const EdgeInsetsDirectional.symmetric(horizontal: 30),
@@ -105,7 +96,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 spacing: 20,
                 children: [
-                  ?roundPromptText,
+                  ?roundPromptText(roundPrompt),
                   SizedBox(
                     height: 50,
                     child: ActionSliderButton(
@@ -154,6 +145,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
                     ],
                   ),
                 );
+              case ViewportKind.mediumSmall:
               case ViewportKind.mediumPlus:
                 return Padding(
                   padding: const EdgeInsetsDirectional.only(
@@ -165,7 +157,8 @@ class ReceiveTotemScreen extends ConsumerWidget {
                     children: [
                       const SizedBox(),
                       Expanded(child: videoCard),
-                      roundPromptText ?? const SizedBox(height: 10),
+                      roundPromptText(roundPrompt) ??
+                          const SizedBox(height: 10),
                       ReceiveTransitionCard(
                         onActionPressed: onAccept,
                         keepActionLoadingOnSuccess: true,

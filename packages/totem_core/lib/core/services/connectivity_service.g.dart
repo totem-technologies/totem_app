@@ -50,61 +50,19 @@ final class ConnectivityProvider
 
 String _$connectivityHash() => r'6d67af0ea4110f6ee0246dd332f90f8901380eda';
 
-@ProviderFor(connectivityStream)
-final connectivityStreamProvider = ConnectivityStreamProvider._();
-
-final class ConnectivityStreamProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<ConnectivityResult>>,
-          List<ConnectivityResult>,
-          Stream<List<ConnectivityResult>>
-        >
-    with
-        $FutureModifier<List<ConnectivityResult>>,
-        $StreamProvider<List<ConnectivityResult>> {
-  ConnectivityStreamProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'connectivityStreamProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$connectivityStreamHash();
-
-  @$internal
-  @override
-  $StreamProviderElement<List<ConnectivityResult>> $createElement(
-    $ProviderPointer pointer,
-  ) => $StreamProviderElement(pointer);
-
-  @override
-  Stream<List<ConnectivityResult>> create(Ref ref) {
-    return connectivityStream(ref);
-  }
-}
-
-String _$connectivityStreamHash() =>
-    r'0e9f1eb3ef49bdff1bcabae32097030194c7a5ae';
-
 @ProviderFor(isOffline)
 final isOfflineProvider = IsOfflineProvider._();
 
 final class IsOfflineProvider
-    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
-    with $FutureModifier<bool>, $FutureProvider<bool> {
+    extends $FunctionalProvider<AsyncValue<bool>, bool, Stream<bool>>
+    with $FutureModifier<bool>, $StreamProvider<bool> {
   IsOfflineProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'isOfflineProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -114,13 +72,13 @@ final class IsOfflineProvider
 
   @$internal
   @override
-  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $StreamProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
 
   @override
-  FutureOr<bool> create(Ref ref) {
+  Stream<bool> create(Ref ref) {
     return isOffline(ref);
   }
 }
 
-String _$isOfflineHash() => r'533ac83bc24df0c6c5f976bd13c82adb8320bf84';
+String _$isOfflineHash() => r'cc412eb5c129c993a57b3c0becf9b05c8d71b8f6';

@@ -87,18 +87,22 @@ class ParticipantsState {
   const ParticipantsState({
     this.participants = const [],
     this.removed = false,
+    this.removeReason,
   });
 
   final List<Participant> participants;
   final bool removed;
+  final RemoveReason? removeReason;
 
   ParticipantsState copyWith({
     List<Participant>? participants,
     bool? removed,
+    RemoveReason? removeReason,
   }) {
     return ParticipantsState(
       participants: participants ?? this.participants,
       removed: removed ?? this.removed,
+      removeReason: removeReason ?? this.removeReason,
     );
   }
 
@@ -110,13 +114,15 @@ class ParticipantsState {
           other.participants.map((p) => p.sid),
           participants.map((p) => p.sid),
         ) &&
-        other.removed == removed;
+        other.removed == removed &&
+        other.removeReason == removeReason;
   }
 
   @override
   int get hashCode =>
       const DeepCollectionEquality().hash(participants.map((p) => p.sid)) ^
-      removed.hashCode;
+      removed.hashCode ^
+      removeReason.hashCode;
 }
 
 @immutable
@@ -179,7 +185,7 @@ class SessionTurnState {
 @immutable
 class SessionOptions {
   const SessionOptions({
-    required this.eventSlug,
+    required this.sessionSlug,
     required this.token,
     required this.cameraEnabled,
     required this.microphoneEnabled,
@@ -187,7 +193,7 @@ class SessionOptions {
     required this.cameraOptions,
   });
 
-  final String eventSlug;
+  final String sessionSlug;
   final String token;
   final bool cameraEnabled;
   final bool microphoneEnabled;
@@ -199,12 +205,37 @@ class SessionOptions {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is SessionOptions &&
-        other.eventSlug == eventSlug &&
+        other.sessionSlug == sessionSlug &&
         other.token == token;
   }
 
   @override
-  int get hashCode => eventSlug.hashCode ^ token.hashCode;
+  int get hashCode => sessionSlug.hashCode ^ token.hashCode;
+}
+
+/// Pre-join media whose ownership is transferred to the session controller.
+///
+/// LiveKit can publish already-created preview tracks through FastConnect. This
+/// avoids opening a second camera and microphone while the pre-join preview is
+/// still active, which is particularly important for Safari. The controller
+/// retains tracks until LiveKit accepts them. Failed transfers are detached
+/// from the preview and disposed before join returns; tracks handed to LiveKit
+/// are disposed with the room.
+@immutable
+class SessionJoinMedia {
+  const SessionJoinMedia({
+    this.cameraTrack,
+    this.microphoneTrack,
+    this.onBeforeDispose,
+  });
+
+  final LocalVideoTrack? cameraTrack;
+  final LocalAudioTrack? microphoneTrack;
+
+  /// Detaches preview renderers before a failed transfer is stopped.
+  final void Function()? onBeforeDispose;
+
+  bool get isEmpty => cameraTrack == null && microphoneTrack == null;
 }
 
 @immutable
@@ -214,12 +245,18 @@ class SessionRoomState {
     required this.participants,
     required this.chat,
     required this.turn,
+    this.turnStartedAt,
   });
 
   final ConnectionState connection;
   final ParticipantsState participants;
   final ChatState chat;
   final SessionTurnState turn;
+
+  /// Wall-clock time when the current turn began.
+  /// Set by the reducer when [speakingNow] changes to a non-empty value;
+  /// carried through unchanged for all other events.
+  final DateTime? turnStartedAt;
 
   SessionPhase get phase => connection.phase;
   RoomConnectionState get connectionState => connection.state;
@@ -250,13 +287,15 @@ class SessionRoomState {
         turn.roomState.nextSpeaker == room.localParticipant?.identity;
   }
 
-  String get speakingNow {
-    if (turn.roomState.currentSpeaker == null ||
-        turn.roomState.currentSpeaker!.isEmpty) {
-      return turn.roomState.keeper;
+  /// The effective speaker identity for [roomState], using keeper as fallback.
+  static String speakerOf(RoomState roomState) {
+    if (roomState.currentSpeaker == null || roomState.currentSpeaker!.isEmpty) {
+      return roomState.keeper;
     }
-    return turn.roomState.currentSpeaker ?? turn.roomState.keeper;
+    return roomState.currentSpeaker!;
   }
+
+  String get speakingNow => speakerOf(turn.roomState);
 
   bool get hasKeeper =>
       participants.participants.any((p) => isKeeper(p.identity));
@@ -305,7 +344,8 @@ class SessionRoomState {
         other.connection == connection &&
         other.participants == participants &&
         other.chat == chat &&
-        other.turn == turn;
+        other.turn == turn &&
+        other.turnStartedAt == turnStartedAt;
   }
 
   @override
@@ -313,7 +353,8 @@ class SessionRoomState {
       connection.hashCode ^
       participants.hashCode ^
       chat.hashCode ^
-      turn.hashCode;
+      turn.hashCode ^
+      turnStartedAt.hashCode;
 }
 
 /// Returns true if the given [reason] represents a transient disconnect that
@@ -325,4 +366,31 @@ bool isTransientJoinDisconnectReason(DisconnectReason? reason) {
   return reason == DisconnectReason.joinFailure ||
       reason == DisconnectReason.clientInitiated ||
       reason == DisconnectReason.signalingConnectionFailure;
+}
+
+/// Returns true when LiveKit reports a client-side internet disconnection.
+bool isInternetDisconnectReason(DisconnectReason? reason) {
+  return reason == DisconnectReason.signalingConnectionFailure ||
+      reason == DisconnectReason.reconnectAttemptsExceeded;
+}
+
+/// Returns whether a confirmed offline state may take precedence over the
+/// LiveKit disconnect reason.
+///
+/// Explicit server-side and user-initiated reasons must keep their dedicated
+/// disconnected-screen messaging. Ambiguous client-side failures may still be
+/// presented as internet failures when connectivity independently reports that
+/// the device is offline.
+bool canOfflineStateOverrideDisconnectReason(DisconnectReason? reason) {
+  return switch (reason) {
+    null ||
+    DisconnectReason.unknown ||
+    DisconnectReason.joinFailure ||
+    DisconnectReason.disconnected ||
+    DisconnectReason.signalingConnectionFailure ||
+    DisconnectReason.reconnectAttemptsExceeded ||
+    DisconnectReason.signalClose ||
+    DisconnectReason.mediaFailure => true,
+    _ => false,
+  };
 }

@@ -100,7 +100,7 @@ class SessionDeviceController extends _$SessionDeviceController {
     return _currentState();
   }
 
-  Room? get _room => this.session.room;
+  Room? get _room => session.room;
 
   StreamSubscription<void>? _becomingNoisySubscription;
   StreamSubscription<audio.AudioDevicesChangedEvent>?
@@ -199,6 +199,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   }
 
   String? get selectedCameraDeviceId {
+    String? id;
     final room = _room;
     final userTrack = room?.localParticipant
         ?.getTrackPublications()
@@ -206,9 +207,9 @@ class SessionDeviceController extends _$SessionDeviceController {
         ?.track;
     if (userTrack?.currentOptions != null &&
         userTrack?.currentOptions is CameraCaptureOptions) {
-      return (userTrack!.currentOptions as CameraCaptureOptions).deviceId;
+      id ??= (userTrack!.currentOptions as CameraCaptureOptions).deviceId;
     }
-    return room
+    return id ??= room
         // ignore: invalid_use_of_internal_member
         ?.engine
         .roomOptions
@@ -258,7 +259,8 @@ class SessionDeviceController extends _$SessionDeviceController {
   }
 
   bool get isSpeakerphoneEnabled =>
-      _systemSpeakerphoneEnabled ?? _room?.speakerOn ?? false;
+      _systemSpeakerphoneEnabled ??
+      AudioManager.instance.isSpeakerOutputPreferred;
 
   Future<void> _refreshSpeakerphoneState() async {
     if (kIsWeb) return;
@@ -305,12 +307,10 @@ class SessionDeviceController extends _$SessionDeviceController {
     // There is a bug in the livekit library that doesn't effectively turn the speakerphone
     // on when requested.
     // A workaround is to first turn it off, then set the desired state.
-    await Hardware.instance.setSpeakerphoneOn(false);
-    await _room?.setSpeakerOn(false);
+    AudioManager.instance.setSpeakerOutputPreferred(false);
 
     if (enabled) {
-      await Hardware.instance.setSpeakerphoneOn(enabled);
-      await _room?.setSpeakerOn(enabled);
+      AudioManager.instance.setSpeakerOutputPreferred(enabled);
     }
 
     await _refreshSpeakerphoneState();
@@ -358,8 +358,8 @@ class SessionDeviceController extends _$SessionDeviceController {
   Future<void> enableMicrophone() async {
     final room = _room;
     if (room?.localParticipant?.isMicrophoneEnabled() ?? false) return;
-    if (this.session.state.roomState.status == RoomStatus.active &&
-        !this.session.state.hasKeeper) {
+    if (session.state.roomState.status == RoomStatus.active &&
+        !session.state.hasKeeper) {
       return;
     }
 

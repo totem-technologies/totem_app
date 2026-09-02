@@ -1,13 +1,12 @@
 import 'dart:async';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
-import 'package:totem_core/shared/logger.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 enum ConnectivityStatus { offline, online, recentlyReconnected }
 
@@ -18,38 +17,49 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isOffline = status == ConnectivityStatus.offline;
-    final text = isOffline ? 'You are offline' : "You're back online";
-    final backgroundColor = isOffline ? Colors.white : Colors.green.shade100;
-    final textColor = isOffline
-        ? theme.colorScheme.onSurface
-        : Colors.green.shade900;
-
-    return Align(
-      alignment: AlignmentDirectional.bottomCenter,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: double.infinity,
-        margin: const EdgeInsetsDirectional.symmetric(
-          horizontal: 20,
-          vertical: 8,
-        ),
-        padding: const EdgeInsetsDirectional.all(8),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          boxShadow: kElevationToShadow[1],
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 14,
-            color: textColor,
-            fontWeight: FontWeight.w500,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      width: double.infinity,
+      margin: const EdgeInsetsDirectional.symmetric(horizontal: 20),
+      padding: const EdgeInsetsDirectional.symmetric(
+        vertical: 10,
+        horizontal: 20,
+      ),
+      decoration: BoxDecoration(
+        color: switch (status) {
+          ConnectivityStatus.offline => AppTheme.errorColor,
+          ConnectivityStatus.online ||
+          ConnectivityStatus.recentlyReconnected => AppTheme.successColor,
+        },
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        spacing: 20,
+        children: [
+          TotemIcon(
+            switch (status) {
+              ConnectivityStatus.offline => TotemIcons.wifiOff,
+              ConnectivityStatus.online ||
+              ConnectivityStatus.recentlyReconnected => TotemIcons.wifi,
+            },
+            color: Colors.white,
+            size: 20,
           ),
-          textAlign: TextAlign.center,
-        ),
+          Expanded(
+            child: Text(
+              switch (status) {
+                ConnectivityStatus.offline => "You're Offline",
+                ConnectivityStatus.online ||
+                ConnectivityStatus.recentlyReconnected => "You're back online",
+              },
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -72,70 +82,50 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
   @override
   void initState() {
     super.initState();
-    _checkInitialConnectivity();
+    ref.listenManual(isOfflineProvider, (_, next) {
+      final isOffline = next.value;
+      if (isOffline != null) _updateConnectivityStatus(isOffline);
+    }, fireImmediately: true);
   }
 
-  Future<void> _checkInitialConnectivity() async {
-    final result = await ref.read(connectivityProvider).checkConnectivity();
-    _updateConnectivityStatus(result, isInitialCheck: true);
-  }
-
-  void _updateConnectivityStatus(
-    List<ConnectivityResult> result, {
-    bool isInitialCheck = false,
-  }) {
-    final bool wasOffline = _status == ConnectivityStatus.offline;
-    final bool isNowOffline =
-        result.isEmpty || result.contains(ConnectivityResult.none);
-
-    if (mounted) {
-      if (isNowOffline) {
-        setState(() {
-          _status = ConnectivityStatus.offline;
-        });
-      } else {
-        if (wasOffline && !isInitialCheck) {
-          _resyncData();
-          setState(() {
-            _status = ConnectivityStatus.recentlyReconnected;
-          });
-          _reconnectedTimer?.cancel();
-          _reconnectedTimer = Timer(const Duration(seconds: 3), () {
-            if (mounted) {
-              setState(() {
-                _status = ConnectivityStatus.online;
-              });
-            }
-          });
-        } else if (_status != ConnectivityStatus.recentlyReconnected) {
-          setState(() {
-            _status = ConnectivityStatus.online;
-          });
-        }
+  void _updateConnectivityStatus(bool isOffline) {
+    if (isOffline) {
+      _reconnectedTimer?.cancel();
+      _reconnectedTimer = null;
+      if (_status != ConnectivityStatus.offline) {
+        setState(() => _status = ConnectivityStatus.offline);
       }
+      return;
     }
+
+    if (_status != ConnectivityStatus.offline) return;
+
+    _resyncData();
+    setState(() => _status = ConnectivityStatus.recentlyReconnected);
+    _reconnectedTimer = Timer(const Duration(seconds: 3), () {
+      _reconnectedTimer = null;
+      if (mounted && _status == ConnectivityStatus.recentlyReconnected) {
+        setState(() => _status = ConnectivityStatus.online);
+      }
+    });
   }
 
   void _resyncData() {
-    void smartRefresh(
-      //
-      // ignore: strict_raw_type, invalid_use_of_internal_member
-      $FunctionalProvider<AsyncValue, dynamic, dynamic> provider,
-    ) {
-      // Workaround for the riverpod typing inconsistency
-      if (!ref.read(provider).hasValue) {
-        logger.i('Refreshing $provider due to reconnection');
-        ref.invalidate(provider);
-      } else {
-        // ref.refresh(provider);
-      }
+    if (!ref.read(listSpacesProvider).hasValue) {
+      ref.invalidate(listSpacesProvider);
     }
-
-    smartRefresh(listSpacesProvider);
-    smartRefresh(spacesSummaryProvider);
-    smartRefresh(listBlogPostsProvider);
-    smartRefresh(listSubscribedSpacesProvider);
-    smartRefresh(listSessionsHistoryProvider);
+    if (!ref.read(spacesSummaryProvider).hasValue) {
+      ref.invalidate(spacesSummaryProvider);
+    }
+    if (!ref.read(listBlogPostsProvider).hasValue) {
+      ref.invalidate(listBlogPostsProvider);
+    }
+    if (!ref.read(listSubscribedSpacesProvider).hasValue) {
+      ref.invalidate(listSubscribedSpacesProvider);
+    }
+    if (!ref.read(listSessionsHistoryProvider).hasValue) {
+      ref.invalidate(listSessionsHistoryProvider);
+    }
   }
 
   @override
@@ -146,35 +136,30 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(connectivityStreamProvider, (previous, next) {
-      if (next.hasValue) {
-        _updateConnectivityStatus(next.value!);
-      }
-    });
+    final shouldShow = _status != ConnectivityStatus.online;
 
-    return Stack(
-      fit: StackFit.expand,
-      alignment: AlignmentDirectional.bottomCenter,
-      children: [
-        Positioned.fill(child: widget.child),
-        SafeArea(
-          child: AnimatedSwitcher(
+    return SafeArea(
+      top: true,
+      left: false,
+      right: false,
+      bottom: false,
+      child: Column(
+        children: [
+          AnimatedSwitcher(
             duration: const Duration(milliseconds: 350),
             transitionBuilder: (child, animation) {
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 1.5),
-                  end: Offset.zero,
-                ).animate(animation),
+              return SizeTransition(
+                sizeFactor: animation,
                 child: FadeTransition(opacity: animation, child: child),
               );
             },
-            child: _status != ConnectivityStatus.online
+            child: shouldShow
                 ? _StatusBanner(status: _status)
                 : const SizedBox.shrink(key: ValueKey('online')),
           ),
-        ),
-      ],
+          Expanded(child: widget.child),
+        ],
+      ),
     );
   }
 }

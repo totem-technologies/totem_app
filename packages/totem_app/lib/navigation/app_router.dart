@@ -5,12 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
+import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
 import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
-import 'package:totem_core/features/sessions/screens/pre_join_screen.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -31,7 +32,7 @@ import '../features/messages/screens/session_participants_screen.dart';
 import '../features/messages/screens/thread_screen.dart';
 import '../features/profile/screens/profile_details_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
-import '../features/spaces/screens/event_deep_link_screen.dart';
+import '../features/spaces/screens/session_deep_link_screen.dart';
 import '../features/spaces/screens/session_history.dart';
 import '../features/spaces/screens/space_detail_screen.dart';
 import '../features/spaces/screens/spaces_discovery_screen.dart';
@@ -88,7 +89,7 @@ class BottomNavScaffold extends ConsumerWidget {
           bottomNavigationBar: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const JoinOngoingSessionCard(),
+              SafeArea(bottom: false, child: const JoinOngoingSessionCard()),
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(30),
@@ -170,6 +171,11 @@ class AppTotemRouter extends TotemRouter {
   GlobalKey<NavigatorState> get navigatorKey => _navigatorKey;
 
   @override
+  Uri get baseUri {
+    return Uri.parse(AppConfig.instance.apiUrl);
+  }
+
+  @override
   void popOrHome([BuildContext? context]) {
     if (context != null) {
       final router = GoRouter.of(context);
@@ -225,6 +231,7 @@ class AppTotemRouter extends TotemRouter {
   @override
   GoRouter createRouter(WidgetRef ref) {
     final authController = ref.read(mobileAuthControllerProvider);
+    final profileController = ref.read(userProfileControllerProvider.notifier);
 
     return GoRouter(
       navigatorKey: navigatorKey,
@@ -246,7 +253,7 @@ class AppTotemRouter extends TotemRouter {
         // Unauthenticated flow
         if (!isLoggedIn) {
           final hasSeenWelcomeOnboarding =
-              await authController.hasSeenWelcomeOnboarding;
+              await profileController.hasSeenWelcomeOnboarding;
 
           if (isWelcomeRoute) {
             // First-time users stay on welcome; returning users go to login
@@ -480,24 +487,27 @@ class AppTotemRouter extends TotemRouter {
         ),
 
         GoRoute(
-          path: RouteNames.spaceEvent(':eventSlug'),
-          name: RouteNames.spaceEvent(':eventSlug'),
+          path: RouteNames.spaceEvent(':sessionSlug'),
+          name: RouteNames.spaceEvent(':sessionSlug'),
           builder: (context, state) {
-            final eventSlug = state.pathParameters['eventSlug'] ?? '';
+            final sessionSlug = state.pathParameters['sessionSlug'] ?? '';
             return SentryDisplayWidget(
-              child: EventDeepLinkScreen(eventSlug: eventSlug),
+              child: SessionDeepLinkScreen(sessionSlug: sessionSlug),
             );
           },
         ),
 
         GoRoute(
-          path: RouteNames.spaceSession(':spaceSlug', ':eventSlug'),
-          name: RouteNames.spaceSession(':spaceSlug', ':eventSlug'),
+          path: RouteNames.spaceSession(':spaceSlug', ':sessionSlug'),
+          name: RouteNames.spaceSession(':spaceSlug', ':sessionSlug'),
           builder: (context, state) {
             final spaceSlug = state.pathParameters['spaceSlug'] ?? '';
-            final eventSlug = state.pathParameters['eventSlug'];
+            final sessionSlug = state.pathParameters['sessionSlug'];
             return SentryDisplayWidget(
-              child: SpaceDetailScreen(slug: spaceSlug, sessionSlug: eventSlug),
+              child: SpaceDetailScreen(
+                slug: spaceSlug,
+                sessionSlug: sessionSlug,
+              ),
             );
           },
         ),
@@ -531,5 +541,10 @@ class AppTotemRouter extends TotemRouter {
       ],
       errorBuilder: (context, state) => const ErrorScreen(),
     );
+  }
+
+  @override
+  void setTabCloseConfirmationEnabled(bool enabled) {
+    // TODO(totem): Enable picture in picture
   }
 }

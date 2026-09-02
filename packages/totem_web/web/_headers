@@ -1,0 +1,10 @@
+# Cloudflare Workers Static Assets honors this file (same _headers feature as
+# Pages). It's copied verbatim from web/ into build/web/ by `flutter build web`.
+#
+# The HTML document is served from a different origin (Django at /room/) and
+# fetches these assets cross-origin via ASSET_BASE, so they must be CORS-enabled
+# -- mirroring scripts/serve_web.dart used for local testing. Not needed if you
+# ever serve the assets from the same host as the page (see wrangler.toml).
+/*
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin

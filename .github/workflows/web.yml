@@ -1,0 +1,69 @@
+name: Web
+
+# Web CI/CD for the totem_web package, hosted on Cloudflare Workers.
+#
+# The app is mounted at /room/ on the Django origin. Django proxies (and patches)
+# the HTML document; the Cloudflare Worker serves every other asset as a CDN.
+# The bundle is built with --base-href /room/ for routing, and its assets are
+# fetched directly from the Worker via Flutter's assetBase (the ASSET_BASE
+# web-define). See .github/actions/build-web and packages/totem_web/wrangler.toml.
+#
+#   PR / push to main  -> build the staging bundle (validation only, no deploy)
+#   push tag v*        -> build + deploy the STAGING environment
+#   release published  -> build + deploy the PRODUCTION environment
+#
+# One job handles all of these: the flavor (and whether to deploy) is derived
+# from the triggering event, so the build+deploy steps aren't duplicated.
+#
+# Required repository secrets:
+#   FIREBASE_OPTIONS_B64    base64 firebase_options.dart
+#   CLOUDFLARE_API_TOKEN    token with Workers Scripts:Edit
+#   CLOUDFLARE_ACCOUNT_ID   Cloudflare account id
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  web:
+    # Production on a published release; staging for PRs, main, tags, dispatch.
+    name: Web (${{ github.event_name == 'release' && 'production' || 'staging' }})
+    runs-on: ubuntu-latest
+    env:
+      FLAVOR: ${{ github.event_name == 'release' && 'production' || 'staging' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # On a release, build the exact commit the tag points at; otherwise the
+          # triggering commit (an empty ref means checkout's default).
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-environment
+        with:
+          firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          flavor: ${{ env.FLAVOR }}
+
+      - name: Build web
+        uses: ./.github/actions/build-web
+
+      # Deploy on a published release (production) or a pushed v* tag (staging).
+      # PR / main builds stop at the build above, as a compile check.
+      - name: Deploy to Cloudflare Workers
+        if: ${{ github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') }}
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: packages/totem_web
+          command: deploy --env ${{ env.FLAVOR }}
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

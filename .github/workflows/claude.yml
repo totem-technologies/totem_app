@@ -31,28 +31,10 @@ jobs:
           fetch-depth: 1
           submodules: recursive
 
-      # We need to enforce java 17 because newer Flutter packages are
-      # requiring this Java Version.
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: "zulu"
-          java-version: "17.x"
-          cache: "gradle"
-          check-latest: true
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2.23.0
-        with:
-          channel: "stable"
-          cache: true
-
-      - name: Flutter version
-        run: flutter --version
-
-      - name: Setup Environment
+      - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
+          java: "true"
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           google_services_json: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
           flavor: staging

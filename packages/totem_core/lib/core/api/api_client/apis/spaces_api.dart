@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:degenerate_runtime/degenerate_runtime.dart';
 import '../models/mobile_space_detail_schema.dart';
 import '../models/paged_mobile_space_detail_schema.dart';
+import '../models/resolve_conflicts_schema.dart';
+import '../models/session_conflict_schema.dart';
 import '../models/session_detail_schema.dart';
 import '../models/session_feedback_schema.dart';
 import '../models/space_schema.dart';
@@ -280,7 +282,7 @@ final class SpacesApi with ApiExecutor {
   Future<ApiResult<List<SessionDetailSchema>, Never>>
   totemSpacesMobileApiGetRecommendedSpaces({
     int? limit,
-    List<String>? body,
+    List<String>? categories,
     RequestOptions? options,
   }) async {
     final queryParameters = <String, String>{
@@ -290,9 +292,15 @@ final class SpacesApi with ApiExecutor {
     if (limit != null) {
       queryParameters['limit'] = limit.toString();
     }
+    if (categories != null) {
+      for (final item in categories) {
+        queryParametersList.add(
+          ApiQueryParameter(name: 'categories', value: item),
+        );
+      }
+    }
 
     final headers = <String, String>{...apiConfig.defaultHeaders};
-    headers['Content-Type'] = 'application/json';
 
     final request = ApiRequest(
       method: 'GET',
@@ -300,7 +308,6 @@ final class SpacesApi with ApiExecutor {
       headers: headers,
       queryParameters: queryParameters,
       queryParametersList: queryParametersList,
-      body: jsonEncode(body),
       options: options,
     );
 
@@ -342,7 +349,7 @@ final class SpacesApi with ApiExecutor {
   /// Rsvp Confirm
   ///
   /// `POST /api/mobile/protected/spaces/rsvp/{event_slug}`
-  Future<ApiResult<SessionDetailSchema, Never>>
+  Future<ApiResult<SessionDetailSchema, SessionConflictSchema>>
   totemSpacesMobileApiRsvpConfirm({
     required String eventSlug,
     RequestOptions? options,
@@ -361,6 +368,11 @@ final class SpacesApi with ApiExecutor {
       request,
       onSuccess: (response) {
         return SessionDetailSchema.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+      },
+      onError: (response) {
+        return SessionConflictSchema.fromJson(
           jsonDecode(response.body) as Map<String, dynamic>,
         );
       },
@@ -388,6 +400,42 @@ final class SpacesApi with ApiExecutor {
       request,
       onSuccess: (response) {
         return SessionDetailSchema.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+      },
+    );
+  }
+
+  /// Rsvp Resolve Conflicts
+  ///
+  /// `POST /api/mobile/protected/spaces/rsvp/{event_slug}/resolve-conflicts`
+  Future<ApiResult<SessionDetailSchema, SessionConflictSchema>>
+  totemSpacesMobileApiRsvpResolveConflicts({
+    required String eventSlug,
+    required ResolveConflictsSchema body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/spaces/rsvp/${Uri.encodeComponent(eventSlug)}/resolve-conflicts',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return execute(
+      request,
+      onSuccess: (response) {
+        return SessionDetailSchema.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+        );
+      },
+      onError: (response) {
+        return SessionConflictSchema.fromJson(
           jsonDecode(response.body) as Map<String, dynamic>,
         );
       },

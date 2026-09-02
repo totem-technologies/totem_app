@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 
@@ -18,6 +21,7 @@ class ScreenProtectionService {
 
   static Future<void> setCaptureProtectionEnabled(bool enabled) async {
     if (_captureProtectionEnabled == enabled) return;
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) return;
     try {
       if (enabled) {
         await ScreenProtector.preventScreenshotOn();

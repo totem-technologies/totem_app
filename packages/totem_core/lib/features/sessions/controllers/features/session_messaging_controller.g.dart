@@ -60,7 +60,7 @@ final class SessionMessagingControllerProvider
 }
 
 String _$sessionMessagingControllerHash() =>
-    r'2155105787da2c927cb975c6158126a84a99b9ae';
+    r'eb20ed68d75c69be5b75ad76172630dc14a0d604';
 
 final class SessionMessagingControllerFamily extends $Family
     with
@@ -94,7 +94,7 @@ abstract class _$SessionMessagingController extends $Notifier<void> {
   void build(SessionController session);
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<void, void>;
     final element =
         ref.element
@@ -104,6 +104,6 @@ abstract class _$SessionMessagingController extends $Notifier<void> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, () => build(_$args));
+    return element.handleCreate(ref, () => build(_$args));
   }
 }

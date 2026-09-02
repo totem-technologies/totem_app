@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,16 +7,14 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:totem_app/features/spaces/widgets/attending_dialog.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
-import 'package:totem_core/core/services/calendar_service.dart';
 import 'package:totem_core/features/keeper/screens/meet_user_card.dart';
-import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/html.dart';
@@ -29,13 +25,15 @@ import 'package:totem_core/shared/routing.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
-import 'package:totem_core/shared/widgets/confetti.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
+import 'package:totem_core/shared/widgets/notifications.dart';
+import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../widgets/conflicting_sessions_dialog.dart';
 import '../widgets/info_text.dart';
 import '../widgets/keeper_message_participants_card.dart';
 
@@ -65,7 +63,7 @@ class SpaceDetailScreen extends ConsumerStatefulWidget {
 class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
   final _scrollController = ScrollController();
   bool _appBarCollapsed = false;
-  String? _selectedEventSlug;
+  String? _selectedSessionSlug;
 
   @override
   void initState() {
@@ -95,8 +93,8 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     ref.sentryReportFullyDisplayed(spaceProvider(widget.slug));
 
     // Determine if we have a valid session slug to watch
-    final String? effectiveEventSlug =
-        _selectedEventSlug ??
+    final String? effectiveSessionSlug =
+        _selectedSessionSlug ??
         widget.sessionSlug ??
         spaceAsync.maybeWhen(
           skipLoadingOnRefresh: false,
@@ -105,12 +103,12 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
           orElse: () => null,
         );
 
-    // Only watch event provider if we have a valid slug
-    final bool hasValidEventSlug =
-        effectiveEventSlug != null && effectiveEventSlug.isNotEmpty;
+    // Only watch session provider if we have a valid slug
+    final bool hasValidSessionSlug =
+        effectiveSessionSlug != null && effectiveSessionSlug.isNotEmpty;
 
-    final AsyncValue<SessionDetailSchema>? eventAsync = hasValidEventSlug
-        ? ref.watch(eventProvider(effectiveEventSlug))
+    final AsyncValue<SessionDetailSchema>? sessionAsync = hasValidSessionSlug
+        ? ref.watch(sessionProvider(effectiveSessionSlug))
         : null;
 
     final currentUserSlug = ref.watch(
@@ -128,8 +126,8 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                   controller: _scrollController,
                   headerSliverBuilder: (context, _) {
                     final collapsedTitle =
-                        eventAsync?.maybeWhen(
-                          data: (event) => event.title,
+                        sessionAsync?.maybeWhen(
+                          data: (session) => session.title,
                           orElse: () => null,
                         ) ??
                         space.title;
@@ -155,7 +153,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         ),
                         flexibleSpace: FlexibleSpaceBar(
                           collapseMode: CollapseMode.parallax,
-                          background: _SpaceHeaderImage(space: space),
+                          background: SizedBox.expand(
+                            child: TotemImage(
+                              imageUrl: space.imageLink,
+                              loadingPlaceholder: ColoredBox(
+                                color: Colors.black.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
                         ),
                         leading: CircleIconButton(
                           margin: const EdgeInsetsDirectional.only(start: 20),
@@ -209,8 +214,10 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                     onRefresh: () {
                       return Future.wait([
                         ref.refresh(spaceProvider(widget.slug).future),
-                        if (hasValidEventSlug)
-                          ref.refresh(eventProvider(effectiveEventSlug).future),
+                        if (hasValidSessionSlug)
+                          ref.refresh(
+                            sessionProvider(effectiveSessionSlug).future,
+                          ),
                       ]);
                     },
                     child: SafeArea(
@@ -234,7 +241,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                               children: [
                                 // Space title — shown as a label only when
                                 // a session title will appear below it
-                                if (eventAsync != null &&
+                                if (sessionAsync != null &&
                                     space.title.trim().isNotEmpty)
                                   Text(
                                     space.title,
@@ -249,8 +256,8 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
 
                                 // Session title (or space title when no session)
                                 Text(
-                                  eventAsync?.maybeWhen(
-                                        data: (event) => event.title,
+                                  sessionAsync?.maybeWhen(
+                                        data: (session) => session.title,
                                         orElse: () => null,
                                       ) ??
                                       space.title,
@@ -304,7 +311,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                             ),
                             child: _SessionInfoCard(
                               space: space,
-                              eventAsync: eventAsync,
+                              sessionAsync: sessionAsync,
                             ),
                           ),
 
@@ -330,7 +337,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           const SizedBox(height: 24),
 
                           // ── About this Session ─────────────────────────
-                          if (eventAsync != null)
+                          if (sessionAsync != null)
                             Padding(
                               padding: const EdgeInsetsDirectional.symmetric(
                                 horizontal: 20,
@@ -350,9 +357,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                           fontSize: 14,
                                         ),
                                   ),
-                                  eventAsync.when(
-                                    data: (event) => Html(
-                                      data: event.content,
+                                  sessionAsync.when(
+                                    data: (session) => Html(
+                                      data: session.content,
                                       shrinkWrap: true,
                                       style: {
                                         ...AppTheme.compactHtmlStyle,
@@ -382,7 +389,17 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           // ── Upcoming Similar Sessions ──────────────────
                           _UpcomingSessionsSection(
                             space: space,
-                            currentEventSlug: effectiveEventSlug,
+                            currentSessionSlug: effectiveSessionSlug,
+                            onRefresh: () {
+                              if (!mounted) return;
+                              ref.invalidate(spacesSummaryProvider);
+                              ref.invalidate(spaceProvider(widget.slug));
+                              if (effectiveSessionSlug != null) {
+                                ref.invalidate(
+                                  sessionProvider(effectiveSessionSlug),
+                                );
+                              }
+                            },
                           ),
 
                           const SizedBox(height: 24),
@@ -461,50 +478,14 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Header image (no text overlay)
-// ─────────────────────────────────────────────────────────────
-
-class _SpaceHeaderImage extends StatelessWidget {
-  const _SpaceHeaderImage({required this.space});
-
-  final MobileSpaceDetailSchema space;
-
-  @override
-  Widget build(BuildContext context) {
-    if (space.imageLink != null && space.imageLink!.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: getFullUrl(space.imageLink!),
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        placeholder: (context, url) =>
-            ColoredBox(color: Colors.black.withValues(alpha: 0.5)),
-        errorWidget: (context, url, error) => Image.asset(
-          TotemImageAssets.genericBackground,
-          fit: BoxFit.cover,
-          package: 'totem_core',
-        ),
-      );
-    }
-    return Image.asset(
-      TotemImageAssets.genericBackground,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      package: 'totem_core',
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
 // Session info card — state-aware attend button
 // ─────────────────────────────────────────────────────────────
 
 class _SessionInfoCard extends ConsumerStatefulWidget {
-  const _SessionInfoCard({required this.space, required this.eventAsync});
+  const _SessionInfoCard({required this.space, required this.sessionAsync});
 
   final MobileSpaceDetailSchema space;
-  final AsyncValue<SessionDetailSchema>? eventAsync;
+  final AsyncValue<SessionDetailSchema>? sessionAsync;
 
   @override
   ConsumerState<_SessionInfoCard> createState() => _SessionInfoCardState();
@@ -512,23 +493,35 @@ class _SessionInfoCard extends ConsumerStatefulWidget {
 
 class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   MobileSpaceDetailSchema get space => widget.space;
+  final _notificationController = NotificationController();
 
   bool _attending = false;
   bool _loading = false;
   bool _joined = false;
-  bool _initialized = false;
+  String? _syncedSessionSlug;
+  bool? _syncedAttending;
+  DateTime? _syncedStart;
   String _currentTimeago = '';
   Timer? _timer;
 
-  void _initFromEvent(SessionDetailSchema event) {
-    if (_initialized) return;
-    _initialized = true;
-    _attending = event.attending;
-    _currentTimeago = timeago.format(event.start, allowFromNow: true);
+  void _syncFromSession(SessionDetailSchema session) {
+    final sessionChanged = _syncedSessionSlug != session.slug;
+    final attendanceChanged = _syncedAttending != session.attending;
+    final startChanged = _syncedStart != session.start;
+    if (!sessionChanged && !attendanceChanged && !startChanged) return;
+
+    _syncedSessionSlug = session.slug;
+    _syncedAttending = session.attending;
+    _syncedStart = session.start;
+    _attending = session.attending;
+    if (sessionChanged) _joined = false;
+
+    if (!sessionChanged && !startChanged) return;
+    _currentTimeago = timeago.format(session.start, allowFromNow: true);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
-      final next = timeago.format(event.start, allowFromNow: true);
+      final next = timeago.format(session.start, allowFromNow: true);
       if (_currentTimeago != next) setState(() => _currentTimeago = next);
     });
   }
@@ -540,22 +533,22 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
   }
 
   SpaceJoinCardState _computeState(
-    SessionDetailSchema event,
+    SessionDetailSchema session,
     UserSchema? user,
   ) {
     final ended =
-        event.ended ||
-        event.start
-            .add(Duration(minutes: event.duration))
+        session.ended ||
+        session.start
+            .add(Duration(minutes: session.duration))
             .isBefore(DateTime.now());
-    return switch (event) {
-      _ when event.cancelled => SpaceJoinCardState.cancelled,
+    return switch (session) {
+      _ when session.cancelled => SpaceJoinCardState.cancelled,
       _ when ended => SpaceJoinCardState.ended,
-      _ when _joined || (event.canJoinNow(user) && event.joinable) =>
+      _ when _joined || (session.canJoinNow(user) && session.joinable) =>
         SpaceJoinCardState.joinable,
       _ when _attending => SpaceJoinCardState.attending,
-      _ when event.seatsLeft <= 0 => SpaceJoinCardState.full,
-      _ when !event.open => SpaceJoinCardState.closed,
+      _ when session.seatsLeft <= 0 => SpaceJoinCardState.full,
+      _ when !session.open => SpaceJoinCardState.closed,
       _ => SpaceJoinCardState.notJoined,
     };
   }
@@ -568,7 +561,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
       symbol: r'USD $',
     );
 
-    widget.eventAsync?.whenData(_initFromEvent);
+    widget.sessionAsync?.whenData(_syncFromSession);
 
     return Container(
       decoration: BoxDecoration(
@@ -589,16 +582,16 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
                 const TotemIcon(TotemIcons.subscribers),
                 Text('${space.subscribers} subscribers'),
               ),
-              if (widget.eventAsync != null)
-                ...widget.eventAsync!.maybeWhen(
-                  data: (event) => [
+              if (widget.sessionAsync != null)
+                ...widget.sessionAsync!.maybeWhen(
+                  data: (session) => [
                     CompactInfoText(
                       const TotemIcon(TotemIcons.clockCircle),
-                      Text('${event.duration} min'),
+                      Text('${session.duration} min'),
                     ),
                     CompactInfoText(
                       const TotemIcon(TotemIcons.seats),
-                      SeatsLeftText(seatsLeft: event.seatsLeft),
+                      SeatsLeftText(seatsLeft: session.seatsLeft),
                     ),
                   ],
                   orElse: () => <Widget>[],
@@ -620,21 +613,21 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
           ),
 
           // ── Date / Attend row ────────────────────────────────
-          if (widget.eventAsync != null) ...[
+          if (widget.sessionAsync != null) ...[
             const SizedBox(height: 17),
-            widget.eventAsync!.when(
-              data: (event) {
-                final state = _computeState(event, user);
+            widget.sessionAsync!.when(
+              data: (session) {
+                final state = _computeState(session, user);
                 return _DateAttendRow(
-                  event: event,
+                  session: session,
                   state: state,
                   currentTimeago: _currentTimeago,
                   loading: _loading,
-                  onAttend: () => _attend(event),
-                  onGiveUpSpot: () => _giveUpSpot(event),
-                  onAddToCalendar: () => _addToCalendar(event),
-                  onJoinLivekit: () => _joinLivekit(event),
-                  onJoinGoogleMeet: () => _joinGoogleMeet(event),
+                  onAttend: () => _attend(session),
+                  onGiveUpSpot: () => _giveUpSpot(session),
+                  onAddToCalendar: () => addSessionToCalendar(context, session),
+                  onJoinLivekit: () => _joinLivekit(session),
+                  onJoinGoogleMeet: () => _joinGoogleMeet(session),
                   onExplore: () =>
                       TotemRouter.instance.toHome(HomeRoutes.spaces),
                 );
@@ -650,20 +643,20 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
 
   // ── Actions ──────────────────────────────────────────────────
 
-  Future<void> _attend(SessionDetailSchema event) async {
+  Future<void> _attend(SessionDetailSchema session) async {
     if (_attending || _loading || !mounted) {
       return;
     }
     setState(() => _loading = true);
     try {
-      final attending = await ref.read(rsvpConfirmProvider(event.slug).future);
+      final attending = await ref.read(
+        rsvpConfirmProvider(session.slug).future,
+      );
       if (attending) {
-        if (mounted) setState(() => _attending = true);
-        await _attendingPopup(event);
-        await _refresh(event);
+        await _onAttendSuccess(session);
       } else {
         if (mounted) {
-          showErrorPopup(
+          _notificationController.showError(
             context,
             icon: TotemIcons.spaces,
             title: 'Failed to attend this circle',
@@ -671,10 +664,20 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
           );
         }
       }
-    } catch (e, st) {
-      ErrorHandler.logError(e, stackTrace: st, message: 'Failed to attend');
+    } on RsvpConflictException catch (error) {
+      if (!mounted) return;
+      final switched = await showConflictingSessionsDialog(
+        context,
+        error.conflict,
+        session,
+        () => _switchSession(session, error.conflict),
+      );
+      if (switched == true) {
+        await _onAttendSuccess(session);
+      }
+    } catch (_) {
       if (mounted) {
-        showErrorPopup(
+        _notificationController.showError(
           context,
           icon: TotemIcons.spaces,
           title: 'Failed to attend this circle',
@@ -686,54 +689,36 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     }
   }
 
-  Future<void> _attendingPopup(SessionDetailSchema event) async {
-    await showDialog<void>(
-      context: context,
-      builder: (_) => AttendingDialog(
-        eventSlug: event.slug,
-        onAddToCalendar: () => _addToCalendar(event),
-      ),
+  Future<bool> _switchSession(
+    SessionDetailSchema newSession,
+    SessionConflictSchema conflict,
+  ) async {
+    final attending = await ref.read(
+      rsvpForceConfirmProvider(
+        newSession.slug,
+        conflict.conflictingSessions.map((e) => e.slug).toList(),
+      ).future,
     );
-    if (mounted) ConfettiController.showConfetti(context);
-  }
-
-  Future<void> _addToCalendar(SessionDetailSchema event) async {
-    final calendarEvent = AppCalendarEvent(
-      title: '[TOTEM] ${event.title} - ${space.title}',
-      description: space.shortDescription,
-      location: getFullUrl(event.calLink),
-      start: event.start.toLocal(),
-      end: event.start.add(Duration(minutes: event.duration)).toLocal(),
-      reminderMinutesBefore: 10,
-    );
-    try {
-      final success = await CalendarService.addToCalendar(calendarEvent);
-      if (!success && mounted) {
-        showErrorPopup(
-          context,
-          icon: TotemIcons.calendar,
-          title: 'Failed to add event to calendar',
-          message: 'Please try again later',
-        );
-      }
-    } catch (e, st) {
-      ErrorHandler.logError(
-        e,
-        stackTrace: st,
-        message: 'Failed to add to calendar',
+    _refresh(newSession);
+    if (!attending && mounted) {
+      _notificationController.showError(
+        context,
+        icon: TotemIcons.spaces,
+        title: 'Failed to switch sessions',
+        message: 'Please try again later',
       );
-      if (mounted) {
-        showErrorPopup(
-          context,
-          icon: TotemIcons.calendar,
-          title: 'Failed to add event to calendar',
-          message: 'Please try again later',
-        );
-      }
     }
+    return attending;
   }
 
-  Future<void> _giveUpSpot(SessionDetailSchema event) async {
+  Future<void> _onAttendSuccess(SessionDetailSchema session) async {
+    if (!mounted) return;
+    setState(() => _attending = true);
+    await showAttendingDialog(context, session);
+    await _refresh(session);
+  }
+
+  Future<void> _giveUpSpot(SessionDetailSchema session) async {
     final giveUp = await showDialog<bool>(
       context: context,
       builder: (_) => ConfirmationDialog(
@@ -745,24 +730,24 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     if (giveUp == null || !giveUp || !mounted) return;
     setState(() => _loading = true);
     try {
-      final attending = await ref.read(rsvpCancelProvider(event.slug).future);
+      final attending = await ref.read(rsvpCancelProvider(session.slug).future);
       if (mounted) setState(() => _loading = false);
 
       if (!attending) {
         if (mounted) setState(() => _attending = false);
 
         if (mounted) {
-          showErrorPopup(
+          _notificationController.showError(
             context,
             icon: TotemIcons.seats,
             title: 'You gave up your spot',
             message: 'You can always attend again if a spot opens up.',
           );
         }
-        await _refresh(event);
+        await _refresh(session);
       } else {
         if (mounted) {
-          showErrorPopup(
+          _notificationController.showError(
             context,
             icon: TotemIcons.seats,
             title: 'Failed to give up your spot',
@@ -770,14 +755,9 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
           );
         }
       }
-    } catch (e, st) {
-      ErrorHandler.logError(
-        e,
-        stackTrace: st,
-        message: 'Failed to give up spot',
-      );
+    } catch (_) {
       if (mounted) {
-        showErrorPopup(
+        _notificationController.showError(
           context,
           icon: TotemIcons.seats,
           title: 'Failed to give up your spot',
@@ -787,25 +767,26 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     }
   }
 
-  void _joinLivekit(SessionDetailSchema event) {
-    logger.d('Joining livekit session: ${event.slug}');
+  void _joinLivekit(SessionDetailSchema session) {
+    logger.d('Joining livekit session: ${session.slug}');
     if (mounted) setState(() => _joined = true);
-    context.go(RouteNames.session(event.slug));
+    context.go(RouteNames.session(session.slug));
   }
 
-  Future<void> _joinGoogleMeet(SessionDetailSchema event) async {
+  Future<void> _joinGoogleMeet(SessionDetailSchema session) async {
     setState(() => _joined = true);
     await launchUrl(
-      Uri.parse(getFullUrl(event.calLink)),
+      Uri.parse(getFullUrl(session.calLink)),
       mode: LaunchMode.externalApplication,
     );
   }
 
-  Future<void> _refresh(SessionDetailSchema event) async {
-    _initialized =
-        false; // allow _initFromEvent to re-run with fresh start time
+  Future<void> _refresh(SessionDetailSchema session) async {
+    if (!mounted) return;
+    ref.invalidate(spacesSummaryProvider);
     // ignore: unused_result
-    await ref.refresh(eventProvider(event.slug).future);
+    await ref.refresh(sessionProvider(session.slug).future);
+    if (!mounted) return;
     // ignore: unused_result
     await ref.refresh(spaceProvider(space.slug).future);
   }
@@ -817,7 +798,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
 
 class _DateAttendRow extends StatelessWidget {
   const _DateAttendRow({
-    required this.event,
+    required this.session,
     required this.state,
     required this.currentTimeago,
     required this.loading,
@@ -829,7 +810,7 @@ class _DateAttendRow extends StatelessWidget {
     required this.onExplore,
   });
 
-  final SessionDetailSchema event;
+  final SessionDetailSchema session;
   final SpaceJoinCardState state;
   final String currentTimeago;
   final bool loading;
@@ -851,11 +832,11 @@ class _DateAttendRow extends StatelessWidget {
       SpaceJoinCardState.closed => 'Registration closed',
       SpaceJoinCardState.full => 'Session full',
       SpaceJoinCardState.attending ||
-      SpaceJoinCardState.notJoined => formatSessionDate(event.start),
+      SpaceJoinCardState.notJoined => formatSessionDate(session.start),
     };
     final timeLabel = switch (state) {
       SpaceJoinCardState.attending || SpaceJoinCardState.notJoined =>
-        formatSessionTime(event.start, event.userTimezone),
+        formatSessionTime(session.start, session.userTimezone),
       SpaceJoinCardState.joinable => currentTimeago,
       _ => 'Explore upcoming sessions',
     };
@@ -949,7 +930,7 @@ class _DateAttendRow extends StatelessWidget {
       SpaceJoinCardState.closed ||
       SpaceJoinCardState.full => onExplore(),
       SpaceJoinCardState.joinable =>
-        event.meetingProvider == MeetingProviderEnum.livekit
+        session.meetingProvider == MeetingProviderEnum.livekit
             ? onJoinLivekit()
             : onJoinGoogleMeet(),
       SpaceJoinCardState.notJoined => onAttend(),
@@ -998,17 +979,19 @@ class _DateAttendRow extends StatelessWidget {
 class _UpcomingSessionsSection extends StatelessWidget {
   const _UpcomingSessionsSection({
     required this.space,
-    required this.currentEventSlug,
+    required this.onRefresh,
+    required this.currentSessionSlug,
   });
 
   final MobileSpaceDetailSchema space;
-  final String? currentEventSlug;
+  final String? currentSessionSlug;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final upcomingSessions = space.nextEvents
-        .where((e) => e.slug != currentEventSlug)
+        .where((e) => e.slug != currentSessionSlug)
         .toList();
 
     if (upcomingSessions.isEmpty) return const SizedBox.shrink();
@@ -1028,7 +1011,11 @@ class _UpcomingSessionsSection extends StatelessWidget {
             ),
           ),
           for (final session in upcomingSessions)
-            _UpcomingSessionCard(space: space, session: session),
+            _UpcomingSessionCard(
+              space: space,
+              session: session,
+              onRefresh: onRefresh,
+            ),
         ],
       ),
     );
@@ -1040,17 +1027,26 @@ class _UpcomingSessionsSection extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────
 
 class _UpcomingSessionCard extends StatelessWidget {
-  const _UpcomingSessionCard({required this.space, required this.session});
+  const _UpcomingSessionCard({
+    required this.space,
+    required this.session,
+    required this.onRefresh,
+  });
 
   final MobileSpaceDetailSchema space;
   final NextSessionSchema session;
+  final VoidCallback onRefresh;
+
+  Future<void> _openSession(BuildContext context) async {
+    await context.push(RouteNames.spaceSession(space.slug, session.slug));
+    if (context.mounted) onRefresh();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () =>
-          context.push(RouteNames.spaceSession(space.slug, session.slug)),
+      onTap: () => _openSession(context),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -1064,24 +1060,12 @@ class _UpcomingSessionCard extends StatelessWidget {
               SizedBox(
                 height: double.infinity,
                 width: 130,
-                child: (space.imageLink != null && space.imageLink!.isNotEmpty)
-                    ? CachedNetworkImage(
-                        imageUrl: getFullUrl(space.imageLink!),
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => ColoredBox(
-                          color: Colors.black.withValues(alpha: 0.3),
-                        ),
-                        errorWidget: (context, url, error) => Image.asset(
-                          TotemImageAssets.genericBackground,
-                          fit: BoxFit.cover,
-                          package: 'totem_core',
-                        ),
-                      )
-                    : Image.asset(
-                        TotemImageAssets.genericBackground,
-                        fit: BoxFit.cover,
-                        package: 'totem_core',
-                      ),
+                child: TotemImage(
+                  imageUrl: space.imageLink,
+                  loadingPlaceholder: ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.3),
+                  ),
+                ),
               ),
 
               // ── Info ───────────────────────────────────────────
@@ -1160,9 +1144,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                             ),
                           ),
                           OutlinedButton(
-                            onPressed: () => context.push(
-                              RouteNames.spaceSession(space.slug, session.slug),
-                            ),
+                            onPressed: () => _openSession(context),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppTheme.mauve,
                               side: const BorderSide(color: AppTheme.mauve),
@@ -1324,173 +1306,6 @@ class AboutSpaceSheet extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Attending confirmation dialog
-// ─────────────────────────────────────────────────────────────
-
-class AttendingDialog extends StatefulWidget {
-  const AttendingDialog({
-    required this.onAddToCalendar,
-    required this.eventSlug,
-    super.key,
-  });
-
-  final String eventSlug;
-  final VoidCallback onAddToCalendar;
-
-  @override
-  State<AttendingDialog> createState() => _AttendingDialogState();
-}
-
-class _AttendingDialogState extends State<AttendingDialog> {
-  var _addedToCalendar = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Dialog(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: 14,
-          vertical: 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 10,
-          children: [
-            Row(
-              children: [
-                Builder(
-                  builder: (context) {
-                    return Container(
-                      height: 30,
-                      width: 30,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                      ),
-                      child: IconButton(
-                        padding: EdgeInsetsDirectional.zero,
-                        iconSize: 18,
-                        color: AppTheme.gray,
-                        onPressed: () async {
-                          final box = context.findRenderObject() as RenderBox?;
-                          await SharePlus.instance.share(
-                            ShareParams(
-                              uri: Uri.parse(AppConfig.instance.apiUrl)
-                                  .resolve('/spaces/event/${widget.eventSlug}')
-                                  .resolve('?utm_source=app&utm_medium=share'),
-                              sharePositionOrigin: box != null
-                                  ? box.localToGlobal(Offset.zero) & box.size
-                                  : null,
-                            ),
-                          );
-                        },
-                        icon: Icon(Icons.adaptive.share),
-                      ),
-                    );
-                  },
-                ),
-                const Spacer(),
-                Container(
-                  height: 30,
-                  width: 30,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                  ),
-                  child: IconButton(
-                    padding: EdgeInsetsDirectional.zero,
-                    iconSize: 18,
-                    color: AppTheme.gray,
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ),
-              ],
-            ),
-            const TotemIcon(
-              TotemIcons.greenCheckbox,
-              size: 95,
-              color: Color(0xFF98BD44),
-            ),
-            Text(
-              "You're going!",
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const Text.rich(
-              TextSpan(
-                children: <TextSpan>[
-                  TextSpan(
-                    text:
-                        "We'll send you a notification before the session "
-                        'starts.',
-                  ),
-                  TextSpan(text: '\n\n'),
-                  TextSpan(
-                    text:
-                        'When you join, you\u2019ll be in a Space where we take '
-                        'turns speaking while holding the virtual Totem \u2014 '
-                        'feel free to share when it\u2019s your turn, or simply '
-                        'listen if you prefer.',
-                  ),
-                  TextSpan(text: '\n\n'),
-                  TextSpan(
-                    text: 'Totem is better with friends!',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  TextSpan(
-                    text:
-                        " Share this link with your friends and they'll be "
-                        'able to join as well.',
-                  ),
-                ],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (!_addedToCalendar) {
-                  widget.onAddToCalendar();
-                  setState(() => _addedToCalendar = true);
-                } else {
-                  Navigator.of(context).pop();
-                }
-              },
-              child: Text(_addedToCalendar ? 'Added!' : 'Add to Calendar'),
-            ),
-            Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(text: 'In the meantime, review our '),
-                  TextSpan(
-                    text: 'Community Guidelines',
-                    style: const TextStyle(
-                      decoration: TextDecoration.underline,
-                    ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () => launchUrl(
-                        AppConfig.instance.communityGuidelinesUrl,
-                        mode: LaunchMode.externalApplication,
-                      ),
-                  ),
-                  const TextSpan(
-                    text: ' to learn more about how to participate.',
-                  ),
-                ],
-              ),
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

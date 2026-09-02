@@ -12,6 +12,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_reducer.dart';
@@ -23,6 +24,7 @@ import 'package:totem_core/features/sessions/controllers/utils.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
+import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/shared/logger.dart';
 
 export 'package:totem_core/features/sessions/controllers/core/session_state.dart';
@@ -72,6 +74,18 @@ enum SessionDisconnectedReason {
 
   /// The user was kicked out of the session by the keeper.
   removed,
+
+  /// The user was banned from the session by the keeper.
+  banned,
+
+  /// The user was disconnected for an unknown reason.
+  other,
+}
+
+enum SessionJoinResult {
+  success,
+  retryableFailure,
+  fatalFailure,
 }
 
 @riverpod
@@ -84,25 +98,41 @@ class SessionController extends _$SessionController {
   }
 
   EventsListener<RoomEvent>? _listener;
+  bool _awaitingInitialMicrophonePublication = false;
+
+  final JoinMediaOwner _joinMediaOwner = JoinMediaOwner();
 
   /// The sync timer periodically checks for changes in the room state
   /// and participants list, to keep the UI up to date.
   KeepAliveLink? _keepAliveLink;
   Timer? _syncTimer;
+  Timer? _statePollTimer;
   static const syncTimerDuration = Duration(seconds: 20);
+  static const _statePollInterval = Duration(seconds: 15);
 
   String? _lastMetadata;
-  SessionDetailSchema? event;
+  SessionDetailSchema? session;
   static const SessionStateReducer _stateReducer = SessionStateReducer();
 
+  /// The capture framerate caps both the local self-view and the published
+  /// stream (the camera is the single source for both).
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
       dimensions: VideoDimensionsPresets.h720_43,
       encoding: VideoEncoding(
         maxBitrate: 1300 * 1000,
-        maxFramerate: 20,
+        maxFramerate: 24,
       ),
     ),
+  );
+
+  /// h264 has hardware encode/decode on effectively every mobile device.
+  ///
+  /// Some Browsers have trouble encoding h265.
+  /// Prefer h265 on mobile devices.
+  static const defaultVideoPublishOptions = VideoPublishOptions(
+    videoCodec: (kIsWeb || kIsWasm) ? 'h264' : 'h265',
+    backupVideoCodec: BackupVideoCodec(codec: 'h264'),
   );
 
   SessionDeviceController get devices {
@@ -129,8 +159,8 @@ class SessionController extends _$SessionController {
     _dispatch(SessionChatMessageAdded(message));
   }
 
-  void markParticipantRemoved() {
-    _dispatch(const ParticipantRemoved());
+  void markParticipantRemoved(RemoveReason reason) {
+    _dispatch(ParticipantRemoved(reason));
   }
 
   void applyRoomState(RoomState roomState) {
@@ -148,18 +178,18 @@ class SessionController extends _$SessionController {
   @override
   SessionRoomState build(SessionOptions options) {
     ref
-        .watch(eventProvider(options.eventSlug))
-        .whenData((event) => this.event = event);
+        .watch(sessionProvider(options.sessionSlug))
+        .whenData((event) => session = event);
 
-    ref.onDispose(_cleanUp);
+    ref.onDispose(() => unawaited(_cleanUp()));
 
     final initialRoomState = RoomState(
-      keeper: event?.space.author.slug ?? '',
+      keeper: session?.space.author.slug ?? '',
       nextSpeaker: '',
       currentSpeaker: '',
       status: RoomStatus.waitingRoom,
       turnState: TurnState.idle,
-      sessionSlug: options.eventSlug,
+      sessionSlug: options.sessionSlug,
       statusDetail: const RoomStateStatusDetailWaitingRoom(
         WaitingRoomDetail(),
       ),
@@ -226,13 +256,18 @@ class SessionController extends _$SessionController {
 
     _onRoomChanges();
 
-    _applyJoinMediaState();
+    unawaited(_applyJoinMediaState());
     _dispatch(
       const ConnectionChanged(
         RoomConnectionState.connected,
         SessionPhase.connected,
       ),
     );
+
+    // Fetch server state immediately on join so the client is never stuck with
+    // stale local state when LiveKit metadata is empty (e.g. room was killed and
+    // recreated on Livekit but alive on the Totem server).
+    unawaited(_pollServerState());
 
     final speakerPref = options.speakerEnabled;
     devices.resetSpeakerRoutingDefaults(speakerPref);
@@ -248,6 +283,7 @@ class SessionController extends _$SessionController {
   }
 
   void _onDisconnected() {
+    _disableLocalMediaTracks();
     _dispatch(
       const ConnectionChanged(
         RoomConnectionState.disconnected,
@@ -274,8 +310,17 @@ class SessionController extends _$SessionController {
 
   void _onRoomChanges([RoomState? newSessionState]) {
     _updateParticipantsList();
+    void handleStateChange(RoomState state) {
+      if (state.version <= this.state.roomState.version) return;
+
+      if (state.status == RoomStatus.ended) {
+        _disableLocalMediaTracks();
+      }
+      _dispatch(RoomStateChanged(state));
+    }
+
     if (newSessionState != null) {
-      _dispatch(RoomStateChanged(newSessionState));
+      handleStateChange(newSessionState);
     } else {
       final metadataResult = resolveMetadataState(
         metadata: room?.metadata,
@@ -283,7 +328,7 @@ class SessionController extends _$SessionController {
       );
       _lastMetadata = metadataResult.lastMetadata;
       if (metadataResult.roomState != null) {
-        _dispatch(RoomStateChanged(metadataResult.roomState!));
+        handleStateChange(metadataResult.roomState!);
       }
     }
 
@@ -292,11 +337,55 @@ class SessionController extends _$SessionController {
     }
   }
 
+  Future<void> _pollServerState({bool attemptReconcile = false}) async {
+    if (!ref.mounted) return;
+    if (state.connectionState != RoomConnectionState.connected) return;
+
+    try {
+      final roomState = await ref.read(
+        roomStateProvider(
+          options.sessionSlug,
+          attemptReconcile: attemptReconcile,
+        ).future,
+      );
+      if (!ref.mounted) return;
+
+      // Protects against out-of-order application from overlapping polls
+      if (roomState.version > state.roomState.version) {
+        applyRoomState(roomState);
+        logger.d('Polled server state: version ${roomState.version}');
+      }
+    } catch (e, s) {
+      logger.d(
+        'poll room state failed (will retry next tick)',
+        error: e,
+        stackTrace: s,
+      );
+      // Network hiccup or transient error - the next poll will retry.
+    }
+  }
+
+  void _startStatePolling() {
+    _statePollTimer?.cancel();
+    _statePollTimer = Timer.periodic(_statePollInterval, (_) {
+      unawaited(_pollServerState());
+    });
+  }
+
+  /// Attempts to reconcile the local state with the server state.
+  void _attemptReconcile() {
+    if (!isCurrentUserKeeper()) return;
+    if (state.roomState.status == RoomStatus.ended) return;
+    _pollServerState(attemptReconcile: true);
+  }
+
   void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
+    _attemptReconcile();
     _updateParticipantsList();
   }
 
   void _onParticipantConnected(ParticipantConnectedEvent event) {
+    _attemptReconcile();
     _updateParticipantsList();
   }
 
@@ -305,12 +394,21 @@ class SessionController extends _$SessionController {
     await leave();
   }
 
-  Future<void> join() async {
-    if (room != null) {
-      if (state.connectionState == RoomConnectionState.connected ||
-          state.connectionState == RoomConnectionState.connecting) {
-        return;
+  Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
+    final retainedJoinMedia = _joinMediaOwner.retain(joinMedia);
+
+    if (state.connectionState == RoomConnectionState.connected ||
+        state.connectionState == RoomConnectionState.connecting) {
+      // The caller transferred ownership, but this no-op join will never hand
+      // these tracks to LiveKit. Release only the media supplied by this call;
+      // tracks retained by an in-flight join must remain alive. Connection
+      // state becomes connecting before initializeConnection assigns _room, so
+      // the state machine itself must be the re-entrancy guard.
+      if (retainedJoinMedia.hasOwnedTracks) {
+        _detachJoinMediaPreview(joinMedia);
       }
+      await retainedJoinMedia.dispose();
+      return SessionJoinResult.success;
     }
 
     _dispatch(
@@ -320,65 +418,33 @@ class SessionController extends _$SessionController {
       ),
     );
 
-    await initializeConnection(
-      roomOptions: RoomOptions(
-        defaultCameraCaptureOptions: options.cameraOptions,
-        defaultAudioCaptureOptions: const AudioCaptureOptions(),
-        defaultAudioOutputOptions: AudioOutputOptions(
-          speakerOn: options.speakerEnabled,
-        ),
-        dynacast: true,
-        defaultVideoPublishOptions: const VideoPublishOptions(
-          // simulcast: true,
-          videoCodec: 'h265',
-          //   videoEncoding: const VideoEncoding(
-          //     maxBitrate: 1_500_000,
-          //     maxFramerate: 30,
-          //   ),
-          //   videoSimulcastLayers: [
-          //     // Low: Small tiles (216p @ 15fps) - Minimal CPU impact
-          //     // const VideoParameters(
-          //     //   dimensions: VideoDimensions(384, 216),
-          //     //   encoding: VideoEncoding(
-          //     //     maxBitrate: 150_000,
-          //     //     maxFramerate: 15,
-          //     //   ),
-          //     // ),
-          //     // Medium: Mid-size tiles (540p @ 20fps)
-          //     const VideoParameters(
-          //       dimensions: VideoDimensions(960, 540),
-          //       encoding: VideoEncoding(
-          //         maxBitrate: 450_000,
-          //         maxFramerate: 24,
-          //       ),
-          //     ),
-          //     // High: The active speaker (720p @ 30fps)
-          //     VideoParameters(
-          //       dimensions: VideoParametersPresets.h720_169.dimensions,
-          //       encoding: const VideoEncoding(
-          //         maxBitrate: 1_500_000,
-          //         maxFramerate: 30,
-          //       ),
-          //     ),
-          //   ],
-        ),
-        adaptiveStream: true,
-      ),
-      url: AppConfig.instance.liveKitUrl,
-      token: options.token,
-    );
-
-    await ref
-        .read(sessionInfraControllerProvider.notifier)
-        .activate(event: event);
-
-    _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(
-      SessionController.syncTimerDuration,
-      (_) => _onRoomChanges(),
-    );
-
     try {
+      await initializeConnection(
+        roomOptions: RoomOptions(
+          defaultCameraCaptureOptions: options.cameraOptions,
+          defaultAudioCaptureOptions: const AudioCaptureOptions(),
+          defaultAudioOutputOptions: AudioOutputOptions(
+            speakerOn: options.speakerEnabled,
+          ),
+          dynacast: true,
+          defaultVideoPublishOptions: defaultVideoPublishOptions,
+          adaptiveStream: true,
+        ),
+        url: AppConfig.instance.liveKitUrl,
+        token: options.token,
+      );
+
+      await ref
+          .read(sessionInfraControllerProvider.notifier)
+          .activate(event: session);
+
+      _syncTimer?.cancel();
+      _syncTimer = Timer.periodic(
+        SessionController.syncTimerDuration,
+        (_) => _onRoomChanges(),
+      );
+      _startStatePolling();
+
       final connectOptions = defaultTargetPlatform == TargetPlatform.iOS
           ? const ConnectOptions(
               timeouts: Timeouts(
@@ -392,15 +458,47 @@ class SessionController extends _$SessionController {
             )
           : null;
 
-      await _connect(
-        url: AppConfig.instance.liveKitUrl,
-        token: options.token,
-        fastConnectOptions: FastConnectOptions(
-          microphone: TrackOption(enabled: options.microphoneEnabled),
-          camera: TrackOption(enabled: options.cameraEnabled),
-        ),
-        connectOptions: connectOptions,
+      final initialCameraTrack = options.cameraEnabled
+          ? _joinMediaOwner.track<LocalVideoTrack>()
+          : null;
+      final initialMicrophoneTrack = options.microphoneEnabled
+          ? _joinMediaOwner.track<LocalAudioTrack>()
+          : null;
+
+      final fastConnectOptions = FastConnectOptions(
+        microphone: initialMicrophoneTrack != null
+            ? TrackOption(track: initialMicrophoneTrack)
+            : TrackOption(enabled: options.microphoneEnabled),
+        camera: initialCameraTrack != null
+            ? TrackOption(track: initialCameraTrack)
+            : TrackOption(enabled: options.cameraEnabled),
       );
+
+      // A successful Room.connect transfers ownership even though the
+      // LocalTrackPublication may not be visible yet: LiveKit's
+      // EngineJoinResponseEvent handler performs FastConnect publication
+      // asynchronously. If connect throws, retain ownership so failed-join
+      // cleanup below can stop the raw capture before join returns.
+      _awaitingInitialMicrophonePublication = options.microphoneEnabled;
+      try {
+        await _connect(
+          url: AppConfig.instance.liveKitUrl,
+          token: options.token,
+          fastConnectOptions: fastConnectOptions,
+          connectOptions: connectOptions,
+        );
+      } catch (_) {
+        _awaitingInitialMicrophonePublication = false;
+        rethrow;
+      }
+      _joinMediaOwner
+        ..releaseToRoom(initialCameraTrack)
+        ..releaseToRoom(initialMicrophoneTrack);
+      // Residual SDK limitation: Room.connect can succeed before FastConnect
+      // publication finishes. If that later asynchronous publication fails,
+      // LiveKit exposes no completion/error future through which ownership can
+      // be reclaimed, so the raw track can remain live until browser cleanup.
+      return SessionJoinResult.success;
     }
     // For ConnectException and MediaConnectException, we log the error but don't
     // necessarily want to show an error message to the user.
@@ -418,9 +516,11 @@ class SessionController extends _$SessionController {
           // This error can occur when the token is invalid or doesn't have the right permissions.
           // In this case, we want to show an error message to the user.
           _onError(error);
+          return SessionJoinResult.fatalFailure;
         case ConnectionErrorReason.Timeout:
-        // These errors can occur due to transient network issues or server problems.
-        // We can choose to retry the connection or show an error message.
+          // These errors can occur due to transient network issues or server problems.
+          // We can choose to retry the connection or show an error message.
+          return SessionJoinResult.retryableFailure;
       }
     } on MediaConnectException catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -430,6 +530,7 @@ class SessionController extends _$SessionController {
       );
       // We may want to catch this error in the future.
       // _onError(error);
+      return SessionJoinResult.retryableFailure;
     } on LiveKitException catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -437,21 +538,79 @@ class SessionController extends _$SessionController {
         message: 'Error connecting to LiveKit room',
       );
       _onError(error);
+      return SessionJoinResult.fatalFailure;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Unexpected error occurred',
       );
+      return SessionJoinResult.retryableFailure;
+    } finally {
+      // Successful FastConnect tracks were removed from the owner above, so
+      // this only disposes media that LiveKit did not accept. In particular,
+      // fatal failures keep rendering the Session error UI and never run the
+      // retry reset path, so join itself must release their live capture.
+      if (retainedJoinMedia.hasOwnedTracks) {
+        _detachJoinMediaPreview(joinMedia);
+      }
+      await retainedJoinMedia.dispose();
+    }
+  }
+
+  void _detachJoinMediaPreview(SessionJoinMedia? joinMedia) {
+    try {
+      joinMedia?.onBeforeDispose?.call();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to detach pre-join media before disposal',
+      );
+    }
+  }
+
+  /// Tears down a failed connection attempt while keeping the controller
+  /// available for another join from the pre-join screen.
+  Future<void> resetAfterFailedJoin() async {
+    _syncTimer?.cancel();
+    _syncTimer = null;
+    _statePollTimer?.cancel();
+    _statePollTimer = null;
+
+    if (ref.mounted) {
+      try {
+        await ref.read(sessionInfraControllerProvider.notifier).deactivate();
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to deactivate session infrastructure after join',
+        );
+      }
+    }
+
+    await disposeConnection();
+    if (ref.mounted) {
+      _dispatch(
+        const ConnectionChanged(
+          RoomConnectionState.disconnected,
+          SessionPhase.idle,
+          wasJoining: true,
+        ),
+      );
     }
   }
 
   Future<void> leave() async {
-    await _disconnect();
-    _cleanUp();
+    try {
+      await _disconnect();
+    } finally {
+      await _cleanUp();
+    }
   }
 
-  void _cleanUp() {
+  Future<void> _cleanUp() async {
     logger.d('Disposing SessionService and closing connections.');
 
     if (ref.mounted) {
@@ -464,9 +623,9 @@ class SessionController extends _$SessionController {
       try {
         ref.read(emojiReactionsProvider.notifier).clear();
       } catch (_) {}
-      if (event != null) {
+      if (session != null) {
         try {
-          ref.invalidate(spaceProvider(event!.space.slug));
+          ref.invalidate(spaceProvider(session!.space.slug));
         } catch (_) {}
       }
       try {
@@ -485,8 +644,10 @@ class SessionController extends _$SessionController {
 
     _syncTimer?.cancel();
     _syncTimer = null;
+    _statePollTimer?.cancel();
+    _statePollTimer = null;
 
-    disposeConnection();
+    await disposeConnection();
   }
 
   @visibleForTesting
@@ -535,6 +696,16 @@ class SessionController extends _$SessionController {
       })
       ..on<DataReceivedEvent>((data) {
         if (ref.mounted) messaging.handleDataReceived(data);
+      })
+      ..on<LocalTrackPublishedEvent>((event) {
+        if (!_awaitingInitialMicrophonePublication ||
+            event.participant != room.localParticipant ||
+            event.publication.source != TrackSource.microphone) {
+          return;
+        }
+
+        _awaitingInitialMicrophonePublication = false;
+        unawaited(_applyJoinMediaState());
       })
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
@@ -590,6 +761,7 @@ class SessionController extends _$SessionController {
 
   @visibleForTesting
   Future<void> disposeConnection() async {
+    _awaitingInitialMicrophonePublication = false;
     await _disableLocalMediaTracks();
 
     try {
@@ -600,34 +772,47 @@ class SessionController extends _$SessionController {
     _listener = null;
 
     try {
-      _room?.dispose();
+      await _room?.dispose();
     } catch (_) {}
     _room = null;
+
+    await _joinMediaOwner.disposeAll();
   }
 
   Future<void> _applyJoinMediaState() async {
     final currentRoom = room;
     if (currentRoom == null) return;
 
-    final cameraEnabled = options.cameraEnabled;
-    currentRoom.localParticipant?.setCameraEnabled(cameraEnabled);
+    // FastConnect is the sole owner of initial capture enablement. Its
+    // publication continues asynchronously after Room.connect completes, so
+    // enabling either source here can open a second getUserMedia capture before
+    // the first publication is registered. Camera needs no post-connect policy
+    // adjustment: FastConnect already received options.cameraEnabled.
 
     final shouldEnableMicrophone = () {
       if (state.roomState.status == RoomStatus.waitingRoom &&
           !state.hasKeeper) {
         return options.microphoneEnabled;
       }
-      if (state.roomState.status == RoomStatus.active &&
-          state.speakingNow == currentRoom.localParticipant?.identity) {
-        return options.microphoneEnabled;
+      if (state.roomState.status == RoomStatus.active) {
+        if (state.speakingNow == currentRoom.localParticipant?.identity) {
+          return options.microphoneEnabled;
+        }
+        return false;
       }
       return isCurrentUserKeeper() && options.microphoneEnabled;
     }();
 
-    if (shouldEnableMicrophone) {
-      await devices.enableMicrophone();
-    } else {
-      await devices.disableMicrophone();
+    if (!shouldEnableMicrophone) {
+      try {
+        await devices.disableMicrophone();
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to apply initial microphone state',
+        );
+      }
     }
   }
 
@@ -690,9 +875,4 @@ class SessionController extends _$SessionController {
       lastMetadata: lastMetadata,
     );
   }
-}
-
-@riverpod
-SessionRoomState session(Ref ref, SessionOptions options) {
-  return ref.watch(sessionControllerProvider(options));
 }

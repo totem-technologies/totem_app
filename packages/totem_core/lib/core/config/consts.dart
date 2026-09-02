@@ -11,4 +11,6 @@ class AppConsts {
   static const storageSubscribedSpacesKey = 'subscribed_spaces';
   static const storageSessionsHistoryKey = 'sessions_history';
   static const hasSeenWelcomeOnboarding = 'has_seen_welcome_onboarding';
+  static const storageSelfViewEnabledKey = 'self_view_enabled';
+  static const storageSelfViewPositionKey = 'self_view_position';
 }

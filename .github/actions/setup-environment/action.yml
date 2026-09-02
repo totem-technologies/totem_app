@@ -1,10 +1,17 @@
-name: "Setup Environment & Secrets"
-description: "Generates the .env file in totem_app and totem_web, and decodes Firebase/Google service credentials"
+name: "Setup build environment"
+description: >-
+  One-stop build environment setup, run right after checkout by every Flutter CI
+  job: installs the Flutter toolchain (optionally Java 17 for Android), composes
+  the flavor's .env from config/, and decodes the Firebase/Google service
+  secrets. The Flutter/Java versions live here only — bump them in one place.
 
 inputs:
   flavor:
-    description: "Build flavor. Must be 'staging' or 'production'."
+    description: "Build flavor: 'development', 'staging' or 'production'."
     required: true
+  java:
+    description: "Also install Java 17 + Gradle cache (needed for Android builds)."
+    default: "false"
   firebase_options:
     description: "Base64 encoded firebase_options.dart"
     required: true
@@ -18,44 +25,32 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Validate flavor
+    - name: Setup Java
+      if: ${{ inputs.java == 'true' }}
+      uses: actions/setup-java@v5
+      with:
+        distribution: "zulu"
+        java-version: "17.x"
+        cache: "gradle"
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2.23.0
+      with:
+        channel: "stable"
+        cache: true
+
+    - name: Flutter version
+      shell: bash
+      run: flutter --version
+
+    # Compose packages/*/.env from the layered sources in config/ (the single
+    # source of truth, shared with the Makefile env-* targets). setup_env.dart
+    # validates the flavor and writes both totem_app/.env and totem_web/.env.
+    - name: Compose .env
       shell: bash
       env:
         FLAVOR: ${{ inputs.flavor }}
-      run: |
-        case "$FLAVOR" in
-          staging|production) ;;
-          *)
-            echo "::error::Unknown flavor '$FLAVOR'. Must be one of: staging, production."
-            exit 1
-            ;;
-        esac
-
-    # totem_app and totem_web share the same runtime config, so each flavor
-    # writes one .env body to both packages via tee.
-    - name: Write .env (staging)
-      if: ${{ inputs.flavor == 'staging' }}
-      shell: bash
-      run: |
-        tee packages/totem_app/.env packages/totem_web/.env > /dev/null <<'EOF'
-        ENVIRONMENT="staging"
-        API_URL="https://totem.kbl.io"
-        LIVEKIT_URL="wss://totem-d7esbgcp.livekit.cloud"
-        SENTRY_DSN="https://66cc97ae272344978f48840710f857a0@o1324443.ingest.us.sentry.io/6582849"
-        POSTHOG_API_KEY="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z"
-        EOF
-
-    - name: Write .env (production)
-      if: ${{ inputs.flavor == 'production' }}
-      shell: bash
-      run: |
-        tee packages/totem_app/.env packages/totem_web/.env > /dev/null <<'EOF'
-        ENVIRONMENT="production"
-        API_URL="https://www.totem.org"
-        LIVEKIT_URL="wss://totem-d7esbgcp.livekit.cloud"
-        SENTRY_DSN="https://66cc97ae272344978f48840710f857a0@o1324443.ingest.us.sentry.io/6582849"
-        POSTHOG_API_KEY="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z"
-        EOF
+      run: dart scripts/setup_env.dart "$FLAVOR"
 
     - name: Decode firebase_options.dart (totem_app)
       shell: bash

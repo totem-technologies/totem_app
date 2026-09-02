@@ -9,19 +9,45 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/shared/logger.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 /// Centralized error handling for the Totem App.
 class ErrorHandler {
   const ErrorHandler._();
 
-  static void logError(
-    dynamic error, {
+  static final Expando<bool> _reportedErrors = Expando<bool>(
+    'totem.reportedErrors',
+  );
+
+  /// Reports [error] at most once for this exception instance.
+  ///
+  /// Errors often cross API, repository, provider, and presentation layers.
+  /// Keeping the reporting marker on the exception prevents each layer from
+  /// creating a separate Sentry event while preserving the original stack.
+  /// Scalar values, records, and null cannot be Expando keys, so they bypass
+  /// identity deduplication and are reported on every call.
+  /// Returns whether this call was the first report for [error].
+  static bool logError(
+    Object? error, {
     StackTrace? stackTrace,
     String? message,
+    Map<String, Object?>? diagnostics,
   }) {
+    if (_supportsIdentityTracking(error)) {
+      if (_reportedErrors[error!] ?? false) return false;
+      _reportedErrors[error] = true;
+    }
+
     if (kDebugMode) {
-      logger.e(message, error: error, stackTrace: stackTrace);
+      logger.e(
+        message,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (diagnostics != null && diagnostics.isNotEmpty) {
+        logger.d('Error diagnostics: $diagnostics');
+      }
     }
 
     if (AppConfig.instance.sentryDsn != null &&
@@ -30,9 +56,30 @@ class ErrorHandler {
         error,
         stackTrace: stackTrace,
         message: message != null ? SentryMessage(message) : null,
+        withScope: diagnostics == null || diagnostics.isEmpty
+            ? null
+            : (scope) => scope.setContexts('diagnostics', diagnostics),
       );
     }
+
+    return true;
   }
+
+  /// Whether this exact exception has already crossed a reporting boundary.
+  ///
+  /// Values unsupported by [Expando] have no trackable identity and therefore
+  /// always return false.
+  static bool wasReported(Object? error) {
+    if (!_supportsIdentityTracking(error)) return false;
+    return _reportedErrors[error!] ?? false;
+  }
+
+  static bool _supportsIdentityTracking(Object? error) =>
+      error != null &&
+      error is! String &&
+      error is! num &&
+      error is! bool &&
+      error is! Record;
 
   static void logFlutterError(FlutterErrorDetails details) {
     logError(
@@ -98,28 +145,21 @@ class ErrorHandler {
   static Future<void> showErrorDialog(
     BuildContext context, {
     required String message,
-    String title = 'Error',
+    String title = 'Something Went Wrong',
     String buttonText = 'OK',
   }) async {
-    final theme = Theme.of(context);
-
-    return showDialog<void>(
+    await showDialog<void>(
       context: context,
-      barrierDismissible: false,
       builder: (context) {
-        return AlertDialog(
-          title: Text(title, style: theme.textTheme.titleLarge),
-          content: SingleChildScrollView(
-            child: Text(message, style: theme.textTheme.bodyMedium),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(buttonText),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+        return ConfirmationDialog(
+          title: title,
+          content: message,
+          confirmButtonText: buttonText,
+          icon: TotemIcons.errorOutlined,
+          onConfirm: () async {
+            Navigator.of(context).pop();
+          },
+          showCancel: false,
         );
       },
     );
@@ -130,7 +170,7 @@ class ErrorHandler {
     BuildContext context,
     Object error, {
     StackTrace? stackTrace,
-    Future<void> Function()? onRetry,
+    AsyncCallback? onRetry,
     bool showError = true,
   }) async {
     logError(error, stackTrace: stackTrace);
@@ -147,7 +187,7 @@ class ErrorHandler {
         buttonText: 'Sign In Again',
       );
     } else
-    // For network errors, we might want to offer a retry
+    // For network errors, allow retry
     if (error is AppNetworkException && onRetry != null) {
       await showDialog<void>(
         context: context,

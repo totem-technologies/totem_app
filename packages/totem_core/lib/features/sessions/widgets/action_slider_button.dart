@@ -2,11 +2,11 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
-typedef OnActionPerformed = Future<bool> Function();
+typedef OnActionPerformed = AsyncValueGetter<bool>;
 
 class ActionSliderButton extends StatefulWidget {
   const ActionSliderButton({
@@ -15,7 +15,9 @@ class ActionSliderButton extends StatefulWidget {
     this.keepLoadingOnSuccess = false,
     this.isLoading,
     this.backgroundColor,
+    this.focusNode,
     this.autofocus = true,
+    this.enabled = true,
     super.key,
   });
 
@@ -24,44 +26,28 @@ class ActionSliderButton extends StatefulWidget {
   final bool keepLoadingOnSuccess;
   final bool? isLoading;
   final Color? backgroundColor;
+  final FocusNode? focusNode;
   final bool autofocus;
+  final bool enabled;
 
   @override
   State<ActionSliderButton> createState() => _ActionSliderButtonState();
 }
 
 class _ActionSliderButtonState extends State<ActionSliderButton> {
-  late final MouseTracker _mouseTracker;
-  late bool _hasMouseConnected;
-
-  @override
-  void initState() {
-    super.initState();
-    _mouseTracker = RendererBinding.instance.mouseTracker;
-    _hasMouseConnected = _mouseTracker.mouseIsConnected;
-    _mouseTracker.addListener(_handleMouseConnectionChanged);
-  }
-
-  @override
-  void dispose() {
-    _mouseTracker.removeListener(_handleMouseConnectionChanged);
-    super.dispose();
-  }
-
-  void _handleMouseConnectionChanged() {
-    final hasMouseConnected = _mouseTracker.mouseIsConnected;
-    if (_hasMouseConnected == hasMouseConnected || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _hasMouseConnected = hasMouseConnected;
-    });
-  }
+  // Platform check is stable — unlike mouseIsConnected, it doesn't flicker
+  // when the pointer leaves the browser window.
+  bool get _isDesktop =>
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux;
 
   @override
   Widget build(BuildContext context) {
-    if (!_hasMouseConnected) {
+    if (!_isDesktop) {
+      // Touch variant intentionally does not auto-focus on enable —
+      // the slider uses CallbackShortcuts for Space which works
+      // globally, and stealing focus would disrupt on-screen keyboards.
       return ActionSlider(
         text: widget.text,
         onActionCompleted: widget.onActionCompleted,
@@ -69,6 +55,7 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
         isLoading: widget.isLoading,
         backgroundColor: widget.backgroundColor,
         autofocus: widget.autofocus,
+        enabled: widget.enabled,
       );
     }
 
@@ -78,7 +65,9 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
       keepLoadingOnSuccess: widget.keepLoadingOnSuccess,
       isLoading: widget.isLoading,
       backgroundColor: widget.backgroundColor,
+      focusNode: widget.focusNode,
       autofocus: widget.autofocus,
+      enabled: widget.enabled,
     );
   }
 }
@@ -91,7 +80,9 @@ class ActionButton extends StatefulWidget {
     this.keepLoadingOnSuccess = false,
     this.isLoading,
     this.backgroundColor,
+    this.focusNode,
     this.autofocus = true,
+    this.enabled = true,
     super.key,
   });
 
@@ -100,7 +91,9 @@ class ActionButton extends StatefulWidget {
   final bool keepLoadingOnSuccess;
   final bool? isLoading;
   final Color? backgroundColor;
+  final FocusNode? focusNode;
   final bool autofocus;
+  final bool enabled;
 
   @override
   State<ActionButton> createState() => _ActionButtonState();
@@ -108,9 +101,27 @@ class ActionButton extends StatefulWidget {
 
 class _ActionButtonState extends State<ActionButton> {
   var _isLoading = false;
+  FocusNode? _internalNode;
+
+  FocusNode get _effectiveFocusNode =>
+      widget.focusNode ?? (_internalNode ??= FocusNode());
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focusNode == null) {
+      _internalNode = FocusNode();
+    }
+  }
+
+  @override
+  void dispose() {
+    _internalNode?.dispose();
+    super.dispose();
+  }
 
   Future<void> _onPressed() async {
-    if (widget.isLoading == true || _isLoading) return;
+    if (!widget.enabled || widget.isLoading == true || _isLoading) return;
 
     setState(() {
       _isLoading = true;
@@ -130,6 +141,21 @@ class _ActionButtonState extends State<ActionButton> {
     if (oldWidget.isLoading != widget.isLoading && widget.isLoading != null) {
       _isLoading = widget.isLoading!;
     }
+    if (oldWidget.focusNode != widget.focusNode) {
+      if (oldWidget.focusNode == null && widget.focusNode != null) {
+        // Caller started providing a node — drop ours.
+        _internalNode?.dispose();
+        _internalNode = null;
+      } else if (oldWidget.focusNode != null && widget.focusNode == null) {
+        // Caller stopped providing a node — create ours.
+        _internalNode = FocusNode();
+      }
+    }
+    if (!oldWidget.enabled && widget.enabled && widget.autofocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _effectiveFocusNode.requestFocus();
+      });
+    }
   }
 
   @override
@@ -143,13 +169,15 @@ class _ActionButtonState extends State<ActionButton> {
       height: 50,
       child: ElevatedButton(
         autofocus: widget.autofocus,
-        onPressed: effectiveLoading ? null : _onPressed,
+        focusNode: _effectiveFocusNode,
+        onPressed: (!widget.enabled || effectiveLoading) ? null : _onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 40),
         ),
         child: effectiveLoading
             ? const SizedBox(
@@ -160,7 +188,7 @@ class _ActionButtonState extends State<ActionButton> {
                   strokeCap: StrokeCap.round,
                 ),
               )
-            : Text(widget.text),
+            : AutoSizeText(widget.text, maxLines: 1),
       ),
     );
   }
@@ -175,6 +203,7 @@ class ActionSlider extends StatefulWidget {
     this.isLoading,
     this.backgroundColor,
     this.autofocus = true,
+    this.enabled = true,
     super.key,
   });
 
@@ -184,12 +213,14 @@ class ActionSlider extends StatefulWidget {
   final bool? isLoading;
   final Color? backgroundColor;
   final bool autofocus;
+  final bool enabled;
 
   @override
-  State<ActionSlider> createState() => _ActionSliderState();
+  State<ActionSlider> createState() => ActionSliderState();
 }
 
-class _ActionSliderState extends State<ActionSlider> {
+@visibleForTesting
+class ActionSliderState extends State<ActionSlider> {
   var _dragPosition = 0.0;
   var _isCompleted = false;
   var _isLoading = false;
@@ -199,7 +230,7 @@ class _ActionSliderState extends State<ActionSlider> {
     DragUpdateDetails details,
     double maxSlideDistance,
   ) async {
-    if (_isCompleted || _isLoading) return;
+    if (_isCompleted || _isLoading || !widget.enabled) return;
 
     setState(() {
       _dragPosition += details.delta.dx;
@@ -222,7 +253,7 @@ class _ActionSliderState extends State<ActionSlider> {
     DragEndDetails details,
     double maxSlideDistance,
   ) {
-    if (_isCompleted || _isLoading) return;
+    if (_isCompleted || _isLoading || !widget.enabled) return;
 
     final progress = _dragPosition / maxSlideDistance;
     final velocity = details.velocity.pixelsPerSecond.dx;
@@ -301,7 +332,10 @@ class _ActionSliderState extends State<ActionSlider> {
         return CallbackShortcuts(
           bindings: <ShortcutActivator, VoidCallback>{
             const SingleActivator(LogicalKeyboardKey.space): () {
-              if (!_isCompleted && !_isLoading && widget.isLoading != true) {
+              if (widget.enabled &&
+                  !_isCompleted &&
+                  !_isLoading &&
+                  widget.isLoading != true) {
                 setState(() {
                   _dragPosition = maxSlideDistance;
                   _isCompleted = true;
@@ -315,75 +349,82 @@ class _ActionSliderState extends State<ActionSlider> {
           child: Focus(
             autofocus: widget.autofocus,
             child: GestureDetector(
-              onPanUpdate: (details) => _onPanUpdate(details, maxSlideDistance),
-              onPanEnd: (details) => _onPanEnd(details, maxSlideDistance),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 50),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: AlignmentDirectional.center,
-                  children: [
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.symmetric(
-                          horizontal: thumbSize * 1.25,
-                        ),
-                        child: AutoSizeText(
-                          widget.text,
-                          style: textStyle?.copyWith(
-                            color: foregroundColor.withValues(
-                              alpha: 1.0 - progress,
-                            ),
+              onPanUpdate: widget.enabled
+                  ? (details) => _onPanUpdate(details, maxSlideDistance)
+                  : null,
+              onPanEnd: widget.enabled
+                  ? (details) => _onPanEnd(details, maxSlideDistance)
+                  : null,
+              child: Opacity(
+                opacity: widget.enabled ? 1.0 : 0.5,
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 50),
+                  decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: AlignmentDirectional.center,
+                    children: [
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: thumbSize * 1.25,
                           ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ),
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      left: padding + _dragPosition,
-                      top: padding,
-                      bottom: padding,
-                      child: Container(
-                        width: thumbSize,
-                        decoration: BoxDecoration(
-                          color: foregroundColor,
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: widget.isLoading == true || _isLoading
-                            ? Center(
-                                child: Container(
-                                  width: 24,
-                                  height: 24,
-                                  alignment: AlignmentDirectional.center,
-                                  child:
-                                      const CircularProgressIndicator.adaptive(
-                                        strokeWidth: 1.5,
-                                        strokeCap: StrokeCap.round,
-                                      ),
-                                ),
-                              )
-                            : Icon(
-                                Icons.arrow_forward_ios,
-                                size: 20,
-                                color: backgroundColor,
+                          child: AutoSizeText(
+                            widget.text,
+                            style: textStyle?.copyWith(
+                              color: foregroundColor.withValues(
+                                alpha: 1.0 - progress,
                               ),
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
+                        left: padding + _dragPosition,
+                        top: padding,
+                        bottom: padding,
+                        child: Container(
+                          width: thumbSize,
+                          decoration: BoxDecoration(
+                            color: foregroundColor,
+                            borderRadius: BorderRadius.circular(25),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: widget.isLoading == true || _isLoading
+                              ? Center(
+                                  child: Container(
+                                    width: 24,
+                                    height: 24,
+                                    alignment: AlignmentDirectional.center,
+                                    child:
+                                        const CircularProgressIndicator.adaptive(
+                                          strokeWidth: 1.5,
+                                          strokeCap: StrokeCap.round,
+                                        ),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 20,
+                                  color: backgroundColor,
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

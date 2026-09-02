@@ -9,6 +9,16 @@ part 'session_repository.g.dart';
 const _shortTimeoutDuration = Duration(seconds: 10);
 const _timeoutDuration = Duration(seconds: 15);
 
+/// Maximum POST attempts when the server asks us to refresh state due to a
+/// [ErrorCode.staleVersion] race. Each attempt bumps the version, so retrying
+/// makes progress.
+const _maxStaleVersionAttempts = 3;
+
+bool _isStaleVersionError(ErrorCode? code) => code == ErrorCode.staleVersion;
+
+bool _isInvalidTransitionError(ErrorCode? code) =>
+    code == ErrorCode.invalidTransition;
+
 Future<RoomState> _postEvent({
   required ClientApi apiService,
   required String sessionSlug,
@@ -17,59 +27,129 @@ Future<RoomState> _postEvent({
   required String operationName,
   Duration? timeout,
 }) async {
-  try {
-    return await RepositoryUtils.handleApiCall<RoomState>(
-      apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
-        sessionSlug: sessionSlug,
-        body: EventRequest(
-          event: event,
-          lastSeenVersion: lastSeenVersion,
+  // ── staleVersion: retry loop with version bumps ──────────────────────
+  var version = lastSeenVersion;
+
+  for (var attempt = 0; attempt < _maxStaleVersionAttempts; attempt++) {
+    final isLastStateAttempt = attempt >= _maxStaleVersionAttempts - 1;
+    try {
+      return await RepositoryUtils.handleApiCall<RoomState>(
+        apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
+          sessionSlug: sessionSlug,
+          body: EventRequest(
+            event: event,
+            lastSeenVersion: version,
+          ),
         ),
-      ),
-      operationName: operationName,
-      retryOnNetworkError: true,
-      timeout: timeout,
-    );
-  } on ApiError<RoomState, RoomErrorResponse> catch (error) {
-    final isStaleVersionError = error.error?.code == ErrorCode.staleVersion;
-    if (!isStaleVersionError) {
-      rethrow;
+        operationName: operationName,
+        retryOnNetworkError: true,
+        timeout: timeout,
+        diagnostics: {
+          'session_slug': sessionSlug,
+          'event': event.runtimeType.toString(),
+          'last_seen_version': version,
+          'state_attempt': attempt + 1,
+          'total_state_attempts': _maxStaleVersionAttempts,
+        },
+        shouldReport: (error) {
+          if (error is! ApiError<RoomState, RoomErrorResponse>) return true;
+          final code = error.error?.code;
+          if (_isInvalidTransitionError(code)) return false;
+          if (_isStaleVersionError(code)) return isLastStateAttempt;
+          return true;
+        },
+      );
+    } on ApiError<RoomState, RoomErrorResponse> catch (error) {
+      final code = error.error?.code;
+
+      // ── invalidTransition: single refresh + single retry ────────────
+      if (_isInvalidTransitionError(code)) {
+        final roomState = await RepositoryUtils.handleApiCall<RoomState>(
+          apiCall: () => apiService.rooms.totemRoomsApiGetState(
+            sessionSlug: sessionSlug,
+          ),
+          operationName: 'refresh room state',
+          retryOnNetworkError: true,
+          timeout: timeout,
+          diagnostics: {'session_slug': sessionSlug},
+        );
+
+        return RepositoryUtils.handleApiCall<RoomState>(
+          apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
+            sessionSlug: sessionSlug,
+            body: EventRequest(
+              event: event,
+              lastSeenVersion: roomState.version,
+            ),
+          ),
+          operationName: operationName,
+          retryOnNetworkError: true,
+          timeout: timeout,
+          diagnostics: {
+            'session_slug': sessionSlug,
+            'event': event.runtimeType.toString(),
+            'last_seen_version': roomState.version,
+          },
+        );
+      }
+
+      // ── staleVersion: bump version and loop ─────────────────────────
+      if (!_isStaleVersionError(code)) {
+        rethrow;
+      }
+
+      if (isLastStateAttempt) {
+        rethrow;
+      }
+
+      final roomState = await RepositoryUtils.handleApiCall<RoomState>(
+        apiCall: () =>
+            apiService.rooms.totemRoomsApiGetState(sessionSlug: sessionSlug),
+        operationName: 'refresh room state',
+        retryOnNetworkError: true,
+        timeout: timeout,
+        diagnostics: {'session_slug': sessionSlug},
+      );
+      version = roomState.version;
     }
-
-    final roomState = await RepositoryUtils.handleApiCall<RoomState>(
-      apiCall: () =>
-          apiService.rooms.totemRoomsApiGetState(sessionSlug: sessionSlug),
-      operationName: 'refresh room state',
-      retryOnNetworkError: true,
-      timeout: timeout,
-    );
-
-    return RepositoryUtils.handleApiCall<RoomState>(
-      apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
-        sessionSlug: sessionSlug,
-        body: EventRequest(
-          event: event,
-          lastSeenVersion: roomState.version,
-        ),
-      ),
-      operationName: operationName,
-      retryOnNetworkError: true,
-      timeout: timeout,
-    );
   }
+
+  throw StateError('_postEvent loop exhausted');
 }
 
 @riverpod
-Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) async {
+Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) {
   final apiService = ref.read(apiServiceProvider);
-  try {
-    final response = await apiService.rooms
-        .totemRoomsApiJoinRoom(sessionSlug: sessionSlug)
-        .timeout(_shortTimeoutDuration);
-    return response.dataOrThrow;
-  } catch (error) {
-    rethrow;
-  }
+  return RepositoryUtils.handleApiCall<JoinResponse>(
+    apiCall: () =>
+        apiService.rooms.totemRoomsApiJoinRoom(sessionSlug: sessionSlug),
+    operationName: 'join session',
+    timeout: _shortTimeoutDuration,
+    diagnostics: {'session_slug': sessionSlug},
+  );
+}
+
+@riverpod
+Future<RoomState> roomState(
+  Ref ref,
+  String sessionSlug, {
+  bool attemptReconcile = false,
+}) async {
+  final apiService = ref.read(apiServiceProvider);
+  return RepositoryUtils.handleApiCall<RoomState>(
+    apiCall: () {
+      if (attemptReconcile) {
+        return apiService.rooms.totemRoomsApiReconcileRoom(
+          sessionSlug: sessionSlug,
+        );
+      } else {
+        return apiService.rooms.totemRoomsApiGetState(sessionSlug: sessionSlug);
+      }
+    },
+    operationName: 'get room state',
+    timeout: _shortTimeoutDuration,
+    diagnostics: {'session_slug': sessionSlug},
+  );
 }
 
 @riverpod
@@ -123,6 +203,26 @@ Future<void> muteEveryone(
   ).timeout(
     _shortTimeoutDuration,
     onTimeout: () => throw AppNetworkException.timeout(),
+  );
+}
+
+/// Disables the camera of a participant.
+///
+/// An error can be thrown if the participant camera is already disabled.
+@riverpod
+Future<void> disableParticipantCamera(
+  Ref ref,
+  String sessionSlug,
+  String participantIdentity,
+) async {
+  final apiService = ref.read(apiServiceProvider);
+  await RepositoryUtils.handleApiCall<void>(
+    apiCall: () => apiService.rooms.totemRoomsApiDisableCamera(
+      sessionSlug: sessionSlug,
+      participantIdentity: participantIdentity,
+    ),
+    operationName: 'disable camera',
+    retryOnNetworkError: true,
   );
 }
 
@@ -202,13 +302,14 @@ Future<RoomState> reorderParticipants(
 Future<RoomState> startSession(
   Ref ref,
   String sessionSlug,
-  int lastSeenVersion,
-) {
+  int lastSeenVersion, {
+  String? prompt,
+}) {
   final apiService = ref.read(apiServiceProvider);
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
-    event: const EventRequestEventStartRoom(StartRoomEvent()),
+    event: EventRequestEventStartRoom(StartRoomEvent(prompt: prompt)),
     lastSeenVersion: lastSeenVersion,
     operationName: 'start session',
   );
@@ -267,6 +368,23 @@ Future<RoomState> unbanParticipant(
     ),
     lastSeenVersion: lastSeenVersion,
     operationName: 'unban participant',
+  );
+}
+
+@riverpod
+Future<RoomState> setPrompt(
+  Ref ref,
+  String sessionSlug,
+  int lastSeenVersion,
+  String prompt,
+) {
+  final apiService = ref.read(apiServiceProvider);
+  return _postEvent(
+    apiService: apiService,
+    sessionSlug: sessionSlug,
+    event: EventRequestEventSetPrompt(SetPromptEvent(prompt: prompt)),
+    lastSeenVersion: lastSeenVersion,
+    operationName: 'set prompt',
   );
 }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:totem_app/features/auth/controllers/auth_controller.dart';
+import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -46,7 +46,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     });
 
     final updated = await ref
-        .read(mobileAuthControllerProvider)
+        .read(userProfileControllerProvider.notifier)
         .updateUserProfile(
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),

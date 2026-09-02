@@ -21,6 +21,10 @@ class AppTheme {
   static const Color pinkTint = Color(0xFF8B5363);
   static const Color purple = Color(0xFF8B5CF6);
   static const Color green = Color(0xFF19F554);
+  static const Color paleGreen = Color(0xFF98BD44);
+
+  static const Color errorColor = Color(0xFFFF545C);
+  static const Color successColor = paleGreen;
 
   // --- Shadows ---
   static const List<BoxShadow> cardShadow = [
@@ -384,7 +388,7 @@ class AppTheme {
 
     // --- Dialog Theme ---
     dialogTheme: DialogThemeData(
-      backgroundColor: const Color(0xFFF3F1E9),
+      backgroundColor: AppTheme.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       titleTextStyle: const TextStyle(
         fontFamily: fontFamilySans,

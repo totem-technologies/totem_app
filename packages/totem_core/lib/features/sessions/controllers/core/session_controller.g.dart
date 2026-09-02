@@ -58,7 +58,7 @@ final class SessionControllerProvider
   }
 }
 
-String _$sessionControllerHash() => r'957691fb915bd9ed4874a481199a9ab0bf511266';
+String _$sessionControllerHash() => r'63a0527cdf7cf1dd02a047ea67e4c73c78330b4b';
 
 final class SessionControllerFamily extends $Family
     with
@@ -92,7 +92,7 @@ abstract class _$SessionController extends $Notifier<SessionRoomState> {
   SessionRoomState build(SessionOptions options);
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<SessionRoomState, SessionRoomState>;
     final element =
         ref.element
@@ -102,88 +102,6 @@ abstract class _$SessionController extends $Notifier<SessionRoomState> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, () => build(_$args));
+    return element.handleCreate(ref, () => build(_$args));
   }
-}
-
-@ProviderFor(session)
-final sessionProvider = SessionFamily._();
-
-final class SessionProvider
-    extends
-        $FunctionalProvider<
-          SessionRoomState,
-          SessionRoomState,
-          SessionRoomState
-        >
-    with $Provider<SessionRoomState> {
-  SessionProvider._({
-    required SessionFamily super.from,
-    required SessionOptions super.argument,
-  }) : super(
-         retry: null,
-         name: r'sessionProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$sessionHash();
-
-  @override
-  String toString() {
-    return r'sessionProvider'
-        ''
-        '($argument)';
-  }
-
-  @$internal
-  @override
-  $ProviderElement<SessionRoomState> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  SessionRoomState create(Ref ref) {
-    final argument = this.argument as SessionOptions;
-    return session(ref, argument);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SessionRoomState value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<SessionRoomState>(value),
-    );
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is SessionProvider && other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
-}
-
-String _$sessionHash() => r'4a4910aff712ffe1b5f76b89f8495c0149817822';
-
-final class SessionFamily extends $Family
-    with $FunctionalFamilyOverride<SessionRoomState, SessionOptions> {
-  SessionFamily._()
-    : super(
-        retry: null,
-        name: r'sessionProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  SessionProvider call(SessionOptions options) =>
-      SessionProvider._(argument: options, from: this);
-
-  @override
-  String toString() => r'sessionProvider';
 }

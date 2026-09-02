@@ -1,17 +1,17 @@
 // ignore_for_file: experimental_member_use
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
-import 'package:totem_core/core/services/notifications_service.dart';
 import 'package:totem_core/core/services/observer_service.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
@@ -19,7 +19,6 @@ import 'package:totem_core/shared/widgets/error_screen.dart';
 Future<void> sharedMain(
   Widget app,
   AsyncCallback init, {
-  required FirebaseOptions firebaseOptions,
   List<Override> providerOverrides = const [],
 }) async {
   // Install Sentry's binding before anything else triggers binding init
@@ -30,22 +29,16 @@ Future<void> sharedMain(
   AppConfig.instance = await AppConfig.build();
 
   try {
-    await Firebase.initializeApp(options: firebaseOptions);
-    await init();
-
     Future<void> launch(Widget rootChild) async {
+      await init();
       _initializeBestEffortServices();
       final container = ProviderContainer(
         observers: [ObserverService()],
         overrides: providerOverrides,
+        retry: _retryPolicy,
       );
       await container.read(authControllerProvider.notifier).checkExistingAuth();
-      runApp(
-        UncontrolledProviderScope(
-          container: container,
-          child: rootChild,
-        ),
-      );
+      runApp(UncontrolledProviderScope(container: container, child: rootChild));
     }
 
     final dsn = AppConfig.instance.sentryDsn;
@@ -73,9 +66,22 @@ Future<void> sharedMain(
   }
 }
 
+/// Riverpod retries failed providers by default (exponential backoff, up to
+/// 10 attempts). RepositoryUtils owns API retries, so a terminal, reported
+/// repository failure must not start another retry loop at the provider layer.
+/// A 4xx is also a definitive response and must never be retried.
+Duration? _retryPolicy(int retryCount, Object error) {
+  // RepositoryUtils owns retries and reports only the terminal failure. Do not
+  // start a second retry loop at the provider layer for the same failure.
+  if (ErrorHandler.wasReported(error) || error is AppException) return null;
+  if (error is ApiError && error.statusCode < 500) return null;
+  return ProviderContainer.defaultRetry(retryCount, error);
+}
+
 void _configureSentry(SentryFlutterOptions options) {
   final config = AppConfig.instance;
   options
+    ..environment = config.environment.name
     ..dsn = config.sentryDsn
     ..navigatorKey = TotemRouter.instance.navigatorKey
     ..sendDefaultPii = true
@@ -92,7 +98,6 @@ void _configureSentry(SentryFlutterOptions options) {
 void _initializeBestEffortServices() {
   try {
     AnalyticsService.instance.initialize();
-    NotificationsService.instance.initialize();
   } catch (e, stackTrace) {
     ErrorHandler.logError(
       e,

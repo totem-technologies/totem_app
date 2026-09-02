@@ -1,6 +1,8 @@
 // ignore_for_file: comment_references
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
@@ -9,16 +11,21 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
+
+class MockSessionMessagingController extends Mock
+    implements SessionMessagingController {}
 
 /// A minimal [SessionDetailSchema] for testing.
 SessionDetailSchema _createTestSession() {
@@ -64,7 +71,6 @@ SessionDetailSchema _createTestSession() {
 /// Creates a [MockRemoteParticipant] with [createListener] stubbed.
 MockRemoteParticipant _mockRemote(String id, String name) {
   final p = MockRemoteParticipant(id, name);
-  when(p.createListener).thenReturn(MockParticipantEventsListener());
   when(() => p.getTrackPublicationBySource(any())).thenReturn(null);
   return p;
 }
@@ -150,6 +156,7 @@ final _testLastMessageProvider =
 void main() {
   late MockSessionController session;
   late MockSessionDeviceController devices;
+  late MockSessionMessagingController messaging;
   late MockLocalParticipant localParticipant;
   late FakeRoom room;
 
@@ -160,11 +167,13 @@ void main() {
   setUp(() {
     session = MockSessionController();
     devices = MockSessionDeviceController();
+    messaging = MockSessionMessagingController();
     localParticipant = MockLocalParticipant('user-1');
     room = FakeRoom(localParticipant);
 
     when(() => session.room).thenReturn(room);
     when(() => session.devices).thenReturn(devices);
+    when(() => session.messaging).thenReturn(messaging);
     when(() => session.isCurrentUserKeeper()).thenReturn(false);
     when(() => devices.isCameraEnabled).thenReturn(false);
     when(() => devices.isMicrophoneEnabled).thenReturn(false);
@@ -176,6 +185,7 @@ void main() {
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
     when(() => devices.enableCamera()).thenAnswer((_) async {});
     when(() => devices.disableCamera()).thenAnswer((_) async {});
+    when(() => messaging.sendReaction(any())).thenAnswer((_) async {});
 
     when(
       () =>
@@ -184,9 +194,6 @@ void main() {
     when(
       () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
     ).thenReturn(null);
-    when(
-      () => localParticipant.createListener(),
-    ).thenReturn(MockParticipantEventsListener());
   });
 
   Future<void> pumpListeningTurn(
@@ -194,6 +201,7 @@ void main() {
     required SessionRoomState sessionState,
     String currentUserSlug = 'user-1',
     bool isKeeper = false,
+    RoomScreen currentScreen = RoomScreen.listening,
   }) async {
     tester.view
       ..physicalSize = const Size(390, 844)
@@ -246,17 +254,17 @@ void main() {
             final state = ref.watch(currentSessionStateProvider);
             return state?.speakingNextParticipant();
           }),
-          resolveCurrentScreenProvider.overrideWith(
-            (ref) => RoomScreen.listening,
-          ),
+          resolveCurrentScreenProvider.overrideWith((ref) => currentScreen),
           lastSessionMessageProvider.overrideWith(
             (ref) => ref.watch(_testLastMessageProvider),
           ),
           sessionMessagesProvider.overrideWith((ref) => const []),
         ],
         child: MaterialApp(
-          home: Scaffold(
-            body: ListeningTurnScreen(event: _createTestSession()),
+          home: SessionKeyboardShortcuts(
+            child: Scaffold(
+              body: ListeningTurnScreen(session: _createTestSession()),
+            ),
           ),
         ),
       ),
@@ -265,6 +273,15 @@ void main() {
   }
 
   group('ListeningTurn', () {
+    Future<void> runOnDesktop(Future<void> Function() body) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        await body();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    }
+
     group('participant grid', () {
       testWidgets('renders the participant grid for room sizes up to 12', (
         tester,
@@ -345,6 +362,39 @@ void main() {
         expect(
           _participantGridIdentities(tester),
           equals(const ['user-3', 'user-1', 'user-2']),
+        );
+      });
+
+      testWidgets('places late-joining participant first when they are next', (
+        tester,
+      ) async {
+        // Simulates a late joiner (e.g. Gianni) who is assigned as nextSpeaker
+        // by the server but is not yet the next person in talkingOrder.
+        // The keeper is speaking, so they are excluded from the grid.
+        final participants = [
+          _mockRemote('user-1', 'Alice'),
+          _mockRemote('user-2', 'Bob'),
+          _mockRemote('gianni', 'Gianni'),
+          _mockRemote('keeper-1', 'Keeper'),
+        ];
+
+        final state = _buildState(
+          status: RoomStatus.active,
+          keeper: 'keeper-1',
+          currentSpeaker: 'keeper-1',
+          nextSpeaker: 'gianni',
+          talkingOrder: const ['keeper-1', 'user-1', 'user-2'],
+          participants: participants,
+        );
+
+        await pumpListeningTurn(tester, sessionState: state);
+
+        // Gianni should appear first because nextSpeaker points to him,
+        // even though talkingOrder's next-in-line after keeper-1 is user-1.
+        // The remaining participants follow in talking order (user-1, user-2).
+        expect(
+          _participantGridIdentities(tester),
+          equals(const ['gianni', 'user-1', 'user-2']),
         );
       });
     });
@@ -528,6 +578,99 @@ void main() {
         await tester.tap(find.bySemanticsLabel('Camera off'));
         await tester.pump();
         verify(() => devices.enableCamera()).called(1);
+      });
+
+      testWidgets('responds to desktop keyboard shortcuts', (tester) async {
+        await runOnDesktop(() async {
+          final state = _buildState(
+            status: RoomStatus.active,
+          );
+
+          await pumpListeningTurn(tester, sessionState: state);
+
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+          await tester.pump();
+          verify(() => devices.enableMicrophone()).called(1);
+
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
+          await tester.pump();
+          verify(() => devices.enableCamera()).called(1);
+
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+          await tester.pump();
+          verify(() => messaging.sendReaction('🫶')).called(1);
+
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+          await tester.pump();
+          verify(() => messaging.sendReaction('💖')).called(1);
+
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
+          await tester.pump();
+          verify(() => messaging.sendReaction('😢')).called(1);
+
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+          await tester.pump();
+          verify(() => messaging.sendReaction('🔥')).called(1);
+        });
+      });
+
+      testWidgets('ignores modified shortcuts on desktop', (tester) async {
+        await runOnDesktop(() async {
+          final state = _buildState(
+            status: RoomStatus.active,
+          );
+
+          await pumpListeningTurn(tester, sessionState: state);
+
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+          await tester.pump();
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+          await tester.pump();
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+          await tester.pump();
+
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+          await tester.pump();
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+          await tester.pump();
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+          await tester.pump();
+
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+          await tester.pump();
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
+          await tester.pump();
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+          await tester.pump();
+
+          verifyNever(() => devices.enableMicrophone());
+          verifyNever(() => devices.enableCamera());
+          verifyNever(() => messaging.sendReaction(any()));
+        });
+      });
+
+      testWidgets('does not trigger shortcuts on inactive room screens', (
+        tester,
+      ) async {
+        await runOnDesktop(() async {
+          final state = _buildState(
+            status: RoomStatus.active,
+          );
+
+          await pumpListeningTurn(
+            tester,
+            sessionState: state,
+            currentScreen: RoomScreen.error,
+          );
+
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+          await tester.pump();
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+          await tester.pump();
+
+          verifyNever(() => devices.enableMicrophone());
+          verifyNever(() => messaging.sendReaction(any()));
+        });
       });
     });
 

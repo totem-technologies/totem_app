@@ -1,8 +1,8 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class _TransitionCardContainer extends StatelessWidget {
   const _TransitionCardContainer({
@@ -66,40 +66,23 @@ class _TransitionCardBase extends StatefulWidget {
 }
 
 class _TransitionCardBaseState extends State<_TransitionCardBase> {
-  late final MouseTracker _mouseTracker;
   late bool _hasMouseConnected;
   late bool _hasKeyboardConnected;
 
   @override
   void initState() {
     super.initState();
-    _mouseTracker = RendererBinding.instance.mouseTracker;
-    _hasMouseConnected = _mouseTracker.mouseIsConnected;
 
-    // TODO(totem): Properly check for hardware keyboard.
-    // Update this check when https://github.com/flutter/flutter/issues/185479 is addressed
-    _hasKeyboardConnected =
+    // Platform check is stable — unlike mouseIsConnected, it doesn't flicker
+    // when the pointer leaves the browser window.
+    _hasMouseConnected =
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.linux;
-    _mouseTracker.addListener(_handleMouseConnectionChanged);
-  }
 
-  @override
-  void dispose() {
-    _mouseTracker.removeListener(_handleMouseConnectionChanged);
-    super.dispose();
-  }
-
-  void _handleMouseConnectionChanged() {
-    final hasMouseConnected = _mouseTracker.mouseIsConnected;
-    if (_hasMouseConnected == hasMouseConnected || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _hasMouseConnected = hasMouseConnected;
-    });
+    // TODO(totem): Properly check for hardware keyboard.
+    // Update this check when https://github.com/flutter/flutter/issues/185479 is addressed
+    _hasKeyboardConnected = _hasMouseConnected;
   }
 
   @override
@@ -196,6 +179,7 @@ class JoinTransitionCard extends StatelessWidget {
     this.keepActionLoadingOnSuccess = false,
     this.isSliderLoading,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+    this.enabled = true,
     super.key,
   });
 
@@ -203,6 +187,7 @@ class JoinTransitionCard extends StatelessWidget {
   final bool keepActionLoadingOnSuccess;
   final bool? isSliderLoading;
   final EdgeInsetsGeometry margin;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -242,6 +227,7 @@ class JoinTransitionCard extends StatelessWidget {
                         onActionCompleted: onActionPressed,
                         keepLoadingOnSuccess: keepActionLoadingOnSuccess,
                         isLoading: isSliderLoading,
+                        enabled: enabled,
                       ),
                     ),
                   ),
@@ -273,17 +259,39 @@ class PassTransitionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GenericTransitionCard(
-      actionText: actionText,
-      onActionPressed: onActionPressed,
-      instructionTextClick:
-          'When done, click to pass the Totem to the next person.',
-      instructionTextSwipe:
-          'When done, slide to pass the Totem to the next person.',
-      keyboardShortcutText: 'press space bar to pass',
-      keepActionLoadingOnSuccess: keepActionLoadingOnSuccess,
-      isSliderLoading: isSliderLoading,
-      margin: margin,
+    return ViewportResolver(
+      builder: (context, viewportKind) {
+        return switch (viewportKind) {
+          ViewportKind.smallPortrait ||
+          ViewportKind.smallLandscape => Container(
+            margin: const EdgeInsetsDirectional.only(
+              start: 20,
+              end: 20,
+              bottom: 18,
+            ),
+            height: 50,
+            child: ActionSliderButton(
+              text: actionText,
+              onActionCompleted: onActionPressed,
+              keepLoadingOnSuccess: true,
+              isLoading: isSliderLoading,
+            ),
+          ),
+          ViewportKind.mediumPlus ||
+          ViewportKind.mediumSmall => _GenericTransitionCard(
+            actionText: actionText,
+            onActionPressed: onActionPressed,
+            instructionTextClick:
+                'When done, click to pass the Totem to the next person.',
+            instructionTextSwipe:
+                'When done, slide to pass the Totem to the next person.',
+            keyboardShortcutText: 'press space bar to pass',
+            keepActionLoadingOnSuccess: keepActionLoadingOnSuccess,
+            isSliderLoading: isSliderLoading,
+            margin: margin,
+          ),
+        };
+      },
     );
   }
 }
@@ -395,9 +403,26 @@ class PromptTransitionCard extends StatefulWidget {
 class _PromptTransitionCardState extends State<PromptTransitionCard> {
   final roundMessageController = TextEditingController();
 
+  final textFieldFocusNode = FocusNode();
+  final buttonFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    textFieldFocusNode.addListener(_textFieldFocusNodeListener);
+  }
+
+  void _textFieldFocusNodeListener() {
+    if (!textFieldFocusNode.hasFocus) {
+      buttonFocusNode.requestFocus();
+    }
+  }
+
   @override
   void dispose() {
     roundMessageController.dispose();
+    textFieldFocusNode.dispose();
+    buttonFocusNode.dispose();
     super.dispose();
   }
 
@@ -419,12 +444,17 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurface,
                 ),
+                selectAllOnFocus: true,
+                focusNode: textFieldFocusNode,
+                onTapOutside: (_) {
+                  buttonFocusNode.requestFocus();
+                },
               ),
             ),
             Flexible(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(
-                  minWidth: 160,
+                  minWidth: 200,
                 ),
                 child: ActionSliderButton(
                   text: widget.actionText,
@@ -434,6 +464,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
                     );
                   },
                   keepLoadingOnSuccess: widget.keepActionLoadingOnSuccess,
+                  focusNode: buttonFocusNode,
                 ),
               ),
             ),

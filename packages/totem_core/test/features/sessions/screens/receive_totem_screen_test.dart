@@ -2,7 +2,9 @@
 
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
@@ -18,6 +20,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
+import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
@@ -122,9 +125,6 @@ void main() {
     when(
       () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
     ).thenReturn(null);
-    when(
-      () => localParticipant.createListener(),
-    ).thenReturn(MockParticipantEventsListener());
   });
 
   Future<void> pumpReceiveTotem(
@@ -183,8 +183,10 @@ void main() {
           ),
         ],
         child: const MaterialApp(
-          home: Scaffold(
-            body: ReceiveTotemScreen(),
+          home: SessionKeyboardShortcuts(
+            child: Scaffold(
+              body: ReceiveTotemScreen(),
+            ),
           ),
         ),
       ),
@@ -193,6 +195,15 @@ void main() {
   }
 
   group('ReceiveTotemScreen action bar', () {
+    Future<void> runOnDesktop(Future<void> Function() body) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        await body();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    }
+
     testWidgets('shows receiving controls without emoji action', (
       tester,
     ) async {
@@ -230,6 +241,22 @@ void main() {
       verify(() => devices.enableCamera()).called(1);
     });
 
+    testWidgets('toggles mic and camera from desktop shortcuts', (
+      tester,
+    ) async {
+      await runOnDesktop(() async {
+        await pumpReceiveTotem(tester);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+        await tester.pump();
+        verify(() => devices.enableMicrophone()).called(1);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
+        await tester.pump();
+        verify(() => devices.enableCamera()).called(1);
+      });
+    });
+
     testWidgets('accepts totem when slider completes', (tester) async {
       final feedbackService = _TestSessionCuesService();
 
@@ -261,7 +288,9 @@ void main() {
       expect(feedbackService.swipePulseCount, 1);
     });
 
-    testWidgets('shows error popup when accept totem fails', (tester) async {
+    testWidgets('shows error notification when accept totem fails', (
+      tester,
+    ) async {
       when(
         () => keeper.acceptTotem(),
       ).thenAnswer((_) async => throw Exception('accept failed'));

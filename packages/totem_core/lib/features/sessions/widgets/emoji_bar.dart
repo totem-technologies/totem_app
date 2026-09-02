@@ -2,106 +2,46 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
-/// Displays an emoji bar above the given button context and calls
-/// [onEmojiSelected] with the selected emoji.
-Future<void> showEmojiBar(
-  BuildContext context, {
-  required ValueChanged<String> onEmojiSelected,
-}) async {
-  final navigator = Navigator.of(context).context;
-  final box = context.findRenderObject() as RenderBox?;
-  if (box == null) return;
-  final overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
-  if (overlay == null) return;
-  final overlayPositionX = overlay
-      .localToGlobal(
-        Offset.zero,
-        ancestor: navigator.findRenderObject(),
-      )
-      .dx;
-  final boxY = box
-      .localToGlobal(
-        Offset.zero,
-        ancestor: navigator.findRenderObject(),
-      )
-      .dy;
-  final position = Offset(overlayPositionX, boxY);
+typedef Emoji = String;
 
-  final completer = Completer<void>();
-  OverlayEntry? entry;
-  entry = OverlayEntry(
-    builder: (context) {
-      return SafeArea(
-        left: false,
-        top: false,
-        bottom: true,
-        right: true,
-        child: _EmojiBarOverlay(
-          position: position,
-          onEmojiSelected: onEmojiSelected,
-          onDismissed: () {
-            completer.complete();
-            if (entry?.mounted ?? false) {
-              entry?.remove();
-            }
-          },
-        ),
-      );
-    },
-  );
-  Overlay.of(navigator).insert(entry);
-  return completer.future;
-}
-
-class _EmojiBarOverlay extends StatefulWidget {
-  const _EmojiBarOverlay({
-    required this.position,
+class EmojiBarOverlay extends StatefulWidget {
+  const EmojiBarOverlay({
+    required this.buttonKey,
     required this.onEmojiSelected,
     required this.onDismissed,
-    // ignore: unused_element_parameter
-    this.displayDuration = const Duration(seconds: 4),
+    super.key,
   });
 
-  final Offset position;
-  final ValueChanged<String> onEmojiSelected;
-  final Duration displayDuration;
+  final GlobalKey buttonKey;
+  final ValueChanged<Emoji> onEmojiSelected;
   final VoidCallback onDismissed;
 
   @override
-  State<_EmojiBarOverlay> createState() => _EmojiBarOverlayState();
+  State<EmojiBarOverlay> createState() => EmojiBarOverlayState();
 }
 
-class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
+class EmojiBarOverlayState extends State<EmojiBarOverlay>
     with SingleTickerProviderStateMixin {
-  Timer? _timer;
-
   late final AnimationController _animationController = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 300),
   )..forward();
 
-  @override
-  void initState() {
-    super.initState();
-    _startTimer();
-  }
+  bool _isDismissing = false;
 
   @override
   void dispose() {
-    _timer?.cancel();
     _animationController.dispose();
     super.dispose();
   }
 
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer(widget.displayDuration, _dismiss);
-  }
-
   void _dismiss() async {
+    if (_isDismissing) return;
+    _isDismissing = true;
     await _animationController.reverse();
     if (mounted) {
       widget.onDismissed();
@@ -110,7 +50,16 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final topPosition = widget.position.dy - 70;
+    final topPosition = () {
+      final buttonBox =
+          widget.buttonKey.currentContext?.findRenderObject() as RenderBox?;
+      if (buttonBox == null || !buttonBox.hasSize) return 0.0;
+      final buttonOffset = buttonBox.localToGlobal(
+        Offset.zero,
+        ancestor: context.findRenderObject() as RenderBox?,
+      );
+      return buttonOffset.dy - 70;
+    }();
 
     return Stack(
       children: [
@@ -125,14 +74,13 @@ class _EmojiBarOverlayState extends State<_EmojiBarOverlay>
         ),
         PositionedDirectional(
           top: topPosition,
-          start: widget.position.dx,
+          start: 0,
           end: 0,
           child: FadeTransition(
             opacity: _animationController,
             child: EmojiBar(
               onEmojiSelected: (emoji) {
                 widget.onEmojiSelected(emoji);
-                _startTimer();
               },
               emojis: EmojiBar.defaultEmojis,
             ),
@@ -150,8 +98,8 @@ class EmojiBar extends StatelessWidget {
     super.key,
   });
 
-  final List<String> emojis;
-  final ValueChanged<String> onEmojiSelected;
+  final List<Emoji> emojis;
+  final ValueChanged<Emoji> onEmojiSelected;
 
   static const defaultEmojis = ['🫶', '💖', '😢', '🔥', '👏', '🎉'];
 
@@ -196,7 +144,7 @@ class EmojiBar extends StatelessWidget {
 
 Future<void> presentEmojiReaction(
   BuildContext context,
-  String emoji, {
+  Emoji emoji, {
   GlobalKey<OverlayState>? overlayKey,
   bool isInListeningTurnScreen = false,
 }) async {
@@ -215,6 +163,7 @@ Future<void> presentEmojiReaction(
 
   final completer = Completer<void>();
   OverlayEntry? entry;
+  var inserted = false;
 
   try {
     entry = OverlayEntry(
@@ -224,7 +173,8 @@ Future<void> presentEmojiReaction(
             final double startX = switch (viewportKind) {
               ViewportKind.smallPortrait => position.dx + box.size.width * 0.15,
               ViewportKind.smallLandscape => position.dx + box.size.width * 0.4,
-              ViewportKind.mediumPlus => position.dx + box.size.width * 0.075,
+              ViewportKind.mediumPlus ||
+              ViewportKind.mediumSmall => position.dx + box.size.width * 0.075,
             };
             final double startY = switch (viewportKind) {
               ViewportKind.smallPortrait =>
@@ -232,7 +182,8 @@ Future<void> presentEmojiReaction(
                     ? position.dy + box.size.height / 2
                     : position.dy + box.size.height / 12,
               ViewportKind.smallLandscape => position.dy + box.size.height / 4,
-              ViewportKind.mediumPlus => position.dy + box.size.height / 16,
+              ViewportKind.mediumPlus ||
+              ViewportKind.mediumSmall => position.dy + box.size.height / 16,
             };
             return Stack(
               children: [
@@ -256,6 +207,12 @@ Future<void> presentEmojiReaction(
     );
 
     overlay.insert(entry!);
+    inserted = true;
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      emoji,
+      Directionality.of(context),
+    );
     await completer.future.timeout(
       const Duration(seconds: 3),
       onTimeout: () => {},
@@ -267,8 +224,11 @@ Future<void> presentEmojiReaction(
       message: 'Failed to show emoji reaction: $emoji',
     );
   } finally {
-    if (entry?.mounted ?? false) {
-      entry?.remove();
+    // An entry inserted while no frames are rendered (e.g. hidden browser
+    // tab) never mounts, but still sits in the overlay — remove it whenever
+    // it was inserted, not only when it is mounted.
+    if (inserted && entry != null) {
+      entry!.remove();
       entry = null;
     }
   }
@@ -286,7 +246,7 @@ class RisingEmoji extends StatefulWidget {
     super.key,
   });
 
-  final String emoji;
+  final Emoji emoji;
   final double startX;
   final double startY;
   final VoidCallback onCompleted;
@@ -317,7 +277,15 @@ class _RisingEmojiState extends State<RisingEmoji>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: widget.duration);
+    // Preserve the real duration when the OS "reduce motion" setting is on;
+    // otherwise the controller runs at 5% of its duration, which also cuts
+    // short the corner emoji on the participant card, whose visibility is
+    // tied to this animation completing.
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+      animationBehavior: AnimationBehavior.preserve,
+    );
 
     _animation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
@@ -359,15 +327,20 @@ class _RisingEmojiState extends State<RisingEmoji>
 
   @override
   Widget build(BuildContext context) {
+    // With "reduce motion" enabled, skip the float animation entirely. The
+    // controller still runs so onCompleted fires after the normal duration,
+    // keeping the corner emoji on the participant card visible as usual.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return const SizedBox.shrink();
+    }
     return AnimatedBuilder(
       animation: Listenable.merge([_animation, _opacityAnimation]),
       builder: (context, child) {
         final screenHeight = MediaQuery.heightOf(context);
 
-        // Vertical position (bottom to top)
-        final bottom = (screenHeight / 2) * _animation.value;
+        final maxTravelDistance = (screenHeight / 2).clamp(200.0, 400.0);
+        final bottom = maxTravelDistance * _animation.value;
 
-        // Horizontal position (sine wave for curvy effect)
         final initialLeft = widget.startX;
         final angle = _controller.value * _frequency * math.pi;
         var horizontalOffset = math.sin(angle) * _amplitude;

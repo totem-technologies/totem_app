@@ -1,0 +1,16 @@
+name: "Build Web"
+description: >-
+  Builds the totem_web Flutter web bundle for hosting on Cloudflare. Assumes the
+  toolchain, .env and firebase_options.dart are already in place (run
+  setup-environment first); reads the flavor back from the composed .env and maps
+  it to the CDN. The app is mounted at /room/ on the Django origin (--base-href)
+  and its assets are fetched from the Cloudflare CDN via Flutter's assetBase (the
+  ASSET_BASE web-define); see scripts/web_build.dart and
+  packages/totem_web/wrangler.toml.
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build web
+      shell: bash
+      run: dart scripts/web_build.dart

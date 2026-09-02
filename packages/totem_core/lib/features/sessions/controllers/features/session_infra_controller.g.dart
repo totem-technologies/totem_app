@@ -42,13 +42,13 @@ final class SessionInfraControllerProvider
 }
 
 String _$sessionInfraControllerHash() =>
-    r'94d3ba5dda42ef8fe25b4e8610cd6252b3b7c35b';
+    r'4728c988ed98271509e1293aa574e00b5a923e04';
 
 abstract class _$SessionInfraController extends $Notifier<void> {
   void build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<void, void>;
     final element =
         ref.element
@@ -58,6 +58,6 @@ abstract class _$SessionInfraController extends $Notifier<void> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }

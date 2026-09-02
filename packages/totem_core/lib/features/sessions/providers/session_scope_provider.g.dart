@@ -169,7 +169,7 @@ final class CurrentSessionStateProvider
 }
 
 String _$currentSessionStateHash() =>
-    r'e7a486704dfcdc004ffb74dc9a1df2c0582941f7';
+    r'1d34a46c72f69f4787351561fbe8d56ed0be095f';
 
 /// The connection state of the current session.
 
@@ -1028,6 +1028,63 @@ final class FeaturedParticipantProvider
 String _$featuredParticipantHash() =>
     r'37c1fd41686ef04c3977f8c2c0bcf075635687dd';
 
+/// The wall-clock time when the current featured turn began.
+/// Null while no speaker is featured.
+
+@ProviderFor(featuredTurnStartTime)
+final featuredTurnStartTimeProvider = FeaturedTurnStartTimeProvider._();
+
+/// The wall-clock time when the current featured turn began.
+/// Null while no speaker is featured.
+
+final class FeaturedTurnStartTimeProvider
+    extends $FunctionalProvider<DateTime?, DateTime?, DateTime?>
+    with $Provider<DateTime?> {
+  /// The wall-clock time when the current featured turn began.
+  /// Null while no speaker is featured.
+  FeaturedTurnStartTimeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'featuredTurnStartTimeProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          FeaturedTurnStartTimeProvider.$allTransitiveDependencies0,
+          FeaturedTurnStartTimeProvider.$allTransitiveDependencies1,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
+
+  @override
+  String debugGetCreateSourceHash() => _$featuredTurnStartTimeHash();
+
+  @$internal
+  @override
+  $ProviderElement<DateTime?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DateTime? create(Ref ref) {
+    return featuredTurnStartTime(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DateTime? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DateTime?>(value),
+    );
+  }
+}
+
+String _$featuredTurnStartTimeHash() =>
+    r'e9777341fb62a82b48e9b9422e66e5cda8c0d1a9';
+
 /// Participant expected to speak next.
 
 @ProviderFor(speakingNextParticipant)
@@ -1089,12 +1146,12 @@ final class SpeakingNextParticipantProvider
 String _$speakingNextParticipantHash() =>
     r'aedb4a4c2543eebe2de4ba45925a7e45857d7319';
 
-/// Active session event payload.
+/// Active session payload.
 
 @ProviderFor(currentSessionEvent)
 final currentSessionEventProvider = CurrentSessionEventProvider._();
 
-/// Active session event payload.
+/// Active session payload.
 
 final class CurrentSessionEventProvider
     extends
@@ -1104,7 +1161,7 @@ final class CurrentSessionEventProvider
           SessionDetailSchema?
         >
     with $Provider<SessionDetailSchema?> {
-  /// Active session event payload.
+  /// Active session payload.
   CurrentSessionEventProvider._()
     : super(
         from: null,
@@ -1147,7 +1204,7 @@ final class CurrentSessionEventProvider
 }
 
 String _$currentSessionEventHash() =>
-    r'3eb0b74e1d2b4d19a926d97a972a4fb2e0f9a13e';
+    r'd09dbffa79ec5ad5b824df13d619717a32fe6192';
 
 /// Whether the signed-in user is keeper for the current session.
 
@@ -1368,3 +1425,55 @@ final class IsCameraOnProvider extends $FunctionalProvider<bool, bool, bool>
 }
 
 String _$isCameraOnHash() => r'8cd38fa32a571a61e9d32c8a2d998297e0619957';
+
+@ProviderFor(SelfViewSettings)
+final selfViewSettingsProvider = SelfViewSettingsProvider._();
+
+final class SelfViewSettingsProvider
+    extends $NotifierProvider<SelfViewSettings, SelfViewState> {
+  SelfViewSettingsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'selfViewSettingsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$selfViewSettingsHash();
+
+  @$internal
+  @override
+  SelfViewSettings create() => SelfViewSettings();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SelfViewState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SelfViewState>(value),
+    );
+  }
+}
+
+String _$selfViewSettingsHash() => r'781af76d0af4f285d78b71f92ce62e0bed76d0bb';
+
+abstract class _$SelfViewSettings extends $Notifier<SelfViewState> {
+  SelfViewState build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<SelfViewState, SelfViewState>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<SelfViewState, SelfViewState>,
+              SelfViewState,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}

@@ -53,7 +53,7 @@ class SecureStorage {
   /// Read a value securely
   Future<String?> read({required String key}) async {
     try {
-      return _storage.read(key: key);
+      return await _storage.read(key: key);
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,

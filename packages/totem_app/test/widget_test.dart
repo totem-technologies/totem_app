@@ -15,7 +15,6 @@ import '../../totem_core/test/setup.dart';
 void main() {
   setUpAll(() async {
     setupAppConfig();
-    await setupFirebase();
     TotemRouter.instance = AppTotemRouter();
   });
 
@@ -66,9 +65,6 @@ class _FakeMobileAuthController extends MobileAuthController {
 
   @override
   bool get isOnboardingCompleted => false;
-
-  @override
-  Future<bool> get hasSeenWelcomeOnboarding async => false;
 
   @override
   Future<void> checkExistingAuth() async {}

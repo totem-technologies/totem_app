@@ -1,45 +1,102 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/services/connectivity_service.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
-class SessionErrorScreen extends StatelessWidget {
-  const SessionErrorScreen({this.onRetry, this.error, super.key});
+class SessionErrorScreen extends ConsumerWidget {
+  const SessionErrorScreen({
+    this.onRetry,
+    this.error,
+    this.session,
+    super.key,
+  });
 
-  final VoidCallback? onRetry;
+  final AsyncCallback? onRetry;
   final Object? error;
 
-  @override
-  Widget build(BuildContext context) {
-    var title = 'Something went wrong';
-    var subtitle =
-        "We couldn't connect you to this session. "
-        'Please check your internet connection or try again.';
-    var canRetry = true;
+  /// The session detail, when available. Forwarded to
+  /// [SessionDisconnectedScreen] so the post-session feedback bar can be shown
+  /// (it requires a session slug to submit feedback).
+  final SessionDetailSchema? session;
 
-    if (error is RoomErrorResponse) {
-      switch ((error! as RoomErrorResponse).code) {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // API failures arrive wrapped: the structured body lives in ApiError.error.
+    var resolvedError = error;
+    if (resolvedError is ApiError && resolvedError.error is RoomErrorResponse) {
+      resolvedError = resolvedError.error as RoomErrorResponse;
+    }
+
+    // On web, redirect to the website when the session doesn't exist (404)
+    // instead of showing the disconnected session screen.
+    if (kIsWeb) {
+      if (resolvedError is RoomErrorResponse &&
+          resolvedError.code == ErrorCode.notFound) {
+        TotemRouter.instance.toHome();
+        return const SizedBox.shrink();
+      }
+    }
+
+    if (resolvedError is RoomErrorResponse) {
+      switch (resolvedError.code) {
         case ErrorCode.banned:
-          title = "You've been removed from this session";
-          subtitle =
-              "You can still join other sessions, but you won't be able to access this one.";
-          canRetry = false;
+          return SessionDisconnectedScreen(
+            session: session,
+            sessionDisconnectedReason: SessionDisconnectedReason.banned,
+          );
+        case ErrorCode.keeperNotInRoom:
+          return SessionDisconnectedScreen(
+            session: session,
+            sessionDisconnectedReason: SessionDisconnectedReason.keeperAbsent,
+          );
         case ErrorCode.roomAlreadyEnded:
-          title = 'This session has ended';
-          subtitle =
-              'This session has already ended. You can still join other sessions.';
         case ErrorCode.notJoinable:
-          title = 'This session cannot be joined';
-          subtitle =
-              'You cannot join the session at this time. Please try again later.';
+        case ErrorCode.roomNotActive:
+          return SessionDisconnectedScreen(
+            session: session,
+            sessionDisconnectedReason: SessionDisconnectedReason.keeperEnded,
+          );
+        case ErrorCode.notInRoom:
+        case ErrorCode.notFound:
+        case ErrorCode.livekitError:
+          return SessionDisconnectedScreen(
+            session: session,
+            sessionDisconnectedReason: SessionDisconnectedReason.other,
+          );
         default:
           break;
       }
     }
+
+    final isOfflineFromProvider = ref.watch(isOfflineProvider).value ?? false;
+    final isOfflineFromError =
+        resolvedError is RoomDisconnectionError &&
+        isInternetDisconnectReason(resolvedError.reason);
+    final isOffline = isOfflineFromProvider || isOfflineFromError;
+    final title = isOffline ? "You're Offline" : 'Something went wrong';
+    final subtitle = isOffline
+        ? 'Video sessions require an active internet connection.\n'
+              'Check your Wi-Fi or mobile data, then tap below to rejoin.'
+        : "We couldn't connect you to this session. "
+              'Please check your internet connection or try again.';
+
     final theme = Theme.of(context);
+
+    void pop() {
+      TotemRouter.instance.popOrHome(context);
+    }
+
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -50,52 +107,88 @@ class SessionErrorScreen extends StatelessWidget {
           tooltip: MaterialLocalizations.of(
             context,
           ).backButtonTooltip,
-          onPressed: () => TotemRouter.instance.popOrHome(context),
+          onPressed: pop,
         ),
       ),
       extendBodyBehindAppBar: true,
-      body: Padding(
-        padding: const EdgeInsetsDirectional.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          spacing: 20,
-          children: [
-            const Spacer(),
-            TotemIcon(
-              TotemIcons.errorOutlined,
-              size: 100,
-              color: theme.textTheme.headlineMedium?.color,
-            ),
-            Text(
-              title,
-              style: theme.textTheme.headlineMedium,
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-            ),
-            const Spacer(),
-            if (canRetry && onRetry != null)
-              OutlinedButton(
-                onPressed: onRetry,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(120, 50),
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 20,
-                    vertical: 8,
-                  ),
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(
-                      color: theme.colorScheme.onPrimary,
+      body: SafeArea(
+        top: false,
+        // uses a sliver to avoid overflow in landscape
+        child: CustomScrollView(
+          physics: const ClampingScrollPhysics(),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  spacing: 20,
+                  children: [
+                    const SizedBox.shrink(),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 20,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.mauve.withValues(alpha: 0.12),
+                          ),
+                          padding: const EdgeInsetsDirectional.all(30),
+                          child: TotemIcon(
+                            isOffline
+                                ? TotemIcons.wifiOff
+                                : TotemIcons.errorOutlined,
+                            size: 48,
+                            color: AppTheme.gray,
+                          ),
+                        ),
+                        Text(
+                          title,
+                          style: theme.textTheme.headlineMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        Text(subtitle, textAlign: TextAlign.center),
+                      ],
                     ),
-                  ),
+                    if (onRetry != null)
+                      SizedBox(
+                        width: double.infinity,
+                        child: Column(
+                          spacing: 4,
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ConfirmationDialogButton.elevated(
+                              onConfirm: () async => onRetry?.call(),
+                              disabled: onRetry == null,
+                              child: const Text('Try Joining Again'),
+                            ),
+                            InkWell(
+                              onTap: pop,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 20.0,
+                                  vertical: 8,
+                                ),
+                                child: Text(
+                                  'Go back to Session Details',
+                                  style: theme.textTheme.bodySmall,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                  ],
                 ),
-                child: const Text('Retry'),
               ),
+            ),
           ],
         ),
       ),

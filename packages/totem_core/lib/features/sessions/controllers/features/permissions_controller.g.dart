@@ -34,14 +34,14 @@ final class PermissionsControllerProvider
 }
 
 String _$permissionsControllerHash() =>
-    r'e600563a9a09e2948af7579936615ea151a06d20';
+    r'27f02cd4f14adf05c98de974a402ba533c37def5';
 
 abstract class _$PermissionsController
     extends $AsyncNotifier<PermissionsState> {
   FutureOr<PermissionsState> build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref =
         this.ref as $Ref<AsyncValue<PermissionsState>, PermissionsState>;
     final element =
@@ -52,6 +52,6 @@ abstract class _$PermissionsController
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }

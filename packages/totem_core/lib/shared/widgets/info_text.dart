@@ -12,9 +12,9 @@ class InfoText extends StatelessWidget {
       padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 4,
         children: [
           Icon(Icons.info_outline, color: theme.disabledColor, size: 16),
-          const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
