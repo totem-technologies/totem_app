@@ -51,20 +51,12 @@ const mockOtherParticipants = <MockPerson>[
   ),
 ];
 
-/// Participant names used by [ComposeToParticipantsScreen].
-// TODO(backend): replace with real provider fetching session participants.
-const mockParticipantNames = <String>[
-  'Emily',
-  'Rafael',
-  'Tanya',
-  'Derek',
-  'Leila',
-  'Kai',
-  'Nina',
-  'Omar',
-];
-
-/// Detailed participant records used by [SessionParticipantsScreen].
+/// Detailed participant records used by [SessionParticipantsScreen] and
+/// [ComposeToParticipantsScreen].
+///
+/// `id` is the thread/peer slug [conversationFromMockParticipant] uses, so it
+/// must stay aligned with `name` — tapping "Kai" should open `conv_kai`, not
+/// a leftover id from another person.
 // TODO(backend): replace with real provider fetching session participants.
 typedef MockParticipant = ({
   String id,
@@ -102,6 +94,22 @@ const mockSessionParticipants = <MockParticipant>[
   ),
   (
     id: 'conv_derek',
+    name: 'Derek',
+    email: 'derek@gmail.com',
+    joinedSessions: 'Joined Mar 20 · 6 sessions',
+    sessions: 6,
+    reviews: 1,
+  ),
+  (
+    id: 'conv_leila',
+    name: 'Leila',
+    email: 'leila@gmail.com',
+    joinedSessions: 'Joined Mar 8 · 9 sessions',
+    sessions: 9,
+    reviews: 2,
+  ),
+  (
+    id: 'conv_kai',
     name: 'Kai',
     email: 'kai@gmail.com',
     joinedSessions: 'Joined Mar 18 · 5 sessions',
@@ -109,12 +117,20 @@ const mockSessionParticipants = <MockParticipant>[
     reviews: 1,
   ),
   (
-    id: 'conv_leila',
+    id: 'conv_nina',
     name: 'Nina',
     email: 'nina@gmail.com',
     joinedSessions: 'Joined Feb 14 · 20 sessions',
     sessions: 20,
     reviews: 6,
+  ),
+  (
+    id: 'conv_omar',
+    name: 'Omar',
+    email: 'omar@gmail.com',
+    joinedSessions: 'Joined Mar 1 · 11 sessions',
+    sessions: 11,
+    reviews: 3,
   ),
 ];
 

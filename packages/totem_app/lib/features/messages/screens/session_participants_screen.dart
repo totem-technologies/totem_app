@@ -170,6 +170,11 @@ class SessionParticipantsScreen extends StatelessWidget {
     );
   }
 
+  /// Opens a thread with [participant] without replacing this screen.
+  ///
+  /// Keepers came here from a session, so back should return to the
+  /// participant list — unlike [NewMessageScreen], which uses
+  /// [GoRouter.pushReplacement] to drop the picker.
   void _navigateToThread(BuildContext context, MockParticipant participant) {
     context.push(
       RouteNames.messageThread(participant.id),
@@ -270,7 +275,7 @@ class _ParticipantCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(22),
                 ),
                 child: Text(
-                  participant.name.substring(0, 1).toUpperCase(),
+                  participant.name.characters.first.toUpperCase(),
                   style: const TextStyle(
                     color: AppTheme.white,
                     fontSize: 18,
@@ -354,7 +359,7 @@ class _ParticipantDialog extends StatelessWidget {
               borderRadius: BorderRadius.circular(36),
             ),
             child: Text(
-              participant.name.substring(0, 1).toUpperCase(),
+              participant.name.characters.first.toUpperCase(),
               style: const TextStyle(
                 color: AppTheme.white,
                 fontSize: 28,

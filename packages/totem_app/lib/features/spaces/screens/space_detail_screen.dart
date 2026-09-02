@@ -321,7 +321,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                   Environment.staging &&
                               currentUserSlug != null &&
                               space.author.slug == currentUserSlug)
-                            if (eventAsync?.value
+                            if (sessionAsync?.value
                                 case final SessionDetailSchema event) ...[
                               const SizedBox(height: 24),
                               Padding(

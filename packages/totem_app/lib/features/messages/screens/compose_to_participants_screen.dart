@@ -25,6 +25,18 @@ class _ComposeToParticipantsScreenState
     extends ConsumerState<ComposeToParticipantsScreen> {
   final _messageController = TextEditingController();
 
+  String get _sessionSlug => widget.session.slug;
+
+  @override
+  void initState() {
+    super.initState();
+    // Seed before the first frame so chips start selected and the copy
+    // already uses the real count. Keyed by session slug, not the list.
+    ref
+        .read(composeToParticipantsProvider(_sessionSlug).notifier)
+        .seedRecipients(mockSessionParticipants.map((p) => p.id));
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
@@ -33,7 +45,7 @@ class _ComposeToParticipantsScreenState
 
   Future<void> _sendMessages(BuildContext context) async {
     final notifier = ref.read(
-      composeToParticipantsProvider(mockParticipantNames).notifier,
+      composeToParticipantsProvider(_sessionSlug).notifier,
     );
     final success = await notifier.send(_messageController.text.trim());
     if (!context.mounted) return;
@@ -42,9 +54,7 @@ class _ComposeToParticipantsScreenState
       barrierColor: Colors.black.withValues(alpha: 0.5),
       barrierDismissible: false,
       builder: (_) {
-        final selected = ref.read(
-          composeToParticipantsProvider(mockParticipantNames),
-        );
+        final selected = ref.read(composeToParticipantsProvider(_sessionSlug));
         return _SendResultDialog(
           success: success,
           sentCount: selected.selected.length,
@@ -62,12 +72,9 @@ class _ComposeToParticipantsScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final composeState = ref.watch(
-      composeToParticipantsProvider(mockParticipantNames),
-    );
+    final composeState = ref.watch(composeToParticipantsProvider(_sessionSlug));
     final selectedCount = composeState.selected.length;
     final sessionName = widget.session.space.title;
-    final totalCount = mockParticipantNames.length;
 
     return Scaffold(
       backgroundColor: AppTheme.cream,
@@ -83,7 +90,8 @@ class _ComposeToParticipantsScreenState
                 children: [
                   // Description
                   Text(
-                    'This message will be sent to $totalCount participants '
+                    'This message will be sent to '
+                    '${_participantCountLabel(selectedCount)} '
                     'in $sessionName as individual conversations.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: AppTheme.textMuted,
@@ -131,20 +139,20 @@ class _ComposeToParticipantsScreenState
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: mockParticipantNames
+                          children: mockSessionParticipants
                               .map(
-                                (name) => _RecipientChip(
-                                  label: name,
+                                (participant) => _RecipientChip(
+                                  label: participant.name,
                                   selected: composeState.selected.contains(
-                                    name,
+                                    participant.id,
                                   ),
                                   onTap: () => ref
                                       .read(
                                         composeToParticipantsProvider(
-                                          mockParticipantNames,
+                                          _sessionSlug,
                                         ).notifier,
                                       )
-                                      .toggleRecipient(name),
+                                      .toggleRecipient(participant.id),
                                 ),
                               )
                               .toList(),
@@ -215,7 +223,8 @@ class _ComposeToParticipantsScreenState
                       // Send
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: selectedCount == 0
+                          onPressed:
+                              selectedCount == 0 || composeState.isSending
                               ? null
                               : () => _sendMessages(context),
                           style: ElevatedButton.styleFrom(
@@ -238,7 +247,18 @@ class _ComposeToParticipantsScreenState
                               height: 1.3,
                             ),
                           ),
-                          child: Text('Send to $selectedCount participants'),
+                          child: composeState.isSending
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppTheme.white,
+                                  ),
+                                )
+                              : Text(
+                                  'Send to ${_participantCountLabel(selectedCount)}',
+                                ),
                         ),
                       ),
                     ],
@@ -338,7 +358,8 @@ class _SendResultDialog extends StatelessWidget {
             // Body
             Text(
               success
-                  ? 'Your message was sent to $sentCount participants '
+                  ? 'Your message was sent to '
+                        '${_participantCountLabel(sentCount)} '
                         'in $sessionName as individual conversations.'
                   : 'We couldn\'t send your message. Please check your '
                         'connection and try again.',
@@ -409,6 +430,9 @@ class _ResultIcon extends StatelessWidget {
     );
   }
 }
+
+String _participantCountLabel(int count) =>
+    count == 1 ? '1 participant' : '$count participants';
 
 class _RecipientChip extends StatelessWidget {
   const _RecipientChip({

@@ -446,33 +446,49 @@ class AppTotemRouter extends TotemRouter {
 
         GoRoute(
           path: RouteNames.newMessage,
+          name: RouteNames.newMessage,
           builder: (context, state) => const NewMessageScreen(),
         ),
 
+        // These screens currently rehydrate from `state.extra` (pushed from
+        // session details). A hard refresh / deep link has no extra, so we
+        // show [ErrorScreen] instead of throwing a cast error.
         GoRoute(
-          path: '/messages/session/:sessionSlug/participants',
+          path: RouteNames.sessionParticipants(':sessionSlug'),
+          name: RouteNames.sessionParticipants(':sessionSlug'),
           builder: (context, state) {
-            final session = state.extra as SessionDetailSchema;
-            return SessionParticipantsScreen(session: session);
+            final extra = state.extra;
+            if (extra is! SessionDetailSchema) {
+              return const ErrorScreen();
+            }
+            return SessionParticipantsScreen(session: extra);
           },
         ),
 
         GoRoute(
-          path: '/messages/session/:sessionSlug/compose',
+          path: RouteNames.composeToParticipants(':sessionSlug'),
+          name: RouteNames.composeToParticipants(':sessionSlug'),
           builder: (context, state) {
-            final session = state.extra as SessionDetailSchema;
-            return ComposeToParticipantsScreen(session: session);
+            final extra = state.extra;
+            if (extra is! SessionDetailSchema) {
+              return const ErrorScreen();
+            }
+            return ComposeToParticipantsScreen(session: extra);
           },
         ),
 
         GoRoute(
-          path: '/messages/:conversationId',
+          path: RouteNames.messageThread(':conversationId'),
+          name: RouteNames.messageThread(':conversationId'),
           builder: (context, state) {
             final conversationId = state.pathParameters['conversationId'] ?? '';
-            final conversation = state.extra as Conversation;
+            final extra = state.extra;
+            if (extra is! Conversation) {
+              return const ErrorScreen();
+            }
             return ThreadScreen(
               conversationId: conversationId,
-              conversation: conversation,
+              conversation: extra,
             );
           },
         ),

@@ -8,6 +8,10 @@ class ComposeToParticipantsState {
     this.isSending = false,
   });
 
+  /// Recipient ids currently checked on the compose screen.
+  ///
+  /// Ids (not display names) so two people named "Emily" do not collide once
+  /// this is wired to real session participants.
   final Set<String> selected;
   final bool isSending;
 
@@ -20,11 +24,27 @@ class ComposeToParticipantsState {
   );
 }
 
+/// Compose state for broadcasting a message to a session's participants.
+///
+/// The family is keyed by [sessionSlug] so selection survives rebuilds even
+/// when the recipient list is a freshly-allocated `List` from a future
+/// backend provider. Do not key on the list itself — that would reset the
+/// notifier on every rebuild.
 @riverpod
 class ComposeToParticipantsNotifier extends _$ComposeToParticipantsNotifier {
+  var _didSeed = false;
+
   @override
-  ComposeToParticipantsState build(List<String> participantIds) =>
-      ComposeToParticipantsState(selected: Set.from(participantIds));
+  ComposeToParticipantsState build(String sessionSlug) =>
+      const ComposeToParticipantsState(selected: {});
+
+  /// Marks every [ids] entry selected the first time the compose screen
+  /// loads. Later calls are ignored so chip toggles stay intact.
+  void seedRecipients(Iterable<String> ids) {
+    if (_didSeed) return;
+    _didSeed = true;
+    state = state.copyWith(selected: Set<String>.from(ids));
+  }
 
   void toggleRecipient(String id) {
     final updated = Set<String>.from(state.selected);
@@ -37,6 +57,8 @@ class ComposeToParticipantsNotifier extends _$ComposeToParticipantsNotifier {
   }
 
   // TODO(backend): replace with real bulk-message API call when endpoint ships.
+  // The mock always succeeds; `_SendResultDialog`'s error branch is waiting
+  // on that endpoint before it can be exercised.
   Future<bool> send(String message) async {
     state = state.copyWith(isSending: true);
     await Future<void>.delayed(const Duration(milliseconds: 400));

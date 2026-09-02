@@ -147,6 +147,8 @@ class _NavBar extends StatelessWidget {
   }
 }
 
+/// Visual placeholder for search. Not wired to a controller yet.
+// TODO(backend): replace with a real TextField once search hits an endpoint.
 class _SearchField extends StatelessWidget {
   const _SearchField({required this.hint});
 

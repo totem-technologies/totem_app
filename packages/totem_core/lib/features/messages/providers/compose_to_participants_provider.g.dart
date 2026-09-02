@@ -8,19 +8,37 @@ part of 'compose_to_participants_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Compose state for broadcasting a message to a session's participants.
+///
+/// The family is keyed by [sessionSlug] so selection survives rebuilds even
+/// when the recipient list is a freshly-allocated `List` from a future
+/// backend provider. Do not key on the list itself — that would reset the
+/// notifier on every rebuild.
 
 @ProviderFor(ComposeToParticipantsNotifier)
 final composeToParticipantsProvider = ComposeToParticipantsNotifierFamily._();
 
+/// Compose state for broadcasting a message to a session's participants.
+///
+/// The family is keyed by [sessionSlug] so selection survives rebuilds even
+/// when the recipient list is a freshly-allocated `List` from a future
+/// backend provider. Do not key on the list itself — that would reset the
+/// notifier on every rebuild.
 final class ComposeToParticipantsNotifierProvider
     extends
         $NotifierProvider<
           ComposeToParticipantsNotifier,
           ComposeToParticipantsState
         > {
+  /// Compose state for broadcasting a message to a session's participants.
+  ///
+  /// The family is keyed by [sessionSlug] so selection survives rebuilds even
+  /// when the recipient list is a freshly-allocated `List` from a future
+  /// backend provider. Do not key on the list itself — that would reset the
+  /// notifier on every rebuild.
   ComposeToParticipantsNotifierProvider._({
     required ComposeToParticipantsNotifierFamily super.from,
-    required List<String> super.argument,
+    required String super.argument,
   }) : super(
          retry: null,
          name: r'composeToParticipantsProvider',
@@ -64,7 +82,14 @@ final class ComposeToParticipantsNotifierProvider
 }
 
 String _$composeToParticipantsNotifierHash() =>
-    r'c505670bdeea86eb9457f64bd2ba29421b23e075';
+    r'1f04235fd48d0a416a91ae8cc44411e07d8f872e';
+
+/// Compose state for broadcasting a message to a session's participants.
+///
+/// The family is keyed by [sessionSlug] so selection survives rebuilds even
+/// when the recipient list is a freshly-allocated `List` from a future
+/// backend provider. Do not key on the list itself — that would reset the
+/// notifier on every rebuild.
 
 final class ComposeToParticipantsNotifierFamily extends $Family
     with
@@ -73,7 +98,7 @@ final class ComposeToParticipantsNotifierFamily extends $Family
           ComposeToParticipantsState,
           ComposeToParticipantsState,
           ComposeToParticipantsState,
-          List<String>
+          String
         > {
   ComposeToParticipantsNotifierFamily._()
     : super(
@@ -84,9 +109,16 @@ final class ComposeToParticipantsNotifierFamily extends $Family
         isAutoDispose: true,
       );
 
-  ComposeToParticipantsNotifierProvider call(List<String> participantIds) =>
+  /// Compose state for broadcasting a message to a session's participants.
+  ///
+  /// The family is keyed by [sessionSlug] so selection survives rebuilds even
+  /// when the recipient list is a freshly-allocated `List` from a future
+  /// backend provider. Do not key on the list itself — that would reset the
+  /// notifier on every rebuild.
+
+  ComposeToParticipantsNotifierProvider call(String sessionSlug) =>
       ComposeToParticipantsNotifierProvider._(
-        argument: participantIds,
+        argument: sessionSlug,
         from: this,
       );
 
@@ -94,15 +126,22 @@ final class ComposeToParticipantsNotifierFamily extends $Family
   String toString() => r'composeToParticipantsProvider';
 }
 
+/// Compose state for broadcasting a message to a session's participants.
+///
+/// The family is keyed by [sessionSlug] so selection survives rebuilds even
+/// when the recipient list is a freshly-allocated `List` from a future
+/// backend provider. Do not key on the list itself — that would reset the
+/// notifier on every rebuild.
+
 abstract class _$ComposeToParticipantsNotifier
     extends $Notifier<ComposeToParticipantsState> {
-  late final _$args = ref.$arg as List<String>;
-  List<String> get participantIds => _$args;
+  late final _$args = ref.$arg as String;
+  String get sessionSlug => _$args;
 
-  ComposeToParticipantsState build(List<String> participantIds);
+  ComposeToParticipantsState build(String sessionSlug);
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref =
         this.ref
             as $Ref<ComposeToParticipantsState, ComposeToParticipantsState>;
@@ -117,6 +156,6 @@ abstract class _$ComposeToParticipantsNotifier
               Object?,
               Object?
             >;
-    element.handleCreate(ref, () => build(_$args));
+    return element.handleCreate(ref, () => build(_$args));
   }
 }
