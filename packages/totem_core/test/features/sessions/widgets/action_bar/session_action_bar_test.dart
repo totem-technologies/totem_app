@@ -120,6 +120,8 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: Align(
+              // Production pins the bar to the bottom; without this the
+              // scaffold stretches the bar and LayoutBuilder sees full width.
               alignment: Alignment.bottomCenter,
               child: child,
             ),
@@ -288,6 +290,45 @@ void main() {
       await tester.pump();
 
       expect(find.byType(ActionBar), findsNothing);
+    });
+
+    testWidgets('disables more when session state is missing', (tester) async {
+      await pumpWidget(
+        tester,
+        child: const SessionActionBar(),
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => FakeAuthController(AuthState.unauthenticated()),
+          ),
+          currentSessionProvider.overrideWith((ref) => session),
+          lastSessionMessageProvider.overrideWith(
+            (ref) => ref.watch(_testLastMessageProvider),
+          ),
+          sessionMessagesProvider.overrideWith((ref) => const []),
+          currentSessionStateProvider.overrideWith((ref) => null),
+          isCurrentUserKeeperProvider.overrideWith((ref) => false),
+          resolveCurrentScreenProvider.overrideWith(
+            (ref) => RoomScreen.listening,
+          ),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      final moreLabel = MaterialLocalizations.of(
+        tester.element(find.byType(SessionActionBar)),
+      ).moreButtonTooltip;
+      final moreButton = find.descendant(
+        of: find.byTooltip(moreLabel),
+        matching: find.byType(ActionBarButton),
+      );
+      expect(moreButton, findsOneWidget);
+      final gesture = tester.widget<GestureDetector>(
+        find.descendant(
+          of: moreButton,
+          matching: find.byType(GestureDetector),
+        ),
+      );
+      expect(gesture.onTap, isNull);
     });
 
     testWidgets('opens options sheet when tapping more button', (tester) async {

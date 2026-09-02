@@ -48,6 +48,8 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: Align(
+              // Production pins the bar to the bottom; without this the
+              // scaffold stretches the bar and LayoutBuilder sees full width.
               alignment: Alignment.bottomCenter,
               child: child,
             ),

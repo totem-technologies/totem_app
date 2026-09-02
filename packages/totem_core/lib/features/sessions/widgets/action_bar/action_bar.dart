@@ -13,12 +13,10 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 typedef ActionBarButtonToggleCallback =
     Future<void> Function(bool shouldEnable);
-
-// Below this width, five 78px buttons overflow a phone.
-const double _kCompactWidth = 456;
 
 /// ghost = idle, muted = media off, emphasized = open sheet.
 /// Keep muted and emphasized distinct — camera-off is not "sheet open".
@@ -37,6 +35,8 @@ enum ActionBarButtonRole {
 }
 
 @immutable
+// Two named layouts plus a derived width; not a closed token set.
+// ignore: use_enums
 class _ActionBarMetrics {
   const _ActionBarMetrics({
     required this.buttonSize,
@@ -68,45 +68,53 @@ class _ActionBarMetrics {
   final double horizontalPadding;
   final double verticalPadding;
 
-  @override
-  bool operator ==(Object other) {
-    return other is _ActionBarMetrics &&
-        buttonSize == other.buttonSize &&
-        iconSize == other.iconSize &&
-        gap == other.gap &&
-        horizontalPadding == other.horizontalPadding &&
-        verticalPadding == other.verticalPadding;
+  /// Width the pill needs to sit the given child count at these metrics.
+  double widthFor(int childCount) {
+    if (childCount <= 0) return 0;
+    return childCount * buttonSize +
+        (childCount - 1) * gap +
+        horizontalPadding * 2;
   }
-
-  @override
-  int get hashCode => Object.hash(
-    buttonSize,
-    iconSize,
-    gap,
-    horizontalPadding,
-    verticalPadding,
-  );
 }
 
 class _ActionBarScope extends InheritedWidget {
   const _ActionBarScope({
     required this.metrics,
+    required this.onLightBackground,
     required super.child,
   });
 
   final _ActionBarMetrics metrics;
 
+  /// Waiting-room / prejoin sits on cream; in-session sits on slate.
+  /// Ghost chrome has to flip with that or cream icons vanish on cream.
+  final bool onLightBackground;
+
+  static _ActionBarScope? _maybeOf(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<_ActionBarScope>();
+  }
+
   static _ActionBarMetrics of(BuildContext context) {
-    return context
-            .dependOnInheritedWidgetOfExactType<_ActionBarScope>()
-            ?.metrics ??
-        _ActionBarMetrics.comfortable;
+    return _maybeOf(context)?.metrics ?? _ActionBarMetrics.comfortable;
+  }
+
+  static bool lightBackgroundOf(BuildContext context) {
+    return _maybeOf(context)?.onLightBackground ?? false;
   }
 
   @override
   bool updateShouldNotify(_ActionBarScope oldWidget) {
-    return metrics != oldWidget.metrics;
+    return !identical(metrics, oldWidget.metrics) ||
+        onLightBackground != oldWidget.onLightBackground;
   }
+}
+
+/// Dark DefaultTextStyle means the surrounding surface is light
+/// (RoomBackground waiting-room sets body color to black).
+bool _onLightBackground(BuildContext context) {
+  final color = DefaultTextStyle.of(context).style.color;
+  if (color == null) return false;
+  return ThemeData.estimateBrightnessForColor(color) == Brightness.dark;
 }
 
 class ActionBarButton extends StatefulWidget {
@@ -152,12 +160,18 @@ class _ActionBarButtonState extends State<ActionBarButton> {
   @override
   Widget build(BuildContext context) {
     final metrics = _ActionBarScope.of(context);
+    final onLightBackground = _ActionBarScope.lightBackgroundOf(context);
     final size = metrics.buttonSize;
     final role = widget.role;
 
     // Don't wash muted/emphasized fills — those colors already mean something.
     final showIdleWash =
         role == ActionBarButtonRole.ghost && _enabled && (_hovered || _pressed);
+
+    // Ghost icons are cream on slate, slate on cream — never cream-on-cream.
+    final ghostForeground = onLightBackground ? AppTheme.slate : AppTheme.cream;
+    final ghostWash = (onLightBackground ? AppTheme.slate : AppTheme.white)
+        .withValues(alpha: 0.16);
 
     final Color background;
     final Color foreground;
@@ -169,10 +183,8 @@ class _ActionBarButtonState extends State<ActionBarButton> {
         background = AppTheme.cream;
         foreground = AppTheme.slate;
       case ActionBarButtonRole.ghost:
-        background = showIdleWash
-            ? AppTheme.white.withValues(alpha: 0.16)
-            : AppTheme.transparent;
-        foreground = AppTheme.cream;
+        background = showIdleWash ? ghostWash : AppTheme.transparent;
+        foreground = ghostForeground;
     }
 
     return Semantics(
@@ -240,25 +252,38 @@ class ActionBar extends StatelessWidget {
 
   final List<Widget> children;
 
+  /// Waiting-room chrome (cream gradient) vs in-session slate.
+  static bool onLightBackgroundOf(BuildContext context) {
+    return _ActionBarScope.lightBackgroundOf(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final metrics = constraints.maxWidth < _kCompactWidth
-            ? _ActionBarMetrics.compact
-            : _ActionBarMetrics.comfortable;
+        final metrics = _resolveMetrics(context, constraints);
+        final onLightBackground = _onLightBackground(context);
+
+        // 8% white glass disappears on the waiting-room cream gradient.
+        final pillFill = onLightBackground
+            ? AppTheme.slate.withValues(alpha: 0.12)
+            : AppTheme.white.withValues(alpha: 0.08);
+        final pillStroke = onLightBackground
+            ? AppTheme.slate.withValues(alpha: 0.22)
+            : AppTheme.white.withValues(alpha: 0.16);
 
         return _ActionBarScope(
           metrics: metrics,
+          onLightBackground: onLightBackground,
           child: RepaintBoundary(
             child: Padding(
               padding: const EdgeInsetsDirectional.only(bottom: 20),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppTheme.white.withValues(alpha: 0.08),
+                  color: pillFill,
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: AppTheme.white.withValues(alpha: 0.16),
+                    color: pillStroke,
                     width: 1.5,
                   ),
                 ),
@@ -286,8 +311,36 @@ class ActionBar extends StatelessWidget {
       },
     );
   }
+
+  /// LayoutBuilder reports incoming constraints. A non-flex Row child gets
+  /// `maxWidth: infinity`, so we cannot key compact off that alone.
+  ///
+  /// Phones always compact — landscape prejoin has the least vertical room,
+  /// and a 5-button comfortable pill overflows a portrait phone.
+  /// Larger viewports use comfortable unless the *finite* constraint (or the
+  /// screen width, when unbounded) cannot fit `children.length`.
+  _ActionBarMetrics _resolveMetrics(
+    BuildContext context,
+    BoxConstraints constraints,
+  ) {
+    final viewport = ViewportResolver.getViewportKind(context);
+    final isPhone =
+        viewport == ViewportKind.smallPortrait ||
+        viewport == ViewportKind.smallLandscape;
+    if (isPhone) return _ActionBarMetrics.compact;
+
+    final availableWidth = constraints.maxWidth.isFinite
+        ? constraints.maxWidth
+        : MediaQuery.sizeOf(context).width;
+    if (availableWidth <
+        _ActionBarMetrics.comfortable.widthFor(children.length)) {
+      return _ActionBarMetrics.compact;
+    }
+    return _ActionBarMetrics.comfortable;
+  }
 }
 
+/// The action bar displayed in the pre join screen.
 class PrejoinActionBar extends StatefulWidget {
   const PrejoinActionBar({
     required this.locked,
@@ -473,20 +526,30 @@ class _ActionBarMoreButtonState extends ConsumerState<_ActionBarMoreButton> {
 
   @override
   Widget build(BuildContext context) {
-    return ExcludeFocus(
-      child: ActionBarButton(
-        semanticsLabel: MaterialLocalizations.of(context).moreButtonTooltip,
-        role: ActionBarButtonRole.sheet(open: _open),
-        onPressed: () async {
-          final session = ref.read(currentSessionProvider);
-          final state = ref.read(currentSessionStateProvider);
-          if (session?.session == null || state == null) return;
+    final session = ref.watch(currentSessionProvider);
+    final state = ref.watch(currentSessionStateProvider);
+    final sessionEvent = session?.session;
+    final canOpen = sessionEvent != null && state != null;
+    final tooltip = MaterialLocalizations.of(context).moreButtonTooltip;
 
-          setState(() => _open = true);
-          await showOptionsSheet(context, state, session!.session!);
-          if (mounted) setState(() => _open = false);
-        },
-        child: const TotemIcon(TotemIcons.more),
+    return ExcludeFocus(
+      child: Tooltip(
+        message: tooltip,
+        child: ActionBarButton(
+          semanticsLabel: tooltip,
+          role: ActionBarButtonRole.sheet(open: _open),
+          onPressed: canOpen
+              ? () async {
+                  setState(() => _open = true);
+                  try {
+                    await showOptionsSheet(context, state, sessionEvent);
+                  } finally {
+                    if (mounted) setState(() => _open = false);
+                  }
+                }
+              : null,
+          child: const TotemIcon(TotemIcons.more),
+        ),
       ),
     );
   }

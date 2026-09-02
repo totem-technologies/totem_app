@@ -10,7 +10,7 @@ class ActionBarMicButton extends StatefulWidget {
     required this.participant,
     required this.onToggle,
     this.audioTrack,
-    this.indicatorColor = AppTheme.cream,
+    this.indicatorColor,
     this.indicatorBarCount = 5,
     super.key,
   });
@@ -18,7 +18,7 @@ class ActionBarMicButton extends StatefulWidget {
   final LocalParticipant? participant;
   final AudioTrack? audioTrack;
   final ActionBarButtonToggleCallback? onToggle;
-  final Color indicatorColor;
+  final Color? indicatorColor;
   final int indicatorBarCount;
 
   @override
@@ -99,7 +99,12 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
           ? SpeakingIndicatorAudioTrack(
               audioTrack: widget.audioTrack,
               participant: widget.participant,
-              foregroundColor: widget.indicatorColor,
+              // Follow the action-bar ghost color so prejoin cream-on-cream
+              // doesn't eat the bars.
+              foregroundColor:
+                  widget.indicatorColor ??
+                  IconTheme.of(context).color ??
+                  AppTheme.cream,
               barCount: widget.indicatorBarCount,
             )
           : const TotemIcon(TotemIcons.microphoneOff),

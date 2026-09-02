@@ -127,31 +127,38 @@ class _ActionBarCameraSwitcherButtonState
         key: _buttonKey,
         mainAxisSize: MainAxisSize.min,
         children: [
-          GestureDetector(
-            onTap: () {
-              if (widget.onToggle == null) return;
-              _showCameraPositionOptions();
-            },
-            child: Padding(
-              padding: const EdgeInsetsDirectional.symmetric(
-                horizontal: 8.0,
-              ),
-              child: AnimatedBuilder(
-                animation: _menuController,
-                builder: (context, child) {
-                  return Transform.rotate(
-                    angle:
-                        CurvedAnimation(
-                          parent: _menuController,
-                          curve: Curves.easeOutCubic,
-                        ).value *
-                        math.pi,
-                    child: child,
-                  );
-                },
-                child: const Icon(
-                  Icons.keyboard_arrow_down,
-                  color: AppTheme.cream,
+          Semantics(
+            button: true,
+            label: 'Switch camera',
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (widget.onToggle == null) return;
+                _showCameraPositionOptions();
+              },
+              child: Padding(
+                padding: const EdgeInsetsDirectional.symmetric(
+                  horizontal: 8.0,
+                ),
+                child: AnimatedBuilder(
+                  animation: _menuController,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle:
+                          CurvedAnimation(
+                            parent: _menuController,
+                            curve: Curves.easeOutCubic,
+                          ).value *
+                          math.pi,
+                      child: child,
+                    );
+                  },
+                  child: Icon(
+                    Icons.keyboard_arrow_down,
+                    color: ActionBar.onLightBackgroundOf(context)
+                        ? AppTheme.slate
+                        : AppTheme.cream,
+                  ),
                 ),
               ),
             ),
