@@ -12,15 +12,25 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 class ParticipantControlButton extends ConsumerStatefulWidget {
   const ParticipantControlButton({
     required this.participant,
-    required this.overlayPadding,
+    required this.menuVerticalOffset,
     this.backgroundColor = Colors.black54,
+    this.metrics,
     super.key,
   });
 
   final Participant participant;
-  final double overlayPadding;
+
+  /// Dy passed to [MenuAnchor.alignmentOffset].
+  ///
+  /// Positive opens the menu below the badge (grid tiles). Negative opens
+  /// it above — used on the featured row, where a downward menu would cover
+  /// the speaker name.
+  final double menuVerticalOffset;
 
   final Color backgroundColor;
+
+  /// When null, resolves via [ParticipantOverlayMetrics.of] (grid tiles).
+  final ParticipantOverlayMetrics? metrics;
 
   static const _menuTextStyle = TextStyle(
     color: Colors.white,
@@ -66,12 +76,12 @@ class _ParticipantControlButtonState
 
   @override
   Widget build(BuildContext context) {
-    final metrics = ParticipantOverlayMetrics.of(context);
+    final metrics = widget.metrics ?? ParticipantOverlayMetrics.of(context);
 
     return MenuAnchor(
       controller: _menuController,
       clipBehavior: Clip.hardEdge,
-      alignmentOffset: Offset(0, widget.overlayPadding),
+      alignmentOffset: Offset(0, widget.menuVerticalOffset),
       menuChildren: _buildMenuItems(context),
       animated: true,
       style: MenuStyle(
@@ -105,6 +115,7 @@ class _ParticipantControlButtonState
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: widget.backgroundColor,
+          boxShadow: kElevationToShadow[6],
         ),
         padding: EdgeInsetsDirectional.all(metrics.badgePadding),
         alignment: AlignmentDirectional.center,

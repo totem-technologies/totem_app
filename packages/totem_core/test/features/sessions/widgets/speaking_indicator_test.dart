@@ -7,7 +7,6 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
-import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
@@ -49,19 +48,17 @@ void main() {
     List<Object?> overrides = const [],
     Size? viewSize,
   }) async {
-    Widget body = child;
     if (viewSize != null) {
-      body = MediaQuery(
-        data: MediaQueryData(size: viewSize),
-        child: child,
-      );
+      tester.view.physicalSize = viewSize;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
     }
     await tester.pumpWidget(
       ProviderScope(
         overrides: overrides.cast(),
         child: MaterialApp(
           home: Scaffold(
-            body: body,
+            body: child,
           ),
         ),
       ),
@@ -108,7 +105,34 @@ void main() {
       );
 
       expect(find.byType(TotemIcon), findsOneWidget);
+      expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
     });
+
+    testWidgets(
+      'keeps a 20dp muted icon on phone-sized windows without an explicit size',
+      (tester) async {
+        await pumpWidget(
+          tester,
+          viewSize: const Size(400, 800),
+          child: const SpeakingIndicatorAudioTrack(audioTrack: null),
+        );
+
+        expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
+      },
+    );
+
+    testWidgets(
+      'keeps a 20dp muted icon on desktop-class windows without an explicit size',
+      (tester) async {
+        await pumpWidget(
+          tester,
+          viewSize: const Size(1200, 900),
+          child: const SpeakingIndicatorAudioTrack(audioTrack: null),
+        );
+
+        expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
+      },
+    );
 
     testWidgets(
       'switches between waveform and icon on mute and unmute events',
@@ -349,43 +373,6 @@ void main() {
         const Size(20, 20),
       );
       expect(tester.widget<Text>(find.text('🔥')).style?.fontSize, 10);
-    });
-  });
-
-  group('ParticipantOverlayMetrics', () {
-    Future<ParticipantOverlayMetrics> metricsFor(
-      WidgetTester tester,
-      Size size,
-    ) async {
-      late ParticipantOverlayMetrics metrics;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MediaQuery(
-            data: MediaQueryData(size: size),
-            child: Builder(
-              builder: (context) {
-                metrics = ParticipantOverlayMetrics.of(context);
-                return const SizedBox();
-              },
-            ),
-          ),
-        ),
-      );
-      return metrics;
-    }
-
-    testWidgets('is compact at the 600px phone breakpoint', (tester) async {
-      expect(
-        await metricsFor(tester, const Size(800, 600)),
-        ParticipantOverlayMetrics.compact,
-      );
-    });
-
-    testWidgets('is comfortable above 600px shortest side', (tester) async {
-      expect(
-        await metricsFor(tester, const Size(1200, 900)),
-        ParticipantOverlayMetrics.comfortable,
-      );
     });
   });
 }

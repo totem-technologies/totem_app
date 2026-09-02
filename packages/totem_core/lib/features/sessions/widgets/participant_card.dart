@@ -37,7 +37,8 @@ class FeaturedParticipantCard extends ConsumerWidget {
     final amKeeper = session.isKeeper(currentUserSlug);
 
     final theme = Theme.of(context);
-    final overlay = ParticipantOverlayMetrics.of(context);
+    // Featured tiles keep a slightly larger compact badge (24dp) than grid tiles.
+    final overlay = ParticipantOverlayMetrics.featuredOf(context);
     final speakerVideoBorderRadius = switch (MediaQuery.orientationOf(
       context,
     )) {
@@ -153,12 +154,14 @@ class FeaturedParticipantCard extends ConsumerWidget {
                             const _ElapsedTimer(),
                           SpeakingIndicatorOrEmoji(
                             participant: activeSpeaker,
+                            metrics: overlay,
                           ),
                           if (amKeeper &&
                               currentUserSlug != activeSpeaker.identity)
                             ParticipantControlButton(
-                              overlayPadding: -overlay.badgeSize - 8,
+                              menuVerticalOffset: -overlay.badgeSize - 8,
                               participant: activeSpeaker,
+                              metrics: overlay,
                             ),
                           Flexible(
                             child: SmartNameText(
@@ -322,7 +325,7 @@ class ParticipantCard extends ConsumerWidget {
                 top: overlayPadding,
                 child: ParticipantControlButton(
                   participant: participant,
-                  overlayPadding: overlayPadding,
+                  menuVerticalOffset: overlayPadding,
                 ),
               )
             else if (isKeeper)

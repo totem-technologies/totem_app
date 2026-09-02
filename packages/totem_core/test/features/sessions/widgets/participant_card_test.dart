@@ -47,12 +47,10 @@ void main() {
     List<Object?> overrides = const [],
     Size? viewSize,
   }) async {
-    Widget body = RepaintBoundary(child: child);
     if (viewSize != null) {
-      body = MediaQuery(
-        data: MediaQueryData(size: viewSize),
-        child: body,
-      );
+      tester.view.physicalSize = viewSize;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
     }
     await tester.pumpWidget(
       ProviderScope(
@@ -75,7 +73,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: body,
+            body: RepaintBoundary(child: child),
           ),
         ),
       ),
@@ -332,6 +330,121 @@ void main() {
       expect(find.text('Waiting room'), findsOneWidget);
       expect(find.byType(TotemIcon), findsOneWidget); // clock icon
     });
+
+    testWidgets('keeps 24dp overlay badges on phone-sized windows', (
+      tester,
+    ) async {
+      final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
+      when(
+        () => speaker.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(null);
+      when(
+        () => speaker.getTrackPublicationBySource(TrackSource.microphone),
+      ).thenReturn(null);
+      fakeSessionState.mockState = SessionRoomState(
+        connection: fakeSessionState.mockState.connection,
+        chat: fakeSessionState.mockState.chat,
+        participants: ParticipantsState(participants: [speaker]),
+        turn: const SessionTurnState(
+          roomState: RoomState(
+            keeper: 'keeper-1',
+            nextSpeaker: 'user-2',
+            currentSpeaker: 'user-1',
+            status: RoomStatus.active,
+            turnState: TurnState.idle,
+            sessionSlug: 'test-session',
+            statusDetail: RoomStateStatusDetailWaitingRoom(
+              WaitingRoomDetail(),
+            ),
+            talkingOrder: [],
+            version: 1,
+            roundNumber: 1,
+          ),
+        ),
+      );
+
+      await pumpWidget(
+        tester,
+        viewSize: const Size(400, 800),
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: const FeaturedParticipantCard(),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(24, 24),
+      );
+      expect(
+        tester
+            .widget<Container>(
+              find.descendant(
+                of: find.byType(SpeakingIndicatorOrEmoji),
+                matching: find.byType(Container),
+              ),
+            )
+            .decoration,
+        isA<BoxDecoration>().having(
+          (decoration) => decoration.boxShadow,
+          'boxShadow',
+          kElevationToShadow[6],
+        ),
+      );
+    });
+
+    testWidgets('uses 40dp overlay badges on desktop-class windows', (
+      tester,
+    ) async {
+      final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
+      when(
+        () => speaker.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(null);
+      when(
+        () => speaker.getTrackPublicationBySource(TrackSource.microphone),
+      ).thenReturn(null);
+      fakeSessionState.mockState = SessionRoomState(
+        connection: fakeSessionState.mockState.connection,
+        chat: fakeSessionState.mockState.chat,
+        participants: ParticipantsState(participants: [speaker]),
+        turn: const SessionTurnState(
+          roomState: RoomState(
+            keeper: 'keeper-1',
+            nextSpeaker: 'user-2',
+            currentSpeaker: 'user-1',
+            status: RoomStatus.active,
+            turnState: TurnState.idle,
+            sessionSlug: 'test-session',
+            statusDetail: RoomStateStatusDetailWaitingRoom(
+              WaitingRoomDetail(),
+            ),
+            talkingOrder: [],
+            version: 1,
+            roundNumber: 1,
+          ),
+        ),
+      );
+
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: const FeaturedParticipantCard(),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(40, 40),
+      );
+    });
   });
 
   group('ParticipantVideo', () {
@@ -443,7 +556,7 @@ void main() {
         authState: AuthState.unauthenticated(),
         child: ParticipantControlButton(
           participant: remoteParticipant,
-          overlayPadding: 10,
+          menuVerticalOffset: 10,
         ),
       );
 
@@ -461,7 +574,7 @@ void main() {
         authState: AuthState.unauthenticated(),
         child: ParticipantControlButton(
           participant: remoteParticipant,
-          overlayPadding: 12,
+          menuVerticalOffset: 12,
         ),
       );
 
@@ -494,7 +607,7 @@ class _MenuCloseTestWrapperState extends State<_MenuCloseTestWrapper> {
       child: _visible
           ? ParticipantControlButton(
               participant: widget.participant,
-              overlayPadding: 10,
+              menuVerticalOffset: 10,
             )
           : const SizedBox.shrink(),
     );

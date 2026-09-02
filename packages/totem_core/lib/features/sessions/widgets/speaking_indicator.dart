@@ -12,7 +12,7 @@ class SpeakingIndicatorAudioTrack extends StatelessWidget {
     this.participant,
     this.foregroundColor = Colors.white,
     this.barCount = 3,
-    this.iconSize,
+    this.iconSize = 20,
     super.key,
   });
 
@@ -22,7 +22,8 @@ class SpeakingIndicatorAudioTrack extends StatelessWidget {
   final Color? foregroundColor;
   final int barCount;
 
-  final double? iconSize;
+  /// Mic-off glyph size. Defaults to 20 for non-overlay callers (action bar).
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +42,7 @@ class SpeakingIndicator extends StatelessWidget {
     required this.participant,
     this.foregroundColor = Colors.white,
     this.barCount = 3,
-    this.iconSize,
+    this.iconSize = 20,
     super.key,
   });
 
@@ -49,7 +50,8 @@ class SpeakingIndicator extends StatelessWidget {
   final Color foregroundColor;
   final int barCount;
 
-  final double? iconSize;
+  /// Mic-off glyph size. Defaults to 20 so this widget stays overlay-agnostic.
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -68,14 +70,14 @@ class _SpeakingIndicatorCore extends StatefulWidget {
     required this.barCount,
     this.audioTrack,
     this.participant,
-    this.iconSize,
+    this.iconSize = 20,
   });
 
   final AudioTrack? audioTrack;
   final Participant? participant;
   final Color? foregroundColor;
   final int barCount;
-  final double? iconSize;
+  final double iconSize;
 
   @override
   State<_SpeakingIndicatorCore> createState() => _SpeakingIndicatorCoreState();
@@ -190,7 +192,7 @@ class _SpeakingIndicatorCoreState extends State<_SpeakingIndicatorCore> {
 
     return TotemIcon(
       TotemIcons.microphoneOff,
-      size: widget.iconSize ?? ParticipantOverlayMetrics.of(context).iconSize,
+      size: widget.iconSize,
       color: widget.foregroundColor,
     );
   }
@@ -200,15 +202,21 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
   const SpeakingIndicatorOrEmoji({
     required this.participant,
     this.backgroundColor = Colors.black54,
+    this.metrics,
     super.key,
   });
 
   final Participant participant;
   final Color backgroundColor;
 
+  /// When null, resolves via [ParticipantOverlayMetrics.of] (grid tiles).
+  /// Featured tiles pass [ParticipantOverlayMetrics.featuredOf] so phone
+  /// chrome stays at 24dp instead of shrinking to the grid's 20dp.
+  final ParticipantOverlayMetrics? metrics;
+
   @override
   Widget build(BuildContext context) {
-    final metrics = ParticipantOverlayMetrics.of(context);
+    final metrics = this.metrics ?? ParticipantOverlayMetrics.of(context);
 
     return Consumer(
       builder: (context, ref, child) {
@@ -225,9 +233,10 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
                     key: ValueKey(emojis.first),
                     width: metrics.badgeSize,
                     height: metrics.badgeSize,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
+                      boxShadow: kElevationToShadow[6],
                     ),
                     alignment: AlignmentDirectional.center,
                     child: Text(
@@ -249,6 +258,7 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: backgroundColor,
+          boxShadow: kElevationToShadow[6],
         ),
         padding: EdgeInsetsDirectional.all(metrics.badgePadding),
         alignment: AlignmentDirectional.center,
