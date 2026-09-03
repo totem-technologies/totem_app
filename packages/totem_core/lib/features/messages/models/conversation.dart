@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:totem_core/core/api/api_client/models/public_user_schema.dart';
+
 import 'package:totem_core/features/messages/models/message.dart';
 
 @immutable

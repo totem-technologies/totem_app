@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:totem_core/core/config/theme.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
@@ -26,10 +27,10 @@ class MessageBubble extends StatelessWidget {
             vertical: 4.5,
           ),
           decoration: BoxDecoration(
-            color: isOwn ? const Color(0xFFEDEBF5) : const Color(0xFFFAFAF7),
+            color: isOwn ? AppTheme.messagePurpleBg : AppTheme.surfaceCard,
             border: isOwn
                 ? null
-                : Border.all(color: const Color(0xFFE8E5E0), width: 1),
+                : Border.all(color: AppTheme.divider, width: 1),
             borderRadius: isOwn
                 ? const BorderRadius.only(
                     topLeft: Radius.circular(18),
@@ -53,8 +54,8 @@ class MessageBubble extends StatelessWidget {
                   text,
                   style: TextStyle(
                     color: isOwn
-                        ? const Color(0xFF3B2E5C)
-                        : const Color(0xFF1F293B),
+                        ? AppTheme.messagePurpleText
+                        : AppTheme.textHeading,
                     fontSize: 16,
                     height: 1.5,
                     fontWeight: FontWeight.w400,
@@ -65,9 +66,7 @@ class MessageBubble extends StatelessWidget {
               Text(
                 timestamp,
                 style: TextStyle(
-                  color: isOwn
-                      ? const Color(0xFF8C7AA8)
-                      : const Color(0xFF8C8A82),
+                  color: isOwn ? AppTheme.messagePurple : AppTheme.textMuted,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w400,
                 ),

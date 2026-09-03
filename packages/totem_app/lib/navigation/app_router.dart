@@ -9,6 +9,7 @@ import 'package:totem_app/features/auth/controllers/user_profile_controller.dart
 import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/shared/logger.dart';
@@ -25,6 +26,9 @@ import '../features/blog/screens/blog_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/home/widgets/join_ongoing_session_card.dart';
 import '../features/messages/screens/messages_screen.dart';
+import '../features/messages/screens/new_message_screen.dart';
+import '../features/messages/screens/compose_to_participants_screen.dart';
+import '../features/messages/screens/session_participants_screen.dart';
 import '../features/messages/screens/thread_screen.dart';
 import '../features/profile/screens/profile_details_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
@@ -441,13 +445,50 @@ class AppTotemRouter extends TotemRouter {
         ),
 
         GoRoute(
-          path: '/messages/:conversationId',
+          path: RouteNames.newMessage,
+          name: RouteNames.newMessage,
+          builder: (context, state) => const NewMessageScreen(),
+        ),
+
+        // These screens currently rehydrate from `state.extra` (pushed from
+        // session details). A hard refresh / deep link has no extra, so we
+        // show [ErrorScreen] instead of throwing a cast error.
+        GoRoute(
+          path: RouteNames.sessionParticipants(':sessionSlug'),
+          name: RouteNames.sessionParticipants(':sessionSlug'),
+          builder: (context, state) {
+            final extra = state.extra;
+            if (extra is! SessionDetailSchema) {
+              return const ErrorScreen();
+            }
+            return SessionParticipantsScreen(session: extra);
+          },
+        ),
+
+        GoRoute(
+          path: RouteNames.composeToParticipants(':sessionSlug'),
+          name: RouteNames.composeToParticipants(':sessionSlug'),
+          builder: (context, state) {
+            final extra = state.extra;
+            if (extra is! SessionDetailSchema) {
+              return const ErrorScreen();
+            }
+            return ComposeToParticipantsScreen(session: extra);
+          },
+        ),
+
+        GoRoute(
+          path: RouteNames.messageThread(':conversationId'),
+          name: RouteNames.messageThread(':conversationId'),
           builder: (context, state) {
             final conversationId = state.pathParameters['conversationId'] ?? '';
-            final conversation = state.extra as Conversation;
+            final extra = state.extra;
+            if (extra is! Conversation) {
+              return const ErrorScreen();
+            }
             return ThreadScreen(
               conversationId: conversationId,
-              conversation: conversation,
+              conversation: extra,
             );
           },
         ),

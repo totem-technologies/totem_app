@@ -7,6 +7,7 @@ import 'package:totem_core/features/messages/providers/conversations_provider.da
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
+import '../mocks/message_mocks.dart';
 import '../widgets/chat_card.dart';
 import '../widgets/message_search_field.dart';
 
@@ -24,7 +25,7 @@ class MessagesScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            color: const Color(0xFFFAFAF7),
+            color: AppTheme.surfaceCard,
             padding: EdgeInsetsDirectional.only(
               top: MediaQuery.of(context).padding.top,
             ),
@@ -38,25 +39,25 @@ class MessagesScreen extends ConsumerWidget {
                     Text(
                       'Messages',
                       style: theme.textTheme.titleLarge?.copyWith(
-                        color: const Color(0xFF1F293B),
+                        color: AppTheme.textHeading,
                         fontWeight: FontWeight.w600,
                         fontSize: 21,
                       ),
                     ),
                     InkWell(
-                      onTap: () {},
+                      onTap: () => context.push(RouteNames.newMessage),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         width: 32,
                         height: 32,
                         alignment: Alignment.center,
                         decoration: const BoxDecoration(
-                          color: Color(0xFF8C7AA8),
+                          color: AppTheme.messagePurple,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.add,
-                          color: Colors.white,
+                          color: AppTheme.white,
                           size: 20,
                         ),
                       ),
@@ -95,14 +96,6 @@ class MessagesScreen extends ConsumerWidget {
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
-  static const _keepers = [
-    (name: 'James Moreau', seed: 'james-moreau'),
-    (name: 'Sofia Reyes', seed: 'sofia-reyes'),
-    (name: 'Lena Fischer', seed: 'lena-fischer'),
-    (name: 'Omar Khalil', seed: 'omar-khalil'),
-    (name: 'Dr. Aisha Patel', seed: 'aisha-patel'),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -110,7 +103,7 @@ class _EmptyState extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 20),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.white,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -121,7 +114,7 @@ class _EmptyState extends StatelessWidget {
                 Text(
                   'Start a conversation',
                   style: TextStyle(
-                    color: Color(0xFF1F293B),
+                    color: AppTheme.textHeading,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
@@ -130,7 +123,7 @@ class _EmptyState extends StatelessWidget {
                 Text(
                   'Recommended Keepers for you',
                   style: TextStyle(
-                    color: Color(0xFF8C8C81),
+                    color: AppTheme.textMuted,
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
                   ),
@@ -138,7 +131,9 @@ class _EmptyState extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 15),
-            ..._keepers.map((k) => _KeeperCard(name: k.name, seed: k.seed)),
+            ...mockRecommendedKeepers.map(
+              (k) => _KeeperCard(name: k.name, seed: k.seed),
+            ),
           ],
         ),
       ),
@@ -164,7 +159,7 @@ class _KeeperCard extends StatelessWidget {
             child: Text(
               name,
               style: const TextStyle(
-                color: Color(0xFF1F293B),
+                color: AppTheme.textHeading,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
               ),
@@ -177,13 +172,13 @@ class _KeeperCard extends StatelessWidget {
               vertical: 7,
             ),
             decoration: BoxDecoration(
-              color: const Color(0xFFF2EBF7),
+              color: AppTheme.messagePurpleLight,
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Text(
               'Message',
               style: TextStyle(
-                color: Color(0xFF987AA5),
+                color: AppTheme.mauve,
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
               ),

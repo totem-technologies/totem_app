@@ -35,6 +35,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../widgets/conflicting_sessions_dialog.dart';
 import '../widgets/info_text.dart';
+import '../widgets/keeper_message_participants_card.dart';
 
 enum SpaceJoinCardState {
   ended,
@@ -109,6 +110,10 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
     final AsyncValue<SessionDetailSchema>? sessionAsync = hasValidSessionSlug
         ? ref.watch(sessionProvider(effectiveSessionSlug))
         : null;
+
+    final currentUserSlug = ref.watch(
+      authControllerProvider.select((auth) => auth.user?.slug),
+    );
 
     return spaceAsync.when(
       data: (space) {
@@ -309,6 +314,25 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                               sessionAsync: sessionAsync,
                             ),
                           ),
+
+                          // ── Message Participants (keeper only) ─────────
+                          // Staging-only until the messaging backend ships.
+                          if (AppConfig.instance.environment ==
+                                  Environment.staging &&
+                              currentUserSlug != null &&
+                              space.author.slug == currentUserSlug)
+                            if (sessionAsync?.value
+                                case final SessionDetailSchema event) ...[
+                              const SizedBox(height: 24),
+                              Padding(
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 20,
+                                ),
+                                child: KeeperMessageParticipantsCard(
+                                  session: event,
+                                ),
+                              ),
+                            ],
 
                           const SizedBox(height: 24),
 

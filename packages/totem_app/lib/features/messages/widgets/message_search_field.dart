@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:totem_core/core/config/theme.dart';
 
 class MessageSearchField extends StatelessWidget {
   const MessageSearchField({super.key});
@@ -10,13 +11,13 @@ class MessageSearchField extends StatelessWidget {
       padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
       alignment: AlignmentDirectional.centerStart,
       decoration: BoxDecoration(
-        color: const Color(0xFFD9D9D9),
+        color: AppTheme.messageSearchBg,
         borderRadius: BorderRadius.circular(20),
       ),
       child: const Text(
         'Search messages',
         style: TextStyle(
-          color: Color(0xFFA2A2A2),
+          color: AppTheme.messageSearchText,
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
