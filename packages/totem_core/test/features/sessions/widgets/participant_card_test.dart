@@ -45,7 +45,13 @@ void main() {
     required Widget child,
     required AuthState authState,
     List<Object?> overrides = const [],
+    Size? viewSize,
   }) async {
+    if (viewSize != null) {
+      tester.view.physicalSize = viewSize;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -71,6 +77,17 @@ void main() {
           ),
         ),
       ),
+    );
+  }
+
+  PositionedDirectional overlayPosition(WidgetTester tester) {
+    return tester.widget<PositionedDirectional>(
+      find
+          .ancestor(
+            of: find.byType(SpeakingIndicatorOrEmoji),
+            matching: find.byType(PositionedDirectional),
+          )
+          .first,
     );
   }
 
@@ -172,6 +189,105 @@ void main() {
 
       expect(find.byType(TotemIconLogo), findsOneWidget);
     });
+
+    testWidgets('keeps compact corner chrome on phone-sized windows', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(400, 800),
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: ParticipantCard(
+          participant: remoteParticipant,
+          session: null,
+          participantIdentity: remoteParticipant.identity,
+        ),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(20, 20),
+      );
+      expect(overlayPosition(tester).top, 10);
+      expect(overlayPosition(tester).start, 10);
+    });
+
+    testWidgets('uses larger corner chrome on desktop-class windows', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: ParticipantCard(
+          participant: remoteParticipant,
+          session: null,
+          participantIdentity: remoteParticipant.identity,
+        ),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(40, 40),
+      );
+      expect(overlayPosition(tester).top, 12);
+      expect(overlayPosition(tester).start, 12);
+    });
+
+    testWidgets('scales the keeper logo badge on desktop-class windows', (
+      tester,
+    ) async {
+      final keeperParticipant = MockRemoteParticipant('keeper-1', 'The Keeper');
+
+      fakeSessionState.mockState = SessionRoomState(
+        connection: fakeSessionState.mockState.connection,
+        chat: fakeSessionState.mockState.chat,
+        participants: fakeSessionState.mockState.participants,
+        turn: const SessionTurnState(
+          roomState: RoomState(
+            keeper: 'keeper-1',
+            nextSpeaker: 'user-2',
+            currentSpeaker: 'user-1',
+            status: RoomStatus.waitingRoom,
+            turnState: TurnState.idle,
+            sessionSlug: 'test-session',
+            statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+            talkingOrder: [],
+            version: 1,
+            roundNumber: 1,
+          ),
+        ),
+      );
+
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: ParticipantCard(
+          participant: keeperParticipant,
+          session: null,
+          participantIdentity: keeperParticipant.identity,
+        ),
+      );
+
+      expect(tester.widget<TotemIconLogo>(find.byType(TotemIconLogo)).size, 22);
+      expect(tester.getSize(find.byType(TotemIconLogo)), const Size(22, 22));
+    });
   });
 
   group('FeaturedParticipantCard', () {
@@ -213,6 +329,121 @@ void main() {
 
       expect(find.text('Waiting room'), findsOneWidget);
       expect(find.byType(TotemIcon), findsOneWidget); // clock icon
+    });
+
+    testWidgets('keeps 24dp overlay badges on phone-sized windows', (
+      tester,
+    ) async {
+      final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
+      when(
+        () => speaker.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(null);
+      when(
+        () => speaker.getTrackPublicationBySource(TrackSource.microphone),
+      ).thenReturn(null);
+      fakeSessionState.mockState = SessionRoomState(
+        connection: fakeSessionState.mockState.connection,
+        chat: fakeSessionState.mockState.chat,
+        participants: ParticipantsState(participants: [speaker]),
+        turn: const SessionTurnState(
+          roomState: RoomState(
+            keeper: 'keeper-1',
+            nextSpeaker: 'user-2',
+            currentSpeaker: 'user-1',
+            status: RoomStatus.active,
+            turnState: TurnState.idle,
+            sessionSlug: 'test-session',
+            statusDetail: RoomStateStatusDetailWaitingRoom(
+              WaitingRoomDetail(),
+            ),
+            talkingOrder: [],
+            version: 1,
+            roundNumber: 1,
+          ),
+        ),
+      );
+
+      await pumpWidget(
+        tester,
+        viewSize: const Size(400, 800),
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: const FeaturedParticipantCard(),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(24, 24),
+      );
+      expect(
+        tester
+            .widget<Container>(
+              find.descendant(
+                of: find.byType(SpeakingIndicatorOrEmoji),
+                matching: find.byType(Container),
+              ),
+            )
+            .decoration,
+        isA<BoxDecoration>().having(
+          (decoration) => decoration.boxShadow,
+          'boxShadow',
+          kElevationToShadow[6],
+        ),
+      );
+    });
+
+    testWidgets('uses 40dp overlay badges on desktop-class windows', (
+      tester,
+    ) async {
+      final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
+      when(
+        () => speaker.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(null);
+      when(
+        () => speaker.getTrackPublicationBySource(TrackSource.microphone),
+      ).thenReturn(null);
+      fakeSessionState.mockState = SessionRoomState(
+        connection: fakeSessionState.mockState.connection,
+        chat: fakeSessionState.mockState.chat,
+        participants: ParticipantsState(participants: [speaker]),
+        turn: const SessionTurnState(
+          roomState: RoomState(
+            keeper: 'keeper-1',
+            nextSpeaker: 'user-2',
+            currentSpeaker: 'user-1',
+            status: RoomStatus.active,
+            turnState: TurnState.idle,
+            sessionSlug: 'test-session',
+            statusDetail: RoomStateStatusDetailWaitingRoom(
+              WaitingRoomDetail(),
+            ),
+            talkingOrder: [],
+            version: 1,
+            roundNumber: 1,
+          ),
+        ),
+      );
+
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: const FeaturedParticipantCard(),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(40, 40),
+      );
     });
   });
 
@@ -317,6 +548,42 @@ void main() {
       expect(find.text('Remove'), findsNothing);
       expect(find.text('Ban'), findsNothing);
     });
+
+    testWidgets('uses a compact badge on phone-sized windows', (tester) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(400, 800),
+        authState: AuthState.unauthenticated(),
+        child: ParticipantControlButton(
+          participant: remoteParticipant,
+          menuVerticalOffset: 10,
+        ),
+      );
+
+      expect(
+        tester.getSize(find.byType(ParticipantControlButton)),
+        const Size(20, 20),
+      );
+      expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 16);
+    });
+
+    testWidgets('uses a larger badge on desktop-class windows', (tester) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        authState: AuthState.unauthenticated(),
+        child: ParticipantControlButton(
+          participant: remoteParticipant,
+          menuVerticalOffset: 12,
+        ),
+      );
+
+      expect(
+        tester.getSize(find.byType(ParticipantControlButton)),
+        const Size(40, 40),
+      );
+      expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 22);
+    });
   });
 }
 
@@ -340,7 +607,7 @@ class _MenuCloseTestWrapperState extends State<_MenuCloseTestWrapper> {
       child: _visible
           ? ParticipantControlButton(
               participant: widget.participant,
-              overlayPadding: 10,
+              menuVerticalOffset: 10,
             )
           : const SizedBox.shrink(),
     );

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
+import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 class SpeakingIndicatorAudioTrack extends StatelessWidget {
@@ -11,6 +12,7 @@ class SpeakingIndicatorAudioTrack extends StatelessWidget {
     this.participant,
     this.foregroundColor = Colors.white,
     this.barCount = 3,
+    this.iconSize = 20,
     super.key,
   });
 
@@ -20,6 +22,9 @@ class SpeakingIndicatorAudioTrack extends StatelessWidget {
   final Color? foregroundColor;
   final int barCount;
 
+  /// Mic-off glyph size. Defaults to 20 for non-overlay callers (action bar).
+  final double iconSize;
+
   @override
   Widget build(BuildContext context) {
     return _SpeakingIndicatorCore(
@@ -27,6 +32,7 @@ class SpeakingIndicatorAudioTrack extends StatelessWidget {
       participant: participant,
       foregroundColor: foregroundColor,
       barCount: barCount,
+      iconSize: iconSize,
     );
   }
 }
@@ -36,6 +42,7 @@ class SpeakingIndicator extends StatelessWidget {
     required this.participant,
     this.foregroundColor = Colors.white,
     this.barCount = 3,
+    this.iconSize = 20,
     super.key,
   });
 
@@ -43,12 +50,16 @@ class SpeakingIndicator extends StatelessWidget {
   final Color foregroundColor;
   final int barCount;
 
+  /// Mic-off glyph size. Defaults to 20 so this widget stays overlay-agnostic.
+  final double iconSize;
+
   @override
   Widget build(BuildContext context) {
     return _SpeakingIndicatorCore(
       participant: participant,
       foregroundColor: foregroundColor,
       barCount: barCount,
+      iconSize: iconSize,
     );
   }
 }
@@ -59,12 +70,14 @@ class _SpeakingIndicatorCore extends StatefulWidget {
     required this.barCount,
     this.audioTrack,
     this.participant,
+    this.iconSize = 20,
   });
 
   final AudioTrack? audioTrack;
   final Participant? participant;
   final Color? foregroundColor;
   final int barCount;
+  final double iconSize;
 
   @override
   State<_SpeakingIndicatorCore> createState() => _SpeakingIndicatorCoreState();
@@ -179,7 +192,7 @@ class _SpeakingIndicatorCoreState extends State<_SpeakingIndicatorCore> {
 
     return TotemIcon(
       TotemIcons.microphoneOff,
-      size: 20,
+      size: widget.iconSize,
       color: widget.foregroundColor,
     );
   }
@@ -189,14 +202,22 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
   const SpeakingIndicatorOrEmoji({
     required this.participant,
     this.backgroundColor = Colors.black54,
+    this.metrics,
     super.key,
   });
 
   final Participant participant;
   final Color backgroundColor;
 
+  /// When null, resolves via [ParticipantOverlayMetrics.of] (grid tiles).
+  /// Featured tiles pass [ParticipantOverlayMetrics.featuredOf] so phone
+  /// chrome stays at 24dp instead of shrinking to the grid's 20dp.
+  final ParticipantOverlayMetrics? metrics;
+
   @override
   Widget build(BuildContext context) {
+    final metrics = this.metrics ?? ParticipantOverlayMetrics.of(context);
+
     return Consumer(
       builder: (context, ref, child) {
         final emojis = ref.watch(
@@ -210,17 +231,18 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
               ? MediaQuery.withNoTextScaling(
                   child: Container(
                     key: ValueKey(emojis.first),
-                    width: 20,
-                    height: 20,
-                    decoration: const BoxDecoration(
+                    width: metrics.badgeSize,
+                    height: metrics.badgeSize,
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
+                      boxShadow: kElevationToShadow[6],
                     ),
                     alignment: AlignmentDirectional.center,
                     child: Text(
                       emojis.first,
-                      style: const TextStyle(
-                        fontSize: 10,
+                      style: TextStyle(
+                        fontSize: metrics.emojiFontSize,
                         textBaseline: TextBaseline.ideographic,
                       ),
                       textAlign: TextAlign.center,
@@ -231,15 +253,19 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
         );
       },
       child: Container(
-        width: 20,
-        height: 20,
+        width: metrics.badgeSize,
+        height: metrics.badgeSize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: backgroundColor,
+          boxShadow: kElevationToShadow[6],
         ),
-        padding: const EdgeInsetsDirectional.all(2),
+        padding: EdgeInsetsDirectional.all(metrics.badgePadding),
         alignment: AlignmentDirectional.center,
-        child: SpeakingIndicator(participant: participant),
+        child: SpeakingIndicator(
+          participant: participant,
+          iconSize: metrics.iconSize,
+        ),
       ),
     );
   }

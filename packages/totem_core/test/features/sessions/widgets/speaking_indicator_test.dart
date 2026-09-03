@@ -46,7 +46,13 @@ void main() {
     WidgetTester tester, {
     required Widget child,
     List<Object?> overrides = const [],
+    Size? viewSize,
   }) async {
+    if (viewSize != null) {
+      tester.view.physicalSize = viewSize;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
     await tester.pumpWidget(
       ProviderScope(
         overrides: overrides.cast(),
@@ -55,6 +61,15 @@ void main() {
             body: child,
           ),
         ),
+      ),
+    );
+  }
+
+  TotemIcon overlayMuteIcon(WidgetTester tester) {
+    return tester.widget<TotemIcon>(
+      find.descendant(
+        of: find.byType(SpeakingIndicatorOrEmoji),
+        matching: find.byType(TotemIcon),
       ),
     );
   }
@@ -90,7 +105,34 @@ void main() {
       );
 
       expect(find.byType(TotemIcon), findsOneWidget);
+      expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
     });
+
+    testWidgets(
+      'keeps a 20dp muted icon on phone-sized windows without an explicit size',
+      (tester) async {
+        await pumpWidget(
+          tester,
+          viewSize: const Size(400, 800),
+          child: const SpeakingIndicatorAudioTrack(audioTrack: null),
+        );
+
+        expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
+      },
+    );
+
+    testWidgets(
+      'keeps a 20dp muted icon on desktop-class windows without an explicit size',
+      (tester) async {
+        await pumpWidget(
+          tester,
+          viewSize: const Size(1200, 900),
+          child: const SpeakingIndicatorAudioTrack(audioTrack: null),
+        );
+
+        expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
+      },
+    );
 
     testWidgets(
       'switches between waveform and icon on mute and unmute events',
@@ -237,6 +279,100 @@ void main() {
 
       expect(find.text('🔥'), findsNothing);
       expect(find.byType(TotemIcon), findsOneWidget);
+    });
+
+    testWidgets('uses compact overlay sizes on phone-sized windows', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(400, 800),
+        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(20, 20),
+      );
+      expect(overlayMuteIcon(tester).size, 16);
+    });
+
+    testWidgets('uses compact overlay sizes in phone landscape', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(800, 400),
+        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(20, 20),
+      );
+      expect(overlayMuteIcon(tester).size, 16);
+    });
+
+    testWidgets('uses comfortable overlay sizes on desktop-class windows', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+      );
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(40, 40),
+      );
+      expect(overlayMuteIcon(tester).size, 22);
+    });
+
+    testWidgets('renders a larger emoji glyph on desktop-class windows', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        overrides: [
+          participantEmojisProvider(
+            remoteParticipant.identity,
+          ).overrideWith((ref) => ['🔥']),
+        ],
+        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(40, 40),
+      );
+      expect(tester.widget<Text>(find.text('🔥')).style?.fontSize, 20);
+    });
+
+    testWidgets('keeps the compact emoji glyph on phone-sized windows', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(400, 800),
+        overrides: [
+          participantEmojisProvider(
+            remoteParticipant.identity,
+          ).overrideWith((ref) => ['🔥']),
+        ],
+        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+        const Size(20, 20),
+      );
+      expect(tester.widget<Text>(find.text('🔥')).style?.fontSize, 10);
     });
   });
 }
