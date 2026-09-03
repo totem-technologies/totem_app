@@ -118,7 +118,14 @@ void main() {
       ProviderScope(
         overrides: overrides.cast(),
         child: MaterialApp(
-          home: Scaffold(body: child),
+          home: Scaffold(
+            body: Align(
+              // Production pins the bar to the bottom; without this the
+              // scaffold stretches the bar and LayoutBuilder sees full width.
+              alignment: Alignment.bottomCenter,
+              child: child,
+            ),
+          ),
         ),
       ),
     );
@@ -217,8 +224,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(ActionBar), findsOneWidget);
-      expect(find.byType(ActionBarButton), findsNWidgets(4));
-      expect(find.byType(IconButton), findsOneWidget);
+      expect(find.byType(ActionBarButton), findsNWidgets(5));
       expect(find.byType(SessionActionBarCameraButton), findsOneWidget);
     });
 
@@ -227,8 +233,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(ActionBar), findsOneWidget);
-      expect(find.byType(ActionBarButton), findsNWidgets(3));
-      expect(find.byType(IconButton), findsOneWidget);
+      expect(find.byType(ActionBarButton), findsNWidgets(4));
     });
 
     testWidgets('shows emoji button on listening screen', (tester) async {
@@ -287,11 +292,56 @@ void main() {
       expect(find.byType(ActionBar), findsNothing);
     });
 
+    testWidgets('disables more when session state is missing', (tester) async {
+      await pumpWidget(
+        tester,
+        child: const SessionActionBar(),
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => FakeAuthController(AuthState.unauthenticated()),
+          ),
+          currentSessionProvider.overrideWith((ref) => session),
+          lastSessionMessageProvider.overrideWith(
+            (ref) => ref.watch(_testLastMessageProvider),
+          ),
+          sessionMessagesProvider.overrideWith((ref) => const []),
+          currentSessionStateProvider.overrideWith((ref) => null),
+          isCurrentUserKeeperProvider.overrideWith((ref) => false),
+          resolveCurrentScreenProvider.overrideWith(
+            (ref) => RoomScreen.listening,
+          ),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      final moreLabel = MaterialLocalizations.of(
+        tester.element(find.byType(SessionActionBar)),
+      ).moreButtonTooltip;
+      final moreButton = find.descendant(
+        of: find.byTooltip(moreLabel),
+        matching: find.byType(ActionBarButton),
+      );
+      expect(moreButton, findsOneWidget);
+      final gesture = tester.widget<GestureDetector>(
+        find.descendant(
+          of: moreButton,
+          matching: find.byType(GestureDetector),
+        ),
+      );
+      expect(gesture.onTap, isNull);
+    });
+
     testWidgets('opens options sheet when tapping more button', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(IconButton));
+      await tester.tap(
+        find.bySemanticsLabel(
+          MaterialLocalizations.of(
+            tester.element(find.byType(SessionActionBar)),
+          ).moreButtonTooltip,
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(MoreOptions), findsOneWidget);

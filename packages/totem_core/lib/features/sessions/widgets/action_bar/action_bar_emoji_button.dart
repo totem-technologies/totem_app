@@ -41,7 +41,7 @@ class _ActionBarEmojiButtonState extends State<ActionBarEmojiButton> {
         key: _buttonKey,
         semanticsLabel: 'Send reaction',
         semanticsHint: 'Open emoji selection overlay',
-        active: _isOpen,
+        role: ActionBarButtonRole.sheet(open: _isOpen),
         onPressed: _openPicker,
         child: const TotemIcon(TotemIcons.reaction),
       ),

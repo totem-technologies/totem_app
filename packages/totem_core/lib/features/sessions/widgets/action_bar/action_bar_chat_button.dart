@@ -45,7 +45,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     );
     return ActionBarButton(
       semanticsLabel: 'Chat',
-      active: _chatSheetOpen,
+      role: ActionBarButtonRole.sheet(open: _chatSheetOpen),
       onPressed: () async {
         if (!mounted) return;
         _notification?.dismissActive();
@@ -53,9 +53,11 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
           _hasPendingSessionChatMessages = false;
           _chatSheetOpen = true;
         });
-        await showSessionChat(context);
-        if (!mounted) return;
-        setState(() => _chatSheetOpen = false);
+        try {
+          await showSessionChat(context);
+        } finally {
+          if (mounted) setState(() => _chatSheetOpen = false);
+        }
       },
       child: Stack(
         clipBehavior: Clip.none,

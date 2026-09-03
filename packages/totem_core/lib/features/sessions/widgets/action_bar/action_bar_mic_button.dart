@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -9,7 +10,7 @@ class ActionBarMicButton extends StatefulWidget {
     required this.participant,
     required this.onToggle,
     this.audioTrack,
-    this.indicatorColor = Colors.black,
+    this.indicatorColor,
     this.indicatorBarCount = 5,
     super.key,
   });
@@ -17,7 +18,7 @@ class ActionBarMicButton extends StatefulWidget {
   final LocalParticipant? participant;
   final AudioTrack? audioTrack;
   final ActionBarButtonToggleCallback? onToggle;
-  final Color indicatorColor;
+  final Color? indicatorColor;
   final int indicatorBarCount;
 
   @override
@@ -91,13 +92,19 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
 
     return ActionBarButton(
       semanticsLabel: 'Microphone ${isEnabled ? 'on' : 'off'}',
-      active: isEnabled,
+      // Live mic stays ghost; cut mic gets the pinkTint "off" circle.
+      role: ActionBarButtonRole.media(enabled: isEnabled),
       onPressed: _busy ? null : _toggleMicrophone,
       child: isEnabled
           ? SpeakingIndicatorAudioTrack(
               audioTrack: widget.audioTrack,
               participant: widget.participant,
-              foregroundColor: widget.indicatorColor,
+              // Follow the action-bar ghost color so prejoin cream-on-cream
+              // doesn't eat the bars.
+              foregroundColor:
+                  widget.indicatorColor ??
+                  IconTheme.of(context).color ??
+                  AppTheme.cream,
               barCount: widget.indicatorBarCount,
             )
           : const TotemIcon(TotemIcons.microphoneOff),

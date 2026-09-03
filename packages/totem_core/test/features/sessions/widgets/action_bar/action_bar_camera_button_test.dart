@@ -32,6 +32,8 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: Align(
+              // Keeps the switcher at the bottom so the overlay lays out
+              // above the button the same way it does in session.
               alignment: Alignment.bottomCenter,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 120),
@@ -64,6 +66,36 @@ void main() {
       );
     });
 
+    testWidgets('switch-camera chevron is labeled for semantics', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ActionBarCameraSwitcherButton(
+              isCameraOn: true,
+              onToggle: () {},
+              cameraPosition: CameraPosition.front,
+              availableCameraDevices: const [
+                MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
+                MediaDevice('camera-2', 'Rear Camera', 'videoinput', null),
+              ],
+              selectedCameraDeviceId: 'camera-2',
+              onCameraPositionChanged: (_) {},
+              onCameraDeviceSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.bySemanticsLabel('Switch camera'), findsOneWidget);
+    });
+
     testWidgets('one-camera mode is platform-adaptive', (tester) async {
       var toggles = 0;
 
@@ -76,6 +108,8 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: Align(
+              // Keeps the switcher at the bottom so the overlay lays out
+              // above the button the same way it does in session.
               alignment: Alignment.bottomCenter,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 120),

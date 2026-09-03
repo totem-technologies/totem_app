@@ -19,7 +19,8 @@ class ActionBarSpeakerButton extends StatelessWidget {
       onPressed: onSpeakerToggled == null
           ? null
           : () => onSpeakerToggled?.call(!isSpeakerOn),
-      active: isSpeakerOn,
+      // Off is the muted pinkTint circle, matching mic and camera.
+      role: ActionBarButtonRole.media(enabled: isSpeakerOn),
       child: TotemIcon(
         isSpeakerOn ? TotemIcons.speakerOn : TotemIcons.speakerOff,
       ),

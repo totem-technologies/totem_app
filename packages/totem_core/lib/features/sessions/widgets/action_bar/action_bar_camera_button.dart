@@ -94,7 +94,8 @@ class _ActionBarCameraSwitcherButtonState
     if (isDesktopPicker && !canChooseBetweenMultipleCameras) {
       return ActionBarButton(
         semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
-        active: widget.isCameraOn,
+        // Off is pinkTint, not cream — that's the muted media treatment.
+        role: ActionBarButtonRole.media(enabled: widget.isCameraOn),
         onPressed: widget.onToggle,
         child: TotemIcon(
           widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
@@ -120,15 +121,17 @@ class _ActionBarCameraSwitcherButtonState
           onDismissOverlay: _dismissOverlay,
         );
       },
-      child: DecoratedBox(
+      // Chevron sits on the same glass as the rest of the pill — no
+      // nested black chip, which fought the compact-bar treatment.
+      child: Row(
         key: _buttonKey,
-        decoration: BoxDecoration(
-          color: Colors.black45,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Row(
-          children: [
-            GestureDetector(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            button: true,
+            label: 'Switch camera',
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () {
                 if (widget.onToggle == null) return;
                 _showCameraPositionOptions();
@@ -150,23 +153,25 @@ class _ActionBarCameraSwitcherButtonState
                       child: child,
                     );
                   },
-                  child: const Icon(
+                  child: Icon(
                     Icons.keyboard_arrow_down,
-                    color: Colors.white,
+                    color: ActionBar.onLightBackgroundOf(context)
+                        ? AppTheme.slate
+                        : AppTheme.cream,
                   ),
                 ),
               ),
             ),
-            ActionBarButton(
-              semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
-              onPressed: widget.onToggle,
-              active: widget.isCameraOn,
-              child: TotemIcon(
-                widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
-              ),
+          ),
+          ActionBarButton(
+            semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
+            onPressed: widget.onToggle,
+            role: ActionBarButtonRole.media(enabled: widget.isCameraOn),
+            child: TotemIcon(
+              widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -577,7 +582,7 @@ class _SessionActionBarCameraButtonState
     if (!isDesktopPicker) {
       return ActionBarButton(
         semanticsLabel: 'Camera ${_isCameraEnabled ? 'on' : 'off'}',
-        active: _isCameraEnabled,
+        role: ActionBarButtonRole.media(enabled: _isCameraEnabled),
         onPressed: _busy ? null : _toggleCamera,
         child: TotemIcon(
           _isCameraEnabled ? TotemIcons.cameraOn : TotemIcons.cameraOff,
