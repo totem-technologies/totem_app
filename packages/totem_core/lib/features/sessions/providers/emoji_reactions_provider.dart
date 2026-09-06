@@ -95,8 +95,11 @@ class EmojiReactions extends _$EmojiReactions {
   Future<void> displayReaction(
     BuildContext context,
     SessionEmojiReaction reaction,
-    bool isInListeningTurnScreen,
-  ) async {
+    bool isInListeningTurnScreen, {
+
+    /// The minimum amount of time the reaction will live before being removed.
+    Duration minAliveDuration = const Duration(milliseconds: 3500),
+  }) async {
     // While the app is hidden (e.g. a backgrounded browser tab) no frames
     // are rendered, so overlay entries would accumulate unbuilt and all
     // animate at once on refocus. Nobody can see the reaction anyway.
@@ -109,12 +112,15 @@ class EmojiReactions extends _$EmojiReactions {
         .map((r) => r == reaction ? r.copyWith(displayed: true) : r)
         .toList();
     try {
-      await presentEmojiReaction(
-        context,
-        reaction.emoji,
-        overlayKey: EmojiReactions.emojiOverlayKey,
-        isInListeningTurnScreen: isInListeningTurnScreen,
-      );
+      await Future.wait([
+        presentEmojiReaction(
+          context,
+          reaction.emoji,
+          overlayKey: EmojiReactions.emojiOverlayKey,
+          isInListeningTurnScreen: isInListeningTurnScreen,
+        ),
+        Future<void>.delayed(minAliveDuration),
+      ]);
     } finally {
       state = state.where((e) => e != reaction).toList();
     }

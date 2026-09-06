@@ -101,7 +101,7 @@ class EmojiBar extends StatelessWidget {
   final List<Emoji> emojis;
   final ValueChanged<Emoji> onEmojiSelected;
 
-  static const defaultEmojis = ['🫶', '💖', '😢', '🔥', '👏', '🎉'];
+  static const defaultEmojis = ['🫰', '💖', '😢', '🔥', '👏', '🎉'];
 
   @override
   Widget build(BuildContext context) {
