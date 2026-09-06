@@ -293,7 +293,7 @@ class ParticipantCard extends ConsumerWidget {
     return RepaintBoundary(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        clipBehavior: Clip.hardEdge,
+        clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
             Positioned.fill(
