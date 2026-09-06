@@ -18,7 +18,7 @@ class SessionTitle extends ConsumerWidget {
         spacing: 2,
         children: [
           Text(
-            'SPACE',
+            'SESSION',
             style: theme.textTheme.labelSmall?.copyWith(
               color: const Color(0xFF787D7E),
             ),
