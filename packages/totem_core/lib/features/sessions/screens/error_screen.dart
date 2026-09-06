@@ -154,7 +154,7 @@ class SessionErrorScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             ConfirmationDialogButton.elevated(
-                              onConfirm: () async => onRetry?.call(),
+                              onConfirm: () async => await onRetry?.call(),
                               disabled: onRetry == null,
                               child: const Text('Try Joining Again'),
                             ),

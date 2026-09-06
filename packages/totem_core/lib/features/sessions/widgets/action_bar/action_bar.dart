@@ -412,7 +412,7 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
         ActionBarMicButton(
           participant: null,
           audioTrack: widget.previewAudioTrack,
-          onToggle: !widget.locked ? (v) async => widget.onToggleMic() : null,
+          onToggle: !widget.locked ? (v) => widget.onToggleMic() : null,
         ),
         // ActionBarSpeakerButton(
         //   isSpeakerOn: widget.isSpeakerOn,

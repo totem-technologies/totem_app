@@ -242,7 +242,7 @@ void main() {
         when(() => inAppReview.isAvailable()).thenAnswer((_) async => true);
         when(
           () => inAppReview.requestReview(),
-        ).thenAnswer((_) async => Future.value());
+        ).thenAnswer((_) async => await Future.value());
 
         await SessionDisconnectedScreen.incrementSessionLikedCount(
           prefs: prefs,

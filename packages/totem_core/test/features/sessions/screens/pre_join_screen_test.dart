@@ -56,7 +56,7 @@ class _DelayedTrackFactory extends _TrackFactory {
     CameraCaptureOptions cameraOptions,
   ) async {
     await cameraGate.future;
-    return super.createVideoTrack(cameraOptions);
+    return await super.createVideoTrack(cameraOptions);
   }
 }
 

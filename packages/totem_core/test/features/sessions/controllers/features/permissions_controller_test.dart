@@ -118,7 +118,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (methodCall) async {
             if (methodCall.method == 'requestPermissions') {
-              return requestCompleter.future;
+              return await requestCompleter.future;
             }
 
             if (methodCall.method == 'checkPermissionStatus') {

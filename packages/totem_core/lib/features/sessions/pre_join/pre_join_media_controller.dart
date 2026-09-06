@@ -70,7 +70,7 @@ class PreJoinMediaOperationQueue {
         // A tail created by this class is non-throwing. This additionally
         // protects callers if the implementation changes in the future.
       }
-      return operation();
+      return await operation();
     }();
 
     _tail = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});

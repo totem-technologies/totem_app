@@ -70,7 +70,7 @@ Future<RoomState> _postEvent({
           diagnostics: {'session_slug': sessionSlug},
         );
 
-        return RepositoryUtils.handleApiCall<RoomState>(
+        return await RepositoryUtils.handleApiCall<RoomState>(
           apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
             sessionSlug: sessionSlug,
             body: EventRequest(
@@ -130,7 +130,7 @@ Future<RoomState> roomState(
   Ref ref,
   String sessionSlug, {
   bool attemptReconcile = false,
-}) async {
+}) {
   final apiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<RoomState>(
     apiCall: () {

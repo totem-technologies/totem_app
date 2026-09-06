@@ -502,7 +502,7 @@ class MoreOptions extends ConsumerWidget {
   static Future<void> _onEndSession(
     BuildContext context,
     SessionController session,
-  ) async {
+  ) {
     return showDialog<void>(
       context: context,
       useRootNavigator: false,

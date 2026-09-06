@@ -20,7 +20,7 @@ Future<void> showBackgroundActivityDialog(BuildContext context) async {
     return;
   }
 
-  return showDialog<void>(
+  return await showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (context) => const BackgroundActivityDialog(),
@@ -133,7 +133,7 @@ Future<bool> showWebPermissionsDeniedDialog(
 
   final permissionsGranted = await (() async {
     if (retryPermissions != null) {
-      return retryPermissions();
+      return await retryPermissions();
     }
 
     // Native and legacy callers still use the permissions controller. The
@@ -151,7 +151,7 @@ Future<bool> showWebPermissionsDeniedDialog(
   }
 
   // Permissions still not granted - show dialog again.
-  return showWebPermissionsDeniedDialog(
+  return await showWebPermissionsDeniedDialog(
     context,
     retryPermissions: retryPermissions,
   );

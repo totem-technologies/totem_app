@@ -182,7 +182,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     final participantListener = _participantListener;
     _participantListener = null;
     await _safeAsyncAction(
-      () async => participantListener?.dispose(),
+      () async => await participantListener?.dispose(),
       failureMessage: 'Failed to dispose participant listener',
     );
   }

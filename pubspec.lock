@@ -1449,10 +1449,10 @@ packages:
     dependency: transitive
     description:
       name: screen_protector
-      sha256: "66f2ffbfbe7acc26db49de893e0c49078c67b546c27a57958d9bd9901f77c38e"
+      sha256: "7f53d7a0c238a62dc970841fd13053f2b79f14b7f8d2c82a11fef65b066f42cd"
       url: "https://pub.dev"
     source: hosted
-    version: "1.5.3"
+    version: "1.5.1"
   sdp_transform:
     dependency: transitive
     description:

@@ -13,7 +13,7 @@ typedef OnFeedbackSubmitted = Future<void> Function(String feedback);
 Future<void> showUserFeedbackPopup(
   BuildContext context, {
   OnFeedbackSubmitted? onFeedbackSubmitted,
-}) async {
+}) {
   return showResponsiveModal<void>(
     context: context,
     showDragHandle: false,
@@ -123,7 +123,7 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         if (_feedbackController.text.isNotEmpty) {
-          return showDialog(
+          return await showDialog(
             context: context,
             builder: (context) {
               return ConfirmationDialog(

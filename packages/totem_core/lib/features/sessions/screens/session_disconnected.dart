@@ -683,9 +683,9 @@ class _NextSessionsSection extends ConsumerWidget {
               space,
               nextEvents: [nextSession],
             ),
-            onTap: () async {
+            onTap: () {
               onRefreshHome();
-              return TotemRouter.instance.toSpaceSession(
+              TotemRouter.instance.toSpaceSession(
                 context,
                 spaceSlug,
                 nextSession.slug,
@@ -706,7 +706,7 @@ class _NextSessionsSection extends ConsumerWidget {
             recSession,
             onTap: () async {
               onRefreshHome();
-              return TotemRouter.instance.toSpaceSession(
+              TotemRouter.instance.toSpaceSession(
                 context,
                 recSession.space.slug,
                 recSession.slug,
