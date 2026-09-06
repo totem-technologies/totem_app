@@ -2,7 +2,6 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-// ignore: depend_on_referenced_packages
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/services/api_service.dart';

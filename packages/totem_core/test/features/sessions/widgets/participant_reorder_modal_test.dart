@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';

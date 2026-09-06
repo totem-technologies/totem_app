@@ -1,8 +1,8 @@
 import 'package:collection/collection.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' show Participant;
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';

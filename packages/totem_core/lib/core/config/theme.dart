@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// This was generated based on the css.
 class AppTheme {

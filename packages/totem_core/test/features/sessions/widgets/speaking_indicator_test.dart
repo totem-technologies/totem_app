@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, logger;
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';

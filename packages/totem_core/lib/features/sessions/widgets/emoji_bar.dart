@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 

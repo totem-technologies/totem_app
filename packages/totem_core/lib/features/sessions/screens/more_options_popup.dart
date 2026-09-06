@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:collection/collection.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' hide Session;
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart'
     as mobile_api
     show RoomStatus, SessionDetailSchema, TurnState;

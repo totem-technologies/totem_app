@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';

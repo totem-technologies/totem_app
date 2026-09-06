@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/widgets/space_card.dart';
 
 class HomeLoadingScreen extends StatelessWidget {

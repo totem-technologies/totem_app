@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart' show DateUtils;
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart' show DateUtils;
 
 /// Formats date as "Today", "Tomorrow", or short format like "5 Feb".
 /// Used for compact date displays in cards.

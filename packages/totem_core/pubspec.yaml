@@ -44,7 +44,7 @@ dependencies:
   livekit_client:
     git:
       url: https://github.com/livekit/client-sdk-flutter
-      ref: 7485922364b260f05aea01c166062762933572cb
+      ref: f48ada022e95cff588deb7187607dd4d8673f69b
   # path: ../client-sdk-flutter
   # git:
   # url: https://github.com/livekit/client-sdk-flutter/
@@ -60,6 +60,7 @@ dependencies:
   screen_protector: 1.5.1
 
   # UI & Utilities
+  material_ui: ^1.1.1
   auto_size_text: ^3.0.0
   flutter_html: ^3.0.0
   # flutter_native_splash: ^2.4.6
@@ -97,6 +98,10 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.7
 
+  riverpod: any
+  wakelock_plus_platform_interface: any
+  flutter_webrtc: any
+  platform: any
 flutter:
   default-flavor: production
   uses-material-design: true

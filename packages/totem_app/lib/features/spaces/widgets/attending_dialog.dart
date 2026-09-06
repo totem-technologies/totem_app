@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:totem_core/core/api/api_client/models/session_detail_schema.dart';
 import 'package:totem_core/core/config/app_config.dart';

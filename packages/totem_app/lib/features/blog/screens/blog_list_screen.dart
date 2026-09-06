@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';

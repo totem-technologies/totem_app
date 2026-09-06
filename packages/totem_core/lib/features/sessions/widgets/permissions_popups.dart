@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_core/shared/totem_icons.dart';

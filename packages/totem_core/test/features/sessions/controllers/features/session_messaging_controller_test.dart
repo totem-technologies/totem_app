@@ -1,4 +1,4 @@
-// ignore_for_file: depend_on_referenced_packages, cascade_invocations
+// ignore_for_file: cascade_invocations
 
 import 'dart:convert';
 

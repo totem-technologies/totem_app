@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';

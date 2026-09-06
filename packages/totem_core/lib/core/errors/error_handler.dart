@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart' show LiveKitException;
+import 'package:material_ui/material_ui.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';

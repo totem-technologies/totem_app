@@ -17,8 +17,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' as sdk;
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 
 enum VisualizerState { thinking, listening, active }

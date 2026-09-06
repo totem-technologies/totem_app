@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 
 void main() {

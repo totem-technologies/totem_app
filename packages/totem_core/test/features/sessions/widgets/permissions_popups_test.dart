@@ -1,13 +1,11 @@
-// ignore_for_file: depend_on_referenced_packages
-
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task_method_channel.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task_platform_interface.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:platform/platform.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';

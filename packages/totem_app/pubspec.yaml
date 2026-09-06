@@ -39,6 +39,7 @@ dependencies:
   shared_preferences: ^2.5.3
 
   # UI & Utilities
+  material_ui: ^1.1.1
   auto_size_text: ^3.0.0
   flutter_html: ^3.0.0
   # flutter_native_splash: ^2.4.6
