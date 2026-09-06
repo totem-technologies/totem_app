@@ -24,11 +24,7 @@ class TotemIconLogo extends StatelessWidget {
 }
 
 class TotemLogo extends StatelessWidget {
-  const TotemLogo({
-    super.key,
-    this.size,
-    this.color,
-  });
+  const TotemLogo({super.key, this.size, this.color});
 
   final double? size;
   final Color? color;

@@ -142,9 +142,7 @@ class _GenericTransitionCard extends StatelessWidget {
             Flexible(
               child: AutoSizeText(
                 hasMouseConnected ? instructionTextClick : instructionTextSwipe,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: Colors.black,
-                ),
+                style: theme.textTheme.bodyLarge?.copyWith(color: Colors.black),
                 textAlign: TextAlign.center,
                 maxLines: 2,
               ),
@@ -453,9 +451,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
             ),
             Flexible(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minWidth: 200,
-                ),
+                constraints: const BoxConstraints(minWidth: 200),
                 child: ActionSliderButton(
                   text: widget.actionText,
                   onActionCompleted: () {

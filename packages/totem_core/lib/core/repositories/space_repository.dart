@@ -114,10 +114,8 @@ Future<bool> subscribeToSpace(Ref ref, String spaceSlug) async {
 Future<bool> unsubscribeFromSpace(Ref ref, String spaceSlug) async {
   final mobileApiService = ref.read(apiServiceProvider);
   final success = await RepositoryUtils.handleApiCall<bool>(
-    apiCall: () =>
-        mobileApiService.spaces.totemSpacesMobileApiUnsubscribeToSpace(
-          spaceSlug: spaceSlug,
-        ),
+    apiCall: () => mobileApiService.spaces
+        .totemSpacesMobileApiUnsubscribeToSpace(spaceSlug: spaceSlug),
     operationName: 'unsubscribe from space',
     diagnostics: {'space_slug': spaceSlug},
   );

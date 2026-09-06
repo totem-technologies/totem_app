@@ -53,9 +53,7 @@ class FakePermissionsController extends PermissionsController {
   Future<void> requestCamera() async {
     cameraRequests++;
     final current = state.asData?.value ?? const PermissionsState();
-    state = AsyncData(
-      current.copyWith(cameraStatus: PermissionStatus.granted),
-    );
+    state = AsyncData(current.copyWith(cameraStatus: PermissionStatus.granted));
   }
 }
 
@@ -92,9 +90,7 @@ void main() {
   });
 
   group('PermissionsRequestSheet', () {
-    testWidgets('disables button when not ready', (
-      tester,
-    ) async {
+    testWidgets('disables button when not ready', (tester) async {
       FakePermissionsController.initialState = const PermissionsState(
         cameraStatus: PermissionStatus.denied,
         microphoneStatus: PermissionStatus.denied,
@@ -118,36 +114,29 @@ void main() {
       expect(button.onPressed, isNull);
     });
 
-    testWidgets(
-      'enables button when camera and mic granted',
-      (
+    testWidgets('enables button when camera and mic granted', (tester) async {
+      FakePermissionsController.initialState = const PermissionsState(
+        cameraStatus: PermissionStatus.granted,
+        microphoneStatus: PermissionStatus.granted,
+        notificationStatus: PermissionStatus.denied,
+      );
+
+      await pumpHost(
         tester,
-      ) async {
-        FakePermissionsController.initialState = const PermissionsState(
-          cameraStatus: PermissionStatus.granted,
-          microphoneStatus: PermissionStatus.granted,
-          notificationStatus: PermissionStatus.denied,
-        );
+        child: const PermissionsRequestSheet(),
+        overrides: [
+          permissionsControllerProvider.overrideWith(
+            FakePermissionsController.new,
+          ),
+        ],
+      );
+      await tester.pumpAndSettle();
 
-        await pumpHost(
-          tester,
-          child: const PermissionsRequestSheet(),
-          overrides: [
-            permissionsControllerProvider.overrideWith(
-              FakePermissionsController.new,
-            ),
-          ],
-        );
-        await tester.pumpAndSettle();
+      expect(find.text('Continue'), findsOneWidget);
 
-        expect(find.text('Continue'), findsOneWidget);
-
-        final button = tester.widget<ElevatedButton>(
-          find.byType(ElevatedButton),
-        );
-        expect(button.onPressed, isNotNull);
-      },
-    );
+      final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+      expect(button.onPressed, isNotNull);
+    });
 
     testWidgets('refreshes statuses on resumed lifecycle event', (
       tester,

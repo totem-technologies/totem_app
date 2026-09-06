@@ -113,9 +113,7 @@ SessionRoomState _buildState({
       phase: SessionPhase.connected,
       state: RoomConnectionState.connected,
     ),
-    participants: ParticipantsState(
-      participants: defaultParticipants,
-    ),
+    participants: ParticipantsState(participants: defaultParticipants),
     chat: const ChatState(),
     turn: SessionTurnState(
       roomState: RoomState(
@@ -313,10 +311,7 @@ void main() {
 
           await pumpListeningTurn(tester, sessionState: state);
 
-          expect(
-            find.byType(ParticipantCard),
-            findsNWidgets(participantCount),
-          );
+          expect(find.byType(ParticipantCard), findsNWidgets(participantCount));
           expect(find.byType(ListeningTurnScreen), findsOneWidget);
 
           await tester.pumpWidget(const SizedBox.shrink());
@@ -414,10 +409,7 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(
-          find.text('Waiting for the Keeper to join...'),
-          findsOneWidget,
-        );
+        expect(find.text('Waiting for the Keeper to join...'), findsOneWidget);
       });
 
       testWidgets('shows GroundingMarquee for non-keeper', (tester) async {
@@ -439,35 +431,23 @@ void main() {
       testWidgets('shows "The session is about to start..." text', (
         tester,
       ) async {
-        final state = _buildState(
-          status: RoomStatus.waitingRoom,
-        );
+        final state = _buildState(status: RoomStatus.waitingRoom);
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(
-          find.text('The session is about to start...'),
-          findsOneWidget,
-        );
+        expect(find.text('The session is about to start...'), findsOneWidget);
       });
 
-      testWidgets(
-        'non-keeper sees GroundingMarquee instead of start button',
-        (tester) async {
-          final state = _buildState(
-            status: RoomStatus.waitingRoom,
-          );
+      testWidgets('non-keeper sees GroundingMarquee instead of start button', (
+        tester,
+      ) async {
+        final state = _buildState(status: RoomStatus.waitingRoom);
 
-          await pumpListeningTurn(
-            tester,
-            sessionState: state,
-            isKeeper: false,
-          );
+        await pumpListeningTurn(tester, sessionState: state, isKeeper: false);
 
-          // Non-keeper should see the marquee, not the start button.
-          expect(find.byType(GroundingMarquee), findsOneWidget);
-        },
-      );
+        // Non-keeper should see the marquee, not the start button.
+        expect(find.byType(GroundingMarquee), findsOneWidget);
+      });
     });
 
     group('active status', () {
@@ -514,9 +494,7 @@ void main() {
       });
 
       testWidgets('does NOT show marquee or transition card', (tester) async {
-        final state = _buildState(
-          status: RoomStatus.active,
-        );
+        final state = _buildState(status: RoomStatus.active);
 
         await pumpListeningTurn(tester, sessionState: state);
 
@@ -539,18 +517,13 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(
-          find.text('The session has been paused...'),
-          findsOneWidget,
-        );
+        expect(find.text('The session has been paused...'), findsOneWidget);
       });
     });
 
     group('session action bar', () {
       testWidgets('renders SessionActionBar', (tester) async {
-        final state = _buildState(
-          status: RoomStatus.active,
-        );
+        final state = _buildState(status: RoomStatus.active);
 
         await pumpListeningTurn(tester, sessionState: state);
 
@@ -560,9 +533,7 @@ void main() {
       testWidgets('shows reaction control and toggles mic/camera', (
         tester,
       ) async {
-        final state = _buildState(
-          status: RoomStatus.active,
-        );
+        final state = _buildState(status: RoomStatus.active);
 
         await pumpListeningTurn(tester, sessionState: state);
 
@@ -582,9 +553,7 @@ void main() {
 
       testWidgets('responds to desktop keyboard shortcuts', (tester) async {
         await runOnDesktop(() async {
-          final state = _buildState(
-            status: RoomStatus.active,
-          );
+          final state = _buildState(status: RoomStatus.active);
 
           await pumpListeningTurn(tester, sessionState: state);
 
@@ -616,9 +585,7 @@ void main() {
 
       testWidgets('ignores modified shortcuts on desktop', (tester) async {
         await runOnDesktop(() async {
-          final state = _buildState(
-            status: RoomStatus.active,
-          );
+          final state = _buildState(status: RoomStatus.active);
 
           await pumpListeningTurn(tester, sessionState: state);
 
@@ -653,9 +620,7 @@ void main() {
         tester,
       ) async {
         await runOnDesktop(() async {
-          final state = _buildState(
-            status: RoomStatus.active,
-          );
+          final state = _buildState(status: RoomStatus.active);
 
           await pumpListeningTurn(
             tester,
@@ -676,9 +641,7 @@ void main() {
 
     group('widget structure', () {
       testWidgets('renders ListeningTurn without crashing', (tester) async {
-        final state = _buildState(
-          status: RoomStatus.active,
-        );
+        final state = _buildState(status: RoomStatus.active);
 
         await pumpListeningTurn(tester, sessionState: state);
 

@@ -32,13 +32,11 @@ void main() {
     when(() => session.state).thenReturn(state);
 
     if (unbanHandler != null) {
-      when(() => keeper.unbanParticipant(any())).thenAnswer(
-        (invocation) async {
-          final slug = invocation.positionalArguments.first as String;
-          await unbanHandler(slug);
-          return;
-        },
-      );
+      when(() => keeper.unbanParticipant(any())).thenAnswer((invocation) async {
+        final slug = invocation.positionalArguments.first as String;
+        await unbanHandler(slug);
+        return;
+      });
     } else {
       when(() => keeper.unbanParticipant(any())).thenAnswer((_) async {
         return;

@@ -304,38 +304,32 @@ class _SpeakingTurnGrid extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               spacing: gap,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: List.generate(
-                rowCount,
-                (rowIndex) {
-                  final startIndex = rowIndex * crossAxisCount;
+              children: List.generate(rowCount, (rowIndex) {
+                final startIndex = rowIndex * crossAxisCount;
 
-                  return Flexible(
-                    child: Row(
-                      spacing: gap,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: List.generate(
-                        crossAxisCount,
-                        (colIndex) {
-                          final itemIndex = startIndex + colIndex;
-                          if (itemIndex < itemCount) {
-                            final participant = sortedParticipants[itemIndex];
-                            return Expanded(
-                              child: ParticipantCard(
-                                key: ValueKey(participant.sid),
-                                participant: participant,
-                                session: session,
-                                participantIdentity: participant.identity,
-                              ),
-                            );
-                          } else {
-                            return const Expanded(child: SizedBox.shrink());
-                          }
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
+                return Flexible(
+                  child: Row(
+                    spacing: gap,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: List.generate(crossAxisCount, (colIndex) {
+                      final itemIndex = startIndex + colIndex;
+                      if (itemIndex < itemCount) {
+                        final participant = sortedParticipants[itemIndex];
+                        return Expanded(
+                          child: ParticipantCard(
+                            key: ValueKey(participant.sid),
+                            participant: participant,
+                            session: session,
+                            participantIdentity: participant.identity,
+                          ),
+                        );
+                      } else {
+                        return const Expanded(child: SizedBox.shrink());
+                      }
+                    }),
+                  ),
+                );
+              }),
             );
           case ViewportKind.mediumSmall:
           case ViewportKind.mediumPlus:

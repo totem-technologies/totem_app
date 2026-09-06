@@ -60,10 +60,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.keyboard_arrow_down));
       await tester.pumpAndSettle();
 
-      expect(
-        find.byType(ActionBarCameraSwitcherButtonOverlay),
-        findsOneWidget,
-      );
+      expect(find.byType(ActionBarCameraSwitcherButtonOverlay), findsOneWidget);
     });
 
     testWidgets('switch-camera chevron is labeled for semantics', (
@@ -282,9 +279,7 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('toggling camera when tapped', (
-      tester,
-    ) async {
+    testWidgets('toggling camera when tapped', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

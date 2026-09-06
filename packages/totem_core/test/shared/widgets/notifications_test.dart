@@ -12,9 +12,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: SizedBox(key: hostKey),
-        ),
+        home: Scaffold(body: SizedBox(key: hostKey)),
       ),
     );
 
@@ -51,96 +49,93 @@ void main() {
       expect(find.text('Auto dismiss'), findsNothing);
     });
 
-    testWidgets(
-      'show with zero duration stays until manually dismissed',
-      (tester) async {
-        final context = await pumpHost(tester);
-        final controller = NotificationController();
+    testWidgets('show with zero duration stays until manually dismissed', (
+      tester,
+    ) async {
+      final context = await pumpHost(tester);
+      final controller = NotificationController();
 
-        final dismiss = controller.show(
-          context,
-          duration: Duration.zero,
-          builder: (_) {
-            return const NotificationBanner(
-              icon: TotemIcons.chat,
-              title: 'No timer',
-              message: 'This should stay visible',
-            );
-          },
-        );
+      final dismiss = controller.show(
+        context,
+        duration: Duration.zero,
+        builder: (_) {
+          return const NotificationBanner(
+            icon: TotemIcons.chat,
+            title: 'No timer',
+            message: 'This should stay visible',
+          );
+        },
+      );
 
-        await tester.pump();
-        expect(find.text('No timer'), findsOneWidget);
+      await tester.pump();
+      expect(find.text('No timer'), findsOneWidget);
 
-        await tester.pump(const Duration(seconds: 10));
-        expect(find.text('No timer'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 10));
+      expect(find.text('No timer'), findsOneWidget);
 
-        dismiss.dismissActive();
-        await tester.pumpAndSettle();
-        expect(find.text('No timer'), findsNothing);
-      },
-    );
+      dismiss.dismissActive();
+      await tester.pumpAndSettle();
+      expect(find.text('No timer'), findsNothing);
+    });
 
-    testWidgets(
-      'show respects short duration and animation boundaries',
-      (tester) async {
-        final context = await pumpHost(tester);
-        final controller = NotificationController();
+    testWidgets('show respects short duration and animation boundaries', (
+      tester,
+    ) async {
+      final context = await pumpHost(tester);
+      final controller = NotificationController();
 
-        controller.show(
-          context,
-          duration: const Duration(milliseconds: 120),
-          animationDuration: const Duration(milliseconds: 80),
-          builder: (_) {
-            return const NotificationBanner(
-              icon: TotemIcons.chat,
-              title: 'Timing check',
-              message: 'Validate timing behavior',
-            );
-          },
-        );
+      controller.show(
+        context,
+        duration: const Duration(milliseconds: 120),
+        animationDuration: const Duration(milliseconds: 80),
+        builder: (_) {
+          return const NotificationBanner(
+            icon: TotemIcons.chat,
+            title: 'Timing check',
+            message: 'Validate timing behavior',
+          );
+        },
+      );
 
-        await tester.pump();
-        expect(find.text('Timing check'), findsOneWidget);
+      await tester.pump();
+      expect(find.text('Timing check'), findsOneWidget);
 
-        await tester.pump(const Duration(milliseconds: 100));
-        expect(find.text('Timing check'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Timing check'), findsOneWidget);
 
-        await tester.pumpAndSettle();
-        expect(find.text('Timing check'), findsNothing);
-      },
-    );
+      await tester.pumpAndSettle();
+      expect(find.text('Timing check'), findsNothing);
+    });
   });
 
   group('NotificationController.showDismissible', () {
-    testWidgets(
-      'showDismissible stays visible until dismiss callback',
-      (tester) async {
-        final context = await pumpHost(tester);
-        final controller = NotificationController();
+    testWidgets('showDismissible stays visible until dismiss callback', (
+      tester,
+    ) async {
+      final context = await pumpHost(tester);
+      final controller = NotificationController();
 
-        final dismiss = controller.showDismissible(
-          context,
-          builder: (_) {
-            return const NotificationBanner(
-              icon: TotemIcons.pause,
-              title: 'Dismissible',
-              message: 'Manual close only',
-            );
-          },
-        );
+      final dismiss = controller.showDismissible(
+        context,
+        builder: (_) {
+          return const NotificationBanner(
+            icon: TotemIcons.pause,
+            title: 'Dismissible',
+            message: 'Manual close only',
+          );
+        },
+      );
 
-        await tester.pump();
-        expect(find.text('Dismissible'), findsOneWidget);
+      await tester.pump();
+      expect(find.text('Dismissible'), findsOneWidget);
 
-        await tester.pump(const Duration(seconds: 8));
-        expect(find.text('Dismissible'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 8));
+      expect(find.text('Dismissible'), findsOneWidget);
 
-        dismiss.dismissActive();
-        await tester.pumpAndSettle();
-        expect(find.text('Dismissible'), findsNothing);
-      },
-    );
+      dismiss.dismissActive();
+      await tester.pumpAndSettle();
+      expect(find.text('Dismissible'), findsNothing);
+    });
   });
 
   group('NotificationController.showTimed', () {
@@ -187,52 +182,48 @@ void main() {
       expect(find.text('Permanent'), findsNothing);
     });
 
-    testWidgets(
-      'showPermanent can be dismissed immediately after show',
-      (tester) async {
-        final context = await pumpHost(tester);
-        final controller = NotificationController();
+    testWidgets('showPermanent can be dismissed immediately after show', (
+      tester,
+    ) async {
+      final context = await pumpHost(tester);
+      final controller = NotificationController();
 
-        final dismiss = controller.showPermanent(
-          context,
-          icon: TotemIcons.pause,
-          title: 'Early dismiss',
-          message: 'Should close quickly',
-        );
+      final dismiss = controller.showPermanent(
+        context,
+        icon: TotemIcons.pause,
+        title: 'Early dismiss',
+        message: 'Should close quickly',
+      );
 
-        await tester.pump();
-        expect(find.text('Early dismiss'), findsOneWidget);
+      await tester.pump();
+      expect(find.text('Early dismiss'), findsOneWidget);
 
-        dismiss.dismissActive();
-        await tester.pumpAndSettle();
-        expect(find.text('Early dismiss'), findsNothing);
-      },
-    );
+      dismiss.dismissActive();
+      await tester.pumpAndSettle();
+      expect(find.text('Early dismiss'), findsNothing);
+    });
 
-    testWidgets(
-      'showPermanent dismiss callback is idempotent',
-      (tester) async {
-        final context = await pumpHost(tester);
-        final controller = NotificationController();
+    testWidgets('showPermanent dismiss callback is idempotent', (tester) async {
+      final context = await pumpHost(tester);
+      final controller = NotificationController();
 
-        final dismiss = controller.showPermanent(
-          context,
-          icon: TotemIcons.pause,
-          title: 'Idempotent',
-          message: 'Dismiss can be called multiple times',
-        );
+      final dismiss = controller.showPermanent(
+        context,
+        icon: TotemIcons.pause,
+        title: 'Idempotent',
+        message: 'Dismiss can be called multiple times',
+      );
 
-        await tester.pump();
-        expect(find.text('Idempotent'), findsOneWidget);
+      await tester.pump();
+      expect(find.text('Idempotent'), findsOneWidget);
 
-        dismiss.dismissActive();
-        dismiss.dismissActive();
-        controller.dismissAll();
-        await tester.pumpAndSettle();
+      dismiss.dismissActive();
+      dismiss.dismissActive();
+      controller.dismissAll();
+      await tester.pumpAndSettle();
 
-        expect(find.text('Idempotent'), findsNothing);
-      },
-    );
+      expect(find.text('Idempotent'), findsNothing);
+    });
 
     testWidgets(
       'NotificationController queues permanent notifications one after another',
@@ -523,9 +514,7 @@ void main() {
 
     testWidgets(
       'dismissImmediately removes a mounted banner without animating',
-      (
-        tester,
-      ) async {
+      (tester) async {
         final context = await pumpHost(tester);
         final controller = NotificationController();
 
@@ -575,9 +564,7 @@ void main() {
         final context = await pumpHost(tester);
         final controller = NotificationController();
 
-        tester.binding.handleAppLifecycleStateChanged(
-          AppLifecycleState.hidden,
-        );
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
         try {
           controller.showPermanent(
             context,

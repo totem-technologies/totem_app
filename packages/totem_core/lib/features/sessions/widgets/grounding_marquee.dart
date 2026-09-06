@@ -102,10 +102,7 @@ class _Tip extends StatelessWidget {
           color: const Color(0xFFF3F1E9),
           borderRadius: BorderRadius.circular(25),
           boxShadow: const [
-            BoxShadow(
-              color: Color(0xFF987AA5),
-              blurRadius: 2,
-            ),
+            BoxShadow(color: Color(0xFF987AA5), blurRadius: 2),
             BoxShadow(
               color: Color(0x80F3F1E9),
               blurRadius: 11,

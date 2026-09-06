@@ -37,9 +37,7 @@ class PreJoinView extends StatelessWidget {
   Widget build(BuildContext context) {
     final preferences = mediaState.preferences;
     final cameraPreview = Container(
-      margin: const EdgeInsetsDirectional.symmetric(
-        horizontal: 40,
-      ),
+      margin: const EdgeInsetsDirectional.symmetric(horizontal: 40),
       alignment: AlignmentDirectional.center,
       child: Semantics(
         label:

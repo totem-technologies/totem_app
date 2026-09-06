@@ -28,21 +28,18 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(
-      lastSessionMessageProvider,
-      (previous, next) {
-        if (next == null || identical(previous, next)) return;
-        if (!mounted || _chatSheetOpen || next.sender) return;
-        _notification?.dismissActive();
-        _notification = NotificationController().showTimed(
-          context,
-          icon: TotemIcons.chat,
-          title: 'New message',
-          message: next.message,
-        );
-        setState(() => _hasPendingSessionChatMessages = true);
-      },
-    );
+    ref.listen(lastSessionMessageProvider, (previous, next) {
+      if (next == null || identical(previous, next)) return;
+      if (!mounted || _chatSheetOpen || next.sender) return;
+      _notification?.dismissActive();
+      _notification = NotificationController().showTimed(
+        context,
+        icon: TotemIcons.chat,
+        title: 'New message',
+        message: next.message,
+      );
+      setState(() => _hasPendingSessionChatMessages = true);
+    });
     return ActionBarButton(
       semanticsLabel: 'Chat',
       role: ActionBarButtonRole.sheet(open: _chatSheetOpen),

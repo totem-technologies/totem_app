@@ -70,9 +70,7 @@ class ListeningTurnScreen extends ConsumerWidget {
                         const TextSpan(text: 'Next up '),
                         TextSpan(
                           text: nextUp.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ],
@@ -166,9 +164,7 @@ class ListeningTurnScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 ?marquee,
-                                const Center(
-                                  child: SessionActionBar(),
-                                ),
+                                const Center(child: SessionActionBar()),
                               ],
                             ),
                           ),
@@ -302,38 +298,32 @@ class _ListeningTurnGrid extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               spacing: gap,
-              children: List.generate(
-                rowCount,
-                (rowIndex) {
-                  final startIndex = rowIndex * crossAxisCount;
+              children: List.generate(rowCount, (rowIndex) {
+                final startIndex = rowIndex * crossAxisCount;
 
-                  return Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: gap,
-                      children: List<Widget>.generate(
-                        crossAxisCount,
-                        (colIndex) {
-                          final itemIndex = startIndex + colIndex;
-                          if (itemIndex < itemCount) {
-                            final participant = sortedParticipants[itemIndex];
-                            return Expanded(
-                              child: ParticipantCard(
-                                key: ValueKey(participant.sid),
-                                participant: participant,
-                                session: session,
-                                participantIdentity: participant.identity,
-                              ),
-                            );
-                          } else {
-                            return const Expanded(child: SizedBox.shrink());
-                          }
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
+                return Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: gap,
+                    children: List<Widget>.generate(crossAxisCount, (colIndex) {
+                      final itemIndex = startIndex + colIndex;
+                      if (itemIndex < itemCount) {
+                        final participant = sortedParticipants[itemIndex];
+                        return Expanded(
+                          child: ParticipantCard(
+                            key: ValueKey(participant.sid),
+                            participant: participant,
+                            session: session,
+                            participantIdentity: participant.identity,
+                          ),
+                        );
+                      } else {
+                        return const Expanded(child: SizedBox.shrink());
+                      }
+                    }),
+                  ),
+                );
+              }),
             );
           case ViewportKind.mediumSmall:
           case ViewportKind.mediumPlus:

@@ -57,15 +57,10 @@ class EmojiReactions extends _$EmojiReactions {
   @override
   List<SessionEmojiReaction> build() => <SessionEmojiReaction>[];
 
-  Future<void> emitIncomingReaction(
-    String userIdentity,
-    String emoji,
-  ) async {
+  Future<void> emitIncomingReaction(String userIdentity, String emoji) async {
     final now = DateTime.timestamp();
     final lastTime = state
-        .lastWhereOrNull(
-          (r) => r.userIdentity == userIdentity,
-        )
+        .lastWhereOrNull((r) => r.userIdentity == userIdentity)
         ?.timestamp;
 
     // THROTTLE: If less than 0.3s has passed since this user's last emoji, ignore it.
@@ -82,10 +77,7 @@ class EmojiReactions extends _$EmojiReactions {
       displayed: false,
     );
 
-    final newState = <SessionEmojiReaction>[
-      ...state,
-      entry,
-    ];
+    final newState = <SessionEmojiReaction>[...state, entry];
     if (newState.length > 10) {
       newState.removeAt(0);
     }
@@ -132,10 +124,7 @@ class EmojiReactions extends _$EmojiReactions {
 }
 
 @riverpod
-List<String> participantEmojis(
-  Ref ref,
-  String participantIdentity,
-) {
+List<String> participantEmojis(Ref ref, String participantIdentity) {
   return ref.watch(
     emojiReactionsProvider.select(
       (reactions) => reactions

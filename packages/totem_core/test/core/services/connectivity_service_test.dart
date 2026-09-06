@@ -15,17 +15,11 @@ void main() {
   group('isOfflineConnectivity', () {
     test('treats empty and none results as offline', () {
       expect(isOfflineConnectivity(const []), isTrue);
-      expect(
-        isOfflineConnectivity(const [ConnectivityResult.none]),
-        isTrue,
-      );
+      expect(isOfflineConnectivity(const [ConnectivityResult.none]), isTrue);
     });
 
     test('treats available transports as online', () {
-      expect(
-        isOfflineConnectivity(const [ConnectivityResult.wifi]),
-        isFalse,
-      );
+      expect(isOfflineConnectivity(const [ConnectivityResult.wifi]), isFalse);
       expect(
         isOfflineConnectivity(const [
           ConnectivityResult.wifi,

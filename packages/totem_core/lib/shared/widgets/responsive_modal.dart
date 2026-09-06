@@ -48,9 +48,7 @@ Future<T?> showResponsiveModal<T>({
           backgroundColor: dialogBackgroundColor,
           shape:
               dialogShape ??
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
           child: largeScreenBuilder(context),
         ),
       );

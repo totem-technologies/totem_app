@@ -141,9 +141,7 @@ void main() {
         ],
         child: const MaterialApp(
           home: SessionKeyboardShortcuts(
-            child: Scaffold(
-              body: SessionChatMessages(),
-            ),
+            child: Scaffold(body: SessionChatMessages()),
           ),
         ),
       ),
@@ -186,9 +184,7 @@ void main() {
         ],
         child: const MaterialApp(
           home: SessionKeyboardShortcuts(
-            child: Scaffold(
-              body: SessionChatMessages(),
-            ),
+            child: Scaffold(body: SessionChatMessages()),
           ),
         ),
       ),
@@ -384,9 +380,7 @@ void main() {
       expect(find.text('Hello chat'), findsNothing);
     });
 
-    testWidgets('sends a quick message on tap on desktop', (
-      tester,
-    ) async {
+    testWidgets('sends a quick message on tap on desktop', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       try {
         await pumpChatSheet(

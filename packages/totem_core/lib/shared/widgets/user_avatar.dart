@@ -136,10 +136,7 @@ class UserAvatar extends ConsumerWidget {
           ),
           borderRadius: borderRadius,
           image: showImage && image != null
-              ? DecorationImage(
-                  image: image!,
-                  fit: BoxFit.cover,
-                )
+              ? DecorationImage(image: image!, fit: BoxFit.cover)
               : null,
         ),
         height: radius * 2,
@@ -242,10 +239,7 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
         child: Hero(
           tag: widget.heroTag,
           child: ClipOval(
-            child: Image(
-              image: widget.image,
-              fit: BoxFit.contain,
-            ),
+            child: Image(image: widget.image, fit: BoxFit.contain),
           ),
         ),
       ),

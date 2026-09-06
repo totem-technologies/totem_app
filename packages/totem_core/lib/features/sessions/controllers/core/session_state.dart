@@ -6,14 +6,7 @@ import 'package:totem_core/features/sessions/controllers/features/session_messag
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
 
-enum SessionPhase {
-  idle,
-  connecting,
-  connected,
-  disconnected,
-  error,
-  ended,
-}
+enum SessionPhase { idle, connecting, connected, disconnected, error, ended }
 
 sealed class RoomError {
   const RoomError();
@@ -127,18 +120,12 @@ class ParticipantsState {
 
 @immutable
 class ChatState {
-  const ChatState({
-    this.messages = const [],
-  });
+  const ChatState({this.messages = const []});
 
   final List<SessionChatMessage> messages;
 
-  ChatState copyWith({
-    List<SessionChatMessage>? messages,
-  }) {
-    return ChatState(
-      messages: messages ?? this.messages,
-    );
+  ChatState copyWith({List<SessionChatMessage>? messages}) {
+    return ChatState(messages: messages ?? this.messages);
   }
 
   @override
@@ -158,18 +145,12 @@ class ChatState {
 
 @immutable
 class SessionTurnState {
-  const SessionTurnState({
-    required this.roomState,
-  });
+  const SessionTurnState({required this.roomState});
 
   final RoomState roomState;
 
-  SessionTurnState copyWith({
-    RoomState? roomState,
-  }) {
-    return SessionTurnState(
-      roomState: roomState ?? this.roomState,
-    );
+  SessionTurnState copyWith({RoomState? roomState}) {
+    return SessionTurnState(roomState: roomState ?? this.roomState);
   }
 
   @override

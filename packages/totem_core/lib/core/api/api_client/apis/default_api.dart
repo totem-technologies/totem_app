@@ -73,10 +73,7 @@ final class DefaultApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
-      request,
-      onSuccess: (_) {},
-    );
+    return execute(request, onSuccess: (_) {});
   }
 
   /// Onboard Get

@@ -19,9 +19,7 @@ final class ForcePassStickEvent {
   final String type;
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-    };
+    return {'type': type};
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -29,9 +27,7 @@ final class ForcePassStickEvent {
   }
 
   ForcePassStickEvent copyWith({String Function()? type}) {
-    return ForcePassStickEvent(
-      type: type != null ? type() : this.type,
-    );
+    return ForcePassStickEvent(type: type != null ? type() : this.type);
   }
 
   @override

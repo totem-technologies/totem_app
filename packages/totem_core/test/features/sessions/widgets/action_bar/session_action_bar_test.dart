@@ -323,10 +323,7 @@ void main() {
       );
       expect(moreButton, findsOneWidget);
       final gesture = tester.widget<GestureDetector>(
-        find.descendant(
-          of: moreButton,
-          matching: find.byType(GestureDetector),
-        ),
+        find.descendant(of: moreButton, matching: find.byType(GestureDetector)),
       );
       expect(gesture.onTap, isNull);
     });

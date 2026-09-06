@@ -135,9 +135,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         context,
         retryPermissions: () async {
           final media = await ref
-              .read(
-                preJoinMediaControllerProvider(widget.sessionSlug).notifier,
-              )
+              .read(preJoinMediaControllerProvider(widget.sessionSlug).notifier)
               .retryFailedMedia();
           return media.canJoinOnWeb;
         },
@@ -200,10 +198,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     );
   }
 
-  Widget _buildPreJoinView(
-    PreJoinMediaState media,
-    PreJoinFlowState flow,
-  ) {
+  Widget _buildPreJoinView(PreJoinMediaState media, PreJoinFlowState flow) {
     final mediaController = ref.read(
       preJoinMediaControllerProvider(widget.sessionSlug).notifier,
     );

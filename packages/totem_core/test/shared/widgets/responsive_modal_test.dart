@@ -5,19 +5,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 
 void main() {
-  Future<void> pumpHost(
-    WidgetTester tester, {
-    required Size size,
-  }) async {
+  Future<void> pumpHost(WidgetTester tester, {required Size size}) async {
     final hostKey = GlobalKey();
 
     await tester.pumpWidget(
       MaterialApp(
         home: MediaQuery(
           data: MediaQueryData(size: size),
-          child: Scaffold(
-            body: SizedBox(key: hostKey),
-          ),
+          child: Scaffold(body: SizedBox(key: hostKey)),
         ),
       ),
     );
@@ -27,10 +22,7 @@ void main() {
 
   group('showResponsiveModal', () {
     testWidgets('uses a bottom sheet on small screens', (tester) async {
-      await pumpHost(
-        tester,
-        size: const Size(500, 900),
-      );
+      await pumpHost(tester, size: const Size(500, 900));
 
       final context = tester.element(find.byType(SizedBox));
 
@@ -52,10 +44,7 @@ void main() {
     });
 
     testWidgets('uses a dialog on large screens', (tester) async {
-      await pumpHost(
-        tester,
-        size: const Size(900, 900),
-      );
+      await pumpHost(tester, size: const Size(900, 900));
 
       final context = tester.element(find.byType(SizedBox));
 

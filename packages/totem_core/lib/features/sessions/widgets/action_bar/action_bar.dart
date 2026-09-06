@@ -282,10 +282,7 @@ class ActionBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: pillFill,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: pillStroke,
-                    width: 1.5,
-                  ),
+                  border: Border.all(color: pillStroke, width: 1.5),
                 ),
                 child: Padding(
                   padding: EdgeInsetsDirectional.symmetric(
@@ -298,9 +295,7 @@ class ActionBar extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       spacing: metrics.gap,
-                      children: [
-                        for (final child in children) child,
-                      ],
+                      children: [for (final child in children) child],
                     ),
                   ),
                 ),
@@ -502,12 +497,7 @@ class SessionActionBar extends ConsumerWidget {
       case RoomScreen.receiving:
         return ActionBar(
           key: SessionActionBar.actionBarKey,
-          children: [
-            microphoneButton,
-            cameraButton,
-            chatButton,
-            moreButton,
-          ],
+          children: [microphoneButton, cameraButton, chatButton, moreButton],
         );
     }
   }

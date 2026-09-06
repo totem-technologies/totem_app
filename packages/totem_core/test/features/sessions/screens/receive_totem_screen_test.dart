@@ -184,9 +184,7 @@ void main() {
         ],
         child: const MaterialApp(
           home: SessionKeyboardShortcuts(
-            child: Scaffold(
-              body: ReceiveTotemScreen(),
-            ),
+            child: Scaffold(body: ReceiveTotemScreen()),
           ),
         ),
       ),

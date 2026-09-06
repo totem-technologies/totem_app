@@ -4,10 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 class SeatsLeftText extends StatelessWidget {
-  const SeatsLeftText({
-    required this.seatsLeft,
-    super.key,
-  });
+  const SeatsLeftText({required this.seatsLeft, super.key});
 
   final int seatsLeft;
 
@@ -16,12 +13,8 @@ class SeatsLeftText extends StatelessWidget {
     return Text.rich(
       TextSpan(
         children: [
-          TextSpan(
-            text: seatsLeft == 0 ? 'No' : '$seatsLeft',
-          ),
-          TextSpan(
-            text: seatsLeft == 1 ? ' seat left' : ' seats left',
-          ),
+          TextSpan(text: seatsLeft == 0 ? 'No' : '$seatsLeft'),
+          TextSpan(text: seatsLeft == 1 ? ' seat left' : ' seats left'),
         ],
       ),
       maxLines: 1,

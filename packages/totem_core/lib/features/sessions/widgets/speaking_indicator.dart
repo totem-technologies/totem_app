@@ -91,9 +91,7 @@ class _SpeakingIndicatorCoreState extends State<_SpeakingIndicatorCore> {
     final participant = widget.participant;
 
     if (participant is RemoteParticipant) {
-      return participant.getTrackPublicationBySource(
-        TrackSource.microphone,
-      );
+      return participant.getTrackPublicationBySource(TrackSource.microphone);
     } else {
       return participant?.audioTrackPublications
           .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)

@@ -139,9 +139,7 @@ Future<bool> showWebPermissionsDeniedDialog(
     // Native and legacy callers still use the permissions controller. The
     // Session pre-join flow supplies [retryPermissions] on web so the real
     // preview tracks request access without opening throwaway media streams.
-    final controller = container.read(
-      permissionsControllerProvider.notifier,
-    );
+    final controller = container.read(permissionsControllerProvider.notifier);
     await controller.requestPermissions();
     return (await controller.currentStatuses).requiredPermissionsGranted;
   })();
@@ -279,10 +277,7 @@ class _PermissionsRequestSheetState
                 ),
                 const SizedBox(height: 32),
                 PermissionItemTile(
-                  icon: const TotemIcon(
-                    TotemIcons.notification,
-                    size: 25,
-                  ),
+                  icon: const TotemIcon(TotemIcons.notification, size: 25),
                   title: 'Notification',
                   description:
                       'Allow Totem to send you notifications about sessions, '
@@ -292,10 +287,7 @@ class _PermissionsRequestSheetState
                 ),
                 const SizedBox(height: 10),
                 PermissionItemTile(
-                  icon: const TotemIcon(
-                    TotemIcons.microphoneOn,
-                    size: 25,
-                  ),
+                  icon: const TotemIcon(TotemIcons.microphoneOn, size: 25),
                   title: 'Mic',
                   description:
                       'To speak during sessions, Totem needs access to your '
@@ -305,10 +297,7 @@ class _PermissionsRequestSheetState
                 ),
                 const SizedBox(height: 10),
                 PermissionItemTile(
-                  icon: const TotemIcon(
-                    TotemIcons.cameraOn,
-                    size: 25,
-                  ),
+                  icon: const TotemIcon(TotemIcons.cameraOn, size: 25),
                   title: 'Camera',
                   description:
                       'Allow camera access so others can see you during '

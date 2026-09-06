@@ -8,11 +8,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: ActionBarEmojiButton(
-            onEmojiSelected: (_) {},
-          ),
-        ),
+        home: Scaffold(body: ActionBarEmojiButton(onEmojiSelected: (_) {})),
       ),
     );
 

@@ -25,10 +25,7 @@ void main() {
             style: TextStyle(color: textColor),
             // Align is load-bearing: production pins the bar to the bottom
             // and keeps it from stretching to fill the scaffold.
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: child,
-            ),
+            child: Align(alignment: Alignment.bottomCenter, child: child),
           ),
         ),
       ),
@@ -42,10 +39,7 @@ void main() {
   List<Widget> ghostButtons(int count) {
     return [
       for (var i = 0; i < count; i++)
-        ActionBarButton(
-          onPressed: () {},
-          child: Text('$i'),
-        ),
+        ActionBarButton(onPressed: () {}, child: Text('$i')),
     ];
   }
 
@@ -92,11 +86,7 @@ void main() {
       await pumpWidget(
         tester,
         child: const ActionBar(
-          children: [
-            Text('One'),
-            Text('Two'),
-            Text('Three'),
-          ],
+          children: [Text('One'), Text('Two'), Text('Three')],
         ),
       );
 

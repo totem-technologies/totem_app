@@ -21,9 +21,7 @@ List<Participant> participantsSorting({
   }).toList();
 
   if (state.roomState.talkingOrder.isNotEmpty) {
-    final participantsMap = {
-      for (final p in participants) p.identity: p,
-    };
+    final participantsMap = {for (final p in participants) p.identity: p};
 
     final speakingOrderSet = state.roomState.talkingOrder.toSet();
     final sortedParticipants = <Participant>[];

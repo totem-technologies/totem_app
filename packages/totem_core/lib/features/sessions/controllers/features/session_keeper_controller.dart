@@ -125,12 +125,8 @@ class SessionKeeperController extends _$SessionKeeperController {
 
     try {
       final roomState = await _run(
-        action: () => ref.read(
-          acceptTotemProvider(
-            _sessionSlug,
-            _roomVersion,
-          ).future,
-        ),
+        action: () =>
+            ref.read(acceptTotemProvider(_sessionSlug, _roomVersion).future),
         errorMessage: 'Error accepting totem',
       );
       session.applyRoomState(roomState);
@@ -164,12 +160,8 @@ class SessionKeeperController extends _$SessionKeeperController {
   Future<void> forcePassTotem() async {
     if (!session.isCurrentUserKeeper()) return;
     final roomState = await _run(
-      action: () => ref.read(
-        forcePassTotemProvider(
-          _sessionSlug,
-          _roomVersion,
-        ).future,
-      ),
+      action: () =>
+          ref.read(forcePassTotemProvider(_sessionSlug, _roomVersion).future),
       errorMessage: 'Error force passing totem',
     );
     session.applyRoomState(roomState);
@@ -180,10 +172,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     if (!session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(
-        removeParticipantProvider(
-          _sessionSlug,
-          participantSlug,
-        ).future,
+        removeParticipantProvider(_sessionSlug, participantSlug).future,
       ),
       errorMessage: 'Error removing participant $participantSlug',
       timeout: const Duration(seconds: 20),
@@ -216,12 +205,8 @@ class SessionKeeperController extends _$SessionKeeperController {
     if (!session.isCurrentUserKeeper()) return false;
     try {
       final roomState = await _run(
-        action: () => ref.read(
-          endSessionProvider(
-            _sessionSlug,
-            _roomVersion,
-          ).future,
-        ),
+        action: () =>
+            ref.read(endSessionProvider(_sessionSlug, _roomVersion).future),
         errorMessage: 'Error ending session',
         timeout: const Duration(seconds: 10),
       );
@@ -272,10 +257,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     if (!session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(
-        disableParticipantCameraProvider(
-          _sessionSlug,
-          participantSlug,
-        ).future,
+        disableParticipantCameraProvider(_sessionSlug, participantSlug).future,
       ),
       errorMessage: 'Error disable participant camera $participantSlug',
       timeout: const Duration(seconds: 20),
@@ -287,10 +269,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     if (!session.isCurrentUserKeeper()) return;
     await _run<void>(
       action: () => ref.read(
-        muteParticipantProvider(
-          _sessionSlug,
-          participantSlug,
-        ).future,
+        muteParticipantProvider(_sessionSlug, participantSlug).future,
       ),
       errorMessage: 'Error muting participant $participantSlug',
       timeout: const Duration(seconds: 20),
@@ -311,11 +290,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     if (!session.isCurrentUserKeeper()) return;
     final roomState = await _run(
       action: () => ref.read(
-        setPromptProvider(
-          _sessionSlug,
-          _roomVersion,
-          prompt,
-        ).future,
+        setPromptProvider(_sessionSlug, _roomVersion, prompt).future,
       ),
       errorMessage: 'Error setting prompt',
     );

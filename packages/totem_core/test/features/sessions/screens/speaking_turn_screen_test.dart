@@ -271,20 +271,7 @@ void main() {
     testWidgets('renders the participant grid for room sizes up to 12', (
       tester,
     ) async {
-      for (final participantCount in [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10,
-        11,
-        12,
-      ]) {
+      for (final participantCount in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
         final state = _buildState(
           keeper: 'user-1',
           currentSpeaker: 'speaker-0',
@@ -297,10 +284,7 @@ void main() {
 
         await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
-        expect(
-          find.byType(ParticipantCard),
-          findsNWidgets(participantCount),
-        );
+        expect(find.byType(ParticipantCard), findsNWidgets(participantCount));
         expect(find.byType(SpeakingTurnScreen), findsOneWidget);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
@@ -401,10 +385,7 @@ void main() {
         cuesService: cuesService,
       );
 
-      await tester.enterText(
-        find.byType(TextField),
-        '  A round message  ',
-      );
+      await tester.enterText(find.byType(TextField), '  A round message  ');
       final actionSlider =
           tester.state(find.byType(ActionSlider)) as ActionSliderState;
       unawaited(actionSlider.widget.onActionCompleted());
@@ -414,9 +395,7 @@ void main() {
       await tester.tap(find.widgetWithText(ElevatedButton, 'Pass to User Two'));
       await tester.pumpAndSettle();
 
-      verify(
-        () => keeper.passTotem(roundMessage: 'A round message'),
-      ).called(1);
+      verify(() => keeper.passTotem(roundMessage: 'A round message')).called(1);
       expect(cuesService.swipePulseCount, 1);
     });
 
@@ -473,9 +452,7 @@ void main() {
       expect(find.byType(SelfView), findsNothing);
     });
 
-    testWidgets('SelfView Settings enables and persists', (
-      tester,
-    ) async {
+    testWidgets('SelfView Settings enables and persists', (tester) async {
       final state = _buildState(
         keeper: 'user-1',
         currentSpeaker: 'user-1',

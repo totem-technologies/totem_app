@@ -71,9 +71,7 @@ void main() {
           (ref) => ref.watch(_testLastMessageProvider),
         ),
         sessionMessagesProvider.overrideWith((ref) => const []),
-        isCurrentUserKeeperProvider.overrideWith(
-          (ref) => false,
-        ),
+        isCurrentUserKeeperProvider.overrideWith((ref) => false),
         currentSessionEventProvider.overrideWith((ref) => null),
       ],
     );

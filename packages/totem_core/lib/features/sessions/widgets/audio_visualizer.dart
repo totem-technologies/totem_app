@@ -392,10 +392,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   ) {
     return List.generate(
       length,
-      (i) => BarsViewItem(
-        value: samples[i],
-        color: colorProvider(i),
-      ),
+      (i) => BarsViewItem(value: samples[i], color: colorProvider(i)),
     );
   }
 
@@ -474,10 +471,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
         _controller.stop();
       }
       final elements = _generateElements(context, state);
-      return BarsView(
-        options: widget.options,
-        elements: elements,
-      );
+      return BarsView(options: widget.options, elements: elements);
     }
 
     // Resume animation for thinking/listening states
@@ -489,31 +483,21 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       animation: _pulseAnimation,
       builder: (ctx, _) {
         final elements = _generateElements(ctx, state);
-        return BarsView(
-          options: widget.options,
-          elements: elements,
-        );
+        return BarsView(options: widget.options, elements: elements);
       },
     );
   }
 }
 
 class BarsViewItem {
-  const BarsViewItem({
-    required this.value,
-    required this.color,
-  });
+  const BarsViewItem({required this.value, required this.color});
 
   final double value;
   final Color color;
 }
 
 class BarsView extends StatelessWidget {
-  const BarsView({
-    required this.options,
-    required this.elements,
-    super.key,
-  });
+  const BarsView({required this.options, required this.elements, super.key});
   final AudioVisualizerWidgetOptions options;
   final List<BarsViewItem> elements;
 

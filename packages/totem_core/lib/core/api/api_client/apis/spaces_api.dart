@@ -245,10 +245,7 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
-      request,
-      onSuccess: (_) {},
-    );
+    return execute(request, onSuccess: (_) {});
   }
 
   /// Get Sessions History

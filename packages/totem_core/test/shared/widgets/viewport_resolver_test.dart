@@ -10,9 +10,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: MediaQuery(
-            data: const MediaQueryData(
-              size: Size(400, 800),
-            ),
+            data: const MediaQueryData(size: Size(400, 800)),
             child: ViewportResolver(
               builder: (context, kind) {
                 resolvedKind = kind;
@@ -32,9 +30,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: MediaQuery(
-            data: const MediaQueryData(
-              size: Size(800, 400),
-            ),
+            data: const MediaQueryData(size: Size(800, 400)),
             child: ViewportResolver(
               builder: (context, kind) {
                 resolvedKind = kind;
@@ -54,9 +50,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: MediaQuery(
-            data: const MediaQueryData(
-              size: Size(800, 1024),
-            ),
+            data: const MediaQueryData(size: Size(800, 1024)),
             child: ViewportResolver(
               builder: (context, kind) {
                 resolvedKind = kind;
@@ -76,9 +70,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: MediaQuery(
-            data: const MediaQueryData(
-              size: Size(1024, 800),
-            ),
+            data: const MediaQueryData(size: Size(1024, 800)),
             child: ViewportResolver(
               builder: (context, kind) {
                 resolvedKind = kind;
@@ -98,9 +90,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: MediaQuery(
-            data: const MediaQueryData(
-              size: Size(1024, 1366),
-            ),
+            data: const MediaQueryData(size: Size(1024, 1366)),
             child: ViewportResolver(
               builder: (context, kind) {
                 resolvedKind = kind;
@@ -120,9 +110,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: MediaQuery(
-            data: const MediaQueryData(
-              size: Size(1366, 1024),
-            ),
+            data: const MediaQueryData(size: Size(1366, 1024)),
             child: ViewportResolver(
               builder: (context, kind) {
                 resolvedKind = kind;

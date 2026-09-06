@@ -7,9 +7,7 @@ void main() {
   group('Transition Cards', () {
     Widget buildTestWidget(Widget child) {
       return MaterialApp(
-        home: Scaffold(
-          body: Center(child: child),
-        ),
+        home: Scaffold(body: Center(child: child)),
       );
     }
 
@@ -133,9 +131,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        buildTestWidget(
-          const WaitingReceiveTransitionCard(),
-        ),
+        buildTestWidget(const WaitingReceiveTransitionCard()),
       );
 
       expect(find.byType(ActionSliderButton), findsNothing);

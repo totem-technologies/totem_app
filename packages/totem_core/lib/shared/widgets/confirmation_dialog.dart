@@ -76,11 +76,8 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
       child: ViewportResolver(
         builder: (context, viewportKind) {
           final contentPadding = switch (viewportKind) {
-            ViewportKind.mediumSmall ||
-            ViewportKind.mediumPlus => const EdgeInsets.symmetric(
-              horizontal: 40,
-              vertical: 24,
-            ),
+            ViewportKind.mediumSmall || ViewportKind.mediumPlus =>
+              const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
             _ => const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
           };
           return AlertDialog(
@@ -288,9 +285,7 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final backgroundColor = switch (widget.type) {
-      ConfirmationDialogType.destructive => const Color(
-        0xFFFF3B30,
-      ),
+      ConfirmationDialogType.destructive => const Color(0xFFFF3B30),
       ConfirmationDialogType.standard => theme.colorScheme.primary,
     };
     final foregroundColor = switch (widget.type) {

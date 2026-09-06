@@ -68,10 +68,7 @@ void main() {
       );
       await tester.pump();
 
-      await sendModifiedEnter(
-        tester,
-        modifierKey: LogicalKeyboardKey.metaLeft,
-      );
+      await sendModifiedEnter(tester, modifierKey: LogicalKeyboardKey.metaLeft);
 
       expect(submittedFeedback, 'This is useful feedback.');
       expect(find.byType(UserFeedback), findsNothing);

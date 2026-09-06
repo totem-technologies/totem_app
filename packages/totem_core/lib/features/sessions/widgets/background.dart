@@ -35,14 +35,9 @@ class RoomBackground extends StatefulWidget {
 }
 
 class _RoomBackgroundState extends State<RoomBackground> {
-  static const roomDecoration = BoxDecoration(
-    color: AppTheme.slate,
-  );
+  static const roomDecoration = BoxDecoration(color: AppTheme.slate);
 
-  static const gradientColors = <Color>[
-    AppTheme.cream,
-    AppTheme.mauve,
-  ];
+  static const gradientColors = <Color>[AppTheme.cream, AppTheme.mauve];
 
   @override
   void didUpdateWidget(covariant RoomBackground oldWidget) {

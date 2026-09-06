@@ -13,12 +13,7 @@ import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 class SessionErrorScreen extends ConsumerWidget {
-  const SessionErrorScreen({
-    this.onRetry,
-    this.error,
-    this.session,
-    super.key,
-  });
+  const SessionErrorScreen({this.onRetry, this.error, this.session, super.key});
 
   final AsyncCallback? onRetry;
   final Object? error;
@@ -104,9 +99,7 @@ class SessionErrorScreen extends ConsumerWidget {
         leading: CircleIconButton(
           margin: const EdgeInsetsDirectional.only(start: 20, top: 20),
           icon: TotemIcons.arrowBack,
-          tooltip: MaterialLocalizations.of(
-            context,
-          ).backButtonTooltip,
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: pop,
         ),
       ),

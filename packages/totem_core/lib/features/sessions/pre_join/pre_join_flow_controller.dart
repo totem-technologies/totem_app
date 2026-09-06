@@ -43,9 +43,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       final currentMedia = ref.read(
         preJoinMediaControllerProvider(sessionSlug),
       );
-      final requireUsableMedia = ref.read(
-        preJoinRequiresUsableMediaProvider,
-      );
+      final requireUsableMedia = ref.read(preJoinRequiresUsableMediaProvider);
       if (requireUsableMedia && !currentMedia.canJoinOnWeb) {
         state = state.copyWith(phase: PreJoinFlowPhase.idle);
         return PreJoinJoinOutcome.permissionsDenied;

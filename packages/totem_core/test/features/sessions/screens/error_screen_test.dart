@@ -36,10 +36,7 @@ void main() {
           ),
         ],
         child: MaterialApp(
-          home: SessionErrorScreen(
-            onRetry: onRetry,
-            error: error,
-          ),
+          home: SessionErrorScreen(onRetry: onRetry, error: error),
         ),
       ),
     );
@@ -77,10 +74,7 @@ void main() {
           0,
         );
 
-        await tester.drag(
-          find.byType(CustomScrollView),
-          const Offset(0, -100),
-        );
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -100));
         await tester.pumpAndSettle();
 
         expect(
@@ -116,10 +110,7 @@ void main() {
         );
         expect(scrollable.position.maxScrollExtent, greaterThan(0));
 
-        await tester.drag(
-          find.byType(CustomScrollView),
-          const Offset(0, -100),
-        );
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -100));
         await tester.pumpAndSettle();
 
         expect(scrollable.position.pixels, greaterThan(0));

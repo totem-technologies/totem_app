@@ -113,9 +113,7 @@ final class UsersApi with ApiExecutor {
       method: 'POST',
       path: '/api/mobile/protected/users/update_image',
       headers: headers,
-      body: [
-        ApiMultipartField.file('profile_image', body.profileImage),
-      ],
+      body: [ApiMultipartField.file('profile_image', body.profileImage)],
       contentType: 'multipart/form-data',
       options: options,
     );

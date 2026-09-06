@@ -15,9 +15,7 @@ final class AcceptStickEvent {
   final String type;
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-    };
+    return {'type': type};
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -25,9 +23,7 @@ final class AcceptStickEvent {
   }
 
   AcceptStickEvent copyWith({String Function()? type}) {
-    return AcceptStickEvent(
-      type: type != null ? type() : this.type,
-    );
+    return AcceptStickEvent(type: type != null ? type() : this.type);
   }
 
   @override

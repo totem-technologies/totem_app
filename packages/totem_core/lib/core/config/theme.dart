@@ -552,34 +552,20 @@ class AppTheme {
   );
 
   static Map<String, Style> get htmlStyle => {
-    'body': Style(
-      margin: Margins.symmetric(horizontal: 0),
-    ),
+    'body': Style(margin: Margins.symmetric(horizontal: 0)),
     'hr': Style(
       margin: Margins.zero,
       padding: HtmlPaddings.zero,
-      border: const Border(
-        top: BorderSide(
-          color: Colors.grey,
-          width: 0.4,
-        ),
-      ),
+      border: const Border(top: BorderSide(color: Colors.grey, width: 0.4)),
     ),
   };
 
   static Map<String, Style> get compactHtmlStyle => {
-    'body': Style(
-      margin: Margins.zero,
-    ),
+    'body': Style(margin: Margins.zero),
     'hr': Style(
       margin: Margins.zero,
       padding: HtmlPaddings.zero,
-      border: const Border(
-        top: BorderSide(
-          color: Colors.grey,
-          width: 0.4,
-        ),
-      ),
+      border: const Border(top: BorderSide(color: Colors.grey, width: 0.4)),
     ),
   };
 }

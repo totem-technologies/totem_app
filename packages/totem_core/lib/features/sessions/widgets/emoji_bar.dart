@@ -67,9 +67,7 @@ class EmojiBarOverlayState extends State<EmojiBarOverlay>
           child: GestureDetector(
             onTap: _dismiss,
             behavior: HitTestBehavior.translucent,
-            child: Container(
-              color: Colors.transparent,
-            ),
+            child: Container(color: Colors.transparent),
           ),
         ),
         PositionedDirectional(
@@ -287,21 +285,24 @@ class _RisingEmojiState extends State<RisingEmoji>
       animationBehavior: AnimationBehavior.preserve,
     );
 
-    _animation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     _opacityAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0, end: 1).chain(
-          CurveTween(curve: Curves.easeOut),
-        ),
+        tween: Tween<double>(
+          begin: 0,
+          end: 1,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 8,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1, end: 0).chain(
-          CurveTween(curve: Curves.easeInOut),
-        ),
+        tween: Tween<double>(
+          begin: 1,
+          end: 0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 92,
       ),
     ]).animate(_controller);
@@ -352,10 +353,7 @@ class _RisingEmojiState extends State<RisingEmoji>
           child: Material(
             type: MaterialType.transparency,
             child: IgnorePointer(
-              child: FadeTransition(
-                opacity: _opacityAnimation,
-                child: child,
-              ),
+              child: FadeTransition(opacity: _opacityAnimation, child: child),
             ),
           ),
         );

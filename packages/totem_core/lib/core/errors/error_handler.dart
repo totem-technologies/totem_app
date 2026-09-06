@@ -40,11 +40,7 @@ class ErrorHandler {
     }
 
     if (kDebugMode) {
-      logger.e(
-        message,
-        error: error,
-        stackTrace: stackTrace,
-      );
+      logger.e(message, error: error, stackTrace: stackTrace);
       if (diagnostics != null && diagnostics.isNotEmpty) {
         logger.d('Error diagnostics: $diagnostics');
       }

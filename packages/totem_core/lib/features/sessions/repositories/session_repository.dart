@@ -36,10 +36,7 @@ Future<RoomState> _postEvent({
       return await RepositoryUtils.handleApiCall<RoomState>(
         apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
           sessionSlug: sessionSlug,
-          body: EventRequest(
-            event: event,
-            lastSeenVersion: version,
-          ),
+          body: EventRequest(event: event, lastSeenVersion: version),
         ),
         operationName: operationName,
         retryOnNetworkError: true,
@@ -65,9 +62,8 @@ Future<RoomState> _postEvent({
       // ── invalidTransition: single refresh + single retry ────────────
       if (_isInvalidTransitionError(code)) {
         final roomState = await RepositoryUtils.handleApiCall<RoomState>(
-          apiCall: () => apiService.rooms.totemRoomsApiGetState(
-            sessionSlug: sessionSlug,
-          ),
+          apiCall: () =>
+              apiService.rooms.totemRoomsApiGetState(sessionSlug: sessionSlug),
           operationName: 'refresh room state',
           retryOnNetworkError: true,
           timeout: timeout,
@@ -190,10 +186,7 @@ Future<void> muteParticipant(
 }
 
 @riverpod
-Future<void> muteEveryone(
-  Ref ref,
-  String sessionSlug,
-) {
+Future<void> muteEveryone(Ref ref, String sessionSlug) {
   final apiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<void>(
     apiCall: () =>
@@ -316,11 +309,7 @@ Future<RoomState> startSession(
 }
 
 @riverpod
-Future<RoomState> endSession(
-  Ref ref,
-  String sessionSlug,
-  int lastSeenVersion,
-) {
+Future<RoomState> endSession(Ref ref, String sessionSlug, int lastSeenVersion) {
   final apiService = ref.read(apiServiceProvider);
   return _postEvent(
     apiService: apiService,
@@ -399,10 +388,7 @@ Future<void> sessionFeedback(
   return RepositoryUtils.handleApiCall<void>(
     apiCall: () => apiService.spaces.totemSpacesMobileApiPostSessionFeedback(
       eventSlug: sessionSlug,
-      body: SessionFeedbackSchema(
-        feedback: feedback,
-        message: message,
-      ),
+      body: SessionFeedbackSchema(feedback: feedback, message: message),
     ),
     operationName: 'end session',
     retryOnNetworkError: true,

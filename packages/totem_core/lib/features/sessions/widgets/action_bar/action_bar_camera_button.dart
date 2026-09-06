@@ -137,9 +137,7 @@ class _ActionBarCameraSwitcherButtonState
                 _showCameraPositionOptions();
               },
               child: Padding(
-                padding: const EdgeInsetsDirectional.symmetric(
-                  horizontal: 8.0,
-                ),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 8.0),
                 child: AnimatedBuilder(
                   animation: _menuController,
                   builder: (context, child) {
@@ -318,9 +316,7 @@ class _ActionBarCameraSwitcherButtonOverlayState
                   ),
                   DefaultTextStyle(
                     style: (theme.textTheme.bodyMedium ?? const TextStyle())
-                        .copyWith(
-                          color: Colors.white,
-                        ),
+                        .copyWith(color: Colors.white),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       spacing: buttonsSpacing,

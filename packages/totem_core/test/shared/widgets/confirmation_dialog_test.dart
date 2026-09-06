@@ -21,11 +21,7 @@ void main() {
       ],
     );
 
-    await tester.pumpWidget(
-      MaterialApp.router(
-        routerConfig: router,
-      ),
-    );
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
 
     unawaited(
       showDialog<void>(
@@ -143,10 +139,7 @@ void main() {
       await tester.pump(const Duration(seconds: 10));
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('Something Went Wrong'),
-        findsOneWidget,
-      );
+      expect(find.text('Something Went Wrong'), findsOneWidget);
       expect(find.text('OK'), findsOneWidget);
     });
   });

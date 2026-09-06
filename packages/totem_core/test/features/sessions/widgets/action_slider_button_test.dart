@@ -13,12 +13,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 320,
-              child: child,
-            ),
-          ),
+          body: Center(child: SizedBox(width: 320, child: child)),
         ),
       ),
     );
@@ -125,9 +120,7 @@ void main() {
 
     testWidgets(
       'completes action on long drag and shows loading while pending',
-      (
-        tester,
-      ) async {
+      (tester) async {
         var calls = 0;
         final completer = Completer<bool>();
 
@@ -173,9 +166,7 @@ void main() {
   });
 
   group('ActionSliderButton', () {
-    testWidgets('renders ActionButton on desktop platforms', (
-      tester,
-    ) async {
+    testWidgets('renders ActionButton on desktop platforms', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       try {
         await pumpTestWidget(

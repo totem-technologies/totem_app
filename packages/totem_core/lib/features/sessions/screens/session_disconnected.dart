@@ -312,10 +312,7 @@ class _LandscapeLayout extends StatelessWidget {
                     ),
                   ),
                 ),
-              _ActionButtons(
-                isBanned: isBanned,
-                onRefreshHome: onRefreshHome,
-              ),
+              _ActionButtons(isBanned: isBanned, onRefreshHome: onRefreshHome),
             ],
           ),
         ],
@@ -563,34 +560,31 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
         const TextSpan(text: '.'),
       ],
     );
-    return Text.rich(
-      switch (widget.reason) {
-        SessionDisconnectedReason.keeperAbsent => const TextSpan(
-          text:
-              'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
-        ),
-        SessionDisconnectedReason.movedToAnotherDevice => const TextSpan(
-          text:
-              'This account joined the same session on another device. Continue there or rejoin from this device.',
-        ),
-        SessionDisconnectedReason.removed => removedSpan,
-        SessionDisconnectedReason.keeperEnded ||
-        SessionDisconnectedReason.roomEmpty => const TextSpan(
-          text:
-              'Thank you for joining!\nWe hope you found the session enjoyable.',
-        ),
-        SessionDisconnectedReason.banned => TextSpan(
-          text:
-              'You have been removed from this session due to a violation of our community guidelines.',
-          children: [
-            const TextSpan(text: '\n'),
-            removedSpan,
-          ],
-        ),
-        SessionDisconnectedReason.other => const TextSpan(text: ''),
-      },
-      textAlign: TextAlign.center,
-    );
+    return Text.rich(switch (widget.reason) {
+      SessionDisconnectedReason.keeperAbsent => const TextSpan(
+        text:
+            'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
+      ),
+      SessionDisconnectedReason.movedToAnotherDevice => const TextSpan(
+        text:
+            'This account joined the same session on another device. Continue there or rejoin from this device.',
+      ),
+      SessionDisconnectedReason.removed => removedSpan,
+      SessionDisconnectedReason.keeperEnded ||
+      SessionDisconnectedReason.roomEmpty => const TextSpan(
+        text:
+            'Thank you for joining!\nWe hope you found the session enjoyable.',
+      ),
+      SessionDisconnectedReason.banned => TextSpan(
+        text:
+            'You have been removed from this session due to a violation of our community guidelines.',
+        children: [
+          const TextSpan(text: '\n'),
+          removedSpan,
+        ],
+      ),
+      SessionDisconnectedReason.other => const TextSpan(text: ''),
+    }, textAlign: TextAlign.center);
   }
 }
 
@@ -761,10 +755,7 @@ class _NextSessionsSection extends ConsumerWidget {
 }
 
 class _ActionButtons extends StatelessWidget {
-  const _ActionButtons({
-    required this.isBanned,
-    required this.onRefreshHome,
-  });
+  const _ActionButtons({required this.isBanned, required this.onRefreshHome});
   final bool isBanned;
   final VoidCallback onRefreshHome;
 
@@ -789,9 +780,7 @@ class _ActionButtons extends StatelessWidget {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsetsDirectional.symmetric(horizontal: 58),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(26),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
       ),
       onPressed: () {
         onRefreshHome();

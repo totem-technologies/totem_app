@@ -284,9 +284,7 @@ void main() {
     addTearDown(container.dispose);
     await _waitForMedia(container);
 
-    final mediaState = container.read(
-      preJoinMediaControllerProvider(_slug),
-    );
+    final mediaState = container.read(preJoinMediaControllerProvider(_slug));
     expect(mediaState.camera.phase, PreJoinCapturePhase.unavailable);
     expect(mediaState.microphone.phase, PreJoinCapturePhase.unavailable);
 
@@ -321,9 +319,7 @@ void main() {
           .requestJoin();
       await resetStarted.future;
 
-      final detached = container.read(
-        preJoinMediaControllerProvider(_slug),
-      );
+      final detached = container.read(preJoinMediaControllerProvider(_slug));
       expect(detached.transferred, isTrue);
       expect(detached.camera.track, isNull);
       expect(detached.microphone.track, isNull);

@@ -51,27 +51,19 @@ Future<void> showOptionsSheet(
     ),
     isScrollControlled: true,
     bottomSheetBuilder: (context) {
-      return SafeArea(
-        child: MoreOptions(session: session, isDialog: false),
-      );
+      return SafeArea(child: MoreOptions(session: session, isDialog: false));
     },
     largeScreenBuilder: (context) {
       return SizedBox(
         width: 400,
-        child: SafeArea(
-          child: MoreOptions(session: session, isDialog: true),
-        ),
+        child: SafeArea(child: MoreOptions(session: session, isDialog: true)),
       );
     },
   );
 }
 
 class MoreOptions extends ConsumerWidget {
-  const MoreOptions({
-    required this.session,
-    this.isDialog = false,
-    super.key,
-  });
+  const MoreOptions({required this.session, this.isDialog = false, super.key});
 
   final mobile_api.SessionDetailSchema session;
   final bool isDialog;
@@ -107,9 +99,7 @@ class MoreOptions extends ConsumerWidget {
         ),
         (options) {
           if (options.speakerOn != null) {
-            currentSession.devices.setSpeakerphone(
-              options.speakerOn ?? false,
-            );
+            currentSession.devices.setSpeakerphone(options.speakerOn ?? false);
           }
         },
         currentSession.devices.selectAudioOutputDevice,
@@ -141,9 +131,7 @@ class MoreOptions extends ConsumerWidget {
               onTap: () {
                 ref
                     .read(selfViewSettingsProvider.notifier)
-                    .setEnabled(
-                      !isSelfViewEnabled,
-                    );
+                    .setEnabled(!isSelfViewEnabled);
               },
             ),
             MoreOptionsTile<void>(
@@ -182,11 +170,7 @@ class MoreOptions extends ConsumerWidget {
                 icon: TotemIcons.removePerson,
                 onTap: () {
                   Navigator.of(context).pop();
-                  showBannedParticipantsModal(
-                    context,
-                    currentSession,
-                    state,
-                  );
+                  showBannedParticipantsModal(context, currentSession, state);
                 },
               ),
               if (state.roomState.status == mobile_api.RoomStatus.active)
@@ -412,9 +396,7 @@ class MoreOptions extends ConsumerWidget {
               }
               return null;
             },
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
         ),
         onConfirm: () async {
@@ -427,9 +409,9 @@ class MoreOptions extends ConsumerWidget {
     );
     controller.dispose();
     if (result != null && result.isNotEmpty && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prompt set successfully')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Prompt set successfully')));
     }
   }
 
@@ -503,9 +485,7 @@ class MoreOptions extends ConsumerWidget {
           ),
           maxLines: 3,
           minLines: 1,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
         onConfirm: () async {
           final prompt = controller.text.trim();
@@ -655,9 +635,7 @@ class MoreOptionsTile<T> extends StatelessWidget {
           ),
         ),
         onTap: () {
-          onSwitch(
-            options.copyWith(speakerOn: !(options.speakerOn ?? false)),
-          );
+          onSwitch(options.copyWith(speakerOn: !(options.speakerOn ?? false)));
         },
       );
     } else {
@@ -766,9 +744,7 @@ class MoreOptionsTile<T> extends StatelessWidget {
         maxLines: 1,
       ),
       onTap: onTap,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(30),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       tileColor: type == MoreOptionsTileType.destructive
           ? theme.colorScheme.errorContainer
           : Colors.white,
