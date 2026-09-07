@@ -19,18 +19,24 @@ class SessionChatMessage {
     required this.id,
     required this.sender,
     this.participant,
+    this.recipientIdentity,
   });
 
   factory SessionChatMessage.fromMap(
     Map<String, dynamic> map,
     Participant? participant,
   ) {
+    final recipient = map['recipientIdentity'] as String?;
     return SessionChatMessage(
       message: map['message'] as String,
       timestamp: map['timestamp'] as int,
       id: map['id'] as String,
       participant: participant,
       sender: false,
+      // Older clients omit this key — treat that as the Everyone thread.
+      recipientIdentity: (recipient == null || recipient.isEmpty)
+          ? null
+          : recipient,
     );
   }
 
@@ -40,11 +46,39 @@ class SessionChatMessage {
   final bool sender;
   final Participant? participant;
 
+  /// LiveKit identity of the private recipient. Null means Everyone.
+  final String? recipientIdentity;
+
+  bool get isEveryoneThread =>
+      recipientIdentity == null || recipientIdentity!.isEmpty;
+
+  /// Whether this message belongs in [threadTarget] for [localIdentity].
+  ///
+  /// [threadTarget] is null for Everyone. A private thread with X includes
+  /// messages we sent to X and messages X sent to us.
+  bool belongsToThread({
+    required String? localIdentity,
+    required String? threadTarget,
+  }) {
+    if (threadTarget == null) {
+      return isEveryoneThread;
+    }
+    if (isEveryoneThread) {
+      return false;
+    }
+
+    final senderId = participant?.identity;
+    final recipientId = recipientIdentity;
+    return (senderId == localIdentity && recipientId == threadTarget) ||
+        (senderId == threadTarget && recipientId == localIdentity);
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'message': message,
       'timestamp': timestamp,
       'id': id,
+      if (recipientIdentity != null) 'recipientIdentity': recipientIdentity,
     };
   }
 
@@ -87,6 +121,19 @@ class SessionMessagingController extends _$SessionMessagingController {
           jsonDecode(data) as Map<String, dynamic>,
           event.participant,
         );
+
+        // Everyone is keeper-broadcast only. Drop group posts from anyone else
+        // so a stale or malicious client cannot write into the main thread.
+        final senderId = event.participant?.identity;
+        if (message.isEveryoneThread &&
+            senderId != null &&
+            senderId != _state.roomState.keeper) {
+          logger.w(
+            'Ignoring Everyone chat message from non-keeper $senderId',
+          );
+          return;
+        }
+
         session.addSessionChatMessage(message);
       } catch (error, stackTrace) {
         ErrorHandler.logError(
@@ -176,10 +223,39 @@ class SessionMessagingController extends _$SessionMessagingController {
     }
   }
 
-  Future<void> sendMessage(String text) async {
-    if (!session.isCurrentUserKeeper()) {
+  /// Sends [text] to Everyone when [recipientIdentity] is null, or as a
+  /// private LiveKit data message when a recipient is set.
+  ///
+  /// Everyone is keeper-only. Participants may only DM the keeper.
+  Future<void> sendMessage(
+    String text, {
+    String? recipientIdentity,
+  }) async {
+    final isKeeper = session.isCurrentUserKeeper();
+    final keeperIdentity = _state.roomState.keeper;
+    final localIdentity = _room?.localParticipant?.identity;
+    final trimmedRecipient =
+        (recipientIdentity == null || recipientIdentity.isEmpty)
+        ? null
+        : recipientIdentity;
+
+    if (trimmedRecipient == null) {
+      if (!isKeeper) {
+        logger.w(
+          'Attempted to send an Everyone chat message without being the '
+          'keeper, ignoring',
+        );
+        return;
+      }
+    } else if (isKeeper) {
+      if (trimmedRecipient == localIdentity) {
+        logger.w('Keeper attempted to DM themselves, ignoring');
+        return;
+      }
+    } else if (trimmedRecipient != keeperIdentity) {
       logger.w(
-        'Attempted to send chat message without being the keeper, ignoring',
+        'Participant attempted to DM $trimmedRecipient instead of the '
+        'keeper, ignoring',
       );
       return;
     }
@@ -191,6 +267,7 @@ class SessionMessagingController extends _$SessionMessagingController {
       id: const Uuid().v4(),
       sender: true,
       participant: room?.localParticipant,
+      recipientIdentity: trimmedRecipient,
     );
 
     try {
@@ -199,6 +276,10 @@ class SessionMessagingController extends _$SessionMessagingController {
           ?.publishData(
             const Utf8Encoder().convert(message.toJson()),
             topic: SessionCommunicationTopics.chat.topic,
+            // LiveKit delivers private payloads only to this identity.
+            destinationIdentities: trimmedRecipient == null
+                ? null
+                : [trimmedRecipient],
           )
           .timeout(
             const Duration(seconds: 5),
