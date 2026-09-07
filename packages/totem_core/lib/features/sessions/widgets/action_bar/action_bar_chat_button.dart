@@ -28,11 +28,14 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
 
   @override
   Widget build(BuildContext context) {
+    final dockedOpen = ref.watch(sessionChatOpenProvider);
+    final isChatOpen = _chatSheetOpen || dockedOpen;
+
     ref.listen(
       lastSessionMessageProvider,
       (previous, next) {
         if (next == null || identical(previous, next)) return;
-        if (!mounted || _chatSheetOpen || next.sender) return;
+        if (!mounted || isChatOpen || next.sender) return;
         _notification?.dismissActive();
         _notification = NotificationController().showTimed(
           context,
@@ -45,14 +48,21 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     );
     return ActionBarButton(
       semanticsLabel: 'Chat',
-      role: ActionBarButtonRole.sheet(open: _chatSheetOpen),
+      role: ActionBarButtonRole.sheet(open: isChatOpen),
       onPressed: () async {
         if (!mounted) return;
         _notification?.dismissActive();
-        setState(() {
-          _hasPendingSessionChatMessages = false;
-          _chatSheetOpen = true;
-        });
+        setState(() => _hasPendingSessionChatMessages = false);
+
+        // Wide desktop docks the panel beside the video; everything else
+        // still opens the existing sheet / dialog.
+        if (shouldDockSessionChat(context)) {
+          ref.read(sessionChatOpenProvider.notifier).toggle();
+          return;
+        }
+
+        ref.read(sessionChatOpenProvider.notifier).setOpen(false);
+        setState(() => _chatSheetOpen = true);
         try {
           await showSessionChat(context);
         } finally {
@@ -63,7 +73,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
         clipBehavior: Clip.none,
         children: [
           const TotemIcon(TotemIcons.chat),
-          if (_hasPendingSessionChatMessages)
+          if (_hasPendingSessionChatMessages && !dockedOpen)
             Container(
               height: 4,
               width: 4,

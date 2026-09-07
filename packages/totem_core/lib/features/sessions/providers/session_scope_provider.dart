@@ -207,6 +207,37 @@ List<SessionChatMessage> sessionMessages(Ref ref) {
       const [];
 }
 
+/// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
+final sessionChatOpenProvider = NotifierProvider<SessionChatOpen, bool>(
+  SessionChatOpen.new,
+);
+
+class SessionChatOpen extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  // ignore: use_setters_to_change_properties
+  void setOpen(bool value) => state = value;
+
+  void toggle() => state = !state;
+}
+
+/// Current in-call thread. Null is the Everyone group thread.
+final sessionChatThreadTargetProvider =
+    NotifierProvider<SessionChatThreadTarget, String?>(
+      SessionChatThreadTarget.new,
+    );
+
+class SessionChatThreadTarget extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void selectEveryone() => state = null;
+
+  // ignore: use_setters_to_change_properties
+  void selectParticipant(String identity) => state = identity;
+}
+
 /// Last chat message if available.
 @Riverpod(dependencies: [sessionMessages])
 SessionChatMessage? lastSessionMessage(Ref ref) {
