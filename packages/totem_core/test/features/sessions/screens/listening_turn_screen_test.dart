@@ -15,6 +15,7 @@ import 'package:totem_core/features/sessions/controllers/features/session_messag
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
@@ -567,19 +568,27 @@ void main() {
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
           await tester.pump();
-          verify(() => messaging.sendReaction('🫶')).called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[0]),
+          ).called(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
           await tester.pump();
-          verify(() => messaging.sendReaction('💖')).called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[1]),
+          ).called(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
           await tester.pump();
-          verify(() => messaging.sendReaction('😢')).called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[2]),
+          ).called(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
           await tester.pump();
-          verify(() => messaging.sendReaction('🔥')).called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[3]),
+          ).called(1);
         });
       });
 
