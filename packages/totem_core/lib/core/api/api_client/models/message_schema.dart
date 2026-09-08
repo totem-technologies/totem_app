@@ -11,6 +11,7 @@ final class MessageSchema {
     required this.text,
     required this.clientMessageId,
     required this.createdAt,
+    required this.cursor,
     required this.isMine,
   });
 
@@ -22,6 +23,7 @@ final class MessageSchema {
       text: json['text'] as String,
       clientMessageId: json['client_message_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
+      cursor: json['cursor'] as String,
       isMine: json['is_mine'] as bool,
     );
   }
@@ -38,6 +40,8 @@ final class MessageSchema {
 
   final DateTime createdAt;
 
+  final String cursor;
+
   final bool isMine;
 
   Map<String, dynamic> toJson() {
@@ -48,6 +52,7 @@ final class MessageSchema {
       'text': text,
       'client_message_id': ?clientMessageId,
       'created_at': createdAt.toIso8601String(),
+      'cursor': cursor,
       'is_mine': isMine,
     };
   }
@@ -65,6 +70,8 @@ final class MessageSchema {
         json['client_message_id'] is String &&
         json.containsKey('created_at') &&
         json['created_at'] is String &&
+        json.containsKey('cursor') &&
+        json['cursor'] is String &&
         json.containsKey('is_mine') &&
         json['is_mine'] is bool;
   }
@@ -76,6 +83,7 @@ final class MessageSchema {
     String? text,
     String? Function()? clientMessageId,
     DateTime? createdAt,
+    String? cursor,
     bool? isMine,
   }) {
     return MessageSchema(
@@ -87,6 +95,7 @@ final class MessageSchema {
           ? clientMessageId()
           : this.clientMessageId,
       createdAt: createdAt ?? this.createdAt,
+      cursor: cursor ?? this.cursor,
       isMine: isMine ?? this.isMine,
     );
   }
@@ -101,6 +110,7 @@ final class MessageSchema {
             text == other.text &&
             clientMessageId == other.clientMessageId &&
             createdAt == other.createdAt &&
+            cursor == other.cursor &&
             isMine == other.isMine;
   }
 
@@ -113,12 +123,13 @@ final class MessageSchema {
       text,
       clientMessageId,
       createdAt,
+      cursor,
       isMine,
     );
   }
 
   @override
   String toString() {
-    return 'MessageSchema(id: $id, senderId: $senderId, senderSlug: $senderSlug, text: $text, clientMessageId: $clientMessageId, createdAt: $createdAt, isMine: $isMine)';
+    return 'MessageSchema(id: $id, senderId: $senderId, senderSlug: $senderSlug, text: $text, clientMessageId: $clientMessageId, createdAt: $createdAt, cursor: $cursor, isMine: $isMine)';
   }
 }

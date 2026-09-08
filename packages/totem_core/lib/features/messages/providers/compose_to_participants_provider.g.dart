@@ -8,34 +8,16 @@ part of 'compose_to_participants_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Compose state for broadcasting a message to a session's participants.
-///
-/// The family is keyed by [sessionSlug] so selection survives rebuilds even
-/// when the recipient list is a freshly-allocated `List` from a future
-/// backend provider. Do not key on the list itself — that would reset the
-/// notifier on every rebuild.
 
 @ProviderFor(ComposeToParticipantsNotifier)
 final composeToParticipantsProvider = ComposeToParticipantsNotifierFamily._();
 
-/// Compose state for broadcasting a message to a session's participants.
-///
-/// The family is keyed by [sessionSlug] so selection survives rebuilds even
-/// when the recipient list is a freshly-allocated `List` from a future
-/// backend provider. Do not key on the list itself — that would reset the
-/// notifier on every rebuild.
 final class ComposeToParticipantsNotifierProvider
     extends
         $NotifierProvider<
           ComposeToParticipantsNotifier,
           ComposeToParticipantsState
         > {
-  /// Compose state for broadcasting a message to a session's participants.
-  ///
-  /// The family is keyed by [sessionSlug] so selection survives rebuilds even
-  /// when the recipient list is a freshly-allocated `List` from a future
-  /// backend provider. Do not key on the list itself — that would reset the
-  /// notifier on every rebuild.
   ComposeToParticipantsNotifierProvider._({
     required ComposeToParticipantsNotifierFamily super.from,
     required String super.argument,
@@ -82,14 +64,7 @@ final class ComposeToParticipantsNotifierProvider
 }
 
 String _$composeToParticipantsNotifierHash() =>
-    r'1f04235fd48d0a416a91ae8cc44411e07d8f872e';
-
-/// Compose state for broadcasting a message to a session's participants.
-///
-/// The family is keyed by [sessionSlug] so selection survives rebuilds even
-/// when the recipient list is a freshly-allocated `List` from a future
-/// backend provider. Do not key on the list itself — that would reset the
-/// notifier on every rebuild.
+    r'b70dc19c9ab234c59d977f7d668d596084606377';
 
 final class ComposeToParticipantsNotifierFamily extends $Family
     with
@@ -109,13 +84,6 @@ final class ComposeToParticipantsNotifierFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Compose state for broadcasting a message to a session's participants.
-  ///
-  /// The family is keyed by [sessionSlug] so selection survives rebuilds even
-  /// when the recipient list is a freshly-allocated `List` from a future
-  /// backend provider. Do not key on the list itself — that would reset the
-  /// notifier on every rebuild.
-
   ComposeToParticipantsNotifierProvider call(String sessionSlug) =>
       ComposeToParticipantsNotifierProvider._(
         argument: sessionSlug,
@@ -125,13 +93,6 @@ final class ComposeToParticipantsNotifierFamily extends $Family
   @override
   String toString() => r'composeToParticipantsProvider';
 }
-
-/// Compose state for broadcasting a message to a session's participants.
-///
-/// The family is keyed by [sessionSlug] so selection survives rebuilds even
-/// when the recipient list is a freshly-allocated `List` from a future
-/// backend provider. Do not key on the list itself — that would reset the
-/// notifier on every rebuild.
 
 abstract class _$ComposeToParticipantsNotifier
     extends $Notifier<ComposeToParticipantsState> {

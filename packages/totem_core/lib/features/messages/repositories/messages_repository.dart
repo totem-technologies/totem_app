@@ -1,203 +1,299 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_core/core/api/api_client/models/profile_avatar_type_enum.dart';
-import 'package:totem_core/core/api/api_client/models/public_user_schema.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/services/api_service.dart';
+import 'package:totem_core/core/services/repository_utils.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/messages/models/message.dart';
-import 'package:uuid/uuid.dart';
+import 'package:totem_core/features/messages/models/message_pages.dart';
 
 part 'messages_repository.g.dart';
 
 abstract class MessagesRepository {
-  Future<List<Conversation>> getConversations();
+  Future<ConversationPage> getConversations({String? cursor, int? limit});
 
-  Future<List<Message>> getMessages(String conversationId, {String? beforeId});
+  Future<Conversation> getConversation(String conversationId);
 
-  Future<Message> sendMessage(String conversationId, String text);
+  Future<MessagePage> getMessages(
+    String conversationId, {
+    String? before,
+    String? after,
+    int? limit,
+  });
 
-  Future<void> markAsRead(String conversationId);
+  Future<Message> sendMessage(
+    String conversationId,
+    String text, {
+    required String clientMessageId,
+  });
+
+  Future<void> markAsRead(String conversationId, String lastReadMessageId);
+
+  Future<ConversationPage> syncConversations({String? since, int? limit});
+
+  Future<Conversation> openConversation(String recipientSlug);
+
+  Future<RecipientDirectorySchema> getRecipients({
+    required RecipientDirectoryKind kind,
+    String? query,
+    String? cursor,
+    int? limit,
+  });
+
+  Future<SessionParticipantPageSchema> getSessionParticipants(
+    String sessionSlug, {
+    String? cursor,
+    int? limit,
+  });
+
+  Future<SessionMessageResultSchema> sendSessionMessage(
+    String sessionSlug, {
+    required List<String> recipientSlugs,
+    required String text,
+    required String clientRequestId,
+  });
 }
 
-// ---------------------------------------------------------------------------
-// Stub implementation – replace with a real API-backed class once the backend
-// messages endpoints are available.
-// ---------------------------------------------------------------------------
-class _StubMessagesRepository implements MessagesRepository {
-  static final _now = DateTime.now();
+class ApiMessagesRepository implements MessagesRepository {
+  ApiMessagesRepository(this._api);
 
-  static final _peers = <String, PublicUserSchema>{
-    'conv_1': PublicUserSchema(
-      profileAvatarType: ProfileAvatarTypeEnum.td,
-      dateCreated: _now,
-      name: 'Vanessa',
-      slug: 'vanessa',
-      profileAvatarSeed: 'vanessa-seed',
-    ),
-    'conv_2': PublicUserSchema(
-      profileAvatarType: ProfileAvatarTypeEnum.td,
-      dateCreated: _now,
-      name: 'Marcus',
-      slug: 'marcus',
-      profileAvatarSeed: 'marcus-seed',
-    ),
-    'conv_3': PublicUserSchema(
-      profileAvatarType: ProfileAvatarTypeEnum.td,
-      dateCreated: _now,
-      name: 'Sarah',
-      slug: 'sarah',
-      profileAvatarSeed: 'sarah-seed',
-    ),
-    'conv_4': PublicUserSchema(
-      profileAvatarType: ProfileAvatarTypeEnum.td,
-      dateCreated: _now,
-      name: 'Jordan',
-      slug: 'jordan',
-      profileAvatarSeed: 'jordan-seed',
-    ),
-    'conv_5': PublicUserSchema(
-      profileAvatarType: ProfileAvatarTypeEnum.td,
-      dateCreated: _now,
-      name: 'Alex',
-      slug: 'alex',
-      profileAvatarSeed: 'alex-seed',
-    ),
-  };
-
-  static Message _msg(
-    String convId,
-    String text, {
-    required int minutesAgo,
-    required bool isOwn,
-  }) {
-    return Message(
-      id: const Uuid().v4(),
-      conversationId: convId,
-      senderId: isOwn ? 'me' : convId,
-      text: text,
-      sentAt: _now.subtract(Duration(minutes: minutesAgo)),
-      isOwn: isOwn,
-    );
-  }
-
-  static final _threads = <String, List<Message>>{
-    'conv_1': [
-      _msg(
-        'conv_1',
-        'That really means a lot to me, thank you for sharing',
-        minutesAgo: 1,
-        isOwn: false,
-      ),
-      _msg(
-        'conv_1',
-        "I hear you. I've been there so many times. You're not alone, I promise.",
-        minutesAgo: 2,
-        isOwn: false,
-      ),
-      _msg(
-        'conv_1',
-        "Honestly, today's been tough. But talking helps. It's nice not to feel alone in it.",
-        minutesAgo: 4,
-        isOwn: true,
-      ),
-      _msg(
-        'conv_1',
-        'Totally. Some days are harder than others. How are you doing today?',
-        minutesAgo: 7,
-        isOwn: false,
-      ),
-      _msg(
-        'conv_1',
-        "Hi Vanessa! Thanks for reaching out. It's nice to connect with someone who gets it.",
-        minutesAgo: 10,
-        isOwn: true,
-      ),
-      _msg(
-        'conv_1',
-        'Hey! I saw your profile and I think we have a lot in common.',
-        minutesAgo: 12,
-        isOwn: false,
-      ),
-    ],
-    'conv_2': [
-      _msg(
-        'conv_2',
-        "I'll check in with you tomorrow",
-        minutesAgo: 60,
-        isOwn: true,
-      ),
-    ],
-    'conv_3': [
-      _msg(
-        'conv_3',
-        'Take care of yourself this weekend',
-        minutesAgo: 1440,
-        isOwn: true,
-      ),
-    ],
-    'conv_4': [
-      _msg(
-        'conv_4',
-        '3 months sober today! Wanted to share...',
-        minutesAgo: 2880,
-        isOwn: false,
-      ),
-    ],
-    'conv_5': [
-      _msg(
-        'conv_5',
-        'Let me know if you ever want to talk again',
-        minutesAgo: 4320,
-        isOwn: false,
-      ),
-    ],
-  };
+  final ClientApi _api;
 
   @override
-  Future<List<Conversation>> getConversations() async {
-    return _peers.entries.map((entry) {
-      final convId = entry.key;
-      final peer = entry.value;
-      final messages = _threads[convId] ?? [];
-      final last = messages.isNotEmpty ? messages.first : null;
-      return Conversation(
-        id: convId,
-        peer: peer,
-        lastMessage: last,
-        unreadCount: convId == 'conv_1' ? 2 : 0,
-        updatedAt: last?.sentAt ?? _now,
-      );
-    }).toList();
-  }
-
-  @override
-  Future<List<Message>> getMessages(
-    String conversationId, {
-    String? beforeId,
+  Future<ConversationPage> getConversations({
+    String? cursor,
+    int? limit,
   }) async {
-    final messages = _threads[conversationId] ?? [];
-    if (beforeId == null) return messages;
-    final idx = messages.indexWhere((m) => m.id == beforeId);
-    if (idx == -1) return [];
-    return messages.sublist(idx + 1);
-  }
-
-  @override
-  Future<Message> sendMessage(String conversationId, String text) async {
-    final message = Message(
-      id: const Uuid().v4(),
-      conversationId: conversationId,
-      senderId: 'me',
-      text: text,
-      sentAt: DateTime.now(),
-      isOwn: true,
-      status: MessageStatus.sent,
+    final page = await RepositoryUtils.handleApiCall<ConversationPageSchema>(
+      apiCall: () => _api.messages.totemMessagesMobileApiListConversations(
+        cursor: cursor,
+        limit: limit,
+      ),
+      operationName: 'list conversations',
+      retryOnNetworkError: true,
     );
-    _threads.putIfAbsent(conversationId, () => []).insert(0, message);
-    return message;
+    return ConversationPage(
+      items: page.items.map(_conversationFromSchema).toList(growable: false),
+      nextCursor: page.nextCursor,
+      totalUnreadCount: page.totalUnreadCount,
+    );
   }
 
   @override
-  Future<void> markAsRead(String conversationId) async {}
+  Future<Conversation> getConversation(String conversationId) async {
+    final conversation =
+        await RepositoryUtils.handleApiCall<ConversationSummarySchema>(
+          apiCall: () => _api.messages.totemMessagesMobileApiGetConversation(
+            conversationId: conversationId,
+          ),
+          operationName: 'get conversation',
+          diagnostics: {'conversation_id': conversationId},
+        );
+    return _conversationFromSchema(conversation);
+  }
+
+  @override
+  Future<MessagePage> getMessages(
+    String conversationId, {
+    String? before,
+    String? after,
+    int? limit,
+  }) async {
+    final page = await RepositoryUtils.handleApiCall<MessagePageSchema>(
+      apiCall: () => _api.messages.totemMessagesMobileApiListMessages(
+        conversationId: conversationId,
+        before: before,
+        after: after,
+        limit: limit,
+      ),
+      operationName: 'list conversation messages',
+      retryOnNetworkError: true,
+      diagnostics: {'conversation_id': conversationId},
+    );
+    return MessagePage(
+      items: page.items
+          .map((message) => _messageFromSchema(message, conversationId))
+          .toList(growable: false),
+      nextBefore: page.nextBefore,
+      nextAfter: page.nextAfter,
+      hasMore: page.hasMore,
+    );
+  }
+
+  @override
+  Future<Message> sendMessage(
+    String conversationId,
+    String text, {
+    required String clientMessageId,
+  }) async {
+    final message = await RepositoryUtils.handleApiCall<MessageSchema>(
+      apiCall: () => _api.messages.totemMessagesMobileApiSendMessage(
+        conversationId: conversationId,
+        body: SendMessageSchema(text: text, clientMessageId: clientMessageId),
+      ),
+      operationName: 'send message',
+      diagnostics: {'conversation_id': conversationId},
+    );
+    return _messageFromSchema(message, conversationId);
+  }
+
+  @override
+  Future<void> markAsRead(String conversationId, String lastReadMessageId) {
+    return RepositoryUtils.handleApiCall<void>(
+      apiCall: () => _api.messages.totemMessagesMobileApiMarkRead(
+        conversationId: conversationId,
+        body: MarkReadSchema(lastReadMessageId: lastReadMessageId),
+      ),
+      operationName: 'mark conversation read',
+      diagnostics: {
+        'conversation_id': conversationId,
+        'last_read_message_id': lastReadMessageId,
+      },
+    );
+  }
+
+  @override
+  Future<ConversationPage> syncConversations({
+    String? since,
+    int? limit,
+  }) async {
+    final page = await RepositoryUtils.handleApiCall<SyncPageSchema>(
+      apiCall: () => _api.messages.totemMessagesMobileApiSyncMessages(
+        since: since,
+        limit: limit,
+      ),
+      operationName: 'sync conversations',
+      retryOnNetworkError: true,
+    );
+    return ConversationPage(
+      items: page.items.map(_conversationFromSchema).toList(growable: false),
+      nextCursor: page.nextCursor,
+      totalUnreadCount: page.totalUnreadCount,
+    );
+  }
+
+  @override
+  Future<Conversation> openConversation(String recipientSlug) async {
+    final conversation =
+        await RepositoryUtils.handleApiCall<ConversationSummarySchema>(
+          apiCall: () => _api.messages.totemMessagesMobileApiOpenConversation(
+            body: OpenConversationSchema(recipientSlug: recipientSlug),
+          ),
+          operationName: 'open conversation',
+          diagnostics: {'recipient_slug': recipientSlug},
+        );
+    return _conversationFromSchema(conversation);
+  }
+
+  @override
+  Future<RecipientDirectorySchema> getRecipients({
+    required RecipientDirectoryKind kind,
+    String? query,
+    String? cursor,
+    int? limit,
+  }) {
+    return RepositoryUtils.handleApiCall<RecipientDirectorySchema>(
+      apiCall: () => _api.messages.totemMessagesMobileApiListRecipients(
+        kind: kind,
+        query: query,
+        cursor: cursor,
+        limit: limit,
+      ),
+      operationName: 'list message recipients',
+      retryOnNetworkError: true,
+      diagnostics: {'recipient_kind': kind.value},
+    );
+  }
+
+  @override
+  Future<SessionParticipantPageSchema> getSessionParticipants(
+    String sessionSlug, {
+    String? cursor,
+    int? limit,
+  }) {
+    return RepositoryUtils.handleApiCall<SessionParticipantPageSchema>(
+      apiCall: () =>
+          _api.messages.totemMessagesMobileApiListSessionParticipants(
+            sessionSlug: sessionSlug,
+            cursor: cursor,
+            limit: limit,
+          ),
+      operationName: 'list session message participants',
+      retryOnNetworkError: true,
+      diagnostics: {'session_slug': sessionSlug},
+    );
+  }
+
+  @override
+  Future<SessionMessageResultSchema> sendSessionMessage(
+    String sessionSlug, {
+    required List<String> recipientSlugs,
+    required String text,
+    required String clientRequestId,
+  }) {
+    return RepositoryUtils.handleApiCall<SessionMessageResultSchema>(
+      apiCall: () => _api.messages.totemMessagesMobileApiSendSessionMessage(
+        sessionSlug: sessionSlug,
+        body: SendSessionMessagesSchema(
+          recipientSlugs: recipientSlugs,
+          text: text,
+          clientRequestId: clientRequestId,
+        ),
+      ),
+      operationName: 'send session message',
+      diagnostics: {
+        'session_slug': sessionSlug,
+        'recipient_count': recipientSlugs.length,
+      },
+    );
+  }
+
+  static Conversation _conversationFromSchema(ConversationSummarySchema value) {
+    return Conversation(
+      id: value.id,
+      peer: _publicUserFromPeer(value.peer),
+      lastMessage: value.lastMessage == null
+          ? null
+          : Message(
+              id: value.lastMessage!.id,
+              conversationId: value.id,
+              senderId: value.lastMessage!.senderSlug,
+              text: value.lastMessage!.text,
+              sentAt: value.lastMessage!.createdAt,
+              isOwn: value.lastMessage!.isMine,
+            ),
+      unreadCount: value.unreadCount,
+      updatedAt: value.updatedAt,
+    );
+  }
+
+  static Message _messageFromSchema(
+    MessageSchema value,
+    String conversationId,
+  ) {
+    return Message(
+      id: value.id,
+      conversationId: conversationId,
+      senderId: value.senderSlug,
+      text: value.text,
+      sentAt: value.createdAt,
+      isOwn: value.isMine,
+      clientMessageId: value.clientMessageId,
+      cursor: value.cursor,
+    );
+  }
+
+  static PublicUserSchema _publicUserFromPeer(MessagePeerSchema value) {
+    return PublicUserSchema(
+      profileAvatarType: value.profileAvatarType ?? ProfileAvatarTypeEnum.td,
+      dateCreated: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      name: value.name,
+      slug: value.slug,
+      profileAvatarSeed: value.profileAvatarSeed,
+      profileImage: value.profileImage,
+    );
+  }
 }
 
 @riverpod
-MessagesRepository messagesRepository(Ref ref) => _StubMessagesRepository();
+MessagesRepository messagesRepository(Ref ref) =>
+    ApiMessagesRepository(ref.watch(apiServiceProvider));

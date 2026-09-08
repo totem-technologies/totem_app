@@ -1,144 +1,152 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/messages/providers/conversations_provider.dart';
+import 'package:totem_core/features/messages/repositories/messages_repository.dart';
 import 'package:totem_core/shared/router.dart';
 
-import '../mocks/message_mocks.dart';
-
-/// Keeper-only screen showing a session's registered participants.
-///
-/// Lets the keeper message individual participants or trigger a bulk message
-/// to everyone in the session. Participant data is mocked until the backend
-/// ships the relevant endpoint.
-class SessionParticipantsScreen extends StatelessWidget {
+class SessionParticipantsScreen extends ConsumerWidget {
   const SessionParticipantsScreen({required this.session, super.key});
 
   final SessionDetailSchema session;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    const participants = mockSessionParticipants;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final participants = ref.watch(
+      sessionMessageParticipantsProvider(session.slug),
+    );
     final date = DateFormat(
-      "EEEE, MMM d · h:mm a",
+      'EEEE, MMM d · h:mm a',
     ).format(session.start.toLocal());
-    final subtitle =
-        '${participants.length} participants  ·  ${session.duration} min';
 
     return Scaffold(
       backgroundColor: AppTheme.surfaceCard,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _NavBar(),
-          const Divider(height: 1, thickness: 1, color: AppTheme.divider),
-
-          // Session header
-          Container(
-            width: double.infinity,
-            color: AppTheme.surfaceCard,
-            padding: const EdgeInsetsDirectional.fromSTEB(20, 28, 20, 24),
+          SafeArea(
+            bottom: false,
+            child: SizedBox(
+              height: 52,
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => context.pop(),
+                    icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                  ),
+                  Text(
+                    'Session participants',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1, color: AppTheme.divider),
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 24, 20, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 5,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 12,
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: AppTheme.messagePurple,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        session.title,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: AppTheme.textHeading,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 28,
-                          height: 1.2,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                 Text(
-                  date,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textMuted,
-                    height: 1.5,
+                  session.title,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppTheme.textHeading,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textMuted,
-                    height: 1.5,
-                  ),
-                ),
+                const SizedBox(height: 5),
+                Text(date, style: const TextStyle(color: AppTheme.textMuted)),
               ],
             ),
           ),
-
-          const Divider(height: 1, thickness: 1, color: AppTheme.divider),
-
-          // Participants list
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsetsDirectional.fromSTEB(16, 20, 16, 32),
-              children: [
-                _SectionLabel('PARTICIPANTS · ${participants.length}'),
-                const SizedBox(height: 12),
-
-                // Bulk message button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => context.push(
-                      RouteNames.composeToParticipants(session.slug),
-                      extra: session,
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.mauve,
-                      foregroundColor: AppTheme.white,
-                      shape: const StadiumBorder(),
-                      minimumSize: const Size.fromHeight(48),
-                      elevation: 0,
-                      shadowColor: AppTheme.mauve.withValues(alpha: 0.15),
-                      textStyle: const TextStyle(
-                        fontFamily: AppTheme.fontFamilySans,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                        height: 1.3,
-                      ),
-                    ),
-                    child: const Text('Message All Participants'),
-                  ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => context.push(
+                  RouteNames.composeToParticipants(session.slug),
+                  extra: session,
                 ),
-
-                const SizedBox(height: 16),
-
-                for (var i = 0; i < participants.length; i++) ...[
-                  _ParticipantCard(
-                    participant: participants[i],
-                    color: AppTheme
-                        .avatarPalette[i % AppTheme.avatarPalette.length],
-                    onTap: () => _showParticipantDialog(
-                      context,
-                      participants[i],
-                      AppTheme.avatarPalette[i % AppTheme.avatarPalette.length],
-                    ),
+                child: const Text('Message All Participants'),
+              ),
+            ),
+          ),
+          Expanded(
+            child: participants.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (_, _) => Center(
+                child: TextButton(
+                  onPressed: () => ref.invalidate(
+                    sessionMessageParticipantsProvider(session.slug),
                   ),
-                  if (i != participants.length - 1) const SizedBox(height: 10),
-                ],
-              ],
+                  child: const Text('Could not load participants. Try again.'),
+                ),
+              ),
+              data: (state) {
+                if (state.participants.isEmpty) {
+                  return const Center(
+                    child: Text('No participants are available to message.'),
+                  );
+                }
+                return NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.metrics.extentAfter < 240) {
+                      ref
+                          .read(
+                            sessionMessageParticipantsProvider(
+                              session.slug,
+                            ).notifier,
+                          )
+                          .loadMore();
+                    }
+                    return false;
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsetsDirectional.fromSTEB(
+                      16,
+                      8,
+                      16,
+                      32,
+                    ),
+                    itemCount:
+                        state.participants.length +
+                        (state.isLoadingMore || state.loadMoreError != null
+                            ? 1
+                            : 0),
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      if (index == state.participants.length) {
+                        if (state.loadMoreError != null) {
+                          return TextButton(
+                            onPressed: () => ref
+                                .read(
+                                  sessionMessageParticipantsProvider(
+                                    session.slug,
+                                  ).notifier,
+                                )
+                                .loadMore(),
+                            child: const Text('Retry loading more'),
+                          );
+                        }
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      return _ParticipantCard(
+                        participant: state.participants[index],
+                        onTap: () => _showParticipantProfile(
+                          context,
+                          ref,
+                          state.participants[index],
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -146,110 +154,46 @@ class SessionParticipantsScreen extends StatelessWidget {
     );
   }
 
-  void _showParticipantDialog(
+  Future<void> _showParticipantProfile(
     BuildContext context,
-    MockParticipant participant,
-    Color color,
-  ) {
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.4),
-      builder: (_) => Dialog(
-        backgroundColor: AppTheme.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
-        child: _ParticipantDialog(
-          participant: participant,
-          color: color,
-          onSendMessage: () {
-            Navigator.of(context).pop();
-            _navigateToThread(context, participant);
-          },
-        ),
-      ),
-    );
-  }
-
-  /// Opens a thread with [participant] without replacing this screen.
-  ///
-  /// Keepers came here from a session, so back should return to the
-  /// participant list — unlike [NewMessageScreen], which uses
-  /// [GoRouter.pushReplacement] to drop the picker.
-  void _navigateToThread(BuildContext context, MockParticipant participant) {
-    context.push(
-      RouteNames.messageThread(participant.id),
-      extra: conversationFromMockParticipant(participant),
-    );
-  }
-}
-
-class _NavBar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Container(
-        color: AppTheme.surfaceCard,
-        height: 52,
-        padding: const EdgeInsetsDirectional.only(start: 12, end: 20),
-        child: Row(
-          children: [
-            IconButton(
-              onPressed: () => context.pop(),
-              icon: const Icon(
-                Icons.arrow_back_ios_new,
-                size: 18,
-                color: AppTheme.textHeading,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              'Session',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.textHeading,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: AppTheme.textMuted,
-        fontSize: 10,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 1.2,
-      ),
-    );
-  }
+    WidgetRef ref,
+    SessionParticipantSchema participant,
+  ) => showDialog<void>(
+    context: context,
+    builder: (dialogContext) => _ParticipantProfileDialog(
+      participant: participant,
+      onSendMessage: () async {
+        try {
+          final conversation = await ref
+              .read(messagesRepositoryProvider)
+              .openConversation(participant.profile.slug);
+          ref.read(conversationsProvider.notifier).upsert(conversation);
+          if (!dialogContext.mounted) return;
+          Navigator.of(dialogContext).pop();
+          if (context.mounted) {
+            context.push(RouteNames.messageThread(conversation.id));
+          }
+        } catch (_) {
+          if (dialogContext.mounted) {
+            ScaffoldMessenger.of(dialogContext).showSnackBar(
+              const SnackBar(content: Text('This participant is unavailable.')),
+            );
+          }
+        }
+      },
+    ),
+  );
 }
 
 class _ParticipantCard extends StatelessWidget {
-  const _ParticipantCard({
-    required this.participant,
-    required this.color,
-    required this.onTap,
-  });
+  const _ParticipantCard({required this.participant, required this.onTap});
 
-  final MockParticipant participant;
-  final Color color;
+  final SessionParticipantSchema participant;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final profile = participant.profile;
     return Material(
       color: AppTheme.surfaceCard,
       borderRadius: BorderRadius.circular(16),
@@ -257,70 +201,36 @@ class _ParticipantCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Ink(
-          height: 88,
+          height: 72,
           padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: AppTheme.surfaceCard,
             borderRadius: BorderRadius.circular(16),
             boxShadow: AppTheme.cardShadow,
           ),
           child: Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Text(
-                  participant.name.characters.first.toUpperCase(),
-                  style: const TextStyle(
-                    color: AppTheme.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+              CircleAvatar(child: Text(profile.name.characters.first)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 2,
                   children: [
                     Text(
-                      participant.name,
+                      profile.name,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: AppTheme.textHeading,
                         fontWeight: FontWeight.w600,
-                        fontSize: 16,
                       ),
                     ),
                     Text(
-                      participant.email,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textMuted,
-                        fontSize: 12,
-                      ),
-                    ),
-                    Text(
-                      participant.joinedSessions,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.messagePurple,
-                        fontSize: 12,
-                      ),
+                      '${participant.sessionsCount} sessions',
+                      style: const TextStyle(color: AppTheme.textMuted),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              const Icon(
-                Icons.chevron_right,
-                color: AppTheme.chevron,
-                size: 24,
-              ),
+              const Icon(Icons.chevron_right, color: AppTheme.chevron),
             ],
           ),
         ),
@@ -329,155 +239,33 @@ class _ParticipantCard extends StatelessWidget {
   }
 }
 
-class _ParticipantDialog extends StatelessWidget {
-  const _ParticipantDialog({
+class _ParticipantProfileDialog extends StatelessWidget {
+  const _ParticipantProfileDialog({
     required this.participant,
-    required this.color,
     required this.onSendMessage,
   });
 
-  final MockParticipant participant;
-  final Color color;
-  final VoidCallback onSendMessage;
+  final SessionParticipantSchema participant;
+  final Future<void> Function() onSendMessage;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(24, 28, 24, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Avatar
-          Container(
-            width: 72,
-            height: 72,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(36),
-            ),
-            child: Text(
-              participant.name.characters.first.toUpperCase(),
-              style: const TextStyle(
-                color: AppTheme.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          // Name
-          Text(
-            participant.name,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: AppTheme.textHeading,
-              fontWeight: FontWeight.w600,
-              fontSize: 21,
-              height: 1.2,
-            ),
-          ),
-
-          const SizedBox(height: 4),
-
-          // Email
-          Text(
-            participant.email,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: AppTheme.textMuted,
-              fontSize: 12,
-              height: 1.5,
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Stats row
-          Row(
-            children: [
-              Expanded(
-                child: _StatCell(
-                  value: '${participant.sessions}',
-                  label: 'Sessions',
-                ),
-              ),
-              Expanded(
-                child: _StatCell(
-                  value: '${participant.reviews}',
-                  label: 'Reviews',
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // Send message button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: onSendMessage,
-              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 22),
-              label: const Text('Send message'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.messagePurple,
-                foregroundColor: AppTheme.white,
-                shape: const StadiumBorder(),
-                minimumSize: const Size.fromHeight(50),
-                elevation: 0,
-                shadowColor: AppTheme.messagePurple.withValues(alpha: 0.32),
-                textStyle: const TextStyle(
-                  fontFamily: AppTheme.fontFamilySans,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                  height: 1.3,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatCell extends StatelessWidget {
-  const _StatCell({required this.value, required this.label});
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      spacing: 2,
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(participant.profile.name),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          value,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            color: AppTheme.textHeading,
-            fontWeight: FontWeight.w600,
-            fontSize: 28,
-            height: 1.2,
-          ),
-        ),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: AppTheme.textMuted,
-            fontSize: 12,
-            height: 1.5,
-          ),
-        ),
+        Text('${participant.sessionsCount} sessions attended'),
+        if (participant.reviewsCount case final reviews?)
+          Text('$reviews reviews'),
       ],
-    );
-  }
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Close'),
+      ),
+      FilledButton(onPressed: onSendMessage, child: const Text('Send message')),
+    ],
+  );
 }

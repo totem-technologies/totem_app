@@ -13,7 +13,7 @@ part of 'thread_provider.dart';
 final threadProvider = ThreadNotifierFamily._();
 
 final class ThreadNotifierProvider
-    extends $AsyncNotifierProvider<ThreadNotifier, List<Message>> {
+    extends $AsyncNotifierProvider<ThreadNotifier, ThreadState> {
   ThreadNotifierProvider._({
     required ThreadNotifierFamily super.from,
     required String super.argument,
@@ -50,15 +50,15 @@ final class ThreadNotifierProvider
   }
 }
 
-String _$threadNotifierHash() => r'bb55d2342514062699cf069a1a1304f5b729c7e5';
+String _$threadNotifierHash() => r'a31d9438274ad038ab40b7f8d52c756af4a132ce';
 
 final class ThreadNotifierFamily extends $Family
     with
         $ClassFamilyOverride<
           ThreadNotifier,
-          AsyncValue<List<Message>>,
-          List<Message>,
-          FutureOr<List<Message>>,
+          AsyncValue<ThreadState>,
+          ThreadState,
+          FutureOr<ThreadState>,
           String
         > {
   ThreadNotifierFamily._()
@@ -77,20 +77,20 @@ final class ThreadNotifierFamily extends $Family
   String toString() => r'threadProvider';
 }
 
-abstract class _$ThreadNotifier extends $AsyncNotifier<List<Message>> {
+abstract class _$ThreadNotifier extends $AsyncNotifier<ThreadState> {
   late final _$args = ref.$arg as String;
   String get conversationId => _$args;
 
-  FutureOr<List<Message>> build(String conversationId);
+  FutureOr<ThreadState> build(String conversationId);
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
-    final ref = this.ref as $Ref<AsyncValue<List<Message>>, List<Message>>;
+    final ref = this.ref as $Ref<AsyncValue<ThreadState>, ThreadState>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<List<Message>>, List<Message>>,
-              AsyncValue<List<Message>>,
+              AnyNotifier<AsyncValue<ThreadState>, ThreadState>,
+              AsyncValue<ThreadState>,
               Object?,
               Object?
             >;

@@ -5,7 +5,11 @@ import 'conversation_summary_schema.dart';
 
 @immutable
 final class ConversationPageSchema {
-  const ConversationPageSchema({required this.items, required this.nextCursor});
+  const ConversationPageSchema({
+    required this.items,
+    required this.nextCursor,
+    required this.totalUnreadCount,
+  });
 
   factory ConversationPageSchema.fromJson(Map<String, dynamic> json) {
     return ConversationPageSchema(
@@ -16,6 +20,7 @@ final class ConversationPageSchema {
           )
           .toList(),
       nextCursor: json['next_cursor'] as String?,
+      totalUnreadCount: (json['total_unread_count'] as num).toInt(),
     );
   }
 
@@ -23,26 +28,33 @@ final class ConversationPageSchema {
 
   final String? nextCursor;
 
+  final int totalUnreadCount;
+
   Map<String, dynamic> toJson() {
     return {
       'items': items.map((e) => e.toJson()).toList(),
       'next_cursor': ?nextCursor,
+      'total_unread_count': totalUnreadCount,
     };
   }
 
   static bool canParse(Map<String, dynamic> json) {
     return json.containsKey('items') &&
         json.containsKey('next_cursor') &&
-        json['next_cursor'] is String;
+        json['next_cursor'] is String &&
+        json.containsKey('total_unread_count') &&
+        json['total_unread_count'] is num;
   }
 
   ConversationPageSchema copyWith({
     List<ConversationSummarySchema>? items,
     String? Function()? nextCursor,
+    int? totalUnreadCount,
   }) {
     return ConversationPageSchema(
       items: items ?? this.items,
       nextCursor: nextCursor != null ? nextCursor() : this.nextCursor,
+      totalUnreadCount: totalUnreadCount ?? this.totalUnreadCount,
     );
   }
 
@@ -51,16 +63,17 @@ final class ConversationPageSchema {
     return identical(this, other) ||
         other is ConversationPageSchema &&
             listEquals(items, other.items) &&
-            nextCursor == other.nextCursor;
+            nextCursor == other.nextCursor &&
+            totalUnreadCount == other.totalUnreadCount;
   }
 
   @override
   int get hashCode {
-    return Object.hash(Object.hashAll(items), nextCursor);
+    return Object.hash(Object.hashAll(items), nextCursor, totalUnreadCount);
   }
 
   @override
   String toString() {
-    return 'ConversationPageSchema(items: $items, nextCursor: $nextCursor)';
+    return 'ConversationPageSchema(items: $items, nextCursor: $nextCursor, totalUnreadCount: $totalUnreadCount)';
   }
 }

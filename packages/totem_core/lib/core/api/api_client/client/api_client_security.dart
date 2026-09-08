@@ -83,6 +83,16 @@ final class ClientSecurity {
         const ApiSecurityRequirement({'JWTAuth': []}),
         const ApiSecurityRequirement({'SessionAuth': []}),
       ];
+  static final totemMessagesMobileApiGetConversationRequirements =
+      <ApiSecurityRequirement>[
+        const ApiSecurityRequirement({'JWTAuth': []}),
+        const ApiSecurityRequirement({'SessionAuth': []}),
+      ];
+  static final totemMessagesMobileApiListRecipientsRequirements =
+      <ApiSecurityRequirement>[
+        const ApiSecurityRequirement({'JWTAuth': []}),
+        const ApiSecurityRequirement({'SessionAuth': []}),
+      ];
   static final totemMessagesMobileApiListMessagesRequirements =
       <ApiSecurityRequirement>[
         const ApiSecurityRequirement({'JWTAuth': []}),
@@ -104,6 +114,11 @@ final class ClientSecurity {
         const ApiSecurityRequirement({'SessionAuth': []}),
       ];
   static final totemMessagesMobileApiListSessionParticipantsRequirements =
+      <ApiSecurityRequirement>[
+        const ApiSecurityRequirement({'JWTAuth': []}),
+        const ApiSecurityRequirement({'SessionAuth': []}),
+      ];
+  static final totemMessagesMobileApiSendSessionMessageRequirements =
       <ApiSecurityRequirement>[
         const ApiSecurityRequirement({'JWTAuth': []}),
         const ApiSecurityRequirement({'SessionAuth': []}),

@@ -4,8 +4,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/router.dart';
 
-/// Keeper-only card on the session details page that lets the space owner
-/// send a message to every participant registered for the session.
+/// Keeper-only card that opens the server-authorized session participant list.
 class KeeperMessageParticipantsCard extends StatelessWidget {
   const KeeperMessageParticipantsCard({required this.session, super.key});
 
@@ -62,7 +61,7 @@ class KeeperMessageParticipantsCard extends StatelessWidget {
             ),
           ),
           const Text(
-            'Message All Participants',
+            'Message Participants',
             style: TextStyle(
               color: _darkNavy,
               fontSize: 18,
@@ -71,8 +70,7 @@ class KeeperMessageParticipantsCard extends StatelessWidget {
             ),
           ),
           const Text(
-            'Send an individual message to every participant registered '
-            'for this session.',
+            'Choose one participant to start a private conversation.',
             style: TextStyle(color: _mutedGray, fontSize: 12, height: 1.5),
           ),
           SizedBox(
@@ -95,7 +93,7 @@ class KeeperMessageParticipantsCard extends StatelessWidget {
                   height: 1.3,
                 ),
               ),
-              child: const Text('Message All Participants'),
+              child: const Text('View Participants'),
             ),
           ),
         ],

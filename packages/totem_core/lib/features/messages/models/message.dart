@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-enum MessageStatus { sent, delivered, read }
+enum MessageStatus { pending, sent, failed }
 
 @immutable
 class Message {
@@ -12,6 +12,8 @@ class Message {
     required this.sentAt,
     this.isOwn = false,
     this.status = MessageStatus.sent,
+    this.clientMessageId,
+    this.cursor,
   });
 
   final String id;
@@ -21,6 +23,10 @@ class Message {
   final DateTime sentAt;
   final bool isOwn;
   final MessageStatus status;
+  final String? clientMessageId;
+
+  /// Opaque server cursor used only for incremental message requests.
+  final String? cursor;
 
   Message copyWith({
     String? id,
@@ -30,6 +36,8 @@ class Message {
     DateTime? sentAt,
     bool? isOwn,
     MessageStatus? status,
+    String? Function()? clientMessageId,
+    String? Function()? cursor,
   }) {
     return Message(
       id: id ?? this.id,
@@ -39,6 +47,10 @@ class Message {
       sentAt: sentAt ?? this.sentAt,
       isOwn: isOwn ?? this.isOwn,
       status: status ?? this.status,
+      clientMessageId: clientMessageId != null
+          ? clientMessageId()
+          : this.clientMessageId,
+      cursor: cursor != null ? cursor() : this.cursor,
     );
   }
 

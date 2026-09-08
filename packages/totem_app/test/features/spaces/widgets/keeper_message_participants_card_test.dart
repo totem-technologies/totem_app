@@ -71,14 +71,12 @@ void main() {
       await tester.pumpWidget(wrapCard());
 
       expect(find.text('\u{1F512}  Keeper Only'), findsOneWidget);
-      expect(find.text('Message All Participants'), findsNWidgets(2));
+      expect(find.text('Message Participants'), findsOneWidget);
       expect(
-        find.text(
-          'Send an individual message to every participant registered '
-          'for this session.',
-        ),
+        find.text('Choose one participant to start a private conversation.'),
         findsOneWidget,
       );
+      expect(find.text('Message All Participants'), findsNothing);
       expect(find.byType(ElevatedButton), findsOneWidget);
     });
 

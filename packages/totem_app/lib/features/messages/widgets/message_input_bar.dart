@@ -2,9 +2,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 
 class MessageInputBar extends StatefulWidget {
-  const MessageInputBar({super.key, this.onSend});
+  const MessageInputBar({
+    super.key,
+    required this.onSend,
+    required this.isSending,
+  });
 
-  final ValueChanged<String>? onSend;
+  final Future<bool> Function(String text) onSend;
+  final bool isSending;
 
   @override
   State<MessageInputBar> createState() => _MessageInputBarState();
@@ -19,15 +24,15 @@ class _MessageInputBarState extends State<MessageInputBar> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
-    widget.onSend?.call(text);
-    _controller.clear();
+    if (text.isEmpty || widget.isSending) return;
+    if (await widget.onSend(text) && mounted) _controller.clear();
   }
 
   @override
   Widget build(BuildContext context) {
+    final enabled = !widget.isSending;
     return Container(
       decoration: const BoxDecoration(
         color: AppTheme.surfaceCard,
@@ -45,6 +50,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
               Expanded(
                 child: TextFormField(
                   controller: _controller,
+                  enabled: enabled,
                   maxLines: 1,
                   textInputAction: TextInputAction.send,
                   onFieldSubmitted: (_) => _submit(),
@@ -80,7 +86,11 @@ class _MessageInputBarState extends State<MessageInputBar> {
                 ),
               ),
               const SizedBox(width: 8),
-              _SendButton(controller: _controller, onSubmit: _submit),
+              _SendButton(
+                controller: _controller,
+                isSending: widget.isSending,
+                onSubmit: _submit,
+              ),
             ],
           ),
         ),
@@ -90,10 +100,15 @@ class _MessageInputBarState extends State<MessageInputBar> {
 }
 
 class _SendButton extends StatefulWidget {
-  const _SendButton({required this.controller, required this.onSubmit});
+  const _SendButton({
+    required this.controller,
+    required this.isSending,
+    required this.onSubmit,
+  });
 
   final TextEditingController controller;
-  final VoidCallback onSubmit;
+  final bool isSending;
+  final Future<void> Function() onSubmit;
 
   @override
   State<_SendButton> createState() => _SendButtonState();
@@ -121,20 +136,34 @@ class _SendButtonState extends State<_SendButton> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _hasText ? widget.onSubmit : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 45,
-        height: 45,
-        decoration: BoxDecoration(
-          color: _hasText ? AppTheme.mauve : AppTheme.messageGray,
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.arrow_forward_rounded,
-          color: AppTheme.white,
-          size: 22,
+    final enabled = _hasText && !widget.isSending;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: widget.isSending ? 'Sending message' : 'Send message',
+      child: GestureDetector(
+        onTap: enabled ? widget.onSubmit : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 45,
+          height: 45,
+          decoration: BoxDecoration(
+            color: enabled ? AppTheme.mauve : AppTheme.messageGray,
+            shape: BoxShape.circle,
+          ),
+          child: widget.isSending
+              ? const Padding(
+                  padding: EdgeInsets.all(13),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppTheme.white,
+                  ),
+                )
+              : const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: AppTheme.white,
+                  size: 22,
+                ),
         ),
       ),
     );
