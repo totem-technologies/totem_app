@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -282,10 +282,7 @@ class ActionBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: pillFill,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: pillStroke,
-                    width: 1.5,
-                  ),
+                  border: Border.all(color: pillStroke, width: 1.5),
                 ),
                 child: Padding(
                   padding: EdgeInsetsDirectional.symmetric(
@@ -298,9 +295,7 @@ class ActionBar extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       spacing: metrics.gap,
-                      children: [
-                        for (final child in children) child,
-                      ],
+                      children: [for (final child in children) child],
                     ),
                   ),
                 ),
@@ -417,7 +412,7 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
         ActionBarMicButton(
           participant: null,
           audioTrack: widget.previewAudioTrack,
-          onToggle: !widget.locked ? (v) async => widget.onToggleMic() : null,
+          onToggle: !widget.locked ? (v) => widget.onToggleMic() : null,
         ),
         // ActionBarSpeakerButton(
         //   isSpeakerOn: widget.isSpeakerOn,
@@ -502,12 +497,7 @@ class SessionActionBar extends ConsumerWidget {
       case RoomScreen.receiving:
         return ActionBar(
           key: SessionActionBar.actionBarKey,
-          children: [
-            microphoneButton,
-            cameraButton,
-            chatButton,
-            moreButton,
-          ],
+          children: [microphoneButton, cameraButton, chatButton, moreButton],
         );
     }
   }

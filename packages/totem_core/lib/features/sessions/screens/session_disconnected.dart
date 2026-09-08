@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
@@ -312,10 +312,7 @@ class _LandscapeLayout extends StatelessWidget {
                     ),
                   ),
                 ),
-              _ActionButtons(
-                isBanned: isBanned,
-                onRefreshHome: onRefreshHome,
-              ),
+              _ActionButtons(isBanned: isBanned, onRefreshHome: onRefreshHome),
             ],
           ),
         ],
@@ -563,34 +560,31 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
         const TextSpan(text: '.'),
       ],
     );
-    return Text.rich(
-      switch (widget.reason) {
-        SessionDisconnectedReason.keeperAbsent => const TextSpan(
-          text:
-              'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
-        ),
-        SessionDisconnectedReason.movedToAnotherDevice => const TextSpan(
-          text:
-              'This account joined the same session on another device. Continue there or rejoin from this device.',
-        ),
-        SessionDisconnectedReason.removed => removedSpan,
-        SessionDisconnectedReason.keeperEnded ||
-        SessionDisconnectedReason.roomEmpty => const TextSpan(
-          text:
-              'Thank you for joining!\nWe hope you found the session enjoyable.',
-        ),
-        SessionDisconnectedReason.banned => TextSpan(
-          text:
-              'You have been removed from this session due to a violation of our community guidelines.',
-          children: [
-            const TextSpan(text: '\n'),
-            removedSpan,
-          ],
-        ),
-        SessionDisconnectedReason.other => const TextSpan(text: ''),
-      },
-      textAlign: TextAlign.center,
-    );
+    return Text.rich(switch (widget.reason) {
+      SessionDisconnectedReason.keeperAbsent => const TextSpan(
+        text:
+            'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
+      ),
+      SessionDisconnectedReason.movedToAnotherDevice => const TextSpan(
+        text:
+            'This account joined the same session on another device. Continue there or rejoin from this device.',
+      ),
+      SessionDisconnectedReason.removed => removedSpan,
+      SessionDisconnectedReason.keeperEnded ||
+      SessionDisconnectedReason.roomEmpty => const TextSpan(
+        text:
+            'Thank you for joining!\nWe hope you found the session enjoyable.',
+      ),
+      SessionDisconnectedReason.banned => TextSpan(
+        text:
+            'You have been removed from this session due to a violation of our community guidelines.',
+        children: [
+          const TextSpan(text: '\n'),
+          removedSpan,
+        ],
+      ),
+      SessionDisconnectedReason.other => const TextSpan(text: ''),
+    }, textAlign: TextAlign.center);
   }
 }
 
@@ -689,9 +683,9 @@ class _NextSessionsSection extends ConsumerWidget {
               space,
               nextEvents: [nextSession],
             ),
-            onTap: () async {
+            onTap: () {
               onRefreshHome();
-              return TotemRouter.instance.toSpaceSession(
+              TotemRouter.instance.toSpaceSession(
                 context,
                 spaceSlug,
                 nextSession.slug,
@@ -712,7 +706,7 @@ class _NextSessionsSection extends ConsumerWidget {
             recSession,
             onTap: () async {
               onRefreshHome();
-              return TotemRouter.instance.toSpaceSession(
+              TotemRouter.instance.toSpaceSession(
                 context,
                 recSession.space.slug,
                 recSession.slug,
@@ -761,10 +755,7 @@ class _NextSessionsSection extends ConsumerWidget {
 }
 
 class _ActionButtons extends StatelessWidget {
-  const _ActionButtons({
-    required this.isBanned,
-    required this.onRefreshHome,
-  });
+  const _ActionButtons({required this.isBanned, required this.onRefreshHome});
   final bool isBanned;
   final VoidCallback onRefreshHome;
 
@@ -789,9 +780,7 @@ class _ActionButtons extends StatelessWidget {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsetsDirectional.symmetric(horizontal: 58),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(26),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
       ),
       onPressed: () {
         onRefreshHome();

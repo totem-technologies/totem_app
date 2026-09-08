@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
@@ -172,9 +172,7 @@ void main() {
           status: RoomStatus.active,
           turnState: TurnState.idle,
           sessionSlug: 'test-session',
-          statusDetail: RoomStateStatusDetailActive(
-            ActiveDetail(),
-          ),
+          statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
           talkingOrder: ['user-1', 'user-2'],
           version: 1,
           roundNumber: 1,
@@ -197,9 +195,7 @@ void main() {
       expect(find.byType(ConfirmationDialog), findsNothing);
     });
 
-    testWidgets('force pass tile is not shown when not keeper', (
-      tester,
-    ) async {
+    testWidgets('force pass tile is not shown when not keeper', (tester) async {
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
 
       final state = _sessionState(
@@ -210,9 +206,7 @@ void main() {
           status: RoomStatus.active,
           turnState: TurnState.speaking,
           sessionSlug: 'test-session',
-          statusDetail: RoomStateStatusDetailActive(
-            ActiveDetail(),
-          ),
+          statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
           talkingOrder: ['user-1', 'user-2'],
           version: 1,
           roundNumber: 1,
@@ -229,9 +223,7 @@ void main() {
       expect(find.textContaining('Force pass'), findsNothing);
     });
 
-    testWidgets('force pass tile is not shown when not active', (
-      tester,
-    ) async {
+    testWidgets('force pass tile is not shown when not active', (tester) async {
       final state = _sessionState(
         roomState: const RoomState(
           keeper: 'keeper-1',
@@ -240,9 +232,7 @@ void main() {
           status: RoomStatus.waitingRoom,
           turnState: TurnState.speaking,
           sessionSlug: 'test-session',
-          statusDetail: RoomStateStatusDetailWaitingRoom(
-            WaitingRoomDetail(),
-          ),
+          statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
           talkingOrder: ['user-1', 'user-2'],
           version: 1,
           roundNumber: 1,
@@ -275,9 +265,7 @@ void main() {
             status: RoomStatus.active,
             turnState: TurnState.speaking,
             sessionSlug: 'test-session',
-            statusDetail: RoomStateStatusDetailActive(
-              ActiveDetail(),
-            ),
+            statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
             talkingOrder: ['user-1', 'user-2', 'user-3'],
             version: 1,
             roundNumber: 1,
@@ -318,9 +306,7 @@ void main() {
           status: RoomStatus.active,
           turnState: TurnState.speaking,
           sessionSlug: 'test-session',
-          statusDetail: RoomStateStatusDetailActive(
-            ActiveDetail(),
-          ),
+          statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
           talkingOrder: ['user-1', 'user-2'],
           version: 1,
           roundNumber: 1,
@@ -363,9 +349,7 @@ void main() {
           status: RoomStatus.active,
           turnState: TurnState.speaking,
           sessionSlug: 'test-session',
-          statusDetail: RoomStateStatusDetailActive(
-            ActiveDetail(),
-          ),
+          statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
           talkingOrder: [],
           version: 1,
           roundNumber: 1,

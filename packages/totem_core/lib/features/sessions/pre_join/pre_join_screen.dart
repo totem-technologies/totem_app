@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -135,9 +135,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
         context,
         retryPermissions: () async {
           final media = await ref
-              .read(
-                preJoinMediaControllerProvider(widget.sessionSlug).notifier,
-              )
+              .read(preJoinMediaControllerProvider(widget.sessionSlug).notifier)
               .retryFailedMedia();
           return media.canJoinOnWeb;
         },
@@ -200,10 +198,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     );
   }
 
-  Widget _buildPreJoinView(
-    PreJoinMediaState media,
-    PreJoinFlowState flow,
-  ) {
+  Widget _buildPreJoinView(PreJoinMediaState media, PreJoinFlowState flow) {
     final mediaController = ref.read(
       preJoinMediaControllerProvider(widget.sessionSlug).notifier,
     );

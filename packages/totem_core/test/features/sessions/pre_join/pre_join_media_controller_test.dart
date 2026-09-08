@@ -43,7 +43,7 @@ class _DelayedCameraFactory extends _PreviewTrackFactory {
   ) async {
     cameraRequested = true;
     await gate.future;
-    return super.createVideoTrack(cameraOptions);
+    return await super.createVideoTrack(cameraOptions);
   }
 }
 
@@ -55,7 +55,7 @@ class _DelayedMicrophoneFactory extends _PreviewTrackFactory {
   Future<LocalAudioTrack?> createAudioTrack() async {
     microphoneRequested = true;
     await gate.future;
-    return super.createAudioTrack();
+    return await super.createAudioTrack();
   }
 }
 
@@ -84,9 +84,7 @@ Future<PreJoinMediaState> _waitUntilInitialized(
   ProviderContainer container,
 ) async {
   for (var attempt = 0; attempt < 50; attempt++) {
-    final state = container.read(
-      preJoinMediaControllerProvider(_sessionSlug),
-    );
+    final state = container.read(preJoinMediaControllerProvider(_sessionSlug));
     if (state.initializationComplete) return state;
     await Future<void>.delayed(Duration.zero);
   }
@@ -101,9 +99,7 @@ ProviderContainer _createContainer(
     overrides: [
       preJoinPreviewTrackFactoryProvider.overrideWithValue(factory),
       if (controller != null)
-        preJoinMediaControllerProvider(
-          _sessionSlug,
-        ).overrideWith(controller),
+        preJoinMediaControllerProvider(_sessionSlug).overrideWith(controller),
     ],
   )..listen(
     preJoinMediaControllerProvider(_sessionSlug),

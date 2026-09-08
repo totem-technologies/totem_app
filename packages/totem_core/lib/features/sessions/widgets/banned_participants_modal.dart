@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -19,10 +19,8 @@ Future<void> showBannedParticipantsModal(
     showDragHandle: false,
     bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
     dialogBackgroundColor: const Color(0xFFF3F1E9),
-    bottomSheetBuilder: (context) => BannedParticipants(
-      session: session,
-      state: state,
-    ),
+    bottomSheetBuilder: (context) =>
+        BannedParticipants(session: session, state: state),
     largeScreenBuilder: (context) => SizedBox(
       width: 400,
       child: BannedParticipants(session: session, state: state),

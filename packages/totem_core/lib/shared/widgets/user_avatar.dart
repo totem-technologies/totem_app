@@ -1,8 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_boring_avatars/flutter_boring_avatars.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/shared/network.dart';
@@ -136,10 +136,7 @@ class UserAvatar extends ConsumerWidget {
           ),
           borderRadius: borderRadius,
           image: showImage && image != null
-              ? DecorationImage(
-                  image: image!,
-                  fit: BoxFit.cover,
-                )
+              ? DecorationImage(image: image!, fit: BoxFit.cover)
               : null,
         ),
         height: radius * 2,
@@ -242,10 +239,7 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer>
         child: Hero(
           tag: widget.heroTag,
           child: ClipOval(
-            child: Image(
-              image: widget.image,
-              fit: BoxFit.contain,
-            ),
+            child: Image(image: widget.image, fit: BoxFit.contain),
           ),
         ),
       ),

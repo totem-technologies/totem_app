@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 
 void main() {
@@ -17,11 +17,7 @@ void main() {
               Positioned(
                 top: 0,
                 left: 0,
-                child: SizedBox(
-                  key: buttonKey,
-                  width: 48,
-                  height: 48,
-                ),
+                child: SizedBox(key: buttonKey, width: 48, height: 48),
               ),
               EmojiBarOverlay(
                 buttonKey: buttonKey,
@@ -36,10 +32,7 @@ void main() {
 
     testWidgets('renders all default emojis', (tester) async {
       await tester.pumpWidget(
-        buildOverlay(
-          onEmojiSelected: (_) {},
-          onDismissed: () {},
-        ),
+        buildOverlay(onEmojiSelected: (_) {}, onDismissed: () {}),
       );
 
       // Complete initial layout and fade-in animation.
@@ -72,9 +65,7 @@ void main() {
       );
     });
 
-    testWidgets('selecting an emoji calls onEmojiSelected', (
-      tester,
-    ) async {
+    testWidgets('selecting an emoji calls onEmojiSelected', (tester) async {
       String? selectedEmoji;
       var dismissed = false;
 

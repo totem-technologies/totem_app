@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
@@ -141,9 +141,7 @@ void main() {
         ],
         child: const MaterialApp(
           home: SessionKeyboardShortcuts(
-            child: Scaffold(
-              body: SessionChatMessages(),
-            ),
+            child: Scaffold(body: SessionChatMessages()),
           ),
         ),
       ),
@@ -186,9 +184,7 @@ void main() {
         ],
         child: const MaterialApp(
           home: SessionKeyboardShortcuts(
-            child: Scaffold(
-              body: SessionChatMessages(),
-            ),
+            child: Scaffold(body: SessionChatMessages()),
           ),
         ),
       ),
@@ -384,9 +380,7 @@ void main() {
       expect(find.text('Hello chat'), findsNothing);
     });
 
-    testWidgets('sends a quick message on tap on desktop', (
-      tester,
-    ) async {
+    testWidgets('sends a quick message on tap on desktop', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       try {
         await pumpChatSheet(

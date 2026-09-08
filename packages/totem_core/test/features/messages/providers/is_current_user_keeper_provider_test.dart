@@ -20,9 +20,7 @@ UserSchema _user({required bool isStaff}) => UserSchema(
 ProviderContainer _containerFor(AuthState authState) {
   return ProviderContainer(
     overrides: [
-      authControllerProvider.overrideWith(
-        () => FakeAuthController(authState),
-      ),
+      authControllerProvider.overrideWith(() => FakeAuthController(authState)),
     ],
   );
 }

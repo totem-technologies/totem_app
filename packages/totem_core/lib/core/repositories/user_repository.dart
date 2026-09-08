@@ -9,9 +9,8 @@ part 'user_repository.g.dart';
 Future<PublicUserSchema> userProfile(Ref ref, String slug) {
   final apiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<PublicUserSchema>(
-    apiCall: () => apiService.users.totemUsersMobileApiGetUserProfile(
-      userSlug: slug,
-    ),
+    apiCall: () =>
+        apiService.users.totemUsersMobileApiGetUserProfile(userSlug: slug),
     operationName: 'get user profile',
   );
 }

@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
 
 void main() {
@@ -206,40 +206,28 @@ void main() {
 
   group('BarsViewItem Tests', () {
     test('should create with correct values', () {
-      const item = BarsViewItem(
-        value: 0.5,
-        color: Colors.red,
-      );
+      const item = BarsViewItem(value: 0.5, color: Colors.red);
 
       expect(item.value, equals(0.5));
       expect(item.color, equals(Colors.red));
     });
 
     test('should handle zero value', () {
-      const item = BarsViewItem(
-        value: 0,
-        color: Colors.blue,
-      );
+      const item = BarsViewItem(value: 0, color: Colors.blue);
 
       expect(item.value, equals(0.0));
       expect(item.color, equals(Colors.blue));
     });
 
     test('should handle maximum value', () {
-      const item = BarsViewItem(
-        value: 1,
-        color: Colors.green,
-      );
+      const item = BarsViewItem(value: 1, color: Colors.green);
 
       expect(item.value, equals(1.0));
       expect(item.color, equals(Colors.green));
     });
 
     test('should handle negative value', () {
-      const item = BarsViewItem(
-        value: -0.5,
-        color: Colors.yellow,
-      );
+      const item = BarsViewItem(value: -0.5, color: Colors.yellow);
 
       expect(item.value, equals(-0.5));
       expect(item.color, equals(Colors.yellow));
@@ -247,9 +235,7 @@ void main() {
   });
 
   group('BarsView Tests', () {
-    testWidgets('should render with empty elements list', (
-      tester,
-    ) async {
+    testWidgets('should render with empty elements list', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -265,20 +251,13 @@ void main() {
       expect(find.byType(Row), findsOneWidget);
     });
 
-    testWidgets('should render with single element', (
-      tester,
-    ) async {
+    testWidgets('should render with single element', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
             body: BarsView(
               options: AudioVisualizerWidgetOptions(),
-              elements: [
-                BarsViewItem(
-                  value: 0.5,
-                  color: Colors.red,
-                ),
-              ],
+              elements: [BarsViewItem(value: 0.5, color: Colors.red)],
             ),
           ),
         ),
@@ -288,9 +267,7 @@ void main() {
       expect(find.byType(AnimatedContainer), findsOneWidget);
     });
 
-    testWidgets('should render with multiple elements', (
-      tester,
-    ) async {
+    testWidgets('should render with multiple elements', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -310,9 +287,7 @@ void main() {
       expect(find.byType(AnimatedContainer), findsNWidgets(3));
     });
 
-    testWidgets('should have correct row properties', (
-      tester,
-    ) async {
+    testWidgets('should have correct row properties', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -328,19 +303,14 @@ void main() {
       );
 
       final row = tester.widget<Row>(
-        find.descendant(
-          of: find.byType(BarsView),
-          matching: find.byType(Row),
-        ),
+        find.descendant(of: find.byType(BarsView), matching: find.byType(Row)),
       );
 
       expect(row.mainAxisSize, equals(MainAxisSize.min));
       expect(row.mainAxisAlignment, equals(MainAxisAlignment.spaceAround));
     });
 
-    testWidgets('should handle different constraint sizes', (
-      tester,
-    ) async {
+    testWidgets('should handle different constraint sizes', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -369,9 +339,7 @@ void main() {
             body: SizedBox.shrink(
               child: BarsView(
                 options: AudioVisualizerWidgetOptions(),
-                elements: [
-                  BarsViewItem(value: 0.5, color: Colors.red),
-                ],
+                elements: [BarsViewItem(value: 0.5, color: Colors.red)],
               ),
             ),
           ),

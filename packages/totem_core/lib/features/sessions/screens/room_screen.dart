@@ -3,11 +3,11 @@ import 'dart:ui' as ui;
 
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -398,115 +398,90 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     }
 
     ref
-      ..listen(
-        emojiReactionsProvider,
-        (previous, next) {
-          if (!mounted) return;
+      ..listen(emojiReactionsProvider, (previous, next) {
+        if (!mounted) return;
 
-          final isListeningTurnScreen =
-              currentRoomScreen == RoomScreen.listening;
+        final isListeningTurnScreen = currentRoomScreen == RoomScreen.listening;
 
-          for (final reaction in next.where(
-            (reaction) => !reaction.displayed,
-          )) {
-            emojiNotifier.displayReaction(
-              context,
-              reaction,
-              isListeningTurnScreen,
-            );
-          }
-        },
-      )
-      ..listen(
-        sessionLivekitErrorProvider,
-        (previous, next) {
-          if (next == null) return;
-          if (identical(previous, next)) return;
-          _onLivekitError(next);
-        },
-      )
-      ..listen(
-        resolveCurrentScreenProvider,
-        (previous, next) {
-          if (previous != RoomScreen.receiving &&
-              next == RoomScreen.receiving) {
-            cuesService.playTotemReceivedCue();
-          }
-
-          if (next == RoomScreen.disconnected || next == RoomScreen.error) {
-            _clearTimeRemainingWarningTimer();
-            _dismissOfflineNotification(immediately: true);
-          }
-        },
-      )
-      ..listen(
-        roomStatusProvider,
-        (previous, next) {
-          final isRoomOpeningTransition =
-              previous == RoomStatus.waitingRoom && next == RoomStatus.active;
-          final isRoomClosingTransition =
-              previous == RoomStatus.active && next == RoomStatus.ended;
-
-          if (isRoomOpeningTransition || isRoomClosingTransition) {
-            cuesService.playSessionTransitionCue();
-          }
-
-          switch (next) {
-            case RoomStatus.waitingRoom:
-            case RoomStatus.active:
-              break;
-            case RoomStatus.ended:
-              _clearTimeRemainingWarningTimer();
-          }
-        },
-      )
-      ..listen(
-        connectionStateProvider,
-        (previous, next) {
-          if (next == RoomConnectionState.disconnected ||
-              next == RoomConnectionState.error) {
-            _clearTimeRemainingWarningTimer();
-          }
-        },
-      )
-      ..listen(
-        isOfflineProvider,
-        (previous, next) {
-          if (!next.hasValue) return;
-          _onConnectivityChanged(
-            next.value!,
-            wasOffline: previous?.value,
+        for (final reaction in next.where((reaction) => !reaction.displayed)) {
+          emojiNotifier.displayReaction(
+            context,
+            reaction,
+            isListeningTurnScreen,
           );
-        },
-      );
+        }
+      })
+      ..listen(sessionLivekitErrorProvider, (previous, next) {
+        if (next == null) return;
+        if (identical(previous, next)) return;
+        _onLivekitError(next);
+      })
+      ..listen(resolveCurrentScreenProvider, (previous, next) {
+        if (previous != RoomScreen.receiving && next == RoomScreen.receiving) {
+          cuesService.playTotemReceivedCue();
+        }
+
+        if (next == RoomScreen.disconnected || next == RoomScreen.error) {
+          _clearTimeRemainingWarningTimer();
+          _dismissOfflineNotification(immediately: true);
+        }
+      })
+      ..listen(roomStatusProvider, (previous, next) {
+        final isRoomOpeningTransition =
+            previous == RoomStatus.waitingRoom && next == RoomStatus.active;
+        final isRoomClosingTransition =
+            previous == RoomStatus.active && next == RoomStatus.ended;
+
+        if (isRoomOpeningTransition || isRoomClosingTransition) {
+          cuesService.playSessionTransitionCue();
+        }
+
+        switch (next) {
+          case RoomStatus.waitingRoom:
+          case RoomStatus.active:
+            break;
+          case RoomStatus.ended:
+            _clearTimeRemainingWarningTimer();
+        }
+      })
+      ..listen(connectionStateProvider, (previous, next) {
+        if (next == RoomConnectionState.disconnected ||
+            next == RoomConnectionState.error) {
+          _clearTimeRemainingWarningTimer();
+        }
+      })
+      ..listen(isOfflineProvider, (previous, next) {
+        if (!next.hasValue) return;
+        _onConnectivityChanged(next.value!, wasOffline: previous?.value);
+      });
 
     if (currentSession != null) {
       final audioRouteNotifier = ref.read(
         sessionDeviceControllerProvider(currentSession).notifier,
       );
 
-      ref.listen(
-        sessionDeviceControllerProvider(currentSession),
-        (previous, next) {
-          if (!mounted || previous == null) return;
+      ref.listen(sessionDeviceControllerProvider(currentSession), (
+        previous,
+        next,
+      ) {
+        if (!mounted || previous == null) return;
 
-          if (!audioRouteNotifier.audioRouteNotificationsEnabled) return;
+        if (!audioRouteNotifier.audioRouteNotificationsEnabled) return;
 
-          if (ref.read(connectionStateProvider) !=
-              RoomConnectionState.connected) {
-            return;
-          }
+        if (ref.read(connectionStateProvider) !=
+            RoomConnectionState.connected) {
+          return;
+        }
 
-          final routeChanged =
-              previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
-              previous.selectedAudioOutputDeviceId !=
-                  next.selectedAudioOutputDeviceId;
+        final routeChanged =
+            previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
+            previous.selectedAudioOutputDeviceId !=
+                next.selectedAudioOutputDeviceId;
 
-          if (!routeChanged) return;
+        if (!routeChanged) return;
 
-          _onAudioRouteChanged(next);
-        },
-      );
+        _onAudioRouteChanged(next);
+      });
     }
 
     if (currentSession == null || currentSessionEvent == null) {
@@ -644,9 +619,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           },
         );
       case RoomScreen.listening:
-        return ListeningTurnScreen(
-          session: session.session!,
-        );
+        return ListeningTurnScreen(session: session.session!);
     }
   }
 }

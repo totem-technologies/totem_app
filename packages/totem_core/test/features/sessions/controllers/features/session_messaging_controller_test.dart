@@ -1,4 +1,4 @@
-// ignore_for_file: depend_on_referenced_packages, cascade_invocations
+// ignore_for_file: cascade_invocations
 
 import 'dart:convert';
 
@@ -25,10 +25,7 @@ void main() {
       });
 
       test('SessionCommunicationTopics.chat has correct topic value', () {
-        expect(
-          SessionCommunicationTopics.chat.topic,
-          equals('lk-chat-topic'),
-        );
+        expect(SessionCommunicationTopics.chat.topic, equals('lk-chat-topic'));
       });
 
       test(
@@ -147,10 +144,7 @@ void main() {
             sessionMessagingControllerProvider(mockSession).notifier,
           );
 
-          final removedData2 = {
-            'identity': 'user-2',
-            'reason': 'remove',
-          };
+          final removedData2 = {'identity': 'user-2', 'reason': 'remove'};
 
           final removedEvent2 = DataReceivedEvent(
             data: utf8.encode(jsonEncode(removedData2)),

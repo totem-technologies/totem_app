@@ -4,10 +4,7 @@ import 'package:degenerate_runtime/degenerate_runtime.dart';
 
 @immutable
 final class PassStickEvent {
-  const PassStickEvent({
-    this.type = 'pass_stick',
-    this.prompt,
-  });
+  const PassStickEvent({this.type = 'pass_stick', this.prompt});
 
   factory PassStickEvent.fromJson(Map<String, dynamic> json) {
     return PassStickEvent(
@@ -21,10 +18,7 @@ final class PassStickEvent {
   final String? prompt;
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'prompt': ?prompt,
-    };
+    return {'type': type, 'prompt': ?prompt};
   }
 
   static bool canParse(Map<String, dynamic> json) {

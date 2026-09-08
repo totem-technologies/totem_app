@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -13,7 +13,7 @@ typedef OnFeedbackSubmitted = Future<void> Function(String feedback);
 Future<void> showUserFeedbackPopup(
   BuildContext context, {
   OnFeedbackSubmitted? onFeedbackSubmitted,
-}) async {
+}) {
   return showResponsiveModal<void>(
     context: context,
     showDragHandle: false,
@@ -123,7 +123,7 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         if (_feedbackController.text.isNotEmpty) {
-          return showDialog(
+          return await showDialog(
             context: context,
             builder: (context) {
               return ConfirmationDialog(

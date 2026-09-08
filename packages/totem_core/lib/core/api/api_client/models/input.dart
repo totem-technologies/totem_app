@@ -4,10 +4,7 @@ import 'package:degenerate_runtime/degenerate_runtime.dart';
 
 @immutable
 final class Input {
-  const Input({
-    this.limit = 100,
-    this.offset = 0,
-  });
+  const Input({this.limit = 100, this.offset = 0});
 
   factory Input.fromJson(Map<String, dynamic> json) {
     return Input(
@@ -21,20 +18,14 @@ final class Input {
   final int offset;
 
   Map<String, dynamic> toJson() {
-    return {
-      'limit': limit,
-      'offset': offset,
-    };
+    return {'limit': limit, 'offset': offset};
   }
 
   static bool canParse(Map<String, dynamic> json) {
     return json.keys.any((key) => const {'limit', 'offset'}.contains(key));
   }
 
-  Input copyWith({
-    int Function()? limit,
-    int Function()? offset,
-  }) {
+  Input copyWith({int Function()? limit, int Function()? offset}) {
     return Input(
       limit: limit != null ? limit() : this.limit,
       offset: offset != null ? offset() : this.offset,

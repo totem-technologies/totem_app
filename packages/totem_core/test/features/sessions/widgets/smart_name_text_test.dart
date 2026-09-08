@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/smart_name_text.dart';
 
 void main() {
@@ -42,9 +42,7 @@ void main() {
       expect(find.text('John'), findsOneWidget);
     });
 
-    testWidgets('abbreviates name when it does not fit', (
-      tester,
-    ) async {
+    testWidgets('abbreviates name when it does not fit', (tester) async {
       // Use a very long name and a small width to force abbreviation
       await pumpSmartNameText(
         tester,
@@ -71,9 +69,7 @@ void main() {
       expect(find.text('Madonna'), findsOneWidget);
     });
 
-    testWidgets('handles names with multiple spaces', (
-      tester,
-    ) async {
+    testWidgets('handles names with multiple spaces', (tester) async {
       await pumpSmartNameText(
         tester,
         name: 'Bruno  Oliveira  Silva',
@@ -87,9 +83,7 @@ void main() {
       expect(widget.data, isNotNull);
     });
 
-    testWidgets('trims leading and trailing whitespace', (
-      tester,
-    ) async {
+    testWidgets('trims leading and trailing whitespace', (tester) async {
       await pumpSmartNameText(
         tester,
         name: '  John Doe  ',
@@ -167,9 +161,7 @@ void main() {
       expect(widget.data, isNotEmpty);
     });
 
-    testWidgets('respects custom abbreviationThreshold', (
-      tester,
-    ) async {
+    testWidgets('respects custom abbreviationThreshold', (tester) async {
       await pumpSmartNameText(
         tester,
         name: 'Short',
@@ -198,9 +190,7 @@ void main() {
       expect(widget.textAlign, equals(TextAlign.left));
     });
 
-    testWidgets('applies correct text alignment center', (
-      tester,
-    ) async {
+    testWidgets('applies correct text alignment center', (tester) async {
       await pumpSmartNameText(
         tester,
         name: 'John Doe',
@@ -215,9 +205,7 @@ void main() {
       expect(widget.textAlign, equals(TextAlign.center));
     });
 
-    testWidgets('sets maxLines to 1 and ellipsis overflow', (
-      tester,
-    ) async {
+    testWidgets('sets maxLines to 1 and ellipsis overflow', (tester) async {
       await pumpSmartNameText(
         tester,
         name: 'John Doe',
@@ -278,9 +266,7 @@ void main() {
       expect(text, findsOneWidget);
     });
 
-    testWidgets('abbreviation uses first char of last word', (
-      tester,
-    ) async {
+    testWidgets('abbreviation uses first char of last word', (tester) async {
       // Test multiple examples to verify abbreviation logic
       final testCases = [
         ('John Smith', 'Smith'),
@@ -307,9 +293,7 @@ void main() {
       }
     });
 
-    testWidgets('handles special unicode characters', (
-      tester,
-    ) async {
+    testWidgets('handles special unicode characters', (tester) async {
       await pumpSmartNameText(
         tester,
         name: 'José García',

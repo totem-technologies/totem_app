@@ -182,10 +182,7 @@ void main() {
       expect(attempts, 1);
       expect(reports, 1);
       expect(reportedError, same(failure));
-      expect(
-        reportedDiagnostics,
-        containsPair('event_slug', 'session-1'),
-      );
+      expect(reportedDiagnostics, containsPair('event_slug', 'session-1'));
       expect(reportedDiagnostics, containsPair('attempt', 1));
       expect(reportedDiagnostics, containsPair('total_attempts', 1));
     });
@@ -204,16 +201,10 @@ void main() {
           operationName: 'load a session',
           retryOnNetworkError: true,
           maxRetries: 1,
-          errorReporter:
-              (
-                error, {
-                stackTrace,
-                message,
-                diagnostics,
-              }) {
-                reports++;
-                reportedDiagnostics = diagnostics;
-              },
+          errorReporter: (error, {stackTrace, message, diagnostics}) {
+            reports++;
+            reportedDiagnostics = diagnostics;
+          },
         ),
         throwsA(isA<AppNetworkException>()),
       );
@@ -236,13 +227,8 @@ void main() {
           apiCall: () async => conflict,
           operationName: 'confirm RSVP',
           shouldReport: (error) => false,
-          errorReporter:
-              (
-                error, {
-                stackTrace,
-                message,
-                diagnostics,
-              }) => reports++,
+          errorReporter: (error, {stackTrace, message, diagnostics}) =>
+              reports++,
         ),
         throwsA(same(conflict)),
       );
@@ -265,13 +251,8 @@ void main() {
           );
         },
         operationName: 'load a session',
-        errorReporter:
-            (
-              error, {
-              stackTrace,
-              message,
-              diagnostics,
-            }) => reportedError = error,
+        errorReporter: (error, {stackTrace, message, diagnostics}) =>
+            reportedError = error,
       );
 
       try {
@@ -304,13 +285,8 @@ void main() {
               );
             },
             operationName: 'list spaces',
-            errorReporter:
-                (
-                  error, {
-                  stackTrace,
-                  message,
-                  diagnostics,
-                }) => reportedError = error,
+            errorReporter: (error, {stackTrace, message, diagnostics}) =>
+                reportedError = error,
           ),
           throwsA(same(classifiedError)),
         );

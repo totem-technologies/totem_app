@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
@@ -60,10 +60,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.keyboard_arrow_down));
       await tester.pumpAndSettle();
 
-      expect(
-        find.byType(ActionBarCameraSwitcherButtonOverlay),
-        findsOneWidget,
-      );
+      expect(find.byType(ActionBarCameraSwitcherButtonOverlay), findsOneWidget);
     });
 
     testWidgets('switch-camera chevron is labeled for semantics', (
@@ -282,9 +279,7 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('toggling camera when tapped', (
-      tester,
-    ) async {
+    testWidgets('toggling camera when tapped', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

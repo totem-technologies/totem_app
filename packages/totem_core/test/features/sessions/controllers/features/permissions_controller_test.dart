@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:permission_handler/permission_handler.dart';
-// ignore: depend_on_referenced_packages
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 
@@ -77,9 +76,7 @@ void main() {
         .setMockMethodCallHandler(channel, (methodCall) async {
           if (methodCall.method == 'requestPermissions') {
             final requested = List<int>.from(methodCall.arguments as List);
-            return {
-              for (final permission in requested) permission: 1,
-            };
+            return {for (final permission in requested) permission: 1};
           }
 
           if (methodCall.method == 'checkPermissionStatus') {
@@ -121,7 +118,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (methodCall) async {
             if (methodCall.method == 'requestPermissions') {
-              return requestCompleter.future;
+              return await requestCompleter.future;
             }
 
             if (methodCall.method == 'checkPermissionStatus') {

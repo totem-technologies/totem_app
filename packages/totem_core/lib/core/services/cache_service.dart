@@ -64,9 +64,7 @@ class CacheService {
   Future<void> saveSpaces(List<MobileSpaceDetailSchema> spaces) {
     return write(
       key: AppConsts.storageSpacesListKey,
-      value: {
-        'spaces': spaces.map((e) => e.toJson()).toList(),
-      },
+      value: {'spaces': spaces.map((e) => e.toJson()).toList()},
     );
   }
 
@@ -107,9 +105,7 @@ class CacheService {
   Future<void> saveSubscribedSpaces(List<SpaceSchema> spaces) {
     return write(
       key: AppConsts.storageSubscribedSpacesKey,
-      value: {
-        'spaces': spaces.map((e) => e.toJson()).toList(),
-      },
+      value: {'spaces': spaces.map((e) => e.toJson()).toList()},
     );
   }
 

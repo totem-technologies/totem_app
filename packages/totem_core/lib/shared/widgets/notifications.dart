@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
@@ -45,10 +45,7 @@ class AnimatedNotificationState extends State<AnimatedNotification>
     );
 
     _offsetAnimation =
-        Tween<Offset>(
-          begin: const Offset(0, -2),
-          end: Offset.zero,
-        ).animate(
+        Tween<Offset>(begin: const Offset(0, -2), end: Offset.zero).animate(
           CurvedAnimation(
             parent: _controller,
             curve: Curves.easeOutCubic,
@@ -250,10 +247,7 @@ class NotificationController {
   }
 
   void dismissAll() {
-    final requests = <NotificationRequest>[
-      ..._queue,
-      ?_activeRequest,
-    ];
+    final requests = <NotificationRequest>[..._queue, ?_activeRequest];
 
     if (requests.isEmpty) return;
 
@@ -355,11 +349,7 @@ class NotificationController {
         );
       },
       builder: (context) {
-        return NotificationBanner(
-          icon: icon,
-          title: title,
-          message: message,
-        );
+        return NotificationBanner(icon: icon, title: title, message: message);
       },
     );
   }
@@ -370,11 +360,7 @@ class NotificationController {
     BuildContext context, {
     required WidgetBuilder builder,
   }) {
-    return show(
-      context,
-      duration: Duration.zero,
-      builder: builder,
-    );
+    return show(context, duration: Duration.zero, builder: builder);
   }
 
   /// Shows a notification banner that stays visible until dismissed.
@@ -400,11 +386,7 @@ class NotificationController {
         );
       },
       builder: (context) {
-        return NotificationBanner(
-          icon: icon,
-          title: title,
-          message: message,
-        );
+        return NotificationBanner(icon: icon, title: title, message: message);
       },
     );
   }
@@ -457,9 +439,7 @@ class NotificationBanner extends StatelessWidget {
                 ? AlignmentDirectional.topStart
                 : Alignment.center,
             child: Container(
-              constraints: BoxConstraints(
-                maxWidth: isLargeScreen ? 400 : 600,
-              ),
+              constraints: BoxConstraints(maxWidth: isLargeScreen ? 400 : 600),
               margin: EdgeInsetsDirectional.only(
                 top: 20,
                 start: 15,
@@ -486,11 +466,7 @@ class NotificationBanner extends StatelessWidget {
                       color: iconBackgroundColor ?? AppTheme.mauve,
                       shape: BoxShape.circle,
                     ),
-                    child: TotemIcon(
-                      icon,
-                      color: Colors.white,
-                      size: 24,
-                    ),
+                    child: TotemIcon(icon, color: Colors.white, size: 24),
                   ),
                   Expanded(
                     child: Column(

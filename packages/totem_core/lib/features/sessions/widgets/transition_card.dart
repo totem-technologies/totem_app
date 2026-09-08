@@ -1,6 +1,6 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
@@ -142,9 +142,7 @@ class _GenericTransitionCard extends StatelessWidget {
             Flexible(
               child: AutoSizeText(
                 hasMouseConnected ? instructionTextClick : instructionTextSwipe,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: Colors.black,
-                ),
+                style: theme.textTheme.bodyLarge?.copyWith(color: Colors.black),
                 textAlign: TextAlign.center,
                 maxLines: 2,
               ),
@@ -453,9 +451,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
             ),
             Flexible(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minWidth: 200,
-                ),
+                constraints: const BoxConstraints(minWidth: 200),
                 child: ActionSliderButton(
                   text: widget.actionText,
                   onActionCompleted: () {

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:url_launcher/link.dart';

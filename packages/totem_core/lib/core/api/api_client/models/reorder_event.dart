@@ -5,10 +5,7 @@ import 'package:degenerate_runtime/degenerate_runtime.dart';
 /// Keeper reorders the talking order.
 @immutable
 final class ReorderEvent {
-  const ReorderEvent({
-    required this.talkingOrder,
-    this.type = 'reorder',
-  });
+  const ReorderEvent({required this.talkingOrder, this.type = 'reorder'});
 
   factory ReorderEvent.fromJson(Map<String, dynamic> json) {
     return ReorderEvent(
@@ -24,20 +21,14 @@ final class ReorderEvent {
   final List<String> talkingOrder;
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'talking_order': talkingOrder,
-    };
+    return {'type': type, 'talking_order': talkingOrder};
   }
 
   static bool canParse(Map<String, dynamic> json) {
     return json.containsKey('talking_order');
   }
 
-  ReorderEvent copyWith({
-    String Function()? type,
-    List<String>? talkingOrder,
-  }) {
+  ReorderEvent copyWith({String Function()? type, List<String>? talkingOrder}) {
     return ReorderEvent(
       type: type != null ? type() : this.type,
       talkingOrder: talkingOrder ?? this.talkingOrder,

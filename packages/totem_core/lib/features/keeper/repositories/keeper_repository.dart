@@ -9,7 +9,7 @@ part 'keeper_repository.g.dart';
 Duration? _noRetry(int retryCount, Object error) => null;
 
 @Riverpod(retry: _noRetry)
-Future<KeeperProfileSchema> keeperProfile(Ref ref, String slug) async {
+Future<KeeperProfileSchema> keeperProfile(Ref ref, String slug) {
   final apiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<KeeperProfileSchema>(
     apiCall: () => apiService.users.totemUsersMobileApiKeeper(slug: slug),

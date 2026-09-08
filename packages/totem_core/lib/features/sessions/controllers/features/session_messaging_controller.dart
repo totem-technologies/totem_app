@@ -41,11 +41,7 @@ class SessionChatMessage {
   final Participant? participant;
 
   Map<String, dynamic> toMap() {
-    return {
-      'message': message,
-      'timestamp': timestamp,
-      'id': id,
-    };
+    return {'message': message, 'timestamp': timestamp, 'id': id};
   }
 
   String toJson() => const JsonEncoder().convert(toMap());

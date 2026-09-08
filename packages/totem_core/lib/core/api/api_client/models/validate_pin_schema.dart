@@ -4,10 +4,7 @@ import 'package:degenerate_runtime/degenerate_runtime.dart';
 
 @immutable
 final class ValidatePinSchema {
-  const ValidatePinSchema({
-    required this.email,
-    required this.pin,
-  });
+  const ValidatePinSchema({required this.email, required this.pin});
 
   factory ValidatePinSchema.fromJson(Map<String, dynamic> json) {
     return ValidatePinSchema(
@@ -21,10 +18,7 @@ final class ValidatePinSchema {
   final String pin;
 
   Map<String, dynamic> toJson() {
-    return {
-      'email': email,
-      'pin': pin,
-    };
+    return {'email': email, 'pin': pin};
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -34,14 +28,8 @@ final class ValidatePinSchema {
         json['pin'] is String;
   }
 
-  ValidatePinSchema copyWith({
-    String? email,
-    String? pin,
-  }) {
-    return ValidatePinSchema(
-      email: email ?? this.email,
-      pin: pin ?? this.pin,
-    );
+  ValidatePinSchema copyWith({String? email, String? pin}) {
+    return ValidatePinSchema(email: email ?? this.email, pin: pin ?? this.pin);
   }
 
   @override

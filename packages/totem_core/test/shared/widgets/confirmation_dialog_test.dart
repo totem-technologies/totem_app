@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
@@ -21,11 +21,7 @@ void main() {
       ],
     );
 
-    await tester.pumpWidget(
-      MaterialApp.router(
-        routerConfig: router,
-      ),
-    );
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
 
     unawaited(
       showDialog<void>(
@@ -143,10 +139,7 @@ void main() {
       await tester.pump(const Duration(seconds: 10));
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('Something Went Wrong'),
-        findsOneWidget,
-      );
+      expect(find.text('Something Went Wrong'), findsOneWidget);
       expect(find.text('OK'), findsOneWidget);
     });
   });

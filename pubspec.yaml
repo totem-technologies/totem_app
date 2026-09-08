@@ -6,3 +6,5 @@ workspace:
   - packages/totem_core
   - packages/totem_app
   - packages/totem_web
+dev_dependencies:
+  meta: any

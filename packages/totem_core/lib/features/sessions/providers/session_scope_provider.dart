@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
+import 'package:material_ui/material_ui.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -23,12 +23,9 @@ class SessionParticipantKeys {
   }
 }
 
-final sessionParticipantKeysProvider = Provider<SessionParticipantKeys>(
-  (ref) {
-    return SessionParticipantKeys();
-  },
-  name: 'Participant Video Keys',
-);
+final sessionParticipantKeysProvider = Provider<SessionParticipantKeys>((ref) {
+  return SessionParticipantKeys();
+}, name: 'Participant Video Keys');
 
 /// Provider that will be overridden at room scope.
 /// Returns the current session options for the active room.
@@ -191,9 +188,7 @@ DisconnectReason? disconnectionReason(Ref ref) {
 @Riverpod(dependencies: [currentSessionState])
 bool hasKeeperDisconnected(Ref ref) {
   return ref.watch(
-        currentSessionStateProvider.select(
-          (s) => s?.hasKeeper == false,
-        ),
+        currentSessionStateProvider.select((s) => s?.hasKeeper == false),
       ) ??
       false;
 }
@@ -225,9 +220,7 @@ String? roundMessage(Ref ref) {
 /// Whether the keeper participant is currently present in the room.
 @Riverpod(dependencies: [currentSessionState])
 bool hasKeeper(Ref ref) {
-  return ref.watch(
-        currentSessionStateProvider.select((s) => s?.hasKeeper),
-      ) ??
+  return ref.watch(currentSessionStateProvider.select((s) => s?.hasKeeper)) ??
       false;
 }
 
@@ -243,9 +236,7 @@ Participant? featuredParticipant(Ref ref) {
 /// Null while no speaker is featured.
 @Riverpod(dependencies: [currentSessionState])
 DateTime? featuredTurnStartTime(Ref ref) {
-  return ref.watch(
-    currentSessionStateProvider.select((s) => s?.turnStartedAt),
-  );
+  return ref.watch(currentSessionStateProvider.select((s) => s?.turnStartedAt));
 }
 
 /// Participant expected to speak next.
@@ -259,9 +250,7 @@ Participant? speakingNextParticipant(Ref ref) {
 /// Active session payload.
 @Riverpod(dependencies: [currentSession])
 SessionDetailSchema? currentSessionEvent(Ref ref) {
-  return ref.watch(
-    currentSessionProvider.select((s) => s?.session),
-  );
+  return ref.watch(currentSessionProvider.select((s) => s?.session));
 }
 
 /// Whether the signed-in user is keeper for the current session.
@@ -301,18 +290,12 @@ bool isCameraOn(Ref ref) {
 enum SelfViewPosition { start, end }
 
 class SelfViewState {
-  const SelfViewState({
-    required this.enabled,
-    required this.position,
-  });
+  const SelfViewState({required this.enabled, required this.position});
 
   final bool enabled;
   final SelfViewPosition position;
 
-  SelfViewState copyWith({
-    bool? enabled,
-    SelfViewPosition? position,
-  }) {
+  SelfViewState copyWith({bool? enabled, SelfViewPosition? position}) {
     return SelfViewState(
       enabled: enabled ?? this.enabled,
       position: position ?? this.position,
@@ -328,10 +311,7 @@ class SelfViewSettings extends _$SelfViewSettings {
   @override
   SelfViewState build() {
     Future.microtask(loadPrefs);
-    return const SelfViewState(
-      enabled: false,
-      position: SelfViewPosition.end,
-    );
+    return const SelfViewState(enabled: false, position: SelfViewPosition.end);
   }
 
   @visibleForTesting

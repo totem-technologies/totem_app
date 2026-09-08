@@ -128,18 +128,16 @@ void main() {
       final client = _RecordingApiClient(
         ApiResponse(
           statusCode: 409,
-          body: jsonEncode(
-            <String, dynamic>{
-              'message': 'The session overlaps an existing RSVP',
-              'conflicting_sessions': <Map<String, dynamic>>[
-                _sessionJson(
-                  slug: 'existing-session',
-                  title: 'Existing Session',
-                  attending: true,
-                ),
-              ],
-            },
-          ),
+          body: jsonEncode(<String, dynamic>{
+            'message': 'The session overlaps an existing RSVP',
+            'conflicting_sessions': <Map<String, dynamic>>[
+              _sessionJson(
+                slug: 'existing-session',
+                title: 'Existing Session',
+                attending: true,
+              ),
+            ],
+          }),
         ),
       );
       final container = _containerFor(client);
@@ -176,10 +174,7 @@ void main() {
       addTearDown(container.dispose);
 
       final attending = await container.read(
-        rsvpForceConfirmProvider(
-          'new-session',
-          ['existing-session'],
-        ).future,
+        rsvpForceConfirmProvider('new-session', ['existing-session']).future,
       );
 
       expect(attending, isTrue);
@@ -192,30 +187,25 @@ void main() {
       if (requestBody is! String) {
         fail('Expected the switch request to contain a JSON string body');
       }
-      expect(
-        jsonDecode(requestBody),
-        <String, dynamic>{
-          'conflicting_session_slugs': <String>['existing-session'],
-        },
-      );
+      expect(jsonDecode(requestBody), <String, dynamic>{
+        'conflicting_session_slugs': <String>['existing-session'],
+      });
     });
 
     test('does not classify a non-409 RSVP error as a conflict', () async {
       final client = _RecordingApiClient(
         ApiResponse(
           statusCode: 400,
-          body: jsonEncode(
-            <String, dynamic>{
-              'message': 'Invalid RSVP request',
-              'conflicting_sessions': <Map<String, dynamic>>[
-                _sessionJson(
-                  slug: 'existing-session',
-                  title: 'Existing Session',
-                  attending: true,
-                ),
-              ],
-            },
-          ),
+          body: jsonEncode(<String, dynamic>{
+            'message': 'Invalid RSVP request',
+            'conflicting_sessions': <Map<String, dynamic>>[
+              _sessionJson(
+                slug: 'existing-session',
+                title: 'Existing Session',
+                attending: true,
+              ),
+            ],
+          }),
         ),
       );
       final container = _containerFor(client);

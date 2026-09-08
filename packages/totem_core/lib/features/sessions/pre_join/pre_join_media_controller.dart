@@ -15,9 +15,7 @@ part 'pre_join_media_controller.g.dart';
 abstract class PreJoinPreviewTrackFactory {
   const PreJoinPreviewTrackFactory();
 
-  Future<LocalVideoTrack?> createVideoTrack(
-    CameraCaptureOptions cameraOptions,
-  );
+  Future<LocalVideoTrack?> createVideoTrack(CameraCaptureOptions cameraOptions);
 
   Future<LocalAudioTrack?> createAudioTrack();
 }
@@ -72,13 +70,10 @@ class PreJoinMediaOperationQueue {
         // A tail created by this class is non-throwing. This additionally
         // protects callers if the implementation changes in the future.
       }
-      return operation();
+      return await operation();
     }();
 
-    _tail = result.then<void>(
-      (_) {},
-      onError: (Object _, StackTrace _) {},
-    );
+    _tail = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
     return result;
   }
 }
@@ -105,9 +100,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     return const PreJoinMediaState();
   }
 
-  Future<void> _guardInitialization(
-    Future<void> Function() operation,
-  ) async {
+  Future<void> _guardInitialization(Future<void> Function() operation) async {
     try {
       await operation();
     } catch (error, stackTrace) {
@@ -234,10 +227,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
         _cameraTrack = track;
         _observeUnexpectedTrackEnd(track, isCamera: true);
         _setCamera(
-          PreJoinCaptureState(
-            phase: PreJoinCapturePhase.ready,
-            track: track,
-          ),
+          PreJoinCaptureState(phase: PreJoinCapturePhase.ready, track: track),
         );
       }
     } catch (error, stackTrace) {
@@ -304,10 +294,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
         return null;
       }
       _setMicrophone(
-        PreJoinCaptureState(
-          phase: PreJoinCapturePhase.ready,
-          track: track,
-        ),
+        PreJoinCaptureState(phase: PreJoinCapturePhase.ready, track: track),
       );
       _microphoneTrack = track;
       _observeUnexpectedTrackEnd(track, isCamera: false);

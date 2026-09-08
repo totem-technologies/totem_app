@@ -24,10 +24,7 @@ final class UnbanParticipantEvent {
   final String participantSlug;
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'participantSlug': participantSlug,
-    };
+    return {'type': type, 'participantSlug': participantSlug};
   }
 
   static bool canParse(Map<String, dynamic> json) {

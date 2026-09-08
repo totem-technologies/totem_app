@@ -57,9 +57,9 @@ SessionDetailSchema _createSessionEvent(String eventSlug) {
 ProviderContainer _createContainerWithEventOverride(String eventSlug) {
   return ProviderContainer(
     overrides: [
-      sessionProvider(eventSlug).overrideWithValue(
-        AsyncData(_createSessionEvent(eventSlug)),
-      ),
+      sessionProvider(
+        eventSlug,
+      ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
     ],
   );
 }
@@ -344,9 +344,7 @@ void main() {
                 microphoneTrack: microphoneTrack,
               ),
             )
-            .whenComplete(
-              () => joinCompleted = true,
-            );
+            .whenComplete(() => joinCompleted = true);
         await pumpEventQueue();
 
         expect(joinCompleted, isFalse);
@@ -393,14 +391,12 @@ void main() {
           );
 
           final localParticipant = MockLocalParticipant();
-          when(() => localParticipant.setCameraEnabled(any<bool>())).thenAnswer(
-            (_) async => null,
-          );
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           when(
             () => localParticipant.setMicrophoneEnabled(any<bool>()),
-          ).thenAnswer(
-            (_) async => null,
-          );
+          ).thenAnswer((_) async => null);
 
           final room = _CountingRoom(localParticipant);
           controller.room = room;
@@ -485,12 +481,8 @@ void main() {
           );
           await pumpEventQueue();
 
-          verifyNever(
-            () => localParticipant.setCameraEnabled(any<bool>()),
-          );
-          verifyNever(
-            () => localParticipant.setMicrophoneEnabled(any<bool>()),
-          );
+          verifyNever(() => localParticipant.setCameraEnabled(any<bool>()));
+          verifyNever(() => localParticipant.setMicrophoneEnabled(any<bool>()));
         },
       );
 
@@ -528,9 +520,9 @@ void main() {
           when(
             localParticipant.isMicrophoneEnabled,
           ).thenAnswer((_) => microphoneEnabled);
-          when(
-            () => localParticipant.setMicrophoneEnabled(false),
-          ).thenAnswer((_) async {
+          when(() => localParticipant.setMicrophoneEnabled(false)).thenAnswer((
+            _,
+          ) async {
             microphoneEnabled = false;
             return null;
           });
@@ -564,9 +556,7 @@ void main() {
           // ever issuing a second enable operation.
           microphoneEnabled = true;
           final publication = MockLocalTrackPublication();
-          when(
-            () => publication.source,
-          ).thenReturn(TrackSource.microphone);
+          when(() => publication.source).thenReturn(TrackSource.microphone);
           await room.listener.trigger(
             LocalTrackPublishedEvent(
               participant: localParticipant,
@@ -575,15 +565,9 @@ void main() {
           );
           await pumpEventQueue();
 
-          verify(
-            () => localParticipant.setMicrophoneEnabled(false),
-          ).called(1);
-          verifyNever(
-            () => localParticipant.setMicrophoneEnabled(true),
-          );
-          verifyNever(
-            () => localParticipant.setCameraEnabled(any<bool>()),
-          );
+          verify(() => localParticipant.setMicrophoneEnabled(false)).called(1);
+          verifyNever(() => localParticipant.setMicrophoneEnabled(true));
+          verifyNever(() => localParticipant.setCameraEnabled(any<bool>()));
         },
       );
 
@@ -612,14 +596,12 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant();
-        when(() => localParticipant.setCameraEnabled(any<bool>())).thenAnswer(
-          (_) async => null,
-        );
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
         when(
           () => localParticipant.setMicrophoneEnabled(any<bool>()),
-        ).thenAnswer(
-          (_) async => null,
-        );
+        ).thenAnswer((_) async => null);
 
         final room = _CountingRoom(localParticipant);
         controller.room = room;
@@ -647,12 +629,12 @@ void main() {
           );
           final container = ProviderContainer(
             overrides: [
-              sessionProvider(eventSlug).overrideWithValue(
-                AsyncData(_createSessionEvent(eventSlug)),
-              ),
-              sessionControllerProvider(options).overrideWith(
-                _DelayedInitializeSessionController.new,
-              ),
+              sessionProvider(
+                eventSlug,
+              ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+              sessionControllerProvider(
+                options,
+              ).overrideWith(_DelayedInitializeSessionController.new),
             ],
           );
           addTearDown(container.dispose);
@@ -665,9 +647,7 @@ void main() {
           addTearDown(sub.close);
 
           final controller =
-              container.read(
-                    sessionControllerProvider(options).notifier,
-                  )
+              container.read(sessionControllerProvider(options).notifier)
                   as _DelayedInitializeSessionController;
           final localParticipant = MockLocalParticipant();
           when(
@@ -818,9 +798,9 @@ void main() {
             sessionControllerProvider(options).notifier,
           );
           final localParticipant = MockLocalParticipant();
-          when(() => localParticipant.setCameraEnabled(any<bool>())).thenAnswer(
-            (_) async => null,
-          );
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           when(
             () => localParticipant.setMicrophoneEnabled(any<bool>()),
           ).thenAnswer((_) async => null);
@@ -838,10 +818,7 @@ void main() {
           );
 
           expect(joined, SessionJoinResult.success);
-          expect(
-            room.lastFastConnectOptions?.camera.track,
-            same(cameraTrack),
-          );
+          expect(room.lastFastConnectOptions?.camera.track, same(cameraTrack));
           expect(
             room.lastFastConnectOptions?.microphone.track,
             same(microphoneTrack),
@@ -891,9 +868,9 @@ void main() {
           final cameraTrack = MockLocalVideoTrack();
           final microphoneTrack = MockLocalAudioTrack();
           final localParticipant = MockLocalParticipant();
-          when(() => localParticipant.setCameraEnabled(any<bool>())).thenAnswer(
-            (_) async => null,
-          );
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           when(
             () => localParticipant.setMicrophoneEnabled(any<bool>()),
           ).thenAnswer((_) async => null);
@@ -953,87 +930,81 @@ void main() {
               retryable: false,
             ),
           ]) {
-        test(
-          'join disposes tracks when ${testCase.name} throws',
-          () async {
-            const eventSlug = 'test-session';
-            final container = _createContainerWithEventOverride(eventSlug);
-            addTearDown(container.dispose);
+        test('join disposes tracks when ${testCase.name} throws', () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
 
-            const options = SessionOptions(
-              sessionSlug: eventSlug,
-              token: 'test-token',
-              cameraEnabled: true,
-              microphoneEnabled: true,
-              cameraOptions: SessionController.defaultCameraCaptureOptions,
-              speakerEnabled: true,
-            );
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
 
-            final sub = container.listen(
-              sessionControllerProvider(options),
-              (_, _) {},
-              fireImmediately: true,
-            );
-            addTearDown(sub.close);
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
 
-            final controller = container.read(
-              sessionControllerProvider(options).notifier,
-            );
-            final cameraTrack = MockLocalVideoTrack();
-            final microphoneTrack = MockLocalAudioTrack();
-            var previewAttached = true;
-            when(cameraTrack.stop).thenAnswer((_) async {
-              expect(previewAttached, isFalse);
-              return true;
-            });
-            final localParticipant = MockLocalParticipant();
-            when(
-              () => localParticipant.setCameraEnabled(any<bool>()),
-            ).thenAnswer((_) async => null);
-            when(
-              () => localParticipant.setMicrophoneEnabled(any<bool>()),
-            ).thenAnswer((_) async => null);
-            final room = _CountingRoom(
-              localParticipant,
-              connectError: testCase.error,
-            );
-            controller.room = room;
-
-            final result = await controller.join(
-              joinMedia: SessionJoinMedia(
-                cameraTrack: cameraTrack,
-                microphoneTrack: microphoneTrack,
-                onBeforeDispose: () => previewAttached = false,
-              ),
-            );
-
-            expect(result, testCase.result);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final cameraTrack = MockLocalVideoTrack();
+          final microphoneTrack = MockLocalAudioTrack();
+          var previewAttached = true;
+          when(cameraTrack.stop).thenAnswer((_) async {
             expect(previewAttached, isFalse);
-            expect(room.connectCount, 1);
-            expect(
-              room.lastFastConnectOptions?.camera.track,
-              same(cameraTrack),
-            );
-            expect(
-              room.lastFastConnectOptions?.microphone.track,
-              same(microphoneTrack),
-            );
-            verify(cameraTrack.stop).called(1);
-            verify(cameraTrack.dispose).called(1);
-            verify(microphoneTrack.stop).called(1);
-            verify(microphoneTrack.dispose).called(1);
+            return true;
+          });
+          final localParticipant = MockLocalParticipant();
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          final room = _CountingRoom(
+            localParticipant,
+            connectError: testCase.error,
+          );
+          controller.room = room;
 
-            if (testCase.retryable) {
-              await controller.resetAfterFailedJoin();
-            } else {
-              await controller.disposeConnection();
-            }
+          final result = await controller.join(
+            joinMedia: SessionJoinMedia(
+              cameraTrack: cameraTrack,
+              microphoneTrack: microphoneTrack,
+              onBeforeDispose: () => previewAttached = false,
+            ),
+          );
 
-            expect(room.disposeCount, 1);
-            verifyNoMoreInteractions(cameraTrack);
-            verifyNoMoreInteractions(microphoneTrack);
-          },
-        );
+          expect(result, testCase.result);
+          expect(previewAttached, isFalse);
+          expect(room.connectCount, 1);
+          expect(room.lastFastConnectOptions?.camera.track, same(cameraTrack));
+          expect(
+            room.lastFastConnectOptions?.microphone.track,
+            same(microphoneTrack),
+          );
+          verify(cameraTrack.stop).called(1);
+          verify(cameraTrack.dispose).called(1);
+          verify(microphoneTrack.stop).called(1);
+          verify(microphoneTrack.dispose).called(1);
+
+          if (testCase.retryable) {
+            await controller.resetAfterFailedJoin();
+          } else {
+            await controller.disposeConnection();
+          }
+
+          expect(room.disposeCount, 1);
+          verifyNoMoreInteractions(cameraTrack);
+          verifyNoMoreInteractions(microphoneTrack);
+        });
       }
     });
 
@@ -1150,17 +1121,15 @@ void main() {
         );
         addTearDown(sub.close);
 
-        final _ =
-            container.read(
-              sessionControllerProvider(options).notifier,
-            )..addSessionChatMessage(
-              const SessionChatMessage(
-                message: 'hello',
-                timestamp: 1,
-                id: 'm1',
-                sender: true,
-              ),
-            );
+        final _ = container.read(sessionControllerProvider(options).notifier)
+          ..addSessionChatMessage(
+            const SessionChatMessage(
+              message: 'hello',
+              timestamp: 1,
+              id: 'm1',
+              sender: true,
+            ),
+          );
 
         final state = container.read(sessionControllerProvider(options));
         expect(state.messages, hasLength(1));
@@ -1177,9 +1146,8 @@ void main() {
         );
         addTearDown(sub.close);
 
-        final _ = container.read(
-          sessionControllerProvider(options).notifier,
-        )..markParticipantRemoved(RemoveReason.remove);
+        final _ = container.read(sessionControllerProvider(options).notifier)
+          ..markParticipantRemoved(RemoveReason.remove);
 
         final state = container.read(sessionControllerProvider(options));
         expect(state.removed, isTrue);
@@ -1248,17 +1216,11 @@ void main() {
       });
 
       test('syncTimerDuration is positive', () {
-        expect(
-          SessionController.syncTimerDuration.isNegative,
-          isFalse,
-        );
+        expect(SessionController.syncTimerDuration.isNegative, isFalse);
       });
 
       test('defaultCameraCaptureOptions is defined', () {
-        expect(
-          SessionController.defaultCameraCaptureOptions,
-          isNotNull,
-        );
+        expect(SessionController.defaultCameraCaptureOptions, isNotNull);
       });
 
       test('defaultCameraCaptureOptions has h720_43 dimensions', () {

@@ -6,15 +6,11 @@ void main() {
   group('isInternetDisconnectReason', () {
     test('recognizes explicit client-side network failures', () {
       expect(
-        isInternetDisconnectReason(
-          DisconnectReason.signalingConnectionFailure,
-        ),
+        isInternetDisconnectReason(DisconnectReason.signalingConnectionFailure),
         isTrue,
       );
       expect(
-        isInternetDisconnectReason(
-          DisconnectReason.reconnectAttemptsExceeded,
-        ),
+        isInternetDisconnectReason(DisconnectReason.reconnectAttemptsExceeded),
         isTrue,
       );
     });

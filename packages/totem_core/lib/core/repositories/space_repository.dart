@@ -49,7 +49,7 @@ Future<List<MobileSpaceDetailSchema>> listSpaces(Ref ref) async {
 }
 
 @riverpod
-Future<SessionDetailSchema> session(Ref ref, String sessionSlug) async {
+Future<SessionDetailSchema> session(Ref ref, String sessionSlug) {
   final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<SessionDetailSchema>(
     apiCall: () => mobileApiService.spaces.totemSpacesMobileApiGetSessionDetail(
@@ -62,7 +62,7 @@ Future<SessionDetailSchema> session(Ref ref, String sessionSlug) async {
 }
 
 @riverpod
-Future<MobileSpaceDetailSchema> space(Ref ref, String spaceSlug) async {
+Future<MobileSpaceDetailSchema> space(Ref ref, String spaceSlug) {
   final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<MobileSpaceDetailSchema>(
     apiCall: () => mobileApiService.spaces.totemSpacesMobileApiGetSpaceDetail(
@@ -99,7 +99,7 @@ Future<List<SpaceSchema>> listSubscribedSpaces(Ref ref) async {
 }
 
 @riverpod
-Future<bool> subscribeToSpace(Ref ref, String spaceSlug) async {
+Future<bool> subscribeToSpace(Ref ref, String spaceSlug) {
   final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<bool>(
     apiCall: () => mobileApiService.spaces.totemSpacesMobileApiSubscribeToSpace(
@@ -114,10 +114,8 @@ Future<bool> subscribeToSpace(Ref ref, String spaceSlug) async {
 Future<bool> unsubscribeFromSpace(Ref ref, String spaceSlug) async {
   final mobileApiService = ref.read(apiServiceProvider);
   final success = await RepositoryUtils.handleApiCall<bool>(
-    apiCall: () =>
-        mobileApiService.spaces.totemSpacesMobileApiUnsubscribeToSpace(
-          spaceSlug: spaceSlug,
-        ),
+    apiCall: () => mobileApiService.spaces
+        .totemSpacesMobileApiUnsubscribeToSpace(spaceSlug: spaceSlug),
     operationName: 'unsubscribe from space',
     diagnostics: {'space_slug': spaceSlug},
   );
@@ -134,7 +132,7 @@ Future<bool> unsubscribeFromSpace(Ref ref, String spaceSlug) async {
 Future<List<MobileSpaceDetailSchema>> listSpacesByKeeper(
   Ref ref,
   String keeperSlug,
-) async {
+) {
   final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<List<MobileSpaceDetailSchema>>(
     apiCall: () => mobileApiService.spaces.totemSpacesMobileApiGetKeeperSpaces(

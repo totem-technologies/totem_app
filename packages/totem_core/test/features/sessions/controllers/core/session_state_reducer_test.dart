@@ -206,10 +206,7 @@ void main() {
             ),
           );
 
-          state = reducer.reduceState(
-            state,
-            SessionErrorChanged(error),
-          );
+          state = reducer.reduceState(state, SessionErrorChanged(error));
 
           expect(state.connection.error, isNotNull);
           expect(state.connection.state, RoomConnectionState.error);
@@ -255,9 +252,7 @@ void main() {
             status: RoomStatus.active,
             turnState: TurnState.speaking,
             sessionSlug: 'test-session',
-            statusDetail: RoomStateStatusDetailActive(
-              ActiveDetail(),
-            ),
+            statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
             talkingOrder: ['user-1', 'user-2'],
             version: 2,
             roundNumber: 1,
@@ -279,9 +274,9 @@ void main() {
             expect(current.turnStartedAt, isNull);
 
             // Room goes active — speakerOf falls back to keeper.
-            final active = _roomState(status: RoomStatus.active).copyWith(
-              currentSpeaker: () => '',
-            );
+            final active = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: () => '');
 
             final next = reducer.reduceState(current, RoomStateChanged(active));
 
@@ -291,9 +286,9 @@ void main() {
           test('stamps when speaker changes', () {
             final current = _initialState();
 
-            final withSpeaker = _roomState(status: RoomStatus.active).copyWith(
-              currentSpeaker: () => 'user-1',
-            );
+            final withSpeaker = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: () => 'user-1');
 
             final next = reducer.reduceState(
               current,
@@ -306,9 +301,9 @@ void main() {
           test('keeps existing stamp when same speaker continues', () {
             final current = _initialState();
 
-            final active = _roomState(status: RoomStatus.active).copyWith(
-              currentSpeaker: () => 'user-1',
-            );
+            final active = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: () => 'user-1');
 
             final first = reducer.reduceState(
               current,
@@ -318,10 +313,7 @@ void main() {
 
             // Metadata bump — same speaker.
             final bumped = active.copyWith(version: 2);
-            final second = reducer.reduceState(
-              first,
-              RoomStateChanged(bumped),
-            );
+            final second = reducer.reduceState(first, RoomStateChanged(bumped));
 
             expect(second.turnStartedAt, same(stamp));
           });
@@ -329,9 +321,9 @@ void main() {
           test('carries forward through non-room-state events', () {
             final current = _initialState();
 
-            final active = _roomState(status: RoomStatus.active).copyWith(
-              currentSpeaker: () => 'user-1',
-            );
+            final active = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: () => 'user-1');
 
             final afterRoom = reducer.reduceState(
               current,

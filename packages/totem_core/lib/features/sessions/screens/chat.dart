@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
@@ -26,9 +26,7 @@ Future<void> showSessionChat(BuildContext context) {
     dialogAlignment: AlignmentDirectional.centerEnd,
     dialogInsetPadding: const EdgeInsetsDirectional.only(end: 40, top: 20),
     dialogShape: const RoundedRectangleBorder(
-      borderRadius: BorderRadiusDirectional.vertical(
-        top: Radius.circular(20),
-      ),
+      borderRadius: BorderRadiusDirectional.vertical(top: Radius.circular(20)),
     ),
     dialogBarrierColor: Colors.black26,
     bottomSheetBuilder: (context) {
@@ -156,9 +154,7 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
       body: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsetsDirectional.only(
-            bottom: 20,
-          ),
+          padding: const EdgeInsetsDirectional.only(bottom: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -280,9 +276,7 @@ class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
                     controller: _messageController,
                     onSubmitted: (_) => send(),
                     textInputAction: TextInputAction.send,
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    style: TextStyle(color: theme.colorScheme.onSurface),
                     decoration: InputDecoration(
                       hintText: 'Message',
                       border: const OutlineInputBorder(),
@@ -356,18 +350,12 @@ class OtherChatBubble extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
-              borderRadius: const BorderRadius.all(
-                Radius.circular(16),
-              ),
+              borderRadius: const BorderRadius.all(Radius.circular(16)),
             ),
-            padding: const EdgeInsetsDirectional.all(
-              10,
-            ),
+            padding: const EdgeInsetsDirectional.all(10),
             child: Text(
               message.message,
-              style: TextStyle(
-                color: theme.colorScheme.onSurface,
-              ),
+              style: TextStyle(color: theme.colorScheme.onSurface),
             ),
           ),
         ),
@@ -377,10 +365,7 @@ class OtherChatBubble extends StatelessWidget {
 }
 
 class MyChatBubble extends StatelessWidget {
-  const MyChatBubble({
-    required this.message,
-    super.key,
-  });
+  const MyChatBubble({required this.message, super.key});
 
   final SessionChatMessage message;
 
@@ -390,33 +375,22 @@ class MyChatBubble extends StatelessWidget {
     return Align(
       alignment: AlignmentDirectional.centerEnd,
       child: Container(
-        margin: const EdgeInsetsDirectional.only(
-          start: 50,
-        ),
-        padding: const EdgeInsetsDirectional.all(
-          10,
-        ),
+        margin: const EdgeInsetsDirectional.only(start: 50),
+        padding: const EdgeInsetsDirectional.all(10),
         decoration: const BoxDecoration(
           color: AppTheme.slate,
-          borderRadius: BorderRadius.all(
-            Radius.circular(16),
-          ),
+          borderRadius: BorderRadius.all(Radius.circular(16)),
         ),
         child: Text(
           message.message,
-          style: TextStyle(
-            color: theme.colorScheme.onInverseSurface,
-          ),
+          style: TextStyle(color: theme.colorScheme.onInverseSurface),
         ),
       ),
     );
   }
 }
 
-Future<void> showKeeperProfileSheet(
-  BuildContext context,
-  String slug,
-) {
+Future<void> showKeeperProfileSheet(BuildContext context, String slug) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -443,10 +417,7 @@ class KeeperProfileSheet extends StatelessWidget {
       builder: (context, controller) {
         return PrimaryScrollController(
           controller: controller,
-          child: KeeperProfileScreen(
-            slug: slug,
-            showAppBar: false,
-          ),
+          child: KeeperProfileScreen(slug: slug, showAppBar: false),
         );
       },
     );

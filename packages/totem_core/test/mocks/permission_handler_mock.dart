@@ -8,9 +8,7 @@ void setupMockPermissionHandler() {
         (methodCall) async {
           if (methodCall.method == 'requestPermissions') {
             final requested = List<int>.from(methodCall.arguments as List);
-            return {
-              for (final permission in requested) permission: 1,
-            };
+            return {for (final permission in requested) permission: 1};
           }
 
           if (methodCall.method == 'checkPermissionStatus') {
