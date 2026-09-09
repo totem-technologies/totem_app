@@ -1,8 +1,8 @@
 import 'package:collection/collection.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart' show Participant;
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -14,26 +14,20 @@ import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
-Future<void> showParticipantReorderModals(
-  BuildContext context,
-) {
+Future<void> showParticipantReorderModals(BuildContext context) {
   return showResponsiveModal<void>(
     context: context,
     useRootNavigator: false,
     bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
     dialogBackgroundColor: const Color(0xFFF3F1E9),
     bottomSheetBuilder: (context) => const ParticipantReorderWidget(),
-    largeScreenBuilder: (context) => const SizedBox(
-      width: 600,
-      child: ParticipantReorderWidget(),
-    ),
+    largeScreenBuilder: (context) =>
+        const SizedBox(width: 600, child: ParticipantReorderWidget()),
   );
 }
 
 class ParticipantReorderWidget extends ConsumerStatefulWidget {
-  const ParticipantReorderWidget({
-    super.key,
-  });
+  const ParticipantReorderWidget({super.key});
 
   @override
   ConsumerState<ParticipantReorderWidget> createState() =>
@@ -75,9 +69,7 @@ class _ParticipantReorderWidgetState
         .toList();
 
     if (participants.isEmpty) {
-      return const Center(
-        child: Text('No participants to reorder'),
-      );
+      return const Center(child: Text('No participants to reorder'));
     }
 
     final viewportKind = ViewportResolver.getViewportKind(context);
@@ -200,10 +192,7 @@ class _ParticipantReorderWidgetState
                               updatedOrder.insert(newIndex, item);
 
                               setState(() {
-                                _localOrder = [
-                                  keeperSlug,
-                                  ...updatedOrder,
-                                ];
+                                _localOrder = [keeperSlug, ...updatedOrder];
                               });
                             },
                             itemBuilder: (context, index) {
@@ -296,9 +285,7 @@ class _ParticipantReorderWidgetState
                                               return;
                                             }
 
-                                            setState(
-                                              () => _loading = false,
-                                            );
+                                            setState(() => _loading = false);
 
                                             if (wasSaved && context.mounted) {
                                               Navigator.of(context).pop();
@@ -366,13 +353,9 @@ class _ParticipantInfo extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final participant = ref.watch(
-      userProfileProvider(this.participant),
-    );
+    final participant = ref.watch(userProfileProvider(this.participant));
     return DefaultTextStyle.merge(
-      style: theme.textTheme.bodyMedium?.copyWith(
-        color: Colors.black,
-      ),
+      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.black),
       child: IntrinsicWidth(
         child: Card(
           child: Padding(
@@ -412,9 +395,7 @@ class _ParticipantInfo extends ConsumerWidget {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    DateFormat(
-                      'MMM, yyyy',
-                    ).format(user.dateCreated),
+                    DateFormat('MMM, yyyy').format(user.dateCreated),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
@@ -523,11 +504,7 @@ class _ParticipantReorderItem extends ConsumerWidget {
             ),
           ),
           trailing: isKeeper
-              ? Icon(
-                  Icons.lock,
-                  size: 24,
-                  color: foregroundColor,
-                )
+              ? Icon(Icons.lock, size: 24, color: foregroundColor)
               : ReorderableDragStartListener(
                   index: index,
                   child: TotemIcon(

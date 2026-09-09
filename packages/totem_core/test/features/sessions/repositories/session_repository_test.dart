@@ -2,7 +2,6 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-// ignore: depend_on_referenced_packages
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/services/api_service.dart';
@@ -132,9 +131,7 @@ void main() {
 
       final container = ProviderContainer(
         retry: (_, _) => null,
-        overrides: [
-          apiServiceProvider.overrideWithValue(_createApi(client)),
-        ],
+        overrides: [apiServiceProvider.overrideWithValue(_createApi(client))],
       );
       addTearDown(container.dispose);
 
@@ -162,9 +159,7 @@ void main() {
 
         final container = ProviderContainer(
           retry: (_, _) => null,
-          overrides: [
-            apiServiceProvider.overrideWithValue(_createApi(client)),
-          ],
+          overrides: [apiServiceProvider.overrideWithValue(_createApi(client))],
         );
         addTearDown(container.dispose);
 
@@ -180,33 +175,28 @@ void main() {
       },
     );
 
-    test(
-      'staleVersion: succeeds after multiple version bumps',
-      () async {
-        final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
-          (_) => _staleVersionResponse(),
-          (_) => _roomStateResponse(10),
-          (_) => _staleVersionResponse(),
-          (_) => _roomStateResponse(15),
-          (_) => _roomStateResponse(16),
-        ]);
+    test('staleVersion: succeeds after multiple version bumps', () async {
+      final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
+        (_) => _staleVersionResponse(),
+        (_) => _roomStateResponse(10),
+        (_) => _staleVersionResponse(),
+        (_) => _roomStateResponse(15),
+        (_) => _roomStateResponse(16),
+      ]);
 
-        final container = ProviderContainer(
-          retry: (_, _) => null,
-          overrides: [
-            apiServiceProvider.overrideWithValue(_createApi(client)),
-          ],
-        );
-        addTearDown(container.dispose);
+      final container = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: [apiServiceProvider.overrideWithValue(_createApi(client))],
+      );
+      addTearDown(container.dispose);
 
-        final roomState = await container.read(
-          passTotemProvider('test-session', 5).future,
-        );
+      final roomState = await container.read(
+        passTotemProvider('test-session', 5).future,
+      );
 
-        expect(roomState.version, 16);
-        expect(client.requests, hasLength(5));
-      },
-    );
+      expect(roomState.version, 16);
+      expect(client.requests, hasLength(5));
+    });
 
     test(
       'invalidTransition: refreshes state and retries exactly once',
@@ -244,9 +234,7 @@ void main() {
 
         final container = ProviderContainer(
           retry: (_, _) => null,
-          overrides: [
-            apiServiceProvider.overrideWithValue(_createApi(client)),
-          ],
+          overrides: [apiServiceProvider.overrideWithValue(_createApi(client))],
         );
         addTearDown(container.dispose);
 
@@ -270,9 +258,7 @@ void main() {
 
         final container = ProviderContainer(
           retry: (_, _) => null,
-          overrides: [
-            apiServiceProvider.overrideWithValue(_createApi(client)),
-          ],
+          overrides: [apiServiceProvider.overrideWithValue(_createApi(client))],
         );
         addTearDown(container.dispose);
 
@@ -291,24 +277,20 @@ void main() {
     test(
       'does not retry on non-recoverable errors like room_not_active',
       () async {
-        final client = _ScriptedApiClient(
-          <ApiResponse Function(ApiRequest)>[
-            (_) => ApiResponse(
-              statusCode: 400,
-              body: jsonEncode(<String, dynamic>{
-                'code': 'room_not_active',
-                'message': 'Room is not active',
-                'detail': null,
-              }),
-            ),
-          ],
-        );
+        final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
+          (_) => ApiResponse(
+            statusCode: 400,
+            body: jsonEncode(<String, dynamic>{
+              'code': 'room_not_active',
+              'message': 'Room is not active',
+              'detail': null,
+            }),
+          ),
+        ]);
 
         final container = ProviderContainer(
           retry: (_, _) => null,
-          overrides: [
-            apiServiceProvider.overrideWithValue(_createApi(client)),
-          ],
+          overrides: [apiServiceProvider.overrideWithValue(_createApi(client))],
         );
         addTearDown(container.dispose);
 

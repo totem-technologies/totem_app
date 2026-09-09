@@ -52,11 +52,7 @@ class PreJoinMediaPreferences {
 
 @immutable
 class PreJoinCaptureState<T extends LocalTrack> {
-  const PreJoinCaptureState({
-    required this.phase,
-    this.track,
-    this.error,
-  });
+  const PreJoinCaptureState({required this.phase, this.track, this.error});
 
   const PreJoinCaptureState.uninitialized()
     : phase = PreJoinCapturePhase.uninitialized,

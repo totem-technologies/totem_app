@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
@@ -37,9 +37,7 @@ class PreJoinView extends StatelessWidget {
   Widget build(BuildContext context) {
     final preferences = mediaState.preferences;
     final cameraPreview = Container(
-      margin: const EdgeInsetsDirectional.symmetric(
-        horizontal: 40,
-      ),
+      margin: const EdgeInsetsDirectional.symmetric(horizontal: 40),
       alignment: AlignmentDirectional.center,
       child: Semantics(
         label:

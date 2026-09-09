@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/card_screen.dart';

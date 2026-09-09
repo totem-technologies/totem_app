@@ -61,9 +61,7 @@ void addSharedApiInterceptors(Dio dio) {
   );
 
   if (AppConfig.instance.isDevelopment) {
-    dio.interceptors.add(
-      LogInterceptor(requestBody: true, responseBody: true),
-    );
+    dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
   }
 
   dio.addSentry();
@@ -236,9 +234,7 @@ Future<Response<dynamic>> postData(
   String url, {
   Map<String, dynamic> data = const {},
 }) async {
-  final body = {
-    ...data,
-  };
+  final body = {...data};
 
   final response = await _dio.post<dynamic>(
     url,

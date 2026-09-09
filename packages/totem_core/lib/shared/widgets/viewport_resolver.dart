@@ -11,10 +11,7 @@ enum ViewportKind {
 }
 
 typedef ViewportResolverBuilder =
-    Widget Function(
-      BuildContext context,
-      ViewportKind viewportKind,
-    );
+    Widget Function(BuildContext context, ViewportKind viewportKind);
 
 class ViewportResolver extends StatelessWidget {
   const ViewportResolver({required this.builder, super.key});

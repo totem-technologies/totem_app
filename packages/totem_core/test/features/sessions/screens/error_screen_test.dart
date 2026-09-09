@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
@@ -36,10 +36,7 @@ void main() {
           ),
         ],
         child: MaterialApp(
-          home: SessionErrorScreen(
-            onRetry: onRetry,
-            error: error,
-          ),
+          home: SessionErrorScreen(onRetry: onRetry, error: error),
         ),
       ),
     );
@@ -77,10 +74,7 @@ void main() {
           0,
         );
 
-        await tester.drag(
-          find.byType(CustomScrollView),
-          const Offset(0, -100),
-        );
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -100));
         await tester.pumpAndSettle();
 
         expect(
@@ -116,10 +110,7 @@ void main() {
         );
         expect(scrollable.position.maxScrollExtent, greaterThan(0));
 
-        await tester.drag(
-          find.byType(CustomScrollView),
-          const Offset(0, -100),
-        );
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -100));
         await tester.pumpAndSettle();
 
         expect(scrollable.position.pixels, greaterThan(0));

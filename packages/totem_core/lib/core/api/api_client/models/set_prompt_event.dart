@@ -5,10 +5,7 @@ import 'package:degenerate_runtime/degenerate_runtime.dart';
 /// Keeper sets or replaces the active round prompt during a live session.
 @immutable
 final class SetPromptEvent {
-  const SetPromptEvent({
-    required this.prompt,
-    this.type = 'set_prompt',
-  });
+  const SetPromptEvent({required this.prompt, this.type = 'set_prompt'});
 
   factory SetPromptEvent.fromJson(Map<String, dynamic> json) {
     return SetPromptEvent(
@@ -22,20 +19,14 @@ final class SetPromptEvent {
   final String prompt;
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'prompt': prompt,
-    };
+    return {'type': type, 'prompt': prompt};
   }
 
   static bool canParse(Map<String, dynamic> json) {
     return json.containsKey('prompt') && json['prompt'] is String;
   }
 
-  SetPromptEvent copyWith({
-    String Function()? type,
-    String? prompt,
-  }) {
+  SetPromptEvent copyWith({String Function()? type, String? prompt}) {
     return SetPromptEvent(
       type: type != null ? type() : this.type,
       prompt: prompt ?? this.prompt,

@@ -198,10 +198,7 @@ class RepositoryUtils {
       );
     }
     if (statusCode != null && statusCode >= 500) {
-      return AppNetworkException.serverError(
-        statusCode,
-        details: details,
-      );
+      return AppNetworkException.serverError(statusCode, details: details);
     }
 
     switch (error.type) {

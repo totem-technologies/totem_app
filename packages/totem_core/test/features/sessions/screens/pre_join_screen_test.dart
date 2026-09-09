@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
+import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -56,7 +56,7 @@ class _DelayedTrackFactory extends _TrackFactory {
     CameraCaptureOptions cameraOptions,
   ) async {
     await cameraGate.future;
-    return super.createVideoTrack(cameraOptions);
+    return await super.createVideoTrack(cameraOptions);
   }
 }
 
@@ -94,9 +94,8 @@ const _sessionState = SessionRoomState(
 
 class _PermissionsGrantedFlowController extends PreJoinFlowController {
   @override
-  PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState(
-    nativePermissionsGranted: true,
-  );
+  PreJoinFlowState build(String sessionSlug) =>
+      const PreJoinFlowState(nativePermissionsGranted: true);
 }
 
 class _SuccessfulSessionController extends SessionController {
@@ -241,11 +240,7 @@ void main() {
 
   testWidgets('locks media toggles during initial capture', (tester) async {
     final factory = _DelayedTrackFactory();
-    await pumpScreen(
-      tester,
-      successfulJoin: true,
-      trackFactory: factory,
-    );
+    await pumpScreen(tester, successfulJoin: true, trackFactory: factory);
 
     expect(
       tester
@@ -353,11 +348,7 @@ void main() {
   testWidgets('shows replacement confirmation only after joining', (
     tester,
   ) async {
-    await pumpScreen(
-      tester,
-      alreadyPresent: true,
-      successfulJoin: true,
-    );
+    await pumpScreen(tester, alreadyPresent: true, successfulJoin: true);
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text("You're Already in This Session"), findsNothing);

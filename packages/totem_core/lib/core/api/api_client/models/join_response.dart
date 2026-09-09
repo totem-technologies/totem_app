@@ -5,10 +5,7 @@ import 'package:degenerate_runtime/degenerate_runtime.dart';
 /// Token for connecting to a LiveKit room.
 @immutable
 final class JoinResponse {
-  const JoinResponse({
-    required this.token,
-    required this.isAlreadyPresent,
-  });
+  const JoinResponse({required this.token, required this.isAlreadyPresent});
 
   factory JoinResponse.fromJson(Map<String, dynamic> json) {
     return JoinResponse(
@@ -22,10 +19,7 @@ final class JoinResponse {
   final bool isAlreadyPresent;
 
   Map<String, dynamic> toJson() {
-    return {
-      'token': token,
-      'is_already_present': isAlreadyPresent,
-    };
+    return {'token': token, 'is_already_present': isAlreadyPresent};
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -35,10 +29,7 @@ final class JoinResponse {
         json['is_already_present'] is bool;
   }
 
-  JoinResponse copyWith({
-    String? token,
-    bool? isAlreadyPresent,
-  }) {
+  JoinResponse copyWith({String? token, bool? isAlreadyPresent}) {
     return JoinResponse(
       token: token ?? this.token,
       isAlreadyPresent: isAlreadyPresent ?? this.isAlreadyPresent,

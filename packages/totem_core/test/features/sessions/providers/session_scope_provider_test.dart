@@ -55,9 +55,7 @@ SessionRoomState _state({
       error: error,
       wasJoining: wasJoining,
     ),
-    participants: ParticipantsState(
-      participants: participants,
-    ),
+    participants: ParticipantsState(participants: participants),
     chat: ChatState(messages: messages),
     turn: SessionTurnState(
       roomState: _roomState(

@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -35,17 +35,12 @@ class _ReorderTestHarness {
   final Map<String, MockParticipant> participants;
 }
 
-void _stubParticipant(
-  MockParticipant participant, {
-  required String id,
-}) {
+void _stubParticipant(MockParticipant participant, {required String id}) {
   when(() => participant.identity).thenReturn(id);
-  when(() => participant.name).thenReturn(
-    switch (id) {
-      'keeper-1' => 'Keeper',
-      _ => 'User ${id.split('-').last}',
-    },
-  );
+  when(() => participant.name).thenReturn(switch (id) {
+    'keeper-1' => 'Keeper',
+    _ => 'User ${id.split('-').last}',
+  });
 }
 
 _ReorderTestHarness _createHarness({
@@ -132,9 +127,7 @@ void main() {
       tester,
       harness,
       child: const MaterialApp(
-        home: Scaffold(
-          body: ParticipantReorderWidget(),
-        ),
+        home: Scaffold(body: ParticipantReorderWidget()),
       ),
     );
 
@@ -152,9 +145,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final captured =
-        verify(
-              () => harness.keeper.reorder(captureAny()),
-            ).captured.single
+        verify(() => harness.keeper.reorder(captureAny())).captured.single
             as List<String>;
 
     expect(captured.first, 'keeper-1');
@@ -185,9 +176,7 @@ void main() {
       tester,
       harness,
       child: const MaterialApp(
-        home: Scaffold(
-          body: ParticipantReorderWidget(),
-        ),
+        home: Scaffold(body: ParticipantReorderWidget()),
       ),
     );
 
@@ -236,9 +225,7 @@ void main() {
       tester,
       harness,
       child: const MaterialApp(
-        home: Scaffold(
-          body: ParticipantReorderWidget(),
-        ),
+        home: Scaffold(body: ParticipantReorderWidget()),
       ),
     );
 

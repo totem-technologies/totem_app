@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
@@ -17,7 +17,7 @@ class BlogListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final blogs = ref.watch(listBlogPostsProvider);
     ref.sentryReportFullyDisplayed(listBlogPostsProvider);
-    return RefreshIndicator(
+    return RefreshIndicator.adaptive(
       onRefresh: () => ref.refresh(listBlogPostsProvider.future),
       child: blogs.when(
         data: (data) {

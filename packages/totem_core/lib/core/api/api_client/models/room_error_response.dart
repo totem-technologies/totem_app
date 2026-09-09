@@ -133,11 +133,7 @@ final class RoomErrorResponse {
   final String? detail;
 
   Map<String, dynamic> toJson() {
-    return {
-      'code': code.toJson(),
-      'message': message,
-      'detail': ?detail,
-    };
+    return {'code': code.toJson(), 'message': message, 'detail': ?detail};
   }
 
   static bool canParse(Map<String, dynamic> json) {

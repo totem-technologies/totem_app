@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 class CircleIconButton extends StatelessWidget {
@@ -35,10 +35,7 @@ class CircleIconButton extends StatelessWidget {
           icon,
           width: 16,
           height: 16,
-          colorFilter: const ColorFilter.mode(
-            Colors.black,
-            BlendMode.srcIn,
-          ),
+          colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
         ),
       ),
     );
@@ -48,10 +45,7 @@ class CircleIconButton extends StatelessWidget {
         button: true,
         enabled: true,
         child: tooltip != null
-            ? Tooltip(
-                message: tooltip,
-                child: button,
-              )
+            ? Tooltip(message: tooltip, child: button)
             : button,
       ),
     );

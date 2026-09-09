@@ -3,8 +3,8 @@ import 'dart:ui';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 typedef OnActionPerformed = AsyncValueGetter<bool>;
 
@@ -249,10 +249,7 @@ class ActionSliderState extends State<ActionSlider> {
     }
   }
 
-  void _onPanEnd(
-    DragEndDetails details,
-    double maxSlideDistance,
-  ) {
+  void _onPanEnd(DragEndDetails details, double maxSlideDistance) {
     if (_isCompleted || _isLoading || !widget.enabled) return;
 
     final progress = _dragPosition / maxSlideDistance;
@@ -311,11 +308,7 @@ class ActionSliderState extends State<ActionSlider> {
         maxSlideDistance = trackWidth - thumbSize - (padding * 2);
         final progress = widget.isLoading == true
             ? 1
-            : clampDouble(
-                math.min(_dragPosition / maxSlideDistance, 1),
-                0,
-                1,
-              );
+            : clampDouble(math.min(_dragPosition / maxSlideDistance, 1), 0, 1);
 
         final backgroundColor =
             widget.backgroundColor ?? theme.colorScheme.primary;

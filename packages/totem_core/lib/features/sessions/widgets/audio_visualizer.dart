@@ -4,8 +4,8 @@ import 'dart:async';
 import 'dart:math' show max, min;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' as sdk;
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 
 enum VisualizerState { thinking, listening, active }
@@ -182,7 +182,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     final participantListener = _participantListener;
     _participantListener = null;
     await _safeAsyncAction(
-      () async => participantListener?.dispose(),
+      () async => await participantListener?.dispose(),
       failureMessage: 'Failed to dispose participant listener',
     );
   }
@@ -392,10 +392,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   ) {
     return List.generate(
       length,
-      (i) => BarsViewItem(
-        value: samples[i],
-        color: colorProvider(i),
-      ),
+      (i) => BarsViewItem(value: samples[i], color: colorProvider(i)),
     );
   }
 
@@ -474,10 +471,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
         _controller.stop();
       }
       final elements = _generateElements(context, state);
-      return BarsView(
-        options: widget.options,
-        elements: elements,
-      );
+      return BarsView(options: widget.options, elements: elements);
     }
 
     // Resume animation for thinking/listening states
@@ -489,31 +483,21 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       animation: _pulseAnimation,
       builder: (ctx, _) {
         final elements = _generateElements(ctx, state);
-        return BarsView(
-          options: widget.options,
-          elements: elements,
-        );
+        return BarsView(options: widget.options, elements: elements);
       },
     );
   }
 }
 
 class BarsViewItem {
-  const BarsViewItem({
-    required this.value,
-    required this.color,
-  });
+  const BarsViewItem({required this.value, required this.color});
 
   final double value;
   final Color color;
 }
 
 class BarsView extends StatelessWidget {
-  const BarsView({
-    required this.options,
-    required this.elements,
-    super.key,
-  });
+  const BarsView({required this.options, required this.elements, super.key});
   final AudioVisualizerWidgetOptions options;
   final List<BarsViewItem> elements;
 

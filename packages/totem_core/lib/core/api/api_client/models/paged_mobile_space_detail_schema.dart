@@ -26,10 +26,7 @@ final class PagedMobileSpaceDetailSchema {
   final int count;
 
   Map<String, dynamic> toJson() {
-    return {
-      'items': items.map((e) => e.toJson()).toList(),
-      'count': count,
-    };
+    return {'items': items.map((e) => e.toJson()).toList(), 'count': count};
   }
 
   static bool canParse(Map<String, dynamic> json) {

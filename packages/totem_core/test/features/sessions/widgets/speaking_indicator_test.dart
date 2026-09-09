@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, logger;
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
@@ -25,21 +25,20 @@ void main() {
 
   setUpAll(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('livekit_client'),
-          (call) async {
-            switch (call.method) {
-              case 'startVisualizer':
-                return true;
-              case 'stopVisualizer':
-              case 'broadcastRequestActivation':
-              case 'broadcastRequestStop':
-                return null;
-              default:
-                return null;
-            }
-          },
-        );
+        .setMockMethodCallHandler(const MethodChannel('livekit_client'), (
+          call,
+        ) async {
+          switch (call.method) {
+            case 'startVisualizer':
+              return true;
+            case 'stopVisualizer':
+            case 'broadcastRequestActivation':
+            case 'broadcastRequestStop':
+              return null;
+            default:
+              return null;
+          }
+        });
   });
 
   Future<void> pumpWidget(
@@ -56,11 +55,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: overrides.cast(),
-        child: MaterialApp(
-          home: Scaffold(
-            body: child,
-          ),
-        ),
+        child: MaterialApp(home: Scaffold(body: child)),
       ),
     );
   }
@@ -82,15 +77,11 @@ void main() {
       final mediaStreamTrack = MockMediaStreamTrack();
       when(() => audioTrack.mediaStreamTrack).thenReturn(mediaStreamTrack);
       when(() => mediaStreamTrack.id).thenReturn('local-track-1');
-      when(audioTrack.createListener).thenReturn(
-        MockTrackEventsListener(),
-      );
+      when(audioTrack.createListener).thenReturn(MockTrackEventsListener());
 
       await pumpWidget(
         tester,
-        child: SpeakingIndicatorAudioTrack(
-          audioTrack: audioTrack,
-        ),
+        child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
       );
 
       expect(find.byType(TotemIcon), findsOneWidget);
@@ -136,9 +127,7 @@ void main() {
 
     testWidgets(
       'switches between waveform and icon on mute and unmute events',
-      (
-        tester,
-      ) async {
+      (tester) async {
         final audioTrack = MockLocalAudioTrack(muted: false);
         final mediaStreamTrack = MockMediaStreamTrack();
         when(() => audioTrack.mediaStreamTrack).thenReturn(mediaStreamTrack);
@@ -185,9 +174,7 @@ void main() {
 
     testWidgets(
       'switches between waveform and icon on participant mute and unmute events',
-      (
-        tester,
-      ) async {
+      (tester) async {
         final participant = MockRemoteParticipant('user-2', 'User 2');
         final publication = MockRemoteTrackPublication<RemoteAudioTrack>();
         final audioTrack = MockRemoteAudioTrack(muted: false);

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
@@ -13,12 +13,7 @@ import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 class SessionErrorScreen extends ConsumerWidget {
-  const SessionErrorScreen({
-    this.onRetry,
-    this.error,
-    this.session,
-    super.key,
-  });
+  const SessionErrorScreen({this.onRetry, this.error, this.session, super.key});
 
   final AsyncCallback? onRetry;
   final Object? error;
@@ -104,9 +99,7 @@ class SessionErrorScreen extends ConsumerWidget {
         leading: CircleIconButton(
           margin: const EdgeInsetsDirectional.only(start: 20, top: 20),
           icon: TotemIcons.arrowBack,
-          tooltip: MaterialLocalizations.of(
-            context,
-          ).backButtonTooltip,
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: pop,
         ),
       ),
@@ -161,7 +154,7 @@ class SessionErrorScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             ConfirmationDialogButton.elevated(
-                              onConfirm: () async => onRetry?.call(),
+                              onConfirm: () async => await onRetry?.call(),
                               disabled: onRetry == null,
                               child: const Text('Try Joining Again'),
                             ),

@@ -15,10 +15,7 @@ class AuthRepository {
 
   final ClientApi apiService;
 
-  Future<MessageResponse> requestPin(
-    String email,
-    bool newsletterConsent,
-  ) async {
+  Future<MessageResponse> requestPin(String email, bool newsletterConsent) {
     return RepositoryUtils.handleApiCall<MessageResponse>(
       apiCall: () => apiService.$default.totemApiAuthRequestPin(
         body: PinRequestSchema(
@@ -30,7 +27,7 @@ class AuthRepository {
     );
   }
 
-  Future<TokenResponse> verifyPin(String email, String pin) async {
+  Future<TokenResponse> verifyPin(String email, String pin) {
     return RepositoryUtils.handleApiCall<TokenResponse>(
       apiCall: () => apiService.$default.totemApiAuthValidatePin(
         body: ValidatePinSchema(email: email, pin: pin),
@@ -39,7 +36,7 @@ class AuthRepository {
     );
   }
 
-  Future<TokenResponse> refreshAccessToken(String refreshToken) async {
+  Future<TokenResponse> refreshAccessToken(String refreshToken) {
     return RepositoryUtils.handleApiCall<TokenResponse>(
       apiCall: () => apiService.$default.totemApiAuthRefreshToken(
         body: RefreshTokenSchema(refreshToken: refreshToken),
@@ -48,7 +45,7 @@ class AuthRepository {
     );
   }
 
-  Future<MessageResponse> logout(String refreshToken) async {
+  Future<MessageResponse> logout(String refreshToken) {
     return RepositoryUtils.handleApiCall<MessageResponse>(
       apiCall: () => apiService.$default.totemApiAuthLogout(
         body: RefreshTokenSchema(refreshToken: refreshToken),
@@ -79,7 +76,7 @@ class AuthRepository {
     }
   }
 
-  Future<void> updateFcmToken(String fcmToken) async {
+  Future<void> updateFcmToken(String fcmToken) {
     return RepositoryUtils.handleApiCall(
       apiCall: () => apiService.$default.totemApiMobileApiRegisterFcmToken(
         body: FcmTokenRegisterSchema(token: fcmToken),
@@ -88,7 +85,7 @@ class AuthRepository {
     );
   }
 
-  Future<void> unregisterFcmToken(String fcmToken) async {
+  Future<void> unregisterFcmToken(String fcmToken) {
     return RepositoryUtils.handleApiCall(
       apiCall: () => apiService.$default.totemApiMobileApiUnregisterFcmToken(
         token: fcmToken,

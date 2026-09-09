@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class SheetDragHandle extends StatelessWidget {

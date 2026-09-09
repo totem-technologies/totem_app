@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 
@@ -15,17 +15,11 @@ void main() {
   group('isOfflineConnectivity', () {
     test('treats empty and none results as offline', () {
       expect(isOfflineConnectivity(const []), isTrue);
-      expect(
-        isOfflineConnectivity(const [ConnectivityResult.none]),
-        isTrue,
-      );
+      expect(isOfflineConnectivity(const [ConnectivityResult.none]), isTrue);
     });
 
     test('treats available transports as online', () {
-      expect(
-        isOfflineConnectivity(const [ConnectivityResult.wifi]),
-        isFalse,
-      );
+      expect(isOfflineConnectivity(const [ConnectivityResult.wifi]), isFalse);
       expect(
         isOfflineConnectivity(const [
           ConnectivityResult.wifi,

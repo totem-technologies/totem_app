@@ -17,9 +17,7 @@ final class UpdateCurrentUserImageRequest {
   final Uint8List profileImage;
 
   Map<String, dynamic> toJson() {
-    return {
-      'profile_image': base64Encode(profileImage),
-    };
+    return {'profile_image': base64Encode(profileImage)};
   }
 
   static bool canParse(Map<String, dynamic> json) {

@@ -15,7 +15,7 @@ class UserRepository {
 
   final ClientApi apiService;
 
-  Future<UserSchema> get currentUser async {
+  Future<UserSchema> get currentUser {
     return RepositoryUtils.handleApiCall<UserSchema>(
       apiCall: () => apiService.users.totemUsersMobileApiGetCurrentUser(),
       operationName: 'fetch current user',
@@ -24,7 +24,7 @@ class UserRepository {
 
   Future<bool> updateCurrentUserProfilePicture(File file) async {
     final bytes = await file.readAsBytes();
-    return RepositoryUtils.handleApiCall<bool>(
+    return await RepositoryUtils.handleApiCall<bool>(
       apiCall: () => apiService.users.totemUsersMobileApiUpdateCurrentUserImage(
         body: UpdateCurrentUserImageRequest(profileImage: bytes),
       ),
@@ -39,7 +39,7 @@ class UserRepository {
     bool? newsletterConsent,
     ProfileAvatarTypeEnum? profileAvatarType,
     String? avatarSeed,
-  }) async {
+  }) {
     return RepositoryUtils.handleApiCall<UserSchema>(
       apiCall: () => apiService.users.totemUsersMobileApiUpdateCurrentUser(
         body: UserUpdateSchema(
@@ -55,7 +55,7 @@ class UserRepository {
     );
   }
 
-  Future<OnboardSchema> get onboardStatus async {
+  Future<OnboardSchema> get onboardStatus {
     return RepositoryUtils.handleApiCall<OnboardSchema>(
       apiCall: () => apiService.$default.totemOnboardMobileApiOnboardGet(),
       operationName: 'fetch onboard status',
@@ -67,7 +67,7 @@ class UserRepository {
     required Set<String> interestTopics,
     int? yearBorn,
     String? referralOther,
-  }) async {
+  }) {
     return RepositoryUtils.handleApiCall<OnboardSchema>(
       apiCall: () => apiService.$default.totemOnboardMobileApiOnboardPost(
         body: OnboardSchema(
@@ -81,7 +81,7 @@ class UserRepository {
     );
   }
 
-  Future<void> deleteAccount() async {
+  Future<void> deleteAccount() {
     return RepositoryUtils.handleApiCall<void>(
       apiCall: () => apiService.users.totemUsersMobileApiDeleteCurrentUser(),
       operationName: 'delete account',

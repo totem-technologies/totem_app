@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -20,7 +20,7 @@ Future<void> showBackgroundActivityDialog(BuildContext context) async {
     return;
   }
 
-  return showDialog<void>(
+  return await showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (context) => const BackgroundActivityDialog(),
@@ -133,15 +133,13 @@ Future<bool> showWebPermissionsDeniedDialog(
 
   final permissionsGranted = await (() async {
     if (retryPermissions != null) {
-      return retryPermissions();
+      return await retryPermissions();
     }
 
     // Native and legacy callers still use the permissions controller. The
     // Session pre-join flow supplies [retryPermissions] on web so the real
     // preview tracks request access without opening throwaway media streams.
-    final controller = container.read(
-      permissionsControllerProvider.notifier,
-    );
+    final controller = container.read(permissionsControllerProvider.notifier);
     await controller.requestPermissions();
     return (await controller.currentStatuses).requiredPermissionsGranted;
   })();
@@ -153,7 +151,7 @@ Future<bool> showWebPermissionsDeniedDialog(
   }
 
   // Permissions still not granted - show dialog again.
-  return showWebPermissionsDeniedDialog(
+  return await showWebPermissionsDeniedDialog(
     context,
     retryPermissions: retryPermissions,
   );
@@ -279,10 +277,7 @@ class _PermissionsRequestSheetState
                 ),
                 const SizedBox(height: 32),
                 PermissionItemTile(
-                  icon: const TotemIcon(
-                    TotemIcons.notification,
-                    size: 25,
-                  ),
+                  icon: const TotemIcon(TotemIcons.notification, size: 25),
                   title: 'Notification',
                   description:
                       'Allow Totem to send you notifications about sessions, '
@@ -292,10 +287,7 @@ class _PermissionsRequestSheetState
                 ),
                 const SizedBox(height: 10),
                 PermissionItemTile(
-                  icon: const TotemIcon(
-                    TotemIcons.microphoneOn,
-                    size: 25,
-                  ),
+                  icon: const TotemIcon(TotemIcons.microphoneOn, size: 25),
                   title: 'Mic',
                   description:
                       'To speak during sessions, Totem needs access to your '
@@ -305,10 +297,7 @@ class _PermissionsRequestSheetState
                 ),
                 const SizedBox(height: 10),
                 PermissionItemTile(
-                  icon: const TotemIcon(
-                    TotemIcons.cameraOn,
-                    size: 25,
-                  ),
+                  icon: const TotemIcon(TotemIcons.cameraOn, size: 25),
                   title: 'Camera',
                   description:
                       'Allow camera access so others can see you during '

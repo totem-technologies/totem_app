@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_core/core/config/theme.dart';

@@ -81,10 +81,7 @@ class RoutingUtils {
       if (appRoute != null && context.mounted) {
         await context.push(appRoute);
       } else {
-        await launchUrl(
-          Uri.parse(url),
-          mode: LaunchMode.externalApplication,
-        );
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       }
     } catch (e) {
       ErrorHandler.logError(e, message: 'Failed to handle link tap: $url');

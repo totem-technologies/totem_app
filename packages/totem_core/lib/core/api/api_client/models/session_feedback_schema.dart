@@ -50,10 +50,7 @@ final class SessionFeedbackOptions {
 
 @immutable
 final class SessionFeedbackSchema {
-  const SessionFeedbackSchema({
-    required this.feedback,
-    this.message,
-  });
+  const SessionFeedbackSchema({required this.feedback, this.message});
 
   factory SessionFeedbackSchema.fromJson(Map<String, dynamic> json) {
     return SessionFeedbackSchema(
@@ -67,10 +64,7 @@ final class SessionFeedbackSchema {
   final String? message;
 
   Map<String, dynamic> toJson() {
-    return {
-      'feedback': feedback.toJson(),
-      'message': ?message,
-    };
+    return {'feedback': feedback.toJson(), 'message': ?message};
   }
 
   static bool canParse(Map<String, dynamic> json) {

@@ -91,7 +91,7 @@ class SecureStorage {
   }
 
   /// Check if a key exists
-  Future<bool> containsKey({required String key}) async {
+  Future<bool> containsKey({required String key}) {
     return _storage.containsKey(key: key);
   }
 }

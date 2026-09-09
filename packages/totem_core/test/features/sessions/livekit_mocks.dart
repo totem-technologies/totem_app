@@ -4,7 +4,6 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-// ignore: depend_on_referenced_packages
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:livekit_client/src/core/engine.dart';
@@ -33,9 +32,7 @@ VoidCallback stubFlutterWebRtcChannels() {
     switch (call.method) {
       case 'createVideoRenderer':
         final textureId = nextTextureId++;
-        final textureChannel = MethodChannel(
-          'FlutterWebRTC/Texture$textureId',
-        );
+        final textureChannel = MethodChannel('FlutterWebRTC/Texture$textureId');
         messenger.setMockMethodCallHandler(textureChannel, (_) async => null);
         textureChannels.add(textureChannel);
         return {'textureId': textureId};
@@ -189,9 +186,8 @@ class MockRemoteAudioTrack extends Mock implements RemoteAudioTrack {
   }
 
   @override
-  EventsListener<TrackEvent> createListener({
-    bool synchronized = false,
-  }) => trackListener;
+  EventsListener<TrackEvent> createListener({bool synchronized = false}) =>
+      trackListener;
 }
 
 class MockTrackMutedEvent extends Mock implements TrackMutedEvent {}
@@ -247,9 +243,7 @@ class MockLocalTrackPublication extends Mock
     bool isActive = true,
     LocalVideoTrack? videoTrack,
   }) {
-    when(
-      () => track,
-    ).thenAnswer(
+    when(() => track).thenAnswer(
       (_) =>
           videoTrack ?? MockLocalVideoTrack(muted: muted, isActive: isActive),
     );
@@ -286,10 +280,7 @@ dynamic _videoTrackDefaults(Invocation invocation) {
 // Members that legitimately return null from the defaults above; without
 // this allowlist they would fall through to mocktail's noSuchMethod and
 // throw for being unstubbed.
-const _videoTrackVoidMembers = {
-  #unregisterVideoView,
-  #removeViewRegistration,
-};
+const _videoTrackVoidMembers = {#unregisterVideoView, #removeViewRegistration};
 
 class MockRemoteVideoTrack extends Mock implements RemoteVideoTrack {
   @override

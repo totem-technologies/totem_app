@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+
+# Pre-push hook to run the test suite
+# To use this hook, run: make githooks
+
+set -eu
+
+make test

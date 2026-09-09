@@ -90,9 +90,7 @@ class AnalyticsService {
           id: user.slug,
           name: user.name,
           username: user.slug,
-          data: {
-            'is_staff': user.isStaff,
-          },
+          data: {'is_staff': user.isStaff},
         ),
       );
 
@@ -102,10 +100,7 @@ class AnalyticsService {
           message: 'User identified: ${user.email}',
           level: SentryLevel.info,
           category: 'user',
-          data: {
-            'user_id': user.slug,
-            'is_staff': user.isStaff.toString(),
-          },
+          data: {'user_id': user.slug, 'is_staff': user.isStaff.toString()},
         ),
       );
     });

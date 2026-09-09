@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
@@ -323,10 +323,7 @@ void main() {
       );
       expect(moreButton, findsOneWidget);
       final gesture = tester.widget<GestureDetector>(
-        find.descendant(
-          of: moreButton,
-          matching: find.byType(GestureDetector),
-        ),
+        find.descendant(of: moreButton, matching: find.byType(GestureDetector)),
       );
       expect(gesture.onTap, isNull);
     });

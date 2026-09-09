@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';

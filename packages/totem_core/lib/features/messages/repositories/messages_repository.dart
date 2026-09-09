@@ -10,10 +10,7 @@ part 'messages_repository.g.dart';
 abstract class MessagesRepository {
   Future<List<Conversation>> getConversations();
 
-  Future<List<Message>> getMessages(
-    String conversationId, {
-    String? beforeId,
-  });
+  Future<List<Message>> getMessages(String conversationId, {String? beforeId});
 
   Future<Message> sendMessage(String conversationId, String text);
 

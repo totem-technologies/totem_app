@@ -101,10 +101,7 @@ class AppDataException extends AppException {
   }
 
   factory AppDataException.missingData() {
-    return AppDataException(
-      'Required data is missing',
-      code: 'MISSING_DATA',
-    );
+    return AppDataException('Required data is missing', code: 'MISSING_DATA');
   }
 
   factory AppDataException.validationError(String field) {

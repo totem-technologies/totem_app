@@ -82,11 +82,7 @@ enum SessionDisconnectedReason {
   other,
 }
 
-enum SessionJoinResult {
-  success,
-  retryableFailure,
-  fatalFailure,
-}
+enum SessionJoinResult { success, retryableFailure, fatalFailure }
 
 @riverpod
 class SessionController extends _$SessionController {
@@ -119,10 +115,7 @@ class SessionController extends _$SessionController {
   static const defaultCameraCaptureOptions = CameraCaptureOptions(
     params: VideoParameters(
       dimensions: VideoDimensionsPresets.h720_43,
-      encoding: VideoEncoding(
-        maxBitrate: 1300 * 1000,
-        maxFramerate: 24,
-      ),
+      encoding: VideoEncoding(maxBitrate: 1300 * 1000, maxFramerate: 24),
     ),
   );
 
@@ -190,9 +183,7 @@ class SessionController extends _$SessionController {
       status: RoomStatus.waitingRoom,
       turnState: TurnState.idle,
       sessionSlug: options.sessionSlug,
-      statusDetail: const RoomStateStatusDetailWaitingRoom(
-        WaitingRoomDetail(),
-      ),
+      statusDetail: const RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
       talkingOrder: const [],
       version: 0,
       roundNumber: 0,
@@ -205,9 +196,7 @@ class SessionController extends _$SessionController {
       ),
       participants: const ParticipantsState(),
       chat: const ChatState(),
-      turn: SessionTurnState(
-        roomState: initialRoomState,
-      ),
+      turn: SessionTurnState(roomState: initialRoomState),
     );
   }
 
@@ -614,9 +603,7 @@ class SessionController extends _$SessionController {
     logger.d('Disposing SessionService and closing connections.');
 
     if (ref.mounted) {
-      unawaited(
-        ref.read(sessionInfraControllerProvider.notifier).deactivate(),
-      );
+      unawaited(ref.read(sessionInfraControllerProvider.notifier).deactivate());
     }
 
     if (ref.mounted) {
@@ -688,9 +675,7 @@ class SessionController extends _$SessionController {
         }
 
         if (event.reason != null) {
-          _dispatch(
-            SessionErrorChanged(RoomDisconnectionError(event.reason!)),
-          );
+          _dispatch(SessionErrorChanged(RoomDisconnectionError(event.reason!)));
         }
         _onDisconnected();
       })

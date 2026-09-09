@@ -219,9 +219,7 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   LocalVideoTrack? get localVideoTrack {
     return _room?.localParticipant?.videoTrackPublications
-        .where(
-          (t) => t.track != null && t.track!.isActive && !t.track!.muted,
-        )
+        .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
         .firstOrNull
         ?.track;
   }
@@ -412,9 +410,7 @@ class SessionDeviceController extends _$SessionDeviceController {
     await room?.localParticipant?.setCameraEnabled(
       true,
       cameraCaptureOptions: SessionController.defaultCameraCaptureOptions
-          .copyWith(
-            deviceId: room.selectedVideoInputDeviceId,
-          ),
+          .copyWith(deviceId: room.selectedVideoInputDeviceId),
     );
 
     _emitState();

@@ -5,10 +5,7 @@ import 'end_reason.dart';
 
 @immutable
 final class EndedDetail {
-  const EndedDetail({
-    required this.reason,
-    this.type = 'ended',
-  });
+  const EndedDetail({required this.reason, this.type = 'ended'});
 
   factory EndedDetail.fromJson(Map<String, dynamic> json) {
     return EndedDetail(
@@ -22,20 +19,14 @@ final class EndedDetail {
   final EndReason reason;
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'reason': reason.toJson(),
-    };
+    return {'type': type, 'reason': reason.toJson()};
   }
 
   static bool canParse(Map<String, dynamic> json) {
     return json.containsKey('reason');
   }
 
-  EndedDetail copyWith({
-    String Function()? type,
-    EndReason? reason,
-  }) {
+  EndedDetail copyWith({String Function()? type, EndReason? reason}) {
     return EndedDetail(
       type: type != null ? type() : this.type,
       reason: reason ?? this.reason,

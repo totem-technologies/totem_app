@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 
@@ -7,9 +7,7 @@ void main() {
   group('Transition Cards', () {
     Widget buildTestWidget(Widget child) {
       return MaterialApp(
-        home: Scaffold(
-          body: Center(child: child),
-        ),
+        home: Scaffold(body: Center(child: child)),
       );
     }
 
@@ -133,9 +131,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        buildTestWidget(
-          const WaitingReceiveTransitionCard(),
-        ),
+        buildTestWidget(const WaitingReceiveTransitionCard()),
       );
 
       expect(find.byType(ActionSliderButton), findsNothing);

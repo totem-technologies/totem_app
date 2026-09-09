@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
@@ -91,9 +91,7 @@ class _SpeakingIndicatorCoreState extends State<_SpeakingIndicatorCore> {
     final participant = widget.participant;
 
     if (participant is RemoteParticipant) {
-      return participant.getTrackPublicationBySource(
-        TrackSource.microphone,
-      );
+      return participant.getTrackPublicationBySource(TrackSource.microphone);
     } else {
       return participant?.audioTrackPublications
           .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)

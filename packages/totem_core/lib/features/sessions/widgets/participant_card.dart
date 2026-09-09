@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart' hide logger;
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
@@ -94,9 +94,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
                 ),
               )
             else if (activeSpeaker == null)
-              const Positioned.fill(
-                child: ColoredBox(color: Colors.black54),
-              )
+              const Positioned.fill(child: ColoredBox(color: Colors.black54))
             else ...[
               Positioned.fill(
                 child: ParticipantVideo(
@@ -293,7 +291,7 @@ class ParticipantCard extends ConsumerWidget {
     return RepaintBoundary(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        clipBehavior: Clip.hardEdge,
+        clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
             Positioned.fill(
@@ -357,12 +355,7 @@ class ParticipantCard extends ConsumerWidget {
                   color: Colors.white,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  shadows: [
-                    Shadow(
-                      offset: Offset(0, 1),
-                      blurRadius: 4,
-                    ),
-                  ],
+                  shadows: [Shadow(offset: Offset(0, 1), blurRadius: 4)],
                 ),
               ),
             ),
@@ -391,9 +384,7 @@ class LocalParticipantCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final user = ref.watch(
-      authControllerProvider.select((auth) => auth.user),
-    );
+    final user = ref.watch(authControllerProvider.select((auth) => auth.user));
 
     final showVideo = isCameraOn && _isVideoTrackVisible;
 
@@ -708,9 +699,8 @@ class _ParticipantVideoStatisticsState
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => setState(
-        () => _shouldShowStatistics = !_shouldShowStatistics,
-      ),
+      onTap: () =>
+          setState(() => _shouldShowStatistics = !_shouldShowStatistics),
       child: _shouldShowStatistics
           ? Stack(
               fit: StackFit.expand,

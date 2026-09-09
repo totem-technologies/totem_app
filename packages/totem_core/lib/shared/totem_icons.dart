@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:material_ui/material_ui.dart';
 
 class TotemIcons {
   static const home = '''

@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:mocktail/mocktail.dart';
-// ignore: depend_on_referenced_packages
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 

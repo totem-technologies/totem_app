@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 
 class SessionTitle extends ConsumerWidget {
@@ -18,7 +18,7 @@ class SessionTitle extends ConsumerWidget {
         spacing: 2,
         children: [
           Text(
-            'SPACE',
+            'SESSION',
             style: theme.textTheme.labelSmall?.copyWith(
               color: const Color(0xFF787D7E),
             ),
@@ -45,9 +45,7 @@ Widget? roundPromptText(String? roundPrompt) {
       final theme = Theme.of(context);
       return Text(
         '"$roundPrompt"',
-        style: theme.textTheme.bodyLarge?.copyWith(
-          fontStyle: FontStyle.italic,
-        ),
+        style: theme.textTheme.bodyLarge?.copyWith(fontStyle: FontStyle.italic),
         textAlign: TextAlign.center,
       );
     },

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/assets.dart';
 
 class TotemIconLogo extends StatelessWidget {
@@ -24,11 +24,7 @@ class TotemIconLogo extends StatelessWidget {
 }
 
 class TotemLogo extends StatelessWidget {
-  const TotemLogo({
-    super.key,
-    this.size,
-    this.color,
-  });
+  const TotemLogo({super.key, this.size, this.color});
 
   final double? size;
   final Color? color;

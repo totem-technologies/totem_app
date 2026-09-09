@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, logger;
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
@@ -72,9 +72,7 @@ void main() {
           ...overrides.cast(),
         ],
         child: MaterialApp(
-          home: Scaffold(
-            body: RepaintBoundary(child: child),
-          ),
+          home: Scaffold(body: RepaintBoundary(child: child)),
         ),
       ),
     );
@@ -353,9 +351,7 @@ void main() {
             status: RoomStatus.active,
             turnState: TurnState.idle,
             sessionSlug: 'test-session',
-            statusDetail: RoomStateStatusDetailWaitingRoom(
-              WaitingRoomDetail(),
-            ),
+            statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
             talkingOrder: [],
             version: 1,
             roundNumber: 1,
@@ -418,9 +414,7 @@ void main() {
             status: RoomStatus.active,
             turnState: TurnState.idle,
             sessionSlug: 'test-session',
-            statusDetail: RoomStateStatusDetailWaitingRoom(
-              WaitingRoomDetail(),
-            ),
+            statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
             talkingOrder: [],
             version: 1,
             roundNumber: 1,
@@ -448,9 +442,7 @@ void main() {
   });
 
   group('ParticipantVideo', () {
-    testWidgets('hides track when muted', (
-      tester,
-    ) async {
+    testWidgets('hides track when muted', (tester) async {
       final mockParticipant = MockRemoteParticipant('user-2', 'John Doe');
       Future<void> show() {
         return pumpWidget(
@@ -520,9 +512,7 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: _MenuCloseTestWrapper(
-                participant: remoteParticipant,
-              ),
+              body: _MenuCloseTestWrapper(participant: remoteParticipant),
             ),
           ),
         ),
@@ -538,9 +528,7 @@ void main() {
 
       // Unmount the control button by toggling visibility.
       final _ = tester
-          .state<_MenuCloseTestWrapperState>(
-            find.byType(_MenuCloseTestWrapper),
-          )
+          .state<_MenuCloseTestWrapperState>(find.byType(_MenuCloseTestWrapper))
           .hide();
       await tester.pumpAndSettle();
 
