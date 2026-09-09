@@ -9,7 +9,11 @@ import 'package:totem_core/features/messages/models/message_pages.dart';
 part 'messages_repository.g.dart';
 
 abstract class MessagesRepository {
-  Future<ConversationPage> getConversations({String? cursor, int? limit});
+  Future<ConversationPage> getConversations({
+    String? cursor,
+    String? query,
+    int? limit,
+  });
 
   Future<Conversation> getConversation(String conversationId);
 
@@ -61,11 +65,13 @@ class ApiMessagesRepository implements MessagesRepository {
   @override
   Future<ConversationPage> getConversations({
     String? cursor,
+    String? query,
     int? limit,
   }) async {
     final page = await RepositoryUtils.handleApiCall<ConversationPageSchema>(
       apiCall: () => _api.messages.totemMessagesMobileApiListConversations(
         cursor: cursor,
+        query: query,
         limit: limit,
       ),
       operationName: 'list conversations',

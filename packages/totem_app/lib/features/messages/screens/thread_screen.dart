@@ -80,7 +80,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     return asyncConversation.when(
       loading: () => const Scaffold(
         backgroundColor: AppTheme.cream,
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator.adaptive()),
       ),
       error: (_, _) => const _UnavailableConversation(),
       data: (conversation) {
@@ -119,7 +119,8 @@ class _ThreadBody extends ConsumerWidget {
           _ThreadHeader(conversation: conversation),
           Expanded(
             child: asyncThread.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator.adaptive()),
               error: (_, _) => _ThreadError(onRetry: onRefresh),
               data: (thread) {
                 onMessagesVisible(thread);
@@ -169,7 +170,7 @@ class _MessageList extends StatelessWidget {
         if (notification.metrics.extentAfter < 200) onLoadMore();
         return false;
       },
-      child: RefreshIndicator(
+      child: RefreshIndicator.adaptive(
         onRefresh: () async => onLoadMore(),
         child: ListView.builder(
           reverse: true,
@@ -180,7 +181,7 @@ class _MessageList extends StatelessWidget {
               if (thread.isLoadingMore) {
                 return const Padding(
                   padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(child: CircularProgressIndicator.adaptive()),
                 );
               }
               if (thread.loadMoreError != null) {

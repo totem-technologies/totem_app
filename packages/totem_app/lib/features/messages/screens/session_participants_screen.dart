@@ -78,7 +78,8 @@ class SessionParticipantsScreen extends ConsumerWidget {
           ),
           Expanded(
             child: participants.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator.adaptive()),
               error: (_, _) => Center(
                 child: TextButton(
                   onPressed: () => ref.invalidate(
@@ -133,7 +134,9 @@ class SessionParticipantsScreen extends ConsumerWidget {
                             child: const Text('Retry loading more'),
                           );
                         }
-                        return const Center(child: CircularProgressIndicator());
+                        return const Center(
+                          child: CircularProgressIndicator.adaptive(),
+                        );
                       }
                       return _ParticipantCard(
                         participant: state.participants[index],

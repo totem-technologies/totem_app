@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +21,8 @@ class MessagesScreen extends ConsumerStatefulWidget {
 }
 
 class _MessagesScreenState extends ConsumerState<MessagesScreen> {
+  Timer? _searchDebounce;
+
   @override
   void initState() {
     super.initState();
@@ -27,85 +31,78 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     ref.read(messagingSyncCoordinatorProvider).setInboxVisible(false);
     super.dispose();
   }
 
   Future<void> _refresh() => ref.read(conversationsProvider.notifier).refresh();
 
+  void _onSearchChanged(String query) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      unawaited(ref.read(conversationsProvider.notifier).search(query));
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final asyncInbox = ref.watch(conversationsProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.cream,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            color: AppTheme.surfaceCard,
-            padding: EdgeInsetsDirectional.only(
-              top: MediaQuery.of(context).padding.top,
-            ),
-            child: SizedBox(
-              height: 56,
-              child: Padding(
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Messages',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: AppTheme.textHeading,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 21,
-                      ),
-                    ),
-                    Semantics(
-                      button: true,
-                      label: 'New message',
-                      child: InkWell(
-                        onTap: () => context.push(RouteNames.newMessage),
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          alignment: Alignment.center,
-                          decoration: const BoxDecoration(
-                            color: AppTheme.messagePurple,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.add,
-                            color: AppTheme.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+      appBar: AppBar(
+        backgroundColor: AppTheme.surfaceCard,
+        title: Text('Messages'),
+        centerTitle: false,
+        actions: [
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 20.0),
+            child: Semantics(
+              button: true,
+              label: 'New message',
+              child: InkWell(
+                onTap: () => context.push(RouteNames.newMessage),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.messagePurple,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.add, color: AppTheme.white, size: 20),
                 ),
               ),
             ),
           ),
+        ],
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Padding(
             padding: const EdgeInsetsDirectional.fromSTEB(20, 18, 20, 18),
             child: TextField(
-              readOnly: true,
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Message search is not available on this server yet.',
-                  ),
-                ),
-              ),
+              onChanged: _onSearchChanged,
               decoration: InputDecoration(
                 hintText: 'Search messages',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: asyncInbox.asData?.value.isSearching == true
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      )
+                    : null,
                 filled: true,
                 fillColor: AppTheme.messageSearchBg,
-                prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                   borderSide: BorderSide.none,
@@ -115,7 +112,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           ),
           Expanded(
             child: asyncInbox.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator.adaptive()),
               error: (_, _) => Center(
                 child: TextButton(
                   onPressed: () => ref.invalidate(conversationsProvider),
@@ -123,7 +121,18 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                 ),
               ),
               data: (inbox) {
-                if (inbox.conversations.isEmpty) return const _EmptyState();
+                if (inbox.searchError != null) {
+                  return _SearchError(
+                    onRetry: () => ref
+                        .read(conversationsProvider.notifier)
+                        .search(inbox.query, force: true),
+                  );
+                }
+                if (inbox.conversations.isEmpty) {
+                  return inbox.query.isEmpty
+                      ? const _EmptyState()
+                      : const _NoSearchResults();
+                }
                 return _ConversationList(
                   conversations: inbox.conversations,
                   isLoadingMore: inbox.isLoadingMore,
@@ -141,6 +150,28 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   }
 }
 
+class _NoSearchResults extends StatelessWidget {
+  const _NoSearchResults();
+
+  @override
+  Widget build(BuildContext context) =>
+      const Center(child: Text('No conversations match your search.'));
+}
+
+class _SearchError extends StatelessWidget {
+  const _SearchError({required this.onRetry});
+
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: TextButton(
+      onPressed: onRetry,
+      child: const Text('Could not search messages. Try again.'),
+    ),
+  );
+}
+
 class _EmptyState extends ConsumerWidget {
   const _EmptyState();
 
@@ -150,7 +181,7 @@ class _EmptyState extends ConsumerWidget {
       recipientDirectoryProvider(RecipientDirectoryKind.keepers),
     );
     return recipients.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: CircularProgressIndicator.adaptive()),
       error: (_, _) => Center(
         child: TextButton(
           onPressed: () => ref.invalidate(
@@ -255,7 +286,7 @@ class _ConversationList extends StatelessWidget {
         if (notification.metrics.extentAfter < 240) onLoadMore();
         return false;
       },
-      child: RefreshIndicator(
+      child: RefreshIndicator.adaptive(
         onRefresh: onRefresh,
         child: ListView.separated(
           padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 20),
@@ -271,7 +302,7 @@ class _ConversationList extends StatelessWidget {
                   child: const Text('Retry loading more'),
                 );
               }
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: CircularProgressIndicator.adaptive());
             }
             final conversation = conversations[index];
             final lastMessage = conversation.lastMessage;

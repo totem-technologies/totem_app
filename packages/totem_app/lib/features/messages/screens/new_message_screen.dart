@@ -98,7 +98,8 @@ class _NewMessageScreenState extends ConsumerState<NewMessageScreen> {
           ),
           Expanded(
             child: recipients.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator.adaptive()),
               error: (_, _) => Center(
                 child: TextButton(
                   onPressed: () =>
@@ -187,7 +188,7 @@ class _RecipientList extends StatelessWidget {
           if (isLoadingMore)
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: CircularProgressIndicator.adaptive()),
             )
           else if (loadMoreError != null)
             TextButton(

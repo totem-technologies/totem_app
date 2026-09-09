@@ -154,9 +154,9 @@ class _SendButtonState extends State<_SendButton> {
           child: widget.isSending
               ? const Padding(
                   padding: EdgeInsets.all(13),
-                  child: CircularProgressIndicator(
+                  child: CircularProgressIndicator.adaptive(
                     strokeWidth: 2,
-                    color: AppTheme.white,
+                    valueColor: AlwaysStoppedAnimation(AppTheme.white),
                   ),
                 )
               : const Icon(

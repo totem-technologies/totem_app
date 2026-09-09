@@ -92,7 +92,8 @@ class _ComposeToParticipantsScreenState
           const Divider(height: 1, thickness: 1, color: AppTheme.divider),
           Expanded(
             child: participants.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator.adaptive()),
               error: (_, _) => Center(
                 child: TextButton(
                   onPressed: () => ref.invalidate(
@@ -282,9 +283,11 @@ class _ComposeToParticipantsScreenState
                                   ? const SizedBox(
                                       width: 18,
                                       height: 18,
-                                      child: CircularProgressIndicator(
+                                      child: CircularProgressIndicator.adaptive(
                                         strokeWidth: 2,
-                                        color: AppTheme.white,
+                                        valueColor: AlwaysStoppedAnimation(
+                                          AppTheme.white,
+                                        ),
                                       ),
                                     )
                                   : Text(

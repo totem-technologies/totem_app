@@ -11,40 +11,54 @@ class InboxState {
     required this.totalUnreadCount,
     this.nextCursor,
     this.syncCursor,
+    this.query = '',
     this.isLoadingMore = false,
+    this.isSearching = false,
     this.loadMoreError,
+    this.searchError,
   });
 
   final List<Conversation> conversations;
   final int totalUnreadCount;
   final String? nextCursor;
   final String? syncCursor;
+  final String query;
   final bool isLoadingMore;
+  final bool isSearching;
   final Object? loadMoreError;
+  final Object? searchError;
 
   InboxState copyWith({
     List<Conversation>? conversations,
     int? totalUnreadCount,
     String? Function()? nextCursor,
     String? Function()? syncCursor,
+    String? query,
     bool? isLoadingMore,
+    bool? isSearching,
     Object? Function()? loadMoreError,
+    Object? Function()? searchError,
   }) {
     return InboxState(
       conversations: conversations ?? this.conversations,
       totalUnreadCount: totalUnreadCount ?? this.totalUnreadCount,
       nextCursor: nextCursor != null ? nextCursor() : this.nextCursor,
       syncCursor: syncCursor != null ? syncCursor() : this.syncCursor,
+      query: query ?? this.query,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      isSearching: isSearching ?? this.isSearching,
       loadMoreError: loadMoreError != null
           ? loadMoreError()
           : this.loadMoreError,
+      searchError: searchError != null ? searchError() : this.searchError,
     );
   }
 }
 
 @riverpod
 class ConversationsNotifier extends _$ConversationsNotifier {
+  var _searchRequestVersion = 0;
+
   @override
   Future<InboxState> build() async {
     final page = await ref.read(messagesRepositoryProvider).getConversations();
@@ -63,6 +77,10 @@ class ConversationsNotifier extends _$ConversationsNotifier {
       ref.invalidateSelf();
       return;
     }
+    if (current.query.isNotEmpty) {
+      await search(current.query, force: true);
+      return;
+    }
     final page = await ref
         .read(messagesRepositoryProvider)
         .syncConversations(since: current.syncCursor);
@@ -73,6 +91,52 @@ class ConversationsNotifier extends _$ConversationsNotifier {
         totalUnreadCount: page.totalUnreadCount,
       ),
     );
+  }
+
+  Future<void> search(String query, {bool force = false}) async {
+    final normalizedQuery = query.trim();
+    final current = state.value;
+    if (current == null) {
+      ref.invalidateSelf();
+      return;
+    }
+    if (!force && normalizedQuery == current.query) return;
+
+    final requestVersion = ++_searchRequestVersion;
+    state = AsyncData(
+      current.copyWith(
+        query: normalizedQuery,
+        isSearching: true,
+        searchError: () => null,
+        loadMoreError: () => null,
+      ),
+    );
+    try {
+      final page = await ref
+          .read(messagesRepositoryProvider)
+          .getConversations(
+            query: normalizedQuery.isEmpty ? null : normalizedQuery,
+          );
+      if (requestVersion != _searchRequestVersion) return;
+      state = AsyncData(
+        InboxState(
+          conversations: _mergeConversations(const [], page.items),
+          nextCursor: page.nextCursor,
+          syncCursor: page.nextCursor,
+          query: normalizedQuery,
+          totalUnreadCount: page.totalUnreadCount,
+        ),
+      );
+    } catch (error) {
+      if (requestVersion != _searchRequestVersion) return;
+      state = AsyncData(
+        current.copyWith(
+          query: normalizedQuery,
+          isSearching: false,
+          searchError: () => error,
+        ),
+      );
+    }
   }
 
   Future<void> loadMore() async {
@@ -86,7 +150,10 @@ class ConversationsNotifier extends _$ConversationsNotifier {
     try {
       final page = await ref
           .read(messagesRepositoryProvider)
-          .getConversations(cursor: cursor);
+          .getConversations(
+            cursor: cursor,
+            query: current.query.isEmpty ? null : current.query,
+          );
       state = AsyncData(
         current.copyWith(
           conversations: _mergeConversations(current.conversations, page.items),

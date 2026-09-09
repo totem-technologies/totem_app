@@ -29,11 +29,14 @@ final class MessagesApi with ApiExecutor {
 
   /// List Conversations
   ///
+  /// Conversation summaries, optionally filtered by peer name or latest message text.
+  ///
   /// `GET /api/mobile/protected/messages/conversations`
   Future<ApiResult<ConversationPageSchema, Never>>
   totemMessagesMobileApiListConversations({
     String? cursor,
     int? limit,
+    String? query,
     RequestOptions? options,
   }) async {
     final queryParameters = <String, String>{
@@ -45,6 +48,9 @@ final class MessagesApi with ApiExecutor {
     }
     if (limit != null) {
       queryParameters['limit'] = limit.toString();
+    }
+    if (query != null) {
+      queryParameters['query'] = query;
     }
 
     final headers = <String, String>{...apiConfig.defaultHeaders};
@@ -129,8 +135,9 @@ final class MessagesApi with ApiExecutor {
   ///
   /// Authorized 1:1 recipients; omit ``kind`` to prefer eligible keepers for dual-role users.
   ///
-  /// The first ordered keepers page powers recommendations. Keepers composing to
-  /// their own participants must explicitly request ``kind=participants``.
+  /// The first ordered keepers page powers recommendations. Participants always
+  /// receive their keepers directory; keepers composing to their own participants
+  /// must explicitly request ``kind=participants``.
   ///
   /// `GET /api/mobile/protected/messages/recipients`
   Future<ApiResult<RecipientDirectorySchema, Never>>

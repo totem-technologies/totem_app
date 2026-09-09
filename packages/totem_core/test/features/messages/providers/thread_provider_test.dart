@@ -80,8 +80,11 @@ final class _FakeMessagesRepository implements MessagesRepository {
   }
 
   @override
-  Future<ConversationPage> getConversations({String? cursor, int? limit}) =>
-      throw UnimplementedError();
+  Future<ConversationPage> getConversations({
+    String? cursor,
+    String? query,
+    int? limit,
+  }) => throw UnimplementedError();
 
   @override
   Future<Conversation> getConversation(String conversationId) =>

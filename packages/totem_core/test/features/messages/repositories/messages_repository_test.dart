@@ -107,7 +107,7 @@ void main() {
         ClientApi(ApiConfig(client: client)),
       );
 
-      final inbox = await repository.getConversations(limit: 20);
+      final inbox = await repository.getConversations(limit: 20, query: 'peer');
       final page = await repository.getMessages(
         'conversation-1',
         before: 'opaque-before',
@@ -121,6 +121,7 @@ void main() {
 
       expect(inbox.items.single.peer.slug, 'peer');
       expect(inbox.items.single.unreadCount, 1);
+      expect(client.requests.first.queryParameters['query'], 'peer');
       expect(page.hasMore, isTrue);
       expect(page.nextBefore, 'opaque-before');
       expect(sent.id, 'canonical');
