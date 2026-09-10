@@ -17,6 +17,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
 import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
@@ -689,6 +690,65 @@ void main() {
       );
 
       expect(find.byType(SpeakingTurnScreen), findsOneWidget);
+    });
+
+    testWidgets('clears leftover chat UI state when a room is entered', (
+      tester,
+    ) async {
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      // State left behind by a previous circle: a docked sidebar and a
+      // private thread aimed at that circle's keeper.
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: event,
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        beforeMount: (container) async {
+          container.read(sessionChatOpenProvider.notifier).open = true;
+          container.read(sessionChatThreadTargetProvider.notifier).target =
+              'keeper-of-previous-circle';
+        },
+      );
+
+      expect(harness.container.read(sessionChatOpenProvider), isFalse);
+      expect(harness.container.read(sessionChatThreadTargetProvider), isNull);
+    });
+
+    testWidgets('docks the chat sidebar on a wide viewport when open', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final event = _createSessionEvent(
+        start: DateTime.now().subtract(const Duration(minutes: 5)),
+        duration: 10,
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+
+      expect(find.byType(SessionChatPanel), findsNothing);
+
+      container.read(sessionChatOpenProvider.notifier).open = true;
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SessionChatPanel), findsOneWidget);
     });
 
     testWidgets('renders not my turn screen for RoomScreen.listening', (

@@ -1,19 +1,40 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:livekit_client/livekit_client.dart'
+    hide Session, SessionOptions;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
-import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
+import 'package:totem_core/shared/widgets/chat/message_input_bar.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
+
+/// Width of the Figma desktop chat column.
+const double sessionChatPanelWidth = 412;
+
+/// Video plus 412px sidebar needs at least this much horizontal room.
+const double sessionChatDockMinWidth = 1100;
+
+/// Dock the panel on wide tablet/desktop. Phones and narrow tablets use a modal.
+bool shouldDockSessionChat(BuildContext context) {
+  final kind = ViewportResolver.getViewportKind(context);
+  final isTabletOrDesktop =
+      kind == ViewportKind.mediumSmall || kind == ViewportKind.mediumPlus;
+  return isTabletOrDesktop &&
+      MediaQuery.sizeOf(context).width >= sessionChatDockMinWidth;
+}
 
 Future<void> showSessionChat(BuildContext context) {
   return showResponsiveModal<void>(
@@ -21,342 +42,609 @@ Future<void> showSessionChat(BuildContext context) {
     useRootNavigator: false,
     showDragHandle: false,
     useSafeArea: false,
-    bottomSheetBackgroundColor: Colors.white,
-    dialogBackgroundColor: Colors.white,
+    bottomSheetBackgroundColor: AppTheme.cream,
+    dialogBackgroundColor: AppTheme.cream,
     dialogAlignment: AlignmentDirectional.centerEnd,
-    dialogInsetPadding: const EdgeInsetsDirectional.only(end: 40, top: 20),
+    dialogInsetPadding: const EdgeInsetsDirectional.only(end: 24, top: 16),
     dialogShape: const RoundedRectangleBorder(
-      borderRadius: BorderRadiusDirectional.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadiusDirectional.horizontal(
+        start: Radius.circular(20),
+      ),
     ),
     dialogBarrierColor: Colors.black26,
     bottomSheetBuilder: (context) {
       return DraggableScrollableSheet(
         maxChildSize: 0.9,
-        initialChildSize: 0.75,
+        initialChildSize: 0.9,
         expand: false,
         builder: (context, scrollController) {
-          return SessionChatMessages(scrollController: scrollController);
+          return SessionChatPanel(
+            scrollController: scrollController,
+            showDragHandle: true,
+          );
         },
       );
     },
     largeScreenBuilder: (context) {
-      return const SizedBox(
-        width: 400,
-        child: SessionChatMessages(shouldShowCloseButton: true),
+      final height = MediaQuery.sizeOf(context).height;
+      return SizedBox(
+        width: sessionChatPanelWidth,
+        height: height - 32,
+        child: const SessionChatPanel(),
       );
     },
   );
 }
 
-class SessionChatMessages extends ConsumerStatefulWidget {
-  const SessionChatMessages({
+/// In-call chat panel used as a phone sheet, tablet dialog, or docked sidebar.
+class SessionChatPanel extends ConsumerStatefulWidget {
+  const SessionChatPanel({
     super.key,
     this.scrollController,
-    this.shouldShowCloseButton = false,
+    this.embedded = false,
+    this.showDragHandle = false,
   });
 
   final ScrollController? scrollController;
-  final bool shouldShowCloseButton;
+
+  /// True when the panel is the docked desktop sidebar (close toggles provider).
+  final bool embedded;
+
+  final bool showDragHandle;
 
   @override
-  ConsumerState<SessionChatMessages> createState() =>
-      _SessionChatMessagesState();
+  ConsumerState<SessionChatPanel> createState() => _SessionChatPanelState();
 }
 
-class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
+class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
+    with SingleTickerProviderStateMixin {
   ScrollController? _localController;
   ScrollController get scrollController =>
       widget.scrollController ?? (_localController ??= ScrollController());
 
-  final _messageController = TextEditingController();
-  int _previousMessageCount = 0;
+  var _dropdownOpen = false;
 
-  Future<void> _scrollToBottom(ScrollController scrollController) async {
-    Future<void> jumpToBottom() async {
-      if (!scrollController.hasClients) return;
+  /// Critically damped spring so the recipient menu can be grabbed mid-flight.
+  late final AnimationController _dropdownController;
 
-      final position = scrollController.position;
-      if (!position.hasContentDimensions) return;
-
-      scrollController.jumpTo(position.maxScrollExtent);
-    }
-
-    await SchedulerBinding.instance.endOfFrame;
-    await jumpToBottom();
-    await SchedulerBinding.instance.endOfFrame;
-    await jumpToBottom();
+  @override
+  void initState() {
+    super.initState();
+    _dropdownController = AnimationController.unbounded(vsync: this);
+    // Open on the most recent message; [ref.listen] only covers later arrivals.
+    unawaited(_scrollToBottom());
   }
 
   @override
   void dispose() {
-    _messageController.dispose();
+    _dropdownController.dispose();
     _localController?.dispose();
     super.dispose();
   }
 
+  Future<void> _scrollToBottom() async {
+    Future<void> jumpToBottom() async {
+      if (!scrollController.hasClients) return;
+      final position = scrollController.position;
+      if (!position.hasContentDimensions) return;
+      scrollController.jumpTo(position.maxScrollExtent);
+    }
+
+    await SchedulerBinding.instance.endOfFrame;
+    if (!mounted) return;
+    await jumpToBottom();
+    await SchedulerBinding.instance.endOfFrame;
+    if (!mounted) return;
+    await jumpToBottom();
+  }
+
+  void _setDropdownOpen(bool open) {
+    if (_dropdownOpen == open) return;
+    setState(() => _dropdownOpen = open);
+
+    // Damping 2√k gives a critically damped settle (~0.3s response).
+    const spring = SpringDescription(mass: 1, stiffness: 400, damping: 40);
+    final simulation = SpringSimulation(
+      spring,
+      _dropdownController.value,
+      open ? 1 : 0,
+      _dropdownController.velocity,
+    );
+    _dropdownController.animateWith(simulation);
+  }
+
+  /// LiveKit identity when the room is attached, else the account fallback the
+  /// rest of the panel uses. Shared by [build] and the message listener so
+  /// there is only one fallback chain.
+  static String? _resolveLocalIdentity(String? roomIdentity, String? fallback) {
+    if (roomIdentity != null && roomIdentity.isNotEmpty) return roomIdentity;
+    return fallback;
+  }
+
+  String? _localIdentity() {
+    final user = ref.read(authControllerProvider).user;
+    return _resolveLocalIdentity(
+      ref.read(currentSessionProvider)?.room?.localParticipant?.identity,
+      user?.slug ?? user?.email,
+    );
+  }
+
+  void _closePanel() {
+    _setDropdownOpen(false);
+    if (widget.embedded) {
+      ref.read(sessionChatOpenProvider.notifier).open = false;
+      return;
+    }
+    Navigator.of(context).maybePop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final user = ref.watch(authControllerProvider.select((auth) => auth.user));
-    final sessionEvent = ref.watch(currentSessionEventProvider);
+    // Scroll on arrival rather than on a length change during build: a thread
+    // switch no longer counts as an arrival, and two threads of equal length
+    // no longer mask one.
+    ref.listen(sessionMessagesProvider, (previous, next) {
+      if (next.length <= (previous?.length ?? 0)) return;
+      final message = next.last;
+      final belongs = message.belongsToThread(
+        localIdentity: _localIdentity(),
+        threadTarget: ref.read(sessionChatThreadTargetProvider),
+      );
+      if (belongs) unawaited(_scrollToBottom());
+    });
+
+    // A newly selected thread should open at its most recent message.
+    ref.listen(sessionChatThreadTargetProvider, (previous, next) {
+      unawaited(_scrollToBottom());
+    });
+
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
-    final isDesktop =
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux;
+    final threadTarget = ref.watch(sessionChatThreadTargetProvider);
+    final allMessages = ref.watch(sessionMessagesProvider);
+    final participants = ref.watch(sessionParticipantsProvider);
+    final sessionState = ref.watch(currentSessionStateProvider);
+    final user = ref.watch(authControllerProvider.select((auth) => auth.user));
 
-    const fastMessages = [
-      'Welcome! 🙏',
-      'Please mute your mic',
-      'Thank you for sharing',
-      "Let's begin",
-      'Please unmute to share',
-      'Take your time',
-    ];
+    final roomIdentity = ref
+        .watch(currentSessionProvider)
+        ?.room
+        ?.localParticipant
+        ?.identity;
+    final localIdentity = _resolveLocalIdentity(
+      roomIdentity,
+      user?.slug ?? user?.email,
+    );
+    final keeperIdentity = sessionState?.roomState.keeper;
 
-    final messages = ref.watch(sessionMessagesProvider);
+    final threadMessages = allMessages
+        .where(
+          (message) => message.belongsToThread(
+            localIdentity: localIdentity,
+            threadTarget: threadTarget,
+          ),
+        )
+        .toList();
 
-    if (messages.length != _previousMessageCount) {
-      _previousMessageCount = messages.length;
-      if (messages.isNotEmpty) {
-        _scrollToBottom(scrollController);
-      }
+    final isPrivateThread = threadTarget != null;
+    final canCompose = isKeeper || isPrivateThread;
+    final hintText = _pinnedHint(
+      isKeeper: isKeeper,
+      isPrivateThread: isPrivateThread,
+    );
+
+    Future<bool> send(String text) async {
+      final messaging = ref.read(currentSessionProvider)?.messaging;
+      if (messaging == null) return false;
+      final accepted = await messaging.sendMessage(
+        text,
+        recipientIdentity: threadTarget,
+      );
+      if (accepted) unawaited(_scrollToBottom());
+      return accepted;
     }
 
-    void send() {
-      final message = _messageController.text.trim();
-      if (message.isNotEmpty) {
-        ref.read(currentSessionProvider)?.messaging.sendMessage(message);
-        _messageController.clear();
-        _scrollToBottom(scrollController);
-      }
-    }
-
-    final closeButton = widget.shouldShowCloseButton
-        ? Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 12.0,
-              vertical: 8,
-            ),
-            child: Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: IconButton(
-                icon: const TotemIcon(TotemIcons.closeRounded, size: 20),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-          )
-        : null;
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      // use scaffold to get proper virtual keyboard padding handling
-      body: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsetsDirectional.only(bottom: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SheetDragHandle(),
-              ?closeButton,
-              if (!isKeeper)
-                const Padding(
-                  padding: EdgeInsetsDirectional.only(
-                    bottom: 8,
-                    start: 20,
-                    end: 20,
-                  ),
-                  child: Text(
-                    'Only the Keeper can post messages here',
-                    style: TextStyle(color: Color(0xFF787D7E)),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              if (messages.isEmpty) ...[
-                const Padding(
-                  padding: EdgeInsetsDirectional.only(
-                    top: 20,
-                    bottom: 8,
-                    start: 20,
-                    end: 20,
-                  ),
-                  child: Text(
-                    'No messages yet',
-                    style: TextStyle(color: Color(0xFF787D7E)),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const Spacer(),
-              ] else
-                Expanded(
-                  child: ListView.separated(
-                    padding: EdgeInsetsDirectional.only(
-                      bottom: isKeeper ? 8 : 0,
-                      start: 20,
-                      end: 20,
-                    ),
-                    controller: scrollController,
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      final isMine = msg.participant?.identity == user?.email;
-                      if (isMine) {
-                        return MyChatBubble(message: msg);
-                      } else {
-                        final showAvatar =
-                            index == 0 ||
-                            messages[index - 1].participant?.identity !=
-                                msg.participant?.identity;
-                        return OtherChatBubble(
-                          showAvatar: showAvatar,
-                          message: msg,
-                          session: sessionEvent,
-                        );
-                      }
-                    },
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  ),
-                ),
-              if (isKeeper) ...[
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    top: 8,
-                    start: 20,
-                    end: 20,
-                  ),
-                  child: Text(
-                    isDesktop
-                        ? 'Tap to send a quick message'
-                        : 'Long press to send a quick message',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.black54,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(top: 8),
-                  child: SizedBox(
-                    height: 36,
-                    child: ListView.separated(
-                      padding: const EdgeInsetsDirectional.only(
-                        start: 20,
-                        end: 20,
+    return Material(
+      color: AppTheme.cream,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.showDragHandle) const SheetDragHandle(),
+          _SessionChatHeader(
+            isKeeper: isKeeper,
+            threadTarget: threadTarget,
+            keeperIdentity: keeperIdentity,
+            participants: participants,
+            dropdownOpen: _dropdownOpen,
+            onClose: _closePanel,
+            onToggleDropdown: () => _setDropdownOpen(!_dropdownOpen),
+          ),
+          Expanded(
+            child: Stack(
+              // Let the popover shadow paint past the stack bounds.
+              clipBehavior: Clip.none,
+              children: [
+                Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        20,
+                        16,
+                        20,
+                        0,
                       ),
-                      scrollDirection: Axis.horizontal,
-                      itemCount: fastMessages.length,
-                      itemBuilder: (context, index) {
-                        final label = fastMessages[index];
-                        return QuickMessageChip(
-                          label: label,
-                          isDesktop: isDesktop,
-                          onSend: () => ref
-                              .read(currentSessionProvider)
-                              ?.messaging
-                              .sendMessage(label),
-                        );
-                      },
-                      separatorBuilder: (_, _) => const SizedBox(width: 8),
+                      child: _PinnedHintPill(text: hintText),
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    top: 8,
-                    start: 20,
-                    end: 20,
-                  ),
-                  child: TextField(
-                    autofocus: switch (defaultTargetPlatform) {
-                      TargetPlatform.android ||
-                      TargetPlatform.iOS ||
-                      TargetPlatform.fuchsia => false,
-                      _ => true,
-                    },
-                    controller: _messageController,
-                    onSubmitted: (_) => send(),
-                    textInputAction: TextInputAction.send,
-                    style: TextStyle(color: theme.colorScheme.onSurface),
-                    decoration: InputDecoration(
-                      hintText: 'Message',
-                      border: const OutlineInputBorder(),
-                      suffixIcon: Container(
-                        margin: const EdgeInsetsDirectional.only(
-                          end: 8,
-                          top: 6,
-                          bottom: 6,
-                        ),
-                        constraints: const BoxConstraints(
-                          maxHeight: 42,
-                          maxWidth: 42,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
-                          borderRadius: const BorderRadius.all(
-                            Radius.circular(16),
-                          ),
-                        ),
-                        child: IconButton(
-                          icon: const TotemIcon(TotemIcons.send, size: 20),
-                          color: theme.colorScheme.onPrimary,
-                          onPressed: send,
-                        ),
+                    Expanded(
+                      child: threadMessages.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No messages yet',
+                                style: TextStyle(color: AppTheme.gray),
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          : ListView.separated(
+                              controller: scrollController,
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                20,
+                                14,
+                                20,
+                                16,
+                              ),
+                              itemCount: threadMessages.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 14),
+                              itemBuilder: (context, index) {
+                                final message = threadMessages[index];
+                                final isOwn =
+                                    message.sender ||
+                                    (localIdentity != null &&
+                                        message.participant?.identity ==
+                                            localIdentity);
+                                return MessageBubble(
+                                  text: message.message,
+                                  timestamp: DateFormat.jm().format(
+                                    DateTime.fromMillisecondsSinceEpoch(
+                                      message.timestamp,
+                                    ).toLocal(),
+                                  ),
+                                  isOwn: isOwn,
+                                );
+                              },
+                            ),
+                    ),
+                    if (!isKeeper)
+                      _ParticipantThreadChip(
+                        isPrivateThread: isPrivateThread,
+                        onMessageKeeper: () {
+                          final keeper = keeperIdentity;
+                          if (keeper == null || keeper.isEmpty) return;
+                          _setDropdownOpen(false);
+                          ref
+                                  .read(
+                                    sessionChatThreadTargetProvider.notifier,
+                                  )
+                                  .target =
+                              keeper;
+                        },
+                        onViewGroup: () {
+                          _setDropdownOpen(false);
+                          ref
+                                  .read(
+                                    sessionChatThreadTargetProvider.notifier,
+                                  )
+                                  .target =
+                              null;
+                        },
                       ),
+                    if (canCompose)
+                      MessageInputBar(
+                        // A fresh State per thread, so a private draft can
+                        // never be sent to Everyone after a thread switch.
+                        key: ValueKey(threadTarget),
+                        hintText: _composerHint(
+                          isPrivateThread: isPrivateThread,
+                          threadTarget: threadTarget,
+                          participants: participants,
+                          keeperIdentity: keeperIdentity,
+                        ),
+                        autofocus: switch (defaultTargetPlatform) {
+                          TargetPlatform.android ||
+                          TargetPlatform.iOS ||
+                          TargetPlatform.fuchsia => false,
+                          _ => true,
+                        },
+                        onSend: send,
+                      )
+                    else
+                      const MessageInputBar(
+                        hintText: 'Message everyone',
+                        enabled: false,
+                      ),
+                  ],
+                ),
+                if (_dropdownOpen)
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _setDropdownOpen(false),
+                      child: const ColoredBox(color: Colors.transparent),
                     ),
                   ),
+                _RecipientDropdownOverlay(
+                  animation: _dropdownController,
+                  isKeeper: isKeeper,
+                  threadTarget: threadTarget,
+                  keeperIdentity: keeperIdentity,
+                  localIdentity: localIdentity,
+                  participants: participants,
+                  onSelectEveryone: () {
+                    ref.read(sessionChatThreadTargetProvider.notifier).target =
+                        null;
+                    _setDropdownOpen(false);
+                  },
+                  onSelectParticipant: (identity) {
+                    ref.read(sessionChatThreadTargetProvider.notifier).target =
+                        identity;
+                    _setDropdownOpen(false);
+                  },
                 ),
               ],
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class OtherChatBubble extends StatelessWidget {
-  const OtherChatBubble({
-    required this.showAvatar,
-    required this.message,
-    required this.session,
-    super.key,
+String _pinnedHint({required bool isKeeper, required bool isPrivateThread}) {
+  if (isPrivateThread) {
+    return 'Only the keeper can see these messages';
+  }
+  if (isKeeper) {
+    return 'Only you can post messages here';
+  }
+  return 'Only the Keeper can post messages here';
+}
+
+String _composerHint({
+  required bool isPrivateThread,
+  required String? threadTarget,
+  required List<Participant> participants,
+  required String? keeperIdentity,
+}) {
+  if (!isPrivateThread) {
+    return 'Message everyone';
+  }
+  final match = participants.cast<Participant?>().firstWhere(
+    (participant) => participant?.identity == threadTarget,
+    orElse: () => null,
+  );
+  final name = match?.name;
+  if (name != null && name.isNotEmpty) {
+    return 'Message $name';
+  }
+  if (threadTarget == keeperIdentity) {
+    return 'Message Keeper';
+  }
+  return 'Type a message...';
+}
+
+class _SessionChatHeader extends StatelessWidget {
+  const _SessionChatHeader({
+    required this.isKeeper,
+    required this.threadTarget,
+    required this.keeperIdentity,
+    required this.participants,
+    required this.dropdownOpen,
+    required this.onClose,
+    required this.onToggleDropdown,
   });
 
-  final bool showAvatar;
-  final SessionChatMessage message;
-  final SessionDetailSchema? session;
+  final bool isKeeper;
+  final String? threadTarget;
+  final String? keeperIdentity;
+  final List<Participant> participants;
+  final bool dropdownOpen;
+  final VoidCallback onClose;
+  final VoidCallback onToggleDropdown;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
+    return Container(
+      height: 68,
+      decoration: const BoxDecoration(
+        color: AppTheme.surfaceCard,
+        border: Border(bottom: BorderSide(color: AppTheme.divider)),
+      ),
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Semantics(
+            button: true,
+            label: 'Close chat',
+            child: IconButton(
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+              onPressed: onClose,
+              icon: const TotemIcon(
+                TotemIcons.closeRounded,
+                size: 20,
+                color: AppTheme.slate,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: InkWell(
+              onTap: onToggleDropdown,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                height: 44,
+                decoration: const BoxDecoration(
+                  border: Border(left: BorderSide(color: AppTheme.gray)),
+                ),
+                padding: const EdgeInsetsDirectional.only(start: 10),
+                child: Row(
+                  children: [
+                    _HeaderAvatar(threadTarget: threadTarget),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _HeaderTitle(
+                        threadTarget: threadTarget,
+                        keeperIdentity: keeperIdentity,
+                        isKeeper: isKeeper,
+                        participants: participants,
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: dropdownOpen ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      child: const TotemIcon(
+                        TotemIcons.chevronDown,
+                        size: 14,
+                        color: AppTheme.gray,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderAvatar extends StatelessWidget {
+  const _HeaderAvatar({required this.threadTarget});
+
+  final String? threadTarget;
+
+  @override
+  Widget build(BuildContext context) {
+    if (threadTarget == null) {
+      return const _EveryoneAvatar();
+    }
+    return _ParticipantAvatar(identity: threadTarget!);
+  }
+}
+
+class _EveryoneAvatar extends StatelessWidget {
+  const _EveryoneAvatar();
+
+  static const double size = 32;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        color: AppTheme.mauve,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: const TotemIcon(TotemIcons.chat, size: 18, color: AppTheme.white),
+    );
+  }
+}
+
+class _ParticipantAvatar extends ConsumerWidget {
+  const _ParticipantAvatar({required this.identity});
+
+  final String identity;
+  static const double radius = 16;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(userProfileProvider(identity));
+    return profile.when(
+      data: (user) =>
+          UserAvatar.fromUserSchema(user, radius: radius, borderWidth: 0),
+      loading: () =>
+          UserAvatar.custom(seed: identity, radius: radius, borderWidth: 0),
+      error: (_, _) =>
+          UserAvatar.custom(seed: identity, radius: radius, borderWidth: 0),
+    );
+  }
+}
+
+class _HeaderTitle extends StatelessWidget {
+  const _HeaderTitle({
+    required this.threadTarget,
+    required this.keeperIdentity,
+    required this.isKeeper,
+    required this.participants,
+  });
+
+  final String? threadTarget;
+  final String? keeperIdentity;
+  final bool isKeeper;
+  final List<Participant> participants;
+
+  @override
+  Widget build(BuildContext context) {
+    if (threadTarget == null) {
+      return const Text(
+        'Everyone',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: AppTheme.textHeading,
+          fontSize: 17,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+    }
+
+    final match = participants.cast<Participant?>().firstWhere(
+      (participant) => participant?.identity == threadTarget,
+      orElse: () => null,
+    );
+    final name = (match?.name != null && match!.name.isNotEmpty)
+        ? match.name
+        : threadTarget!;
+    final showKeeperSubtitle = !isKeeper && threadTarget == keeperIdentity;
+
+    if (!showKeeperSubtitle) {
+      return Text(
+        name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: AppTheme.textHeading,
+          fontSize: 17,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+    }
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        if (showAvatar)
-          UserAvatar.fromUserSchema(
-            session?.space.author,
-            radius: 20,
-            onTap: session?.space.author.slug != null
-                ? () => showKeeperProfileSheet(
-                    context,
-                    session!.space.author.slug!,
-                  )
-                : null,
-          )
-        else
-          const SizedBox(width: 40),
-        const SizedBox(width: 10),
-        Flexible(
-          child: Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: const BorderRadius.all(Radius.circular(16)),
-            ),
-            padding: const EdgeInsetsDirectional.all(10),
-            child: Text(
-              message.message,
-              style: TextStyle(color: theme.colorScheme.onSurface),
-            ),
+        Text(
+          name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppTheme.textHeading,
+            fontSize: 17,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const Text(
+          'Keeper',
+          style: TextStyle(
+            color: AppTheme.gray,
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
           ),
         ),
       ],
@@ -364,26 +652,284 @@ class OtherChatBubble extends StatelessWidget {
   }
 }
 
-class MyChatBubble extends StatelessWidget {
-  const MyChatBubble({required this.message, super.key});
+class _PinnedHintPill extends StatelessWidget {
+  const _PinnedHintPill({required this.text});
 
-  final SessionChatMessage message;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Align(
-      alignment: AlignmentDirectional.centerEnd,
+    return Center(
       child: Container(
-        margin: const EdgeInsetsDirectional.only(start: 50),
-        padding: const EdgeInsetsDirectional.all(10),
-        decoration: const BoxDecoration(
-          color: AppTheme.slate,
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 16,
+          vertical: 5,
+        ),
+        decoration: BoxDecoration(
+          color: AppTheme.messageDaySeparatorBg,
+          borderRadius: BorderRadius.circular(15),
         ),
         child: Text(
-          message.message,
-          style: TextStyle(color: theme.colorScheme.onInverseSurface),
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppTheme.gray,
+            fontSize: 12,
+            height: 1.2,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ParticipantThreadChip extends StatelessWidget {
+  const _ParticipantThreadChip({
+    required this.isPrivateThread,
+    required this.onMessageKeeper,
+    required this.onViewGroup,
+  });
+
+  final bool isPrivateThread;
+  final VoidCallback onMessageKeeper;
+  final VoidCallback onViewGroup;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = isPrivateThread ? 'View Group Messages' : 'Message Keeper';
+    return Align(
+      alignment: AlignmentDirectional.centerEnd,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 12),
+        child: Material(
+          color: AppTheme.messagePurpleLight,
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            onTap: isPrivateThread ? onViewGroup : onMessageKeeper,
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: 15,
+                vertical: 13,
+              ),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: AppTheme.messageChipText,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecipientDropdownOverlay extends StatelessWidget {
+  const _RecipientDropdownOverlay({
+    required this.animation,
+    required this.isKeeper,
+    required this.threadTarget,
+    required this.keeperIdentity,
+    required this.localIdentity,
+    required this.participants,
+    required this.onSelectEveryone,
+    required this.onSelectParticipant,
+  });
+
+  final Animation<double> animation;
+  final bool isKeeper;
+  final String? threadTarget;
+  final String? keeperIdentity;
+  final String? localIdentity;
+  final List<Participant> participants;
+  final VoidCallback onSelectEveryone;
+  final ValueChanged<String> onSelectParticipant;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Participant>[];
+    if (isKeeper) {
+      for (final participant in participants) {
+        if (participant.identity == localIdentity) continue;
+        rows.add(participant);
+      }
+    } else if (keeperIdentity != null) {
+      final keeper = participants.cast<Participant?>().firstWhere(
+        (participant) => participant?.identity == keeperIdentity,
+        orElse: () => null,
+      );
+      if (keeper != null) {
+        rows.add(keeper);
+      }
+    }
+
+    final count = participants.length;
+    final countLabel = '$count ${count == 1 ? 'participant' : 'participants'}';
+
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final t = animation.value.clamp(0.0, 1.0);
+        if (t <= 0) {
+          return const SizedBox.shrink();
+        }
+        // Line the popover up with the header's recipient control: its rows
+        // carry 16px padding, so starting 16px before the header avatar
+        // (20 close-button inset + 32 button + 8 gap + 1 rule + 10 pad = 71)
+        // puts popover and header avatars on the same vertical axis, and the
+        // trailing edge matches the header's 20px padding.
+        return PositionedDirectional(
+          top: 10,
+          start: 71 - 16,
+          end: 20,
+          child: IgnorePointer(
+            ignoring: t < 0.5,
+            child: Opacity(
+              opacity: t,
+              child: Transform.scale(
+                alignment: Alignment.topCenter,
+                scale: 0.96 + (0.04 * t),
+                child: child,
+              ),
+            ),
+          ),
+        );
+      },
+      // Figma 3518:10039 — white popover, 20px radius, 12% black shadow.
+      // Shadow lives outside the clip so cream selected rows don't square off.
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppTheme.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.12),
+              blurRadius: 24,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Material(
+            color: AppTheme.white,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _RecipientHairline(),
+                _RecipientRow(
+                  selected: threadTarget == null,
+                  title: 'Everyone',
+                  subtitle: isKeeper
+                      ? '$countLabel · only you can post'
+                      : '$countLabel · only the Keeper can post',
+                  leading: const _EveryoneAvatar(),
+                  onTap: onSelectEveryone,
+                ),
+                for (final participant in rows) ...[
+                  const _RecipientHairline(),
+                  _RecipientRow(
+                    selected: threadTarget == participant.identity,
+                    title: participant.name.isNotEmpty
+                        ? participant.name
+                        : participant.identity,
+                    leading: _ParticipantAvatar(identity: participant.identity),
+                    onTap: () => onSelectParticipant(participant.identity),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 1px #E8E5E0 rule from the Figma recipient menu — not a Material hairline.
+class _RecipientHairline extends StatelessWidget {
+  const _RecipientHairline();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: AppTheme.divider,
+      child: SizedBox(width: double.infinity, height: 1),
+    );
+  }
+}
+
+class _RecipientRow extends StatelessWidget {
+  const _RecipientRow({
+    required this.selected,
+    required this.title,
+    required this.leading,
+    required this.onTap,
+    this.subtitle,
+  });
+
+  final bool selected;
+  final String title;
+  final String? subtitle;
+  final Widget leading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    // Highlight on press-down so the row feels grabbed, not "clicked".
+    return InkWell(
+      onTap: onTap,
+      splashColor: AppTheme.cream.withValues(alpha: 0.45),
+      highlightColor: AppTheme.cream.withValues(alpha: 0.35),
+      child: ColoredBox(
+        color: selected ? AppTheme.cream : AppTheme.white,
+        child: Padding(
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+          child: Row(
+            children: [
+              leading,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 4,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppTheme.slate,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle!,
+                        style: const TextStyle(
+                          color: AppTheme.gray,
+                          fontSize: 11,
+                          height: 1.3,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (selected)
+                const TotemIcon(
+                  TotemIcons.checkmark,
+                  size: 18,
+                  color: AppTheme.mauve,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -420,47 +966,6 @@ class KeeperProfileSheet extends StatelessWidget {
           child: KeeperProfileScreen(slug: slug, showAppBar: false),
         );
       },
-    );
-  }
-}
-
-@visibleForTesting
-class QuickMessageChip extends StatelessWidget {
-  const QuickMessageChip({
-    required this.label,
-    required this.onSend,
-    required this.isDesktop,
-    super.key,
-  });
-
-  final String label;
-  final VoidCallback onSend;
-  final bool isDesktop;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.primaryContainer,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: isDesktop ? onSend : null,
-        onLongPress: isDesktop ? null : onSend,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: theme.colorScheme.onPrimaryContainer,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -799,6 +799,147 @@ final class SessionMessagesProvider
 
 String _$sessionMessagesHash() => r'fc346f31bc9ace6128030e70f72ae61264bb02db';
 
+/// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
+///
+/// Reset on room entry, so a docked sidebar in one circle doesn't open the
+/// panel on entry to the next.
+
+@ProviderFor(SessionChatOpen)
+final sessionChatOpenProvider = SessionChatOpenProvider._();
+
+/// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
+///
+/// Reset on room entry, so a docked sidebar in one circle doesn't open the
+/// panel on entry to the next.
+final class SessionChatOpenProvider
+    extends $NotifierProvider<SessionChatOpen, bool> {
+  /// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
+  ///
+  /// Reset on room entry, so a docked sidebar in one circle doesn't open the
+  /// panel on entry to the next.
+  SessionChatOpenProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionChatOpenProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionChatOpenHash();
+
+  @$internal
+  @override
+  SessionChatOpen create() => SessionChatOpen();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$sessionChatOpenHash() => r'c5282f3458b1bbe403075ec93e19f37826ce385d';
+
+/// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
+///
+/// Reset on room entry, so a docked sidebar in one circle doesn't open the
+/// panel on entry to the next.
+
+abstract class _$SessionChatOpen extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Current in-call thread. Null is the Everyone group thread.
+///
+/// Reset alongside [SessionChatOpen]; a thread target from a previous circle
+/// names a keeper who isn't in this one, and every send would be rejected.
+
+@ProviderFor(SessionChatThreadTarget)
+final sessionChatThreadTargetProvider = SessionChatThreadTargetProvider._();
+
+/// Current in-call thread. Null is the Everyone group thread.
+///
+/// Reset alongside [SessionChatOpen]; a thread target from a previous circle
+/// names a keeper who isn't in this one, and every send would be rejected.
+final class SessionChatThreadTargetProvider
+    extends $NotifierProvider<SessionChatThreadTarget, String?> {
+  /// Current in-call thread. Null is the Everyone group thread.
+  ///
+  /// Reset alongside [SessionChatOpen]; a thread target from a previous circle
+  /// names a keeper who isn't in this one, and every send would be rejected.
+  SessionChatThreadTargetProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionChatThreadTargetProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionChatThreadTargetHash();
+
+  @$internal
+  @override
+  SessionChatThreadTarget create() => SessionChatThreadTarget();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$sessionChatThreadTargetHash() =>
+    r'408635a13d9cd0461edb452f4eea2b53a6674419';
+
+/// Current in-call thread. Null is the Everyone group thread.
+///
+/// Reset alongside [SessionChatOpen]; a thread target from a previous circle
+/// names a keeper who isn't in this one, and every send would be rejected.
+
+abstract class _$SessionChatThreadTarget extends $Notifier<String?> {
+  String? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<String?, String?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<String?, String?>,
+              String?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// Last chat message if available.
 
 @ProviderFor(lastSessionMessage)

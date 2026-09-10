@@ -18,6 +18,7 @@ import 'package:totem_core/features/sessions/controllers/features/session_device
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
 import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
@@ -66,6 +67,14 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+    // In-call chat UI state is per-session. Clearing it on entry keeps a
+    // docked sidebar, or a private thread aimed at the previous circle's
+    // keeper, from carrying into this one.
+    ref
+      ..invalidate(sessionChatOpenProvider)
+      ..invalidate(sessionChatThreadTargetProvider);
+
     _listenToBatteryChanges();
     _warmEmojiGlyphs();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -497,47 +506,61 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       );
     }
 
+    final dockChat =
+        shouldDockSessionChat(context) && ref.watch(sessionChatOpenProvider);
+
     return SessionKeyboardShortcuts(
       navigatorKey: _roomNavigatorKey,
       enableEmojiReactions: currentRoomScreen == RoomScreen.listening,
       child: RoomBackground(
         status: roomStatus,
-        child: Navigator(
-          key: _roomNavigatorKey,
-          clipBehavior: Clip.none,
-          onDidRemovePage: (page) => {},
-          pages: [
-            MaterialPage(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: RepaintBoundary(
-                      child: PopScope(
-                        canPop: false,
-                        onPopInvokedWithResult: (didPop, result) async {
-                          await _handleBackNavigation(
-                            currentSession,
-                            connectionState,
-                          );
-                        },
-                        child: _buildBody(
-                          currentSession,
-                          currentRoomScreen,
-                          currentSessionEvent,
-                          disconnectReason,
-                          isOffline: isOffline ?? false,
+        child: Row(
+          children: [
+            Expanded(
+              child: Navigator(
+                key: _roomNavigatorKey,
+                clipBehavior: Clip.none,
+                onDidRemovePage: (page) => {},
+                pages: [
+                  MaterialPage(
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: RepaintBoundary(
+                            child: PopScope(
+                              canPop: false,
+                              onPopInvokedWithResult: (didPop, result) async {
+                                await _handleBackNavigation(
+                                  currentSession,
+                                  connectionState,
+                                );
+                              },
+                              child: _buildBody(
+                                currentSession,
+                                currentRoomScreen,
+                                currentSessionEvent,
+                                disconnectReason,
+                                isOffline: isOffline ?? false,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: Overlay(key: EmojiReactions.emojiOverlayKey),
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: Overlay(key: EmojiReactions.emojiOverlayKey),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
+            if (dockChat)
+              const SizedBox(
+                width: sessionChatPanelWidth,
+                child: SessionChatPanel(embedded: true),
+              ),
           ],
         ),
       ),

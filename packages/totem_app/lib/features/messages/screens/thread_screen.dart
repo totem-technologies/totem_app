@@ -40,8 +40,12 @@ class ThreadScreen extends ConsumerWidget {
             ),
           ),
           MessageInputBar(
-            onSend: (text) =>
-                ref.read(threadProvider(conversationId).notifier).send(text),
+            onSend: (text) async {
+              await ref
+                  .read(threadProvider(conversationId).notifier)
+                  .send(text);
+              return true;
+            },
           ),
         ],
       ),

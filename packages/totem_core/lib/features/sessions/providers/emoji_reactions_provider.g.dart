@@ -41,7 +41,7 @@ final class EmojiReactionsProvider
   }
 }
 
-String _$emojiReactionsHash() => r'3ac97a11dd378b687b56f7e67c170306f978c01c';
+String _$emojiReactionsHash() => r'09fa961480a1f51bd8f91492c23ba7f0238cd639';
 
 abstract class _$EmojiReactions extends $Notifier<List<SessionEmojiReaction>> {
   List<SessionEmojiReaction> build();

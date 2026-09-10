@@ -19,18 +19,24 @@ class SessionChatMessage {
     required this.id,
     required this.sender,
     this.participant,
+    this.recipientIdentity,
   });
 
   factory SessionChatMessage.fromMap(
     Map<String, dynamic> map,
     Participant? participant,
   ) {
+    final recipient = map['recipientIdentity'] as String?;
     return SessionChatMessage(
       message: map['message'] as String,
       timestamp: map['timestamp'] as int,
       id: map['id'] as String,
       participant: participant,
       sender: false,
+      // Older clients omit this key — treat that as the Everyone thread.
+      recipientIdentity: (recipient == null || recipient.isEmpty)
+          ? null
+          : recipient,
     );
   }
 
@@ -40,8 +46,48 @@ class SessionChatMessage {
   final bool sender;
   final Participant? participant;
 
+  /// LiveKit identity of the private recipient. Null means Everyone.
+  final String? recipientIdentity;
+
+  /// [SessionChatMessage.fromMap] and every send-side caller normalize empty
+  /// to null.
+  bool get isEveryoneThread => recipientIdentity == null;
+
+  /// Whether this message belongs in [threadTarget] for [localIdentity].
+  ///
+  /// [threadTarget] is null for Everyone. A private thread with X includes
+  /// messages we sent to X and messages X sent to us.
+  bool belongsToThread({
+    required String? localIdentity,
+    required String? threadTarget,
+  }) {
+    if (threadTarget == null) {
+      return isEveryoneThread;
+    }
+    if (isEveryoneThread) {
+      return false;
+    }
+
+    // [sender] is authoritative for locally-created messages: [participant] may
+    // be null when the room isn't attached, and the UI's identity fallback
+    // (slug/email) never matches a LiveKit identity.
+    if (sender) {
+      return recipientIdentity == threadTarget;
+    }
+
+    final senderId = participant?.identity;
+    final recipientId = recipientIdentity;
+    return (senderId == localIdentity && recipientId == threadTarget) ||
+        (senderId == threadTarget && recipientId == localIdentity);
+  }
+
   Map<String, dynamic> toMap() {
-    return {'message': message, 'timestamp': timestamp, 'id': id};
+    return {
+      'message': message,
+      'timestamp': timestamp,
+      'id': id,
+      if (recipientIdentity != null) 'recipientIdentity': recipientIdentity,
+    };
   }
 
   String toJson() => const JsonEncoder().convert(toMap());
@@ -83,6 +129,39 @@ class SessionMessagingController extends _$SessionMessagingController {
           jsonDecode(data) as Map<String, dynamic>,
           event.participant,
         );
+
+        // LiveKit lets any client publish with arbitrary destinations, so the
+        // receive side has to enforce the same rules as [sendMessage].
+        final senderId = event.participant?.identity;
+        final keeperIdentity = _state.roomState.keeper;
+        if (message.isEveryoneThread) {
+          // Everyone is keeper-broadcast only. Drop group posts from anyone
+          // else so a stale or malicious client cannot write into the main
+          // thread.
+          if (senderId != null && senderId != keeperIdentity) {
+            logger.w(
+              'Ignoring Everyone chat message from non-keeper $senderId',
+            );
+            return;
+          }
+        } else {
+          // Private threads always have the keeper on one end: either the
+          // keeper is DMing us, or we are the keeper being DMed.
+          final localIdentity = _room?.localParticipant?.identity;
+          final fromKeeper = senderId != null && senderId == keeperIdentity;
+          final toLocalKeeper =
+              localIdentity != null &&
+              localIdentity == keeperIdentity &&
+              message.recipientIdentity == localIdentity;
+          if (!fromKeeper && !toLocalKeeper) {
+            logger.w(
+              'Ignoring private chat message from $senderId to '
+              '${message.recipientIdentity}: neither end is the keeper',
+            );
+            return;
+          }
+        }
+
         session.addSessionChatMessage(message);
       } catch (error, stackTrace) {
         ErrorHandler.logError(
@@ -172,12 +251,41 @@ class SessionMessagingController extends _$SessionMessagingController {
     }
   }
 
-  Future<void> sendMessage(String text) async {
-    if (!session.isCurrentUserKeeper()) {
+  /// Sends [text] to Everyone when [recipientIdentity] is null, or as a
+  /// private LiveKit data message when a recipient is set.
+  ///
+  /// Everyone is keeper-only. Participants may only DM the keeper.
+  ///
+  /// Returns false when the message was rejected before publishing, so the
+  /// composer can keep the user's text instead of silently dropping it.
+  Future<bool> sendMessage(String text, {String? recipientIdentity}) async {
+    final isKeeper = session.isCurrentUserKeeper();
+    final keeperIdentity = _state.roomState.keeper;
+    final localIdentity = _room?.localParticipant?.identity;
+    final trimmedRecipient =
+        (recipientIdentity == null || recipientIdentity.isEmpty)
+        ? null
+        : recipientIdentity;
+
+    if (trimmedRecipient == null) {
+      if (!isKeeper) {
+        logger.w(
+          'Attempted to send an Everyone chat message without being the '
+          'keeper, ignoring',
+        );
+        return false;
+      }
+    } else if (isKeeper) {
+      if (trimmedRecipient == localIdentity) {
+        logger.w('Keeper attempted to DM themselves, ignoring');
+        return false;
+      }
+    } else if (trimmedRecipient != keeperIdentity) {
       logger.w(
-        'Attempted to send chat message without being the keeper, ignoring',
+        'Participant attempted to DM $trimmedRecipient instead of the '
+        'keeper, ignoring',
       );
-      return;
+      return false;
     }
 
     final room = _room;
@@ -187,6 +295,7 @@ class SessionMessagingController extends _$SessionMessagingController {
       id: const Uuid().v4(),
       sender: true,
       participant: room?.localParticipant,
+      recipientIdentity: trimmedRecipient,
     );
 
     try {
@@ -195,6 +304,10 @@ class SessionMessagingController extends _$SessionMessagingController {
           ?.publishData(
             const Utf8Encoder().convert(message.toJson()),
             topic: SessionCommunicationTopics.chat.topic,
+            // LiveKit delivers private payloads only to this identity.
+            destinationIdentities: trimmedRecipient == null
+                ? null
+                : [trimmedRecipient],
           )
           .timeout(
             const Duration(seconds: 5),
@@ -212,5 +325,9 @@ class SessionMessagingController extends _$SessionMessagingController {
         message: 'Error sending chat message',
       );
     }
+
+    // The message is already in local state; a publish failure is surfaced
+    // through the error handler, not by rejecting the composer's text.
+    return true;
   }
 }
