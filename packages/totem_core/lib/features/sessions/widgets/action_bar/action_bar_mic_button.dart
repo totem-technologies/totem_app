@@ -96,16 +96,18 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
       role: ActionBarButtonRole.media(enabled: isEnabled),
       onPressed: _busy ? null : _toggleMicrophone,
       child: isEnabled
-          ? SpeakingIndicatorAudioTrack(
-              audioTrack: widget.audioTrack,
-              participant: widget.participant,
-              // Follow the action-bar ghost color so prejoin cream-on-cream
-              // doesn't eat the bars.
-              foregroundColor:
-                  widget.indicatorColor ??
-                  IconTheme.of(context).color ??
-                  AppTheme.cream,
-              barCount: widget.indicatorBarCount,
+          ? Builder(
+              builder: (context) {
+                return SpeakingIndicatorAudioTrack(
+                  audioTrack: widget.audioTrack,
+                  participant: widget.participant,
+                  foregroundColor:
+                      widget.indicatorColor ??
+                      IconTheme.of(context).color ??
+                      AppTheme.cream,
+                  barCount: widget.indicatorBarCount,
+                );
+              },
             )
           : const TotemIcon(TotemIcons.microphoneOff),
     );
