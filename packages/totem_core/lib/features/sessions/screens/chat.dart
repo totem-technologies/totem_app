@@ -236,6 +236,8 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
           ),
           Expanded(
             child: Stack(
+              // Let the popover shadow paint past the stack bounds.
+              clipBehavior: Clip.none,
               children: [
                 Column(
                   children: [
@@ -365,10 +367,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
   }
 }
 
-String _pinnedHint({
-  required bool isKeeper,
-  required bool isPrivateThread,
-}) {
+String _pinnedHint({required bool isKeeper, required bool isPrivateThread}) {
   if (isPrivateThread) {
     return 'Only the keeper can see these messages';
   }
@@ -454,9 +453,7 @@ class _SessionChatHeader extends StatelessWidget {
               child: Container(
                 height: 44,
                 decoration: const BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: AppTheme.gray),
-                  ),
+                  border: Border(left: BorderSide(color: AppTheme.gray)),
                 ),
                 padding: const EdgeInsetsDirectional.only(start: 10),
                 child: Row(
@@ -493,9 +490,7 @@ class _SessionChatHeader extends StatelessWidget {
 }
 
 class _HeaderAvatar extends StatelessWidget {
-  const _HeaderAvatar({
-    required this.threadTarget,
-  });
+  const _HeaderAvatar({required this.threadTarget});
 
   final String? threadTarget;
 
@@ -523,19 +518,13 @@ class _EveryoneAvatar extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: const TotemIcon(
-        TotemIcons.chat,
-        size: 18,
-        color: AppTheme.white,
-      ),
+      child: const TotemIcon(TotemIcons.chat, size: 18, color: AppTheme.white),
     );
   }
 }
 
 class _ParticipantAvatar extends ConsumerWidget {
-  const _ParticipantAvatar({
-    required this.identity,
-  });
+  const _ParticipantAvatar({required this.identity});
 
   final String identity;
   static const double radius = 16;
@@ -544,21 +533,12 @@ class _ParticipantAvatar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileProvider(identity));
     return profile.when(
-      data: (user) => UserAvatar.fromUserSchema(
-        user,
-        radius: radius,
-        borderWidth: 0,
-      ),
-      loading: () => UserAvatar.custom(
-        seed: identity,
-        radius: radius,
-        borderWidth: 0,
-      ),
-      error: (_, _) => UserAvatar.custom(
-        seed: identity,
-        radius: radius,
-        borderWidth: 0,
-      ),
+      data: (user) =>
+          UserAvatar.fromUserSchema(user, radius: radius, borderWidth: 0),
+      loading: () =>
+          UserAvatar.custom(seed: identity, radius: radius, borderWidth: 0),
+      error: (_, _) =>
+          UserAvatar.custom(seed: identity, radius: radius, borderWidth: 0),
     );
   }
 }
@@ -757,6 +737,9 @@ class _RecipientDropdownOverlay extends StatelessWidget {
       }
     }
 
+    final count = participants.length;
+    final countLabel = '$count ${count == 1 ? 'participant' : 'participants'}';
+
     return AnimatedBuilder(
       animation: animation,
       builder: (context, child) {
@@ -764,10 +747,15 @@ class _RecipientDropdownOverlay extends StatelessWidget {
         if (t <= 0) {
           return const SizedBox.shrink();
         }
+        // Line the popover up with the header's recipient control: its rows
+        // carry 16px padding, so starting 16px before the header avatar
+        // (20 close-button inset + 32 button + 8 gap + 1 rule + 10 pad = 71)
+        // puts popover and header avatars on the same vertical axis, and the
+        // trailing edge matches the header's 20px padding.
         return PositionedDirectional(
           top: 10,
-          start: 38,
-          end: 13,
+          start: 71 - 16,
+          end: 20,
           child: IgnorePointer(
             ignoring: t < 0.5,
             child: Opacity(
@@ -781,50 +769,66 @@ class _RecipientDropdownOverlay extends StatelessWidget {
           ),
         );
       },
-      child: Material(
-        color: AppTheme.white,
-        elevation: 0,
-        shadowColor: Colors.black,
-        borderRadius: BorderRadius.circular(20),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
+      // Figma 3518:10039 — white popover, 20px radius, 12% black shadow.
+      // Shadow lives outside the clip so cream selected rows don't square off.
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppTheme.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.12),
+              blurRadius: 24,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Material(
             color: AppTheme.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x1F000000),
-                blurRadius: 24,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _RecipientRow(
-                selected: threadTarget == null,
-                title: 'Everyone',
-                subtitle: isKeeper
-                    ? '${participants.length} participants · only you can post'
-                    : '${participants.length} participants · only the Keeper can post',
-                leading: const _EveryoneAvatar(),
-                onTap: onSelectEveryone,
-              ),
-              for (final participant in rows) ...[
-                const Divider(height: 1, color: AppTheme.divider),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _RecipientHairline(),
                 _RecipientRow(
-                  selected: threadTarget == participant.identity,
-                  title: participant.name.isNotEmpty
-                      ? participant.name
-                      : participant.identity,
-                  leading: _ParticipantAvatar(identity: participant.identity),
-                  onTap: () => onSelectParticipant(participant.identity),
+                  selected: threadTarget == null,
+                  title: 'Everyone',
+                  subtitle: isKeeper
+                      ? '$countLabel · only you can post'
+                      : '$countLabel · only the Keeper can post',
+                  leading: const _EveryoneAvatar(),
+                  onTap: onSelectEveryone,
                 ),
+                for (final participant in rows) ...[
+                  const _RecipientHairline(),
+                  _RecipientRow(
+                    selected: threadTarget == participant.identity,
+                    title: participant.name.isNotEmpty
+                        ? participant.name
+                        : participant.identity,
+                    leading: _ParticipantAvatar(identity: participant.identity),
+                    onTap: () => onSelectParticipant(participant.identity),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 1px #E8E5E0 rule from the Figma recipient menu — not a Material hairline.
+class _RecipientHairline extends StatelessWidget {
+  const _RecipientHairline();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: AppTheme.divider,
+      child: SizedBox(width: double.infinity, height: 1),
     );
   }
 }
@@ -846,8 +850,11 @@ class _RecipientRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Highlight on press-down so the row feels grabbed, not "clicked".
     return InkWell(
       onTap: onTap,
+      splashColor: AppTheme.cream.withValues(alpha: 0.45),
+      highlightColor: AppTheme.cream.withValues(alpha: 0.35),
       child: ColoredBox(
         color: selected ? AppTheme.cream : AppTheme.white,
         child: Padding(
@@ -862,6 +869,7 @@ class _RecipientRow extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 4,
                   children: [
                     Text(
                       title,
@@ -871,8 +879,7 @@ class _RecipientRow extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 4),
+                    if (subtitle != null)
                       Text(
                         subtitle!,
                         style: const TextStyle(
@@ -881,7 +888,6 @@ class _RecipientRow extends StatelessWidget {
                           height: 1.3,
                         ),
                       ),
-                    ],
                   ],
                 ),
               ),
@@ -899,10 +905,7 @@ class _RecipientRow extends StatelessWidget {
   }
 }
 
-Future<void> showKeeperProfileSheet(
-  BuildContext context,
-  String slug,
-) {
+Future<void> showKeeperProfileSheet(BuildContext context, String slug) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -929,10 +932,7 @@ class KeeperProfileSheet extends StatelessWidget {
       builder: (context, controller) {
         return PrimaryScrollController(
           controller: controller,
-          child: KeeperProfileScreen(
-            slug: slug,
-            showAppBar: false,
-          ),
+          child: KeeperProfileScreen(slug: slug, showAppBar: false),
         );
       },
     );
