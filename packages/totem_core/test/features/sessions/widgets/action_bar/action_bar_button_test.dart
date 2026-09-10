@@ -134,7 +134,7 @@ void main() {
         child: ActionBar(children: ghostButtons(2)),
       );
 
-      expect(buttonWidthOf(tester), 78);
+      expect(buttonWidthOf(tester), 56);
     });
   });
 
