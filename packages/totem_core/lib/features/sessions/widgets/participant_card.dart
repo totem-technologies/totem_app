@@ -53,6 +53,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
     };
     return RepaintBoundary(
       child: ClipRRect(
+        clipBehavior: Clip.antiAlias,
         borderRadius: speakerVideoBorderRadius,
         child: Stack(
           fit: StackFit.expand,

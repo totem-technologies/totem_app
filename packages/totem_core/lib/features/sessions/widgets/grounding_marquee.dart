@@ -26,7 +26,6 @@ class _GroundingMarqueeState extends State<GroundingMarquee>
     'Totem is community-led.',
     'You don’t need to calm yourself perfectly.',
     'You can turn your camera off if needed.',
-    'We listen without interrupting.',
     'Share what feels right.',
     'It’s always acceptable to pass.',
   ];

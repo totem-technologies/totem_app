@@ -46,6 +46,7 @@ class SessionTitle extends ConsumerWidget {
                 color: const Color(0xFF787D7E),
               ),
             ),
+            textScaler: MediaQuery.textScalerOf(context),
           ),
           Text(
             title,
@@ -62,13 +63,13 @@ class SessionTitle extends ConsumerWidget {
   }
 }
 
-enum SessionElapsedTimerStyle { featureCard, sessionTitle }
+enum SessionElapsedTimerStyle { featuredCard, sessionTitle }
 
 class SessionElapsedTimer extends ConsumerStatefulWidget {
   const SessionElapsedTimer({
     this.startTime,
     this.onTap,
-    this.style = SessionElapsedTimerStyle.featureCard,
+    this.style = SessionElapsedTimerStyle.featuredCard,
     super.key,
   });
 
@@ -91,11 +92,12 @@ class _SessionElapsedTimerState extends ConsumerState<SessionElapsedTimer> {
     super.initState();
     _start = widget.startTime ?? ref.read(featuredTurnStartTimeProvider);
     _syncTimer();
-    ref.listenManual(featuredTurnStartTimeProvider, (_, next) {
-      if (widget.startTime != null) return;
-      setState(() => _start = next);
-      _syncTimer();
-    });
+    if (widget.startTime == null) {
+      ref.listenManual(featuredTurnStartTimeProvider, (_, next) {
+        setState(() => _start = next);
+        _syncTimer();
+      });
+    }
   }
 
   @override
@@ -136,7 +138,7 @@ class _SessionElapsedTimerState extends ConsumerState<SessionElapsedTimer> {
 
     final text = _format(DateTime.now().difference(_start!));
     final timer = switch (widget.style) {
-      SessionElapsedTimerStyle.featureCard => Container(
+      SessionElapsedTimerStyle.featuredCard => Container(
         padding: const EdgeInsetsDirectional.symmetric(
           horizontal: 10,
           vertical: 4,
@@ -167,11 +169,7 @@ class _SessionElapsedTimerState extends ConsumerState<SessionElapsedTimer> {
     return Semantics(
       button: true,
       label: 'Send a private share time reminder',
-      child: InkWell(
-        borderRadius: BorderRadius.circular(42),
-        onTap: widget.onTap,
-        child: timer,
-      ),
+      child: GestureDetector(onTap: widget.onTap, child: timer),
     );
   }
 }

@@ -117,9 +117,12 @@ class SessionMessagingController extends _$SessionMessagingController {
           throw const FormatException('Invalid elapsed milliseconds');
         }
 
-        state = DateTime.timestamp().subtract(
-          Duration(milliseconds: elapsedMilliseconds.toInt()),
+        final ms = elapsedMilliseconds.toInt().clamp(
+          0,
+          const Duration(hours: 6).inMilliseconds,
         );
+
+        state = DateTime.timestamp().subtract(Duration(milliseconds: ms));
       } catch (error, stackTrace) {
         ErrorHandler.logError(
           error,
