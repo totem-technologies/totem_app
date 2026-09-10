@@ -66,9 +66,8 @@ Future<void> _pumpMoreOptions(
         ),
         currentSessionProvider.overrideWith((ref) => session),
         currentSessionStateProvider.overrideWithValue(state),
-        sessionDeviceControllerProvider(
-          session,
-        ).overrideWith(() => deviceController),
+        sessionDeviceControllerProvider(session)
+            .overrideWith(() => deviceController),
         isCameraOnProvider.overrideWith((ref) => false),
         userProfileProvider.overrideWith(
           (ref, slug) => Future.value(

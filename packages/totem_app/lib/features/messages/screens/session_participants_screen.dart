@@ -21,9 +21,8 @@ class SessionParticipantsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     const participants = mockSessionParticipants;
-    final date = DateFormat(
-      "EEEE, MMM d · h:mm a",
-    ).format(session.start.toLocal());
+    final date = DateFormat("EEEE, MMM d · h:mm a")
+        .format(session.start.toLocal());
     final subtitle =
         '${participants.length} participants  ·  ${session.duration} min';
 
@@ -300,10 +299,8 @@ class _ParticipantCard extends StatelessWidget {
                     ),
                     Text(
                       participant.email,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textMuted,
-                        fontSize: 12,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: AppTheme.textMuted, fontSize: 12),
                     ),
                     Text(
                       participant.joinedSessions,

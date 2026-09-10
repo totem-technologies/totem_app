@@ -303,11 +303,7 @@ void main() {
 
         final chatEvent = DataReceivedEvent(
           data: utf8.encode(
-            jsonEncode({
-              'message': 'Hijack',
-              'timestamp': 1,
-              'id': 'bad-1',
-            }),
+            jsonEncode({'message': 'Hijack', 'timestamp': 1, 'id': 'bad-1'}),
           ),
           participant: MockRemoteParticipant('lucas', 'Lucas'),
           topic: SessionCommunicationTopics.chat.topic,

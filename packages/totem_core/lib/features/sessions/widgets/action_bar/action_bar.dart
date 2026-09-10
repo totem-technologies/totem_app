@@ -15,8 +15,9 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_b
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
-typedef ActionBarButtonToggleCallback =
-    Future<void> Function(bool shouldEnable);
+typedef ActionBarButtonToggleCallback = Future<void> Function(
+  bool shouldEnable,
+);
 
 /// ghost = idle, muted = media off, emphasized = open sheet.
 /// Keep muted and emphasized distinct — camera-off is not "sheet open".

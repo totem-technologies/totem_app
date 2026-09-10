@@ -48,9 +48,8 @@ void main() {
         if (checks++ == 0) return initialCheck.future;
         return Future.value(const [ConnectivityResult.wifi]);
       });
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
+      when(() => connectivity.onConnectivityChanged)
+          .thenAnswer((_) => changes.stream);
 
       final container = ProviderContainer(
         overrides: [connectivityProvider.overrideWithValue(connectivity)],
@@ -81,12 +80,10 @@ void main() {
       final connectivity = _MockConnectivity();
       final changes = StreamController<List<ConnectivityResult>>();
       addTearDown(changes.close);
-      when(
-        connectivity.checkConnectivity,
-      ).thenAnswer((_) async => const [ConnectivityResult.none]);
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
+      when(connectivity.checkConnectivity)
+          .thenAnswer((_) async => const [ConnectivityResult.none]);
+      when(() => connectivity.onConnectivityChanged)
+          .thenAnswer((_) => changes.stream);
 
       final container = ProviderContainer(
         overrides: [connectivityProvider.overrideWithValue(connectivity)],
@@ -116,12 +113,10 @@ void main() {
       final changes = StreamController<List<ConnectivityResult>>();
       var currentConnectivity = const [ConnectivityResult.wifi];
       addTearDown(changes.close);
-      when(
-        connectivity.checkConnectivity,
-      ).thenAnswer((_) async => currentConnectivity);
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
+      when(connectivity.checkConnectivity)
+          .thenAnswer((_) async => currentConnectivity);
+      when(() => connectivity.onConnectivityChanged)
+          .thenAnswer((_) => changes.stream);
 
       final container = ProviderContainer(
         overrides: [connectivityProvider.overrideWithValue(connectivity)],
@@ -159,12 +154,10 @@ void main() {
       final connectivity = _MockConnectivity();
       final changes = StreamController<List<ConnectivityResult>>();
       addTearDown(changes.close);
-      when(
-        connectivity.checkConnectivity,
-      ).thenAnswer((_) async => const [ConnectivityResult.wifi]);
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
+      when(connectivity.checkConnectivity)
+          .thenAnswer((_) async => const [ConnectivityResult.wifi]);
+      when(() => connectivity.onConnectivityChanged)
+          .thenAnswer((_) => changes.stream);
 
       final container = ProviderContainer(
         overrides: [connectivityProvider.overrideWithValue(connectivity)],
@@ -202,9 +195,8 @@ void main() {
         }
         return confirmation.future;
       });
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
+      when(() => connectivity.onConnectivityChanged)
+          .thenAnswer((_) => changes.stream);
 
       final container = ProviderContainer(
         overrides: [connectivityProvider.overrideWithValue(connectivity)],
@@ -235,12 +227,10 @@ void main() {
       final changes = StreamController<List<ConnectivityResult>>();
       final currentCheck = Completer<List<ConnectivityResult>>();
       addTearDown(changes.close);
-      when(
-        connectivity.checkConnectivity,
-      ).thenAnswer((_) => currentCheck.future);
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
+      when(connectivity.checkConnectivity)
+          .thenAnswer((_) => currentCheck.future);
+      when(() => connectivity.onConnectivityChanged)
+          .thenAnswer((_) => changes.stream);
 
       final container = ProviderContainer(
         overrides: [connectivityProvider.overrideWithValue(connectivity)],
@@ -274,9 +264,8 @@ void main() {
             ? const [ConnectivityResult.wifi]
             : const [ConnectivityResult.none];
       });
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
+      when(() => connectivity.onConnectivityChanged)
+          .thenAnswer((_) => changes.stream);
 
       final container = ProviderContainer(
         overrides: [connectivityProvider.overrideWithValue(connectivity)],
@@ -325,9 +314,8 @@ void main() {
           }
           return resumedCheck.future;
         });
-        when(
-          () => connectivity.onConnectivityChanged,
-        ).thenAnswer((_) => changes.stream);
+        when(() => connectivity.onConnectivityChanged)
+            .thenAnswer((_) => changes.stream);
 
         final container = ProviderContainer(
           overrides: [connectivityProvider.overrideWithValue(connectivity)],

@@ -468,12 +468,10 @@ void main() {
       final localParticipant = _buildMockParticipant('user-1');
 
       when(() => session.room).thenReturn(FakeRoom(localParticipant));
-      when(
-        () => localParticipant.setCameraEnabled(false),
-      ).thenAnswer((_) async => null);
-      when(
-        () => localParticipant.setMicrophoneEnabled(false),
-      ).thenAnswer((_) async => null);
+      when(() => localParticipant.setCameraEnabled(false))
+          .thenAnswer((_) async => null);
+      when(() => localParticipant.setMicrophoneEnabled(false))
+          .thenAnswer((_) async => null);
       when(() => session.devices).thenReturn(devices);
       when(() => devices.isCameraEnabled).thenReturn(false);
       when(() => devices.isMicrophoneEnabled).thenReturn(false);
@@ -1107,9 +1105,8 @@ void main() {
         event: event,
         screen: RoomScreen.listening,
         extraOverrides: [
-          sessionDeviceControllerProvider(
-            session,
-          ).overrideWith(_TestSessionDeviceController.new),
+          sessionDeviceControllerProvider(session)
+              .overrideWith(_TestSessionDeviceController.new),
         ],
       );
 
@@ -1152,9 +1149,8 @@ void main() {
         screen: RoomScreen.listening,
         connectionState: RoomConnectionState.disconnected,
         extraOverrides: [
-          sessionDeviceControllerProvider(
-            session,
-          ).overrideWith(_TestSessionDeviceController.new),
+          sessionDeviceControllerProvider(session)
+              .overrideWith(_TestSessionDeviceController.new),
         ],
       );
 

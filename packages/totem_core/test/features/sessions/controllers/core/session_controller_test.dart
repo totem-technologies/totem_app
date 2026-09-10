@@ -57,9 +57,8 @@ SessionDetailSchema _createSessionEvent(String eventSlug) {
 ProviderContainer _createContainerWithEventOverride(String eventSlug) {
   return ProviderContainer(
     overrides: [
-      sessionProvider(
-        eventSlug,
-      ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+      sessionProvider(eventSlug)
+          .overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
     ],
   );
 }
@@ -316,12 +315,10 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant();
-        when(
-          () => localParticipant.setCameraEnabled(any<bool>()),
-        ).thenAnswer((_) async => null);
-        when(
-          () => localParticipant.setMicrophoneEnabled(any<bool>()),
-        ).thenAnswer((_) async => null);
+        when(() => localParticipant.setCameraEnabled(any<bool>()))
+            .thenAnswer((_) async => null);
+        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+            .thenAnswer((_) async => null);
         final room = _CountingRoom(
           localParticipant,
           prepareConnectionError: StateError('prepare failed'),
@@ -391,12 +388,10 @@ void main() {
           );
 
           final localParticipant = MockLocalParticipant();
-          when(
-            () => localParticipant.setCameraEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
-          when(
-            () => localParticipant.setMicrophoneEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
+          when(() => localParticipant.setCameraEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
 
           final room = _CountingRoom(localParticipant);
           controller.room = room;
@@ -455,12 +450,10 @@ void main() {
           );
           final localParticipant = MockLocalParticipant();
           when(localParticipant.isMicrophoneEnabled).thenReturn(false);
-          when(
-            () => localParticipant.setCameraEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
-          when(
-            () => localParticipant.setMicrophoneEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
+          when(() => localParticipant.setCameraEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
 
           final room = _CountingRoom(localParticipant);
           controller.room = room;
@@ -514,18 +507,15 @@ void main() {
           );
           final localParticipant = MockLocalParticipant();
           var microphoneEnabled = false;
-          when(
-            () => localParticipant.setCameraEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
-          when(
-            localParticipant.isMicrophoneEnabled,
-          ).thenAnswer((_) => microphoneEnabled);
-          when(() => localParticipant.setMicrophoneEnabled(false)).thenAnswer((
-            _,
-          ) async {
-            microphoneEnabled = false;
-            return null;
-          });
+          when(() => localParticipant.setCameraEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          when(localParticipant.isMicrophoneEnabled)
+              .thenAnswer((_) => microphoneEnabled);
+          when(() => localParticipant.setMicrophoneEnabled(false))
+              .thenAnswer((_) async {
+                microphoneEnabled = false;
+                return null;
+              });
 
           final room = _CountingRoom(localParticipant);
           controller.room = room;
@@ -596,12 +586,10 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant();
-        when(
-          () => localParticipant.setCameraEnabled(any<bool>()),
-        ).thenAnswer((_) async => null);
-        when(
-          () => localParticipant.setMicrophoneEnabled(any<bool>()),
-        ).thenAnswer((_) async => null);
+        when(() => localParticipant.setCameraEnabled(any<bool>()))
+            .thenAnswer((_) async => null);
+        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+            .thenAnswer((_) async => null);
 
         final room = _CountingRoom(localParticipant);
         controller.room = room;
@@ -629,12 +617,10 @@ void main() {
           );
           final container = ProviderContainer(
             overrides: [
-              sessionProvider(
-                eventSlug,
-              ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
-              sessionControllerProvider(
-                options,
-              ).overrideWith(_DelayedInitializeSessionController.new),
+              sessionProvider(eventSlug)
+                  .overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+              sessionControllerProvider(options)
+                  .overrideWith(_DelayedInitializeSessionController.new),
             ],
           );
           addTearDown(container.dispose);
@@ -646,16 +632,14 @@ void main() {
           );
           addTearDown(sub.close);
 
-          final controller =
-              container.read(sessionControllerProvider(options).notifier)
-                  as _DelayedInitializeSessionController;
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          ) as _DelayedInitializeSessionController;
           final localParticipant = MockLocalParticipant();
-          when(
-            () => localParticipant.setCameraEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
-          when(
-            () => localParticipant.setMicrophoneEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
+          when(() => localParticipant.setCameraEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
           final room = _CountingRoom(localParticipant);
           controller.initializedRoom = room;
 
@@ -737,12 +721,10 @@ void main() {
             sessionControllerProvider(options).notifier,
           );
           final localParticipant = MockLocalParticipant();
-          when(
-            () => localParticipant.setCameraEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
-          when(
-            () => localParticipant.setMicrophoneEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
+          when(() => localParticipant.setCameraEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
           final room = _CountingRoom(localParticipant);
           controller.room = room;
 
@@ -798,12 +780,10 @@ void main() {
             sessionControllerProvider(options).notifier,
           );
           final localParticipant = MockLocalParticipant();
-          when(
-            () => localParticipant.setCameraEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
-          when(
-            () => localParticipant.setMicrophoneEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
+          when(() => localParticipant.setCameraEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
           final cameraTrack = MockLocalVideoTrack();
           final microphoneTrack = MockLocalAudioTrack();
 
@@ -868,12 +848,10 @@ void main() {
           final cameraTrack = MockLocalVideoTrack();
           final microphoneTrack = MockLocalAudioTrack();
           final localParticipant = MockLocalParticipant();
-          when(
-            () => localParticipant.setCameraEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
-          when(
-            () => localParticipant.setMicrophoneEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
+          when(() => localParticipant.setCameraEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
           final room = _CountingRoom(
             localParticipant,
             prepareConnectionError: StateError('prepare failed'),
@@ -962,12 +940,10 @@ void main() {
             return true;
           });
           final localParticipant = MockLocalParticipant();
-          when(
-            () => localParticipant.setCameraEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
-          when(
-            () => localParticipant.setMicrophoneEnabled(any<bool>()),
-          ).thenAnswer((_) async => null);
+          when(() => localParticipant.setCameraEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
           final room = _CountingRoom(
             localParticipant,
             connectError: testCase.error,

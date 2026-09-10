@@ -346,10 +346,8 @@ class StartTransitionCard extends StatelessWidget {
     return _GenericTransitionCard(
       actionText: actionText,
       onActionPressed: onActionPressed,
-      instructionTextClick:
-          'Bring participants out of the waiting room and begin the conversation.',
-      instructionTextSwipe:
-          'Bring participants out of the waiting room and begin the conversation.',
+      instructionTextClick: 'Bring participants out of the waiting room and begin the conversation.',
+      instructionTextSwipe: 'Bring participants out of the waiting room and begin the conversation.',
       keyboardShortcutText: 'press space bar to start',
       keepActionLoadingOnSuccess: keepActionLoadingOnSuccess,
       isSliderLoading: isSliderLoading,

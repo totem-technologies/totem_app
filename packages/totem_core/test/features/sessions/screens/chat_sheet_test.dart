@@ -131,13 +131,9 @@ List<Object?> _sharedOverrides({
   RoomScreen currentScreen = RoomScreen.listening,
 }) {
   return [
-    authControllerProvider.overrideWith(
-      () => FakeAuthController(authState),
-    ),
+    authControllerProvider.overrideWith(() => FakeAuthController(authState)),
     currentSessionProvider.overrideWith((ref) => session),
-    currentSessionEventProvider.overrideWith(
-      (ref) => _createSessionEvent(),
-    ),
+    currentSessionEventProvider.overrideWith((ref) => _createSessionEvent()),
     currentSessionStateProvider.overrideWithValue(
       _createSessionState(messages: messages),
     ),
@@ -421,10 +417,8 @@ void main() {
       await tester.pump();
 
       verify(
-        () => messaging.sendMessage(
-          'I need help',
-          recipientIdentity: 'keeper-1',
-        ),
+        () =>
+            messaging.sendMessage('I need help', recipientIdentity: 'keeper-1'),
       ).called(1);
     });
 

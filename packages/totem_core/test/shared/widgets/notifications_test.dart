@@ -778,8 +778,7 @@ void main() {
               width: 220,
               child: NotificationBanner(
                 icon: TotemIcons.chat,
-                title:
-                    'Very long notification title that must remain stable in UI',
+                title: 'Very long notification title that must remain stable in UI',
                 message:
                     'Very long notification message that should be truncated '
                     'safely without causing overflow exceptions during layout.',

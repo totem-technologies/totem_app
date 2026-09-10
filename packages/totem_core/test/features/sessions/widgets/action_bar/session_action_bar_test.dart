@@ -148,19 +148,16 @@ void main() {
       when(() => deviceController.isCameraEnabled).thenReturn(false);
       when(() => deviceController.selectedCameraDeviceId).thenReturn(null);
       when(() => deviceController.localVideoTrack).thenReturn(null);
-      when(
-        () => deviceController.enableCamera(),
-      ).thenAnswer((_) => Future<void>.value());
-      when(
-        () => deviceController.disableCamera(),
-      ).thenAnswer((_) => Future<void>.value());
+      when(() => deviceController.enableCamera())
+          .thenAnswer((_) => Future<void>.value());
+      when(() => deviceController.disableCamera())
+          .thenAnswer((_) => Future<void>.value());
 
       when(
         () => participant.getTrackPublicationBySource(TrackSource.microphone),
       ).thenReturn(null);
-      when(
-        () => participant.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(null);
+      when(() => participant.getTrackPublicationBySource(TrackSource.camera))
+          .thenReturn(null);
       when(() => participant.isMicrophoneEnabled()).thenReturn(false);
 
       when(() => session.isCurrentUserKeeper()).thenReturn(false);

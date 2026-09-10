@@ -333,12 +333,10 @@ void main() {
       tester,
     ) async {
       final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
-      when(
-        () => speaker.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(null);
-      when(
-        () => speaker.getTrackPublicationBySource(TrackSource.microphone),
-      ).thenReturn(null);
+      when(() => speaker.getTrackPublicationBySource(TrackSource.camera))
+          .thenReturn(null);
+      when(() => speaker.getTrackPublicationBySource(TrackSource.microphone))
+          .thenReturn(null);
       fakeSessionState.mockState = SessionRoomState(
         connection: fakeSessionState.mockState.connection,
         chat: fakeSessionState.mockState.chat,
@@ -396,12 +394,10 @@ void main() {
       tester,
     ) async {
       final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
-      when(
-        () => speaker.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(null);
-      when(
-        () => speaker.getTrackPublicationBySource(TrackSource.microphone),
-      ).thenReturn(null);
+      when(() => speaker.getTrackPublicationBySource(TrackSource.camera))
+          .thenReturn(null);
+      when(() => speaker.getTrackPublicationBySource(TrackSource.microphone))
+          .thenReturn(null);
       fakeSessionState.mockState = SessionRoomState(
         connection: fakeSessionState.mockState.connection,
         chat: fakeSessionState.mockState.chat,

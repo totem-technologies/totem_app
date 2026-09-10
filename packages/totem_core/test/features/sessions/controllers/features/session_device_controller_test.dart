@@ -27,12 +27,10 @@ void main() {
 
         mockSession.mockRoom = mockRoom;
 
-        when(
-          () => mockLocalParticipant.isMicrophoneEnabled(),
-        ).thenReturn(false);
-        when(
-          () => mockLocalParticipant.setMicrophoneEnabled(any()),
-        ).thenAnswer((_) async => null);
+        when(() => mockLocalParticipant.isMicrophoneEnabled())
+            .thenReturn(false);
+        when(() => mockLocalParticipant.setMicrophoneEnabled(any()))
+            .thenAnswer((_) async => null);
 
         when(() => mockLocalParticipant.isCameraEnabled()).thenReturn(false);
         when(
@@ -58,9 +56,8 @@ void main() {
 
           await controller.enableMicrophone();
 
-          verify(
-            () => mockLocalParticipant.setMicrophoneEnabled(true),
-          ).called(1);
+          verify(() => mockLocalParticipant.setMicrophoneEnabled(true))
+              .called(1);
         },
       );
 
@@ -75,28 +72,21 @@ void main() {
         verifyNever(() => mockLocalParticipant.setMicrophoneEnabled(any()));
       });
 
-      test(
-        'disableMicrophone calls setMicrophoneEnabled(false) on localParticipant',
-        () async {
-          when(
-            () => mockLocalParticipant.isMicrophoneEnabled(),
-          ).thenReturn(true);
-          final controller = container.read(
-            sessionDeviceControllerProvider(mockSession).notifier,
-          );
+      test('disableMicrophone calls setMicrophoneEnabled(false) on localParticipant', () async {
+        when(() => mockLocalParticipant.isMicrophoneEnabled()).thenReturn(true);
+        final controller = container.read(
+          sessionDeviceControllerProvider(mockSession).notifier,
+        );
 
-          await controller.disableMicrophone();
+        await controller.disableMicrophone();
 
-          verify(
-            () => mockLocalParticipant.setMicrophoneEnabled(false),
-          ).called(1);
-        },
-      );
+        verify(() => mockLocalParticipant.setMicrophoneEnabled(false))
+            .called(1);
+      });
 
       test('disableMicrophone does nothing if already disabled', () async {
-        when(
-          () => mockLocalParticipant.isMicrophoneEnabled(),
-        ).thenReturn(false);
+        when(() => mockLocalParticipant.isMicrophoneEnabled())
+            .thenReturn(false);
         final controller = container.read(
           sessionDeviceControllerProvider(mockSession).notifier,
         );

@@ -205,20 +205,16 @@ void main() {
           }),
           sessionProvider(_slug).overrideWith((_) async => _event()),
           if (successfulJoin) ...[
-            preJoinFlowControllerProvider(
-              _slug,
-            ).overrideWith(_PermissionsGrantedFlowController.new),
-            sessionControllerProvider(
-              _options,
-            ).overrideWith(_SuccessfulSessionController.new),
+            preJoinFlowControllerProvider(_slug)
+                .overrideWith(_PermissionsGrantedFlowController.new),
+            sessionControllerProvider(_options)
+                .overrideWith(_SuccessfulSessionController.new),
           ],
           if (pendingJoin) ...[
-            preJoinFlowControllerProvider(
-              _slug,
-            ).overrideWith(_PermissionsGrantedFlowController.new),
-            sessionControllerProvider(
-              _options,
-            ).overrideWith(_PendingSessionController.new),
+            preJoinFlowControllerProvider(_slug)
+                .overrideWith(_PermissionsGrantedFlowController.new),
+            sessionControllerProvider(_options)
+                .overrideWith(_PendingSessionController.new),
           ],
         ],
         child: const SentryDisplayWidget(

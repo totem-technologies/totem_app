@@ -122,9 +122,8 @@ void main() {
       () =>
           localParticipant.getTrackPublicationBySource(TrackSource.microphone),
     ).thenReturn(null);
-    when(
-      () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
-    ).thenReturn(null);
+    when(() => localParticipant.getTrackPublicationBySource(TrackSource.camera))
+        .thenReturn(null);
   });
 
   Future<void> pumpReceiveTotem(
@@ -289,9 +288,8 @@ void main() {
     testWidgets('shows error notification when accept totem fails', (
       tester,
     ) async {
-      when(
-        () => keeper.acceptTotem(),
-      ).thenAnswer((_) async => throw Exception('accept failed'));
+      when(() => keeper.acceptTotem())
+          .thenAnswer((_) async => throw Exception('accept failed'));
 
       final feedbackService = _TestSessionCuesService();
 

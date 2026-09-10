@@ -128,9 +128,7 @@ class SessionMessagingController extends _$SessionMessagingController {
         if (message.isEveryoneThread &&
             senderId != null &&
             senderId != _state.roomState.keeper) {
-          logger.w(
-            'Ignoring Everyone chat message from non-keeper $senderId',
-          );
+          logger.w('Ignoring Everyone chat message from non-keeper $senderId');
           return;
         }
 
@@ -227,10 +225,7 @@ class SessionMessagingController extends _$SessionMessagingController {
   /// private LiveKit data message when a recipient is set.
   ///
   /// Everyone is keeper-only. Participants may only DM the keeper.
-  Future<void> sendMessage(
-    String text, {
-    String? recipientIdentity,
-  }) async {
+  Future<void> sendMessage(String text, {String? recipientIdentity}) async {
     final isKeeper = session.isCurrentUserKeeper();
     final keeperIdentity = _state.roomState.keeper;
     final localIdentity = _room?.localParticipant?.identity;

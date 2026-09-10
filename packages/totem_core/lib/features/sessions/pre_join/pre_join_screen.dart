@@ -31,8 +31,7 @@ Future<bool> showAlreadyPresentDialog(BuildContext context) async {
           context: context,
           builder: (context) => ConfirmationDialog(
             title: "You're Already in This Session",
-            content:
-                'You are already in this session on another device. Do you want to leave the other session and join on this device?',
+            content: 'You are already in this session on another device. Do you want to leave the other session and join on this device?',
             icon: TotemIcons.questionMarkCircle,
             iconSize: 60,
             confirmButtonText: 'Join Here',
