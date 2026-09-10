@@ -13,15 +13,21 @@ class GroundingMarquee extends StatefulWidget {
 class _GroundingMarqueeState extends State<GroundingMarquee>
     with SingleTickerProviderStateMixin {
   static const messages = [
+    'Now is a good time to get settled, whatever that looks like for you.',
+    'We listen without interrupting and speak without being interrupted.',
+    'Put on headphones if background noise is distracting.',
+    'Keep your phone plugged in if your battery is low.',
+    'Stretch or shift positions whenever you need to.',
+    'No small talk is required here.',
+    'Close any tabs or apps that might interrupt you.',
+    'Your perspective matters here.',
+    'Healing happens in community.',
+    'Come as you are, not as you think you should be.',
     'Totem is community-led.',
     'You don’t need to calm yourself perfectly.',
     'You can turn your camera off if needed.',
-    'You belong.',
     'We listen without interrupting.',
     'Share what feels right.',
-    'You’re allowed to arrive messy.',
-    'Feeling nervous is perfectly okay.',
-    'You’re allowed to take up space.',
     'It’s always acceptable to pass.',
   ];
 
