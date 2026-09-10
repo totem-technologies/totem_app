@@ -47,11 +47,11 @@ class _ActionBarMetrics {
   });
 
   static const comfortable = _ActionBarMetrics(
-    buttonSize: 78,
-    iconSize: 39,
-    gap: 10,
-    horizontalPadding: 13,
-    verticalPadding: 13,
+    buttonSize: 56,
+    iconSize: 28,
+    gap: 8,
+    horizontalPadding: 10,
+    verticalPadding: 10,
   );
 
   static const compact = _ActionBarMetrics(
