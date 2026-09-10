@@ -63,11 +63,10 @@ dependencies:
   screen_protector: 1.5.1
 
   # UI & Utilities
-  material_ui: ^1.1.1
+  material_ui: ^1.2.0
   auto_size_text: ^3.0.0
   flutter_html: ^3.0.0
   # flutter_native_splash: ^2.4.6
-  pinput: ^6.0.1
   flutter_boring_avatars: ^2.1.0
   flutter_svg: ^2.2.4
   flutter_confetti: ^0.9.0

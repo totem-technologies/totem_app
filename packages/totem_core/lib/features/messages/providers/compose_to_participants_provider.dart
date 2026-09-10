@@ -1,4 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/features/messages/repositories/messages_repository.dart';
+import 'package:uuid/uuid.dart';
 
 part 'compose_to_participants_provider.g.dart';
 
@@ -6,30 +9,35 @@ class ComposeToParticipantsState {
   const ComposeToParticipantsState({
     required this.selected,
     this.isSending = false,
+    this.clientRequestId,
+    this.result,
+    this.error,
   });
 
-  /// Recipient ids currently checked on the compose screen.
-  ///
-  /// Ids (not display names) so two people named "Emily" do not collide once
-  /// this is wired to real session participants.
+  /// Recipient slugs currently selected on the compose screen.
   final Set<String> selected;
   final bool isSending;
+  final String? clientRequestId;
+  final SessionMessageResultSchema? result;
+  final Object? error;
 
   ComposeToParticipantsState copyWith({
     Set<String>? selected,
     bool? isSending,
+    String? Function()? clientRequestId,
+    SessionMessageResultSchema? Function()? result,
+    Object? Function()? error,
   }) => ComposeToParticipantsState(
     selected: selected ?? this.selected,
     isSending: isSending ?? this.isSending,
+    clientRequestId: clientRequestId != null
+        ? clientRequestId()
+        : this.clientRequestId,
+    result: result != null ? result() : this.result,
+    error: error != null ? error() : this.error,
   );
 }
 
-/// Compose state for broadcasting a message to a session's participants.
-///
-/// The family is keyed by [sessionSlug] so selection survives rebuilds even
-/// when the recipient list is a freshly-allocated `List` from a future
-/// backend provider. Do not key on the list itself — that would reset the
-/// notifier on every rebuild.
 @riverpod
 class ComposeToParticipantsNotifier extends _$ComposeToParticipantsNotifier {
   var _didSeed = false;
@@ -38,31 +46,49 @@ class ComposeToParticipantsNotifier extends _$ComposeToParticipantsNotifier {
   ComposeToParticipantsState build(String sessionSlug) =>
       const ComposeToParticipantsState(selected: {});
 
-  /// Marks every [ids] entry selected the first time the compose screen
-  /// loads. Later calls are ignored so chip toggles stay intact.
-  void seedRecipients(Iterable<String> ids) {
+  /// Applies the initial all-selected Figma state once without overwriting
+  /// choices the user has already made.
+  void seedRecipients(Iterable<String> slugs) {
     if (_didSeed) return;
     _didSeed = true;
-    state = state.copyWith(selected: Set<String>.from(ids));
+    state = state.copyWith(selected: Set<String>.from(slugs));
   }
 
-  void toggleRecipient(String id) {
+  void toggleRecipient(String slug) {
     final updated = Set<String>.from(state.selected);
-    if (updated.contains(id)) {
-      updated.remove(id);
-    } else {
-      updated.add(id);
-    }
-    state = state.copyWith(selected: updated);
+    if (!updated.add(slug)) updated.remove(slug);
+    state = state.copyWith(selected: updated, error: () => null);
   }
 
-  // TODO(backend): replace with real bulk-message API call when endpoint ships.
-  // The mock always succeeds; `_SendResultDialog`'s error branch is waiting
-  // on that endpoint before it can be exercised.
-  Future<bool> send(String message) async {
-    state = state.copyWith(isSending: true);
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    state = state.copyWith(isSending: false);
-    return true;
+  Future<SessionMessageResultSchema?> send(String message) async {
+    final text = message.trim();
+    if (text.isEmpty || state.selected.isEmpty || state.isSending) return null;
+
+    final requestId = state.clientRequestId ?? const Uuid().v4();
+    state = state.copyWith(
+      isSending: true,
+      clientRequestId: () => requestId,
+      error: () => null,
+      result: () => null,
+    );
+    try {
+      final result = await ref
+          .read(messagesRepositoryProvider)
+          .sendSessionMessage(
+            sessionSlug,
+            recipientSlugs: state.selected.toList(growable: false),
+            text: text,
+            clientRequestId: requestId,
+          );
+      state = state.copyWith(
+        isSending: false,
+        result: () => result,
+        error: () => null,
+      );
+      return result;
+    } catch (error) {
+      state = state.copyWith(isSending: false, error: () => error);
+      return null;
+    }
   }
 }

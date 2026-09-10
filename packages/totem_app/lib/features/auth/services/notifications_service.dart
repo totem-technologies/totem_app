@@ -24,6 +24,8 @@ final class NotificationType {
   static const String circleStarting = 'circle_starting';
   static const String circleAdvertisement = 'circle_advertisement';
   static const String missedEvent = 'missed_event';
+  static const String directMessage = 'direct_message';
+  static const String messageReceived = 'message_received';
 }
 
 const _backgroundKey = 'initial_payload';
@@ -57,6 +59,10 @@ class NotificationsService {
   final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
+  final _handledMessageIds = <String>{};
+  void Function(String conversationId)? onDirectMessage;
+  String? visibleConversationId;
+
   Future<void> initialize() async {
     if (_initialized) {
       return;
@@ -79,8 +85,16 @@ class NotificationsService {
           logger
             ..i('⏰ Got a message whilst in the foreground!')
             ..i('⏰ Message data: ${message.data}');
+          _handlePayload(message.data, navigate: false);
 
-          if (message.notification != null) {
+          final conversationId = message.data['conversation_id'] as String?;
+          final notificationType =
+              message.data['type'] ?? message.data['category'];
+          final isVisibleDirectMessage =
+              (notificationType == NotificationType.directMessage ||
+                  notificationType == NotificationType.messageReceived) &&
+              conversationId == visibleConversationId;
+          if (message.notification != null && !isVisibleDirectMessage) {
             logger.i(
               '⏰ Message also contained a notification: '
               '${message.notification}',
@@ -157,10 +171,21 @@ class NotificationsService {
     }
   }
 
-  void _handlePayload(Map<dynamic, dynamic> payload) {
-    final type = payload['type'] as String?;
+  void _handlePayload(Map<dynamic, dynamic> payload, {bool navigate = true}) {
+    final type = (payload['type'] ?? payload['category']) as String?;
     if (type != null) {
       switch (type) {
+        case NotificationType.directMessage:
+        case NotificationType.messageReceived:
+          if (!AppConfig.instance.messagesEnabled) return;
+          final conversationId = payload['conversation_id'] as String?;
+          final messageId = payload['message_id'] as String?;
+          if (conversationId == null || conversationId.isEmpty) return;
+          if (messageId == null || _handledMessageIds.add(messageId)) {
+            onDirectMessage?.call(conversationId);
+          }
+          if (navigate) _handlePath(RouteNames.messageThread(conversationId));
+          return;
         case NotificationType.circleStarting:
         case NotificationType.circleAdvertisement:
         case NotificationType.missedEvent:

@@ -1,41 +1,122 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/messages/providers/conversations_provider.dart';
 import 'package:totem_core/features/messages/providers/is_current_user_keeper_provider.dart';
+import 'package:totem_core/features/messages/repositories/messages_repository.dart';
 import 'package:totem_core/shared/router.dart';
 
-import '../mocks/message_mocks.dart';
-
-/// Screen for composing a new message. Shown when tapping the "+" button on the
-/// Messages screen. Renders two role-based variants:
-///  - normal user: a "Search keepers" field + a list of their keepers.
-///  - keeper: a "Search participants" field + recent / other session
-///    participants.
-///
-/// Data is mocked until a backend exists; tapping a row opens a message thread
-/// with that person via the existing [ThreadScreen] flow.
-class NewMessageScreen extends ConsumerWidget {
+class NewMessageScreen extends ConsumerStatefulWidget {
   const NewMessageScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NewMessageScreen> createState() => _NewMessageScreenState();
+}
+
+class _NewMessageScreenState extends ConsumerState<NewMessageScreen> {
+  Timer? _searchDebounce;
+  bool _openingConversation = false;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value, RecipientDirectoryKind kind) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      ref.read(recipientDirectoryProvider(kind).notifier).search(value);
+    });
+  }
+
+  Future<void> _openConversation(String recipientSlug) async {
+    if (_openingConversation) return;
+    setState(() => _openingConversation = true);
+    try {
+      final conversation = await ref
+          .read(messagesRepositoryProvider)
+          .openConversation(recipientSlug);
+      ref.read(conversationsProvider.notifier).upsert(conversation);
+      if (mounted) {
+        // Replace the picker: back returns to Messages, not to a stale search.
+        context.pushReplacement(RouteNames.messageThread(conversation.id));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This person is unavailable to message.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _openingConversation = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isKeeper = ref.watch(isCurrentMessagingUserKeeperProvider);
+    final kind = isKeeper
+        ? RecipientDirectoryKind.participants
+        : RecipientDirectoryKind.keepers;
+    final recipients = ref.watch(recipientDirectoryProvider(kind));
 
     return Scaffold(
       backgroundColor: AppTheme.cream,
+      appBar: AppBar(
+        backgroundColor: AppTheme.surfaceCard,
+        title: const Text('New Message'),
+        leading: IconButton(
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+        ),
+      ),
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _NavBar(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
+            child: TextField(
+              onChanged: (value) => _onSearchChanged(value, kind),
+              decoration: InputDecoration(
+                hintText: isKeeper ? 'Search participants' : 'Search keepers',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: AppTheme.messageSearchBg,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
           Expanded(
-            child: SafeArea(
-              top: false,
-              child: ListView(
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 20, 16, 32),
-                children: isKeeper
-                    ? _keeperContent(context)
-                    : _participantContent(context),
+            child: recipients.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator.adaptive()),
+              error: (_, _) => Center(
+                child: TextButton(
+                  onPressed: () =>
+                      ref.invalidate(recipientDirectoryProvider(kind)),
+                  child: const Text('Could not load recipients. Try again.'),
+                ),
+              ),
+              data: (state) => _RecipientList(
+                directory: state.directory,
+                isKeeper: isKeeper,
+                isLoadingMore: state.isLoadingMore,
+                loadMoreError: state.loadMoreError,
+                isOpeningConversation: _openingConversation,
+                onLoadMore: () => ref
+                    .read(recipientDirectoryProvider(kind).notifier)
+                    .loadMore(),
+                onTap: _openConversation,
               ),
             ),
           ),
@@ -43,236 +124,148 @@ class NewMessageScreen extends ConsumerWidget {
       ),
     );
   }
-
-  List<Widget> _participantContent(BuildContext context) {
-    return [
-      const _SearchField(hint: 'Search keepers'),
-      const SizedBox(height: 12),
-      const _SectionLabel('YOUR KEEPERS'),
-      const SizedBox(height: 16),
-      ..._cardsFor(context, mockKeepers),
-    ];
-  }
-
-  List<Widget> _keeperContent(BuildContext context) {
-    return [
-      const _SearchField(hint: 'Search participants'),
-      const SizedBox(height: 24),
-      const _SectionLabel('YOUR SESSION PARTICIPANTS'),
-      const SizedBox(height: 12),
-      ..._cardsFor(context, mockRecentParticipants),
-      const SizedBox(height: 12),
-      const _SectionLabel('OTHER PARTICIPANTS'),
-      const SizedBox(height: 12),
-      ..._cardsFor(
-        context,
-        mockOtherParticipants,
-        colorOffset: mockRecentParticipants.length,
-      ),
-    ];
-  }
-
-  List<Widget> _cardsFor(
-    BuildContext context,
-    List<MockPerson> people, {
-    int colorOffset = 0,
-  }) {
-    return [
-      for (var i = 0; i < people.length; i++) ...[
-        _PersonCard(
-          person: people[i],
-          color: AppTheme
-              .avatarPalette[(i + colorOffset) % AppTheme.avatarPalette.length],
-          onTap: () => _navigateToThread(context, people[i]),
-        ),
-        if (i != people.length - 1) const SizedBox(height: 10),
-      ],
-    ];
-  }
-
-  /// Opens (or starts) a message thread with [person].
-  ///
-  /// Uses [GoRouter.pushReplacement] so this picker is removed from the stack
-  /// once a thread opens — pressing back from the thread returns to the
-  /// Messages tab rather than back to the picker.
-  void _navigateToThread(BuildContext context, MockPerson person) {
-    context.pushReplacement(
-      RouteNames.messageThread(person.id),
-      extra: conversationFromMockPerson(person),
-    );
-  }
 }
 
-class _NavBar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppTheme.surfaceCard,
-      padding: EdgeInsetsDirectional.only(
-        top: MediaQuery.of(context).padding.top,
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 52,
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(start: 12, end: 20),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new,
-                      size: 18,
-                      color: AppTheme.textHeading,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'New Message',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.textHeading,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const Divider(height: 1, thickness: 1, color: AppTheme.divider),
-        ],
-      ),
-    );
-  }
-}
-
-/// Visual placeholder for search. Not wired to a controller yet.
-// TODO(backend): replace with a real TextField once search hits an endpoint.
-class _SearchField extends StatelessWidget {
-  const _SearchField({required this.hint});
-
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 48,
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-      alignment: AlignmentDirectional.centerStart,
-      decoration: BoxDecoration(
-        color: AppTheme.fieldFill,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        hint,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: AppTheme.textMuted,
-          fontWeight: FontWeight.w400,
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: AppTheme.textMuted,
-        fontSize: 10,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 1.2,
-      ),
-    );
-  }
-}
-
-class _PersonCard extends StatelessWidget {
-  const _PersonCard({
-    required this.person,
-    required this.color,
+class _RecipientList extends StatelessWidget {
+  const _RecipientList({
+    required this.directory,
+    required this.isKeeper,
+    required this.isLoadingMore,
+    required this.loadMoreError,
+    required this.isOpeningConversation,
+    required this.onLoadMore,
     required this.onTap,
   });
 
-  final MockPerson person;
-  final Color color;
-  final VoidCallback onTap;
+  final RecipientDirectorySchema directory;
+  final bool isKeeper;
+  final bool isLoadingMore;
+  final Object? loadMoreError;
+  final bool isOpeningConversation;
+  final VoidCallback onLoadMore;
+  final ValueChanged<String> onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppTheme.surfaceCard,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          height: 72,
-          padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceCard,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: AppTheme.cardShadow,
+    final hasRecipients = isKeeper
+        ? directory.participants.isNotEmpty
+        : directory.keepers.isNotEmpty;
+    if (!hasRecipients) {
+      return const Center(child: Text('No eligible recipients found.'));
+    }
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics.extentAfter < 240) onLoadMore();
+        return false;
+      },
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        children: [
+          Text(
+            isKeeper ? 'YOUR SESSION PARTICIPANTS' : 'YOUR KEEPERS',
+            style: const TextStyle(
+              color: AppTheme.messagePurple,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.1,
+            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                child: Text(
-                  person.name.characters.first.toUpperCase(),
-                  style: const TextStyle(
-                    color: AppTheme.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+          const SizedBox(height: 8),
+          if (isKeeper)
+            for (final recipient in directory.participants)
+              _ParticipantRecipientRow(
+                recipient: recipient,
+                enabled: !isOpeningConversation && recipient.canStartDirect,
+                onTap: onTap,
+              )
+          else
+            for (final recipient in directory.keepers)
+              _KeeperRecipientRow(
+                recipient: recipient,
+                enabled: !isOpeningConversation && recipient.canStartDirect,
+                onTap: onTap,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      person.name,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppTheme.textHeading,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (person.subtitle != null) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        person.subtitle!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textMuted,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Icon(
-                Icons.chevron_right,
-                color: AppTheme.chevron,
-                size: 24,
-              ),
-            ],
-          ),
-        ),
+          if (isLoadingMore)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator.adaptive()),
+            )
+          else if (loadMoreError != null)
+            TextButton(
+              onPressed: onLoadMore,
+              child: const Text('Retry loading more'),
+            ),
+        ],
       ),
     );
   }
+}
+
+class _KeeperRecipientRow extends StatelessWidget {
+  const _KeeperRecipientRow({
+    required this.recipient,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final KeeperRecipientSchema recipient;
+  final bool enabled;
+  final ValueChanged<String> onTap;
+
+  @override
+  Widget build(BuildContext context) => _RecipientRow(
+    name: recipient.profile.name,
+    avatarSeed: recipient.profile.profileAvatarSeed,
+    enabled: enabled,
+    onTap: () => onTap(recipient.profile.slug),
+  );
+}
+
+class _ParticipantRecipientRow extends StatelessWidget {
+  const _ParticipantRecipientRow({
+    required this.recipient,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final ParticipantRecipientSchema recipient;
+  final bool enabled;
+  final ValueChanged<String> onTap;
+
+  @override
+  Widget build(BuildContext context) => _RecipientRow(
+    name: recipient.profile.name,
+    avatarSeed: recipient.profile.profileAvatarSeed,
+    subtitle:
+        '${recipient.sessionTitle} · ${DateFormat.MMMd().format(recipient.sessionStart.toLocal())}',
+    enabled: enabled,
+    onTap: () => onTap(recipient.profile.slug),
+  );
+}
+
+class _RecipientRow extends StatelessWidget {
+  const _RecipientRow({
+    required this.name,
+    required this.avatarSeed,
+    required this.enabled,
+    required this.onTap,
+    this.subtitle,
+  });
+
+  final String name;
+  final String avatarSeed;
+  final String? subtitle;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    enabled: enabled,
+    contentPadding: EdgeInsets.zero,
+    leading: CircleAvatar(child: Text(name.characters.first)),
+    title: Text(name),
+    subtitle: subtitle == null ? null : Text(subtitle!),
+    trailing: const Icon(Icons.chevron_right),
+    onTap: enabled ? onTap : null,
+  );
 }

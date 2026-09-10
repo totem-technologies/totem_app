@@ -1089,10 +1089,10 @@ packages:
     dependency: transitive
     description:
       name: material_ui
-      sha256: "9c0156b0cf8b3f56d365c8ffe051a720be3cae9eec55119f01e01b986ffb7101"
+      sha256: fbfb53cab6c4629438feeade5f3d305f72944bc9d9f25786b19106d32b80ec45
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.1"
+    version: "1.2.0"
   meta:
     dependency: "direct dev"
     description:
@@ -1304,11 +1304,12 @@ packages:
   pinput:
     dependency: transitive
     description:
-      name: pinput
-      sha256: "4c3f1b84768b47a56a1abdaca551bd7cef4ac673b882209039ecdf803a5d6e68"
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.0.2"
+      path: "."
+      ref: material-ui
+      resolved-ref: f91db3d6b07e44a82169aeaac2cfbf70914b9fb0
+      url: "https://github.com/qeepcologne/Flutter_Pinput.git"
+    source: git
+    version: "7.0.0"
   platform:
     dependency: transitive
     description:

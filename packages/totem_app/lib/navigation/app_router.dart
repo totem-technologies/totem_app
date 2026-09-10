@@ -10,7 +10,7 @@ import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/features/messages/models/conversation.dart';
+
 import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/router.dart';
@@ -27,6 +27,7 @@ import '../features/home/screens/home_screen.dart';
 import '../features/home/widgets/join_ongoing_session_card.dart';
 import '../features/messages/screens/messages_screen.dart';
 import '../features/messages/screens/new_message_screen.dart';
+
 import '../features/messages/screens/compose_to_participants_screen.dart';
 import '../features/messages/screens/session_participants_screen.dart';
 import '../features/messages/screens/thread_screen.dart';
@@ -51,9 +52,7 @@ class BottomNavScaffold extends ConsumerWidget {
 
   static List<HomeRoutes> get _visibleRoutes => HomeRoutes.values
       .where(
-        (r) =>
-            AppConfig.instance.environment != Environment.production ||
-            r != HomeRoutes.messages,
+        (r) => AppConfig.instance.messagesEnabled || r != HomeRoutes.messages,
       )
       .toList();
 
@@ -133,8 +132,7 @@ class BottomNavScaffold extends ConsumerWidget {
                       ),
                       label: 'Blog',
                     ),
-                    if (AppConfig.instance.environment !=
-                        Environment.production)
+                    if (AppConfig.instance.messagesEnabled)
                       const NavigationDestination(
                         icon: TotemIcon(TotemIcons.messages),
                         selectedIcon: TotemIcon(
@@ -273,6 +271,11 @@ class AppTotemRouter extends TotemRouter {
           return isOnboardingRoute ? null : RouteNames.onboarding;
         }
 
+        if (!AppConfig.instance.messagesEnabled &&
+            state.matchedLocation.startsWith(RouteNames.messages)) {
+          return RouteNames.home;
+        }
+
         // Logged-in and onboarded: keep them off auth/welcome routes
         if (isAuthRoute || isWelcomeRoute) {
           return RouteNames.home;
@@ -382,7 +385,7 @@ class AppTotemRouter extends TotemRouter {
                 ),
               ],
             ),
-            if (AppConfig.instance.environment != Environment.production)
+            if (AppConfig.instance.messagesEnabled)
               StatefulShellBranch(
                 routes: <RouteBase>[
                   GoRoute(
@@ -470,9 +473,7 @@ class AppTotemRouter extends TotemRouter {
           name: RouteNames.composeToParticipants(':sessionSlug'),
           builder: (context, state) {
             final extra = state.extra;
-            if (extra is! SessionDetailSchema) {
-              return const ErrorScreen();
-            }
+            if (extra is! SessionDetailSchema) return const ErrorScreen();
             return ComposeToParticipantsScreen(session: extra);
           },
         ),
@@ -480,17 +481,9 @@ class AppTotemRouter extends TotemRouter {
         GoRoute(
           path: RouteNames.messageThread(':conversationId'),
           name: RouteNames.messageThread(':conversationId'),
-          builder: (context, state) {
-            final conversationId = state.pathParameters['conversationId'] ?? '';
-            final extra = state.extra;
-            if (extra is! Conversation) {
-              return const ErrorScreen();
-            }
-            return ThreadScreen(
-              conversationId: conversationId,
-              conversation: extra,
-            );
-          },
+          builder: (context, state) => ThreadScreen(
+            conversationId: state.pathParameters['conversationId'] ?? '',
+          ),
         ),
 
         GoRoute(

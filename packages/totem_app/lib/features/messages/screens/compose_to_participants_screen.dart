@@ -4,13 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/messages/providers/compose_to_participants_provider.dart';
+import 'package:totem_core/features/messages/providers/conversations_provider.dart';
 import 'package:totem_core/shared/router.dart';
 
-import '../mocks/message_mocks.dart';
-
-/// Keeper-only compose screen for broadcasting a message to all (or a subset
-/// of) participants in a session. All data is mocked; the send action is a
-/// no-op until the backend ships the bulk-message endpoint.
+/// Keeper-only compose screen for messaging all or a selected server-authorized
+/// session participant list as individual direct conversations.
 class ComposeToParticipantsScreen extends ConsumerStatefulWidget {
   const ComposeToParticipantsScreen({required this.session, super.key});
 
@@ -30,16 +28,16 @@ class _ComposeToParticipantsScreenState
   @override
   void initState() {
     super.initState();
-    // Seed before the first frame so chips start selected and the copy
-    // already uses the real count. Keyed by session slug, not the list.
-    ref
-        .read(composeToParticipantsProvider(_sessionSlug).notifier)
-        .seedRecipients(mockSessionParticipants.map((p) => p.id));
+    _messageController.addListener(_onMessageChanged);
   }
+
+  void _onMessageChanged() => setState(() {});
 
   @override
   void dispose() {
-    _messageController.dispose();
+    _messageController
+      ..removeListener(_onMessageChanged)
+      ..dispose();
     super.dispose();
   }
 
@@ -47,25 +45,28 @@ class _ComposeToParticipantsScreenState
     final notifier = ref.read(
       composeToParticipantsProvider(_sessionSlug).notifier,
     );
-    final success = await notifier.send(_messageController.text.trim());
+    final result = await notifier.send(_messageController.text);
     if (!context.mounted) return;
     await showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.5),
       barrierDismissible: false,
-      builder: (_) {
-        final selected = ref.read(composeToParticipantsProvider(_sessionSlug));
-        return _SendResultDialog(
-          success: success,
-          sentCount: selected.selected.length,
-          sessionName: widget.session.space.title,
-          onGoToMessages: () {
-            Navigator.of(context).pop();
-            context.go(RouteNames.messages);
-          },
-          onDismiss: () => Navigator.of(context).pop(),
-        );
-      },
+      builder: (_) => _SendResultDialog(
+        success: result != null,
+        sentCount: result?.sentCount ?? 0,
+        requestedCount: result?.requestedCount ?? 0,
+        sessionName: widget.session.space.title,
+        onGoToMessages: () {
+          Navigator.of(context).pop();
+          ref.invalidate(conversationsProvider);
+          context.go(RouteNames.messages);
+        },
+        onDismiss: () => Navigator.of(context).pop(),
+        onRetry: () {
+          Navigator.of(context).pop();
+          _sendMessages(context);
+        },
+      ),
     );
   }
 
@@ -75,6 +76,13 @@ class _ComposeToParticipantsScreenState
     final composeState = ref.watch(composeToParticipantsProvider(_sessionSlug));
     final selectedCount = composeState.selected.length;
     final sessionName = widget.session.space.title;
+    final participants = ref.watch(
+      sessionMessageParticipantsProvider(_sessionSlug),
+    );
+    final canSend =
+        selectedCount > 0 &&
+        _messageController.text.trim().isNotEmpty &&
+        !composeState.isSending;
 
     return Scaffold(
       backgroundColor: AppTheme.cream,
@@ -83,188 +91,216 @@ class _ComposeToParticipantsScreenState
           _NavBar(),
           const Divider(height: 1, thickness: 1, color: AppTheme.divider),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsetsDirectional.fromSTEB(16, 20, 16, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Description
-                  Text(
-                    'This message will be sent to '
-                    '${_participantCountLabel(selectedCount)} '
-                    'in $sessionName as individual conversations.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textMuted,
-                      fontSize: 12,
-                      height: 1.5,
-                    ),
+            child: participants.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator.adaptive()),
+              error: (_, _) => Center(
+                child: TextButton(
+                  onPressed: () => ref.invalidate(
+                    sessionMessageParticipantsProvider(_sessionSlug),
                   ),
-
-                  const SizedBox(height: 16),
-
-                  // Recipients card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsetsDirectional.all(14),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceCard,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x08000000),
-                          blurRadius: 12,
-                          offset: Offset(0, 4),
-                        ),
-                        BoxShadow(
-                          color: Color(0x0D000000),
-                          blurRadius: 3,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'TO',
-                          style: TextStyle(
-                            color: AppTheme.messagePurple,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 1.5,
-                            height: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: mockSessionParticipants
-                              .map(
-                                (participant) => _RecipientChip(
-                                  label: participant.name,
-                                  selected: composeState.selected.contains(
-                                    participant.id,
-                                  ),
-                                  onTap: () => ref
-                                      .read(
-                                        composeToParticipantsProvider(
-                                          _sessionSlug,
-                                        ).notifier,
-                                      )
-                                      .toggleRecipient(participant.id),
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Compose box
-                  Container(
-                    width: double.infinity,
-                    constraints: const BoxConstraints(minHeight: 160),
-                    padding: const EdgeInsetsDirectional.all(14),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceCard,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.divider),
-                    ),
-                    child: TextField(
-                      controller: _messageController,
-                      maxLines: null,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.textHeading,
-                        fontSize: 16,
-                        height: 1.5,
-                      ),
-                      decoration: InputDecoration.collapsed(
-                        hintText: 'Write your message…',
-                        hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                  child: const Text('Could not load participants. Try again.'),
+                ),
+              ),
+              data: (participantState) {
+                final people = participantState.participants;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    ref
+                        .read(
+                          composeToParticipantsProvider(_sessionSlug).notifier,
+                        )
+                        .seedRecipients(
+                          people.map((participant) => participant.profile.slug),
+                        );
+                  }
+                });
+                return SingleChildScrollView(
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 20, 16, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Description
+                      Text(
+                        'This message will be sent to '
+                        '${_participantCountLabel(selectedCount)} '
+                        'in $sessionName as individual conversations.',
+                        style: theme.textTheme.bodySmall?.copyWith(
                           color: AppTheme.textMuted,
-                          fontSize: 16,
+                          fontSize: 12,
                           height: 1.5,
                         ),
                       ),
-                    ),
-                  ),
 
-                  const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
-                  // Action buttons
-                  Row(
-                    spacing: 12,
-                    children: [
-                      // Cancel
-                      OutlinedButton(
-                        onPressed: () => context.pop(),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.mauve,
-                          side: const BorderSide(color: AppTheme.mauve),
-                          shape: const StadiumBorder(),
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 24,
-                            vertical: 14,
-                          ),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          textStyle: const TextStyle(
-                            fontFamily: AppTheme.fontFamilySans,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                            height: 1.3,
-                          ),
+                      // Recipients card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsetsDirectional.all(14),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceCard,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x08000000),
+                              blurRadius: 12,
+                              offset: Offset(0, 4),
+                            ),
+                            BoxShadow(
+                              color: Color(0x0D000000),
+                              blurRadius: 3,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
                         ),
-                        child: const Text('Cancel'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'TO',
+                              style: TextStyle(
+                                color: AppTheme.messagePurple,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 1.5,
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: people
+                                  .map(
+                                    (participant) => _RecipientChip(
+                                      label: participant.profile.name,
+                                      selected: composeState.selected.contains(
+                                        participant.profile.slug,
+                                      ),
+                                      onTap: () => ref
+                                          .read(
+                                            composeToParticipantsProvider(
+                                              _sessionSlug,
+                                            ).notifier,
+                                          )
+                                          .toggleRecipient(
+                                            participant.profile.slug,
+                                          ),
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                            ),
+                          ],
+                        ),
                       ),
 
-                      // Send
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed:
-                              selectedCount == 0 || composeState.isSending
-                              ? null
-                              : () => _sendMessages(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.mauve,
-                            foregroundColor: AppTheme.white,
-                            disabledBackgroundColor: AppTheme.mauve.withValues(
-                              alpha: 0.4,
-                            ),
-                            shape: const StadiumBorder(),
-                            padding: const EdgeInsetsDirectional.symmetric(
-                              horizontal: 24,
-                              vertical: 14,
-                            ),
-                            elevation: 0,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            textStyle: const TextStyle(
-                              fontFamily: AppTheme.fontFamilySans,
-                              fontWeight: FontWeight.w600,
+                      const SizedBox(height: 16),
+
+                      // Compose box
+                      Container(
+                        width: double.infinity,
+                        constraints: const BoxConstraints(minHeight: 160),
+                        padding: const EdgeInsetsDirectional.all(14),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceCard,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.divider),
+                        ),
+                        child: TextField(
+                          controller: _messageController,
+                          maxLines: null,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: AppTheme.textHeading,
+                            fontSize: 16,
+                            height: 1.5,
+                          ),
+                          decoration: InputDecoration.collapsed(
+                            hintText: 'Write your message…',
+                            hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                              color: AppTheme.textMuted,
                               fontSize: 16,
-                              height: 1.3,
+                              height: 1.5,
                             ),
                           ),
-                          child: composeState.isSending
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppTheme.white,
-                                  ),
-                                )
-                              : Text(
-                                  'Send to ${_participantCountLabel(selectedCount)}',
-                                ),
                         ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Action buttons
+                      Row(
+                        spacing: 12,
+                        children: [
+                          // Cancel
+                          OutlinedButton(
+                            onPressed: () => context.pop(),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.mauve,
+                              side: const BorderSide(color: AppTheme.mauve),
+                              shape: const StadiumBorder(),
+                              padding: const EdgeInsetsDirectional.symmetric(
+                                horizontal: 24,
+                                vertical: 14,
+                              ),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              textStyle: const TextStyle(
+                                fontFamily: AppTheme.fontFamilySans,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                                height: 1.3,
+                              ),
+                            ),
+                            child: const Text('Cancel'),
+                          ),
+
+                          // Send
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: canSend
+                                  ? () => _sendMessages(context)
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.mauve,
+                                foregroundColor: AppTheme.white,
+                                disabledBackgroundColor: AppTheme.mauve
+                                    .withValues(alpha: 0.4),
+                                shape: const StadiumBorder(),
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 24,
+                                  vertical: 14,
+                                ),
+                                elevation: 0,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                textStyle: const TextStyle(
+                                  fontFamily: AppTheme.fontFamilySans,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                  height: 1.3,
+                                ),
+                              ),
+                              child: composeState.isSending
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator.adaptive(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation(
+                                          AppTheme.white,
+                                        ),
+                                      ),
+                                    )
+                                  : Text(
+                                      'Send to ${_participantCountLabel(selectedCount)}',
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -312,16 +348,20 @@ class _SendResultDialog extends StatelessWidget {
   const _SendResultDialog({
     required this.success,
     required this.sentCount,
+    required this.requestedCount,
     required this.sessionName,
     required this.onGoToMessages,
     required this.onDismiss,
+    required this.onRetry,
   });
 
   final bool success;
   final int sentCount;
+  final int requestedCount;
   final String sessionName;
   final VoidCallback onGoToMessages;
   final VoidCallback onDismiss;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -358,9 +398,14 @@ class _SendResultDialog extends StatelessWidget {
             // Body
             Text(
               success
-                  ? 'Your message was sent to '
-                        '${_participantCountLabel(sentCount)} '
-                        'in $sessionName as individual conversations.'
+                  ? sentCount == requestedCount
+                        ? 'Your message was sent to '
+                              '${_participantCountLabel(sentCount)} '
+                              'in $sessionName as individual conversations.'
+                        : 'Your message was sent to '
+                              '${_participantCountLabel(sentCount)} of '
+                              '${_participantCountLabel(requestedCount)} '
+                              'in $sessionName.'
                   : 'We couldn\'t send your message. Please check your '
                         'connection and try again.',
               textAlign: TextAlign.center,
@@ -381,7 +426,7 @@ class _SendResultDialog extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: success ? onGoToMessages : onDismiss,
+                onPressed: success ? onGoToMessages : onRetry,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.mauve,
                   foregroundColor: AppTheme.white,
