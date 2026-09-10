@@ -408,6 +408,15 @@ void main() {
     testWidgets('shows elapsed time only after a keeper reminder', (
       tester,
     ) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view
+        ..physicalSize = const Size(1280, 1000)
+        ..devicePixelRatio = 1;
+      when(() => session.session).thenReturn(_createTestSession());
+
       final state = _buildState(
         keeper: 'keeper-1',
         currentSpeaker: 'user-1',

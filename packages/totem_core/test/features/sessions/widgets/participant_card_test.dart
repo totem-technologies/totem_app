@@ -412,6 +412,7 @@ void main() {
           topic: SessionCommunicationTopics.shareTimeReminder.topic,
         ),
       ).thenAnswer((_) async {});
+      final semantics = tester.ensureSemantics();
       fakeSessionState
         ..isCurrentUserKeeperValue = true
         ..mockRoom = FakeRoom(keeper)
@@ -457,7 +458,9 @@ void main() {
         child: const FeaturedParticipantCard(),
       );
 
-      await tester.tap(find.byTooltip('Send a private share time reminder'));
+      await tester.tap(
+        find.bySemanticsLabel(RegExp('Send a private share time reminder')),
+      );
       await tester.pump();
 
       verify(
@@ -494,7 +497,9 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byTooltip('Send a private share time reminder'));
+      await tester.tap(
+        find.bySemanticsLabel(RegExp('Send a private share time reminder')),
+      );
       await tester.pump();
 
       verify(
@@ -505,6 +510,7 @@ void main() {
           topic: SessionCommunicationTopics.shareTimeReminder.topic,
         ),
       ).called(1);
+      semantics.dispose();
     });
 
     testWidgets('uses 40dp overlay badges on desktop-class windows', (

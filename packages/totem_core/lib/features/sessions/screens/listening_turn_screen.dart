@@ -39,8 +39,8 @@ class ListeningTurnScreen extends ConsumerWidget {
               final highlightColor = Colors.grey.shade500;
               return Shimmer(
                 gradient: LinearGradient(
-                  begin: AlignmentDirectional.centerStart,
-                  end: AlignmentDirectional.centerEnd,
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                   colors: [
                     baseColor,
                     baseColor,

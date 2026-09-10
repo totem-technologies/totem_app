@@ -429,12 +429,14 @@ void main() {
     });
 
     group('waitingRoom status with keeper', () {
-      testWidgets('shows "The session is about to start" text', (tester) async {
+      testWidgets('shows "Your session is about to start" text', (
+        tester,
+      ) async {
         final state = _buildState(status: RoomStatus.waitingRoom);
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.text('The session is about to start'), findsOneWidget);
+        expect(find.text('Your session is about to start'), findsOneWidget);
       });
 
       testWidgets('non-keeper sees GroundingMarquee instead of start button', (
