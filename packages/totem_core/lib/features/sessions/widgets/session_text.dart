@@ -33,6 +33,7 @@ class SessionTitle extends ConsumerWidget {
                 if (shareTimeStartedAt != null) ...[
                   const TextSpan(text: ' · '),
                   WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
                     child: SessionElapsedTimer(
                       startTime: shareTimeStartedAt,
                       style: SessionElapsedTimerStyle.sessionTitle,
