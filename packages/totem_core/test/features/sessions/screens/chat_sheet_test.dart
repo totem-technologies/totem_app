@@ -245,7 +245,7 @@ void main() {
           any(),
           recipientIdentity: any(named: 'recipientIdentity'),
         ),
-      ).thenAnswer((_) async {});
+      ).thenAnswer((_) async => true);
       when(() => messaging.sendReaction(any())).thenAnswer((_) async {});
       when(() => devices.enableMicrophone()).thenAnswer((_) async {});
       when(() => devices.disableMicrophone()).thenAnswer((_) async {});
@@ -496,6 +496,75 @@ void main() {
         ),
       ).called(1);
       expect(find.text('Hello chat'), findsNothing);
+    });
+
+    testWidgets('does not carry a private draft into the Everyone thread', (
+      tester,
+    ) async {
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: const [],
+        session: session,
+        authState: AuthState.authenticated(
+          user: UserSchema(
+            email: 'keeper@example.com',
+            slug: 'keeper-1',
+            name: 'Heather',
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            circleCount: 0,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Everyone').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lucas').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Checking in privately');
+      await tester.pump();
+
+      // Back to Everyone: the private draft must not follow.
+      await tester.tap(find.text('Lucas').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Everyone').last);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('only you can post'), findsOneWidget);
+
+      expect(find.text('Checking in privately'), findsNothing);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        isEmpty,
+      );
+    });
+
+    testWidgets('keeps the composer text when the send is rejected', (
+      tester,
+    ) async {
+      when(
+        () => messaging.sendMessage(
+          any(),
+          recipientIdentity: any(named: 'recipientIdentity'),
+        ),
+      ).thenAnswer((_) async => false);
+
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: const [],
+        session: session,
+        authState: AuthState.unauthenticated(),
+      );
+
+      await tester.enterText(find.byType(TextField), 'Dropped message');
+      await tester.pump();
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pumpAndSettle();
+
+      // A rejected send must not silently swallow what the user typed.
+      expect(find.text('Dropped message'), findsOneWidget);
     });
 
     testWidgets('opens the recipient dropdown from the header', (tester) async {

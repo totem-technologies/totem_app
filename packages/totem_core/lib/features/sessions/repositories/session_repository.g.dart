@@ -142,7 +142,7 @@ final class RoomStateProvider
   }
 }
 
-String _$roomStateHash() => r'98f214604a0ddcf4a461aa236fefbbf110c6809b';
+String _$roomStateHash() => r'43c7ac9c835bf63b70e0b8dd580c53b9bff98a27';
 
 final class RoomStateFamily extends $Family
     with

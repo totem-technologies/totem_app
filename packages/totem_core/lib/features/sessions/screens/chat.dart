@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
@@ -94,16 +96,12 @@ class SessionChatPanel extends ConsumerStatefulWidget {
   ConsumerState<SessionChatPanel> createState() => _SessionChatPanelState();
 }
 
-/// Tests and older call sites still look up this name.
-typedef SessionChatMessages = SessionChatPanel;
-
 class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     with SingleTickerProviderStateMixin {
   ScrollController? _localController;
   ScrollController get scrollController =>
       widget.scrollController ?? (_localController ??= ScrollController());
 
-  int _previousMessageCount = 0;
   var _dropdownOpen = false;
 
   /// Critically damped spring so the recipient menu can be grabbed mid-flight.
@@ -113,6 +111,8 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
   void initState() {
     super.initState();
     _dropdownController = AnimationController.unbounded(vsync: this);
+    // Open on the most recent message; [ref.listen] only covers later arrivals.
+    unawaited(_scrollToBottom());
   }
 
   @override
@@ -131,8 +131,10 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     }
 
     await SchedulerBinding.instance.endOfFrame;
+    if (!mounted) return;
     await jumpToBottom();
     await SchedulerBinding.instance.endOfFrame;
+    if (!mounted) return;
     await jumpToBottom();
   }
 
@@ -151,30 +153,51 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     _dropdownController.animateWith(simulation);
   }
 
+  /// LiveKit identity when the room is attached, else the account fallback the
+  /// rest of the panel uses. Shared by [build] and the message listener so
+  /// there is only one fallback chain.
+  static String? _resolveLocalIdentity(String? roomIdentity, String? fallback) {
+    if (roomIdentity != null && roomIdentity.isNotEmpty) return roomIdentity;
+    return fallback;
+  }
+
+  String? _localIdentity() {
+    final user = ref.read(authControllerProvider).user;
+    return _resolveLocalIdentity(
+      ref.read(currentSessionProvider)?.room?.localParticipant?.identity,
+      user?.slug ?? user?.email,
+    );
+  }
+
   void _closePanel() {
     _setDropdownOpen(false);
     if (widget.embedded) {
-      ref.read(sessionChatOpenProvider.notifier).setOpen(false);
+      ref.read(sessionChatOpenProvider.notifier).open = false;
       return;
     }
     Navigator.of(context).maybePop();
   }
 
-  String? _localIdentity() {
-    final roomIdentity = ref
-        .read(currentSessionProvider)
-        ?.room
-        ?.localParticipant
-        ?.identity;
-    if (roomIdentity != null && roomIdentity.isNotEmpty) {
-      return roomIdentity;
-    }
-    final user = ref.read(authControllerProvider).user;
-    return user?.slug ?? user?.email;
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Scroll on arrival rather than on a length change during build: a thread
+    // switch no longer counts as an arrival, and two threads of equal length
+    // no longer mask one.
+    ref.listen(sessionMessagesProvider, (previous, next) {
+      if (next.length <= (previous?.length ?? 0)) return;
+      final message = next.last;
+      final belongs = message.belongsToThread(
+        localIdentity: _localIdentity(),
+        threadTarget: ref.read(sessionChatThreadTargetProvider),
+      );
+      if (belongs) unawaited(_scrollToBottom());
+    });
+
+    // A newly selected thread should open at its most recent message.
+    ref.listen(sessionChatThreadTargetProvider, (previous, next) {
+      unawaited(_scrollToBottom());
+    });
+
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
     final threadTarget = ref.watch(sessionChatThreadTargetProvider);
     final allMessages = ref.watch(sessionMessagesProvider);
@@ -182,10 +205,15 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     final sessionState = ref.watch(currentSessionStateProvider);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
 
-    final localIdentity =
-        ref.watch(currentSessionProvider)?.room?.localParticipant?.identity ??
-        user?.slug ??
-        user?.email;
+    final roomIdentity = ref
+        .watch(currentSessionProvider)
+        ?.room
+        ?.localParticipant
+        ?.identity;
+    final localIdentity = _resolveLocalIdentity(
+      roomIdentity,
+      user?.slug ?? user?.email,
+    );
     final keeperIdentity = sessionState?.roomState.keeper;
 
     final threadMessages = allMessages
@@ -197,13 +225,6 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
         )
         .toList();
 
-    if (threadMessages.length != _previousMessageCount) {
-      _previousMessageCount = threadMessages.length;
-      if (threadMessages.isNotEmpty) {
-        _scrollToBottom();
-      }
-    }
-
     final isPrivateThread = threadTarget != null;
     final canCompose = isKeeper || isPrivateThread;
     final hintText = _pinnedHint(
@@ -211,12 +232,15 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       isPrivateThread: isPrivateThread,
     );
 
-    void send(String text) {
-      ref
-          .read(currentSessionProvider)
-          ?.messaging
-          .sendMessage(text, recipientIdentity: threadTarget);
-      _scrollToBottom();
+    Future<bool> send(String text) async {
+      final messaging = ref.read(currentSessionProvider)?.messaging;
+      if (messaging == null) return false;
+      final accepted = await messaging.sendMessage(
+        text,
+        recipientIdentity: threadTarget,
+      );
+      if (accepted) unawaited(_scrollToBottom());
+      return accepted;
     }
 
     return Material(
@@ -297,18 +321,27 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                           if (keeper == null || keeper.isEmpty) return;
                           _setDropdownOpen(false);
                           ref
-                              .read(sessionChatThreadTargetProvider.notifier)
-                              .selectParticipant(keeper);
+                                  .read(
+                                    sessionChatThreadTargetProvider.notifier,
+                                  )
+                                  .target =
+                              keeper;
                         },
                         onViewGroup: () {
                           _setDropdownOpen(false);
                           ref
-                              .read(sessionChatThreadTargetProvider.notifier)
-                              .selectEveryone();
+                                  .read(
+                                    sessionChatThreadTargetProvider.notifier,
+                                  )
+                                  .target =
+                              null;
                         },
                       ),
                     if (canCompose)
                       MessageInputBar(
+                        // A fresh State per thread, so a private draft can
+                        // never be sent to Everyone after a thread switch.
+                        key: ValueKey(threadTarget),
                         hintText: _composerHint(
                           isPrivateThread: isPrivateThread,
                           threadTarget: threadTarget,
@@ -343,18 +376,16 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                   isKeeper: isKeeper,
                   threadTarget: threadTarget,
                   keeperIdentity: keeperIdentity,
-                  localIdentity: _localIdentity(),
+                  localIdentity: localIdentity,
                   participants: participants,
                   onSelectEveryone: () {
-                    ref
-                        .read(sessionChatThreadTargetProvider.notifier)
-                        .selectEveryone();
+                    ref.read(sessionChatThreadTargetProvider.notifier).target =
+                        null;
                     _setDropdownOpen(false);
                   },
                   onSelectParticipant: (identity) {
-                    ref
-                        .read(sessionChatThreadTargetProvider.notifier)
-                        .selectParticipant(identity);
+                    ref.read(sessionChatThreadTargetProvider.notifier).target =
+                        identity;
                     _setDropdownOpen(false);
                   },
                 ),

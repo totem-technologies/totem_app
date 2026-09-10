@@ -392,7 +392,7 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Chat'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SessionChatMessages), findsOneWidget);
+      expect(find.byType(SessionChatPanel), findsOneWidget);
       expect(find.text('No messages yet'), findsOneWidget);
       expect(findPendingBadge(), findsNothing);
 
@@ -402,7 +402,7 @@ void main() {
       ).pop();
       await tester.pumpAndSettle();
 
-      expect(find.byType(SessionChatMessages), findsNothing);
+      expect(find.byType(SessionChatPanel), findsNothing);
       expect(findPendingBadge(), findsNothing);
     });
   });

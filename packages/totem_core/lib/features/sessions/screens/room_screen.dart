@@ -67,6 +67,14 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+    // In-call chat UI state is per-session. Clearing it on entry keeps a
+    // docked sidebar, or a private thread aimed at the previous circle's
+    // keeper, from carrying into this one.
+    ref
+      ..invalidate(sessionChatOpenProvider)
+      ..invalidate(sessionChatThreadTargetProvider);
+
     _listenToBatteryChanges();
     _warmEmojiGlyphs();
     WidgetsBinding.instance.addPostFrameCallback((_) {

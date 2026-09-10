@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 
@@ -11,7 +13,9 @@ class MessageInputBar extends StatefulWidget {
     this.autofocus = false,
   });
 
-  final ValueChanged<String>? onSend;
+  /// Returns false when the message was rejected, in which case the composer
+  /// keeps the text so the user can retry instead of losing it.
+  final FutureOr<bool> Function(String text)? onSend;
 
   /// Placeholder inside the pill field. Session chat swaps this per thread.
   final String hintText;
@@ -35,11 +39,14 @@ class _MessageInputBarState extends State<MessageInputBar> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!widget.enabled) return;
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    widget.onSend?.call(text);
+    final onSend = widget.onSend;
+    if (onSend == null) return;
+    final accepted = await onSend(text);
+    if (!mounted || !accepted) return;
     _controller.clear();
   }
 
@@ -66,7 +73,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
                   autofocus: widget.autofocus,
                   maxLines: 1,
                   textInputAction: TextInputAction.send,
-                  onFieldSubmitted: (_) => _submit(),
+                  onFieldSubmitted: (_) => unawaited(_submit()),
                   style: const TextStyle(
                     color: AppTheme.textHeading,
                     fontSize: 14.5,
@@ -106,7 +113,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
               _SendButton(
                 controller: _controller,
                 enabled: widget.enabled,
-                onSubmit: _submit,
+                onSubmit: () => unawaited(_submit()),
               ),
             ],
           ),

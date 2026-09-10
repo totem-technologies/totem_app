@@ -203,34 +203,34 @@ List<SessionChatMessage> sessionMessages(Ref ref) {
 }
 
 /// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
-final sessionChatOpenProvider = NotifierProvider<SessionChatOpen, bool>(
-  SessionChatOpen.new,
-);
-
-class SessionChatOpen extends Notifier<bool> {
+///
+/// Reset on room entry, so a docked sidebar in one circle doesn't open the
+/// panel on entry to the next.
+@Riverpod(keepAlive: true)
+class SessionChatOpen extends _$SessionChatOpen {
   @override
   bool build() => false;
 
-  // ignore: use_setters_to_change_properties
-  void setOpen(bool value) => state = value;
+  bool get open => state;
+
+  set open(bool value) => state = value;
 
   void toggle() => state = !state;
 }
 
 /// Current in-call thread. Null is the Everyone group thread.
-final sessionChatThreadTargetProvider =
-    NotifierProvider<SessionChatThreadTarget, String?>(
-      SessionChatThreadTarget.new,
-    );
-
-class SessionChatThreadTarget extends Notifier<String?> {
+///
+/// Reset alongside [SessionChatOpen]; a thread target from a previous circle
+/// names a keeper who isn't in this one, and every send would be rejected.
+@Riverpod(keepAlive: true)
+class SessionChatThreadTarget extends _$SessionChatThreadTarget {
   @override
   String? build() => null;
 
-  void selectEveryone() => state = null;
+  /// Null is the Everyone thread.
+  String? get target => state;
 
-  // ignore: use_setters_to_change_properties
-  void selectParticipant(String identity) => state = identity;
+  set target(String? identity) => state = identity;
 }
 
 /// Last chat message if available.

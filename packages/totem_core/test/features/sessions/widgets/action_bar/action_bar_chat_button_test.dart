@@ -10,6 +10,7 @@ import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
+import '../../livekit_mocks.dart';
 
 class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   @override
@@ -98,7 +99,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Chat'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SessionChatMessages), findsOneWidget);
+    expect(find.byType(SessionChatPanel), findsOneWidget);
     expect(find.text('No messages yet'), findsOneWidget);
 
     Navigator.of(
@@ -165,7 +166,7 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Chat'));
     await tester.pumpAndSettle();
-    expect(find.byType(SessionChatMessages), findsOneWidget);
+    expect(find.byType(SessionChatPanel), findsOneWidget);
 
     final context = tester.element(find.byType(ActionBarChatButton));
     final container = ProviderScope.containerOf(context, listen: false);
@@ -183,5 +184,90 @@ void main() {
 
     expect(find.text('New message'), findsNothing);
     expect(findPendingBadge(), findsNothing);
+  });
+
+  testWidgets('announces a message from a thread that is not on screen', (
+    tester,
+  ) async {
+    await pumpWidget(
+      tester,
+      child: const ActionBarChatButton(),
+      overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(AuthState.unauthenticated()),
+        ),
+        lastSessionMessageProvider.overrideWith(
+          (ref) => ref.watch(_testLastMessageProvider),
+        ),
+        sessionMessagesProvider.overrideWith((ref) => const []),
+        isCurrentUserKeeperProvider.overrideWith((ref) => true),
+        currentSessionEventProvider.overrideWith((ref) => null),
+      ],
+    );
+
+    // Keeper is reading Everyone with the panel open...
+    await tester.tap(find.bySemanticsLabel('Chat'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SessionChatPanel), findsOneWidget);
+
+    final context = tester.element(find.byType(ActionBarChatButton));
+    final container = ProviderScope.containerOf(context, listen: false);
+
+    // ...when a private support request arrives on another thread.
+    container
+        .read(_testLastMessageProvider.notifier)
+        .set(
+          SessionChatMessage(
+            id: 'msg-dm',
+            sender: false,
+            message: 'I am struggling',
+            timestamp: 4,
+            recipientIdentity: 'keeper-1',
+            participant: MockRemoteParticipant('lucas', 'Lucas'),
+          ),
+        );
+    await tester.pump();
+
+    expect(find.text('New message'), findsOneWidget);
+  });
+
+  testWidgets('a docked flag on a narrow viewport still opens the sheet', (
+    tester,
+  ) async {
+    // Docked on a wide window, then resized below the dock threshold: the
+    // stale flag must not make the first tap a no-op.
+    tester.view.physicalSize = const Size(600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpWidget(
+      tester,
+      child: const ActionBarChatButton(),
+      overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(AuthState.unauthenticated()),
+        ),
+        lastSessionMessageProvider.overrideWith(
+          (ref) => ref.watch(_testLastMessageProvider),
+        ),
+        sessionMessagesProvider.overrideWith((ref) => const []),
+        isCurrentUserKeeperProvider.overrideWith((ref) => false),
+        currentSessionEventProvider.overrideWith((ref) => null),
+      ],
+    );
+
+    final context = tester.element(find.byType(ActionBarChatButton));
+    final container = ProviderScope.containerOf(context, listen: false);
+    container.read(sessionChatOpenProvider.notifier).open = true;
+    await tester.pumpAndSettle();
+
+    // Nothing is docked at this width.
+    expect(find.byType(SessionChatPanel), findsNothing);
+
+    await tester.tap(find.bySemanticsLabel('Chat'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SessionChatPanel), findsOneWidget);
   });
 }
