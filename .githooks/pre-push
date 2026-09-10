@@ -5,4 +5,8 @@
 
 set -eu
 
+# Flutter uses Git to determine its SDK version; don't let the hook's GIT_DIR
+# make it inspect this repository instead of the Flutter SDK repository.
+unset GIT_DIR
+
 make test

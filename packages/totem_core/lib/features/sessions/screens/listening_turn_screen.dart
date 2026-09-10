@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
+import 'package:shimmer/shimmer.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -34,27 +35,54 @@ class ListeningTurnScreen extends ConsumerWidget {
           final theme = Theme.of(context);
           final nextUpText = () {
             if (roomStatus == RoomStatus.waitingRoom) {
-              return Text(
-                () {
-                  if (!hasKeeper) {
-                    return 'Waiting for the Keeper to join...';
-                  }
-                  return 'The session is about to start...';
-                }(),
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 6,
-                      offset: const Offset(0, 1),
-                    ),
+              const baseColor = Colors.black;
+              final highlightColor = Colors.grey.shade500;
+              return Shimmer(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    baseColor,
+                    baseColor,
+                    baseColor,
+                    highlightColor,
+                    baseColor,
+                    baseColor,
+                    baseColor,
                   ],
+                  stops: const <double>[
+                    0.0,
+                    0.49,
+                    0.49999,
+                    0.5,
+                    0.51,
+                    0.51111,
+                    1.0,
+                  ],
+                ),
+                period: const Duration(seconds: 6),
+                child: Text(
+                  () {
+                    if (!hasKeeper) {
+                      return 'Waiting for the Keeper to join';
+                    }
+                    return 'Your session is about to start';
+                  }(),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
                 ),
               );
             } else if (roomStatus == RoomStatus.active) {
               if (!hasKeeper) {
                 return Text(
-                  'The session has been paused...',
+                  'The session has been paused',
                   style: theme.textTheme.bodyLarge,
                 );
               } else if (nextUp != null) {
