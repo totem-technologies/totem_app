@@ -201,8 +201,9 @@ void main() {
       () =>
           localParticipant.getTrackPublicationBySource(TrackSource.microphone),
     ).thenReturn(null);
-    when(() => localParticipant.getTrackPublicationBySource(TrackSource.camera))
-        .thenReturn(null);
+    when(
+      () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
+    ).thenReturn(null);
   });
 
   Future<void> pumpSpeakingTurn(
@@ -373,8 +374,9 @@ void main() {
       );
       final cuesService = _TestSessionCuesService();
 
-      when(() => keeper.passTotem(roundMessage: 'A round message'))
-          .thenAnswer((_) async {});
+      when(
+        () => keeper.passTotem(roundMessage: 'A round message'),
+      ).thenAnswer((_) async {});
 
       await pumpSpeakingTurn(
         tester,

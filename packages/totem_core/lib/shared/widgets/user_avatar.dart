@@ -114,8 +114,9 @@ class UserAvatar extends ConsumerWidget {
               await showGeneralDialog(
                 context: context,
                 barrierDismissible: true,
-                barrierLabel: MaterialLocalizations.of(context)
-                    .modalBarrierDismissLabel,
+                barrierLabel: MaterialLocalizations.of(
+                  context,
+                ).modalBarrierDismissLabel,
                 barrierColor: Colors.black.withValues(alpha: 0.8),
                 pageBuilder: (context, animation, secondaryAnimation) {
                   return _FullScreenImageViewer(

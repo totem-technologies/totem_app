@@ -562,10 +562,12 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
     );
     return Text.rich(switch (widget.reason) {
       SessionDisconnectedReason.keeperAbsent => const TextSpan(
-        text: 'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
+        text:
+            'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
       ),
       SessionDisconnectedReason.movedToAnotherDevice => const TextSpan(
-        text: 'This account joined the same session on another device. Continue there or rejoin from this device.',
+        text:
+            'This account joined the same session on another device. Continue there or rejoin from this device.',
       ),
       SessionDisconnectedReason.removed => removedSpan,
       SessionDisconnectedReason.keeperEnded ||
@@ -574,7 +576,8 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
             'Thank you for joining!\nWe hope you found the session enjoyable.',
       ),
       SessionDisconnectedReason.banned => TextSpan(
-        text: 'You have been removed from this session due to a violation of our community guidelines.',
+        text:
+            'You have been removed from this session due to a violation of our community guidelines.',
         children: [
           const TextSpan(text: '\n'),
           removedSpan,

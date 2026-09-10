@@ -34,7 +34,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     ),
     const _OnboardingData(
       title: 'Our Ask',
-      description: 'Keep everything confidential, and speak only from your own experience.',
+      description:
+          'Keep everything confidential, and speak only from your own experience.',
       image: TotemImageAssets.onboarding3,
     ),
   ];

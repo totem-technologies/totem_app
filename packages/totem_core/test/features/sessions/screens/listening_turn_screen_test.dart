@@ -190,8 +190,9 @@ void main() {
       () =>
           localParticipant.getTrackPublicationBySource(TrackSource.microphone),
     ).thenReturn(null);
-    when(() => localParticipant.getTrackPublicationBySource(TrackSource.camera))
-        .thenReturn(null);
+    when(
+      () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
+    ).thenReturn(null);
   });
 
   Future<void> pumpListeningTurn(
@@ -567,23 +568,27 @@ void main() {
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
           await tester.pump();
-          verify(() => messaging.sendReaction(EmojiBar.defaultEmojis[0]))
-              .called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[0]),
+          ).called(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
           await tester.pump();
-          verify(() => messaging.sendReaction(EmojiBar.defaultEmojis[1]))
-              .called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[1]),
+          ).called(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
           await tester.pump();
-          verify(() => messaging.sendReaction(EmojiBar.defaultEmojis[2]))
-              .called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[2]),
+          ).called(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
           await tester.pump();
-          verify(() => messaging.sendReaction(EmojiBar.defaultEmojis[3]))
-              .called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[3]),
+          ).called(1);
         });
       });
 

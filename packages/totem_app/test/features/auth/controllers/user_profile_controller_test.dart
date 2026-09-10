@@ -74,21 +74,24 @@ void main() {
 
   group('UserProfileController - Welcome Onboarding', () {
     test('hasSeenWelcomeOnboarding returns value from local storage', () async {
-      when(() => mockLocalStorageService.hasSeenWelcomeOnboarding())
-          .thenAnswer((_) async => true);
+      when(
+        () => mockLocalStorageService.hasSeenWelcomeOnboarding(),
+      ).thenAnswer((_) async => true);
 
       final result = await getController().hasSeenWelcomeOnboarding;
 
       expect(result, isTrue);
-      verify(() => mockLocalStorageService.hasSeenWelcomeOnboarding())
-          .called(1);
+      verify(
+        () => mockLocalStorageService.hasSeenWelcomeOnboarding(),
+      ).called(1);
     });
 
     test(
       'markWelcomeOnboardingCompleted updates local storage and logs event',
       () async {
-        when(() => mockLocalStorageService.markWelcomeOnboardingCompleted())
-            .thenAnswer((_) async {});
+        when(
+          () => mockLocalStorageService.markWelcomeOnboardingCompleted(),
+        ).thenAnswer((_) async {});
         when(
           () => mockAnalyticsService.logEvent(
             any(),
@@ -98,8 +101,9 @@ void main() {
 
         await getController().markWelcomeOnboardingCompleted();
 
-        verify(() => mockLocalStorageService.markWelcomeOnboardingCompleted())
-            .called(1);
+        verify(
+          () => mockLocalStorageService.markWelcomeOnboardingCompleted(),
+        ).called(1);
         verify(
           () => mockAnalyticsService.logEvent('welcome_onboarding_completed'),
         ).called(1);
@@ -163,8 +167,9 @@ void main() {
       );
 
       verify(() => mockAuthController.syncUser(mockUpdatedUser)).called(1);
-      verify(() => mockAnalyticsService.logEvent('onboarding_completed'))
-          .called(1);
+      verify(
+        () => mockAnalyticsService.logEvent('onboarding_completed'),
+      ).called(1);
 
       expect(
         container.read(userProfileControllerProvider),
@@ -195,19 +200,22 @@ void main() {
       when(() => mockAuthController.isAuthenticated).thenReturn(true);
       when(() => mockAuthController.user).thenReturn(mockUser);
 
-      when(() => mockUserRepository.updateCurrentUserProfilePicture(mockFile))
-          .thenAnswer((_) async => true);
+      when(
+        () => mockUserRepository.updateCurrentUserProfilePicture(mockFile),
+      ).thenAnswer((_) async => true);
 
-      when(() => mockUserRepository.currentUser)
-          .thenAnswer((_) async => mockRefreshedUser);
+      when(
+        () => mockUserRepository.currentUser,
+      ).thenAnswer((_) async => mockRefreshedUser);
 
       final success = await getController().updateUserProfile(
         profileImage: mockFile,
       );
 
       expect(success, isTrue);
-      verify(() => mockUserRepository.updateCurrentUserProfilePicture(mockFile))
-          .called(1);
+      verify(
+        () => mockUserRepository.updateCurrentUserProfilePicture(mockFile),
+      ).called(1);
       verify(() => mockUserRepository.currentUser).called(1);
       verify(() => mockAuthController.syncUser(mockRefreshedUser)).called(1);
     });

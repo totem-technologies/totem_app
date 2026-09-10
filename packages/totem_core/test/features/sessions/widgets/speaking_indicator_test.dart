@@ -228,8 +228,9 @@ void main() {
       await pumpWidget(
         tester,
         overrides: [
-          participantEmojisProvider(remoteParticipant.identity)
-              .overrideWith((ref) => ['🔥']),
+          participantEmojisProvider(
+            remoteParticipant.identity,
+          ).overrideWith((ref) => ['🔥']),
         ],
         child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
       );
@@ -322,8 +323,9 @@ void main() {
         tester,
         viewSize: const Size(1200, 900),
         overrides: [
-          participantEmojisProvider(remoteParticipant.identity)
-              .overrideWith((ref) => ['🔥']),
+          participantEmojisProvider(
+            remoteParticipant.identity,
+          ).overrideWith((ref) => ['🔥']),
         ],
         child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
       );
@@ -344,8 +346,9 @@ void main() {
         tester,
         viewSize: const Size(400, 800),
         overrides: [
-          participantEmojisProvider(remoteParticipant.identity)
-              .overrideWith((ref) => ['🔥']),
+          participantEmojisProvider(
+            remoteParticipant.identity,
+          ).overrideWith((ref) => ['🔥']),
         ],
         child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
       );

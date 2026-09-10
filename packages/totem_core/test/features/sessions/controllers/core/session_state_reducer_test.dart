@@ -274,8 +274,9 @@ void main() {
             expect(current.turnStartedAt, isNull);
 
             // Room goes active — speakerOf falls back to keeper.
-            final active = _roomState(status: RoomStatus.active)
-                .copyWith(currentSpeaker: () => '');
+            final active = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: () => '');
 
             final next = reducer.reduceState(current, RoomStateChanged(active));
 
@@ -285,8 +286,9 @@ void main() {
           test('stamps when speaker changes', () {
             final current = _initialState();
 
-            final withSpeaker = _roomState(status: RoomStatus.active)
-                .copyWith(currentSpeaker: () => 'user-1');
+            final withSpeaker = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: () => 'user-1');
 
             final next = reducer.reduceState(
               current,
@@ -299,8 +301,9 @@ void main() {
           test('keeps existing stamp when same speaker continues', () {
             final current = _initialState();
 
-            final active = _roomState(status: RoomStatus.active)
-                .copyWith(currentSpeaker: () => 'user-1');
+            final active = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: () => 'user-1');
 
             final first = reducer.reduceState(
               current,
@@ -318,8 +321,9 @@ void main() {
           test('carries forward through non-room-state events', () {
             final current = _initialState();
 
-            final active = _roomState(status: RoomStatus.active)
-                .copyWith(currentSpeaker: () => 'user-1');
+            final active = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: () => 'user-1');
 
             final afterRoom = reducer.reduceState(
               current,

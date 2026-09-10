@@ -125,8 +125,9 @@ void main() {
         overrides: [
           authControllerProvider.overrideWith(_FakeAuthController.new),
           spaceProvider(newSpace.slug).overrideWith((_) async => newSpace),
-          sessionProvider(newSession.slug)
-              .overrideWith((_) async => newSession),
+          sessionProvider(
+            newSession.slug,
+          ).overrideWith((_) async => newSession),
           rsvpConfirmProvider(newSession.slug).overrideWith(
             (_) async => throw RsvpConflictException(
               SessionConflictSchema(

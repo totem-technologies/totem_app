@@ -165,8 +165,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                         leading: CircleIconButton(
                           margin: const EdgeInsetsDirectional.only(start: 20),
                           icon: TotemIcons.arrowBack,
-                          tooltip: MaterialLocalizations.of(context)
-                              .backButtonTooltip,
+                          tooltip: MaterialLocalizations.of(
+                            context,
+                          ).backButtonTooltip,
                           onPressed: () =>
                               TotemRouter.instance.popOrHome(context),
                         ),
@@ -179,8 +180,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                             builder: (context) {
                               return CircleIconButton(
                                 icon: TotemIcons.share,
-                                tooltip: MaterialLocalizations.of(context)
-                                    .shareButtonLabel,
+                                tooltip: MaterialLocalizations.of(
+                                  context,
+                                ).shareButtonLabel,
                                 onPressed: () async {
                                   final box =
                                       context.findRenderObject() as RenderBox?;

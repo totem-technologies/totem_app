@@ -329,8 +329,9 @@ class _SpacesDiscoveryScreenState extends ConsumerState<SpacesDiscoveryScreen> {
       // horizontal space at wide widths.
       final allSessions = groupedSessions.expand((g) => g.sessions).toList();
       return GridView.builder(
-        padding: const EdgeInsetsDirectional.symmetric(horizontal: 100)
-            .copyWith(bottom: 20),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 100,
+        ).copyWith(bottom: 20),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           mainAxisSpacing: 16,

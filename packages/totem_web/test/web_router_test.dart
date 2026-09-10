@@ -154,10 +154,12 @@ void main() {
         authState: AuthState.authenticated(user: _fakeUser),
         overrides: [
           // Stub providers to prevent API calls that create pending timers.
-          sessionTokenProvider(slug)
-              .overrideWith((ref) async => throw Exception('test')),
-          sessionProvider(slug)
-              .overrideWith((ref) async => throw Exception('test')),
+          sessionTokenProvider(
+            slug,
+          ).overrideWith((ref) async => throw Exception('test')),
+          sessionProvider(
+            slug,
+          ).overrideWith((ref) async => throw Exception('test')),
         ],
       );
 
@@ -190,10 +192,12 @@ void main() {
         tester,
         authState: AuthState.unauthenticated(),
         overrides: [
-          sessionTokenProvider(slug)
-              .overrideWith((ref) async => throw Exception('test')),
-          sessionProvider(slug)
-              .overrideWith((ref) async => throw Exception('test')),
+          sessionTokenProvider(
+            slug,
+          ).overrideWith((ref) async => throw Exception('test')),
+          sessionProvider(
+            slug,
+          ).overrideWith((ref) async => throw Exception('test')),
         ],
       );
 
@@ -208,8 +212,9 @@ void main() {
 
     test('isAuthenticated returns correct values for each auth status', () {
       expect(
-        _FakeAuthController(AuthState.authenticated(user: _fakeUser))
-            .isAuthenticated,
+        _FakeAuthController(
+          AuthState.authenticated(user: _fakeUser),
+        ).isAuthenticated,
         isTrue,
       );
       expect(

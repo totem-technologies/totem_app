@@ -298,10 +298,11 @@ void main() {
       expect(devices.disableCameraCalled, isFalse);
 
       // force disabled state
-      when(() => participant.getTrackPublicationBySource(TrackSource.camera))
-          .thenAnswer(
-            (_) => MockLocalTrackPublication(muted: false, isActive: true),
-          );
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.camera),
+      ).thenAnswer(
+        (_) => MockLocalTrackPublication(muted: false, isActive: true),
+      );
 
       await tester.tap(find.byType(ActionBarButton));
       await tester.pumpAndSettle();
