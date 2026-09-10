@@ -8,10 +8,12 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/loading_video_placeholder.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
+import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -28,13 +30,13 @@ class FeaturedParticipantCard extends ConsumerWidget {
     );
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final session = ref.watch(currentSessionStateProvider);
-
     if (session == null) {
       return const SizedBox.shrink();
     }
 
+    final sessionController = ref.watch(currentSessionProvider);
     final activeSpeaker = session.featuredParticipant();
-    final amKeeper = session.isKeeper(currentUserSlug);
+    final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
 
     final theme = Theme.of(context);
     // Featured tiles keep a slightly larger compact badge (24dp) than grid tiles.
@@ -147,14 +149,28 @@ class FeaturedParticipantCard extends ConsumerWidget {
                         spacing: 12,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          if (amKeeper &&
+                          if (isCurrentUserKeeper &&
                               session.roomState.status == RoomStatus.active)
-                            const _ElapsedTimer(),
+                            SessionElapsedTimer(
+                              onTap: sessionController == null
+                                  ? null
+                                  : () => unawaited(
+                                      ref
+                                          .read(
+                                            sessionMessagingControllerProvider(
+                                              sessionController,
+                                            ).notifier,
+                                          )
+                                          .sendShareTimeReminder(
+                                            activeSpeaker.identity,
+                                          ),
+                                    ),
+                            ),
                           SpeakingIndicatorOrEmoji(
                             participant: activeSpeaker,
                             metrics: overlay,
                           ),
-                          if (amKeeper &&
+                          if (isCurrentUserKeeper &&
                               currentUserSlug != activeSpeaker.identity)
                             ParticipantControlButton(
                               menuVerticalOffset: -overlay.badgeSize - 8,
@@ -186,80 +202,6 @@ class FeaturedParticipantCard extends ConsumerWidget {
   }
 }
 
-class _ElapsedTimer extends ConsumerStatefulWidget {
-  const _ElapsedTimer();
-
-  @override
-  ConsumerState<_ElapsedTimer> createState() => _ElapsedTimerState();
-}
-
-class _ElapsedTimerState extends ConsumerState<_ElapsedTimer> {
-  Timer? _tick;
-  DateTime? _start;
-
-  @override
-  void initState() {
-    super.initState();
-    _start = ref.read(featuredTurnStartTimeProvider);
-    _syncTimer();
-    ref.listenManual(featuredTurnStartTimeProvider, (_, next) {
-      setState(() => _start = next);
-      _syncTimer();
-    });
-  }
-
-  void _syncTimer() {
-    _tick?.cancel();
-    if (_start != null) {
-      _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) setState(() {});
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _tick?.cancel();
-    super.dispose();
-  }
-
-  String _format(Duration d) {
-    final hours = d.inHours;
-    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    if (hours > 0) {
-      return '$hours:$minutes:$seconds';
-    }
-    return '$minutes:$seconds';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_start == null) return const SizedBox.shrink();
-
-    final elapsed = DateTime.now().difference(_start!);
-
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 10,
-        vertical: 4,
-      ),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(42),
-        color: Colors.black54,
-      ),
-      child: Text(
-        _format(elapsed),
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Colors.white70,
-          fontWeight: FontWeight.w600,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
-      ),
-    );
-  }
-}
-
 class ParticipantCard extends ConsumerWidget {
   const ParticipantCard({
     required this.participant,
@@ -278,7 +220,8 @@ class ParticipantCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final session = ref.watch(currentSessionStateProvider);
-    final amKeeper = session?.isKeeper(currentUserSlug) ?? false;
+    final sessionController = ref.watch(currentSessionProvider);
+    final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
 
     final overlay = ParticipantOverlayMetrics.of(context);
@@ -308,15 +251,27 @@ class ParticipantCard extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SpeakingIndicatorOrEmoji(participant: participant),
-                  if (amKeeper &&
+                  if (isCurrentUserKeeper &&
                       isSpeaking &&
                       session?.roomState.status == RoomStatus.active)
-                    const _ElapsedTimer(),
+                    SessionElapsedTimer(
+                      onTap: sessionController == null
+                          ? null
+                          : () => unawaited(
+                              ref
+                                  .read(
+                                    sessionMessagingControllerProvider(
+                                      sessionController,
+                                    ).notifier,
+                                  )
+                                  .sendShareTimeReminder(participant.identity),
+                            ),
+                    ),
                 ],
               ),
             ),
             if (session != null &&
-                amKeeper &&
+                isCurrentUserKeeper &&
                 currentUserSlug != participant.identity)
               PositionedDirectional(
                 end: overlayPadding,
