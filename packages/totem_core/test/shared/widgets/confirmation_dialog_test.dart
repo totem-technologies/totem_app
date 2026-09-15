@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:checks/checks.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -24,12 +24,7 @@ void main() {
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
 
-    unawaited(
-      showDialog<void>(
-        context: hostKey.currentContext!,
-        builder: (_) => dialog,
-      ),
-    );
+    showDialog<void>(context: hostKey.currentContext!, builder: (_) => dialog);
 
     await tester.pumpAndSettle();
   }

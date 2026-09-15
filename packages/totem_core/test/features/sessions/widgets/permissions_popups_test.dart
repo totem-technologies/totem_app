@@ -1,14 +1,14 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task_method_channel.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task_platform_interface.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:platform/platform.dart';
+import 'package:platform/testing.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_core/features/sessions/widgets/permissions_popups.dart';
 
@@ -292,14 +292,14 @@ void main() {
     setUp(() {
       final platform = FlutterForegroundTaskPlatform.instance;
       if (platform is MethodChannelFlutterForegroundTask) {
-        platform.platform = FakePlatform(operatingSystem: 'android');
+        platform.platform = TestPlatform.native(operatingSystem: 'android');
       }
     });
 
     tearDown(() {
       final platform = FlutterForegroundTaskPlatform.instance;
       if (platform is MethodChannelFlutterForegroundTask) {
-        platform.platform = const LocalPlatform();
+        platform.platform = const Platform();
       }
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

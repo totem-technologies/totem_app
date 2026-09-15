@@ -1,15 +1,19 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 
 void main() {
   group('EmojiReactions Provider', () {
     late ProviderContainer container;
+    late DateTime now;
 
     setUp(() {
-      container = ProviderContainer();
+      now = DateTime.utc(2026);
+      container = ProviderContainer(
+        overrides: [emojiReactionClockProvider.overrideWithValue(() => now)],
+      );
     });
 
     tearDown(() {
@@ -54,7 +58,7 @@ void main() {
 
         await notifier.emitIncomingReaction('user1', '👍');
 
-        await Future<void>.delayed(const Duration(milliseconds: 310));
+        now = now.add(const Duration(milliseconds: 310));
 
         await notifier.emitIncomingReaction('user1', '❤️');
 
@@ -80,7 +84,7 @@ void main() {
 
       for (int i = 0; i < 11; i++) {
         await notifier.emitIncomingReaction('user1', 'emoji_$i');
-        await Future<void>.delayed(const Duration(milliseconds: 310));
+        now = now.add(const Duration(milliseconds: 310));
       }
 
       final state = container.read(emojiReactionsProvider);
@@ -92,12 +96,16 @@ void main() {
 
   group('participantEmojis Provider', () {
     test('filters emojis by participant identity', () async {
-      final container = ProviderContainer();
+      var now = DateTime.utc(2026);
+      final container = ProviderContainer(
+        overrides: [emojiReactionClockProvider.overrideWithValue(() => now)],
+      );
+      addTearDown(container.dispose);
       final notifier = container.read(emojiReactionsProvider.notifier);
 
       await notifier.emitIncomingReaction('user1', '👍');
       await notifier.emitIncomingReaction('user2', '❤️');
-      await Future<void>.delayed(const Duration(milliseconds: 310));
+      now = now.add(const Duration(milliseconds: 310));
       await notifier.emitIncomingReaction('user1', '🔥');
 
       final user1Emojis = container.read(participantEmojisProvider('user1'));
@@ -112,14 +120,20 @@ void main() {
 
   group('EmojiReactions Display Logic', () {
     Future<ProviderContainer> pumpOverlayHost(WidgetTester tester) async {
+      final initialEntry = OverlayEntry(builder: (context) => const SizedBox());
+      addTearDown(() async {
+        initialEntry.remove();
+        initialEntry.dispose();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      });
+
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
             home: Overlay(
               key: EmojiReactions.emojiOverlayKey,
-              initialEntries: [
-                OverlayEntry(builder: (context) => const SizedBox()),
-              ],
+              initialEntries: [initialEntry],
             ),
           ),
         ),

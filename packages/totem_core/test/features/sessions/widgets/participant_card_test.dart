@@ -1,6 +1,6 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, logger;
 import 'package:material_ui/material_ui.dart';
@@ -394,7 +394,7 @@ void main() {
           .decoration;
       check(decoration).isA<BoxDecoration>();
       check(
-        (decoration as BoxDecoration).boxShadow!,
+        (decoration! as BoxDecoration).boxShadow!,
       ).deepEquals(kElevationToShadow[6]!);
     });
 

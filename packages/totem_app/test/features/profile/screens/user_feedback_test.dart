@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -70,11 +72,12 @@ void main() {
 
   testWidgets('submits successfully with valid text', (tester) async {
     String? submittedFeedback;
+    final submission = Completer<void>();
     await pumpPopup(
       tester,
       onSubmitted: (text) async {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
         submittedFeedback = text;
+        await submission.future;
       },
     );
 
@@ -88,6 +91,7 @@ void main() {
     // Verify loading indicator is shown
     check(tester.widgetList(find.byType(LoadingIndicator))).length.equals(1);
 
+    submission.complete();
     await tester.pumpAndSettle();
 
     // Verify callback was called

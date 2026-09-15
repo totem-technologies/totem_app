@@ -32,6 +32,7 @@ class AnimatedNotification extends StatefulWidget {
 class AnimatedNotificationState extends State<AnimatedNotification>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  late CurvedAnimation _offsetCurve;
   late Animation<Offset> _offsetAnimation;
   Timer? _autoDismissTimer;
   bool _isDismissing = false;
@@ -44,14 +45,15 @@ class AnimatedNotificationState extends State<AnimatedNotification>
       vsync: this,
     );
 
-    _offsetAnimation =
-        Tween<Offset>(begin: const Offset(0, -2), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _controller,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          ),
-        );
+    _offsetCurve = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0, -2),
+      end: Offset.zero,
+    ).animate(_offsetCurve);
 
     _controller.forward();
 
@@ -71,6 +73,7 @@ class AnimatedNotificationState extends State<AnimatedNotification>
   @override
   void dispose() {
     _autoDismissTimer?.cancel();
+    _offsetCurve.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -106,6 +109,7 @@ class NotificationRequest {
   bool _isCancelled = false;
   bool _isClosed = false;
   bool _isDismissing = false;
+  bool _entryRemoved = false;
 
   bool get isCancelled => _isCancelled;
 
@@ -115,6 +119,14 @@ class NotificationRequest {
     _isShown = true;
     overlay.insert(overlayEntry);
     onShown?.call();
+  }
+
+  void _removeEntry() {
+    if (_entryRemoved) return;
+    _entryRemoved = true;
+    overlayEntry
+      ..remove()
+      ..dispose();
   }
 
   void cancelQueued() {
@@ -137,9 +149,7 @@ class NotificationRequest {
     // An entry inserted while no frames were rendered (e.g. a hidden
     // browser tab) never mounts but still sits in the overlay — remove it
     // whenever it was inserted, not only when it is mounted.
-    if (_isShown) {
-      overlayEntry.remove();
-    }
+    if (_isShown) _removeEntry();
     close();
   }
 
@@ -147,9 +157,7 @@ class NotificationRequest {
     if (_isClosed || _isDismissing) return;
 
     _isDismissing = true;
-    if (_isShown) {
-      overlayEntry.remove();
-    }
+    if (_isShown) _removeEntry();
     close();
   }
 
@@ -296,10 +304,9 @@ class NotificationController {
             animationDuration: animationDuration,
             duration: duration,
             onDismissed: () {
-              if (entry.mounted) {
-                entry.remove();
-              }
-              request.close();
+              request
+                .._removeEntry()
+                ..close();
             },
             notification: Builder(builder: builder),
           ),

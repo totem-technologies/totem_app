@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:checks/checks.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/shared/routing.dart';
 
 void main() {

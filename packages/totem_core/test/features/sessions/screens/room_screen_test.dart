@@ -1,10 +1,10 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -766,14 +766,13 @@ void main() {
           check(enableMicrophoneCallCount).equals(1);
 
           final context = tester.element(find.byType(ListeningTurnScreen));
-          unawaited(
-            showDialog<void>(
-              context: context,
-              useRootNavigator: false,
-              builder: (context) => const AlertDialog(
-                title: Text('Dialog'),
-                content: Text('Session shortcut blocker'),
-              ),
+
+          showDialog<void>(
+            context: context,
+            useRootNavigator: false,
+            builder: (context) => const AlertDialog(
+              title: Text('Dialog'),
+              content: Text('Session shortcut blocker'),
             ),
           );
           await tester.pumpAndSettle();

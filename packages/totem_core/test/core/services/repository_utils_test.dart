@@ -1,8 +1,8 @@
 import 'dart:io';
 
+import 'package:checks/checks.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart' show ApiError;
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -228,7 +228,7 @@ void main() {
         await future;
         fail('Expected a network exception');
       } on AppNetworkException catch (error) {
-        check(error).identicalTo(reportedError as AppNetworkException);
+        check(error).identicalTo(reportedError! as AppNetworkException);
         check(error.code).equals('NO_CONNECTION');
         check(error.details['request_method']).equals('GET');
         check(

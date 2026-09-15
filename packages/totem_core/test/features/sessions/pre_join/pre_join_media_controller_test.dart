@@ -1,8 +1,8 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';

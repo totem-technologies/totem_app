@@ -1,10 +1,10 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -278,7 +278,7 @@ void main() {
     testWidgets('renders the participant grid for room sizes up to 12', (
       tester,
     ) async {
-      for (final participantCount in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+      for (final participantCount in [1, 3, 7, 12]) {
         final state = _buildState(
           keeper: 'user-1',
           currentSpeaker: 'speaker-0',

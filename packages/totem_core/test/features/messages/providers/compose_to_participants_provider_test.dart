@@ -1,6 +1,6 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
 import 'package:totem_core/features/messages/providers/compose_to_participants_provider.dart';
 
 void main() {
