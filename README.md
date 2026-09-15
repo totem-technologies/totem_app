@@ -251,9 +251,9 @@ default deployment.
 
 #### Server integration and persistence
 
-**The staging server must implement this contract before the preview links
-select a build.** This repository supplies deployments and links; selection
-and persistence belong in `totem-server`.
+The staging server uses `ROOM_PREVIEW_ENABLED=True` to enable build selection.
+Deploy the preview middleware from `totem-server` and enable that setting on
+staging before using these links. Selection remains disabled by default.
 
 - Handle `room_preview` on staging GET requests after session middleware and before
   view/login redirects, including requests to `/` and `/room/<session>`.
@@ -263,12 +263,16 @@ and persistence belong in `totem-server`.
   63-character DNS label limit. Construct the upstream using the fixed
   `https://<alias>-totem-web-preview.lopkerk.workers.dev/` domain; never accept an
   arbitrary URL.
-- Store the validated selection in `request.session["room_preview"]`. Requests
-  without `room_preview` use the saved selection, including after ordinary login.
+- Store `{alias, expires_at}` in `request.session["room_preview"]`, with an expiry
+  two hours after selection. Requests without `room_preview` use the saved
+  selection, including after ordinary login. Browsing does not extend the timer;
+  following a preview link again starts a new two-hour period. Once expired,
+  clear only this selection and use the normal staging build on the next load.
   [Django's session rotation preserves session data during login](https://docs.djangoproject.com/en/6.0/topics/http/sessions/#django.contrib.sessions.backends.base.SessionBase.cycle_key).
 - `?room_preview=off` removes only `room_preview` and restores the configured staging
   bundle. Logout or expiry of the Django session also clears the selection.
-  No additional cookie or browser storage is needed.
+  The login session's lifetime is unchanged. No additional cookie or browser
+  storage is needed.
 - After setting or clearing the choice, redirect to the same path with only
   `room_preview` removed from the query string. This keeps refreshes from reapplying
   an old selection and preserves other URL parameters.
@@ -276,15 +280,16 @@ and persistence belong in `totem-server`.
   Host header accordingly. Keep the normal staging CDN as the default. Return
   session-dependent HTML and selection redirects with `Cache-Control: private,
   no-store`; do not reuse another preview's conditional HTML response.
-- If a saved deployment no longer exists, clear the selection and explain the
-  return to normal staging. Treat temporary upstream failures as errors rather
-  than silently switching builds. Production must not enable preview selection.
+- If a saved deployment's index returns 404 or 410, clear the selection and ask
+  the user to reload to return to normal staging. Treat temporary upstream
+  failures as errors rather than silently switching builds. Production must
+  not enable preview selection.
 
-The selection is shared across tabs using the same Django session. A loaded
-room keeps its build; newly opened or reloaded rooms use the current selection.
-Separate browser profiles can compare different builds concurrently. The server
-should show the selected PR and a **Return to normal staging** link so the active
-build is visible.
+The selection is shared across tabs using the same Django session for up to two
+hours. A loaded room keeps its build; newly opened or reloaded rooms use the
+current selection, or normal staging after expiry.
+Separate browser profiles can compare different builds concurrently. Use the
+PR comment's **Return to normal staging** link to clear the selection early.
 
 The workflow builds directly from the PR head commit, including its build
 scripts and Wrangler configuration. Open a PR or push another commit to deploy;

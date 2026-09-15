@@ -72,6 +72,6 @@ jobs:
             [Open preview](${{ steps.preview.outputs.url }}) · Backend: https://totem.kbl.io
 
             Built from ${{ github.event.pull_request.head.sha }}.
-            Staging remembers this build for your browser session. Open a session to test it.
+            Staging selects this build for two hours. Open a session to test it.
 
             [Return to normal staging](https://totem.kbl.io/?room_preview=off)
