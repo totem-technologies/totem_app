@@ -31,7 +31,7 @@ void main() {
     final url = Uri.parse(outputs['url']!);
     expect(url.origin, 'https://totem.kbl.io');
     expect(url.path, '/');
-    expect(url.queryParameters, {'preview': outputs['alias']});
+    expect(url.queryParameters, {'room_preview': outputs['alias']});
     expect(outputs.values.every((value) => !value.contains('\n')), isTrue);
   });
 

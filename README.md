@@ -221,7 +221,7 @@ Closing a PR does not remove its preview.
 The workflow's **Open preview** link selects that build on staging:
 
 ```text
-https://totem.kbl.io/?preview=pr-166-video-experience
+https://totem.kbl.io/?room_preview=pr-166-video-experience
 ```
 
 Django serves the selected deployment's HTML under `/room/`. The HTML includes
@@ -255,7 +255,7 @@ default deployment.
 select a build.** This repository supplies deployments and links; selection
 and persistence belong in `totem-server`.
 
-- Handle `preview` on staging GET requests after session middleware and before
+- Handle `room_preview` on staging GET requests after session middleware and before
   view/login redirects, including requests to `/` and `/room/<session>`.
 - A valid value is a preview alias, such as `pr-166-video-experience`. Validate
   the `pr-<positive-number>-<slug>` format, allowing only lowercase letters,
@@ -264,13 +264,13 @@ and persistence belong in `totem-server`.
   `https://<alias>-totem-web-preview.lopkerk.workers.dev/` domain; never accept an
   arbitrary URL.
 - Store the validated selection in `request.session["room_preview"]`. Requests
-  without `preview` use the saved selection, including after ordinary login.
+  without `room_preview` use the saved selection, including after ordinary login.
   [Django's session rotation preserves session data during login](https://docs.djangoproject.com/en/6.0/topics/http/sessions/#django.contrib.sessions.backends.base.SessionBase.cycle_key).
-- `?preview=off` removes only `room_preview` and restores the configured staging
+- `?room_preview=off` removes only `room_preview` and restores the configured staging
   bundle. Logout or expiry of the Django session also clears the selection.
   No additional cookie or browser storage is needed.
 - After setting or clearing the choice, redirect to the same path with only
-  `preview` removed from the query string. This keeps refreshes from reapplying
+  `room_preview` removed from the query string. This keeps refreshes from reapplying
   an old selection and preserves other URL parameters.
 - For room HTML, resolve the CDN from the saved selection and set its upstream
   Host header accordingly. Keep the normal staging CDN as the default. Return

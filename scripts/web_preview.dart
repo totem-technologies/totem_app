@@ -24,7 +24,7 @@ Map<String, String> previewOutputs(String number, String branch) {
   return {
     'alias': alias,
     'asset_base': 'https://$alias-$previewWorkerName.lopkerk.workers.dev/',
-    'url': Uri.https('totem.kbl.io', '/', {'preview': alias}).toString(),
+    'url': Uri.https('totem.kbl.io', '/', {'room_preview': alias}).toString(),
   };
 }
 
