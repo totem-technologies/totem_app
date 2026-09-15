@@ -75,7 +75,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
   @override
   void dispose() {
-    _notificationController.dismissAll();
+    _notificationController.dispose();
     _clearTimeRemainingWarningTimer();
     _setScreenProtection(false);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

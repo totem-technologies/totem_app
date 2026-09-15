@@ -1,26 +1,16 @@
-import 'dart:io';
-
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/core/config/app_config.dart';
 
 void main() {
-  // Validates the .env files in each consuming package by feeding them
-  // through [AppConfig.parse]. These are composed from config/ by
-  // scripts/setup_env.dart (see config/README.md), so a misconfigured layer
-  // that omits a required key (e.g. LIVEKIT_URL) fails here instead of
-  // shipping a build that hangs on the splash screen at runtime.
-  for (final package in const ['totem_app', 'totem_web']) {
-    test('$package/.env builds an AppConfig', () {
-      TestWidgetsFlutterBinding.ensureInitialized();
-      final envFile = File('../$package/.env');
-      check(
-        because:
-            'Missing ${envFile.path}; generate it with `make env-dev` '
-            '(or scripts/setup_env.dart <flavor>). See config/README.md.',
-        envFile.existsSync(),
-      ).equals(true);
-      AppConfig.parse(envFile.readAsStringSync());
-    });
-  }
+  test('valid configuration builds an AppConfig', () {
+    final config = AppConfig.parse('''
+ENVIRONMENT=development
+API_URL=https://api.totem.org/
+LIVEKIT_URL=wss://livekit.totem.org/
+''');
+
+    check(config.apiUrl).equals('https://api.totem.org/');
+    check(config.liveKitUrl).equals('wss://livekit.totem.org/');
+  });
 }

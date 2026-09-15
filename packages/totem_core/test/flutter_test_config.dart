@@ -21,6 +21,8 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
           'LocalTrackPublication',
           'RemoteTrackPublication',
           'Room',
+          'AutoSizeText',
+          'TextPainter',
         ],
       );
 

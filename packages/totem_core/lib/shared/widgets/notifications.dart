@@ -133,6 +133,7 @@ class NotificationRequest {
     if (_isShown || _isCancelled || _isClosed) return;
 
     _isCancelled = true;
+    overlayEntry.dispose();
   }
 
   void dismissActive() {
@@ -263,6 +264,26 @@ class NotificationController {
     for (final request in requests) {
       if (request == _activeRequest) {
         request.dismissActive();
+      } else {
+        request.cancelQueued();
+      }
+    }
+    _queue.clear();
+    _activeRequest = null;
+    _isBulkDismissing = false;
+  }
+
+  /// Releases all entries without waiting for their exit animations.
+  ///
+  /// Use this when the owning overlay is being disposed, such as during a
+  /// route change or test-host teardown.
+  void dispose() {
+    final requests = <NotificationRequest>[..._queue, ?_activeRequest];
+
+    _isBulkDismissing = true;
+    for (final request in requests) {
+      if (request == _activeRequest) {
+        request.dismissImmediately();
       } else {
         request.cancelQueued();
       }

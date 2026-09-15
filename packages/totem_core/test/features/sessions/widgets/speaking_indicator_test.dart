@@ -163,6 +163,9 @@ void main() {
           tester.widgetList(find.byType(SoundWaveformWidget)),
         ).length.equals(1);
         check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
       },
     );
   });
@@ -230,6 +233,9 @@ void main() {
           tester.widgetList(find.byType(SoundWaveformWidget)),
         ).length.equals(1);
         check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
       },
     );
   });

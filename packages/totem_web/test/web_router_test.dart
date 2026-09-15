@@ -120,7 +120,11 @@ Future<GoRouter> _pumpTestRouter(
 
   await tester.pump();
   final testRouter = router!;
-  addTearDown(testRouter.dispose);
+  addTearDown(() async {
+    testRouter.dispose();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
   return testRouter;
 }
 
