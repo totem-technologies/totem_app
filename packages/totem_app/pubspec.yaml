@@ -73,6 +73,7 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.7
   checks: ^0.3.2
+  leak_tracker_flutter_testing: any
 
 dependency_overrides:
   # https://github.com/Sub6Resources/flutter_html/issues/1522

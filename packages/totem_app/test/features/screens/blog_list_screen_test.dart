@@ -17,6 +17,14 @@ void main() {
     testWidgets('renders featured blog post and blog post cards correctly', (
       tester,
     ) async {
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 1));
+        tester.binding.imageCache.clearLiveImages();
+        tester.binding.imageCache.clear();
+      });
+
       final blog1 = BlogPostListSchema(
         title: 'Featured Blog Post',
         slug: 'featured-post',

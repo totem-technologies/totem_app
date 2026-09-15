@@ -191,14 +191,14 @@ void main() {
       await tester.pump();
 
       check(controller)
-          .has((value) => value.notificationRequests, 'notificationRequests')
+          .has((value) => value!.notificationRequests, 'notificationRequests')
           .equals(1);
       check(controller)
-          .has((value) => value.microphoneRequests, 'microphoneRequests')
+          .has((value) => value!.microphoneRequests, 'microphoneRequests')
           .equals(1);
       check(
         controller,
-      ).has((value) => value.cameraRequests, 'cameraRequests').equals(1);
+      ).has((value) => value!.cameraRequests, 'cameraRequests').equals(1);
     });
   });
 

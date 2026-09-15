@@ -48,9 +48,9 @@ SessionDetailSchema _mockSession() => SessionDetailSchema(
 );
 
 void main() {
-  Widget wrapCard() {
+  GoRouter createRouter() {
     final session = _mockSession();
-    final router = GoRouter(
+    return GoRouter(
       routes: [
         GoRoute(
           path: '/',
@@ -64,12 +64,15 @@ void main() {
         ),
       ],
     );
-    return MaterialApp.router(routerConfig: router);
   }
+
+  Widget wrapCard(GoRouter router) => MaterialApp.router(routerConfig: router);
 
   group('KeeperMessageParticipantsCard', () {
     testWidgets('renders badge, title, description and button', (tester) async {
-      await tester.pumpWidget(wrapCard());
+      final router = createRouter();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(wrapCard(router));
 
       check(
         tester.widgetList(find.text('\u{1F512}  Keeper Only')),
@@ -91,7 +94,9 @@ void main() {
     testWidgets('tapping the button opens the Session Participants screen', (
       tester,
     ) async {
-      await tester.pumpWidget(wrapCard());
+      final router = createRouter();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(wrapCard(router));
 
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();

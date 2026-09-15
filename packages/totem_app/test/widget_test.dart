@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:checks/checks.dart';
@@ -20,6 +21,14 @@ void main() {
   });
 
   testWidgets('App builds smoke test', (tester) async {
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      tester.binding.imageCache.clearLiveImages();
+      tester.binding.imageCache.clear();
+    });
+
     final fakeController = _FakeMobileAuthController(
       const AuthState(status: AuthStatus.unauthenticated),
     );

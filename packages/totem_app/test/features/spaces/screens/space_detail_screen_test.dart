@@ -10,6 +10,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/widgets/confetti.dart';
 
 import '../../../../../totem_core/test/setup.dart';
 
@@ -106,6 +107,15 @@ void main() {
   testWidgets('shows the conflict dialog when RSVP overlaps a session', (
     tester,
   ) async {
+    addTearDown(() async {
+      ConfettiController.clear();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      tester.binding.imageCache.clearLiveImages();
+      tester.binding.imageCache.clear();
+    });
+
     final newSpace = _space('new-space', 'New Space');
     final existingSpace = _space('existing-space', 'Existing Space');
     final newSession = _session(
@@ -166,6 +176,15 @@ void main() {
   testWidgets('invalidates the spaces summary after a successful RSVP', (
     tester,
   ) async {
+    addTearDown(() async {
+      ConfettiController.clear();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      tester.binding.imageCache.clearLiveImages();
+      tester.binding.imageCache.clear();
+    });
+
     var summaryLoads = 0;
     final space = _space('new-space', 'New Space');
     final session = _session(
@@ -208,11 +227,14 @@ void main() {
     check(tester.widgetList(find.text("You're going!"))).length.equals(1);
 
     await tester.tap(find.byIcon(Icons.close));
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
     await container.read(spacesSummaryProvider.future);
 
     check(summaryLoads).equals(2);
+    ConfettiController.clear();
+    await tester.pump();
   });
 
   testWidgets('refreshes the current state after returning from a session', (

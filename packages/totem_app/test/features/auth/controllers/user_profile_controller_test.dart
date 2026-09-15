@@ -117,8 +117,8 @@ void main() {
       when(() => mockAuthController.isAuthenticated).thenReturn(false);
       when(() => mockAuthController.user).thenReturn(null);
 
-      check(
-        () => getController().completeOnboarding(
+      await check(
+        getController().completeOnboarding(
           firstName: 'John',
           age: 30,
           referralSource: null,
@@ -181,8 +181,8 @@ void main() {
     test('throws assertion error if unauthenticated', () async {
       when(() => mockAuthController.isAuthenticated).thenReturn(false);
 
-      check(
-        () => getController().updateUserProfile(name: 'Jane'),
+      await check(
+        getController().updateUserProfile(name: 'Jane'),
       ).throws<Exception>();
     });
 

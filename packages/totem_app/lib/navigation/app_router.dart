@@ -237,7 +237,7 @@ class AppTotemRouter extends TotemRouter {
       navigatorKey: navigatorKey,
       initialLocation: '/',
       debugLogDiagnostics: true,
-      refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
+
       observers: [PosthogObserver(), SentryNavigatorObserver()],
       redirect: (context, state) async {
         logger.i('🛻 Router State Change: ${state.fullPath}');

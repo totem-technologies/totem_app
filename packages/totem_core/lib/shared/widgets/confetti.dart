@@ -6,6 +6,29 @@ import 'package:material_ui/material_ui.dart';
 
 class ConfettiController {
   static Timer? _confettiTimer;
+  static final _activeOverlays = <OverlayEntry>{};
+
+  static void clear() {
+    _confettiTimer?.cancel();
+    _confettiTimer = null;
+
+    for (final overlay in List<OverlayEntry>.of(_activeOverlays)) {
+      if (overlay.mounted) overlay.remove();
+      overlay.dispose();
+    }
+    _activeOverlays.clear();
+  }
+
+  static void _trackOverlay(BuildContext context, OverlayEntry overlay) {
+    _activeOverlays.add(overlay);
+    Overlay.of(context).insert(overlay);
+  }
+
+  static void _removeOverlay(OverlayEntry overlay) {
+    _activeOverlays.remove(overlay);
+    if (overlay.mounted) overlay.remove();
+    overlay.dispose();
+  }
 
   static void showConfetti(BuildContext context) {
     if (!context.mounted) return;
@@ -43,6 +66,8 @@ class ConfettiController {
           x: randomInRange(0.1, 0.3),
           y: Random().nextDouble() - 0.2,
         ),
+        insertInOverlay: (overlay) => _trackOverlay(context, overlay),
+        onFinished: _removeOverlay,
       );
       Confetti.launch(
         context,
@@ -54,6 +79,8 @@ class ConfettiController {
           x: randomInRange(0.7, 0.9),
           y: Random().nextDouble() - 0.2,
         ),
+        insertInOverlay: (overlay) => _trackOverlay(context, overlay),
+        onFinished: _removeOverlay,
       );
     });
   }
