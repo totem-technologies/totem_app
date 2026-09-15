@@ -31,8 +31,8 @@ Future<void> main() async {
   final envFile = File('$webDir/.env');
 
   final flavor = _readEnvironment(envFile);
-  final assetBase = _assetBase[flavor];
-  if (assetBase == null) {
+  final defaultAssetBase = _assetBase[flavor];
+  if (defaultAssetBase == null) {
     stderr
       ..writeln(
         "web_build: ${envFile.path} is missing or has no known "
@@ -43,6 +43,9 @@ Future<void> main() async {
       );
     exit(1);
   }
+  // Each PR has its own CDN. Its absolute asset base keeps all bundle requests
+  // on that deployment while Django serves the HTML and API on staging.
+  final assetBase = Platform.environment['WEB_ASSET_BASE'] ?? defaultAssetBase;
 
   // --base-href /room/ : app is served from /room/ on the Django origin.
   // --web-define ASSET_BASE : where flutter_bootstrap.js loads assets from.

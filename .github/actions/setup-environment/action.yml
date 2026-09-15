@@ -1,7 +1,7 @@
 name: "Setup build environment"
 description: >-
   One-stop build environment setup, run right after checkout by every Flutter CI
-  job: installs the Flutter toolchain (optionally Java 17 for Android), composes
+  job: installs Flutter and its bundled Dart SDK (optionally Java 17 for Android), composes
   the flavor's .env from config/, and decodes the Firebase/Google service
   secrets. The Flutter/Java versions live here only — bump them in one place.
 
@@ -33,7 +33,7 @@ runs:
         java-version: "17.x"
         cache: "gradle"
 
-    - name: Setup Flutter
+    - name: Setup Flutter and Dart
       uses: subosito/flutter-action@v2.23.0
       with:
         channel: "stable"

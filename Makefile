@@ -92,6 +92,7 @@ install:
 
 test:
 	@echo "Running tests..."
+	flutter test scripts/test
 	cd $(APP_DIR) && flutter test
 	cd $(CORE_DIR) && flutter test
 	cd $(WEB_DIR) && flutter test --platform chrome
@@ -107,6 +108,9 @@ test-web:
 test-core:
 	@echo "Running core tests..."
 	cd $(CORE_DIR) && flutter test
+
+test-scripts:
+	flutter test scripts/test
 
 lint:
 	@echo "Running linter..."

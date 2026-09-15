@@ -1,0 +1,77 @@
+name: Web previews
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: web-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+env:
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+  PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+  PR_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  deploy:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    environment:
+      name: web-preview-pr-${{ github.event.pull_request.number }}
+      url: ${{ steps.preview.outputs.url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-environment
+        with:
+          firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          flavor: staging
+
+      - name: Preview address
+        id: preview
+        run: dart scripts/web_preview.dart
+
+      - name: Build preview
+        env:
+          WEB_ASSET_BASE: ${{ steps.preview.outputs.asset_base }}
+        run: dart scripts/web_build.dart
+
+      # A PR can close or advance while this build is queued or running.
+      - name: Check PR status
+        id: current
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: dart scripts/web_preview.dart current
+
+      - name: Deploy preview
+        if: steps.current.outputs.deploy == 'true'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: packages/totem_web
+          command: versions upload --env preview --preview-alias ${{ steps.preview.outputs.alias }}
+
+      - name: Comment preview link
+        if: steps.current.outputs.deploy == 'true'
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: web-preview
+          message: |
+            ### Web preview
+
+            [Open preview](${{ steps.preview.outputs.url }}) · Backend: https://totem.kbl.io
+
+            Built from ${{ github.event.pull_request.head.sha }}.
+            Staging remembers this build for your browser session. Open a session to test it.
+
+            [Return to normal staging](https://totem.kbl.io/?preview=off)
