@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
@@ -51,10 +52,10 @@ void main() {
             ),
           );
 
-          expect(next.connection.state, RoomConnectionState.connected);
-          expect(next.connection.phase, SessionPhase.connected);
-          expect(next.connection.error, isNull);
-          expect(next.removed, isFalse);
+          check(next.connection.state).equals(RoomConnectionState.connected);
+          check(next.connection.phase).equals(SessionPhase.connected);
+          check(next.connection.error).isNull();
+          check(next.removed).equals(false);
         });
 
         test('keeps existing error when disconnected', () {
@@ -77,14 +78,14 @@ void main() {
             ),
           );
 
-          expect(next.connection.error, isNotNull);
-          expect(next.connection.state, RoomConnectionState.disconnected);
-          expect(next.phase, SessionPhase.disconnected);
+          check(next.connection.error).isNotNull();
+          check(next.connection.state).equals(RoomConnectionState.disconnected);
+          check(next.phase).equals(SessionPhase.disconnected);
         });
 
         test('tracks state changes correctly', () {
           var state = _initialState();
-          expect(state.connection.state, RoomConnectionState.connecting);
+          check(state.connection.state).equals(RoomConnectionState.connecting);
 
           state = reducer.reduceState(
             state,
@@ -93,7 +94,7 @@ void main() {
               SessionPhase.connected,
             ),
           );
-          expect(state.connection.state, RoomConnectionState.connected);
+          check(state.connection.state).equals(RoomConnectionState.connected);
 
           state = reducer.reduceState(
             state,
@@ -102,7 +103,9 @@ void main() {
               SessionPhase.disconnected,
             ),
           );
-          expect(state.connection.state, RoomConnectionState.disconnected);
+          check(
+            state.connection.state,
+          ).equals(RoomConnectionState.disconnected);
         });
 
         test('transitions phases correctly', () {
@@ -115,7 +118,7 @@ void main() {
             chat: const ChatState(),
             turn: SessionTurnState(roomState: _roomState()),
           );
-          expect(state.connection.phase, SessionPhase.idle);
+          check(state.connection.phase).equals(SessionPhase.idle);
 
           state = reducer.reduceState(
             state,
@@ -124,7 +127,7 @@ void main() {
               SessionPhase.connecting,
             ),
           );
-          expect(state.connection.phase, SessionPhase.connecting);
+          check(state.connection.phase).equals(SessionPhase.connecting);
 
           state = reducer.reduceState(
             state,
@@ -133,7 +136,7 @@ void main() {
               SessionPhase.connected,
             ),
           );
-          expect(state.connection.phase, SessionPhase.connected);
+          check(state.connection.phase).equals(SessionPhase.connected);
 
           state = reducer.reduceState(
             state,
@@ -142,7 +145,7 @@ void main() {
               SessionPhase.disconnected,
             ),
           );
-          expect(state.connection.phase, SessionPhase.disconnected);
+          check(state.connection.phase).equals(SessionPhase.disconnected);
         });
       });
 
@@ -159,9 +162,9 @@ void main() {
             ),
           );
 
-          expect(next.connection.state, RoomConnectionState.connecting);
-          expect(next.connection.phase, SessionPhase.connecting);
-          expect(next.connection.error, isNull);
+          check(next.connection.state).equals(RoomConnectionState.connecting);
+          check(next.connection.phase).equals(SessionPhase.connecting);
+          check(next.connection.error).isNull();
         },
       );
 
@@ -177,9 +180,9 @@ void main() {
 
           final next = reducer.reduceState(current, SessionErrorChanged(error));
 
-          expect(next.connection.error, error);
-          expect(next.connection.state, RoomConnectionState.error);
-          expect(next.phase, SessionPhase.error);
+          check(next.connection.error).equals(error);
+          check(next.connection.state).equals(RoomConnectionState.error);
+          check(next.phase).equals(SessionPhase.error);
         });
 
         test('preserves state for non-livekit errors', () {
@@ -191,9 +194,9 @@ void main() {
             const SessionErrorChanged(error),
           );
 
-          expect(next.connection.error, error);
-          expect(next.connection.state, current.connection.state);
-          expect(next.phase, current.phase);
+          check(next.connection.error).equals(error);
+          check(next.connection.state).equals(current.connection.state);
+          check(next.phase).equals(current.phase);
         });
 
         test('handles error state properly', () {
@@ -208,8 +211,8 @@ void main() {
 
           state = reducer.reduceState(state, SessionErrorChanged(error));
 
-          expect(state.connection.error, isNotNull);
-          expect(state.connection.state, RoomConnectionState.error);
+          check(state.connection.error).isNotNull();
+          check(state.connection.state).equals(RoomConnectionState.error);
         });
       });
     });
@@ -225,8 +228,8 @@ void main() {
             RoomStateChanged(nextRoomState),
           );
 
-          expect(next.roomState.status, RoomStatus.active);
-          expect(next.phase, SessionPhase.connecting);
+          check(next.roomState.status).equals(RoomStatus.active);
+          check(next.phase).equals(SessionPhase.connecting);
         });
 
         test('sets phase ended when room ended', () {
@@ -238,8 +241,8 @@ void main() {
             RoomStateChanged(nextRoomState),
           );
 
-          expect(next.roomState.status, RoomStatus.ended);
-          expect(next.phase, SessionPhase.ended);
+          check(next.roomState.status).equals(RoomStatus.ended);
+          check(next.phase).equals(SessionPhase.ended);
         });
 
         test('applies room state updates correctly', () {
@@ -263,15 +266,15 @@ void main() {
             const RoomStateChanged(newRoomState),
           );
 
-          expect(state.roomState.status, RoomStatus.active);
-          expect(state.roomState.version, 2);
-          expect(state.roomState.talkingOrder, contains('user-1'));
+          check(state.roomState.status).equals(RoomStatus.active);
+          check(state.roomState.version).equals(2);
+          check(state.roomState.talkingOrder).contains('user-1');
         });
 
         group('turnStartedAt', () {
           test('stamps on keeper opening turn (currentSpeaker empty)', () {
             final current = _initialState();
-            expect(current.turnStartedAt, isNull);
+            check(current.turnStartedAt).isNull();
 
             // Room goes active — speakerOf falls back to keeper.
             final active = _roomState(
@@ -280,7 +283,7 @@ void main() {
 
             final next = reducer.reduceState(current, RoomStateChanged(active));
 
-            expect(next.turnStartedAt, isNotNull);
+            check(next.turnStartedAt).isNotNull();
           });
 
           test('stamps when speaker changes', () {
@@ -295,7 +298,7 @@ void main() {
               RoomStateChanged(withSpeaker),
             );
 
-            expect(next.turnStartedAt, isNotNull);
+            check(next.turnStartedAt).isNotNull();
           });
 
           test('keeps existing stamp when same speaker continues', () {
@@ -315,7 +318,7 @@ void main() {
             final bumped = active.copyWith(version: 2);
             final second = reducer.reduceState(first, RoomStateChanged(bumped));
 
-            expect(second.turnStartedAt, same(stamp));
+            check(second.turnStartedAt).identicalTo(stamp);
           });
 
           test('carries forward through non-room-state events', () {
@@ -335,7 +338,7 @@ void main() {
               afterRoom,
               const ParticipantsChanged([]),
             );
-            expect(afterParticipants.turnStartedAt, same(stamp));
+            check(afterParticipants.turnStartedAt).identicalTo(stamp);
 
             final afterError = reducer.reduceState(
               afterRoom,
@@ -343,7 +346,7 @@ void main() {
                 RoomDisconnectionError(DisconnectReason.disconnected),
               ),
             );
-            expect(afterError.turnStartedAt, same(stamp));
+            check(afterError.turnStartedAt).identicalTo(stamp);
           });
         });
       });
@@ -367,7 +370,7 @@ void main() {
             const ParticipantRemoved(RemoveReason.remove),
           );
 
-          expect(next.removed, isTrue);
+          check(next.removed).equals(true);
         });
 
         test('dispatches event correctly', () {
@@ -378,7 +381,7 @@ void main() {
             const ParticipantRemoved(RemoveReason.remove),
           );
 
-          expect(newState.removed, isTrue);
+          check(newState.removed).equals(true);
         });
 
         test('tracks removal flag', () {
@@ -391,14 +394,14 @@ void main() {
             chat: const ChatState(),
             turn: SessionTurnState(roomState: _roomState()),
           );
-          expect(state.removed, isFalse);
+          check(state.removed).equals(false);
 
           state = reducer.reduceState(
             state,
             const ParticipantRemoved(RemoveReason.remove),
           );
 
-          expect(state.removed, isTrue);
+          check(state.removed).equals(true);
         });
       });
 
@@ -412,7 +415,7 @@ void main() {
             ParticipantsChanged(participants),
           );
 
-          expect(next.participantsList, isEmpty);
+          check(next.participantsList).isEmpty();
         });
       });
     });
@@ -433,9 +436,9 @@ void main() {
             const SessionChatMessageAdded(message),
           );
 
-          expect(next.messages.length, 1);
-          expect(next.messages.first.id, 'm1');
-          expect(next.messages.first.message, 'hello');
+          check(next.messages).length.equals(1);
+          check(next.messages.first.id).equals('m1');
+          check(next.messages.first.message).equals('hello');
         });
 
         test('dispatches event correctly', () {
@@ -452,9 +455,9 @@ void main() {
             const SessionChatMessageAdded(message),
           );
 
-          expect(newState.messages, hasLength(1));
-          expect(newState.messages.first.message, 'Test message');
-          expect(newState.messages.first.id, 'msg-1');
+          check(newState.messages).length.equals(1);
+          check(newState.messages.first.message).equals('Test message');
+          check(newState.messages.first.id).equals('msg-1');
         });
 
         test('maintains message order', () {
@@ -474,9 +477,9 @@ void main() {
             );
           }
 
-          expect(state.messages, hasLength(5));
+          check(state.messages).length.equals(5);
           for (int i = 0; i < 5; i++) {
-            expect(state.messages[i].id, 'msg-$i');
+            check(state.messages[i].id).equals('msg-$i');
           }
         });
       });
@@ -499,7 +502,7 @@ void main() {
           ),
         );
 
-        expect(originalState.messages.length, originalMessageCount);
+        check(originalState.messages).length.equals(originalMessageCount);
       });
     });
   });

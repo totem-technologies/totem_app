@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -312,8 +313,12 @@ void main() {
 
           await pumpListeningTurn(tester, sessionState: state);
 
-          expect(find.byType(ParticipantCard), findsNWidgets(participantCount));
-          expect(find.byType(ListeningTurnScreen), findsOneWidget);
+          check(
+            tester.widgetList(find.byType(ParticipantCard)),
+          ).length.equals(participantCount);
+          check(
+            tester.widgetList(find.byType(ListeningTurnScreen)),
+          ).length.equals(1);
 
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
@@ -340,10 +345,9 @@ void main() {
         );
 
         await pumpListeningTurn(tester, sessionState: initialState);
-        expect(
+        check(
           _participantGridIdentities(tester),
-          equals(const ['user-2', 'user-3', 'user-1']),
-        );
+        ).deepEquals(const ['user-2', 'user-3', 'user-1']);
 
         final reorderedState = _buildState(
           status: RoomStatus.active,
@@ -355,10 +359,9 @@ void main() {
         );
 
         await pumpListeningTurn(tester, sessionState: reorderedState);
-        expect(
+        check(
           _participantGridIdentities(tester),
-          equals(const ['user-3', 'user-1', 'user-2']),
-        );
+        ).deepEquals(const ['user-3', 'user-1', 'user-2']);
       });
 
       testWidgets('places late-joining participant first when they are next', (
@@ -388,10 +391,9 @@ void main() {
         // Gianni should appear first because nextSpeaker points to him,
         // even though talkingOrder's next-in-line after keeper-1 is user-1.
         // The remaining participants follow in talking order (user-1, user-2).
-        expect(
+        check(
           _participantGridIdentities(tester),
-          equals(const ['gianni', 'user-1', 'user-2']),
-        );
+        ).deepEquals(const ['gianni', 'user-1', 'user-2']);
       });
     });
 
@@ -410,7 +412,9 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.text('Waiting for the Keeper to join'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Waiting for the Keeper to join')),
+        ).length.equals(1);
       });
 
       testWidgets('shows GroundingMarquee for non-keeper', (tester) async {
@@ -424,7 +428,9 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.byType(GroundingMarquee), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(GroundingMarquee)),
+        ).length.equals(1);
       });
     });
 
@@ -436,7 +442,9 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.text('Your session is about to start'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Your session is about to start')),
+        ).length.equals(1);
       });
 
       testWidgets('non-keeper sees GroundingMarquee instead of start button', (
@@ -447,7 +455,9 @@ void main() {
         await pumpListeningTurn(tester, sessionState: state, isKeeper: false);
 
         // Non-keeper should see the marquee, not the start button.
-        expect(find.byType(GroundingMarquee), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(GroundingMarquee)),
+        ).length.equals(1);
       });
     });
 
@@ -473,7 +483,9 @@ void main() {
             currentUserSlug: 'user-1',
           );
 
-          expect(findRichTextContaining('You are Next'), findsOneWidget);
+          check(
+            tester.widgetList(findRichTextContaining('You are Next')),
+          ).length.equals(1);
         },
       );
 
@@ -491,7 +503,9 @@ void main() {
           currentUserSlug: 'user-1',
         );
 
-        expect(findRichTextContaining('Next up User Two'), findsOneWidget);
+        check(
+          tester.widgetList(findRichTextContaining('Next up User Two')),
+        ).length.equals(1);
       });
 
       testWidgets('does NOT show marquee or transition card', (tester) async {
@@ -499,7 +513,9 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.byType(GroundingMarquee), findsNothing);
+        check(
+          tester.widgetList(find.byType(GroundingMarquee)),
+        ).length.equals(0);
       });
     });
 
@@ -516,7 +532,9 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.text('The session has been paused'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('The session has been paused')),
+        ).length.equals(1);
       });
     });
 
@@ -526,7 +544,9 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.byType(SessionActionBar), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(SessionActionBar)),
+        ).length.equals(1);
       });
 
       testWidgets('shows reaction control and toggles mic/camera', (
@@ -536,10 +556,18 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.bySemanticsLabel('Microphone off'), findsOneWidget);
-        expect(find.bySemanticsLabel('Camera off'), findsOneWidget);
-        expect(find.bySemanticsLabel('Chat'), findsOneWidget);
-        expect(find.bySemanticsLabel('Send reaction'), findsOneWidget);
+        check(
+          tester.widgetList(find.bySemanticsLabel('Microphone off')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.bySemanticsLabel('Camera off')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.bySemanticsLabel('Chat')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.bySemanticsLabel('Send reaction')),
+        ).length.equals(1);
 
         await tester.tap(find.bySemanticsLabel('Microphone off'));
         await tester.pump();
@@ -652,7 +680,9 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.byType(ListeningTurnScreen), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(ListeningTurnScreen)),
+        ).length.equals(1);
       });
     });
   });

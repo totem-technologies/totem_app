@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:totem_core/features/messages/providers/compose_to_participants_provider.dart';
 
 void main() {
@@ -16,22 +17,19 @@ void main() {
       final notifier = container.read(
         composeToParticipantsProvider('session-1').notifier,
       )..seedRecipients(['a', 'b', 'c']);
-      expect(
+      check(
         container.read(composeToParticipantsProvider('session-1')).selected,
-        {'a', 'b', 'c'},
-      );
+      ).deepEquals({'a', 'b', 'c'});
 
       notifier.toggleRecipient('b');
-      expect(
+      check(
         container.read(composeToParticipantsProvider('session-1')).selected,
-        {'a', 'c'},
-      );
+      ).deepEquals({'a', 'c'});
 
       notifier.toggleRecipient('b');
-      expect(
+      check(
         container.read(composeToParticipantsProvider('session-1')).selected,
-        {'a', 'b', 'c'},
-      );
+      ).deepEquals({'a', 'b', 'c'});
     });
 
     test('seedRecipients is a no-op after the first call', () {
@@ -40,10 +38,9 @@ void main() {
         ..toggleRecipient('a')
         ..seedRecipients(['a', 'b', 'c']);
 
-      expect(
+      check(
         container.read(composeToParticipantsProvider('session-1')).selected,
-        {'b'},
-      );
+      ).deepEquals({'b'});
     });
 
     test('families are isolated by session slug', () {
@@ -54,14 +51,12 @@ void main() {
           .read(composeToParticipantsProvider('session-b').notifier)
           .seedRecipients(['b']);
 
-      expect(
+      check(
         container.read(composeToParticipantsProvider('session-a')).selected,
-        {'a'},
-      );
-      expect(
+      ).deepEquals({'a'});
+      check(
         container.read(composeToParticipantsProvider('session-b')).selected,
-        {'b'},
-      );
+      ).deepEquals({'b'});
     });
   });
 }

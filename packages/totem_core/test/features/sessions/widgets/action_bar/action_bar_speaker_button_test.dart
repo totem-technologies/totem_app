@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_speaker_button.dart';
@@ -25,7 +26,7 @@ void main() {
     await tester.tap(find.byType(ActionBarButton));
     await tester.pump();
 
-    expect(requested, isFalse);
+    check(requested).equals(false);
   });
 
   testWidgets('ActionBarSpeakerButton is disabled when callback is null', (
@@ -49,6 +50,6 @@ void main() {
       ),
     );
 
-    expect(gesture.onTap, isNull);
+    check(gesture.onTap).isNull();
   });
 }

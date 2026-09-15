@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -131,7 +132,9 @@ void main() {
       ),
     );
 
-    expect(find.text('Reorder Participants'), findsOneWidget);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
 
     final handle = find.byType(ReorderableDragStartListener).at(2);
     final gesture = await tester.startGesture(tester.getCenter(handle));
@@ -148,9 +151,13 @@ void main() {
         verify(() => harness.keeper.reorder(captureAny())).captured.single
             as List<String>;
 
-    expect(captured.first, 'keeper-1');
-    expect(captured.toSet(), {'keeper-1', 'user-1', 'user-2', 'user-3'});
-    expect(captured, isNot(equals(['keeper-1', 'user-1', 'user-2', 'user-3'])));
+    check(captured.first).equals('keeper-1');
+    check(
+      captured.toSet(),
+    ).deepEquals({'keeper-1', 'user-1', 'user-2', 'user-3'});
+    check(
+      captured,
+    ).not((it) => it.equals(['keeper-1', 'user-1', 'user-2', 'user-3']));
   });
 
   testWidgets('keeps the keeper visually pinned above reordered items', (
@@ -198,7 +205,7 @@ void main() {
     final keeperTop = tester.getTopLeft(keeperFinder).dy;
     final firstParticipantTop = tester.getTopLeft(firstParticipantFinder).dy;
 
-    expect(keeperTop, lessThan(firstParticipantTop));
+    check(keeperTop).isLessThan(firstParticipantTop);
   });
 
   testWidgets('save shows loading until reorder completes', (tester) async {
@@ -232,12 +239,12 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pump();
 
-    expect(find.byType(LoadingIndicator), findsOneWidget);
+    check(tester.widgetList(find.byType(LoadingIndicator))).length.equals(1);
 
     reorderCompleter.complete();
     await tester.pumpAndSettle();
 
-    expect(find.byType(LoadingIndicator), findsNothing);
+    check(tester.widgetList(find.byType(LoadingIndicator))).length.equals(0);
     verify(() => harness.keeper.reorder(any())).called(1);
   });
 
@@ -304,17 +311,21 @@ void main() {
     await tester.tap(find.text('Open reorder modal'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Reorder Participants'), findsOneWidget);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
 
     await tester.tap(find.text('Save'));
     await tester.pump();
 
-    expect(find.byType(LoadingIndicator), findsOneWidget);
+    check(tester.widgetList(find.byType(LoadingIndicator))).length.equals(1);
 
     reorderCompleter.complete();
     await tester.pumpAndSettle();
 
-    expect(find.text('Reorder Participants'), findsNothing);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(0);
     verify(() => harness.keeper.reorder(any())).called(1);
   });
 
@@ -379,12 +390,16 @@ void main() {
     await tester.tap(find.text('Open reorder modal'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Reorder Participants'), findsOneWidget);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
 
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Reorder Participants'), findsNothing);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(0);
     verifyNever(() => harness.keeper.reorder(any()));
   });
 
@@ -448,21 +463,31 @@ void main() {
     await tester.tap(find.text('Open reorder modal'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Reorder Participants'), findsOneWidget);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
 
     await tester.tap(find.text('Save'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Error Reordering Participants'), findsOneWidget);
-    expect(find.text('Reorder Participants'), findsOneWidget);
+    check(
+      tester.widgetList(find.text('Error Reordering Participants')),
+    ).length.equals(1);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
 
     await tester.tap(find.text('OK'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Error Reordering Participants'), findsNothing);
-    expect(find.text('Reorder Participants'), findsOneWidget);
+    check(
+      tester.widgetList(find.text('Error Reordering Participants')),
+    ).length.equals(0);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
     verify(() => harness.keeper.reorder(any())).called(1);
   });
 }

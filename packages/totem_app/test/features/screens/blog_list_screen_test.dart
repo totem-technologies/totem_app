@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
 import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
@@ -50,12 +51,16 @@ void main() {
       await tester.pump();
 
       // Check if FeaturedBlogPost is rendered for the first item
-      expect(find.byType(FeaturedBlogPost), findsOneWidget);
-      expect(find.text('Featured Blog Post'), findsWidgets);
+      check(tester.widgetList(find.byType(FeaturedBlogPost))).length.equals(1);
+      check(
+        tester.widgetList(find.text('Featured Blog Post')),
+      ).length.isGreaterThan(0);
 
       // Check if HomeBlogCard is rendered for the subsequent items
-      expect(find.byType(HomeBlogCard), findsOneWidget);
-      expect(find.text('Second Blog Post'), findsWidgets);
+      check(tester.widgetList(find.byType(HomeBlogCard))).length.equals(1);
+      check(
+        tester.widgetList(find.text('Second Blog Post')),
+      ).length.isGreaterThan(0);
     });
   });
 }

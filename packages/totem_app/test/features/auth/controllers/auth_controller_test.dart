@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/auth/services/notifications_service.dart';
@@ -170,8 +171,8 @@ void main() {
 
       await getController().requestPin(email);
 
-      expect(getState().status, AuthStatus.awaitingVerification);
-      expect(getState().email, email);
+      check(getState().status).equals(AuthStatus.awaitingVerification);
+      check(getState().email).equals(email);
       verify(() => mockAuthRepository.requestPin(email, false)).called(1);
       verify(
         () => mockAnalyticsService.logEvent(
@@ -185,7 +186,7 @@ void main() {
   group('MobileAuthController - verifyPin', () {
     test('aborts if no email is in current state', () async {
       await getController().verifyPin('123456');
-      expect(getState().status, AuthStatus.error);
+      check(getState().status).equals(AuthStatus.error);
     });
 
     test(
@@ -242,9 +243,9 @@ void main() {
 
         await getController().verifyPin(pin);
 
-        expect(getState().status, AuthStatus.authenticated);
-        expect(getState().user, mockUser);
-        expect(getController().isAuthenticated, isTrue);
+        check(getState().status).equals(AuthStatus.authenticated);
+        check(getState().user).equals(mockUser);
+        check(getController().isAuthenticated).equals(true);
 
         verify(() => mockAuthRepository.verifyPin(email, pin)).called(1);
         verify(
@@ -326,8 +327,8 @@ void main() {
 
       await getController().logout();
 
-      expect(getState().status, AuthStatus.unauthenticated);
-      expect(getController().isAuthenticated, isFalse);
+      check(getState().status).equals(AuthStatus.unauthenticated);
+      check(getController().isAuthenticated).equals(false);
       verify(() => mockAuthRepository.logout('refresh_token')).called(1);
       verify(
         () => mockSecureStorage.delete(key: AppConsts.accessTokenKey),
@@ -352,7 +353,7 @@ void main() {
 
       await getController().deleteAccount();
 
-      expect(getState().status, AuthStatus.unauthenticated);
+      check(getState().status).equals(AuthStatus.unauthenticated);
       verify(() => mockUserRepository.deleteAccount()).called(1);
       verify(() => mockAnalyticsService.logAccountDeleted()).called(1);
       verify(() => mockSecureStorage.deleteAll()).called(1);
@@ -400,12 +401,12 @@ void main() {
       await getController().requestPin(email);
       await getController().verifyPin('123456');
 
-      expect(getState().user?.name, 'John');
+      check(getState().user?.name).equals('John');
 
       getController().syncUser(updatedUser);
 
-      expect(getState().status, AuthStatus.authenticated);
-      expect(getState().user?.name, 'John Doe');
+      check(getState().status).equals(AuthStatus.authenticated);
+      check(getState().user?.name).equals('John Doe');
     });
 
     test('syncUser does nothing if not authenticated', () {
@@ -413,8 +414,8 @@ void main() {
 
       getController().syncUser(updatedUser);
 
-      expect(getState().status, AuthStatus.unauthenticated);
-      expect(getState().user, isNull);
+      check(getState().status).equals(AuthStatus.unauthenticated);
+      check(getState().user).isNull();
     });
   });
 }

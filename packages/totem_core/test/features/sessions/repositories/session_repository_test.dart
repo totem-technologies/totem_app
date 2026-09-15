@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/services/api_service.dart';
@@ -100,31 +101,28 @@ void main() {
     test('refreshes state and retries once with updated version', () async {
       final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
         (request) {
-          expect(request.method, 'POST');
-          expect(
+          check(request.method).equals('POST');
+          check(
             request.path,
-            '/api/mobile/protected/rooms/test-session/event',
-          );
+          ).equals('/api/mobile/protected/rooms/test-session/event');
           final body = _decodeJsonBody(request.body);
-          expect(body['last_seen_version'], 5);
+          check(body['last_seen_version']).equals(5);
           return _staleVersionResponse();
         },
         (request) {
-          expect(request.method, 'GET');
-          expect(
+          check(request.method).equals('GET');
+          check(
             request.path,
-            '/api/mobile/protected/rooms/test-session/state',
-          );
+          ).equals('/api/mobile/protected/rooms/test-session/state');
           return _roomStateResponse(10);
         },
         (request) {
-          expect(request.method, 'POST');
-          expect(
+          check(request.method).equals('POST');
+          check(
             request.path,
-            '/api/mobile/protected/rooms/test-session/event',
-          );
+          ).equals('/api/mobile/protected/rooms/test-session/event');
           final body = _decodeJsonBody(request.body);
-          expect(body['last_seen_version'], 10);
+          check(body['last_seen_version']).equals(10);
           return _roomStateResponse(11);
         },
       ]);
@@ -139,8 +137,8 @@ void main() {
         passTotemProvider('test-session', 5).future,
       );
 
-      expect(roomState.version, 11);
-      expect(client.requests, hasLength(3));
+      check(roomState.version).equals(11);
+      check(client.requests).length.equals(3);
     });
 
     test(
@@ -167,11 +165,11 @@ void main() {
           await container.read(passTotemProvider('test-session', 5).future);
           fail('Expected passTotemProvider to throw a stale version error');
         } on ApiError<RoomState, RoomErrorResponse> catch (error) {
-          expect(error.error?.code, ErrorCode.staleVersion);
+          check(error.error?.code).equals(ErrorCode.staleVersion);
         }
 
         // 3 POSTs + 2 GETs = 5
-        expect(client.requests, hasLength(5));
+        check(client.requests).length.equals(5);
       },
     );
 
@@ -194,8 +192,8 @@ void main() {
         passTotemProvider('test-session', 5).future,
       );
 
-      expect(roomState.version, 16);
-      expect(client.requests, hasLength(5));
+      check(roomState.version).equals(16);
+      check(client.requests).length.equals(5);
     });
 
     test(
@@ -203,31 +201,28 @@ void main() {
       () async {
         final client = _ScriptedApiClient(<ApiResponse Function(ApiRequest)>[
           (request) {
-            expect(request.method, 'POST');
-            expect(
+            check(request.method).equals('POST');
+            check(
               request.path,
-              '/api/mobile/protected/rooms/test-session/event',
-            );
+            ).equals('/api/mobile/protected/rooms/test-session/event');
             final body = _decodeJsonBody(request.body);
-            expect(body['last_seen_version'], 5);
+            check(body['last_seen_version']).equals(5);
             return _invalidTransitionResponse();
           },
           (request) {
-            expect(request.method, 'GET');
-            expect(
+            check(request.method).equals('GET');
+            check(
               request.path,
-              '/api/mobile/protected/rooms/test-session/state',
-            );
+            ).equals('/api/mobile/protected/rooms/test-session/state');
             return _roomStateResponse(6);
           },
           (request) {
-            expect(request.method, 'POST');
-            expect(
+            check(request.method).equals('POST');
+            check(
               request.path,
-              '/api/mobile/protected/rooms/test-session/event',
-            );
+            ).equals('/api/mobile/protected/rooms/test-session/event');
             final body = _decodeJsonBody(request.body);
-            expect(body['last_seen_version'], 6);
+            check(body['last_seen_version']).equals(6);
             return _roomStateResponse(7);
           },
         ]);
@@ -242,8 +237,8 @@ void main() {
           acceptTotemProvider('test-session', 5).future,
         );
 
-        expect(roomState.version, 7);
-        expect(client.requests, hasLength(3));
+        check(roomState.version).equals(7);
+        check(client.requests).length.equals(3);
       },
     );
 
@@ -266,11 +261,11 @@ void main() {
           await container.read(acceptTotemProvider('test-session', 5).future);
           fail('Expected acceptTotemProvider to throw');
         } on ApiError<RoomState, RoomErrorResponse> catch (error) {
-          expect(error.error?.code, ErrorCode.invalidTransition);
+          check(error.error?.code).equals(ErrorCode.invalidTransition);
         }
 
         // 1 POST + 1 GET + 1 POST = 3 (one refresh, no loop)
-        expect(client.requests, hasLength(3));
+        check(client.requests).length.equals(3);
       },
     );
 
@@ -298,10 +293,10 @@ void main() {
           await container.read(acceptTotemProvider('test-session', 5).future);
           fail('Expected acceptTotemProvider to throw');
         } on ApiError<RoomState, RoomErrorResponse> catch (error) {
-          expect(error.error?.code, ErrorCode.roomNotActive);
+          check(error.error?.code).equals(ErrorCode.roomNotActive);
         }
 
-        expect(client.requests, hasLength(1));
+        check(client.requests).length.equals(1);
       },
     );
   });

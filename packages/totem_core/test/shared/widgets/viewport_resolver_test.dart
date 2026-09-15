@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
@@ -21,7 +22,7 @@ void main() {
         ),
       );
 
-      expect(resolvedKind, ViewportKind.smallPortrait);
+      check(resolvedKind).equals(ViewportKind.smallPortrait);
     });
 
     testWidgets('returns smallLandscape for landscape phones', (tester) async {
@@ -41,7 +42,7 @@ void main() {
         ),
       );
 
-      expect(resolvedKind, ViewportKind.smallLandscape);
+      check(resolvedKind).equals(ViewportKind.smallLandscape);
     });
 
     testWidgets('returns mediumSmall for tablets in portrait', (tester) async {
@@ -61,7 +62,7 @@ void main() {
         ),
       );
 
-      expect(resolvedKind, ViewportKind.mediumSmall);
+      check(resolvedKind).equals(ViewportKind.mediumSmall);
     });
 
     testWidgets('returns mediumSmall for tablets in landscape', (tester) async {
@@ -81,7 +82,7 @@ void main() {
         ),
       );
 
-      expect(resolvedKind, ViewportKind.mediumSmall);
+      check(resolvedKind).equals(ViewportKind.mediumSmall);
     });
 
     testWidgets('returns mediumPlus above 900 in portrait', (tester) async {
@@ -101,7 +102,7 @@ void main() {
         ),
       );
 
-      expect(resolvedKind, ViewportKind.mediumPlus);
+      check(resolvedKind).equals(ViewportKind.mediumPlus);
     });
 
     testWidgets('returns mediumPlus above 900 in landscape', (tester) async {
@@ -121,7 +122,7 @@ void main() {
         ),
       );
 
-      expect(resolvedKind, ViewportKind.mediumPlus);
+      check(resolvedKind).equals(ViewportKind.mediumPlus);
     });
   });
 }

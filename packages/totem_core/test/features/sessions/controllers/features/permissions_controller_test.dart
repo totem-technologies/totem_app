@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
@@ -99,15 +100,15 @@ void main() {
         .requestPermissions();
 
     final permissions = container.read(permissionsControllerProvider);
-    expect(permissions.asData?.value.cameraStatus, PermissionStatus.granted);
-    expect(
+    check(
+      permissions.asData?.value.cameraStatus,
+    ).equals(PermissionStatus.granted);
+    check(
       permissions.asData?.value.microphoneStatus,
-      PermissionStatus.granted,
-    );
-    expect(
-      permissions.asData?.value.notificationStatus,
-      PermissionStatus.granted,
-    );
+    ).equals(PermissionStatus.granted);
+    check(permissions.asData?.value)
+        .has((state) => state!.notificationStatus, 'notificationStatus')
+        .equals(PermissionStatus.granted);
   });
 
   test(
@@ -159,7 +160,7 @@ void main() {
         Permission.notification.value: 1,
       });
 
-      await expectLater(future, completes);
+      await check(future).completes();
     },
   );
 }

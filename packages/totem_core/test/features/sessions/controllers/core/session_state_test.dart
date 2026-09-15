@@ -1,25 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
 void main() {
   group('isInternetDisconnectReason', () {
     test('recognizes explicit client-side network failures', () {
-      expect(
+      check(
         isInternetDisconnectReason(DisconnectReason.signalingConnectionFailure),
-        isTrue,
-      );
-      expect(
+      ).equals(true);
+      check(
         isInternetDisconnectReason(DisconnectReason.reconnectAttemptsExceeded),
-        isTrue,
-      );
+      ).equals(true);
     });
 
     test('does not infer internet loss from a closed signaling connection', () {
-      expect(
+      check(
         isInternetDisconnectReason(DisconnectReason.disconnected),
-        isFalse,
-      );
+      ).equals(false);
     });
   });
 
@@ -35,11 +33,10 @@ void main() {
         DisconnectReason.signalClose,
         DisconnectReason.mediaFailure,
       ]) {
-        expect(
+        check(
+          because: '$reason should allow a confirmed offline override',
           canOfflineStateOverrideDisconnectReason(reason),
-          isTrue,
-          reason: '$reason should allow a confirmed offline override',
-        );
+        ).equals(true);
       }
     });
 
@@ -59,11 +56,10 @@ void main() {
         DisconnectReason.connectionTimeout,
         DisconnectReason.agentError,
       ]) {
-        expect(
+        check(
+          because: '$reason should keep its explicit disconnect messaging',
           canOfflineStateOverrideDisconnectReason(reason),
-          isFalse,
-          reason: '$reason should keep its explicit disconnect messaging',
-        );
+        ).equals(false);
       }
     });
   });

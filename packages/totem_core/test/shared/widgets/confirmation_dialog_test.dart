@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -44,10 +45,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Are you sure?'), findsOneWidget);
-      expect(find.text('Delete this item?'), findsOneWidget);
-      expect(find.text('Delete'), findsOneWidget);
-      expect(find.text('Cancel'), findsOneWidget);
+      check(tester.widgetList(find.text('Are you sure?'))).length.equals(1);
+      check(tester.widgetList(find.text('Delete this item?'))).length.equals(1);
+      check(tester.widgetList(find.text('Delete'))).length.equals(1);
+      check(tester.widgetList(find.text('Cancel'))).length.equals(1);
     });
 
     testWidgets('uses custom title and calls onConfirm once', (tester) async {
@@ -68,8 +69,8 @@ void main() {
       await tester.tap(find.text('Start'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Start Session'), findsOneWidget);
-      expect(callCount, 1);
+      check(tester.widgetList(find.text('Start Session'))).length.equals(1);
+      check(callCount).equals(1);
     });
 
     testWidgets('shows loading while confirm callback is pending', (
@@ -89,17 +90,17 @@ void main() {
       await tester.tap(find.text('Confirm'));
       await tester.pump();
 
-      expect(find.byType(LoadingIndicator), findsOneWidget);
+      check(tester.widgetList(find.byType(LoadingIndicator))).length.equals(1);
 
       final cancelButton = tester.widget<OutlinedButton>(
         find.widgetWithText(OutlinedButton, 'Cancel'),
       );
-      expect(cancelButton.onPressed, isNull);
+      check(cancelButton.onPressed).isNull();
 
       completer.complete();
       await tester.pumpAndSettle();
 
-      expect(find.byType(LoadingIndicator), findsNothing);
+      check(tester.widgetList(find.byType(LoadingIndicator))).length.equals(0);
     });
 
     testWidgets('cancel closes the dialog route', (tester) async {
@@ -112,12 +113,12 @@ void main() {
         ),
       );
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      check(tester.widgetList(find.byType(AlertDialog))).length.equals(1);
 
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsNothing);
+      check(tester.widgetList(find.byType(AlertDialog))).length.equals(0);
     });
 
     testWidgets('shows timeout error dialog when confirm exceeds 10 seconds', (
@@ -139,8 +140,10 @@ void main() {
       await tester.pump(const Duration(seconds: 10));
       await tester.pumpAndSettle();
 
-      expect(find.text('Something Went Wrong'), findsOneWidget);
-      expect(find.text('OK'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Something Went Wrong')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('OK'))).length.equals(1);
     });
   });
 }

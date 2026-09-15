@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_message_participants_card.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -70,16 +71,21 @@ void main() {
     testWidgets('renders badge, title, description and button', (tester) async {
       await tester.pumpWidget(wrapCard());
 
-      expect(find.text('\u{1F512}  Keeper Only'), findsOneWidget);
-      expect(find.text('Message All Participants'), findsNWidgets(2));
-      expect(
-        find.text(
-          'Send an individual message to every participant registered '
-          'for this session.',
+      check(
+        tester.widgetList(find.text('\u{1F512}  Keeper Only')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.text('Message All Participants')),
+      ).length.equals(2);
+      check(
+        tester.widgetList(
+          find.text(
+            'Send an individual message to every participant registered '
+            'for this session.',
+          ),
         ),
-        findsOneWidget,
-      );
-      expect(find.byType(ElevatedButton), findsOneWidget);
+      ).length.equals(1);
+      check(tester.widgetList(find.byType(ElevatedButton))).length.equals(1);
     });
 
     testWidgets('tapping the button opens the Session Participants screen', (
@@ -90,7 +96,9 @@ void main() {
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();
 
-      expect(find.text('Session Participants Screen'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Session Participants Screen')),
+      ).length.equals(1);
     });
   });
 }

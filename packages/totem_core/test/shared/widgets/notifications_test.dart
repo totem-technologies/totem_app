@@ -2,6 +2,7 @@
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -40,13 +41,13 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Auto dismiss'), findsOneWidget);
+      check(tester.widgetList(find.text('Auto dismiss'))).length.equals(1);
 
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('Auto dismiss'), findsOneWidget);
+      check(tester.widgetList(find.text('Auto dismiss'))).length.equals(1);
 
       await tester.pumpAndSettle();
-      expect(find.text('Auto dismiss'), findsNothing);
+      check(tester.widgetList(find.text('Auto dismiss'))).length.equals(0);
     });
 
     testWidgets('show with zero duration stays until manually dismissed', (
@@ -68,14 +69,14 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('No timer'), findsOneWidget);
+      check(tester.widgetList(find.text('No timer'))).length.equals(1);
 
       await tester.pump(const Duration(seconds: 10));
-      expect(find.text('No timer'), findsOneWidget);
+      check(tester.widgetList(find.text('No timer'))).length.equals(1);
 
       dismiss.dismissActive();
       await tester.pumpAndSettle();
-      expect(find.text('No timer'), findsNothing);
+      check(tester.widgetList(find.text('No timer'))).length.equals(0);
     });
 
     testWidgets('show respects short duration and animation boundaries', (
@@ -98,13 +99,13 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Timing check'), findsOneWidget);
+      check(tester.widgetList(find.text('Timing check'))).length.equals(1);
 
       await tester.pump(const Duration(milliseconds: 100));
-      expect(find.text('Timing check'), findsOneWidget);
+      check(tester.widgetList(find.text('Timing check'))).length.equals(1);
 
       await tester.pumpAndSettle();
-      expect(find.text('Timing check'), findsNothing);
+      check(tester.widgetList(find.text('Timing check'))).length.equals(0);
     });
   });
 
@@ -127,14 +128,14 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Dismissible'), findsOneWidget);
+      check(tester.widgetList(find.text('Dismissible'))).length.equals(1);
 
       await tester.pump(const Duration(seconds: 8));
-      expect(find.text('Dismissible'), findsOneWidget);
+      check(tester.widgetList(find.text('Dismissible'))).length.equals(1);
 
       dismiss.dismissActive();
       await tester.pumpAndSettle();
-      expect(find.text('Dismissible'), findsNothing);
+      check(tester.widgetList(find.text('Dismissible'))).length.equals(0);
     });
   });
 
@@ -151,11 +152,11 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Auto dismiss'), findsOneWidget);
+      check(tester.widgetList(find.text('Auto dismiss'))).length.equals(1);
 
       await tester.pump(const Duration(seconds: 8));
       await tester.pumpAndSettle();
-      expect(find.text('Auto dismiss'), findsNothing);
+      check(tester.widgetList(find.text('Auto dismiss'))).length.equals(0);
     });
   });
 
@@ -172,14 +173,14 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Permanent'), findsOneWidget);
+      check(tester.widgetList(find.text('Permanent'))).length.equals(1);
 
       await tester.pump(const Duration(seconds: 10));
-      expect(find.text('Permanent'), findsOneWidget);
+      check(tester.widgetList(find.text('Permanent'))).length.equals(1);
 
       dismiss.dismissActive();
       await tester.pumpAndSettle();
-      expect(find.text('Permanent'), findsNothing);
+      check(tester.widgetList(find.text('Permanent'))).length.equals(0);
     });
 
     testWidgets('showPermanent can be dismissed immediately after show', (
@@ -196,11 +197,11 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Early dismiss'), findsOneWidget);
+      check(tester.widgetList(find.text('Early dismiss'))).length.equals(1);
 
       dismiss.dismissActive();
       await tester.pumpAndSettle();
-      expect(find.text('Early dismiss'), findsNothing);
+      check(tester.widgetList(find.text('Early dismiss'))).length.equals(0);
     });
 
     testWidgets('showPermanent dismiss callback is idempotent', (tester) async {
@@ -215,14 +216,14 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Idempotent'), findsOneWidget);
+      check(tester.widgetList(find.text('Idempotent'))).length.equals(1);
 
       dismiss.dismissActive();
       dismiss.dismissActive();
       controller.dismissAll();
       await tester.pumpAndSettle();
 
-      expect(find.text('Idempotent'), findsNothing);
+      check(tester.widgetList(find.text('Idempotent'))).length.equals(0);
     });
 
     testWidgets(
@@ -246,14 +247,14 @@ void main() {
         );
 
         await tester.pump();
-        expect(find.text('Permanent A'), findsOneWidget);
-        expect(find.text('Permanent B'), findsNothing);
+        check(tester.widgetList(find.text('Permanent A'))).length.equals(1);
+        check(tester.widgetList(find.text('Permanent B'))).length.equals(0);
 
         controller.dismissAll();
         await tester.pumpAndSettle();
 
-        expect(find.text('Permanent A'), findsNothing);
-        expect(find.text('Permanent B'), findsNothing);
+        check(tester.widgetList(find.text('Permanent A'))).length.equals(0);
+        check(tester.widgetList(find.text('Permanent B'))).length.equals(0);
       },
     );
 
@@ -276,11 +277,11 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Duplicate'), findsOneWidget);
+      check(tester.widgetList(find.text('Duplicate'))).length.equals(1);
 
       controller.dismissAll();
       await tester.pumpAndSettle();
-      expect(find.text('Duplicate'), findsNothing);
+      check(tester.widgetList(find.text('Duplicate'))).length.equals(0);
     });
 
     testWidgets(
@@ -302,7 +303,7 @@ void main() {
           message: 'Connection dropped',
         );
 
-        expect(identical(duplicate, first), isTrue);
+        check(identical(duplicate, first)).equals(true);
         await tester.pump();
 
         first.dismissActive();
@@ -315,13 +316,17 @@ void main() {
           message: 'Connection dropped',
         );
 
-        expect(identical(replacement, first), isFalse);
+        check(identical(replacement, first)).equals(false);
         await tester.pumpAndSettle();
-        expect(find.text('Flaky connection'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Flaky connection')),
+        ).length.equals(1);
 
         replacement.dismissActive();
         await tester.pumpAndSettle();
-        expect(find.text('Flaky connection'), findsNothing);
+        check(
+          tester.widgetList(find.text('Flaky connection')),
+        ).length.equals(0);
       },
     );
   });
@@ -346,21 +351,21 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Ephemeral'), findsOneWidget);
-      expect(find.text('Persistent'), findsNothing);
+      check(tester.widgetList(find.text('Ephemeral'))).length.equals(1);
+      check(tester.widgetList(find.text('Persistent'))).length.equals(0);
 
       controller.dismissAll();
       await tester.pumpAndSettle();
 
-      expect(find.text('Ephemeral'), findsNothing);
-      expect(find.text('Persistent'), findsNothing);
+      check(tester.widgetList(find.text('Ephemeral'))).length.equals(0);
+      check(tester.widgetList(find.text('Persistent'))).length.equals(0);
     });
 
     testWidgets('dismissAll on empty controller is a no-op', (tester) async {
       final controller = NotificationController();
       controller.dismissAll();
       await tester.pump();
-      expect(tester.takeException(), isNull);
+      check(tester.takeException()).isNull();
     });
 
     testWidgets('dismissAll affects only its own controller notifications', (
@@ -385,17 +390,17 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Controller A'), findsOneWidget);
-      expect(find.text('Controller B'), findsOneWidget);
+      check(tester.widgetList(find.text('Controller A'))).length.equals(1);
+      check(tester.widgetList(find.text('Controller B'))).length.equals(1);
 
       controllerA.dismissAll();
       await tester.pumpAndSettle();
-      expect(find.text('Controller A'), findsNothing);
-      expect(find.text('Controller B'), findsOneWidget);
+      check(tester.widgetList(find.text('Controller A'))).length.equals(0);
+      check(tester.widgetList(find.text('Controller B'))).length.equals(1);
 
       controllerB.dismissAll();
       await tester.pumpAndSettle();
-      expect(find.text('Controller B'), findsNothing);
+      check(tester.widgetList(find.text('Controller B'))).length.equals(0);
     });
 
     testWidgets(
@@ -418,15 +423,15 @@ void main() {
         );
 
         await tester.pump();
-        expect(find.text('Auto unregister'), findsOneWidget);
+        check(tester.widgetList(find.text('Auto unregister'))).length.equals(1);
 
         await tester.pump(const Duration(milliseconds: 300));
         await tester.pumpAndSettle();
-        expect(find.text('Auto unregister'), findsNothing);
+        check(tester.widgetList(find.text('Auto unregister'))).length.equals(0);
 
         controller.dismissAll();
         await tester.pump();
-        expect(tester.takeException(), isNull);
+        check(tester.takeException()).isNull();
       },
     );
 
@@ -451,17 +456,17 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Ephemeral mixed'), findsOneWidget);
-      expect(find.text('Permanent mixed'), findsNothing);
+      check(tester.widgetList(find.text('Ephemeral mixed'))).length.equals(1);
+      check(tester.widgetList(find.text('Permanent mixed'))).length.equals(0);
 
       await tester.pump(const Duration(seconds: 6));
       await tester.pumpAndSettle();
-      expect(find.text('Ephemeral mixed'), findsNothing);
-      expect(find.text('Permanent mixed'), findsOneWidget);
+      check(tester.widgetList(find.text('Ephemeral mixed'))).length.equals(0);
+      check(tester.widgetList(find.text('Permanent mixed'))).length.equals(1);
 
       controller.dismissAll();
       await tester.pumpAndSettle();
-      expect(find.text('Permanent mixed'), findsNothing);
+      check(tester.widgetList(find.text('Permanent mixed'))).length.equals(0);
     });
 
     testWidgets('dismiss during animation and dismissAll is race-safe', (
@@ -478,15 +483,15 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Race safe'), findsOneWidget);
+      check(tester.widgetList(find.text('Race safe'))).length.equals(1);
 
       dismiss.dismissActive();
       controller.dismissAll();
       dismiss.dismissActive();
       await tester.pumpAndSettle();
 
-      expect(find.text('Race safe'), findsNothing);
-      expect(tester.takeException(), isNull);
+      check(tester.widgetList(find.text('Race safe'))).length.equals(0);
+      check(tester.takeException()).isNull();
     });
   });
 
@@ -509,7 +514,7 @@ void main() {
       request.dismissActive();
 
       await tester.pump();
-      expect(find.text('Never built'), findsNothing);
+      check(tester.widgetList(find.text('Never built'))).length.equals(0);
     });
 
     testWidgets(
@@ -525,12 +530,12 @@ void main() {
           message: 'Must not overlap the next screen',
         );
         await tester.pump();
-        expect(find.text('Remove now'), findsOneWidget);
+        check(tester.widgetList(find.text('Remove now'))).length.equals(1);
 
         request.dismissImmediately();
         await tester.pump();
 
-        expect(find.text('Remove now'), findsNothing);
+        check(tester.widgetList(find.text('Remove now'))).length.equals(0);
       },
     );
 
@@ -555,7 +560,7 @@ void main() {
       }
 
       await tester.pump();
-      expect(find.text('Hidden timed'), findsNothing);
+      check(tester.widgetList(find.text('Hidden timed'))).length.equals(0);
     });
 
     testWidgets(
@@ -579,11 +584,15 @@ void main() {
         }
 
         await tester.pump();
-        expect(find.text('Hidden permanent'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Hidden permanent')),
+        ).length.equals(1);
 
         controller.dismissAll();
         await tester.pumpAndSettle();
-        expect(find.text('Hidden permanent'), findsNothing);
+        check(
+          tester.widgetList(find.text('Hidden permanent')),
+        ).length.equals(0);
       },
     );
   });
@@ -619,7 +628,7 @@ void main() {
       );
 
       await tester.pump();
-      expect(announcements, contains('New message: Ephemeral semantics'));
+      check(announcements).contains('New message: Ephemeral semantics');
     });
 
     testWidgets('showPermanent announces message', (tester) async {
@@ -652,7 +661,7 @@ void main() {
       );
 
       await tester.pump();
-      expect(announcements, contains('New message: Persistent semantics'));
+      check(announcements).contains('New message: Persistent semantics');
     });
   });
 
@@ -679,7 +688,7 @@ void main() {
             decoration.color == customColor;
       });
 
-      expect(iconBackground, findsOneWidget);
+      check(tester.widgetList(iconBackground)).length.equals(1);
     });
 
     group('NotificationController.blocked', () {
@@ -688,7 +697,7 @@ void main() {
         final controller = NotificationController();
 
         controller.blocked = true;
-        expect(controller.blocked, isTrue);
+        check(controller.blocked).equals(true);
 
         controller.showTimed(
           context,
@@ -698,7 +707,7 @@ void main() {
         );
 
         await tester.pump();
-        expect(find.text('Blocked'), findsNothing);
+        check(tester.widgetList(find.text('Blocked'))).length.equals(0);
       });
 
       testWidgets('dismisses active notifications when becoming blocked', (
@@ -715,11 +724,11 @@ void main() {
         );
 
         await tester.pump();
-        expect(find.text('Active'), findsOneWidget);
+        check(tester.widgetList(find.text('Active'))).length.equals(1);
 
         controller.blocked = true;
         await tester.pumpAndSettle();
-        expect(find.text('Active'), findsNothing);
+        check(tester.widgetList(find.text('Active'))).length.equals(0);
       });
 
       testWidgets('allows notifications after unblocking', (tester) async {
@@ -735,10 +744,10 @@ void main() {
           message: 'Should not appear',
         );
         await tester.pump();
-        expect(find.text('Blocked'), findsNothing);
+        check(tester.widgetList(find.text('Blocked'))).length.equals(0);
 
         controller.blocked = false;
-        expect(controller.blocked, isFalse);
+        check(controller.blocked).equals(false);
 
         controller.showTimed(
           context,
@@ -747,24 +756,24 @@ void main() {
           message: 'Should appear',
         );
         await tester.pump();
-        expect(find.text('Unblocked'), findsOneWidget);
+        check(tester.widgetList(find.text('Unblocked'))).length.equals(1);
       });
 
       testWidgets('idempotent block/unblock', (tester) async {
         final controller = NotificationController();
 
         controller.blocked = true;
-        expect(controller.blocked, isTrue);
+        check(controller.blocked).equals(true);
         controller.blocked = true; // no-op
-        expect(controller.blocked, isTrue);
+        check(controller.blocked).equals(true);
 
         controller.blocked = false;
-        expect(controller.blocked, isFalse);
+        check(controller.blocked).equals(false);
         controller.blocked = false; // no-op
-        expect(controller.blocked, isFalse);
+        check(controller.blocked).equals(false);
 
         await tester.pump();
-        expect(tester.takeException(), isNull);
+        check(tester.takeException()).isNull();
       });
     });
 
@@ -790,7 +799,7 @@ void main() {
       );
 
       await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
+      check(tester.takeException()).isNull();
     });
   });
 }

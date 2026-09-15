@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart'
@@ -78,7 +79,7 @@ void main() {
       final first = keys.getKey('alice');
       final second = keys.getKey('alice');
 
-      expect(identical(first, second), isTrue);
+      check(identical(first, second)).equals(true);
     });
 
     test('returns different keys for different identities', () {
@@ -87,7 +88,7 @@ void main() {
       final alice = keys.getKey('alice');
       final bob = keys.getKey('bob');
 
-      expect(identical(alice, bob), isFalse);
+      check(identical(alice, bob)).equals(false);
     });
   });
 
@@ -96,27 +97,28 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(currentSessionProvider), isNull);
-      expect(container.read(currentSessionStateProvider), isNull);
-      expect(
+      check(container.read(currentSessionProvider)).isNull();
+      check(container.read(currentSessionStateProvider)).isNull();
+      check(
         container.read(connectionStateProvider),
-        RoomConnectionState.connecting,
-      );
-      expect(container.read(sessionPhaseProvider), SessionPhase.connecting);
-      expect(container.read(sessionErrorProvider), isNull);
-      expect(container.read(roomStatusProvider), RoomStatus.waitingRoom);
-      expect(container.read(turnStateProvider), TurnState.idle);
-      expect(container.read(sessionParticipantsProvider), isEmpty);
-      expect(container.read(sessionMessagesProvider), isEmpty);
-      expect(container.read(lastSessionMessageProvider), isNull);
-      expect(container.read(hasKeeperDisconnectedProvider), isFalse);
-      expect(container.read(hasKeeperProvider), isFalse);
-      expect(container.read(featuredParticipantProvider), isNull);
-      expect(container.read(speakingNextParticipantProvider), isNull);
-      expect(container.read(currentSessionEventProvider), isNull);
-      expect(container.read(isCurrentUserKeeperProvider), isFalse);
-      expect(container.read(isMyTurnProvider), isFalse);
-      expect(container.read(amNextSpeakerProvider), isFalse);
+      ).equals(RoomConnectionState.connecting);
+      check(
+        container.read(sessionPhaseProvider),
+      ).equals(SessionPhase.connecting);
+      check(container.read(sessionErrorProvider)).isNull();
+      check(container.read(roomStatusProvider)).equals(RoomStatus.waitingRoom);
+      check(container.read(turnStateProvider)).equals(TurnState.idle);
+      check(container.read(sessionParticipantsProvider)).isEmpty();
+      check(container.read(sessionMessagesProvider)).isEmpty();
+      check(container.read(lastSessionMessageProvider)).isNull();
+      check(container.read(hasKeeperDisconnectedProvider)).equals(false);
+      check(container.read(hasKeeperProvider)).equals(false);
+      check(container.read(featuredParticipantProvider)).isNull();
+      check(container.read(speakingNextParticipantProvider)).isNull();
+      check(container.read(currentSessionEventProvider)).isNull();
+      check(container.read(isCurrentUserKeeperProvider)).equals(false);
+      check(container.read(isMyTurnProvider)).equals(false);
+      check(container.read(amNextSpeakerProvider)).equals(false);
     });
 
     test('maps livekit and disconnect errors correctly', () {
@@ -137,9 +139,9 @@ void main() {
       );
       addTearDown(livekitContainer.dispose);
 
-      expect(livekitContainer.read(sessionErrorProvider), livekitError);
-      expect(livekitContainer.read(sessionLivekitErrorProvider), isNotNull);
-      expect(livekitContainer.read(disconnectionReasonProvider), isNull);
+      check(livekitContainer.read(sessionErrorProvider)).equals(livekitError);
+      check(livekitContainer.read(sessionLivekitErrorProvider)).isNotNull();
+      check(livekitContainer.read(disconnectionReasonProvider)).isNull();
 
       final disconnectContainer = ProviderContainer(
         overrides: [
@@ -150,12 +152,13 @@ void main() {
       );
       addTearDown(disconnectContainer.dispose);
 
-      expect(disconnectContainer.read(sessionErrorProvider), disconnectError);
-      expect(disconnectContainer.read(sessionLivekitErrorProvider), isNull);
-      expect(
+      check(
+        disconnectContainer.read(sessionErrorProvider),
+      ).equals(disconnectError);
+      check(disconnectContainer.read(sessionLivekitErrorProvider)).isNull();
+      check(
         disconnectContainer.read(disconnectionReasonProvider),
-        DisconnectReason.unknown,
-      );
+      ).equals(DisconnectReason.unknown);
     });
 
     test('computes selectors from state', () {
@@ -188,21 +191,22 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      expect(
+      check(
         container.read(connectionStateProvider),
-        RoomConnectionState.connected,
-      );
-      expect(container.read(sessionPhaseProvider), SessionPhase.connected);
-      expect(container.read(roomStatusProvider), RoomStatus.active);
-      expect(container.read(turnStateProvider), TurnState.passing);
-      expect(container.read(sessionParticipantsProvider), isEmpty);
-      expect(container.read(hasKeeperDisconnectedProvider), isTrue);
-      expect(container.read(sessionMessagesProvider), hasLength(1));
-      expect(container.read(lastSessionMessageProvider)?.id, 'm1');
-      expect(container.read(roundMessageProvider), 'focus');
-      expect(container.read(hasKeeperProvider), isFalse);
-      expect(container.read(featuredParticipantProvider), isNull);
-      expect(container.read(speakingNextParticipantProvider), isNull);
+      ).equals(RoomConnectionState.connected);
+      check(
+        container.read(sessionPhaseProvider),
+      ).equals(SessionPhase.connected);
+      check(container.read(roomStatusProvider)).equals(RoomStatus.active);
+      check(container.read(turnStateProvider)).equals(TurnState.passing);
+      check(container.read(sessionParticipantsProvider)).isEmpty();
+      check(container.read(hasKeeperDisconnectedProvider)).equals(true);
+      check(container.read(sessionMessagesProvider)).length.equals(1);
+      check(container.read(lastSessionMessageProvider)?.id).equals('m1');
+      check(container.read(roundMessageProvider)).equals('focus');
+      check(container.read(hasKeeperProvider)).equals(false);
+      check(container.read(featuredParticipantProvider)).isNull();
+      check(container.read(speakingNextParticipantProvider)).isNull();
     });
 
     test('computes active session properties correctly', () {
@@ -235,20 +239,20 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      expect(container.read(hasKeeperProvider), isTrue);
-      expect(container.read(featuredParticipantProvider)?.identity, 'keeper');
-      expect(
+      check(container.read(hasKeeperProvider)).equals(true);
+      check(
+        container.read(featuredParticipantProvider)?.identity,
+      ).equals('keeper');
+      check(
         container.read(speakingNextParticipantProvider)?.identity,
-        'alice',
-      );
+      ).equals('alice');
 
-      expect(container.read(isCurrentUserKeeperProvider), isTrue);
-      expect(container.read(isMyTurnProvider), isFalse);
-      expect(container.read(amNextSpeakerProvider), isTrue);
-      expect(
+      check(container.read(isCurrentUserKeeperProvider)).equals(true);
+      check(container.read(isMyTurnProvider)).equals(false);
+      check(container.read(amNextSpeakerProvider)).equals(true);
+      check(
         container.read(resolveCurrentScreenProvider),
-        RoomScreen.listening,
-      );
+      ).equals(RoomScreen.listening);
     });
 
     test('resolveCurrentScreen resolves different states', () {
@@ -298,7 +302,7 @@ void main() {
       }
 
       // No room -> disconnected
-      expect(
+      check(
         containerForState(
           RoomConnectionState.connected,
           RoomStatus.active,
@@ -307,11 +311,10 @@ void main() {
           'alice',
           noRoom: true,
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.disconnected,
-      );
+      ).equals(RoomScreen.disconnected);
 
       // error -> RoomScreen.error
-      expect(
+      check(
         containerForState(
           RoomConnectionState.error,
           RoomStatus.active,
@@ -319,11 +322,10 @@ void main() {
           'alice',
           'alice',
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.error,
-      );
+      ).equals(RoomScreen.error);
 
       // loading -> RoomScreen.loading
-      expect(
+      check(
         containerForState(
           RoomConnectionState.connecting,
           RoomStatus.active,
@@ -331,11 +333,10 @@ void main() {
           'alice',
           'alice',
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.loading,
-      );
+      ).equals(RoomScreen.loading);
 
       // connecting without room (fast-join race) -> RoomScreen.loading
-      expect(
+      check(
         containerForState(
           RoomConnectionState.connecting,
           RoomStatus.active,
@@ -344,12 +345,11 @@ void main() {
           'alice',
           noRoom: true,
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.loading,
-      );
+      ).equals(RoomScreen.loading);
 
       // Transient disconnect
       // disconnected -> RoomScreen.loading
-      expect(
+      check(
         containerForState(
           RoomConnectionState.disconnected,
           RoomStatus.waitingRoom,
@@ -358,11 +358,10 @@ void main() {
           'alice',
           wasJoining: true,
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.loading,
-      );
+      ).equals(RoomScreen.loading);
 
       // disconnected with join-failure -> RoomScreen.loading
-      expect(
+      check(
         containerForState(
           RoomConnectionState.disconnected,
           RoomStatus.waitingRoom,
@@ -372,11 +371,10 @@ void main() {
           error: const RoomDisconnectionError(DisconnectReason.joinFailure),
           wasJoining: true,
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.loading,
-      );
+      ).equals(RoomScreen.loading);
 
       // disconnected with clientInitiated -> RoomScreen.loading
-      expect(
+      check(
         containerForState(
           RoomConnectionState.disconnected,
           RoomStatus.waitingRoom,
@@ -386,11 +384,10 @@ void main() {
           error: const RoomDisconnectionError(DisconnectReason.clientInitiated),
           wasJoining: true,
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.loading,
-      );
+      ).equals(RoomScreen.loading);
 
       // connected, RoomStatus.ended -> RoomScreen.disconnected
-      expect(
+      check(
         containerForState(
           RoomConnectionState.connected,
           RoomStatus.ended,
@@ -398,11 +395,10 @@ void main() {
           'alice',
           'alice',
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.disconnected,
-      );
+      ).equals(RoomScreen.disconnected);
 
       // TurnState.passing and amNextSpeaker -> RoomScreen.receiving
-      expect(
+      check(
         containerForState(
           RoomConnectionState.connected,
           RoomStatus.active,
@@ -410,11 +406,10 @@ void main() {
           'keeper',
           'alice',
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.receiving,
-      );
+      ).equals(RoomScreen.receiving);
 
       // My turn
-      expect(
+      check(
         containerForState(
           RoomConnectionState.connected,
           RoomStatus.active,
@@ -422,8 +417,7 @@ void main() {
           'alice',
           'keeper',
         ).read(resolveCurrentScreenProvider),
-        RoomScreen.speaking,
-      );
+      ).equals(RoomScreen.speaking);
     });
   });
 }

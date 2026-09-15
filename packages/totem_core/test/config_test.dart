@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:totem_core/core/config/app_config.dart';
 
 void main() {
@@ -13,13 +14,12 @@ void main() {
     test('$package/.env builds an AppConfig', () {
       TestWidgetsFlutterBinding.ensureInitialized();
       final envFile = File('../$package/.env');
-      expect(
-        envFile.existsSync(),
-        isTrue,
-        reason:
+      check(
+        because:
             'Missing ${envFile.path}; generate it with `make env-dev` '
             '(or scripts/setup_env.dart <flavor>). See config/README.md.',
-      );
+        envFile.existsSync(),
+      ).equals(true);
       AppConfig.parse(envFile.readAsStringSync());
     });
   }

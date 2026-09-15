@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
@@ -112,22 +113,18 @@ void main() {
   group('buildHomeUrl', () {
     final router = WebTotemRouter();
     test('returns correct URLs for each HomeRoute', () {
-      expect(
+      check(
         router.buildHomeUrl(HomeRoutes.home),
-        router.baseUri.resolve('users/dashboard/').toString(),
-      );
-      expect(
+      ).equals(router.baseUri.resolve('users/dashboard/').toString());
+      check(
         router.buildHomeUrl(HomeRoutes.spaces),
-        router.baseUri.resolve('spaces/').toString(),
-      );
-      expect(
+      ).equals(router.baseUri.resolve('spaces/').toString());
+      check(
         router.buildHomeUrl(HomeRoutes.blog),
-        router.baseUri.resolve('blog/').toString(),
-      );
-      expect(
+      ).equals(router.baseUri.resolve('blog/').toString());
+      check(
         router.buildHomeUrl(HomeRoutes.profile),
-        router.baseUri.resolve('users/profile/').toString(),
-      );
+      ).equals(router.baseUri.resolve('users/profile/').toString());
     });
   });
 
@@ -139,10 +136,10 @@ void main() {
       );
 
       final routes = router.configuration.routes;
-      expect(routes.length, 3);
-      expect((routes[0] as GoRoute).path, '/');
-      expect((routes[1] as GoRoute).path, '/__version');
-      expect((routes[2] as GoRoute).path, '/:slug');
+      check(routes).length.equals(3);
+      check((routes[0] as GoRoute).path).equals('/');
+      check((routes[1] as GoRoute).path).equals('/__version');
+      check((routes[2] as GoRoute).path).equals('/:slug');
     });
 
     testWidgets('/:slug route captures the slug path parameter', (
@@ -166,8 +163,8 @@ void main() {
       router.go('/$slug');
       await tester.pump();
 
-      expect(router.state.uri.path, '/$slug');
-      expect(router.state.pathParameters['slug'], slug);
+      check(router.state.uri.path).equals('/$slug');
+      check(router.state.pathParameters['slug']).equals(slug);
     });
 
     testWidgets('/ route matches the root path', (tester) async {
@@ -179,7 +176,7 @@ void main() {
       router.go('/');
       await tester.pump();
 
-      expect(router.state.uri.path, '/');
+      check(router.state.uri.path).equals('/');
     });
   });
 
@@ -205,24 +202,26 @@ void main() {
       await tester.pump();
 
       // _WebRedirectScreen displays a Scaffold.
-      expect(find.byType(Scaffold), findsOneWidget);
+      check(tester.widgetList(find.byType(Scaffold))).length.equals(1);
       // PreJoinScreen must NOT be shown.
-      expect(find.byType(PreJoinScreen), findsNothing);
+      check(tester.widgetList(find.byType(PreJoinScreen))).length.equals(0);
     });
 
     test('isAuthenticated returns correct values for each auth status', () {
-      expect(
+      check(
         _FakeAuthController(
           AuthState.authenticated(user: _fakeUser),
         ).isAuthenticated,
-        isTrue,
-      );
-      expect(
+      ).equals(true);
+      check(
         _FakeAuthController(AuthState.unauthenticated()).isAuthenticated,
-        isFalse,
-      );
-      expect(_FakeAuthController(AuthState.initial()).isAuthenticated, isFalse);
-      expect(_FakeAuthController(AuthState.loading()).isAuthenticated, isFalse);
+      ).equals(false);
+      check(
+        _FakeAuthController(AuthState.initial()).isAuthenticated,
+      ).equals(false);
+      check(
+        _FakeAuthController(AuthState.loading()).isAuthenticated,
+      ).equals(false);
     });
 
     testWidgets('/ (root) shows redirect screen regardless of auth state', (
@@ -237,7 +236,7 @@ void main() {
       await tester.pump();
 
       // Root always redirects to origin via the redirect screen.
-      expect(find.byType(Scaffold), findsOneWidget);
+      check(tester.widgetList(find.byType(Scaffold))).length.equals(1);
     });
   });
 }

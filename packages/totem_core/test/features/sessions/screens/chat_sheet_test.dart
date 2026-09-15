@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -244,14 +245,13 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
-      expect(
-        find.text('Only the Keeper can post messages here'),
-        findsOneWidget,
-      );
-      expect(find.text('No messages yet'), findsOneWidget);
-      expect(find.byType(TextField), findsNothing);
-      expect(find.byType(IconButton), findsNothing);
-      expect(find.text('Welcome! 🙏'), findsNothing);
+      check(
+        tester.widgetList(find.text('Only the Keeper can post messages here')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
+      check(tester.widgetList(find.byType(TextField))).length.equals(0);
+      check(tester.widgetList(find.byType(IconButton))).length.equals(0);
+      check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(0);
     });
 
     testWidgets('shows the keeper composer and quick messages', (tester) async {
@@ -263,12 +263,16 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
-      expect(find.text('Long press to send a quick message'), findsOneWidget);
-      expect(find.text('No messages yet'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
-      expect(find.byType(IconButton), findsOneWidget);
-      expect(find.text('Welcome! 🙏'), findsOneWidget);
-      expect(find.text('Please mute your mic'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Long press to send a quick message')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
+      check(tester.widgetList(find.byType(TextField))).length.equals(1);
+      check(tester.widgetList(find.byType(IconButton))).length.equals(1);
+      check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(1);
+      check(
+        tester.widgetList(find.text('Please mute your mic')),
+      ).length.equals(1);
     });
 
     testWidgets('renders my messages and other messages', (tester) async {
@@ -303,11 +307,11 @@ void main() {
         ),
       );
 
-      expect(find.byType(MyChatBubble), findsOneWidget);
-      expect(find.byType(OtherChatBubble), findsOneWidget);
-      expect(find.text('My message'), findsOneWidget);
-      expect(find.text('Their message'), findsOneWidget);
-      expect(find.text('No messages yet'), findsNothing);
+      check(tester.widgetList(find.byType(MyChatBubble))).length.equals(1);
+      check(tester.widgetList(find.byType(OtherChatBubble))).length.equals(1);
+      check(tester.widgetList(find.text('My message'))).length.equals(1);
+      check(tester.widgetList(find.text('Their message'))).length.equals(1);
+      check(tester.widgetList(find.text('No messages yet'))).length.equals(0);
     });
 
     testWidgets('scrolls to the newest message when a new message arrives', (
@@ -335,13 +339,13 @@ void main() {
       final listView = tester.widget<ListView>(find.byType(ListView));
       final controller = listView.controller!;
 
-      expect(find.text('Message 19'), findsOneWidget);
+      check(tester.widgetList(find.text('Message 19'))).length.equals(1);
 
       controller.jumpTo(0);
       await tester.pumpAndSettle();
 
-      expect(controller.position.pixels, 0);
-      expect(find.text('Message 0'), findsOneWidget);
+      check(controller.position.pixels).equals(0);
+      check(tester.widgetList(find.text('Message 0'))).length.equals(1);
 
       final updatedMessages = [
         ...messages,
@@ -360,7 +364,9 @@ void main() {
       await tester.pump();
       await tester.pumpAndSettle();
 
-      expect(controller.position.pixels, controller.position.maxScrollExtent);
+      check(
+        controller.position.pixels,
+      ).equals(controller.position.maxScrollExtent);
     });
 
     testWidgets('sends a trimmed message from the composer', (tester) async {
@@ -377,7 +383,7 @@ void main() {
       await tester.pump();
 
       verify(() => messaging.sendMessage('Hello chat')).called(1);
-      expect(find.text('Hello chat'), findsNothing);
+      check(tester.widgetList(find.text('Hello chat'))).length.equals(0);
     });
 
     testWidgets('sends a quick message on tap on desktop', (tester) async {
@@ -391,7 +397,9 @@ void main() {
           authState: AuthState.unauthenticated(),
         );
 
-        expect(find.text('Tap to send a quick message'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Tap to send a quick message')),
+        ).length.equals(1);
 
         await tester.tap(find.text('Please mute your mic'));
         await tester.pump();
@@ -415,7 +423,9 @@ void main() {
           authState: AuthState.unauthenticated(),
         );
 
-        expect(find.text('Long press to send a quick message'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Long press to send a quick message')),
+        ).length.equals(1);
 
         // A plain tap should not send on mobile.
         await tester.tap(find.text('Please mute your mic'));

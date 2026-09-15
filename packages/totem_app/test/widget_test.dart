@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/main.dart' as app;
 import 'package:totem_app/navigation/app_router.dart';
@@ -34,7 +35,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(app.TotemApp), findsOneWidget);
+    check(tester.widgetList(find.byType(app.TotemApp))).length.equals(1);
   });
 }
 

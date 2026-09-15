@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
@@ -64,26 +65,26 @@ void main() {
           initiallyOffline: true,
         );
 
-        expect(tester.takeException(), isNull);
-        expect(find.byType(CustomScrollView), findsOneWidget);
-        expect(
+        check(tester.takeException()).isNull();
+        check(
+          tester.widgetList(find.byType(CustomScrollView)),
+        ).length.equals(1);
+        check(
           tester
               .state<ScrollableState>(find.byType(Scrollable))
               .position
               .maxScrollExtent,
-          0,
-        );
+        ).equals(0);
 
         await tester.drag(find.byType(CustomScrollView), const Offset(0, -100));
         await tester.pumpAndSettle();
 
-        expect(
+        check(
           tester
               .state<ScrollableState>(find.byType(Scrollable))
               .position
               .pixels,
-          0,
-        );
+        ).equals(0);
       });
 
       testWidgets('scrolls instead of overflowing in short landscape', (
@@ -104,17 +105,19 @@ void main() {
           initiallyOffline: true,
         );
 
-        expect(tester.takeException(), isNull);
+        check(tester.takeException()).isNull();
         final scrollable = tester.state<ScrollableState>(
           find.byType(Scrollable),
         );
-        expect(scrollable.position.maxScrollExtent, greaterThan(0));
+        check(scrollable.position.maxScrollExtent).isGreaterThan(0);
 
         await tester.drag(find.byType(CustomScrollView), const Offset(0, -100));
         await tester.pumpAndSettle();
 
-        expect(scrollable.position.pixels, greaterThan(0));
-        expect(find.text('Go back to Session Details'), findsOneWidget);
+        check(scrollable.position.pixels).isGreaterThan(0);
+        check(
+          tester.widgetList(find.text('Go back to Session Details')),
+        ).length.equals(1);
       });
     });
 
@@ -122,14 +125,17 @@ void main() {
       testWidgets('shows default title and subtitle', (tester) async {
         await pumpErrorScreen(tester, onRetry: () async {});
 
-        expect(find.text('Something went wrong'), findsOneWidget);
-        expect(
-          find.text(
-            "We couldn't connect you to this session. "
-            'Please check your internet connection or try again.',
+        check(
+          tester.widgetList(find.text('Something went wrong')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(
+            find.text(
+              "We couldn't connect you to this session. "
+              'Please check your internet connection or try again.',
+            ),
           ),
-          findsOneWidget,
-        );
+        ).length.equals(1);
       });
 
       testWidgets('shows retry button when onRetry is provided', (
@@ -137,15 +143,23 @@ void main() {
       ) async {
         await pumpErrorScreen(tester, onRetry: () async {});
 
-        expect(find.text('Try Joining Again'), findsOneWidget);
-        expect(find.byType(ConfirmationDialogButton), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Try Joining Again')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.byType(ConfirmationDialogButton)),
+        ).length.equals(1);
       });
 
       testWidgets('hides retry button when onRetry is null', (tester) async {
         await pumpErrorScreen(tester);
 
-        expect(find.text('Try Joining Again'), findsNothing);
-        expect(find.byType(ConfirmationDialogButton), findsNothing);
+        check(
+          tester.widgetList(find.text('Try Joining Again')),
+        ).length.equals(0);
+        check(
+          tester.widgetList(find.byType(ConfirmationDialogButton)),
+        ).length.equals(0);
       });
 
       testWidgets('retry button invokes onRetry callback', (tester) async {
@@ -155,7 +169,7 @@ void main() {
         await tester.tap(find.text('Try Joining Again'));
         await tester.pump();
 
-        expect(retryCount, 1);
+        check(retryCount).equals(1);
       });
     });
 
@@ -167,22 +181,26 @@ void main() {
           initiallyOffline: true,
         );
 
-        expect(find.text("You're Offline"), findsOneWidget);
-        expect(
-          find.text(
-            'Video sessions require an active internet connection.\n'
-            'Check your Wi-Fi or mobile data, then tap below to rejoin.',
+        check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
+        check(
+          tester.widgetList(
+            find.text(
+              'Video sessions require an active internet connection.\n'
+              'Check your Wi-Fi or mobile data, then tap below to rejoin.',
+            ),
           ),
-          findsOneWidget,
-        );
-        expect(
-          find.byWidgetPredicate(
-            (widget) =>
-                widget is TotemIcon && widget.icon == TotemIcons.wifiOff,
+        ).length.equals(1);
+        check(
+          tester.widgetList(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is TotemIcon && widget.icon == TotemIcons.wifiOff,
+            ),
           ),
-          findsOneWidget,
-        );
-        expect(find.text('Something went wrong'), findsNothing);
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.text('Something went wrong')),
+        ).length.equals(0);
       });
 
       testWidgets('reacts to connectivity changes while visible', (
@@ -196,15 +214,19 @@ void main() {
           onRetry: () async {},
           connectivityStream: connectivityChanges.stream,
         );
-        expect(find.text('Something went wrong'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Something went wrong')),
+        ).length.equals(1);
 
         connectivityChanges.add(true);
         await tester.pumpAndSettle();
-        expect(find.text("You're Offline"), findsOneWidget);
+        check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
 
         connectivityChanges.add(false);
         await tester.pumpAndSettle();
-        expect(find.text('Something went wrong'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Something went wrong')),
+        ).length.equals(1);
       });
     });
 
@@ -224,7 +246,9 @@ void main() {
           onRetry: () async {},
         );
 
-        expect(find.text('Something went wrong'), findsNothing);
+        check(
+          tester.widgetList(find.text('Something went wrong')),
+        ).length.equals(0);
       });
     });
 
@@ -246,8 +270,12 @@ void main() {
           onRetry: () async {},
         );
 
-        expect(find.text('Something went wrong'), findsNothing);
-        expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Something went wrong')),
+        ).length.equals(0);
+        check(
+          tester.widgetList(find.byType(SessionDisconnectedScreen)),
+        ).length.equals(1);
       });
     });
   });

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
@@ -124,7 +125,7 @@ void main() {
         final controller = container.read(
           sessionDeviceControllerProvider(mockSession).notifier,
         )..resetSpeakerRoutingDefaults();
-        expect(controller.userSpeakerPreference, isTrue);
+        check(controller.userSpeakerPreference).equals(true);
       });
     });
   });

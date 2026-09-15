@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -48,7 +49,7 @@ void main() {
       DateTime.now().subtract(const Duration(minutes: 2)),
     );
 
-    expect(heightWithTimer, heightWithoutTimer);
+    check(heightWithTimer).equals(heightWithoutTimer);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

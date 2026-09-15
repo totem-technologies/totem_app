@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -211,15 +212,13 @@ void main() {
           .read(preJoinFlowControllerProvider(_slug).notifier)
           .requestJoin();
 
-      expect(outcome, PreJoinJoinOutcome.confirmationRequired);
-      expect(
+      check(outcome).equals(PreJoinJoinOutcome.confirmationRequired);
+      check(
         container.read(preJoinFlowControllerProvider(_slug)).phase,
-        PreJoinFlowPhase.idle,
-      );
-      expect(
+      ).equals(PreJoinFlowPhase.idle);
+      check(
         container.read(preJoinFlowControllerProvider(_slug)).sessionOptions,
-        isNull,
-      );
+      ).isNull();
     },
   );
 
@@ -238,15 +237,13 @@ void main() {
         .read(preJoinFlowControllerProvider(_slug).notifier)
         .requestJoin();
 
-    expect(outcome, PreJoinJoinOutcome.joined);
-    expect(
+    check(outcome).equals(PreJoinJoinOutcome.joined);
+    check(
       _SuccessfulSessionController.receivedMedia?.cameraTrack,
-      factory.videoTracks.single,
-    );
-    expect(
+    ).equals(factory.videoTracks.single);
+    check(
       _SuccessfulSessionController.receivedMedia?.microphoneTrack,
-      factory.audioTracks.single,
-    );
+    ).equals(factory.audioTracks.single);
   });
 
   test('permission revocation prevents joining with stale tracks', () async {
@@ -266,12 +263,11 @@ void main() {
         .read(preJoinFlowControllerProvider(_slug).notifier)
         .requestJoin();
 
-    expect(outcome, PreJoinJoinOutcome.permissionsDenied);
-    expect(_SuccessfulSessionController.receivedMedia, isNull);
-    expect(
+    check(outcome).equals(PreJoinJoinOutcome.permissionsDenied);
+    check(_SuccessfulSessionController.receivedMedia).isNull();
+    check(
       container.read(preJoinFlowControllerProvider(_slug)).phase,
-      PreJoinFlowPhase.idle,
-    );
+    ).equals(PreJoinFlowPhase.idle);
   });
 
   test('native join succeeds when no camera or microphone exists', () async {
@@ -285,16 +281,16 @@ void main() {
     await _waitForMedia(container);
 
     final mediaState = container.read(preJoinMediaControllerProvider(_slug));
-    expect(mediaState.camera.phase, PreJoinCapturePhase.unavailable);
-    expect(mediaState.microphone.phase, PreJoinCapturePhase.unavailable);
+    check(mediaState.camera.phase).equals(PreJoinCapturePhase.unavailable);
+    check(mediaState.microphone.phase).equals(PreJoinCapturePhase.unavailable);
 
     final outcome = await container
         .read(preJoinFlowControllerProvider(_slug).notifier)
         .requestJoin();
 
-    expect(outcome, PreJoinJoinOutcome.joined);
-    expect(_SuccessfulSessionController.receivedMedia?.cameraTrack, isNull);
-    expect(_SuccessfulSessionController.receivedMedia?.microphoneTrack, isNull);
+    check(outcome).equals(PreJoinJoinOutcome.joined);
+    check(_SuccessfulSessionController.receivedMedia?.cameraTrack).isNull();
+    check(_SuccessfulSessionController.receivedMedia?.microphoneTrack).isNull();
   });
 
   test(
@@ -320,23 +316,22 @@ void main() {
       await resetStarted.future;
 
       final detached = container.read(preJoinMediaControllerProvider(_slug));
-      expect(detached.transferred, isTrue);
-      expect(detached.camera.track, isNull);
-      expect(detached.microphone.track, isNull);
-      expect(factory.videoTracks, hasLength(1));
-      expect(factory.audioTracks, hasLength(1));
+      check(detached.transferred).equals(true);
+      check(detached.camera.track).isNull();
+      check(detached.microphone.track).isNull();
+      check(factory.videoTracks).length.equals(1);
+      check(factory.audioTracks).length.equals(1);
 
       resetGate.complete();
       final outcome = await outcomeFuture;
 
-      expect(outcome, PreJoinJoinOutcome.retryableFailure);
-      expect(_RetryableSessionController.resets, 1);
-      expect(factory.videoTracks, hasLength(2));
-      expect(factory.audioTracks, hasLength(2));
-      expect(
+      check(outcome).equals(PreJoinJoinOutcome.retryableFailure);
+      check(_RetryableSessionController.resets).equals(1);
+      check(factory.videoTracks).length.equals(2);
+      check(factory.audioTracks).length.equals(2);
+      check(
         container.read(preJoinFlowControllerProvider(_slug)).phase,
-        PreJoinFlowPhase.idle,
-      );
+      ).equals(PreJoinFlowPhase.idle);
       _RetryableSessionController.resetStarted = null;
       _RetryableSessionController.resetGate = null;
     },

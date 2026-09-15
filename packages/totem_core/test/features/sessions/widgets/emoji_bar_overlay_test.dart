@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 
@@ -39,7 +40,7 @@ void main() {
       await tester.pumpAndSettle();
 
       for (final emoji in EmojiBar.defaultEmojis) {
-        expect(find.text(emoji), findsOneWidget);
+        check(tester.widgetList(find.text(emoji))).length.equals(1);
       }
     });
 
@@ -57,12 +58,11 @@ void main() {
       // Pump well past the old 4-second displayDuration
       await tester.pump(const Duration(seconds: 6));
 
-      expect(dismissed, isFalse, reason: 'Should not auto-dismiss');
-      expect(
-        find.byType(EmojiBar),
-        findsOneWidget,
-        reason: 'EmojiBar should still be visible',
-      );
+      check(because: 'Should not auto-dismiss', dismissed).equals(false);
+      check(
+        because: 'EmojiBar should still be visible',
+        tester.widgetList(find.byType(EmojiBar)),
+      ).length.equals(1);
     });
 
     testWidgets('selecting an emoji calls onEmojiSelected', (tester) async {
@@ -82,8 +82,11 @@ void main() {
       await tester.tap(find.text(EmojiBar.defaultEmojis.first));
       await tester.pumpAndSettle();
 
-      expect(selectedEmoji, equals(EmojiBar.defaultEmojis.first));
-      expect(dismissed, isFalse, reason: 'Overlay should not be dismissed');
+      check(selectedEmoji).equals(EmojiBar.defaultEmojis.first);
+      check(
+        because: 'Overlay should not be dismissed',
+        dismissed,
+      ).equals(false);
     });
 
     testWidgets('tapping outside the menu dismisses it', (tester) async {
@@ -102,11 +105,10 @@ void main() {
       await tester.tapAt(const Offset(5, 5));
       await tester.pumpAndSettle();
 
-      expect(
+      check(
+        because: 'Tapping outside should dismiss the overlay',
         dismissed,
-        isTrue,
-        reason: 'Tapping outside should dismiss the overlay',
-      );
+      ).equals(true);
     });
 
     testWidgets('dismiss plays a fade-out animation before completing', (
@@ -128,19 +130,17 @@ void main() {
       await tester.pump();
 
       // Should still be visible mid-animation
-      expect(
+      check(
+        because: 'onDismissed should not fire mid-animation',
         dismissed,
-        isFalse,
-        reason: 'onDismissed should not fire mid-animation',
-      );
+      ).equals(false);
 
       await tester.pumpAndSettle();
 
-      expect(
+      check(
+        because: 'onDismissed should fire after animation completes',
         dismissed,
-        isTrue,
-        reason: 'onDismissed should fire after animation completes',
-      );
+      ).equals(true);
     });
   });
 }

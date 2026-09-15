@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/smart_name_text.dart';
 
@@ -39,7 +40,7 @@ void main() {
         maxWidth: 200,
       );
 
-      expect(find.text('John'), findsOneWidget);
+      check(tester.widgetList(find.text('John'))).length.equals(1);
     });
 
     testWidgets('abbreviates name when it does not fit', (tester) async {
@@ -53,9 +54,9 @@ void main() {
 
       // Should show abbreviated form: "Christopher M."
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.data, equals('Christopher M.'));
+      check(widget.data).equals('Christopher M.');
     });
 
     testWidgets('handles single word names', (tester) async {
@@ -66,7 +67,7 @@ void main() {
         maxWidth: 100,
       );
 
-      expect(find.text('Madonna'), findsOneWidget);
+      check(tester.widgetList(find.text('Madonna'))).length.equals(1);
     });
 
     testWidgets('handles names with multiple spaces', (tester) async {
@@ -78,9 +79,9 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.data, isNotNull);
+      check(widget.data).isNotNull();
     });
 
     testWidgets('trims leading and trailing whitespace', (tester) async {
@@ -92,11 +93,11 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.data, isNotEmpty);
-      expect(widget.data?.startsWith(' '), isFalse);
-      expect(widget.data?.endsWith(' '), isFalse);
+      check(widget.data!).isNotEmpty();
+      check(widget.data!).not((it) => it.startsWith(' '));
+      check(widget.data!).not((it) => it.endsWith(' '));
     });
 
     testWidgets('renders emoji correctly', (tester) async {
@@ -108,9 +109,9 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.data, contains('😀'));
+      check(widget.data!).contains('😀');
     });
 
     testWidgets('preserves emoji in full name', (tester) async {
@@ -122,11 +123,11 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.data, contains('Alice'));
-      expect(widget.data, contains('🚀'));
-      expect(widget.data, contains('Bob'));
+      check(widget.data!).contains('Alice');
+      check(widget.data!).contains('🚀');
+      check(widget.data!).contains('Bob');
     });
 
     testWidgets('abbreviates correctly with emoji in last name', (
@@ -140,11 +141,11 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.data, contains('Bruno'));
+      check(widget.data!).contains('Bruno');
       // Should contain a period for abbreviation
-      expect(widget.data, contains('.'));
+      check(widget.data!).contains('.');
     });
 
     testWidgets('handles name with only emoji', (tester) async {
@@ -156,9 +157,9 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.data, isNotEmpty);
+      check(widget.data!).isNotEmpty();
     });
 
     testWidgets('respects custom abbreviationThreshold', (tester) async {
@@ -172,7 +173,7 @@ void main() {
 
       // With a large threshold, the text should be rendered
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
     });
 
     testWidgets('applies correct text alignment', (tester) async {
@@ -185,9 +186,9 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.textAlign, equals(TextAlign.left));
+      check(widget.textAlign).equals(TextAlign.left);
     });
 
     testWidgets('applies correct text alignment center', (tester) async {
@@ -200,9 +201,9 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.textAlign, equals(TextAlign.center));
+      check(widget.textAlign).equals(TextAlign.center);
     });
 
     testWidgets('sets maxLines to 1 and ellipsis overflow', (tester) async {
@@ -214,10 +215,10 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.maxLines, equals(1));
-      expect(widget.overflow, equals(TextOverflow.ellipsis));
+      check(widget.maxLines).equals(1);
+      check(widget.overflow).equals(TextOverflow.ellipsis);
     });
 
     testWidgets('applies custom style', (tester) async {
@@ -235,9 +236,9 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.style, equals(customStyle));
+      check(widget.style).equals(customStyle);
     });
 
     testWidgets('handles very narrow width', (tester) async {
@@ -249,9 +250,9 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.data, isNotEmpty);
+      check(widget.data!).isNotEmpty();
     });
 
     testWidgets('handles empty-like strings', (tester) async {
@@ -263,7 +264,7 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
     });
 
     testWidgets('abbreviation uses first char of last word', (tester) async {
@@ -285,8 +286,8 @@ void main() {
         final text = find.byType(Text);
         final widget = tester.widget<Text>(text);
         final firstChar = lastName.characters.first;
-        expect(widget.data, contains(firstChar.toUpperCase()));
-        expect(widget.data, contains('.'));
+        check(widget.data!).contains(firstChar.toUpperCase());
+        check(widget.data!).contains('.');
 
         // Clean up for next iteration
         await tester.pumpWidget(const SizedBox());
@@ -302,10 +303,10 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.data, contains('José'));
-      expect(widget.data, contains('García'));
+      check(widget.data!).contains('José');
+      check(widget.data!).contains('García');
     });
 
     testWidgets('handles complex emoji sequences', (tester) async {
@@ -318,9 +319,9 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
       final widget = tester.widget<Text>(text);
-      expect(widget.data, isNotEmpty);
+      check(widget.data!).isNotEmpty();
     });
 
     testWidgets('no null style crashes widget', (tester) async {
@@ -332,8 +333,8 @@ void main() {
       );
 
       final text = find.byType(Text);
-      expect(text, findsOneWidget);
-      expect(find.byType(SmartNameText), findsOneWidget);
+      check(tester.widgetList(text)).length.equals(1);
+      check(tester.widgetList(find.byType(SmartNameText))).length.equals(1);
     });
   });
 }

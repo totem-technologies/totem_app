@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -33,7 +34,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      expect(container.read(isCurrentMessagingUserKeeperProvider), isTrue);
+      check(container.read(isCurrentMessagingUserKeeperProvider)).equals(true);
     });
 
     test('is false when the current user is not staff', () {
@@ -42,14 +43,14 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      expect(container.read(isCurrentMessagingUserKeeperProvider), isFalse);
+      check(container.read(isCurrentMessagingUserKeeperProvider)).equals(false);
     });
 
     test('is false when there is no authenticated user', () {
       final container = _containerFor(AuthState.unauthenticated());
       addTearDown(container.dispose);
 
-      expect(container.read(isCurrentMessagingUserKeeperProvider), isFalse);
+      check(container.read(isCurrentMessagingUserKeeperProvider)).equals(false);
     });
   });
 }

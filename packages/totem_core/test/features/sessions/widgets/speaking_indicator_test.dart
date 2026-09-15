@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, logger;
 import 'package:material_ui/material_ui.dart';
@@ -84,7 +85,7 @@ void main() {
         child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
       );
 
-      expect(find.byType(TotemIcon), findsOneWidget);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
     });
 
     testWidgets('shows the muted icon when no audio track is provided', (
@@ -95,8 +96,8 @@ void main() {
         child: const SpeakingIndicatorAudioTrack(audioTrack: null),
       );
 
-      expect(find.byType(TotemIcon), findsOneWidget);
-      expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+      check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(20);
     });
 
     testWidgets(
@@ -108,7 +109,7 @@ void main() {
           child: const SpeakingIndicatorAudioTrack(audioTrack: null),
         );
 
-        expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
+        check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(20);
       },
     );
 
@@ -121,7 +122,7 @@ void main() {
           child: const SpeakingIndicatorAudioTrack(audioTrack: null),
         );
 
-        expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
+        check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(20);
       },
     );
 
@@ -140,22 +141,28 @@ void main() {
           child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
         );
 
-        expect(find.byType(SoundWaveformWidget), findsOneWidget);
-        expect(find.byType(TotemIcon), findsNothing);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
 
         await audioTrack.mute(stopOnMute: false);
         trackListener.emit(MockTrackEvent());
         await tester.pump();
 
-        expect(find.byType(TotemIcon), findsOneWidget);
-        expect(find.byType(SoundWaveformWidget), findsNothing);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(0);
 
         await audioTrack.unmute(stopOnMute: false);
         trackListener.emit(MockTrackEvent());
         await tester.pump();
 
-        expect(find.byType(SoundWaveformWidget), findsOneWidget);
-        expect(find.byType(TotemIcon), findsNothing);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
       },
     );
   });
@@ -169,7 +176,7 @@ void main() {
         child: SpeakingIndicator(participant: remoteParticipant),
       );
 
-      expect(find.byType(TotemIcon), findsOneWidget);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
     });
 
     testWidgets(
@@ -199,24 +206,30 @@ void main() {
           child: SpeakingIndicator(participant: participant),
         );
 
-        expect(find.byType(SoundWaveformWidget), findsOneWidget);
-        expect(find.byType(TotemIcon), findsNothing);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
 
         audioTrack.setMuted(true);
         participant.listener.emitMuted(mutedEvent);
         audioTrack.trackListener.emit(MockTrackEvent());
         await tester.pump();
 
-        expect(find.byType(TotemIcon), findsOneWidget);
-        expect(find.byType(SoundWaveformWidget), findsNothing);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(0);
 
         audioTrack.setMuted(false);
         participant.listener.emitUnmuted(unmutedEvent);
         audioTrack.trackListener.emit(MockTrackEvent());
         await tester.pump();
 
-        expect(find.byType(SoundWaveformWidget), findsOneWidget);
-        expect(find.byType(TotemIcon), findsNothing);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
       },
     );
   });
@@ -237,8 +250,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('🔥'), findsOneWidget);
-      expect(find.byType(TotemIcon), findsNothing);
+      check(tester.widgetList(find.text('🔥'))).length.equals(1);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
     });
 
     testWidgets('updates when the emoji provider changes', (tester) async {
@@ -252,20 +265,20 @@ void main() {
       );
       final notifier = container.read(emojiReactionsProvider.notifier);
 
-      expect(find.byType(TotemIcon), findsOneWidget);
-      expect(find.text('🔥'), findsNothing);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+      check(tester.widgetList(find.text('🔥'))).length.equals(0);
 
       await notifier.emitIncomingReaction(remoteParticipant.identity, '🔥');
       await tester.pump();
 
-      expect(find.text('🔥'), findsOneWidget);
-      expect(find.byType(TotemIcon), findsNothing);
+      check(tester.widgetList(find.text('🔥'))).length.equals(1);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
 
       notifier.clear();
       await tester.pumpAndSettle();
 
-      expect(find.text('🔥'), findsNothing);
-      expect(find.byType(TotemIcon), findsOneWidget);
+      check(tester.widgetList(find.text('🔥'))).length.equals(0);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
     });
 
     testWidgets('uses compact overlay sizes on phone-sized windows', (
@@ -277,11 +290,10 @@ void main() {
         child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(20, 20),
-      );
-      expect(overlayMuteIcon(tester).size, 16);
+      ).equals(const Size(20, 20));
+      check(overlayMuteIcon(tester).size).equals(16);
     });
 
     testWidgets('uses compact overlay sizes in phone landscape', (
@@ -293,11 +305,10 @@ void main() {
         child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(20, 20),
-      );
-      expect(overlayMuteIcon(tester).size, 16);
+      ).equals(const Size(20, 20));
+      check(overlayMuteIcon(tester).size).equals(16);
     });
 
     testWidgets('uses comfortable overlay sizes on desktop-class windows', (
@@ -309,11 +320,10 @@ void main() {
         child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(40, 40),
-      );
-      expect(overlayMuteIcon(tester).size, 22);
+      ).equals(const Size(40, 40));
+      check(overlayMuteIcon(tester).size).equals(22);
     });
 
     testWidgets('renders a larger emoji glyph on desktop-class windows', (
@@ -332,11 +342,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(40, 40),
-      );
-      expect(tester.widget<Text>(find.text('🔥')).style?.fontSize, 20);
+      ).equals(const Size(40, 40));
+      check(tester.widget<Text>(find.text('🔥')).style?.fontSize).equals(20);
     });
 
     testWidgets('keeps the compact emoji glyph on phone-sized windows', (
@@ -355,11 +364,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(20, 20),
-      );
-      expect(tester.widget<Text>(find.text('🔥')).style?.fontSize, 10);
+      ).equals(const Size(20, 20));
+      check(tester.widget<Text>(find.text('🔥')).style?.fontSize).equals(10);
     });
   });
 }

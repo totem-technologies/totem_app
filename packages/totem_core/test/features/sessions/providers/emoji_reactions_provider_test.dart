@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 
@@ -17,7 +18,7 @@ void main() {
 
     test('initial state is empty', () {
       final state = container.read(emojiReactionsProvider);
-      expect(state, isEmpty);
+      check(state).isEmpty();
     });
 
     test('emitIncomingReaction adds a reaction', () async {
@@ -26,10 +27,10 @@ void main() {
       await notifier.emitIncomingReaction('user1', '👍');
 
       final state = container.read(emojiReactionsProvider);
-      expect(state, hasLength(1));
-      expect(state.first.userIdentity, 'user1');
-      expect(state.first.emoji, '👍');
-      expect(state.first.displayed, isFalse);
+      check(state).length.equals(1);
+      check(state.first.userIdentity).equals('user1');
+      check(state.first.emoji).equals('👍');
+      check(state.first.displayed).equals(false);
     });
 
     test(
@@ -41,8 +42,8 @@ void main() {
         await notifier.emitIncomingReaction('user1', '❤️');
 
         final state = container.read(emojiReactionsProvider);
-        expect(state, hasLength(1));
-        expect(state.first.emoji, '👍');
+        check(state).length.equals(1);
+        check(state.first.emoji).equals('👍');
       },
     );
 
@@ -58,9 +59,9 @@ void main() {
         await notifier.emitIncomingReaction('user1', '❤️');
 
         final state = container.read(emojiReactionsProvider);
-        expect(state, hasLength(2));
-        expect(state[0].emoji, '👍');
-        expect(state[1].emoji, '❤️');
+        check(state).length.equals(2);
+        check(state[0].emoji).equals('👍');
+        check(state[1].emoji).equals('❤️');
       },
     );
 
@@ -71,7 +72,7 @@ void main() {
       await notifier.emitIncomingReaction('user2', '❤️');
 
       final state = container.read(emojiReactionsProvider);
-      expect(state, hasLength(2));
+      check(state).length.equals(2);
     });
 
     test('emitIncomingReaction limits history to 10 items (FIFO)', () async {
@@ -83,9 +84,9 @@ void main() {
       }
 
       final state = container.read(emojiReactionsProvider);
-      expect(state, hasLength(10));
-      expect(state.first.emoji, 'emoji_1');
-      expect(state.last.emoji, 'emoji_10');
+      check(state).length.equals(10);
+      check(state.first.emoji).equals('emoji_1');
+      check(state.last.emoji).equals('emoji_10');
     });
   });
 
@@ -103,9 +104,9 @@ void main() {
       final user2Emojis = container.read(participantEmojisProvider('user2'));
       final user3Emojis = container.read(participantEmojisProvider('user3'));
 
-      expect(user1Emojis, ['👍', '🔥']);
-      expect(user2Emojis, ['❤️']);
-      expect(user3Emojis, isEmpty);
+      check(user1Emojis).deepEquals(['👍', '🔥']);
+      check(user2Emojis).deepEquals(['❤️']);
+      check(user3Emojis).isEmpty();
     });
   });
 
@@ -137,9 +138,9 @@ void main() {
 
       await notifier.emitIncomingReaction('user1', '👍');
       var state = container.read(emojiReactionsProvider);
-      expect(state, hasLength(1));
+      check(state).length.equals(1);
       final reaction = state.first;
-      expect(reaction.displayed, isFalse);
+      check(reaction.displayed).equals(false);
 
       final context = tester.element(
         find.byKey(EmojiReactions.emojiOverlayKey),
@@ -148,17 +149,19 @@ void main() {
       final future = notifier.displayReaction(context, reaction, false);
 
       state = container.read(emojiReactionsProvider);
-      expect(
+      check(
+        because: 'Should be marked displayed while animating',
         state.first.displayed,
-        isTrue,
-        reason: 'Should be marked displayed while animating',
-      );
+      ).equals(true);
 
       await tester.pumpAndSettle(const Duration(seconds: 4));
       await future;
 
       state = container.read(emojiReactionsProvider);
-      expect(state, isEmpty, reason: 'Should be removed after display is done');
+      check(
+        because: 'Should be removed after display is done',
+        state,
+      ).isEmpty();
     });
 
     testWidgets('displayReaction renders emoji on screen while animating', (
@@ -177,11 +180,11 @@ void main() {
       final future = notifier.displayReaction(context, reaction, false);
       await tester.pump();
 
-      expect(find.text('🔥'), findsOneWidget);
+      check(tester.widgetList(find.text('🔥'))).length.equals(1);
 
       await tester.pumpAndSettle(const Duration(seconds: 4));
       await future;
-      expect(find.text('🔥'), findsNothing);
+      check(tester.widgetList(find.text('🔥'))).length.equals(0);
     });
 
     testWidgets('displayReaction drops the reaction while the app is hidden', (
@@ -201,11 +204,10 @@ void main() {
       try {
         await notifier.displayReaction(context, reaction, false);
 
-        expect(
+        check(
+          because: 'Hidden app should drop the reaction without presenting it',
           container.read(emojiReactionsProvider),
-          isEmpty,
-          reason: 'Hidden app should drop the reaction without presenting it',
-        );
+        ).isEmpty();
       } finally {
         tester.binding.handleAppLifecycleStateChanged(
           AppLifecycleState.resumed,
@@ -213,11 +215,10 @@ void main() {
       }
 
       await tester.pump();
-      expect(
-        find.text('👏'),
-        findsNothing,
-        reason: 'No overlay entry should be queued for when the app resumes',
-      );
+      check(
+        because: 'No overlay entry should be queued for when the app resumes',
+        tester.widgetList(find.text('👏')),
+      ).length.equals(0);
     });
 
     testWidgets('displayReaction renders emoji in not-my-turn mode too', (
@@ -236,11 +237,11 @@ void main() {
       final future = notifier.displayReaction(context, reaction, true);
       await tester.pump();
 
-      expect(find.text('🎉'), findsOneWidget);
+      check(tester.widgetList(find.text('🎉'))).length.equals(1);
 
       await tester.pumpAndSettle(const Duration(seconds: 4));
       await future;
-      expect(find.text('🎉'), findsNothing);
+      check(tester.widgetList(find.text('🎉'))).length.equals(0);
     });
   });
 }
