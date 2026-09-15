@@ -616,6 +616,52 @@ void main() {
         tester.widgetList(find.byType(VideoTrackRenderer)),
       ).length.equals(0);
     });
+
+    testWidgets('shows a camera track subscribed after the initial build', (
+      tester,
+    ) async {
+      final participant = MockRemoteParticipant('user-2', 'John Doe');
+      final publication = MockRemoteTrackPublication<RemoteVideoTrack>();
+      final track = MockRemoteVideoTrack();
+      RemoteTrackPublication<RemoteVideoTrack>? cameraPublication;
+
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.camera),
+      ).thenAnswer((_) => cameraPublication);
+      when(() => publication.track).thenReturn(track);
+      when(() => publication.source).thenReturn(TrackSource.camera);
+      when(() => publication.sid).thenReturn('pub-sid');
+      when(() => publication.subscribed).thenReturn(true);
+      when(() => publication.muted).thenReturn(false);
+      when(() => track.sid).thenReturn('track-sid');
+      when(() => track.isActive).thenReturn(true);
+      when(() => track.muted).thenReturn(false);
+
+      await pumpWidget(
+        tester,
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: ParticipantVideo(participant: participant),
+      );
+
+      expect(find.byType(VideoTrackRenderer), findsNothing);
+
+      cameraPublication = publication;
+      participant.listener.emitParticipantEvent(
+        TrackSubscribedEvent(
+          participant: participant,
+          publication: publication,
+          track: track,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(VideoTrackRenderer), findsOneWidget);
+    });
   });
 
   group('ParticipantControlButton', () {
