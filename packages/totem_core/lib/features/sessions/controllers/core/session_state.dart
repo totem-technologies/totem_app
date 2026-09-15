@@ -196,12 +196,12 @@ class SessionOptions {
 
 /// Pre-join media whose ownership is transferred to the session controller.
 ///
-/// LiveKit can publish already-created preview tracks through FastConnect. This
-/// avoids opening a second camera and microphone while the pre-join preview is
-/// still active, which is particularly important for Safari. The controller
-/// retains tracks until LiveKit accepts them. Failed transfers are detached
-/// from the preview and disposed before join returns; tracks handed to LiveKit
-/// are disposed with the room.
+/// The session publishes these already-created preview tracks after connecting.
+/// This avoids opening a second camera and microphone while the pre-join preview
+/// is still active, which is particularly important for Safari. The controller
+/// retains tracks until publication succeeds. Failed transfers are detached
+/// from the preview and disposed before join returns; published tracks are
+/// disposed with the room.
 @immutable
 class SessionJoinMedia {
   const SessionJoinMedia({
