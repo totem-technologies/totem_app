@@ -51,11 +51,9 @@ void main() {
 
     //     await service.playSessionTransitionCue();
 
-    //     expect(fakePlayer.playerModes, [PlayerMode.lowLatency]);
-    //     expect(fakePlayer.releaseModes, [ReleaseMode.stop]);
-    //     expect(
-    //       fakePlayer.audioContexts,
-    //       [
+    //     check(fakePlayer.playerModes).deepEquals([PlayerMode.lowLatency]);
+    //     check(fakePlayer.releaseModes).deepEquals([ReleaseMode.stop]);
+    //     check(//       fakePlayer.audioContexts).equals(//       [
     //         AudioContext(
     //           iOS: AudioContextIOS(
     //             category: AVAudioSessionCategory.playback,
@@ -67,13 +65,9 @@ void main() {
     //             audioFocus: AndroidAudioFocus.gainTransient,
     //           ),
     //         ),
-    //       ],
-    //     );
-    //     expect(fakePlayer.stopCallCount, 1);
-    //     expect(
-    //       fakePlayer.playedAssets,
-    //       ['audio/enter_leave_session_ringtone.mp3'],
-    //     );
+    //       ]);
+    //     check(fakePlayer.stopCallCount).equals(1);
+    //     check(//       fakePlayer.playedAssets).equals(//       ['audio/enter_leave_session_ringtone.mp3']);
     //   },
     // );
 
@@ -86,11 +80,9 @@ void main() {
     //     await service.playSessionTransitionCue();
     //     await service.playTotemReceivedCue();
 
-    //     expect(fakePlayer.playerModes, [PlayerMode.lowLatency]);
-    //     expect(fakePlayer.releaseModes, [ReleaseMode.stop]);
-    //     expect(
-    //       fakePlayer.audioContexts,
-    //       [
+    //     check(fakePlayer.playerModes).deepEquals([PlayerMode.lowLatency]);
+    //     check(fakePlayer.releaseModes).deepEquals([ReleaseMode.stop]);
+    //     check(//       fakePlayer.audioContexts).equals(//       [
     //         AudioContext(
     //           iOS: AudioContextIOS(
     //             category: AVAudioSessionCategory.playback,
@@ -102,16 +94,12 @@ void main() {
     //             audioFocus: AndroidAudioFocus.gainTransient,
     //           ),
     //         ),
-    //       ],
-    //     );
-    //     expect(fakePlayer.stopCallCount, 2);
-    //     expect(
-    //       fakePlayer.playedAssets,
-    //       [
+    //       ]);
+    //     check(fakePlayer.stopCallCount).equals(2);
+    //     check(//       fakePlayer.playedAssets).equals(//       [
     //         'audio/enter_leave_session_ringtone.mp3',
     //         'audio/totem_received_ringtone.mp3',
-    //       ],
-    //     );
+    //       ]);
     //   },
     // );
 
@@ -126,14 +114,14 @@ void main() {
 
     //   await service.pulseSwipeCompletion();
 
-    //   expect(pulseCount, 1);
+    //   check(pulseCount).equals(1);
     // });
 
     // test('disposes underlying audio player', () {
     //   final fakePlayer = _FakeSessionCuesAudioPlayer();
     //   final _ = SessionCuesService(audioPlayer: fakePlayer)..dispose();
 
-    //   expect(fakePlayer.disposeCallCount, 1);
+    //   check(fakePlayer.disposeCallCount).equals(1);
     // });
   });
 }

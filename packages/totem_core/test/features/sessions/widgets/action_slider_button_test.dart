@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -40,15 +41,19 @@ void main() {
       await tester.tap(find.byType(ElevatedButton));
       await tester.pump();
 
-      expect(calls, 1);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      check(calls).equals(1);
+      check(
+        tester.widgetList(find.byType(CircularProgressIndicator)),
+      ).length.equals(1);
 
       completer.complete(false);
       await tester.pump();
       await tester.pump();
 
-      expect(find.text('Continue'), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      check(tester.widgetList(find.text('Continue'))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(CircularProgressIndicator)),
+      ).length.equals(0);
     });
 
     testWidgets('keeps loading on successful completion when configured', (
@@ -67,8 +72,10 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Start'), findsNothing);
+      check(
+        tester.widgetList(find.byType(CircularProgressIndicator)),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Start'))).length.equals(0);
     });
 
     testWidgets('respects external loading state and blocks presses', (
@@ -91,8 +98,10 @@ void main() {
       await tester.tap(find.byType(ElevatedButton));
       await tester.pump();
 
-      expect(calls, 0);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      check(calls).equals(0);
+      check(
+        tester.widgetList(find.byType(CircularProgressIndicator)),
+      ).length.equals(1);
     });
   });
 
@@ -114,8 +123,10 @@ void main() {
       await tester.drag(find.byType(ActionSlider), const Offset(30, 0));
       await tester.pump();
 
-      expect(calls, 0);
-      expect(find.byIcon(Icons.arrow_forward_ios), findsOneWidget);
+      check(calls).equals(0);
+      check(
+        tester.widgetList(find.byIcon(Icons.arrow_forward_ios)),
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -138,14 +149,18 @@ void main() {
         await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
         await tester.pump();
 
-        expect(calls, 1);
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        check(calls).equals(1);
+        check(
+          tester.widgetList(find.byType(CircularProgressIndicator)),
+        ).length.equals(1);
 
         completer.complete(false);
         await tester.pump();
         await tester.pump();
 
-        expect(find.byIcon(Icons.arrow_forward_ios), findsOneWidget);
+        check(
+          tester.widgetList(find.byIcon(Icons.arrow_forward_ios)),
+        ).length.equals(1);
       },
     );
 
@@ -161,7 +176,9 @@ void main() {
 
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(CircularProgressIndicator)),
+      ).length.equals(1);
     });
   });
 
@@ -177,8 +194,8 @@ void main() {
           ),
         );
 
-        expect(find.byType(ActionButton), findsOneWidget);
-        expect(find.byType(ActionSlider), findsNothing);
+        check(tester.widgetList(find.byType(ActionButton))).length.equals(1);
+        check(tester.widgetList(find.byType(ActionSlider))).length.equals(0);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
@@ -195,8 +212,8 @@ void main() {
           ),
         );
 
-        expect(find.byType(ActionSlider), findsOneWidget);
-        expect(find.byType(ActionButton), findsNothing);
+        check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
+        check(tester.widgetList(find.byType(ActionButton))).length.equals(0);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }

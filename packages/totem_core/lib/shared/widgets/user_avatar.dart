@@ -106,52 +106,51 @@ class UserAvatar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final heroTag = 'avatar-${seed ?? image.hashCode}';
 
+    final child = Container(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Colors.white,
+          width: borderWidth,
+          style: borderWidth == 0 ? BorderStyle.none : BorderStyle.solid,
+        ),
+        borderRadius: borderRadius,
+        image: showImage && image != null
+            ? DecorationImage(image: image!, fit: BoxFit.cover)
+            : null,
+      ),
+      height: radius * 2,
+      width: radius * 2,
+      child: showImage && image == null
+          ? ClipRRect(
+              borderRadius: borderRadius,
+              child: AnimatedBoringAvatar(
+                name: seed ?? 'default',
+                type: BoringAvatarType.marble,
+                duration: const Duration(milliseconds: 300),
+              ),
+            )
+          : null,
+    );
+
+    if (onTap == null && image == null) return child;
+
     return GestureDetector(
       onTap:
           onTap ??
           () async {
-            if (image != null) {
-              await showGeneralDialog(
-                context: context,
-                barrierDismissible: true,
-                barrierLabel: MaterialLocalizations.of(
-                  context,
-                ).modalBarrierDismissLabel,
-                barrierColor: Colors.black.withValues(alpha: 0.8),
-                pageBuilder: (context, animation, secondaryAnimation) {
-                  return _FullScreenImageViewer(
-                    image: image!,
-                    heroTag: heroTag,
-                  );
-                },
-              );
-            }
+            await showGeneralDialog(
+              context: context,
+              barrierDismissible: true,
+              barrierLabel: MaterialLocalizations.of(
+                context,
+              ).modalBarrierDismissLabel,
+              barrierColor: Colors.black.withValues(alpha: 0.8),
+              pageBuilder: (context, animation, secondaryAnimation) {
+                return _FullScreenImageViewer(image: image!, heroTag: heroTag);
+              },
+            );
           },
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: Colors.white,
-            width: borderWidth,
-            style: borderWidth == 0 ? BorderStyle.none : BorderStyle.solid,
-          ),
-          borderRadius: borderRadius,
-          image: showImage && image != null
-              ? DecorationImage(image: image!, fit: BoxFit.cover)
-              : null,
-        ),
-        height: radius * 2,
-        width: radius * 2,
-        child: showImage && image == null
-            ? ClipRRect(
-                borderRadius: borderRadius,
-                child: AnimatedBoringAvatar(
-                  name: seed ?? 'default',
-                  type: BoringAvatarType.marble,
-                  duration: const Duration(milliseconds: 300),
-                ),
-              )
-            : null,
-      ),
+      child: child,
     );
   }
 }

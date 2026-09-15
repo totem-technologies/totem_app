@@ -191,10 +191,10 @@ Future<void> presentEmojiReaction(
                   startY: startY,
                   onCompleted: () {
                     completer.complete();
-                    if (entry?.mounted ?? false) {
-                      entry?.remove();
-                      entry = null;
-                    }
+                    final completedEntry = entry;
+                    completedEntry?.remove();
+                    completedEntry?.dispose();
+                    entry = null;
                   },
                 ),
               ],
@@ -227,6 +227,7 @@ Future<void> presentEmojiReaction(
     // it was inserted, not only when it is mounted.
     if (inserted && entry != null) {
       entry!.remove();
+      entry!.dispose();
       entry = null;
     }
   }
@@ -258,6 +259,7 @@ class RisingEmoji extends StatefulWidget {
 class _RisingEmojiState extends State<RisingEmoji>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  late CurvedAnimation _curvedAnimation;
   late Animation<double> _animation;
   late Animation<double> _opacityAnimation;
 
@@ -285,10 +287,11 @@ class _RisingEmojiState extends State<RisingEmoji>
       animationBehavior: AnimationBehavior.preserve,
     );
 
-    _animation = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _curvedAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+    _animation = Tween<double>(begin: 0, end: 1).animate(_curvedAnimation);
 
     _opacityAnimation = TweenSequence<double>([
       TweenSequenceItem(
@@ -322,6 +325,7 @@ class _RisingEmojiState extends State<RisingEmoji>
 
   @override
   void dispose() {
+    _curvedAnimation.dispose();
     _controller.dispose();
     super.dispose();
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
@@ -37,10 +38,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Small modal'), findsOneWidget);
-      expect(find.text('Large modal'), findsNothing);
-      expect(find.byType(BottomSheet), findsOneWidget);
-      expect(find.byType(Dialog), findsNothing);
+      check(tester.widgetList(find.text('Small modal'))).length.equals(1);
+      check(tester.widgetList(find.text('Large modal'))).length.equals(0);
+      check(tester.widgetList(find.byType(BottomSheet))).length.equals(1);
+      check(tester.widgetList(find.byType(Dialog))).length.equals(0);
     });
 
     testWidgets('uses a dialog on large screens', (tester) async {
@@ -58,10 +59,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Large modal'), findsOneWidget);
-      expect(find.text('Small modal'), findsNothing);
-      expect(find.byType(Dialog), findsOneWidget);
-      expect(find.byType(BottomSheet), findsNothing);
+      check(tester.widgetList(find.text('Large modal'))).length.equals(1);
+      check(tester.widgetList(find.text('Small modal'))).length.equals(0);
+      check(tester.widgetList(find.byType(Dialog))).length.equals(1);
+      check(tester.widgetList(find.byType(BottomSheet))).length.equals(0);
     });
   });
 }

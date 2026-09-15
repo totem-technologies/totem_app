@@ -53,13 +53,14 @@ class SmartNameText extends StatelessWidget {
       text: TextSpan(text: text, style: style),
       maxLines: 1,
       textDirection: TextDirection.ltr,
-    )..layout(minWidth: 0, maxWidth: double.infinity);
-
-    if (textPainter.didExceedMaxLines) {
-      return false;
+    );
+    try {
+      textPainter.layout(minWidth: 0, maxWidth: double.infinity);
+      return !textPainter.didExceedMaxLines &&
+          textPainter.size.width <= maxWidth;
+    } finally {
+      textPainter.dispose();
     }
-
-    return textPainter.size.width <= maxWidth;
   }
 
   // Abbreviate name (Bruno Oliveira -> Bruno O.)

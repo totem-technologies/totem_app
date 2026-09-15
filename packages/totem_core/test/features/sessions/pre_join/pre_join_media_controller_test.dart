@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -118,9 +119,10 @@ void main() {
       () async => throw StateError('capture failed'),
     );
 
-    await expectLater(failed, throwsStateError);
-    await expectLater(queue.pending, completes);
-    expect(await queue.schedule(() async => 42), 42);
+    await check(failed).throws<StateError>();
+    check(queue.pending).isNotNull();
+    await check(queue.pending!).completes();
+    check(await queue.schedule(() async => 42)).equals(42);
   });
 
   test('failed initial future does not poison media retry', () async {
@@ -132,15 +134,15 @@ void main() {
     addTearDown(container.dispose);
 
     final failedState = await _waitUntilInitialized(container);
-    expect(failedState.camera.phase, PreJoinCapturePhase.unavailable);
-    expect(failedState.microphone.phase, PreJoinCapturePhase.unavailable);
+    check(failedState.camera.phase).equals(PreJoinCapturePhase.unavailable);
+    check(failedState.microphone.phase).equals(PreJoinCapturePhase.unavailable);
 
     final recoveredState = await container
         .read(preJoinMediaControllerProvider(_sessionSlug).notifier)
         .retryFailedMedia();
 
-    expect(recoveredState.camera.isReady, isTrue);
-    expect(recoveredState.microphone.isReady, isTrue);
+    check(recoveredState.camera.isReady).equals(true);
+    check(recoveredState.microphone.isReady).equals(true);
   });
 
   test('camera unavailable still allows a microphone-only web join', () async {
@@ -149,15 +151,15 @@ void main() {
     addTearDown(container.dispose);
 
     final state = await _waitUntilInitialized(container);
-    expect(state.camera.phase, PreJoinCapturePhase.unavailable);
-    expect(state.microphone.phase, PreJoinCapturePhase.ready);
-    expect(state.canJoinOnWeb, isTrue);
+    check(state.camera.phase).equals(PreJoinCapturePhase.unavailable);
+    check(state.microphone.phase).equals(PreJoinCapturePhase.ready);
+    check(state.canJoinOnWeb).equals(true);
 
     final media = await container
         .read(preJoinMediaControllerProvider(_sessionSlug).notifier)
         .takeForJoin();
-    expect(media.cameraTrack, isNull);
-    expect(media.microphoneTrack, same(factory.audioTracks.single));
+    check(media.cameraTrack).isNull();
+    check(media.microphoneTrack).identicalTo(factory.audioTracks.single);
   });
 
   test('explicit camera permission denial blocks a web join', () async {
@@ -171,7 +173,7 @@ void main() {
         track: MockLocalAudioTrack(),
       ),
     );
-    expect(state.canJoinOnWeb, isFalse);
+    check(state.canJoinOnWeb).equals(false);
   });
 
   test('typed track creation permission errors are classified', () async {
@@ -180,8 +182,8 @@ void main() {
 
     final state = await _waitUntilInitialized(container);
 
-    expect(state.camera.phase, PreJoinCapturePhase.permissionDenied);
-    expect(state.canJoinOnWeb, isFalse);
+    check(state.camera.phase).equals(PreJoinCapturePhase.permissionDenied);
+    check(state.canJoinOnWeb).equals(false);
   });
 
   test(
@@ -197,15 +199,14 @@ void main() {
       final state = container.read(
         preJoinMediaControllerProvider(_sessionSlug),
       );
-      expect(state.camera.phase, PreJoinCapturePhase.permissionDenied);
-      expect(state.camera.track, isNull);
-      expect(state.canJoinOnWeb, isFalse);
-      await expectLater(
+      check(state.camera.phase).equals(PreJoinCapturePhase.permissionDenied);
+      check(state.camera.track).isNull();
+      check(state.canJoinOnWeb).equals(false);
+      await check(
         container
             .read(preJoinMediaControllerProvider(_sessionSlug).notifier)
             .takeForJoin(requireUsableMedia: true),
-        throwsA(isA<PreJoinMediaPermissionDeniedException>()),
-      );
+      ).throws<PreJoinMediaPermissionDeniedException>();
     },
   );
 
@@ -222,9 +223,11 @@ void main() {
       final state = container.read(
         preJoinMediaControllerProvider(_sessionSlug),
       );
-      expect(state.microphone.phase, PreJoinCapturePhase.permissionDenied);
-      expect(state.microphone.track, isNull);
-      expect(state.canJoinOnWeb, isFalse);
+      check(
+        state.microphone.phase,
+      ).equals(PreJoinCapturePhase.permissionDenied);
+      check(state.microphone.track).isNull();
+      check(state.canJoinOnWeb).equals(false);
     },
   );
 
@@ -234,12 +237,12 @@ void main() {
     addTearDown(container.dispose);
     await Future<void>.delayed(Duration.zero);
 
-    expect(factory.cameraRequested, isTrue);
-    expect(factory.audioTracks, isEmpty);
+    check(factory.cameraRequested).equals(true);
+    check(factory.audioTracks).isEmpty();
     factory.gate.complete();
     await _waitUntilInitialized(container);
-    expect(factory.videoTracks, hasLength(1));
-    expect(factory.audioTracks, hasLength(1));
+    check(factory.videoTracks).length.equals(1);
+    check(factory.audioTracks).length.equals(1);
   });
 
   test('microphone disabled during camera capture is never acquired', () async {
@@ -256,8 +259,8 @@ void main() {
     await toggle;
     final state = await _waitUntilInitialized(container);
 
-    expect(factory.audioTracks, isEmpty);
-    expect(state.microphone.phase, PreJoinCapturePhase.disabled);
+    check(factory.audioTracks).isEmpty();
+    check(state.microphone.phase).equals(PreJoinCapturePhase.disabled);
   });
 
   test('microphone toggles share the in-flight camera capture queue', () async {
@@ -275,17 +278,17 @@ void main() {
     );
     await Future<void>.delayed(Duration.zero);
 
-    expect(toggleCompleted, isFalse);
-    expect(factory.audioTracks, isEmpty);
+    check(toggleCompleted).equals(false);
+    check(factory.audioTracks).isEmpty();
 
     factory.gate.complete();
     await toggleOff;
     await controller.toggleMicrophone();
     final state = await _waitUntilInitialized(container);
 
-    expect(factory.videoTracks, hasLength(1));
-    expect(factory.audioTracks, hasLength(1));
-    expect(state.microphone.isReady, isTrue);
+    check(factory.videoTracks).length.equals(1);
+    check(factory.audioTracks).length.equals(1);
+    check(state.microphone.isReady).equals(true);
   });
 
   test('microphone stop waits for in-flight initialization', () async {
@@ -310,13 +313,12 @@ void main() {
     final track = factory.audioTracks.single;
     verify(track.stop).called(1);
     verify(track.dispose).called(1);
-    expect(
+    check(
       container
           .read(preJoinMediaControllerProvider(_sessionSlug))
           .microphone
           .phase,
-      PreJoinCapturePhase.disabled,
-    );
+    ).equals(PreJoinCapturePhase.disabled);
   });
 
   test(
@@ -329,8 +331,8 @@ void main() {
           .read(preJoinMediaControllerProvider(_sessionSlug).notifier)
           .takeForJoin();
 
-      expect(media.cameraTrack, same(factory.videoTracks.single));
-      expect(media.microphoneTrack, same(factory.audioTracks.single));
+      check(media.cameraTrack).identicalTo(factory.videoTracks.single);
+      check(media.microphoneTrack).identicalTo(factory.audioTracks.single);
       container.dispose();
       await Future<void>.delayed(Duration.zero);
       verifyNever(factory.videoTracks.single.stop);
@@ -356,11 +358,13 @@ void main() {
       final detached = container.read(
         preJoinMediaControllerProvider(_sessionSlug),
       );
-      expect(detached.transferred, isTrue);
-      expect(detached.camera.track, isNull);
-      expect(detached.camera.phase, PreJoinCapturePhase.uninitialized);
-      expect(detached.microphone.track, isNull);
-      expect(detached.microphone.phase, PreJoinCapturePhase.uninitialized);
+      check(detached.transferred).equals(true);
+      check(detached.camera.track).isNull();
+      check(detached.camera.phase).equals(PreJoinCapturePhase.uninitialized);
+      check(detached.microphone.track).isNull();
+      check(
+        detached.microphone.phase,
+      ).equals(PreJoinCapturePhase.uninitialized);
 
       container.dispose();
       await Future<void>.delayed(Duration.zero);
@@ -398,11 +402,13 @@ void main() {
     final resetState = await controller.resetAfterFailedJoin();
     final second = await controller.takeForJoin();
 
-    expect(resetState.initializationComplete, isTrue);
-    expect(factory.videoTracks, hasLength(2));
-    expect(factory.audioTracks, hasLength(2));
-    expect(second.cameraTrack, isNot(same(first.cameraTrack)));
-    expect(second.microphoneTrack, isNot(same(first.microphoneTrack)));
+    check(resetState.initializationComplete).equals(true);
+    check(factory.videoTracks).length.equals(2);
+    check(factory.audioTracks).length.equals(2);
+    check(second.cameraTrack).not((it) => it.identicalTo(first.cameraTrack));
+    check(
+      second.microphoneTrack,
+    ).not((it) => it.identicalTo(first.microphoneTrack));
     verifyNever(first.cameraTrack!.stop);
     verifyNever(first.microphoneTrack!.stop);
   });

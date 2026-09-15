@@ -31,9 +31,13 @@ class WebTotemRouter extends TotemRouter {
   @override
   GoRouter createRouter(WidgetRef ref) {
     final authController = ref.read(authControllerProvider.notifier);
+    final refreshStream = GoRouterRefreshStream(
+      authController.authStateChanges,
+    );
+
     return GoRouter(
       initialLocation: '/',
-      refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
+      refreshListenable: refreshStream,
       observers: [SentryNavigatorObserver()],
       routes: [
         GoRoute(

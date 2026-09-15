@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
@@ -143,25 +144,29 @@ void main() {
       await tester.tap(find.text('Open banned modal'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Banned Participants'), findsOneWidget);
-      expect(find.text('User user-1'), findsOneWidget);
-      expect(find.text('User user-2'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Banned Participants')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('User user-1'))).length.equals(1);
+      check(tester.widgetList(find.text('User user-2'))).length.equals(1);
 
       final unbanButtons = find.text('Unban');
-      expect(unbanButtons, findsNWidgets(2));
+      check(tester.widgetList(unbanButtons)).length.equals(2);
 
       // Tap the first Unban button
       await tester.tap(unbanButtons.first);
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(CircularProgressIndicator)),
+      ).length.equals(1);
 
       unbanCompleter.complete();
       await tester.pumpAndSettle();
 
-      expect(find.text('User user-1'), findsNothing);
-      expect(find.text('User user-2'), findsOneWidget);
-      expect(find.text('Unban'), findsOneWidget);
+      check(tester.widgetList(find.text('User user-1'))).length.equals(0);
+      check(tester.widgetList(find.text('User user-2'))).length.equals(1);
+      check(tester.widgetList(find.text('Unban'))).length.equals(1);
     });
 
     testWidgets('shows empty state when no banned participants', (
@@ -226,9 +231,13 @@ void main() {
       await tester.tap(find.text('Open banned modal'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Banned Participants'), findsOneWidget);
-      expect(find.text('No participants have been banned'), findsOneWidget);
-      expect(find.text('Unban'), findsNothing);
+      check(
+        tester.widgetList(find.text('Banned Participants')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.text('No participants have been banned')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Unban'))).length.equals(0);
     });
 
     testWidgets('close button dismisses the modal', (tester) async {
@@ -292,14 +301,17 @@ void main() {
       await tester.tap(find.text('Open banned modal'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Banned Participants'), findsOneWidget);
-      expect(find.text('User user-1'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Banned Participants')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('User user-1'))).length.equals(1);
 
       // Close button is visible
-      expect(
-        find.byKey(const Key('close-banned-participants-modal')),
-        findsOneWidget,
-      );
+      check(
+        tester.widgetList(
+          find.byKey(const Key('close-banned-participants-modal')),
+        ),
+      ).length.equals(1);
 
       // Tap the close button
       await tester.tap(
@@ -308,10 +320,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Modal is dismissed
-      expect(find.text('Banned Participants'), findsNothing);
-      expect(find.text('User user-1'), findsNothing);
+      check(
+        tester.widgetList(find.text('Banned Participants')),
+      ).length.equals(0);
+      check(tester.widgetList(find.text('User user-1'))).length.equals(0);
       // Original screen is still visible
-      expect(find.text('Open banned modal'), findsOneWidget);
+      check(tester.widgetList(find.text('Open banned modal'))).length.equals(1);
     });
 
     testWidgets('shows error dialog and keeps tile on unban failure', (
@@ -380,8 +394,8 @@ void main() {
       await tester.tap(find.text('Open banned modal'));
       await tester.pumpAndSettle();
 
-      expect(find.text('User user-1'), findsOneWidget);
-      expect(find.text('Unban'), findsOneWidget);
+      check(tester.widgetList(find.text('User user-1'))).length.equals(1);
+      check(tester.widgetList(find.text('Unban'))).length.equals(1);
 
       // Tap Unban
       await tester.tap(find.text('Unban'));
@@ -392,21 +406,23 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('User user-1'), findsOneWidget);
-      expect(find.text('Unban'), findsOneWidget);
+      check(tester.widgetList(find.text('User user-1'))).length.equals(1);
+      check(tester.widgetList(find.text('Unban'))).length.equals(1);
 
-      expect(
-        find.text('Something went wrong!\nPlease try again later'),
-        findsOneWidget,
-      );
+      check(
+        tester.widgetList(
+          find.text('Something went wrong!\nPlease try again later'),
+        ),
+      ).length.equals(1);
 
       await tester.tap(find.text('Ok'));
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('Something went wrong!\nPlease try again later'),
-        findsNothing,
-      );
+      check(
+        tester.widgetList(
+          find.text('Something went wrong!\nPlease try again later'),
+        ),
+      ).length.equals(0);
     });
   });
 }

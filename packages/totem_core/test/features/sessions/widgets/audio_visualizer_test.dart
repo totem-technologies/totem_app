@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
@@ -7,16 +8,16 @@ void main() {
     test('should create with default values', () {
       const options = AudioVisualizerWidgetOptions();
 
-      expect(options.barCount, equals(7));
-      expect(options.centeredBands, isTrue);
-      expect(options.width, equals(12));
-      expect(options.minHeight, equals(12));
-      expect(options.maxHeight, equals(100));
-      expect(options.durationInMilliseconds, equals(500));
-      expect(options.color, isNull);
-      expect(options.spacing, equals(5));
-      expect(options.cornerRadius, equals(9999));
-      expect(options.barMinOpacity, equals(0.2));
+      check(options.barCount).equals(7);
+      check(options.centeredBands).equals(true);
+      check(options.width).equals(12);
+      check(options.minHeight).equals(12);
+      check(options.maxHeight).equals(100);
+      check(options.durationInMilliseconds).equals(500);
+      check(options.color).isNull();
+      check(options.spacing).equals(5);
+      check(options.cornerRadius).equals(9999);
+      check(options.barMinOpacity).equals(0.2);
     });
 
     test('should create with custom values', () {
@@ -33,16 +34,16 @@ void main() {
         barMinOpacity: 0.3,
       );
 
-      expect(options.barCount, equals(5));
-      expect(options.centeredBands, isFalse);
-      expect(options.width, equals(8));
-      expect(options.minHeight, equals(8));
-      expect(options.maxHeight, equals(80));
-      expect(options.durationInMilliseconds, equals(300));
-      expect(options.color, equals(Colors.red));
-      expect(options.spacing, equals(3));
-      expect(options.cornerRadius, equals(4));
-      expect(options.barMinOpacity, equals(0.3));
+      check(options.barCount).equals(5);
+      check(options.centeredBands).equals(false);
+      check(options.width).equals(8);
+      check(options.minHeight).equals(8);
+      check(options.maxHeight).equals(80);
+      check(options.durationInMilliseconds).equals(300);
+      check(options.color).equals(Colors.red);
+      check(options.spacing).equals(3);
+      check(options.cornerRadius).equals(4);
+      check(options.barMinOpacity).equals(0.3);
     });
 
     test('should be equal for identical options', () {
@@ -55,43 +56,43 @@ void main() {
         color: Colors.blue,
       );
 
-      expect(options1, equals(options2));
-      expect(options1.hashCode, equals(options2.hashCode));
+      check(options1).equals(options2);
+      check(options1.hashCode).equals(options2.hashCode);
     });
 
     test('should not be equal for different barCount', () {
       const options1 = AudioVisualizerWidgetOptions(barCount: 5);
       const options2 = AudioVisualizerWidgetOptions(barCount: 7);
 
-      expect(options1, isNot(equals(options2)));
+      check(options1).not((it) => it.equals(options2));
     });
 
     test('should not be equal for different centeredBands', () {
       const options1 = AudioVisualizerWidgetOptions(centeredBands: true);
       const options2 = AudioVisualizerWidgetOptions(centeredBands: false);
 
-      expect(options1, isNot(equals(options2)));
+      check(options1).not((it) => it.equals(options2));
     });
 
     test('should not be equal for different width', () {
       const options1 = AudioVisualizerWidgetOptions(width: 10);
       const options2 = AudioVisualizerWidgetOptions(width: 12);
 
-      expect(options1, isNot(equals(options2)));
+      check(options1).not((it) => it.equals(options2));
     });
 
     test('should not be equal for different minHeight', () {
       const options1 = AudioVisualizerWidgetOptions(minHeight: 10);
       const options2 = AudioVisualizerWidgetOptions(minHeight: 12);
 
-      expect(options1, isNot(equals(options2)));
+      check(options1).not((it) => it.equals(options2));
     });
 
     test('should not be equal for different maxHeight', () {
       const options1 = AudioVisualizerWidgetOptions(maxHeight: 80);
       const options2 = AudioVisualizerWidgetOptions(maxHeight: 100);
 
-      expect(options1, isNot(equals(options2)));
+      check(options1).not((it) => it.equals(options2));
     });
 
     test('should not be equal for different durationInMilliseconds', () {
@@ -102,43 +103,43 @@ void main() {
         durationInMilliseconds: 500,
       );
 
-      expect(options1, isNot(equals(options2)));
+      check(options1).not((it) => it.equals(options2));
     });
 
     test('should not be equal for different color', () {
       const options1 = AudioVisualizerWidgetOptions(color: Colors.red);
       const options2 = AudioVisualizerWidgetOptions(color: Colors.blue);
 
-      expect(options1, isNot(equals(options2)));
+      check(options1).not((it) => it.equals(options2));
     });
 
     test('should not be equal for different spacing', () {
       const options1 = AudioVisualizerWidgetOptions(spacing: 3);
       const options2 = AudioVisualizerWidgetOptions(spacing: 5);
 
-      expect(options1, isNot(equals(options2)));
+      check(options1).not((it) => it.equals(options2));
     });
 
     test('should not be equal for different cornerRadius', () {
       const options1 = AudioVisualizerWidgetOptions(cornerRadius: 4);
       const options2 = AudioVisualizerWidgetOptions(cornerRadius: 8);
 
-      expect(options1, isNot(equals(options2)));
+      check(options1).not((it) => it.equals(options2));
     });
 
     test('should not be equal for different barMinOpacity', () {
       const options1 = AudioVisualizerWidgetOptions(barMinOpacity: 0.1);
       const options2 = AudioVisualizerWidgetOptions(barMinOpacity: 0.2);
 
-      expect(options1, isNot(equals(options2)));
+      check(options1).not((it) => it.equals(options2));
     });
 
     test('should handle null color', () {
       const options1 = AudioVisualizerWidgetOptions(color: null);
       const options2 = AudioVisualizerWidgetOptions(color: null);
 
-      expect(options1, equals(options2));
-      expect(options1.hashCode, equals(options2.hashCode));
+      check(options1).equals(options2);
+      check(options1.hashCode).equals(options2.hashCode);
     });
 
     test('should have correct hashCode for all properties', () {
@@ -156,7 +157,7 @@ void main() {
       );
 
       // Hash code should be consistent
-      expect(options.hashCode, equals(options.hashCode));
+      check(options.hashCode).equals(options.hashCode);
     });
 
     testWidgets('should compute color correctly with theme', (tester) async {
@@ -172,10 +173,9 @@ void main() {
               // Test the extension method by accessing it through the options
               final computedColor =
                   options.color ?? Theme.of(context).colorScheme.primary;
-              expect(
+              check(
                 computedColor,
-                equals(Theme.of(context).colorScheme.primary),
-              );
+              ).equals(Theme.of(context).colorScheme.primary);
               return Container();
             },
           ),
@@ -195,7 +195,7 @@ void main() {
               // Test the extension method by accessing it through the options
               final computedColor =
                   options.color ?? Theme.of(context).colorScheme.primary;
-              expect(computedColor, equals(Colors.green));
+              check(computedColor).equals(Colors.green);
               return Container();
             },
           ),
@@ -208,29 +208,29 @@ void main() {
     test('should create with correct values', () {
       const item = BarsViewItem(value: 0.5, color: Colors.red);
 
-      expect(item.value, equals(0.5));
-      expect(item.color, equals(Colors.red));
+      check(item.value).equals(0.5);
+      check(item.color).equals(Colors.red);
     });
 
     test('should handle zero value', () {
       const item = BarsViewItem(value: 0, color: Colors.blue);
 
-      expect(item.value, equals(0.0));
-      expect(item.color, equals(Colors.blue));
+      check(item.value).equals(0.0);
+      check(item.color).equals(Colors.blue);
     });
 
     test('should handle maximum value', () {
       const item = BarsViewItem(value: 1, color: Colors.green);
 
-      expect(item.value, equals(1.0));
-      expect(item.color, equals(Colors.green));
+      check(item.value).equals(1.0);
+      check(item.color).equals(Colors.green);
     });
 
     test('should handle negative value', () {
       const item = BarsViewItem(value: -0.5, color: Colors.yellow);
 
-      expect(item.value, equals(-0.5));
-      expect(item.color, equals(Colors.yellow));
+      check(item.value).equals(-0.5);
+      check(item.color).equals(Colors.yellow);
     });
   });
 
@@ -247,8 +247,8 @@ void main() {
         ),
       );
 
-      expect(find.byType(BarsView), findsOneWidget);
-      expect(find.byType(Row), findsOneWidget);
+      check(tester.widgetList(find.byType(BarsView))).length.equals(1);
+      check(tester.widgetList(find.byType(Row))).length.equals(1);
     });
 
     testWidgets('should render with single element', (tester) async {
@@ -263,8 +263,8 @@ void main() {
         ),
       );
 
-      expect(find.byType(BarsView), findsOneWidget);
-      expect(find.byType(AnimatedContainer), findsOneWidget);
+      check(tester.widgetList(find.byType(BarsView))).length.equals(1);
+      check(tester.widgetList(find.byType(AnimatedContainer))).length.equals(1);
     });
 
     testWidgets('should render with multiple elements', (tester) async {
@@ -283,8 +283,8 @@ void main() {
         ),
       );
 
-      expect(find.byType(BarsView), findsOneWidget);
-      expect(find.byType(AnimatedContainer), findsNWidgets(3));
+      check(tester.widgetList(find.byType(BarsView))).length.equals(1);
+      check(tester.widgetList(find.byType(AnimatedContainer))).length.equals(3);
     });
 
     testWidgets('should have correct row properties', (tester) async {
@@ -306,8 +306,8 @@ void main() {
         find.descendant(of: find.byType(BarsView), matching: find.byType(Row)),
       );
 
-      expect(row.mainAxisSize, equals(MainAxisSize.min));
-      expect(row.mainAxisAlignment, equals(MainAxisAlignment.spaceAround));
+      check(row.mainAxisSize).equals(MainAxisSize.min);
+      check(row.mainAxisAlignment).equals(MainAxisAlignment.spaceAround);
     });
 
     testWidgets('should handle different constraint sizes', (tester) async {
@@ -329,7 +329,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(BarsView), findsOneWidget);
+      check(tester.widgetList(find.byType(BarsView))).length.equals(1);
     });
 
     testWidgets('should handle zero constraints', (tester) async {
@@ -346,31 +346,26 @@ void main() {
         ),
       );
 
-      expect(find.byType(BarsView), findsOneWidget);
+      check(tester.widgetList(find.byType(BarsView))).length.equals(1);
     });
   });
 
   group('VisualizerState Tests', () {
     test('should have correct enum values', () {
-      expect(VisualizerState.values.length, equals(3));
-      expect(VisualizerState.values, contains(VisualizerState.thinking));
-      expect(VisualizerState.values, contains(VisualizerState.listening));
-      expect(VisualizerState.values, contains(VisualizerState.active));
+      check(VisualizerState.values).length.equals(3);
+      check(VisualizerState.values).contains(VisualizerState.thinking);
+      check(VisualizerState.values).contains(VisualizerState.listening);
+      check(VisualizerState.values).contains(VisualizerState.active);
     });
 
     test('should have correct string representation', () {
-      expect(
+      check(
         VisualizerState.thinking.toString(),
-        equals('VisualizerState.thinking'),
-      );
-      expect(
+      ).equals('VisualizerState.thinking');
+      check(
         VisualizerState.listening.toString(),
-        equals('VisualizerState.listening'),
-      );
-      expect(
-        VisualizerState.active.toString(),
-        equals('VisualizerState.active'),
-      );
+      ).equals('VisualizerState.listening');
+      check(VisualizerState.active.toString()).equals('VisualizerState.active');
     });
   });
 }

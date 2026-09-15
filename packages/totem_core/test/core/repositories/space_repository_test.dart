@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -116,12 +117,11 @@ void main() {
         rsvpConfirmProvider('new-session').future,
       );
 
-      expect(attending, isTrue);
-      expect(client.request?.method, 'POST');
-      expect(
+      check(attending).equals(true);
+      check(client.request?.method).equals('POST');
+      check(
         client.request?.path,
-        '/api/mobile/protected/spaces/rsvp/new-session',
-      );
+      ).equals('/api/mobile/protected/spaces/rsvp/new-session');
     });
 
     test('treats RSVP confirm 409 as an unreported conflict', () async {
@@ -147,14 +147,13 @@ void main() {
         await container.read(rsvpConfirmProvider('new-session').future);
         fail('Expected an RSVP conflict');
       } on RsvpConflictException catch (error) {
-        expect(
+        check(
           error.conflict.conflictingSessions.firstOrNull?.slug,
-          'existing-session',
-        );
-        expect(error.cause, isA<ApiError<dynamic, dynamic>>());
-        expect(ErrorHandler.wasReported(error.cause), isFalse);
+        ).equals('existing-session');
+        check(error.cause).isA<ApiError<dynamic, dynamic>>();
+        check(ErrorHandler.wasReported(error.cause)).equals(false);
       }
-      expect(client.requestCount, 1);
+      check(client.requestCount).equals(1);
     });
 
     test('resolves the conflict successfully with status 200', () async {
@@ -177,19 +176,20 @@ void main() {
         rsvpForceConfirmProvider('new-session', ['existing-session']).future,
       );
 
-      expect(attending, isTrue);
-      expect(client.request?.method, 'POST');
-      expect(
-        client.request?.path,
+      check(attending).equals(true);
+      check(client.request?.method).equals('POST');
+      check(client.request?.path).equals(
         '/api/mobile/protected/spaces/rsvp/new-session/resolve-conflicts',
       );
       final requestBody = client.request?.body;
       if (requestBody is! String) {
         fail('Expected the switch request to contain a JSON string body');
       }
-      expect(jsonDecode(requestBody), <String, dynamic>{
-        'conflicting_session_slugs': <String>['existing-session'],
-      });
+      check(jsonDecode(requestBody) as Map<Object?, Object?>).deepEquals(
+        <String, dynamic>{
+          'conflicting_session_slugs': <String>['existing-session'],
+        },
+      );
     });
 
     test('does not classify a non-409 RSVP error as a conflict', () async {
@@ -215,8 +215,8 @@ void main() {
         rsvpConfirmProvider('new-session').future,
       );
 
-      expect(attending, isFalse);
-      expect(client.requestCount, 1);
+      check(attending).equals(false);
+      check(client.requestCount).equals(1);
     });
 
     test('gives up an existing spot', () async {
@@ -239,12 +239,11 @@ void main() {
         rsvpCancelProvider('existing-session').future,
       );
 
-      expect(attending, isFalse);
-      expect(client.request?.method, 'DELETE');
-      expect(
+      check(attending).equals(false);
+      check(client.request?.method).equals('DELETE');
+      check(
         client.request?.path,
-        '/api/mobile/protected/spaces/rsvp/existing-session',
-      );
+      ).equals('/api/mobile/protected/spaces/rsvp/existing-session');
     });
   });
 }

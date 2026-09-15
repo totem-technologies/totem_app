@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -91,15 +92,15 @@ void main() {
 
     await tester.pump();
 
-    expect(findPendingBadge(), findsOneWidget);
-    expect(find.text('New message'), findsOneWidget);
-    expect(find.text('hello from chat'), findsOneWidget);
+    check(tester.widgetList(findPendingBadge())).length.equals(1);
+    check(tester.widgetList(find.text('New message'))).length.equals(1);
+    check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
 
     await tester.tap(find.bySemanticsLabel('Chat'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SessionChatMessages), findsOneWidget);
-    expect(find.text('No messages yet'), findsOneWidget);
+    check(tester.widgetList(find.byType(SessionChatMessages))).length.equals(1);
+    check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
 
     Navigator.of(
       tester.element(find.byType(ActionBarChatButton)),
@@ -107,7 +108,7 @@ void main() {
     ).pop();
     await tester.pumpAndSettle();
 
-    expect(findPendingBadge(), findsNothing);
+    check(tester.widgetList(findPendingBadge())).length.equals(0);
   });
 
   testWidgets('does not show popup for identical message instance', (
@@ -143,7 +144,7 @@ void main() {
     container.read(_testLastMessageProvider.notifier).set(message);
     await tester.pump();
 
-    expect(find.text('New message'), findsOneWidget);
+    check(tester.widgetList(find.text('New message'))).length.equals(1);
   });
 
   testWidgets('does not show popup while chat is open', (tester) async {
@@ -165,7 +166,7 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Chat'));
     await tester.pumpAndSettle();
-    expect(find.byType(SessionChatMessages), findsOneWidget);
+    check(tester.widgetList(find.byType(SessionChatMessages))).length.equals(1);
 
     final context = tester.element(find.byType(ActionBarChatButton));
     final container = ProviderScope.containerOf(context, listen: false);
@@ -181,7 +182,7 @@ void main() {
         );
     await tester.pump();
 
-    expect(find.text('New message'), findsNothing);
-    expect(findPendingBadge(), findsNothing);
+    check(tester.widgetList(find.text('New message'))).length.equals(0);
+    check(tester.widgetList(findPendingBadge())).length.equals(0);
   });
 }

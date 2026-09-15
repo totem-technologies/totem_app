@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task_method_channel.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task_platform_interface.dart';
@@ -7,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:platform/platform.dart';
+import 'package:platform/testing.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_core/features/sessions/widgets/permissions_popups.dart';
 
@@ -108,10 +109,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Grant Permissions'), findsOneWidget);
+      check(tester.widgetList(find.text('Grant Permissions'))).length.equals(1);
 
       final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
-      expect(button.onPressed, isNull);
+      check(button.onPressed).isNull();
     });
 
     testWidgets('enables button when camera and mic granted', (tester) async {
@@ -132,10 +133,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Continue'), findsOneWidget);
+      check(tester.widgetList(find.text('Continue'))).length.equals(1);
 
       final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
-      expect(button.onPressed, isNotNull);
+      check(button.onPressed).isNotNull();
     });
 
     testWidgets('refreshes statuses on resumed lifecycle event', (
@@ -153,12 +154,12 @@ void main() {
       await tester.pumpAndSettle();
 
       final controller = FakePermissionsController.lastInstance;
-      expect(controller, isNotNull);
+      check(controller).isNotNull();
 
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pump();
 
-      expect(controller?.refreshCalls, 1);
+      check(controller?.refreshCalls).equals(1);
     });
 
     testWidgets('tapping permission tiles triggers request methods', (
@@ -182,16 +183,22 @@ void main() {
       await tester.pumpAndSettle();
 
       final controller = FakePermissionsController.lastInstance;
-      expect(controller, isNotNull);
+      check(controller).isNotNull();
 
       await tester.tap(find.text('Notification'));
       await tester.tap(find.text('Mic'));
       await tester.tap(find.text('Camera'));
       await tester.pump();
 
-      expect(controller!.notificationRequests, 1);
-      expect(controller.microphoneRequests, 1);
-      expect(controller.cameraRequests, 1);
+      check(controller)
+          .has((value) => value!.notificationRequests, 'notificationRequests')
+          .equals(1);
+      check(controller)
+          .has((value) => value!.microphoneRequests, 'microphoneRequests')
+          .equals(1);
+      check(
+        controller,
+      ).has((value) => value!.cameraRequests, 'cameraRequests').equals(1);
     });
   });
 
@@ -218,8 +225,10 @@ void main() {
       final result = await showPermissionsRequestSheet(context);
       await tester.pumpAndSettle();
 
-      expect(result, isTrue);
-      expect(find.byType(PermissionsRequestSheet), findsNothing);
+      check(result).equals(true);
+      check(
+        tester.widgetList(find.byType(PermissionsRequestSheet)),
+      ).length.equals(0);
     });
 
     testWidgets('returns false when dismissed', (tester) async {
@@ -245,7 +254,7 @@ void main() {
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
 
-      expect(await future, isFalse);
+      check(await future).equals(false);
     });
 
     testWidgets('returns true when tapping Continue in ready state', (
@@ -273,7 +282,7 @@ void main() {
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
-      expect(await future, isTrue);
+      check(await future).equals(true);
     });
   });
 
@@ -283,14 +292,14 @@ void main() {
     setUp(() {
       final platform = FlutterForegroundTaskPlatform.instance;
       if (platform is MethodChannelFlutterForegroundTask) {
-        platform.platform = FakePlatform(operatingSystem: 'android');
+        platform.platform = TestPlatform.native(operatingSystem: 'android');
       }
     });
 
     tearDown(() {
       final platform = FlutterForegroundTaskPlatform.instance;
       if (platform is MethodChannelFlutterForegroundTask) {
-        platform.platform = const LocalPlatform();
+        platform.platform = const Platform();
       }
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -316,7 +325,7 @@ void main() {
       await showBackgroundActivityDialog(context);
       await tester.pumpAndSettle();
 
-      expect(find.text('Stay connected'), findsNothing);
+      check(tester.widgetList(find.text('Stay connected'))).length.equals(0);
     });
 
     testWidgets('is not dismissed by tapping outside dialog', (tester) async {
@@ -336,12 +345,12 @@ void main() {
       unawaited(showBackgroundActivityDialog(context));
       await tester.pumpAndSettle();
 
-      expect(find.text('Stay connected'), findsOneWidget);
+      check(tester.widgetList(find.text('Stay connected'))).length.equals(1);
 
       await tester.tapAt(const Offset(5, 5));
       await tester.pumpAndSettle();
 
-      expect(find.text('Stay connected'), findsOneWidget);
+      check(tester.widgetList(find.text('Stay connected'))).length.equals(1);
     });
 
     testWidgets('closes when tapping Enable Background Mode', (tester) async {
@@ -367,8 +376,8 @@ void main() {
       await tester.tap(find.text('Enable Background Mode'));
       await tester.pumpAndSettle();
 
-      expect(requestCalled, isTrue);
-      expect(find.text('Stay connected'), findsNothing);
+      check(requestCalled).equals(true);
+      check(tester.widgetList(find.text('Stay connected'))).length.equals(0);
     });
   });
 
@@ -390,8 +399,8 @@ void main() {
       await tester.tap(find.byType(PermissionItemTile));
       await tester.pump();
 
-      expect(taps, 1);
-      expect(find.byIcon(Icons.check), findsNothing);
+      check(taps).equals(1);
+      check(tester.widgetList(find.byIcon(Icons.check))).length.equals(0);
     });
 
     testWidgets('does not invoke onTap and shows check when granted', (
@@ -413,8 +422,8 @@ void main() {
       await tester.tap(find.byType(PermissionItemTile));
       await tester.pump();
 
-      expect(taps, 0);
-      expect(find.byIcon(Icons.check), findsOneWidget);
+      check(taps).equals(0);
+      check(tester.widgetList(find.byIcon(Icons.check))).length.equals(1);
     });
   });
 }

@@ -13,11 +13,24 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
-class ReceiveTotemScreen extends ConsumerWidget {
+class ReceiveTotemScreen extends ConsumerStatefulWidget {
   const ReceiveTotemScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ReceiveTotemScreen> createState() => _ReceiveTotemScreenState();
+}
+
+class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
+  final _notificationController = NotificationController();
+
+  @override
+  void dispose() {
+    _notificationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final sessionStatus = ref.watch(roomStatusProvider);
     final session = ref.watch(currentSessionProvider);
     final roundPrompt = ref.watch(roundMessageProvider);
@@ -34,7 +47,7 @@ class ReceiveTotemScreen extends ConsumerWidget {
           message: 'Accept Totem failed',
         );
         if (context.mounted) {
-          NotificationController().showError(
+          _notificationController.showError(
             context,
             icon: TotemIcons.errorOutlined,
             title: 'Something went wrong',

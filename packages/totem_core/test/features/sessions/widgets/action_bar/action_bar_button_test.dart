@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -58,7 +59,7 @@ void main() {
       await tester.tap(find.byType(ActionBarButton));
       await tester.pump();
 
-      expect(taps, 1);
+      check(taps).equals(1);
     });
 
     testWidgets('is disabled when callback is null', (tester) async {
@@ -77,7 +78,7 @@ void main() {
           matching: find.byType(GestureDetector),
         ),
       );
-      expect(gesture.onTap, isNull);
+      check(gesture.onTap).isNull();
     });
   });
 
@@ -90,9 +91,9 @@ void main() {
         ),
       );
 
-      expect(find.text('One'), findsOneWidget);
-      expect(find.text('Two'), findsOneWidget);
-      expect(find.text('Three'), findsOneWidget);
+      check(tester.widgetList(find.text('One'))).length.equals(1);
+      check(tester.widgetList(find.text('Two'))).length.equals(1);
+      check(tester.widgetList(find.text('Three'))).length.equals(1);
     });
 
     testWidgets('uses compact metrics on a phone-width surface', (
@@ -104,7 +105,7 @@ void main() {
         child: ActionBar(children: ghostButtons(5)),
       );
 
-      expect(buttonWidthOf(tester), 48);
+      check(buttonWidthOf(tester)).equals(48);
     });
 
     testWidgets('uses compact metrics when nested in an unbounded Row', (
@@ -122,7 +123,7 @@ void main() {
         ),
       );
 
-      expect(buttonWidthOf(tester), 48);
+      check(buttonWidthOf(tester)).equals(48);
     });
 
     testWidgets('uses comfortable metrics on a wide tablet surface', (
@@ -134,7 +135,7 @@ void main() {
         child: ActionBar(children: ghostButtons(2)),
       );
 
-      expect(buttonWidthOf(tester), 56);
+      check(buttonWidthOf(tester)).equals(56);
     });
   });
 
@@ -160,8 +161,8 @@ void main() {
       );
 
       final decoration = decorationOf(tester);
-      expect(decoration.color, AppTheme.transparent);
-      expect(decoration.shape, BoxShape.circle);
+      check(decoration.color).equals(AppTheme.transparent);
+      check(decoration.shape).equals(BoxShape.circle);
     });
 
     testWidgets('muted uses pinkTint fill', (tester) async {
@@ -174,7 +175,7 @@ void main() {
         ),
       );
 
-      expect(decorationOf(tester).color, AppTheme.pinkTint);
+      check(decorationOf(tester).color).equals(AppTheme.pinkTint);
     });
 
     testWidgets('emphasized uses cream fill', (tester) async {
@@ -187,7 +188,7 @@ void main() {
         ),
       );
 
-      expect(decorationOf(tester).color, AppTheme.cream);
+      check(decorationOf(tester).color).equals(AppTheme.cream);
     });
 
     testWidgets('disabled ghost is faded', (tester) async {
@@ -206,7 +207,7 @@ void main() {
           matching: find.byType(AnimatedOpacity),
         ),
       );
-      expect(opacity.opacity, 0.4);
+      check(opacity.opacity).equals(0.4);
     });
 
     testWidgets('ghost idle wash appears on hover', (tester) async {
@@ -224,7 +225,7 @@ void main() {
         ),
       );
 
-      expect(decorationOf(tester).color, AppTheme.transparent);
+      check(decorationOf(tester).color).equals(AppTheme.transparent);
 
       final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
@@ -232,10 +233,9 @@ void main() {
       await gesture.moveTo(tester.getCenter(find.byType(ActionBarButton)));
       await tester.pumpAndSettle();
 
-      expect(
+      check(
         decorationOf(tester).color,
-        AppTheme.white.withValues(alpha: 0.16),
-      );
+      ).equals(AppTheme.white.withValues(alpha: 0.16));
     });
 
     testWidgets('ghost foreground is slate on a light surrounding', (
@@ -261,7 +261,7 @@ void main() {
           matching: find.byType(IconTheme),
         ),
       );
-      expect(iconTheme.data.color, AppTheme.slate);
+      check(iconTheme.data.color).equals(AppTheme.slate);
     });
   });
 }
