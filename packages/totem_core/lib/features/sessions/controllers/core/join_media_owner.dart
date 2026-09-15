@@ -29,7 +29,7 @@ class JoinMediaOwner {
     return null;
   }
 
-  /// LiveKit owns a track after Room.connect succeeds.
+  /// LiveKit owns a track after its publication succeeds.
   void releaseToRoom(LocalTrack? track) {
     if (track == null) return;
     _tracks.removeWhere((owned) => identical(owned, track));
