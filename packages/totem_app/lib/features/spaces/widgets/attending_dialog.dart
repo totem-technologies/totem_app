@@ -85,6 +85,17 @@ class AttendingDialog extends StatefulWidget {
 
 class _AttendingDialogState extends State<AttendingDialog> {
   var _addedToCalendar = false;
+  late final _guidelinesRecognizer = TapGestureRecognizer()
+    ..onTap = () => launchUrl(
+      AppConfig.instance.communityGuidelinesUrl,
+      mode: LaunchMode.externalApplication,
+    );
+
+  @override
+  void dispose() {
+    _guidelinesRecognizer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -214,11 +225,7 @@ class _AttendingDialogState extends State<AttendingDialog> {
                     style: const TextStyle(
                       decoration: TextDecoration.underline,
                     ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () => launchUrl(
-                        AppConfig.instance.communityGuidelinesUrl,
-                        mode: LaunchMode.externalApplication,
-                      ),
+                    recognizer: _guidelinesRecognizer,
                   ),
                   const TextSpan(
                     text: ' to learn more about how to participate.',

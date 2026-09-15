@@ -21,12 +21,6 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
           'LocalTrackPublication',
           'RemoteTrackPublication',
           'Room',
-          'ImageStreamCompleterHandle',
-          '_LiveImage',
-          'TapGestureRecognizer',
-          'ImageStreamCompleterHandle',
-          '_LiveImage',
-          'TapGestureRecognizer',
         ],
       );
 

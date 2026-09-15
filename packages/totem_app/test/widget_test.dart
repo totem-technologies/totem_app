@@ -10,6 +10,7 @@ import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/models/user_schema.dart';
+import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/router.dart';
 
 import '../../totem_core/test/setup.dart';
@@ -25,6 +26,13 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
       await tester.pump(const Duration(seconds: 1));
+      for (final path in <String>[
+        TotemImageAssets.onboarding1,
+        TotemImageAssets.onboarding2,
+        TotemImageAssets.onboarding3,
+      ]) {
+        await AssetImage(path, package: 'totem_core').evict();
+      }
       tester.binding.imageCache.clearLiveImages();
       tester.binding.imageCache.clear();
     });
@@ -45,6 +53,18 @@ void main() {
     await tester.pumpAndSettle();
 
     check(tester.widgetList(find.byType(app.TotemApp))).length.equals(1);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    for (final path in <String>[
+      TotemImageAssets.onboarding1,
+      TotemImageAssets.onboarding2,
+      TotemImageAssets.onboarding3,
+    ]) {
+      await AssetImage(path, package: 'totem_core').evict();
+    }
+    tester.binding.imageCache.clearLiveImages();
+    tester.binding.imageCache.clear();
   });
 }
 

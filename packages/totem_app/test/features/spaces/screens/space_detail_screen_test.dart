@@ -9,6 +9,7 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/confetti.dart';
 
@@ -234,12 +235,26 @@ void main() {
 
     check(summaryLoads).equals(2);
     ConfettiController.clear();
-    await tester.pump();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    tester.binding.imageCache.clearLiveImages();
+    tester.binding.imageCache.clear();
   });
 
   testWidgets('refreshes the current state after returning from a session', (
     tester,
   ) async {
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await const AssetImage(
+        TotemImageAssets.genericBackground,
+        package: 'totem_core',
+      ).evict();
+      tester.binding.imageCache.clearLiveImages();
+      tester.binding.imageCache.clear();
+    });
+
     var spaceLoads = 0;
     var eventLoads = 0;
     var summaryLoads = 0;
@@ -341,5 +356,14 @@ void main() {
 
     check((spaceLoads, eventLoads, summaryLoads)).equals((2, 2, 2));
     check(tester.widgetList(find.text('Attend'))).length.equals(1);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await const AssetImage(
+      TotemImageAssets.genericBackground,
+      package: 'totem_core',
+    ).evict();
+    tester.binding.imageCache.clearLiveImages();
+    tester.binding.imageCache.clear();
   });
 }
