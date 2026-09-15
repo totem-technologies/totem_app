@@ -40,11 +40,11 @@ dependencies:
   sentry_dio: ^9.21.0
 
   # Video Experience
-  # livekit_client: ^2.8.0
+  # livekit_client: ^2.13.0
   livekit_client:
     git:
       url: https://github.com/livekit/client-sdk-flutter
-      ref: f48ada022e95cff588deb7187607dd4d8673f69b
+      ref: ac9d3906eefc8eea91338651b53f4f2d0d2a37cb
   # path: ../client-sdk-flutter
   # git:
   # url: https://github.com/livekit/client-sdk-flutter/
