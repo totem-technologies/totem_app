@@ -926,7 +926,7 @@ void main() {
           ).thenAnswer((_) async => MockLocalTrackPublication());
           when(
             () => localParticipant.publishAudioTrack(microphoneTrack),
-          ).thenThrow(MediaConnectException('microphone publication failed'));
+          ).thenThrow(TrackPublishException('microphone publication failed'));
 
           final room = _CountingRoom(localParticipant);
           controller.room = room;
@@ -947,6 +947,11 @@ void main() {
           verify(
             () => localParticipant.publishAudioTrack(microphoneTrack),
           ).called(1);
+
+          await controller.resetAfterFailedJoin();
+
+          expect(room.disposeCount, 1);
+          expect(controller.room, isNull);
         },
       );
 

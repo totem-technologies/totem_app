@@ -475,24 +475,34 @@ class SessionController extends _$SessionController {
         throw StateError('Room connected without a local participant');
       }
 
-      if (initialCameraTrack != null) {
-        await localParticipant.publishVideoTrack(
-          initialCameraTrack,
-          publishOptions: defaultVideoPublishOptions,
+      try {
+        if (initialCameraTrack != null) {
+          await localParticipant.publishVideoTrack(
+            initialCameraTrack,
+            publishOptions: defaultVideoPublishOptions,
+          );
+          _joinMediaOwner.releaseToRoom(initialCameraTrack);
+        } else if (options.cameraEnabled) {
+          await localParticipant.setCameraEnabled(true);
+        }
+
+        if (initialMicrophoneTrack != null) {
+          await localParticipant.publishAudioTrack(initialMicrophoneTrack);
+          _joinMediaOwner.releaseToRoom(initialMicrophoneTrack);
+        } else if (options.microphoneEnabled) {
+          await localParticipant.setMicrophoneEnabled(true);
+        }
+
+        await _applyJoinMediaState();
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error publishing initial session media',
         );
-        _joinMediaOwner.releaseToRoom(initialCameraTrack);
-      } else if (options.cameraEnabled) {
-        await localParticipant.setCameraEnabled(true);
+        return SessionJoinResult.retryableFailure;
       }
 
-      if (initialMicrophoneTrack != null) {
-        await localParticipant.publishAudioTrack(initialMicrophoneTrack);
-        _joinMediaOwner.releaseToRoom(initialMicrophoneTrack);
-      } else if (options.microphoneEnabled) {
-        await localParticipant.setMicrophoneEnabled(true);
-      }
-
-      await _applyJoinMediaState();
       return SessionJoinResult.success;
     }
     // For ConnectException and MediaConnectException, we log the error but don't
