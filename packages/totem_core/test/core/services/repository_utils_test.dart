@@ -230,10 +230,10 @@ void main() {
       } on AppNetworkException catch (error) {
         check(error).identicalTo(reportedError! as AppNetworkException);
         check(error.code).equals('NO_CONNECTION');
-        check(error.details['request_method']).equals('GET');
-        check(
-          error.details['request_path'],
-        ).equals('/spaces/session/session-1');
+
+        final details = error.details as Map<String, dynamic>;
+        check(details['request_method']).equals('GET');
+        check(details['request_path']).equals('/spaces/session/session-1');
       }
     });
 

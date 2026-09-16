@@ -122,8 +122,9 @@ void main() {
     Future<ProviderContainer> pumpOverlayHost(WidgetTester tester) async {
       final initialEntry = OverlayEntry(builder: (context) => const SizedBox());
       addTearDown(() async {
-        initialEntry.remove();
-        initialEntry.dispose();
+        initialEntry
+          ..remove()
+          ..dispose();
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       });

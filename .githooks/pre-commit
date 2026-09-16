@@ -1,9 +1,14 @@
 #!/usr/bin/env sh
 
-# Pre-commit hook to check dart formatting
+# Pre-commit hook to check formatting and static analysis
 # To use this hook, run: make githooks
 
 set -u
 
-# Run the format check script
+# Flutter uses Git to determine its SDK version; don't let the hook's GIT_DIR
+# make it inspect this repository instead of the Flutter SDK repository.
+unset GIT_DIR
+
+# Check formatting before running the slower package analysis.
 dart scripts/check_format.dart
+make lint
