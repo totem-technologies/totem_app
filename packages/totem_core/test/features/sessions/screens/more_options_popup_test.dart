@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
@@ -187,12 +188,16 @@ void main() {
       );
 
       // Tile is rendered but with null onTap
-      expect(find.textContaining('Force pass'), findsOneWidget);
+      check(
+        tester.widgetList(find.textContaining('Force pass')),
+      ).length.equals(1);
 
       // Tapping does nothing — no dialog appears
       await tester.tap(find.textContaining('Force pass'));
       await tester.pumpAndSettle();
-      expect(find.byType(ConfirmationDialog), findsNothing);
+      check(
+        tester.widgetList(find.byType(ConfirmationDialog)),
+      ).length.equals(0);
     });
 
     testWidgets('force pass tile is not shown when not keeper', (tester) async {
@@ -220,7 +225,9 @@ void main() {
         deviceController: deviceController,
       );
 
-      expect(find.textContaining('Force pass'), findsNothing);
+      check(
+        tester.widgetList(find.textContaining('Force pass')),
+      ).length.equals(0);
     });
 
     testWidgets('force pass tile is not shown when not active', (tester) async {
@@ -246,7 +253,9 @@ void main() {
         deviceController: deviceController,
       );
 
-      expect(find.textContaining('Force pass'), findsNothing);
+      check(
+        tester.widgetList(find.textContaining('Force pass')),
+      ).length.equals(0);
     });
 
     // ── Dialog content: normal speaking turn ───────────────────────
@@ -284,12 +293,11 @@ void main() {
         await tester.pumpAndSettle();
 
         // p2 is in participants list — uses MockLocalParticipant name
-        expect(find.textContaining(p2.name), findsOneWidget);
-        expect(
-          find.textContaining("the current speaker's turn"),
-          findsOneWidget,
-        );
-        expect(find.text('Are you sure?'), findsOneWidget);
+        check(tester.widgetList(find.textContaining(p2.name))).length.equals(1);
+        check(
+          tester.widgetList(find.textContaining("the current speaker's turn")),
+        ).length.equals(1);
+        check(tester.widgetList(find.text('Are you sure?'))).length.equals(1);
       },
     );
 
@@ -332,7 +340,9 @@ void main() {
 
       verify(() => keeper.forcePassTotem()).called(1);
       // Dialog should be closed
-      expect(find.byType(ConfirmationDialog), findsNothing);
+      check(
+        tester.widgetList(find.byType(ConfirmationDialog)),
+      ).length.equals(0);
     });
 
     // ── Early return ───────────────────────────────────────────────
@@ -368,7 +378,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // No dialog should appear because nextParticipantIdentity is null
-      expect(find.byType(ConfirmationDialog), findsNothing);
+      check(
+        tester.widgetList(find.byType(ConfirmationDialog)),
+      ).length.equals(0);
       verifyNever(() => keeper.forcePassTotem());
     });
   });

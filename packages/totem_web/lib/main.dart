@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
@@ -32,13 +33,33 @@ void main() {
   );
 }
 
-class TotemWebApp extends ConsumerWidget {
+class TotemWebApp extends ConsumerStatefulWidget {
   const TotemWebApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TotemWebApp> createState() => _TotemWebAppState();
+}
+
+class _TotemWebAppState extends ConsumerState<TotemWebApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _router = TotemRouter.instance.createRouter(ref);
+  }
+
+  @override
+  void dispose() {
+    TotemRouter.instance.dispose();
+    _router.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp.router(
-      routerConfig: TotemRouter.instance.createRouter(ref),
+      routerConfig: _router,
       title: 'Totem',
       theme: AppTheme.lightTheme,
       themeMode: ThemeMode.light,

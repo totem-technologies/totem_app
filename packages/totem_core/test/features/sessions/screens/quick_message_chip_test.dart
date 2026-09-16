@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
@@ -28,7 +29,7 @@ void main() {
 
       await tester.tap(find.text('Please mute your mic'));
       await tester.pump();
-      expect(sendCount, 1);
+      check(sendCount).equals(1);
     });
 
     testWidgets('ignores a quick tap and sends on long press when mobile', (
@@ -39,11 +40,11 @@ void main() {
 
       await tester.tap(find.text('Please mute your mic'));
       await tester.pump();
-      expect(sendCount, 0);
+      check(sendCount).equals(0);
 
       await tester.longPress(find.text('Please mute your mic'));
       await tester.pump();
-      expect(sendCount, 1);
+      check(sendCount).equals(1);
     });
   });
 }

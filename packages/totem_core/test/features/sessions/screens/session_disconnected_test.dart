@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
@@ -66,7 +67,7 @@ void main() {
           sessionState: _createEndedState(),
         );
 
-        expect(result, SessionDisconnectedReason.movedToAnotherDevice);
+        check(result).equals(SessionDisconnectedReason.movedToAnotherDevice);
       });
 
       test('duplicateIdentity takes priority over removed', () {
@@ -75,7 +76,7 @@ void main() {
           sessionState: _createEndedState(removed: true),
         );
 
-        expect(result, SessionDisconnectedReason.movedToAnotherDevice);
+        check(result).equals(SessionDisconnectedReason.movedToAnotherDevice);
       });
 
       test('returns removed when participant was removed', () {
@@ -83,7 +84,7 @@ void main() {
           sessionState: _createEndedState(removed: true),
         );
 
-        expect(result, SessionDisconnectedReason.removed);
+        check(result).equals(SessionDisconnectedReason.removed);
       });
 
       test('removed takes priority over endReason', () {
@@ -94,7 +95,7 @@ void main() {
           ),
         );
 
-        expect(result, SessionDisconnectedReason.removed);
+        check(result).equals(SessionDisconnectedReason.removed);
       });
 
       test('returns banned when removeReason is ban', () {
@@ -105,7 +106,7 @@ void main() {
           ),
         );
 
-        expect(result, SessionDisconnectedReason.banned);
+        check(result).equals(SessionDisconnectedReason.banned);
       });
 
       test('banned takes priority over endReason', () {
@@ -117,7 +118,7 @@ void main() {
           ),
         );
 
-        expect(result, SessionDisconnectedReason.banned);
+        check(result).equals(SessionDisconnectedReason.banned);
       });
 
       test('returns keeperAbsent when EndReason.keeperAbsent', () {
@@ -125,7 +126,7 @@ void main() {
           sessionState: _createEndedState(endReason: EndReason.keeperAbsent),
         );
 
-        expect(result, SessionDisconnectedReason.keeperAbsent);
+        check(result).equals(SessionDisconnectedReason.keeperAbsent);
       });
 
       test('returns roomEmpty when EndReason.roomEmpty', () {
@@ -133,7 +134,7 @@ void main() {
           sessionState: _createEndedState(endReason: EndReason.roomEmpty),
         );
 
-        expect(result, SessionDisconnectedReason.roomEmpty);
+        check(result).equals(SessionDisconnectedReason.roomEmpty);
       });
 
       test('returns keeperEnded when EndReason.keeperEnded', () {
@@ -141,7 +142,7 @@ void main() {
           sessionState: _createEndedState(endReason: EndReason.keeperEnded),
         );
 
-        expect(result, SessionDisconnectedReason.keeperEnded);
+        check(result).equals(SessionDisconnectedReason.keeperEnded);
       });
 
       test('returns keeperEnded for unrecognized EndReason values', () {
@@ -151,13 +152,13 @@ void main() {
           ),
         );
 
-        expect(result, SessionDisconnectedReason.keeperEnded);
+        check(result).equals(SessionDisconnectedReason.keeperEnded);
       });
 
       test('returns keeperEnded when sessionState is null', () {
         final result = resolveDisconnectedReason();
 
-        expect(result, SessionDisconnectedReason.keeperEnded);
+        check(result).equals(SessionDisconnectedReason.keeperEnded);
       });
 
       test('returns keeperEnded when room status is not ended', () {
@@ -165,7 +166,7 @@ void main() {
           sessionState: _createEndedState(status: RoomStatus.active),
         );
 
-        expect(result, SessionDisconnectedReason.keeperEnded);
+        check(result).equals(SessionDisconnectedReason.keeperEnded);
       });
     });
 

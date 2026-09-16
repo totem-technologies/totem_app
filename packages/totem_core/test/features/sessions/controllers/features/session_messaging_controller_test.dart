@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -18,47 +19,41 @@ void main() {
   group('SessionMessagingController', () {
     group('Static Configuration', () {
       test('SessionCommunicationTopics enum has four topics', () {
-        expect(SessionCommunicationTopics.values.length, 4);
+        check(SessionCommunicationTopics.values).length.equals(4);
       });
 
       test('SessionCommunicationTopics.emoji has correct topic value', () {
-        expect(
-          SessionCommunicationTopics.emoji.topic,
-          equals('lk-emoji-topic'),
-        );
+        check(SessionCommunicationTopics.emoji.topic).equals('lk-emoji-topic');
       });
 
       test('SessionCommunicationTopics.chat has correct topic value', () {
-        expect(SessionCommunicationTopics.chat.topic, equals('lk-chat-topic'));
+        check(SessionCommunicationTopics.chat.topic).equals('lk-chat-topic');
       });
 
       test(
         'SessionCommunicationTopics.participantRemoved has correct topic value',
         () {
-          expect(
+          check(
             SessionCommunicationTopics.participantRemoved.topic,
-            equals('lk-participant-removed-topic'),
-          );
+          ).equals('lk-participant-removed-topic');
         },
       );
 
       test(
         'SessionCommunicationTopics.shareTimeReminder has correct topic value',
         () {
-          expect(
+          check(
             SessionCommunicationTopics.shareTimeReminder.topic,
-            equals('lk-share-time-reminder-topic'),
-          );
+          ).equals('lk-share-time-reminder-topic');
         },
       );
 
       test('All topic values are unique', () {
         final topics = SessionCommunicationTopics.values.map((t) => t.topic);
-        expect(
-          topics.length,
-          equals(topics.toSet().length),
-          reason: 'All topic values should be unique',
-        );
+        check(
+          because: 'All topic values should be unique',
+          topics,
+        ).length.equals(topics.toSet().length);
       });
     });
 
@@ -119,8 +114,8 @@ void main() {
 
         controller.handleDataReceived(chatEvent);
 
-        expect(mockSession.addedChatMessages, isNotEmpty);
-        expect(mockSession.addedChatMessages.first.message, equals('Hello'));
+        check(mockSession.addedChatMessages).isNotEmpty();
+        check(mockSession.addedChatMessages.first.message).equals('Hello');
       });
     });
 
@@ -168,7 +163,7 @@ void main() {
 
           controller.handleDataReceived(removedEvent2);
 
-          expect(mockSession.disconnectFromRoomCalled, isFalse);
+          check(mockSession.disconnectFromRoomCalled).equals(false);
         },
       );
     });
@@ -204,11 +199,10 @@ void main() {
           );
 
           final reminderStart = container.read(provider);
-          expect(reminderStart, isNotNull);
-          expect(
+          check(reminderStart).isNotNull();
+          check(
             DateTime.timestamp().difference(reminderStart!).inMilliseconds,
-            closeTo(120000, 1000),
-          );
+          ).isCloseTo(120000, 1000);
         },
       );
 
@@ -239,7 +233,7 @@ void main() {
           ),
         );
 
-        expect(container.read(provider), isNull);
+        check(container.read(provider)).isNull();
       });
     });
 
@@ -274,13 +268,13 @@ void main() {
           );
 
           final before = container.read(emojiReactionsProvider);
-          expect(before, isEmpty);
+          check(before).isEmpty();
 
           await controller.sendReaction('👍');
 
           final after = container.read(emojiReactionsProvider);
-          expect(after, hasLength(1));
-          expect(after.first.emoji, equals('👍'));
+          check(after).length.equals(1);
+          check(after.first.emoji).equals('👍');
         },
       );
     });
@@ -333,7 +327,7 @@ void main() {
                 ).captured.single
                 as List<int>;
         final payload = jsonDecode(utf8.decode(data)) as Map<String, dynamic>;
-        expect(payload['elapsedMilliseconds'], closeTo(120000, 1000));
+        check(payload['elapsedMilliseconds'] as num).isCloseTo(120000, 1000);
       });
     });
 
@@ -350,11 +344,10 @@ void main() {
         // Should not throw
         await controller.sendMessage('Hello everyone!');
 
-        expect(mockSession.addedChatMessages, isNotEmpty);
-        expect(
+        check(mockSession.addedChatMessages).isNotEmpty();
+        check(
           mockSession.addedChatMessages.first.message,
-          equals('Hello everyone!'),
-        );
+        ).equals('Hello everyone!');
       });
 
       test('sendMessage logs warning when not keeper', () async {
@@ -368,7 +361,7 @@ void main() {
 
         await controller.sendMessage('Hello');
 
-        expect(mockSession.addedChatMessages, isEmpty);
+        check(mockSession.addedChatMessages).isEmpty();
       });
     });
   });

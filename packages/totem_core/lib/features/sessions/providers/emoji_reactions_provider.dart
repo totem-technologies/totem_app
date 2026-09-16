@@ -8,6 +8,10 @@ import 'package:uuid/uuid.dart';
 
 part 'emoji_reactions_provider.g.dart';
 
+final emojiReactionClockProvider = Provider<DateTime Function()>(
+  (ref) => DateTime.timestamp,
+);
+
 @immutable
 class SessionEmojiReaction {
   const SessionEmojiReaction({
@@ -58,7 +62,7 @@ class EmojiReactions extends _$EmojiReactions {
   List<SessionEmojiReaction> build() => <SessionEmojiReaction>[];
 
   Future<void> emitIncomingReaction(String userIdentity, String emoji) async {
-    final now = DateTime.timestamp();
+    final now = ref.read(emojiReactionClockProvider)();
     final lastTime = state
         .lastWhereOrNull((r) => r.userIdentity == userIdentity)
         ?.timestamp;

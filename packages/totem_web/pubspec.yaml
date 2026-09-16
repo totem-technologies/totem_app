@@ -32,7 +32,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  checks: ^0.3.2
+  leak_tracker_flutter_testing: any
 
+  url_launcher_platform_interface: any
 flutter:
   uses-material-design: true
 

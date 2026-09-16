@@ -1,9 +1,24 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 
 void main() {
+  void autoSizeTest(
+    String description,
+    Future<void> Function(WidgetTester) body,
+  ) {
+    testWidgets(
+      description,
+      body,
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
+  }
+
   group('Transition Cards', () {
     Widget buildTestWidget(Widget child) {
       return MaterialApp(
@@ -11,7 +26,7 @@ void main() {
       );
     }
 
-    testWidgets('JoinTransitionCard renders and triggers action', (
+    autoSizeTest('JoinTransitionCard renders and triggers action', (
       tester,
     ) async {
       bool actionTriggered = false;
@@ -27,14 +42,17 @@ void main() {
         ),
       );
 
-      expect(find.text('Welcome'), findsOneWidget);
-      expect(
-        find.text(
-          'Your session will start soon. Please check your audio and video before joining.',
+      check(tester.widgetList(find.text('Welcome'))).length.equals(1);
+      check(
+        tester.widgetList(
+          find.text(
+            'Your session will start soon. Please check your audio and video before joining.',
+          ),
         ),
-        findsOneWidget,
-      );
-      expect(find.byType(ActionSliderButton), findsOneWidget);
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
 
       // Trigger the action
       final button = tester.widget<ActionSliderButton>(
@@ -42,10 +60,10 @@ void main() {
       );
       await button.onActionCompleted();
 
-      expect(actionTriggered, isTrue);
+      check(actionTriggered).equals(true);
     });
 
-    testWidgets('PassTransitionCard renders and triggers action', (
+    autoSizeTest('PassTransitionCard renders and triggers action', (
       tester,
     ) async {
       bool actionTriggered = false;
@@ -62,7 +80,9 @@ void main() {
         ),
       );
 
-      expect(find.byType(ActionSliderButton), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
 
       // Trigger the action
       final button = tester.widget<ActionSliderButton>(
@@ -70,10 +90,10 @@ void main() {
       );
       await button.onActionCompleted();
 
-      expect(actionTriggered, isTrue);
+      check(actionTriggered).equals(true);
     });
 
-    testWidgets('ReceiveTransitionCard renders and triggers action', (
+    autoSizeTest('ReceiveTransitionCard renders and triggers action', (
       tester,
     ) async {
       bool actionTriggered = false;
@@ -89,7 +109,9 @@ void main() {
         ),
       );
 
-      expect(find.byType(ActionSliderButton), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
 
       // Trigger the action
       final button = tester.widget<ActionSliderButton>(
@@ -97,10 +119,10 @@ void main() {
       );
       await button.onActionCompleted();
 
-      expect(actionTriggered, isTrue);
+      check(actionTriggered).equals(true);
     });
 
-    testWidgets('StartTransitionCard renders and triggers action', (
+    autoSizeTest('StartTransitionCard renders and triggers action', (
       tester,
     ) async {
       bool actionTriggered = false;
@@ -116,7 +138,9 @@ void main() {
         ),
       );
 
-      expect(find.byType(ActionSliderButton), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
 
       // Trigger the action
       final button = tester.widget<ActionSliderButton>(
@@ -124,24 +148,27 @@ void main() {
       );
       await button.onActionCompleted();
 
-      expect(actionTriggered, isTrue);
+      check(actionTriggered).equals(true);
     });
 
-    testWidgets('WaitingReceiveTransitionCard renders without action button', (
+    autoSizeTest('WaitingReceiveTransitionCard renders without action button', (
       tester,
     ) async {
       await tester.pumpWidget(
         buildTestWidget(const WaitingReceiveTransitionCard()),
       );
 
-      expect(find.byType(ActionSliderButton), findsNothing);
-      expect(
-        find.textContaining('Waiting for the receiver to accept'),
-        findsOneWidget,
-      );
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(0);
+      check(
+        tester.widgetList(
+          find.textContaining('Waiting for the receiver to accept'),
+        ),
+      ).length.equals(1);
     });
 
-    testWidgets('PromptTransitionCard renders and triggers action', (
+    autoSizeTest('PromptTransitionCard renders and triggers action', (
       tester,
     ) async {
       bool actionTriggered = false;
@@ -159,8 +186,10 @@ void main() {
         ),
       );
 
-      expect(find.byType(TextField), findsOneWidget);
-      expect(find.byType(ActionSliderButton), findsOneWidget);
+      check(tester.widgetList(find.byType(TextField))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
 
       await tester.enterText(find.byType(TextField), 'Test prompt');
 
@@ -170,8 +199,8 @@ void main() {
       );
       await button.onActionCompleted();
 
-      expect(actionTriggered, isTrue);
-      expect(message, 'Test prompt');
+      check(actionTriggered).equals(true);
+      check(message).equals('Test prompt');
     });
   });
 }

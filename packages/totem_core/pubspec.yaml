@@ -105,6 +105,8 @@ dev_dependencies:
   wakelock_plus_platform_interface: any
   flutter_webrtc: any
   platform: any
+  checks: ^0.3.2
+  leak_tracker_flutter_testing: any
 flutter:
   default-flavor: production
   uses-material-design: true

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:totem_app/features/spaces/widgets/conflicting_sessions_dialog.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 
@@ -106,17 +107,22 @@ void main() {
   ) async {
     await showConflict(tester, onSwitch: () async => true);
 
-    expect(find.text('You have a session at this time.'), findsOneWidget);
-    expect(
-      find.text(
-        'To join New Session, you’ll need to give up your spot in Existing Session.',
+    check(
+      tester.widgetList(find.text('You have a session at this time.')),
+    ).length.equals(1);
+    check(
+      tester.widgetList(
+        find.text(
+          'To join New Session, you’ll need to give up your spot in Existing Session.',
+        ),
       ),
-      findsOneWidget,
-    );
-    expect(find.text('Your current session'), findsOneWidget);
-    expect(find.text('Existing Session'), findsOneWidget);
-    expect(find.text('New session'), findsOneWidget);
-    expect(find.text('New Session'), findsOneWidget);
+    ).length.equals(1);
+    check(
+      tester.widgetList(find.text('Your current session')),
+    ).length.equals(1);
+    check(tester.widgetList(find.text('Existing Session'))).length.equals(1);
+    check(tester.widgetList(find.text('New session'))).length.equals(1);
+    check(tester.widgetList(find.text('New Session'))).length.equals(1);
 
     final description = tester.widget<Text>(
       find.text(
@@ -126,10 +132,9 @@ void main() {
     final spans = (description.textSpan! as TextSpan).children!
         .whereType<TextSpan>();
     for (final sessionName in ['New Session', 'Existing Session']) {
-      expect(
+      check(
         spans.singleWhere((span) => span.text == sessionName).style?.fontWeight,
-        FontWeight.w500,
-      );
+      ).equals(FontWeight.w500);
     }
   });
 
@@ -150,7 +155,7 @@ void main() {
     const description =
         'To join New Session, you’ll need to give up your spot in '
         'Existing Session, Second Session, and Third Session.';
-    expect(find.text(description), findsOneWidget);
+    check(tester.widgetList(find.text(description))).length.equals(1);
 
     final text = tester.widget<Text>(find.text(description));
     final spans = (text.textSpan! as TextSpan).children!.whereType<TextSpan>();
@@ -159,15 +164,13 @@ void main() {
       'Second Session',
       'Third Session',
     ]) {
-      expect(
+      check(
         spans.singleWhere((span) => span.text == sessionName).style?.fontWeight,
-        FontWeight.w500,
-      );
+      ).equals(FontWeight.w500);
     }
-    expect(
+    check(
       spans.singleWhere((span) => span.text == ', and ').style?.fontWeight,
-      isNull,
-    );
+    ).isNull();
   });
 
   testWidgets('lays out session cards as a column in portrait', (tester) async {
@@ -181,15 +184,14 @@ void main() {
     final layout = find.byKey(
       const ValueKey('conflicting-sessions-vertical-layout'),
     );
-    expect(layout, findsOneWidget);
+    check(tester.widgetList(layout)).length.equals(1);
     final arrow = tester.widget<RotatedBox>(
       find.descendant(of: layout, matching: find.byType(RotatedBox)),
     );
-    expect(arrow.quarterTurns, -1);
-    expect(
+    check(arrow.quarterTurns).equals(-1);
+    check(
       tester.getCenter(find.text('Existing Session')).dy,
-      lessThan(tester.getCenter(find.text('New Session')).dy),
-    );
+    ).isLessThan(tester.getCenter(find.text('New Session')).dy);
   });
 
   testWidgets('lays out session cards as a row in landscape', (tester) async {
@@ -203,15 +205,14 @@ void main() {
     final layout = find.byKey(
       const ValueKey('conflicting-sessions-horizontal-layout'),
     );
-    expect(layout, findsOneWidget);
+    check(tester.widgetList(layout)).length.equals(1);
     final arrow = tester.widget<RotatedBox>(
       find.descendant(of: layout, matching: find.byType(RotatedBox)),
     );
-    expect(arrow.quarterTurns, 2);
-    expect(
+    check(arrow.quarterTurns).equals(2);
+    check(
       tester.getCenter(find.text('Existing Session')).dx,
-      lessThan(tester.getCenter(find.text('New Session')).dx),
-    );
+    ).isLessThan(tester.getCenter(find.text('New Session')).dx);
   });
 
   testWidgets('points the horizontal arrow toward the new session in RTL', (
@@ -234,11 +235,10 @@ void main() {
     final arrow = tester.widget<RotatedBox>(
       find.descendant(of: layout, matching: find.byType(RotatedBox)),
     );
-    expect(arrow.quarterTurns, 0);
-    expect(
+    check(arrow.quarterTurns).equals(0);
+    check(
       tester.getCenter(find.text('Existing Session')).dx,
-      greaterThan(tester.getCenter(find.text('New Session')).dx),
-    );
+    ).isGreaterThan(tester.getCenter(find.text('New Session')).dx);
   });
 
   testWidgets('switches sessions and closes only after success', (
@@ -258,9 +258,11 @@ void main() {
     await tester.tap(find.text('Switch Sessions'));
     await tester.pumpAndSettle();
 
-    expect(switchCalls, 1);
-    expect(dialogResult, isTrue);
-    expect(find.text('You have a session at this time.'), findsNothing);
+    check(switchCalls).equals(1);
+    check(dialogResult).equals(true);
+    check(
+      tester.widgetList(find.text('You have a session at this time.')),
+    ).length.equals(0);
   });
 
   testWidgets('keeps the dialog open when switching fails', (tester) async {
@@ -269,6 +271,8 @@ void main() {
     await tester.tap(find.text('Switch Sessions'));
     await tester.pumpAndSettle();
 
-    expect(find.text('You have a session at this time.'), findsOneWidget);
+    check(
+      tester.widgetList(find.text('You have a session at this time.')),
+    ).length.equals(1);
   });
 }

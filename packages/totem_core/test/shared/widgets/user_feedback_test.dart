@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -70,8 +71,8 @@ void main() {
 
       await sendModifiedEnter(tester, modifierKey: LogicalKeyboardKey.metaLeft);
 
-      expect(submittedFeedback, 'This is useful feedback.');
-      expect(find.byType(UserFeedback), findsNothing);
+      check(submittedFeedback).equals('This is useful feedback.');
+      check(tester.widgetList(find.byType(UserFeedback))).length.equals(0);
     });
 
     testWidgets('submits on Control+Enter on windows', (tester) async {
@@ -96,11 +97,10 @@ void main() {
         modifierKey: LogicalKeyboardKey.controlLeft,
       );
 
-      expect(
+      check(
         submittedFeedback,
-        'This feedback should submit from the keyboard.',
-      );
-      expect(find.byType(UserFeedback), findsNothing);
+      ).equals('This feedback should submit from the keyboard.');
+      check(tester.widgetList(find.byType(UserFeedback))).length.equals(0);
     });
   });
 }

@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -449,6 +451,12 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
 }
 
 void main() {
+  setUp(() {
+    LeakTesting.settings = LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    );
+  });
+
   setUpAll(() {
     TotemRouter.instance = FakeTotemRouter();
   });
@@ -510,7 +518,9 @@ void main() {
         screen: RoomScreen.loading,
       );
 
-      expect(find.byKey(const ValueKey('loading-screen')), findsOneWidget);
+      check(
+        tester.widgetList(find.byKey(const ValueKey('loading-screen'))),
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -531,8 +541,12 @@ void main() {
           disconnectReason: DisconnectReason.joinFailure,
         );
 
-        expect(find.byKey(const ValueKey('loading-screen')), findsOneWidget);
-        expect(find.byType(SessionDisconnectedScreen), findsNothing);
+        check(
+          tester.widgetList(find.byKey(const ValueKey('loading-screen'))),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.byType(SessionDisconnectedScreen)),
+        ).length.equals(0);
       },
     );
 
@@ -549,7 +563,9 @@ void main() {
         screen: RoomScreen.error,
       );
 
-      expect(find.byType(SessionErrorScreen), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(SessionErrorScreen)),
+      ).length.equals(1);
     });
 
     testWidgets('renders offline error screen for a network disconnection', (
@@ -569,16 +585,21 @@ void main() {
         disconnectReason: DisconnectReason.reconnectAttemptsExceeded,
       );
 
-      expect(find.byType(SessionErrorScreen), findsOneWidget);
-      expect(find.byType(SessionDisconnectedScreen), findsNothing);
-      expect(find.text("You're Offline"), findsOneWidget);
-      expect(
-        find.text(
-          'Video sessions require an active internet connection.\n'
-          'Check your Wi-Fi or mobile data, then tap below to rejoin.',
+      check(
+        tester.widgetList(find.byType(SessionErrorScreen)),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.byType(SessionDisconnectedScreen)),
+      ).length.equals(0);
+      check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
+      check(
+        tester.widgetList(
+          find.text(
+            'Video sessions require an active internet connection.\n'
+            'Check your Wi-Fi or mobile data, then tap below to rejoin.',
+          ),
         ),
-        findsOneWidget,
-      );
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -601,8 +622,12 @@ void main() {
           ],
         );
 
-        expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
-        expect(find.byType(SessionErrorScreen), findsNothing);
+        check(
+          tester.widgetList(find.byType(SessionDisconnectedScreen)),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.byType(SessionErrorScreen)),
+        ).length.equals(0);
         await tester.pump(const Duration(seconds: 3));
       },
     );
@@ -633,8 +658,12 @@ void main() {
           ],
         );
 
-        expect(find.byType(SessionDisconnectedScreen), findsOneWidget);
-        expect(find.byType(SessionErrorScreen), findsNothing);
+        check(
+          tester.widgetList(find.byType(SessionDisconnectedScreen)),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.byType(SessionErrorScreen)),
+        ).length.equals(0);
         await tester.pump(const Duration(seconds: 3));
       });
     }
@@ -654,7 +683,9 @@ void main() {
         screen: RoomScreen.receiving,
       );
 
-      expect(find.byType(ReceiveTotemScreen), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(ReceiveTotemScreen)),
+      ).length.equals(1);
     });
 
     testWidgets('renders my turn screen for RoomScreen.myTurn', (tester) async {
@@ -670,7 +701,9 @@ void main() {
         screen: RoomScreen.speaking,
       );
 
-      expect(find.byType(SpeakingTurnScreen), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(SpeakingTurnScreen)),
+      ).length.equals(1);
     });
 
     testWidgets('renders my turn screen for RoomScreen.passing', (
@@ -688,7 +721,9 @@ void main() {
         screen: RoomScreen.passing,
       );
 
-      expect(find.byType(SpeakingTurnScreen), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(SpeakingTurnScreen)),
+      ).length.equals(1);
     });
 
     testWidgets('renders not my turn screen for RoomScreen.listening', (
@@ -706,7 +741,9 @@ void main() {
         screen: RoomScreen.listening,
       );
 
-      expect(find.byType(ListeningTurnScreen), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(ListeningTurnScreen)),
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -733,27 +770,26 @@ void main() {
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
           await tester.pump();
-          expect(enableMicrophoneCallCount, 1);
+          check(enableMicrophoneCallCount).equals(1);
 
           final context = tester.element(find.byType(ListeningTurnScreen));
-          unawaited(
-            showDialog<void>(
-              context: context,
-              useRootNavigator: false,
-              builder: (context) => const AlertDialog(
-                title: Text('Dialog'),
-                content: Text('Session shortcut blocker'),
-              ),
+
+          showDialog<void>(
+            context: context,
+            useRootNavigator: false,
+            builder: (context) => const AlertDialog(
+              title: Text('Dialog'),
+              content: Text('Session shortcut blocker'),
             ),
           );
           await tester.pumpAndSettle();
 
-          expect(find.text('Dialog'), findsOneWidget);
+          check(tester.widgetList(find.text('Dialog'))).length.equals(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
           await tester.pump();
 
-          expect(enableMicrophoneCallCount, 1);
+          check(enableMicrophoneCallCount).equals(1);
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }
@@ -780,11 +816,14 @@ void main() {
 
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('Time Remaining 5 min'), findsOneWidget);
-      expect(
-        find.text('Thanks for your participation in this session today'),
-        findsOneWidget,
-      );
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(
+          find.text('Thanks for your participation in this session today'),
+        ),
+      ).length.equals(1);
     });
 
     testWidgets('does not show the warning when room is not active', (
@@ -805,11 +844,14 @@ void main() {
 
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('Time Remaining 5 min'), findsNothing);
-      expect(
-        find.text('Thanks for your participation in this session today'),
-        findsNothing,
-      );
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
+      check(
+        tester.widgetList(
+          find.text('Thanks for your participation in this session today'),
+        ),
+      ).length.equals(0);
     });
 
     testWidgets('shows the warning only once for the same session', (
@@ -829,14 +871,20 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
 
       await tester.pump(const Duration(seconds: 8));
       await tester.pumpAndSettle();
-      expect(find.text('Time Remaining 5 min'), findsNothing);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
 
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Time Remaining 5 min'), findsNothing);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets(
@@ -857,11 +905,15 @@ void main() {
         );
 
         await tester.pump(const Duration(seconds: 1));
-        expect(find.text('Time Remaining 5 min'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Time Remaining 5 min')),
+        ).length.equals(1);
 
         await tester.pump(const Duration(seconds: 8));
         await tester.pumpAndSettle();
-        expect(find.text('Time Remaining 5 min'), findsNothing);
+        check(
+          tester.widgetList(find.text('Time Remaining 5 min')),
+        ).length.equals(0);
 
         harness.container
             .read(harness.roomStatusProvider.notifier)
@@ -872,7 +924,9 @@ void main() {
             .set(RoomStatus.active);
         await tester.pump(const Duration(seconds: 2));
 
-        expect(find.text('Time Remaining 5 min'), findsNothing);
+        check(
+          tester.widgetList(find.text('Time Remaining 5 min')),
+        ).length.equals(0);
       },
     );
 
@@ -893,10 +947,14 @@ void main() {
       );
 
       await tester.pump(const Duration(minutes: 2, seconds: 50));
-      expect(find.text('Time Remaining 5 min'), findsNothing);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
 
       await tester.pump(const Duration(seconds: 15));
-      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
     });
 
     testWidgets('shows warning immediately when threshold already passed', (
@@ -916,7 +974,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
     });
 
     testWidgets('does not show warning when event has ended', (tester) async {
@@ -935,7 +995,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 2));
-      expect(find.text('Time Remaining 5 min'), findsNothing);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets('cancels scheduled warning when connection disconnects', (
@@ -955,7 +1017,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 30));
-      expect(find.text('Time Remaining 5 min'), findsNothing);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
 
       harness.container
           .read(harness.connectionStateProvider.notifier)
@@ -963,7 +1027,9 @@ void main() {
       await tester.pump();
 
       await tester.pump(const Duration(seconds: 45));
-      expect(find.text('Time Remaining 5 min'), findsNothing);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets('cancels scheduled warning when room ends before threshold', (
@@ -983,7 +1049,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 30));
-      expect(find.text('Time Remaining 5 min'), findsNothing);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
 
       harness.container
           .read(harness.roomStatusProvider.notifier)
@@ -991,7 +1059,9 @@ void main() {
       await tester.pump();
 
       await tester.pump(const Duration(seconds: 45));
-      expect(find.text('Time Remaining 5 min'), findsNothing);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets('resets one-shot guard when session slug changes', (
@@ -1012,11 +1082,15 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
 
       await tester.pump(const Duration(seconds: 8));
       await tester.pumpAndSettle();
-      expect(find.text('Time Remaining 5 min'), findsNothing);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
 
       final eventB = _createSessionEvent(
         slug: 'session-b',
@@ -1028,7 +1102,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('Time Remaining 5 min'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -1048,13 +1124,19 @@ void main() {
         );
 
         await tester.pump(const Duration(seconds: 1));
-        expect(find.byType(NotificationBanner), findsOneWidget);
-        expect(find.text('Time Remaining 5 min'), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.text('Time Remaining 5 min')),
+        ).length.equals(1);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
 
-        expect(find.byType(NotificationBanner), findsNothing);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
       },
     );
   });
@@ -1113,10 +1195,12 @@ void main() {
         ],
       );
 
-      expect(find.text('Audio route changed'), findsNothing);
+      check(
+        tester.widgetList(find.text('Audio route changed')),
+      ).length.equals(0);
 
       final controller = _TestSessionDeviceController.lastInstance;
-      expect(controller, isNotNull);
+      check(controller).isNotNull();
 
       controller?.emit(
         const SessionDeviceState(
@@ -1130,11 +1214,14 @@ void main() {
       );
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('Audio route changed'), findsOneWidget);
-      expect(
-        find.text('Audio is now routed to another output device.'),
-        findsOneWidget,
-      );
+      check(
+        tester.widgetList(find.text('Audio route changed')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(
+          find.text('Audio is now routed to another output device.'),
+        ),
+      ).length.equals(1);
     });
 
     testWidgets('does not show notification while disconnected', (
@@ -1159,7 +1246,7 @@ void main() {
       );
 
       final controller = _TestSessionDeviceController.lastInstance;
-      expect(controller, isNotNull);
+      check(controller).isNotNull();
 
       controller?.emit(
         const SessionDeviceState(
@@ -1173,7 +1260,9 @@ void main() {
       );
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('Audio route changed'), findsNothing);
+      check(
+        tester.widgetList(find.text('Audio route changed')),
+      ).length.equals(0);
     });
   });
 
@@ -1204,7 +1293,7 @@ void main() {
             await container.pump();
             connectivityChanges.add(false);
             await container.pump();
-            expect(container.read(isOfflineProvider).value, isFalse);
+            check(container.read(isOfflineProvider).value).equals(false);
             subscription.close();
           },
         );
@@ -1213,8 +1302,10 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
 
-        expect(find.byType(NotificationBanner), findsOneWidget);
-        expect(find.text("You're Offline"), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
+        check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
       },
     );
 
@@ -1243,34 +1334,46 @@ void main() {
         connectivityChanges.add(true);
         await tester.pumpAndSettle();
 
-        expect(find.byType(NotificationBanner), findsOneWidget);
-        expect(find.text("You're Offline"), findsOneWidget);
-        expect(
-          find.text('Check your Wi-Fi or mobile data to continue.'),
-          findsOneWidget,
-        );
-        expect(
-          find.byWidgetPredicate(
-            (widget) =>
-                widget is TotemIcon && widget.icon == TotemIcons.wifiOff,
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
+        check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
+        check(
+          tester.widgetList(
+            find.text('Check your Wi-Fi or mobile data to continue.'),
           ),
-          findsOneWidget,
-        );
+        ).length.equals(1);
+        check(
+          tester.widgetList(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is TotemIcon && widget.icon == TotemIcons.wifiOff,
+            ),
+          ),
+        ).length.equals(1);
 
         await tester.pump(const Duration(seconds: 5));
-        expect(find.byType(NotificationBanner), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
 
         connectivityChanges.add(true);
         await tester.pumpAndSettle();
-        expect(find.byType(NotificationBanner), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
 
         connectivityChanges.add(false);
         await tester.pumpAndSettle();
-        expect(find.byType(NotificationBanner), findsNothing);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
 
         connectivityChanges.add(true);
         await tester.pumpAndSettle();
-        expect(find.byType(NotificationBanner), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
       },
     );
 
@@ -1296,14 +1399,16 @@ void main() {
       connectivityChanges.add(true);
       await tester.pumpAndSettle();
 
-      expect(find.byType(NotificationBanner), findsNothing);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
 
       connectivityChanges.add(false);
       await tester.pump();
       connectivityChanges.add(true);
       await tester.pumpAndSettle();
 
-      expect(find.text("You're Offline"), findsOneWidget);
+      check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
     });
 
     testWidgets(
@@ -1330,7 +1435,7 @@ void main() {
         await tester.pump();
         connectivityChanges.add(true);
         await tester.pumpAndSettle();
-        expect(find.text("You're Offline"), findsOneWidget);
+        check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
 
         connectivityChanges.add(false);
         await tester.pump();
@@ -1338,7 +1443,7 @@ void main() {
         connectivityChanges.add(true);
         await tester.pumpAndSettle();
 
-        expect(find.text("You're Offline"), findsOneWidget);
+        check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
       },
     );
 
@@ -1365,7 +1470,7 @@ void main() {
       await tester.pump();
       connectivityChanges.add(true);
       await tester.pumpAndSettle();
-      expect(find.text("You're Offline"), findsOneWidget);
+      check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
 
       harness.container
           .read(harness.roomScreenProvider.notifier)
@@ -1373,8 +1478,10 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.byType(NotificationBanner), findsNothing);
-      expect(find.text("You're Offline"), findsNothing);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
+      check(tester.widgetList(find.text("You're Offline"))).length.equals(0);
     });
   });
 
@@ -1395,9 +1502,15 @@ void main() {
         hasKeeperDisconnected: true,
       );
 
-      expect(find.byType(NotificationBanner), findsOneWidget);
-      expect(find.text('The session has been paused.'), findsOneWidget);
-      expect(find.text('The keeper will be right back.'), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.text('The session has been paused.')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.text('The keeper will be right back.')),
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -1420,9 +1533,15 @@ void main() {
             .set(true);
         await tester.pumpAndSettle();
 
-        expect(find.byType(NotificationBanner), findsOneWidget);
-        expect(find.text('The session has been paused.'), findsOneWidget);
-        expect(find.text('The keeper will be right back.'), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.text('The session has been paused.')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.text('The keeper will be right back.')),
+        ).length.equals(1);
       },
     );
 
@@ -1445,14 +1564,18 @@ void main() {
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(true);
       await tester.pumpAndSettle();
-      expect(find.byType(NotificationBanner), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
 
       harness.container
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(false);
       await tester.pumpAndSettle();
 
-      expect(find.byType(NotificationBanner), findsNothing);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
     });
 
     testWidgets('clears keeper paused notification when room ends', (
@@ -1474,14 +1597,18 @@ void main() {
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(true);
       await tester.pumpAndSettle();
-      expect(find.byType(NotificationBanner), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
 
       harness.container
           .read(harness.roomStatusProvider.notifier)
           .set(RoomStatus.ended);
       await tester.pumpAndSettle();
 
-      expect(find.byType(NotificationBanner), findsNothing);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
     });
 
     testWidgets(
@@ -1503,14 +1630,18 @@ void main() {
             .read(harness.hasKeeperDisconnectedProvider.notifier)
             .set(true);
         await tester.pumpAndSettle();
-        expect(find.byType(NotificationBanner), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
 
         harness.container
             .read(harness.connectionStateProvider.notifier)
             .set(RoomConnectionState.disconnected);
         await tester.pumpAndSettle();
 
-        expect(find.byType(NotificationBanner), findsNothing);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
       },
     );
 
@@ -1534,14 +1665,18 @@ void main() {
             .read(harness.hasKeeperDisconnectedProvider.notifier)
             .set(true);
         await tester.pumpAndSettle();
-        expect(find.byType(NotificationBanner), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
 
         harness.container
             .read(harness.roomScreenProvider.notifier)
             .set(RoomScreen.disconnected);
         await tester.pumpAndSettle();
 
-        expect(find.byType(NotificationBanner), findsNothing);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
       },
     );
 
@@ -1565,14 +1700,18 @@ void main() {
             .read(harness.hasKeeperDisconnectedProvider.notifier)
             .set(true);
         await tester.pumpAndSettle();
-        expect(find.byType(NotificationBanner), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
 
         harness.container
             .read(harness.roomScreenProvider.notifier)
             .set(RoomScreen.error);
         await tester.pumpAndSettle();
 
-        expect(find.byType(NotificationBanner), findsNothing);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
       },
     );
 
@@ -1596,12 +1735,16 @@ void main() {
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(true);
       await tester.pumpAndSettle();
-      expect(find.byType(NotificationBanner), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
 
-      expect(find.byType(NotificationBanner), findsNothing);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
     });
   });
 
@@ -1627,14 +1770,18 @@ void main() {
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(true);
       await tester.pumpAndSettle();
-      expect(find.byType(NotificationBanner), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
 
       // Transition to disconnected screen
       harness.container
           .read(harness.roomScreenProvider.notifier)
           .set(RoomScreen.disconnected);
       await tester.pumpAndSettle();
-      expect(find.byType(NotificationBanner), findsNothing);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
 
       // Toggle keeper disconnect off/on while on disconnected screen
       harness.container
@@ -1647,7 +1794,9 @@ void main() {
           .set(true);
       await tester.pumpAndSettle();
 
-      expect(find.byType(NotificationBanner), findsNothing);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
     });
 
     testWidgets('blocks keeper paused notification on error screen', (
@@ -1670,13 +1819,17 @@ void main() {
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(true);
       await tester.pumpAndSettle();
-      expect(find.byType(NotificationBanner), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
 
       harness.container
           .read(harness.roomScreenProvider.notifier)
           .set(RoomScreen.error);
       await tester.pumpAndSettle();
-      expect(find.byType(NotificationBanner), findsNothing);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
 
       harness.container
           .read(harness.hasKeeperDisconnectedProvider.notifier)
@@ -1688,7 +1841,9 @@ void main() {
           .set(true);
       await tester.pumpAndSettle();
 
-      expect(find.byType(NotificationBanner), findsNothing);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
     });
 
     testWidgets('blocks 5 minute warning on disconnected screen', (
@@ -1709,7 +1864,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Time Remaining 5 min'), findsNothing);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets('blocks 5 minute warning on error screen', (tester) async {
@@ -1728,7 +1885,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Time Remaining 5 min'), findsNothing);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets(
@@ -1753,7 +1912,9 @@ void main() {
         );
 
         await tester.pumpAndSettle();
-        expect(find.byType(NotificationBanner), findsNothing);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
       },
     );
   });
@@ -1777,21 +1938,21 @@ void main() {
         ],
       );
 
-      expect(feedbackService.sessionTransitionCueCount, 0);
+      check(feedbackService.sessionTransitionCueCount).equals(0);
 
       harness.container
           .read(harness.roomStatusProvider.notifier)
           .set(RoomStatus.active);
       await tester.pump();
 
-      expect(feedbackService.sessionTransitionCueCount, 1);
+      check(feedbackService.sessionTransitionCueCount).equals(1);
 
       harness.container
           .read(harness.roomStatusProvider.notifier)
           .set(RoomStatus.active);
       await tester.pump();
 
-      expect(feedbackService.sessionTransitionCueCount, 1);
+      check(feedbackService.sessionTransitionCueCount).equals(1);
     });
 
     testWidgets('plays transition cue for active to ended', (tester) async {
@@ -1815,7 +1976,7 @@ void main() {
           .set(RoomStatus.ended);
       await tester.pump();
 
-      expect(feedbackService.sessionTransitionCueCount, 1);
+      check(feedbackService.sessionTransitionCueCount).equals(1);
     });
 
     testWidgets('plays totem arrived cue when receiving screen appears', (
@@ -1837,21 +1998,21 @@ void main() {
         ],
       );
 
-      expect(feedbackService.totemReceivedCueCount, 0);
+      check(feedbackService.totemReceivedCueCount).equals(0);
 
       harness.container
           .read(harness.roomScreenProvider.notifier)
           .set(RoomScreen.receiving);
       await tester.pump();
 
-      expect(feedbackService.totemReceivedCueCount, 1);
+      check(feedbackService.totemReceivedCueCount).equals(1);
 
       harness.container
           .read(harness.roomScreenProvider.notifier)
           .set(RoomScreen.receiving);
       await tester.pump();
 
-      expect(feedbackService.totemReceivedCueCount, 1);
+      check(feedbackService.totemReceivedCueCount).equals(1);
     });
   });
 }

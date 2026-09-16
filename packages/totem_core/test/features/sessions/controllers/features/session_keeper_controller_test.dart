@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -26,7 +27,7 @@ void main() {
           );
           controller.onKeeperDisconnected(RoomStatus.active);
 
-          expect(mockSession.state.hasKeeper, isTrue);
+          check(mockSession.state.hasKeeper).equals(true);
         },
       );
 
@@ -43,7 +44,7 @@ void main() {
           );
           controller.onKeeperDisconnected(RoomStatus.active);
 
-          expect(mockDevices.disableMicrophoneCalled, isTrue);
+          check(mockDevices.disableMicrophoneCalled).equals(true);
         },
       );
 
@@ -58,7 +59,7 @@ void main() {
         );
         controller.onKeeperDisconnected(RoomStatus.active);
 
-        expect(controller.keeperDisconnectedTimer, isNotNull);
+        check(controller.keeperDisconnectedTimer).isNotNull();
 
         controller.disposePresenceTracking();
       });
@@ -80,8 +81,8 @@ void main() {
           controller.onKeeperDisconnected(RoomStatus.active);
           final secondTimer = controller.keeperDisconnectedTimer;
 
-          expect(firstTimer != secondTimer, isTrue);
-          expect(firstTimer!.isActive, isFalse);
+          check(firstTimer != secondTimer).equals(true);
+          check(firstTimer!.isActive).equals(false);
 
           controller.disposePresenceTracking();
         },
@@ -97,7 +98,7 @@ void main() {
         );
         controller.onKeeperConnected();
 
-        expect(mockSession.state.hasKeeper, isTrue);
+        check(mockSession.state.hasKeeper).equals(true);
       });
 
       test('onKeeperConnected cancels disconnection timer', () async {
@@ -110,10 +111,10 @@ void main() {
           sessionKeeperControllerProvider(mockSession).notifier,
         );
         controller.onKeeperDisconnected(RoomStatus.active);
-        expect(controller.keeperDisconnectedTimer, isNotNull);
+        check(controller.keeperDisconnectedTimer).isNotNull();
 
         controller.onKeeperConnected();
-        expect(controller.keeperDisconnectedTimer, isNull);
+        check(controller.keeperDisconnectedTimer).isNull();
       });
 
       test('onKeeperConnected is idempotent', () async {
@@ -125,7 +126,7 @@ void main() {
         controller.onKeeperConnected();
         controller.onKeeperConnected();
 
-        expect(mockSession.state.hasKeeper, isTrue);
+        check(mockSession.state.hasKeeper).equals(true);
       });
     });
 
@@ -144,7 +145,7 @@ void main() {
 
         await controller.onKeeperDisconnectedTimeout();
 
-        expect(controller.keeperDisconnectedTimer, isNull);
+        check(controller.keeperDisconnectedTimer).isNull();
       });
 
       test('onKeeperDisconnectedTimeout disconnects from room', () async {
@@ -156,7 +157,7 @@ void main() {
         );
         await controller.onKeeperDisconnectedTimeout();
 
-        expect(mockSession.disconnectFromRoomCalled, isTrue);
+        check(mockSession.disconnectFromRoomCalled).equals(true);
       });
     });
 
@@ -171,10 +172,10 @@ void main() {
           sessionKeeperControllerProvider(mockSession).notifier,
         );
         controller.onKeeperDisconnected(RoomStatus.active);
-        expect(controller.keeperDisconnectedTimer, isNotNull);
+        check(controller.keeperDisconnectedTimer).isNotNull();
 
         controller.disposePresenceTracking();
-        expect(controller.keeperDisconnectedTimer, isNull);
+        check(controller.keeperDisconnectedTimer).isNull();
       });
 
       test('disposePresenceTracking is safe when no timer exists', () async {
@@ -183,9 +184,9 @@ void main() {
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );
-        expect(controller.keeperDisconnectedTimer, isNull);
+        check(controller.keeperDisconnectedTimer).isNull();
         controller.disposePresenceTracking();
-        expect(controller.keeperDisconnectedTimer, isNull);
+        check(controller.keeperDisconnectedTimer).isNull();
       });
 
       test('disposePresenceTracking is idempotent', () async {
@@ -198,7 +199,7 @@ void main() {
         controller.disposePresenceTracking();
         controller.disposePresenceTracking();
 
-        expect(controller.keeperDisconnectedTimer, isNull);
+        check(controller.keeperDisconnectedTimer).isNull();
       });
     });
 
@@ -212,8 +213,8 @@ void main() {
         );
 
         await controller.onKeeperDisconnectedTimeout();
-        expect(mockSession.disconnectFromRoomCalled, isTrue);
-        expect(controller.keeperDisconnectedTimer, isNull);
+        check(mockSession.disconnectFromRoomCalled).equals(true);
+        check(controller.keeperDisconnectedTimer).isNull();
       });
     });
   });

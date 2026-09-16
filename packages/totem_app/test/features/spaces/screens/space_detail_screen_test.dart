@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -8,7 +9,9 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/widgets/confetti.dart';
 
 import '../../../../../totem_core/test/setup.dart';
 
@@ -105,6 +108,15 @@ void main() {
   testWidgets('shows the conflict dialog when RSVP overlaps a session', (
     tester,
   ) async {
+    addTearDown(() async {
+      ConfettiController.clear();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      tester.binding.imageCache.clearLiveImages();
+      tester.binding.imageCache.clear();
+    });
+
     final newSpace = _space('new-space', 'New Space');
     final existingSpace = _space('existing-space', 'Existing Space');
     final newSession = _session(
@@ -152,15 +164,28 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('You have a session at this time.'), findsOneWidget);
-    expect(find.text('Existing Session'), findsOneWidget);
-    expect(find.text('New Session'), findsAtLeastNWidgets(1));
-    expect(find.text('Switch Sessions'), findsOneWidget);
+    check(
+      tester.widgetList(find.text('You have a session at this time.')),
+    ).length.equals(1);
+    check(tester.widgetList(find.text('Existing Session'))).length.equals(1);
+    check(
+      tester.widgetList(find.text('New Session')),
+    ).length.isGreaterOrEqual(1);
+    check(tester.widgetList(find.text('Switch Sessions'))).length.equals(1);
   });
 
   testWidgets('invalidates the spaces summary after a successful RSVP', (
     tester,
   ) async {
+    addTearDown(() async {
+      ConfettiController.clear();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      tester.binding.imageCache.clearLiveImages();
+      tester.binding.imageCache.clear();
+    });
+
     var summaryLoads = 0;
     final space = _space('new-space', 'New Space');
     final session = _session(
@@ -184,7 +209,7 @@ void main() {
     addTearDown(container.dispose);
 
     await container.read(spacesSummaryProvider.future);
-    expect(summaryLoads, 1);
+    check(summaryLoads).equals(1);
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -200,19 +225,36 @@ void main() {
     await tester.tap(find.text('Attend'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text("You're going!"), findsOneWidget);
+    check(tester.widgetList(find.text("You're going!"))).length.equals(1);
 
     await tester.tap(find.byIcon(Icons.close));
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
     await container.read(spacesSummaryProvider.future);
 
-    expect(summaryLoads, 2);
+    check(summaryLoads).equals(2);
+    ConfettiController.clear();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    tester.binding.imageCache.clearLiveImages();
+    tester.binding.imageCache.clear();
   });
 
   testWidgets('refreshes the current state after returning from a session', (
     tester,
   ) async {
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await const AssetImage(
+        TotemImageAssets.genericBackground,
+        package: 'totem_core',
+      ).evict();
+      tester.binding.imageCache.clearLiveImages();
+      tester.binding.imageCache.clear();
+    });
+
     var spaceLoads = 0;
     var eventLoads = 0;
     var summaryLoads = 0;
@@ -294,8 +336,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect((spaceLoads, eventLoads, summaryLoads), (1, 1, 1));
-    expect(find.byTooltip('Give up your spot'), findsOneWidget);
+    check((spaceLoads, eventLoads, summaryLoads)).equals((1, 1, 1));
+    check(
+      tester.widgetList(find.byTooltip('Give up your spot')),
+    ).length.equals(1);
 
     await tester.scrollUntilVisible(
       find.text('Upcoming Session'),
@@ -304,13 +348,22 @@ void main() {
     );
     await tester.tap(find.text('Upcoming Session'));
     await tester.pumpAndSettle();
-    expect(find.text('Other session'), findsOneWidget);
+    check(tester.widgetList(find.text('Other session'))).length.equals(1);
 
     router.pop();
     await tester.pumpAndSettle();
     await container.read(spacesSummaryProvider.future);
 
-    expect((spaceLoads, eventLoads, summaryLoads), (2, 2, 2));
-    expect(find.text('Attend'), findsOneWidget);
+    check((spaceLoads, eventLoads, summaryLoads)).equals((2, 2, 2));
+    check(tester.widgetList(find.text('Attend'))).length.equals(1);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await const AssetImage(
+      TotemImageAssets.genericBackground,
+      package: 'totem_core',
+    ).evict();
+    tester.binding.imageCache.clearLiveImages();
+    tester.binding.imageCache.clear();
   });
 }

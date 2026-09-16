@@ -1,7 +1,10 @@
 // ignore_for_file: cascade_invocations
 
+import 'package:checks/checks.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -19,12 +22,45 @@ void main() {
     return hostKey.currentContext!;
   }
 
+  final controllers = <NotificationController>[];
+
+  NotificationController createController(WidgetTester tester) {
+    final controller = NotificationController();
+    controllers.add(controller);
+    return controller;
+  }
+
+  void notificationTest(
+    String description,
+    Future<void> Function(WidgetTester tester) body,
+  ) {
+    testWidgets(
+      description,
+      (tester) async {
+        try {
+          await body(tester);
+        } finally {
+          for (final controller in controllers) {
+            controller.dispose();
+          }
+          controllers.clear();
+          await tester.pump();
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      },
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
+  }
+
   group('NotificationController.show', () {
-    testWidgets('show auto dismisses after configured duration', (
+    notificationTest('show auto dismisses after configured duration', (
       tester,
     ) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       controller.show(
         context,
@@ -40,20 +76,20 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Auto dismiss'), findsOneWidget);
+      check(tester.widgetList(find.text('Auto dismiss'))).length.equals(1);
 
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('Auto dismiss'), findsOneWidget);
+      check(tester.widgetList(find.text('Auto dismiss'))).length.equals(1);
 
       await tester.pumpAndSettle();
-      expect(find.text('Auto dismiss'), findsNothing);
+      check(tester.widgetList(find.text('Auto dismiss'))).length.equals(0);
     });
 
-    testWidgets('show with zero duration stays until manually dismissed', (
+    notificationTest('show with zero duration stays until manually dismissed', (
       tester,
     ) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       final dismiss = controller.show(
         context,
@@ -68,21 +104,21 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('No timer'), findsOneWidget);
+      check(tester.widgetList(find.text('No timer'))).length.equals(1);
 
       await tester.pump(const Duration(seconds: 10));
-      expect(find.text('No timer'), findsOneWidget);
+      check(tester.widgetList(find.text('No timer'))).length.equals(1);
 
       dismiss.dismissActive();
       await tester.pumpAndSettle();
-      expect(find.text('No timer'), findsNothing);
+      check(tester.widgetList(find.text('No timer'))).length.equals(0);
     });
 
-    testWidgets('show respects short duration and animation boundaries', (
+    notificationTest('show respects short duration and animation boundaries', (
       tester,
     ) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       controller.show(
         context,
@@ -98,22 +134,22 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Timing check'), findsOneWidget);
+      check(tester.widgetList(find.text('Timing check'))).length.equals(1);
 
       await tester.pump(const Duration(milliseconds: 100));
-      expect(find.text('Timing check'), findsOneWidget);
+      check(tester.widgetList(find.text('Timing check'))).length.equals(1);
 
       await tester.pumpAndSettle();
-      expect(find.text('Timing check'), findsNothing);
+      check(tester.widgetList(find.text('Timing check'))).length.equals(0);
     });
   });
 
   group('NotificationController.showDismissible', () {
-    testWidgets('showDismissible stays visible until dismiss callback', (
+    notificationTest('showDismissible stays visible until dismiss callback', (
       tester,
     ) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       final dismiss = controller.showDismissible(
         context,
@@ -127,21 +163,21 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Dismissible'), findsOneWidget);
+      check(tester.widgetList(find.text('Dismissible'))).length.equals(1);
 
       await tester.pump(const Duration(seconds: 8));
-      expect(find.text('Dismissible'), findsOneWidget);
+      check(tester.widgetList(find.text('Dismissible'))).length.equals(1);
 
       dismiss.dismissActive();
       await tester.pumpAndSettle();
-      expect(find.text('Dismissible'), findsNothing);
+      check(tester.widgetList(find.text('Dismissible'))).length.equals(0);
     });
   });
 
   group('NotificationController.showTimed', () {
-    testWidgets('showTimed eventually auto dismisses', (tester) async {
+    notificationTest('showTimed eventually auto dismisses', (tester) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       controller.showTimed(
         context,
@@ -151,18 +187,18 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Auto dismiss'), findsOneWidget);
+      check(tester.widgetList(find.text('Auto dismiss'))).length.equals(1);
 
       await tester.pump(const Duration(seconds: 8));
       await tester.pumpAndSettle();
-      expect(find.text('Auto dismiss'), findsNothing);
+      check(tester.widgetList(find.text('Auto dismiss'))).length.equals(0);
     });
   });
 
   group('NotificationController.showPermanent', () {
-    testWidgets('showPermanent stays until dismissed', (tester) async {
+    notificationTest('showPermanent stays until dismissed', (tester) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       final dismiss = controller.showPermanent(
         context,
@@ -172,21 +208,21 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Permanent'), findsOneWidget);
+      check(tester.widgetList(find.text('Permanent'))).length.equals(1);
 
       await tester.pump(const Duration(seconds: 10));
-      expect(find.text('Permanent'), findsOneWidget);
+      check(tester.widgetList(find.text('Permanent'))).length.equals(1);
 
       dismiss.dismissActive();
       await tester.pumpAndSettle();
-      expect(find.text('Permanent'), findsNothing);
+      check(tester.widgetList(find.text('Permanent'))).length.equals(0);
     });
 
-    testWidgets('showPermanent can be dismissed immediately after show', (
+    notificationTest('showPermanent can be dismissed immediately after show', (
       tester,
     ) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       final dismiss = controller.showPermanent(
         context,
@@ -196,16 +232,18 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Early dismiss'), findsOneWidget);
+      check(tester.widgetList(find.text('Early dismiss'))).length.equals(1);
 
       dismiss.dismissActive();
       await tester.pumpAndSettle();
-      expect(find.text('Early dismiss'), findsNothing);
+      check(tester.widgetList(find.text('Early dismiss'))).length.equals(0);
     });
 
-    testWidgets('showPermanent dismiss callback is idempotent', (tester) async {
+    notificationTest('showPermanent dismiss callback is idempotent', (
+      tester,
+    ) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       final dismiss = controller.showPermanent(
         context,
@@ -215,21 +253,21 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Idempotent'), findsOneWidget);
+      check(tester.widgetList(find.text('Idempotent'))).length.equals(1);
 
       dismiss.dismissActive();
       dismiss.dismissActive();
       controller.dismissAll();
       await tester.pumpAndSettle();
 
-      expect(find.text('Idempotent'), findsNothing);
+      check(tester.widgetList(find.text('Idempotent'))).length.equals(0);
     });
 
-    testWidgets(
+    notificationTest(
       'NotificationController queues permanent notifications one after another',
       (tester) async {
         final context = await pumpHost(tester);
-        final controller = NotificationController();
+        final controller = createController(tester);
 
         controller.showPermanent(
           context,
@@ -246,20 +284,20 @@ void main() {
         );
 
         await tester.pump();
-        expect(find.text('Permanent A'), findsOneWidget);
-        expect(find.text('Permanent B'), findsNothing);
+        check(tester.widgetList(find.text('Permanent A'))).length.equals(1);
+        check(tester.widgetList(find.text('Permanent B'))).length.equals(0);
 
         controller.dismissAll();
         await tester.pumpAndSettle();
 
-        expect(find.text('Permanent A'), findsNothing);
-        expect(find.text('Permanent B'), findsNothing);
+        check(tester.widgetList(find.text('Permanent A'))).length.equals(0);
+        check(tester.widgetList(find.text('Permanent B'))).length.equals(0);
       },
     );
 
-    testWidgets('duplicate notification is suppressed', (tester) async {
+    notificationTest('duplicate notification is suppressed', (tester) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       controller.showTimed(
         context,
@@ -276,18 +314,18 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Duplicate'), findsOneWidget);
+      check(tester.widgetList(find.text('Duplicate'))).length.equals(1);
 
       controller.dismissAll();
       await tester.pumpAndSettle();
-      expect(find.text('Duplicate'), findsNothing);
+      check(tester.widgetList(find.text('Duplicate'))).length.equals(0);
     });
 
-    testWidgets(
+    notificationTest(
       'duplicate requested during dismissal is shown after it closes',
       (tester) async {
         final context = await pumpHost(tester);
-        final controller = NotificationController();
+        final controller = createController(tester);
 
         final first = controller.showPermanent(
           context,
@@ -302,7 +340,7 @@ void main() {
           message: 'Connection dropped',
         );
 
-        expect(identical(duplicate, first), isTrue);
+        check(identical(duplicate, first)).equals(true);
         await tester.pump();
 
         first.dismissActive();
@@ -315,21 +353,25 @@ void main() {
           message: 'Connection dropped',
         );
 
-        expect(identical(replacement, first), isFalse);
+        check(identical(replacement, first)).equals(false);
         await tester.pumpAndSettle();
-        expect(find.text('Flaky connection'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Flaky connection')),
+        ).length.equals(1);
 
         replacement.dismissActive();
         await tester.pumpAndSettle();
-        expect(find.text('Flaky connection'), findsNothing);
+        check(
+          tester.widgetList(find.text('Flaky connection')),
+        ).length.equals(0);
       },
     );
   });
 
   group('NotificationController', () {
-    testWidgets('dismissAll closes active notifications', (tester) async {
+    notificationTest('dismissAll closes active notifications', (tester) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       controller.showTimed(
         context,
@@ -346,63 +388,66 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Ephemeral'), findsOneWidget);
-      expect(find.text('Persistent'), findsNothing);
+      check(tester.widgetList(find.text('Ephemeral'))).length.equals(1);
+      check(tester.widgetList(find.text('Persistent'))).length.equals(0);
 
       controller.dismissAll();
       await tester.pumpAndSettle();
 
-      expect(find.text('Ephemeral'), findsNothing);
-      expect(find.text('Persistent'), findsNothing);
+      check(tester.widgetList(find.text('Ephemeral'))).length.equals(0);
+      check(tester.widgetList(find.text('Persistent'))).length.equals(0);
     });
 
-    testWidgets('dismissAll on empty controller is a no-op', (tester) async {
-      final controller = NotificationController();
-      controller.dismissAll();
-      await tester.pump();
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('dismissAll affects only its own controller notifications', (
+    notificationTest('dismissAll on empty controller is a no-op', (
       tester,
     ) async {
-      final context = await pumpHost(tester);
-      final controllerA = NotificationController();
-      final controllerB = NotificationController();
-
-      controllerA.showPermanent(
-        context,
-        icon: TotemIcons.pause,
-        title: 'Controller A',
-        message: 'Owned by controller A',
-      );
-
-      controllerB.showPermanent(
-        context,
-        icon: TotemIcons.pause,
-        title: 'Controller B',
-        message: 'Owned by controller B',
-      );
-
+      final controller = createController(tester);
+      controller.dismissAll();
       await tester.pump();
-      expect(find.text('Controller A'), findsOneWidget);
-      expect(find.text('Controller B'), findsOneWidget);
-
-      controllerA.dismissAll();
-      await tester.pumpAndSettle();
-      expect(find.text('Controller A'), findsNothing);
-      expect(find.text('Controller B'), findsOneWidget);
-
-      controllerB.dismissAll();
-      await tester.pumpAndSettle();
-      expect(find.text('Controller B'), findsNothing);
+      check(tester.takeException()).isNull();
     });
 
-    testWidgets(
+    notificationTest(
+      'dismissAll affects only its own controller notifications',
+      (tester) async {
+        final context = await pumpHost(tester);
+        final controllerA = createController(tester);
+        final controllerB = createController(tester);
+
+        controllerA.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Controller A',
+          message: 'Owned by controller A',
+        );
+
+        controllerB.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Controller B',
+          message: 'Owned by controller B',
+        );
+
+        await tester.pump();
+        check(tester.widgetList(find.text('Controller A'))).length.equals(1);
+        check(tester.widgetList(find.text('Controller B'))).length.equals(1);
+
+        controllerA.dismissAll();
+        await tester.pumpAndSettle();
+        check(tester.widgetList(find.text('Controller A'))).length.equals(0);
+        check(tester.widgetList(find.text('Controller B'))).length.equals(1);
+
+        controllerB.dismissAll();
+        await tester.pumpAndSettle();
+        check(tester.widgetList(find.text('Controller B'))).length.equals(0);
+      },
+    );
+
+    notificationTest(
       'auto-dismissed notification is safely unregistered from controller',
       (tester) async {
         final context = await pumpHost(tester);
-        final controller = NotificationController();
+        final controller = createController(tester);
 
         controller.show(
           context,
@@ -418,57 +463,58 @@ void main() {
         );
 
         await tester.pump();
-        expect(find.text('Auto unregister'), findsOneWidget);
+        check(tester.widgetList(find.text('Auto unregister'))).length.equals(1);
 
         await tester.pump(const Duration(milliseconds: 300));
         await tester.pumpAndSettle();
-        expect(find.text('Auto unregister'), findsNothing);
+        check(tester.widgetList(find.text('Auto unregister'))).length.equals(0);
 
         controller.dismissAll();
         await tester.pump();
-        expect(tester.takeException(), isNull);
+        check(tester.takeException()).isNull();
       },
     );
 
-    testWidgets('mixed auto and permanent lifecycle is handled correctly', (
+    notificationTest(
+      'mixed auto and permanent lifecycle is handled correctly',
+      (tester) async {
+        final context = await pumpHost(tester);
+        final controller = createController(tester);
+
+        controller.showTimed(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Ephemeral mixed',
+          message: 'Auto-dismisses',
+        );
+
+        controller.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Permanent mixed',
+          message: 'Stays visible',
+        );
+
+        await tester.pump();
+        check(tester.widgetList(find.text('Ephemeral mixed'))).length.equals(1);
+        check(tester.widgetList(find.text('Permanent mixed'))).length.equals(0);
+
+        await tester.pump(const Duration(seconds: 6));
+        await tester.pumpAndSettle();
+        check(tester.widgetList(find.text('Ephemeral mixed'))).length.equals(0);
+        check(tester.widgetList(find.text('Permanent mixed'))).length.equals(1);
+
+        controller.dismissAll();
+        await tester.pumpAndSettle();
+        check(tester.widgetList(find.text('Permanent mixed'))).length.equals(0);
+      },
+    );
+
+    notificationTest('dismiss during animation and dismissAll is race-safe', (
       tester,
     ) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
-
-      controller.showTimed(
-        context,
-        icon: TotemIcons.chat,
-        title: 'Ephemeral mixed',
-        message: 'Auto-dismisses',
-      );
-
-      controller.showPermanent(
-        context,
-        icon: TotemIcons.pause,
-        title: 'Permanent mixed',
-        message: 'Stays visible',
-      );
-
-      await tester.pump();
-      expect(find.text('Ephemeral mixed'), findsOneWidget);
-      expect(find.text('Permanent mixed'), findsNothing);
-
-      await tester.pump(const Duration(seconds: 6));
-      await tester.pumpAndSettle();
-      expect(find.text('Ephemeral mixed'), findsNothing);
-      expect(find.text('Permanent mixed'), findsOneWidget);
-
-      controller.dismissAll();
-      await tester.pumpAndSettle();
-      expect(find.text('Permanent mixed'), findsNothing);
-    });
-
-    testWidgets('dismiss during animation and dismissAll is race-safe', (
-      tester,
-    ) async {
-      final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       final dismiss = controller.showPermanent(
         context,
@@ -478,24 +524,24 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('Race safe'), findsOneWidget);
+      check(tester.widgetList(find.text('Race safe'))).length.equals(1);
 
       dismiss.dismissActive();
       controller.dismissAll();
       dismiss.dismissActive();
       await tester.pumpAndSettle();
 
-      expect(find.text('Race safe'), findsNothing);
-      expect(tester.takeException(), isNull);
+      check(tester.widgetList(find.text('Race safe'))).length.equals(0);
+      check(tester.takeException()).isNull();
     });
   });
 
   group('hidden app lifecycle', () {
-    testWidgets('dismissActive removes a banner that was never built', (
+    notificationTest('dismissActive removes a banner that was never built', (
       tester,
     ) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       final request = controller.showTimed(
         context,
@@ -509,14 +555,14 @@ void main() {
       request.dismissActive();
 
       await tester.pump();
-      expect(find.text('Never built'), findsNothing);
+      check(tester.widgetList(find.text('Never built'))).length.equals(0);
     });
 
-    testWidgets(
+    notificationTest(
       'dismissImmediately removes a mounted banner without animating',
       (tester) async {
         final context = await pumpHost(tester);
-        final controller = NotificationController();
+        final controller = createController(tester);
 
         final request = controller.showPermanent(
           context,
@@ -525,20 +571,20 @@ void main() {
           message: 'Must not overlap the next screen',
         );
         await tester.pump();
-        expect(find.text('Remove now'), findsOneWidget);
+        check(tester.widgetList(find.text('Remove now'))).length.equals(1);
 
         request.dismissImmediately();
         await tester.pump();
 
-        expect(find.text('Remove now'), findsNothing);
+        check(tester.widgetList(find.text('Remove now'))).length.equals(0);
       },
     );
 
-    testWidgets('showTimed drops the banner while the app is hidden', (
+    notificationTest('showTimed drops the banner while the app is hidden', (
       tester,
     ) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
 
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
       try {
@@ -555,14 +601,14 @@ void main() {
       }
 
       await tester.pump();
-      expect(find.text('Hidden timed'), findsNothing);
+      check(tester.widgetList(find.text('Hidden timed'))).length.equals(0);
     });
 
-    testWidgets(
+    notificationTest(
       'showPermanent while hidden is still visible when the app returns',
       (tester) async {
         final context = await pumpHost(tester);
-        final controller = NotificationController();
+        final controller = createController(tester);
 
         tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
         try {
@@ -579,19 +625,23 @@ void main() {
         }
 
         await tester.pump();
-        expect(find.text('Hidden permanent'), findsOneWidget);
+        check(
+          tester.widgetList(find.text('Hidden permanent')),
+        ).length.equals(1);
 
         controller.dismissAll();
         await tester.pumpAndSettle();
-        expect(find.text('Hidden permanent'), findsNothing);
+        check(
+          tester.widgetList(find.text('Hidden permanent')),
+        ).length.equals(0);
       },
     );
   });
 
   group('semantics announcements', () {
-    testWidgets('showTimed announces message', (tester) async {
+    notificationTest('showTimed announces message', (tester) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
       final announcements = <String>[];
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -619,12 +669,12 @@ void main() {
       );
 
       await tester.pump();
-      expect(announcements, contains('New message: Ephemeral semantics'));
+      check(announcements).contains('New message: Ephemeral semantics');
     });
 
-    testWidgets('showPermanent announces message', (tester) async {
+    notificationTest('showPermanent announces message', (tester) async {
       final context = await pumpHost(tester);
-      final controller = NotificationController();
+      final controller = createController(tester);
       final announcements = <String>[];
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -652,12 +702,12 @@ void main() {
       );
 
       await tester.pump();
-      expect(announcements, contains('New message: Persistent semantics'));
+      check(announcements).contains('New message: Persistent semantics');
     });
   });
 
   group('NotificationBanner', () {
-    testWidgets('uses custom icon background color', (tester) async {
+    notificationTest('uses custom icon background color', (tester) async {
       const customColor = Color(0xFF336699);
 
       await tester.pumpWidget(
@@ -679,16 +729,18 @@ void main() {
             decoration.color == customColor;
       });
 
-      expect(iconBackground, findsOneWidget);
+      check(tester.widgetList(iconBackground)).length.equals(1);
     });
 
     group('NotificationController.blocked', () {
-      testWidgets('rejects new notifications when blocked', (tester) async {
+      notificationTest('rejects new notifications when blocked', (
+        tester,
+      ) async {
         final context = await pumpHost(tester);
-        final controller = NotificationController();
+        final controller = createController(tester);
 
         controller.blocked = true;
-        expect(controller.blocked, isTrue);
+        check(controller.blocked).equals(true);
 
         controller.showTimed(
           context,
@@ -698,14 +750,14 @@ void main() {
         );
 
         await tester.pump();
-        expect(find.text('Blocked'), findsNothing);
+        check(tester.widgetList(find.text('Blocked'))).length.equals(0);
       });
 
-      testWidgets('dismisses active notifications when becoming blocked', (
+      notificationTest('dismisses active notifications when becoming blocked', (
         tester,
       ) async {
         final context = await pumpHost(tester);
-        final controller = NotificationController();
+        final controller = createController(tester);
 
         controller.showPermanent(
           context,
@@ -715,16 +767,16 @@ void main() {
         );
 
         await tester.pump();
-        expect(find.text('Active'), findsOneWidget);
+        check(tester.widgetList(find.text('Active'))).length.equals(1);
 
         controller.blocked = true;
         await tester.pumpAndSettle();
-        expect(find.text('Active'), findsNothing);
+        check(tester.widgetList(find.text('Active'))).length.equals(0);
       });
 
-      testWidgets('allows notifications after unblocking', (tester) async {
+      notificationTest('allows notifications after unblocking', (tester) async {
         final context = await pumpHost(tester);
-        final controller = NotificationController();
+        final controller = createController(tester);
 
         controller.blocked = true;
 
@@ -735,10 +787,10 @@ void main() {
           message: 'Should not appear',
         );
         await tester.pump();
-        expect(find.text('Blocked'), findsNothing);
+        check(tester.widgetList(find.text('Blocked'))).length.equals(0);
 
         controller.blocked = false;
-        expect(controller.blocked, isFalse);
+        check(controller.blocked).equals(false);
 
         controller.showTimed(
           context,
@@ -747,28 +799,28 @@ void main() {
           message: 'Should appear',
         );
         await tester.pump();
-        expect(find.text('Unblocked'), findsOneWidget);
+        check(tester.widgetList(find.text('Unblocked'))).length.equals(1);
       });
 
-      testWidgets('idempotent block/unblock', (tester) async {
-        final controller = NotificationController();
+      notificationTest('idempotent block/unblock', (tester) async {
+        final controller = createController(tester);
 
         controller.blocked = true;
-        expect(controller.blocked, isTrue);
+        check(controller.blocked).equals(true);
         controller.blocked = true; // no-op
-        expect(controller.blocked, isTrue);
+        check(controller.blocked).equals(true);
 
         controller.blocked = false;
-        expect(controller.blocked, isFalse);
+        check(controller.blocked).equals(false);
         controller.blocked = false; // no-op
-        expect(controller.blocked, isFalse);
+        check(controller.blocked).equals(false);
 
         await tester.pump();
-        expect(tester.takeException(), isNull);
+        check(tester.takeException()).isNull();
       });
     });
 
-    testWidgets('handles long title and message without layout exceptions', (
+    notificationTest('handles long title and message without layout exceptions', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -790,7 +842,7 @@ void main() {
       );
 
       await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
+      check(tester.takeException()).isNull();
     });
   });
 }

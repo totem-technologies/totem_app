@@ -98,7 +98,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   static const int _maxConsecutiveRestartAttempts = 6;
 
   late AnimationController _controller;
-  late Animation<double> _pulseAnimation;
+  late CurvedAnimation _pulseAnimation;
 
   List<double> samples = <double>[];
   List<double> _backgroundSamples = <double>[];
@@ -353,6 +353,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     _uiThrottleTimer?.cancel();
     _visualizerWatchdogTimer?.cancel();
     _listenerGeneration++;
+    _pulseAnimation.dispose();
     _controller.dispose();
     _detachListeners();
     super.dispose();

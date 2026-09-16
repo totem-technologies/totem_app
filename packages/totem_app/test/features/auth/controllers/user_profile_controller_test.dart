@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
@@ -80,7 +81,7 @@ void main() {
 
       final result = await getController().hasSeenWelcomeOnboarding;
 
-      expect(result, isTrue);
+      check(result).equals(true);
       verify(
         () => mockLocalStorageService.hasSeenWelcomeOnboarding(),
       ).called(1);
@@ -116,16 +117,15 @@ void main() {
       when(() => mockAuthController.isAuthenticated).thenReturn(false);
       when(() => mockAuthController.user).thenReturn(null);
 
-      expectLater(
-        () => getController().completeOnboarding(
+      await check(
+        getController().completeOnboarding(
           firstName: 'John',
           age: 30,
           referralSource: null,
           interestTopics: {SpaceCategories.allies},
           newsletterConsent: true,
         ),
-        throwsA(isA<Exception>()),
-      );
+      ).throws<Exception>();
     });
 
     test('successfully completes onboarding and syncs user', () async {
@@ -171,10 +171,9 @@ void main() {
         () => mockAnalyticsService.logEvent('onboarding_completed'),
       ).called(1);
 
-      expect(
+      check(
         container.read(userProfileControllerProvider),
-        const AsyncData<void>(null),
-      );
+      ).equals(const AsyncData<void>(null));
     });
   });
 
@@ -182,10 +181,9 @@ void main() {
     test('throws assertion error if unauthenticated', () async {
       when(() => mockAuthController.isAuthenticated).thenReturn(false);
 
-      expectLater(
-        () => getController().updateUserProfile(name: 'Jane'),
-        throwsA(isA<Exception>()),
-      );
+      await check(
+        getController().updateUserProfile(name: 'Jane'),
+      ).throws<Exception>();
     });
 
     test('updates image successfully and fetches refreshed user', () async {
@@ -212,7 +210,7 @@ void main() {
         profileImage: mockFile,
       );
 
-      expect(success, isTrue);
+      check(success).equals(true);
       verify(
         () => mockUserRepository.updateCurrentUserProfilePicture(mockFile),
       ).called(1);
@@ -247,7 +245,7 @@ void main() {
           email: 'john@doe.com',
         );
 
-        expect(success, isTrue);
+        check(success).equals(true);
         verify(
           () => mockUserRepository.updateCurrentUserProfile(
             name: 'John Doe',

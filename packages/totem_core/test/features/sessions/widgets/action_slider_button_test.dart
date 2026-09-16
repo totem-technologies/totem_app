@@ -1,11 +1,26 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 
 void main() {
+  void autoSizeTest(
+    String description,
+    Future<void> Function(WidgetTester) body,
+  ) {
+    testWidgets(
+      description,
+      body,
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
+  }
+
   Future<void> pumpTestWidget(
     WidgetTester tester, {
     required Widget child,
@@ -20,7 +35,7 @@ void main() {
   }
 
   group('ActionButton', () {
-    testWidgets('invokes callback and shows loading while pending', (
+    autoSizeTest('invokes callback and shows loading while pending', (
       tester,
     ) async {
       var calls = 0;
@@ -40,18 +55,22 @@ void main() {
       await tester.tap(find.byType(ElevatedButton));
       await tester.pump();
 
-      expect(calls, 1);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      check(calls).equals(1);
+      check(
+        tester.widgetList(find.byType(CircularProgressIndicator)),
+      ).length.equals(1);
 
       completer.complete(false);
       await tester.pump();
       await tester.pump();
 
-      expect(find.text('Continue'), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      check(tester.widgetList(find.text('Continue'))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(CircularProgressIndicator)),
+      ).length.equals(0);
     });
 
-    testWidgets('keeps loading on successful completion when configured', (
+    autoSizeTest('keeps loading on successful completion when configured', (
       tester,
     ) async {
       await pumpTestWidget(
@@ -67,11 +86,13 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Start'), findsNothing);
+      check(
+        tester.widgetList(find.byType(CircularProgressIndicator)),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Start'))).length.equals(0);
     });
 
-    testWidgets('respects external loading state and blocks presses', (
+    autoSizeTest('respects external loading state and blocks presses', (
       tester,
     ) async {
       var calls = 0;
@@ -91,13 +112,15 @@ void main() {
       await tester.tap(find.byType(ElevatedButton));
       await tester.pump();
 
-      expect(calls, 0);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      check(calls).equals(0);
+      check(
+        tester.widgetList(find.byType(CircularProgressIndicator)),
+      ).length.equals(1);
     });
   });
 
   group('ActionSlider', () {
-    testWidgets('does not complete action on short drag', (tester) async {
+    autoSizeTest('does not complete action on short drag', (tester) async {
       var calls = 0;
 
       await pumpTestWidget(
@@ -114,11 +137,13 @@ void main() {
       await tester.drag(find.byType(ActionSlider), const Offset(30, 0));
       await tester.pump();
 
-      expect(calls, 0);
-      expect(find.byIcon(Icons.arrow_forward_ios), findsOneWidget);
+      check(calls).equals(0);
+      check(
+        tester.widgetList(find.byIcon(Icons.arrow_forward_ios)),
+      ).length.equals(1);
     });
 
-    testWidgets(
+    autoSizeTest(
       'completes action on long drag and shows loading while pending',
       (tester) async {
         var calls = 0;
@@ -138,18 +163,22 @@ void main() {
         await tester.drag(find.byType(ActionSlider), const Offset(500, 0));
         await tester.pump();
 
-        expect(calls, 1);
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        check(calls).equals(1);
+        check(
+          tester.widgetList(find.byType(CircularProgressIndicator)),
+        ).length.equals(1);
 
         completer.complete(false);
         await tester.pump();
         await tester.pump();
 
-        expect(find.byIcon(Icons.arrow_forward_ios), findsOneWidget);
+        check(
+          tester.widgetList(find.byIcon(Icons.arrow_forward_ios)),
+        ).length.equals(1);
       },
     );
 
-    testWidgets('reflects external loading state', (tester) async {
+    autoSizeTest('reflects external loading state', (tester) async {
       await pumpTestWidget(
         tester,
         child: ActionSlider(
@@ -161,12 +190,14 @@ void main() {
 
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(CircularProgressIndicator)),
+      ).length.equals(1);
     });
   });
 
   group('ActionSliderButton', () {
-    testWidgets('renders ActionButton on desktop platforms', (tester) async {
+    autoSizeTest('renders ActionButton on desktop platforms', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       try {
         await pumpTestWidget(
@@ -177,14 +208,14 @@ void main() {
           ),
         );
 
-        expect(find.byType(ActionButton), findsOneWidget);
-        expect(find.byType(ActionSlider), findsNothing);
+        check(tester.widgetList(find.byType(ActionButton))).length.equals(1);
+        check(tester.widgetList(find.byType(ActionSlider))).length.equals(0);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
     });
 
-    testWidgets('renders ActionSlider on mobile platforms', (tester) async {
+    autoSizeTest('renders ActionSlider on mobile platforms', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       try {
         await pumpTestWidget(
@@ -195,8 +226,8 @@ void main() {
           ),
         );
 
-        expect(find.byType(ActionSlider), findsOneWidget);
-        expect(find.byType(ActionButton), findsNothing);
+        check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
+        check(tester.widgetList(find.byType(ActionButton))).length.equals(0);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }

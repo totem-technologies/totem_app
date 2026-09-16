@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
@@ -245,8 +246,8 @@ void main() {
             token: options.token,
           );
 
-          expect(controller.room, isNotNull);
-          expect(identical(controller.room, initializedRoom), isTrue);
+          check(controller.room).isNotNull();
+          check(identical(controller.room, initializedRoom)).equals(true);
         },
       );
 
@@ -287,9 +288,9 @@ void main() {
           token: options.token,
         );
 
-        expect(controller.room, isNotNull);
+        check(controller.room).isNotNull();
         await controller.disposeConnection();
-        expect(controller.room, isNull);
+        check(controller.room).isNull();
       });
 
       test('failed join waits for retained pre-join media disposal', () async {
@@ -348,20 +349,20 @@ void main() {
             .whenComplete(() => joinCompleted = true);
         await pumpEventQueue();
 
-        expect(joinCompleted, isFalse);
+        check(joinCompleted).equals(false);
         verify(cameraTrack.stop).called(1);
         verify(cameraTrack.dispose).called(1);
         verify(microphoneTrack.stop).called(1);
         verify(microphoneTrack.dispose).called(1);
 
         cameraDisposalGate.complete();
-        expect(await joinFuture, SessionJoinResult.retryableFailure);
-        expect(joinCompleted, isTrue);
+        check(await joinFuture).equals(SessionJoinResult.retryableFailure);
+        check(joinCompleted).equals(true);
 
         await controller.leave();
-        expect(controller.room, isNull);
-        expect(room.disconnectCount, 1);
-        expect(room.disposeCount, 1);
+        check(controller.room).isNull();
+        check(room.disconnectCount).equals(1);
+        check(room.disposeCount).equals(1);
       });
 
       test(
@@ -418,13 +419,12 @@ void main() {
             RoomDisconnectedEvent(reason: DisconnectReason.joinFailure),
           );
 
-          expect(controller.room, same(room));
-          expect(room.disposeCount, 0);
-          expect(room.disconnectCount, 0);
-          expect(
+          check(controller.room).identicalTo(room);
+          check(room.disposeCount).equals(0);
+          check(room.disconnectCount).equals(0);
+          check(
             controller.state.connectionState,
-            RoomConnectionState.disconnected,
-          );
+          ).equals(RoomConnectionState.disconnected);
         },
       );
 
@@ -530,7 +530,7 @@ void main() {
 
           final room = _CountingRoom(localParticipant);
           controller.room = room;
-          expect(await controller.join(), SessionJoinResult.success);
+          check(await controller.join()).equals(SessionJoinResult.success);
 
           controller.applyRoomState(
             const RoomState(
@@ -612,8 +612,8 @@ void main() {
         await controller.join();
         await controller.join();
 
-        expect(room.prepareConnectionCount, 1);
-        expect(room.connectCount, 1);
+        check(room.prepareConnectionCount).equals(1);
+        check(room.connectCount).equals(1);
       });
 
       test(
@@ -670,11 +670,10 @@ void main() {
           );
           await controller.initializationStarted.future;
 
-          expect(controller.room, isNull);
-          expect(
+          check(controller.room).isNull();
+          check(
             controller.state.connectionState,
-            RoomConnectionState.connecting,
-          );
+          ).equals(RoomConnectionState.connecting);
 
           final secondCameraTrack = MockLocalVideoTrack();
           final secondMicrophoneTrack = MockLocalAudioTrack();
@@ -685,25 +684,23 @@ void main() {
             ),
           );
 
-          expect(secondResult, SessionJoinResult.success);
-          expect(controller.initializationCount, 1);
-          expect(room.connectCount, 0);
+          check(secondResult).equals(SessionJoinResult.success);
+          check(controller.initializationCount).equals(1);
+          check(room.connectCount).equals(0);
           verify(secondCameraTrack.stop).called(1);
           verify(secondCameraTrack.dispose).called(1);
           verify(secondMicrophoneTrack.stop).called(1);
           verify(secondMicrophoneTrack.dispose).called(1);
 
           controller.initializationGate.complete();
-          expect(await firstJoin, SessionJoinResult.success);
-          expect(room.connectCount, 1);
-          expect(
+          check(await firstJoin).equals(SessionJoinResult.success);
+          check(room.connectCount).equals(1);
+          check(
             room.lastFastConnectOptions?.camera.track,
-            same(firstCameraTrack),
-          );
-          expect(
+          ).identicalTo(firstCameraTrack);
+          check(
             room.lastFastConnectOptions?.microphone.track,
-            same(firstMicrophoneTrack),
-          );
+          ).identicalTo(firstMicrophoneTrack);
           verifyNever(firstCameraTrack.stop);
           verifyNever(firstCameraTrack.dispose);
           verifyNever(firstMicrophoneTrack.stop);
@@ -758,8 +755,8 @@ void main() {
             ),
           );
 
-          expect(result, SessionJoinResult.success);
-          expect(room.connectCount, 1);
+          check(result).equals(SessionJoinResult.success);
+          check(room.connectCount).equals(1);
           verify(cameraTrack.stop).called(1);
           verify(cameraTrack.dispose).called(1);
           verify(microphoneTrack.stop).called(1);
@@ -818,21 +815,22 @@ void main() {
             ),
           );
 
-          expect(joined, SessionJoinResult.success);
-          expect(room.lastFastConnectOptions?.camera.track, same(cameraTrack));
-          expect(
+          check(joined).equals(SessionJoinResult.success);
+          check(
+            room.lastFastConnectOptions?.camera.track,
+          ).identicalTo(cameraTrack);
+          check(
             room.lastFastConnectOptions?.microphone.track,
-            same(microphoneTrack),
-          );
+          ).identicalTo(microphoneTrack);
           verifyNever(cameraTrack.stop);
           verifyNever(cameraTrack.dispose);
           verifyNever(microphoneTrack.stop);
           verifyNever(microphoneTrack.dispose);
-          expect(localParticipant.getTrackPublications(), isEmpty);
+          check(localParticipant.getTrackPublications()).isEmpty();
 
           await controller.disposeConnection();
 
-          expect(room.disposeCount, 1);
+          check(room.disposeCount).equals(1);
           verifyNever(cameraTrack.stop);
           verifyNever(cameraTrack.dispose);
           verifyNever(microphoneTrack.stop);
@@ -888,8 +886,8 @@ void main() {
             ),
           );
 
-          expect(joined, SessionJoinResult.retryableFailure);
-          expect(room.connectCount, 0);
+          check(joined).equals(SessionJoinResult.retryableFailure);
+          check(room.connectCount).equals(0);
           verify(cameraTrack.stop).called(1);
           verify(cameraTrack.dispose).called(1);
           verify(microphoneTrack.stop).called(1);
@@ -897,7 +895,7 @@ void main() {
 
           await controller.resetAfterFailedJoin();
 
-          expect(controller.room, isNull);
+          check(controller.room).isNull();
           verifyNoMoreInteractions(cameraTrack);
           verifyNoMoreInteractions(microphoneTrack);
         },
@@ -959,7 +957,7 @@ void main() {
           final microphoneTrack = MockLocalAudioTrack();
           var previewAttached = true;
           when(cameraTrack.stop).thenAnswer((_) async {
-            expect(previewAttached, isFalse);
+            check(previewAttached).equals(false);
             return true;
           });
           final localParticipant = MockLocalParticipant();
@@ -983,14 +981,15 @@ void main() {
             ),
           );
 
-          expect(result, testCase.result);
-          expect(previewAttached, isFalse);
-          expect(room.connectCount, 1);
-          expect(room.lastFastConnectOptions?.camera.track, same(cameraTrack));
-          expect(
+          check(result).equals(testCase.result);
+          check(previewAttached).equals(false);
+          check(room.connectCount).equals(1);
+          check(
+            room.lastFastConnectOptions?.camera.track,
+          ).identicalTo(cameraTrack);
+          check(
             room.lastFastConnectOptions?.microphone.track,
-            same(microphoneTrack),
-          );
+          ).identicalTo(microphoneTrack);
           verify(cameraTrack.stop).called(1);
           verify(cameraTrack.dispose).called(1);
           verify(microphoneTrack.stop).called(1);
@@ -1002,7 +1001,7 @@ void main() {
             await controller.disposeConnection();
           }
 
-          expect(room.disposeCount, 1);
+          check(room.disposeCount).equals(1);
           verifyNoMoreInteractions(cameraTrack);
           verifyNoMoreInteractions(microphoneTrack);
         });
@@ -1034,7 +1033,7 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
 
-        expect(controller.sortedParticipants(), isEmpty);
+        check(controller.sortedParticipants()).isEmpty();
       });
 
       test(
@@ -1058,8 +1057,8 @@ void main() {
             lastMetadata: 'previous-metadata',
           );
 
-          expect(result.roomState, isNull);
-          expect(result.lastMetadata, 'previous-metadata');
+          check(result.roomState).isNull();
+          check(result.lastMetadata).equals('previous-metadata');
         },
       );
 
@@ -1096,8 +1095,8 @@ void main() {
           lastMetadata: null,
         );
 
-        expect(result.roomState, expected);
-        expect(result.lastMetadata, metadata);
+        check(result.roomState).equals(expected);
+        check(result.lastMetadata).equals(metadata);
       });
     });
 
@@ -1133,8 +1132,8 @@ void main() {
           );
 
         final state = container.read(sessionControllerProvider(options));
-        expect(state.messages, hasLength(1));
-        expect(state.messages.first.message, 'hello');
+        check(state.messages).length.equals(1);
+        check(state.messages.first.message).equals('hello');
       });
 
       test('markParticipantRemoved updates removed flag', () {
@@ -1151,7 +1150,7 @@ void main() {
           ..markParticipantRemoved(RemoveReason.remove);
 
         final state = container.read(sessionControllerProvider(options));
-        expect(state.removed, isTrue);
+        check(state.removed).equals(true);
       });
 
       test('applyRoomState updates roomState', () {
@@ -1184,7 +1183,7 @@ void main() {
         controller.applyRoomState(newRoomState);
 
         final state = container.read(sessionControllerProvider(options));
-        expect(state.roomState, newRoomState);
+        check(state.roomState).equals(newRoomState);
       });
 
       test('applyRoomState clears a share time reminder when passing', () {
@@ -1223,7 +1222,7 @@ void main() {
                 topic: SessionCommunicationTopics.shareTimeReminder.topic,
               ),
             );
-        expect(container.read(reminderProvider), isNotNull);
+        check(container.read(reminderProvider)).isNotNull();
 
         final _ = container.read(sessionControllerProvider(options).notifier)
           ..room = null
@@ -1242,7 +1241,7 @@ void main() {
             ),
           );
 
-        expect(container.read(reminderProvider), isNull);
+        check(container.read(reminderProvider)).isNull();
       });
 
       test(
@@ -1261,61 +1260,56 @@ void main() {
             sessionControllerProvider(options).notifier,
           );
 
-          await expectLater(controller.disconnectFromRoom(), completes);
+          await check(controller.disconnectFromRoom()).completes();
         },
       );
     });
 
     group('Static Defaults', () {
       test('syncTimerDuration is 20 seconds', () {
-        expect(
+        check(
           SessionController.syncTimerDuration,
-          equals(const Duration(seconds: 20)),
-        );
+        ).equals(const Duration(seconds: 20));
       });
 
       test('syncTimerDuration is positive', () {
-        expect(SessionController.syncTimerDuration.isNegative, isFalse);
+        check(SessionController.syncTimerDuration.isNegative).equals(false);
       });
 
       test('defaultCameraCaptureOptions is defined', () {
-        expect(SessionController.defaultCameraCaptureOptions, isNotNull);
+        check(SessionController.defaultCameraCaptureOptions).isNotNull();
       });
 
       test('defaultCameraCaptureOptions has h720_43 dimensions', () {
-        expect(
+        check(
           SessionController.defaultCameraCaptureOptions.params.dimensions,
-          equals(VideoDimensionsPresets.h720_43),
-        );
+        ).equals(VideoDimensionsPresets.h720_43);
       });
 
       test('defaultCameraCaptureOptions has 24 fps framerate', () {
-        expect(
+        check(
           SessionController
               .defaultCameraCaptureOptions
               .params
               .encoding
               ?.maxFramerate,
-          equals(24),
-        );
+        ).equals(24);
       });
 
       test('defaultCameraCaptureOptions has 1300kbps bitrate', () {
-        expect(
+        check(
           SessionController
               .defaultCameraCaptureOptions
               .params
               .encoding
               ?.maxBitrate,
-          equals(1300 * 1000),
-        );
+        ).equals(1300 * 1000);
       });
 
       test('defaultVideoPublishOptions uses h265 codec on native', () {
-        expect(
+        check(
           SessionController.defaultVideoPublishOptions.videoCodec,
-          equals('h265'),
-        );
+        ).equals('h265');
       });
 
       test(
@@ -1323,8 +1317,8 @@ void main() {
         () {
           final backup =
               SessionController.defaultVideoPublishOptions.backupVideoCodec;
-          expect(backup.enabled, isTrue);
-          expect(backup.codec, equals('h264'));
+          check(backup.enabled).equals(true);
+          check(backup.codec).equals('h264');
         },
       );
     });
