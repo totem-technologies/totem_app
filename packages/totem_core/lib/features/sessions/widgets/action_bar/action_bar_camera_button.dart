@@ -143,7 +143,9 @@ class _ActionBarCameraSwitcherButtonState
                 _showCameraPositionOptions();
               },
               child: Padding(
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 8.0),
+                padding: EdgeInsetsDirectional.symmetric(
+                  horizontal: ActionBar.gapOf(context),
+                ),
                 child: AnimatedBuilder(
                   animation: _menuController,
                   builder: (context, child) {

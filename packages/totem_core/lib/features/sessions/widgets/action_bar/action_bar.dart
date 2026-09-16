@@ -47,19 +47,19 @@ class _ActionBarMetrics {
   });
 
   static const comfortable = _ActionBarMetrics(
-    buttonSize: 56,
-    iconSize: 28,
-    gap: 8,
-    horizontalPadding: 10,
-    verticalPadding: 10,
+    buttonSize: 44,
+    iconSize: 22,
+    gap: 6,
+    horizontalPadding: 6,
+    verticalPadding: 6,
   );
 
   static const compact = _ActionBarMetrics(
-    buttonSize: 48,
-    iconSize: 24,
-    gap: 6,
-    horizontalPadding: 8,
-    verticalPadding: 8,
+    buttonSize: 40,
+    iconSize: 20,
+    gap: 4,
+    horizontalPadding: 4,
+    verticalPadding: 4,
   );
 
   final double buttonSize;
@@ -257,6 +257,10 @@ class ActionBar extends StatelessWidget {
     return _ActionBarScope.lightBackgroundOf(context);
   }
 
+  static double gapOf(BuildContext context) {
+    return _ActionBarScope.of(context).gap;
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -275,27 +279,30 @@ class ActionBar extends StatelessWidget {
         return _ActionBarScope(
           metrics: metrics,
           onLightBackground: onLightBackground,
-          child: RepaintBoundary(
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(bottom: 20),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: pillFill,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: pillStroke, width: 1.5),
-                ),
-                child: Padding(
-                  padding: EdgeInsetsDirectional.symmetric(
-                    horizontal: metrics.horizontalPadding,
-                    vertical: metrics.verticalPadding,
+          child: IconTheme.merge(
+            data: IconThemeData(size: metrics.iconSize),
+            child: RepaintBoundary(
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(bottom: 20),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: pillFill,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: pillStroke, width: 1.5),
                   ),
-                  child: AnimatedSize(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeInOut,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: metrics.gap,
-                      children: [for (final child in children) child],
+                  child: Padding(
+                    padding: EdgeInsetsDirectional.symmetric(
+                      horizontal: metrics.horizontalPadding,
+                      vertical: metrics.verticalPadding,
+                    ),
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeInOut,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: metrics.gap,
+                        children: [for (final child in children) child],
+                      ),
                     ),
                   ),
                 ),
@@ -310,10 +317,9 @@ class ActionBar extends StatelessWidget {
   /// LayoutBuilder reports incoming constraints. A non-flex Row child gets
   /// `maxWidth: infinity`, so we cannot key compact off that alone.
   ///
-  /// Phones always compact — landscape prejoin has the least vertical room,
-  /// and a 5-button comfortable pill overflows a portrait phone.
-  /// Larger viewports use comfortable unless the *finite* constraint (or the
-  /// screen width, when unbounded) cannot fit `children.length`.
+  /// Phones always compact. Larger viewports use comfortable unless the
+  /// *finite* constraint (or the screen width, when unbounded) cannot fit
+  /// `children.length`.
   _ActionBarMetrics _resolveMetrics(
     BuildContext context,
     BoxConstraints constraints,

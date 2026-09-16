@@ -105,7 +105,7 @@ void main() {
         child: ActionBar(children: ghostButtons(5)),
       );
 
-      check(buttonWidthOf(tester)).equals(48);
+      check(buttonWidthOf(tester)).equals(40);
     });
 
     testWidgets('uses compact metrics when nested in an unbounded Row', (
@@ -123,7 +123,7 @@ void main() {
         ),
       );
 
-      check(buttonWidthOf(tester)).equals(48);
+      check(buttonWidthOf(tester)).equals(40);
     });
 
     testWidgets('uses comfortable metrics on a wide tablet surface', (
@@ -135,7 +135,7 @@ void main() {
         child: ActionBar(children: ghostButtons(2)),
       );
 
-      check(buttonWidthOf(tester)).equals(56);
+      check(buttonWidthOf(tester)).equals(44);
     });
   });
 

@@ -105,6 +105,7 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
                   widget.indicatorColor ??
                   IconTheme.of(context).color ??
                   AppTheme.cream,
+              iconSize: IconTheme.of(context).size ?? 20,
               barCount: widget.indicatorBarCount,
             )
           : const TotemIcon(TotemIcons.microphoneOff),
