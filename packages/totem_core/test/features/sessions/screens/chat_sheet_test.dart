@@ -9,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
@@ -286,6 +287,19 @@ void main() {
       expect(find.text('Message Keeper'), findsOneWidget);
       expect(find.text('Message everyone'), findsOneWidget);
       expect(find.byType(MessageInputBar), findsOneWidget);
+      expect(
+        tester
+            .widget<Material>(
+              find
+                  .ancestor(
+                    of: find.text('Message Keeper'),
+                    matching: find.byType(Material),
+                  )
+                  .first,
+            )
+            .color,
+        AppTheme.mauve,
+      );
     });
 
     testWidgets('shows the keeper composer for Everyone', (tester) async {
@@ -422,6 +436,12 @@ void main() {
         () =>
             messaging.sendMessage('I need help', recipientIdentity: 'keeper-1'),
       ).called(1);
+
+      await tester.tap(find.text('View Group Messages'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Message Keeper'), findsOneWidget);
+      expect(find.text('Everyone'), findsWidgets);
     });
 
     testWidgets('scrolls to the newest message when a new message arrives', (

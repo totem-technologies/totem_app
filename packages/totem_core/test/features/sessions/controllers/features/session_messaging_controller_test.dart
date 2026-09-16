@@ -465,6 +465,45 @@ void main() {
           isFalse,
         );
       });
+
+      test('threadTargetFor opens the other party, not Everyone', () {
+        const everyone = SessionChatMessage(
+          id: 'g1',
+          sender: false,
+          message: 'hi all',
+          timestamp: 1,
+        );
+        final incoming = SessionChatMessage(
+          id: 'd1',
+          sender: false,
+          message: 'need help',
+          timestamp: 2,
+          recipientIdentity: 'keeper-1',
+          participant: MockRemoteParticipant('lucas', 'Lucas'),
+        );
+        final echo = SessionChatMessage(
+          id: 'd2',
+          sender: false,
+          message: 'hang tight',
+          timestamp: 3,
+          recipientIdentity: 'lucas',
+          participant: MockRemoteParticipant('keeper-1', 'Heather'),
+        );
+        final sent = SessionChatMessage(
+          id: 'd3',
+          sender: true,
+          message: 'hang tight',
+          timestamp: 4,
+          recipientIdentity: 'lucas',
+          participant: MockLocalParticipant('keeper-1'),
+        );
+
+        expect(everyone.threadTargetFor('keeper-1'), isNull);
+        expect(incoming.threadTargetFor('keeper-1'), 'lucas');
+        expect(incoming.threadTargetFor('lucas'), 'keeper-1');
+        expect(echo.threadTargetFor('keeper-1'), 'lucas');
+        expect(sent.threadTargetFor('keeper-1'), 'lucas');
+      });
     });
   });
 }

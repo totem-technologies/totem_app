@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
@@ -23,20 +25,59 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
   /// per-thread rather than a single flag: a keeper reading Everyone still
   /// needs to see that a private support request arrived.
   final Set<String?> _unreadThreads = {};
+  String? _latestUnreadThread;
   NotificationRequest? _notification;
 
-  /// The thread a message belongs to from this client's point of view.
-  static String? _threadOf(SessionChatMessage message) {
-    if (message.isEveryoneThread) return null;
-    return message.sender
-        ? message.recipientIdentity
-        : message.participant?.identity;
+  String? _localIdentity() {
+    final user = ref.read(authControllerProvider).user;
+    final roomIdentity = ref
+        .read(currentSessionProvider)
+        ?.room
+        ?.localParticipant
+        ?.identity;
+    if (roomIdentity != null && roomIdentity.isNotEmpty) return roomIdentity;
+    return user?.slug ?? user?.email;
   }
 
   @override
   void dispose() {
     _notification?.dismissActive();
     super.dispose();
+  }
+
+  Future<void> _openChat({required bool fromUnread, String? thread}) async {
+    if (!mounted) return;
+    _notification?.dismissActive();
+
+    if (fromUnread) {
+      ref.read(sessionChatThreadTargetProvider.notifier).target = thread;
+      setState(() => _unreadThreads.remove(thread));
+    } else {
+      setState(
+        () => _unreadThreads.remove(ref.read(sessionChatThreadTargetProvider)),
+      );
+    }
+
+    // Wide desktop docks the panel beside the video; everything else
+    // still opens the existing sheet / dialog.
+    if (shouldDockSessionChat(context)) {
+      if (fromUnread) {
+        ref.read(sessionChatOpenProvider.notifier).open = true;
+        return;
+      }
+      ref.read(sessionChatOpenProvider.notifier).toggle();
+      return;
+    }
+
+    if (_chatSheetOpen) return;
+
+    ref.read(sessionChatOpenProvider.notifier).open = false;
+    setState(() => _chatSheetOpen = true);
+    try {
+      await showSessionChat(context);
+    } finally {
+      if (mounted) setState(() => _chatSheetOpen = false);
+    }
   }
 
   @override
@@ -51,41 +92,31 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     ref.listen(lastSessionMessageProvider, (previous, next) {
       if (next == null || identical(previous, next)) return;
       if (!mounted || next.sender) return;
+      final thread = next.threadTargetFor(_localIdentity());
       // Only the thread on screen is already "read"; anything else still
       // needs to be announced even while the panel is open.
-      final thread = _threadOf(next);
       if (isChatOpen && thread == visibleThread) return;
       _notification?.dismissActive();
+      _latestUnreadThread = thread;
       _notification = NotificationController().showTimed(
         context,
         icon: TotemIcons.chat,
         title: 'New message',
         message: next.message,
+        onTap: () {
+          unawaited(_openChat(thread: thread, fromUnread: true));
+        },
       );
       setState(() => _unreadThreads.add(thread));
     });
     return ActionBarButton(
       semanticsLabel: 'Chat',
       role: ActionBarButtonRole.sheet(open: isChatOpen),
-      onPressed: () async {
-        if (!mounted) return;
-        _notification?.dismissActive();
-        setState(() => _unreadThreads.remove(visibleThread));
-
-        // Wide desktop docks the panel beside the video; everything else
-        // still opens the existing sheet / dialog.
-        if (shouldDockSessionChat(context)) {
-          ref.read(sessionChatOpenProvider.notifier).toggle();
-          return;
-        }
-
-        ref.read(sessionChatOpenProvider.notifier).open = false;
-        setState(() => _chatSheetOpen = true);
-        try {
-          await showSessionChat(context);
-        } finally {
-          if (mounted) setState(() => _chatSheetOpen = false);
-        }
+      onPressed: () {
+        final hasUnread = _unreadThreads.isNotEmpty;
+        unawaited(
+          _openChat(thread: _latestUnreadThread, fromUnread: hasUnread),
+        );
       },
       child: Stack(
         clipBehavior: Clip.none,

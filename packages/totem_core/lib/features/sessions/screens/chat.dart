@@ -385,7 +385,10 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       roomIdentity,
       user?.slug ?? user?.email,
     );
-    final keeperIdentity = sessionState?.roomState.keeper;
+    final keeperIdentity = _resolveKeeperIdentity(
+      roomKeeper: sessionState?.roomState.keeper,
+      spaceAuthor: ref.watch(currentSessionEventProvider)?.space.author.slug,
+    );
 
     final threadMessages = allMessages
         .where(
@@ -484,54 +487,6 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                               },
                             ),
                     ),
-                    if (!isKeeper)
-                      _ParticipantThreadChip(
-                        isPrivateThread: isPrivateThread,
-                        onMessageKeeper: () {
-                          final keeper = keeperIdentity;
-                          if (keeper == null || keeper.isEmpty) return;
-                          _setDropdownOpen(false);
-                          ref
-                                  .read(
-                                    sessionChatThreadTargetProvider.notifier,
-                                  )
-                                  .target =
-                              keeper;
-                        },
-                        onViewGroup: () {
-                          _setDropdownOpen(false);
-                          ref
-                                  .read(
-                                    sessionChatThreadTargetProvider.notifier,
-                                  )
-                                  .target =
-                              null;
-                        },
-                      ),
-                    if (canCompose)
-                      MessageInputBar(
-                        // A fresh State per thread, so a private draft can
-                        // never be sent to Everyone after a thread switch.
-                        key: ValueKey(threadTarget),
-                        hintText: _composerHint(
-                          isPrivateThread: isPrivateThread,
-                          threadTarget: threadTarget,
-                          participants: participants,
-                          keeperIdentity: keeperIdentity,
-                        ),
-                        autofocus: switch (defaultTargetPlatform) {
-                          TargetPlatform.android ||
-                          TargetPlatform.iOS ||
-                          TargetPlatform.fuchsia => false,
-                          _ => true,
-                        },
-                        onSend: send,
-                      )
-                    else
-                      const MessageInputBar(
-                        hintText: 'Message everyone',
-                        enabled: false,
-                      ),
                   ],
                 ),
                 if (_dropdownOpen)
@@ -544,6 +499,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                   ),
                 _RecipientDropdownOverlay(
                   animation: _dropdownController,
+                  interactive: _dropdownOpen,
                   isKeeper: isKeeper,
                   threadTarget: threadTarget,
                   keeperIdentity: keeperIdentity,
@@ -563,10 +519,56 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
               ],
             ),
           ),
+          if (!isKeeper)
+            _ParticipantThreadChip(
+              isPrivateThread: isPrivateThread,
+              onMessageKeeper: () {
+                final keeper = keeperIdentity;
+                if (keeper == null || keeper.isEmpty) return;
+                _setDropdownOpen(false);
+                ref.read(sessionChatThreadTargetProvider.notifier).target =
+                    keeper;
+              },
+              onViewGroup: () {
+                _setDropdownOpen(false);
+                ref.read(sessionChatThreadTargetProvider.notifier).target =
+                    null;
+              },
+            ),
+          if (canCompose)
+            MessageInputBar(
+              // A fresh State per thread, so a private draft can
+              // never be sent to Everyone after a thread switch.
+              key: ValueKey(threadTarget),
+              hintText: _composerHint(
+                isPrivateThread: isPrivateThread,
+                threadTarget: threadTarget,
+                participants: participants,
+                keeperIdentity: keeperIdentity,
+              ),
+              autofocus: switch (defaultTargetPlatform) {
+                TargetPlatform.android ||
+                TargetPlatform.iOS ||
+                TargetPlatform.fuchsia => false,
+                _ => true,
+              },
+              onSend: send,
+            )
+          else
+            const MessageInputBar(hintText: 'Message everyone', enabled: false),
         ],
       ),
     );
   }
+}
+
+String? _resolveKeeperIdentity({
+  required String? roomKeeper,
+  required String? spaceAuthor,
+}) {
+  if (roomKeeper != null && roomKeeper.isNotEmpty) return roomKeeper;
+  if (spaceAuthor != null && spaceAuthor.isNotEmpty) return spaceAuthor;
+  return null;
 }
 
 String _pinnedHint({required bool isKeeper, required bool isPrivateThread}) {
@@ -869,27 +871,43 @@ class _ParticipantThreadChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = isPrivateThread ? 'View Group Messages' : 'Message Keeper';
+    const radius = 33.0;
     return Align(
       alignment: AlignmentDirectional.centerEnd,
       child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 20, 12),
-        child: Material(
-          color: AppTheme.messagePurpleLight,
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            onTap: isPrivateThread ? onViewGroup : onMessageKeeper,
-            borderRadius: BorderRadius.circular(20),
-            child: Padding(
-              padding: const EdgeInsetsDirectional.symmetric(
-                horizontal: 15,
-                vertical: 13,
+        padding: const EdgeInsetsDirectional.fromSTEB(20, 0, 16, 10),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            boxShadow: const [
+              BoxShadow(
+                color: Color.fromRGBO(0, 0, 0, 0.25),
+                offset: Offset(2, 2),
+                blurRadius: 2,
               ),
-              child: Text(
-                label,
-                style: const TextStyle(
-                  color: AppTheme.messageChipText,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+            ],
+          ),
+          child: Material(
+            color: AppTheme.mauve,
+            borderRadius: BorderRadius.circular(radius),
+            child: InkWell(
+              onTap: isPrivateThread ? onViewGroup : onMessageKeeper,
+              borderRadius: BorderRadius.circular(radius),
+              splashColor: AppTheme.white.withValues(alpha: 0.22),
+              highlightColor: AppTheme.white.withValues(alpha: 0.12),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.symmetric(
+                  horizontal: 15,
+                  vertical: 10,
+                ),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppTheme.white,
+                    fontSize: 12,
+                    height: 1.2,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -903,6 +921,7 @@ class _ParticipantThreadChip extends StatelessWidget {
 class _RecipientDropdownOverlay extends StatelessWidget {
   const _RecipientDropdownOverlay({
     required this.animation,
+    required this.interactive,
     required this.isKeeper,
     required this.threadTarget,
     required this.keeperIdentity,
@@ -913,6 +932,7 @@ class _RecipientDropdownOverlay extends StatelessWidget {
   });
 
   final Animation<double> animation;
+  final bool interactive;
   final bool isKeeper;
   final String? threadTarget;
   final String? keeperIdentity;
@@ -959,7 +979,7 @@ class _RecipientDropdownOverlay extends StatelessWidget {
           start: 71 - 16,
           end: 20,
           child: IgnorePointer(
-            ignoring: t < 0.5,
+            ignoring: !interactive || t < 0.5,
             child: Opacity(
               opacity: t,
               child: Transform.scale(

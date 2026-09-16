@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -269,5 +270,112 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SessionChatPanel), findsOneWidget);
+  });
+
+  testWidgets('Chat opens the private thread that sent the notification', (
+    tester,
+  ) async {
+    await pumpWidget(
+      tester,
+      child: const ActionBarChatButton(),
+      overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(
+            AuthState.authenticated(
+              user: UserSchema(
+                email: 'keeper@example.com',
+                slug: 'keeper-1',
+                name: 'Bruno Keeper',
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                circleCount: 0,
+                dateCreated: DateTime(2024),
+              ),
+            ),
+          ),
+        ),
+        lastSessionMessageProvider.overrideWith(
+          (ref) => ref.watch(_testLastMessageProvider),
+        ),
+        sessionMessagesProvider.overrideWith((ref) => const []),
+        isCurrentUserKeeperProvider.overrideWith((ref) => true),
+        currentSessionEventProvider.overrideWith((ref) => null),
+      ],
+    );
+
+    final context = tester.element(find.byType(ActionBarChatButton));
+    final container = ProviderScope.containerOf(context, listen: false);
+    container
+        .read(_testLastMessageProvider.notifier)
+        .set(
+          SessionChatMessage(
+            id: 'msg-dm',
+            sender: false,
+            message: 'Checking in',
+            timestamp: 5,
+            recipientIdentity: 'bruno-test',
+            participant: MockRemoteParticipant('keeper-1', 'Bruno Keeper'),
+          ),
+        );
+    await tester.pump();
+
+    expect(find.text('New message'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Chat'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(sessionChatThreadTargetProvider), 'bruno-test');
+    expect(find.byType(SessionChatPanel), findsOneWidget);
+  });
+
+  testWidgets('Chat opens the sender thread for an incoming private message', (
+    tester,
+  ) async {
+    await pumpWidget(
+      tester,
+      child: const ActionBarChatButton(),
+      overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(
+            AuthState.authenticated(
+              user: UserSchema(
+                email: 'lucas@example.com',
+                slug: 'lucas',
+                name: 'Lucas',
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                circleCount: 0,
+                dateCreated: DateTime(2024),
+              ),
+            ),
+          ),
+        ),
+        lastSessionMessageProvider.overrideWith(
+          (ref) => ref.watch(_testLastMessageProvider),
+        ),
+        sessionMessagesProvider.overrideWith((ref) => const []),
+        isCurrentUserKeeperProvider.overrideWith((ref) => false),
+        currentSessionEventProvider.overrideWith((ref) => null),
+      ],
+    );
+
+    final context = tester.element(find.byType(ActionBarChatButton));
+    final container = ProviderScope.containerOf(context, listen: false);
+    container
+        .read(_testLastMessageProvider.notifier)
+        .set(
+          SessionChatMessage(
+            id: 'msg-from-keeper',
+            sender: false,
+            message: 'How are you holding up?',
+            timestamp: 6,
+            recipientIdentity: 'lucas',
+            participant: MockRemoteParticipant('keeper-1', 'Heather'),
+          ),
+        );
+    await tester.pump();
+
+    await tester.tap(find.bySemanticsLabel('Chat'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(sessionChatThreadTargetProvider), 'keeper-1');
   });
 }

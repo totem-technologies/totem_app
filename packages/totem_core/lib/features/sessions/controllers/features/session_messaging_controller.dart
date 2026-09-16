@@ -53,6 +53,19 @@ class SessionChatMessage {
   /// to null.
   bool get isEveryoneThread => recipientIdentity == null;
 
+  String? threadTargetFor(String? localIdentity) {
+    if (isEveryoneThread) return null;
+    if (sender) return recipientIdentity;
+
+    final senderId = participant?.identity;
+    if (localIdentity != null &&
+        senderId != null &&
+        senderId == localIdentity) {
+      return recipientIdentity;
+    }
+    return senderId;
+  }
+
   /// Whether this message belongs in [threadTarget] for [localIdentity].
   ///
   /// [threadTarget] is null for Everyone. A private thread with X includes
