@@ -101,6 +101,7 @@ Future<GoRouter> _pumpTestRouter(
   List<Object?> overrides = const [],
 }) async {
   GoRouter? router;
+  final routerOwner = WebTotemRouter();
 
   await tester.pumpWidget(
     ProviderScope(
@@ -112,7 +113,7 @@ Future<GoRouter> _pumpTestRouter(
       ],
       child: Consumer(
         builder: (context, ref, _) {
-          router ??= WebTotemRouter().createRouter(ref);
+          router ??= routerOwner.createRouter(ref);
           return MaterialApp.router(routerConfig: router!);
         },
       ),
@@ -122,6 +123,7 @@ Future<GoRouter> _pumpTestRouter(
   await tester.pump();
   final testRouter = router!;
   addTearDown(() async {
+    routerOwner.dispose();
     testRouter.dispose();
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
