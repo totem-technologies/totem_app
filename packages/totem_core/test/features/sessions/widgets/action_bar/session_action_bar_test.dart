@@ -423,9 +423,6 @@ void main() {
       await tester.pumpAndSettle();
 
       check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
-      check(
-        tester.widgetList(find.byType(SessionChatMessages)),
-      ).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
       check(tester.widgetList(findPendingBadge())).length.equals(0);
 
@@ -436,9 +433,6 @@ void main() {
       await tester.pumpAndSettle();
 
       check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(0);
-      check(
-        tester.widgetList(find.byType(SessionChatMessages)),
-      ).length.equals(0);
       check(tester.widgetList(findPendingBadge())).length.equals(0);
     });
   });

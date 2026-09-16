@@ -32,6 +32,7 @@ class MessageInputBar extends StatefulWidget {
 
 class _MessageInputBarState extends State<MessageInputBar> {
   final _controller = TextEditingController();
+  var _isSubmitting = false;
 
   @override
   void dispose() {
@@ -40,14 +41,20 @@ class _MessageInputBarState extends State<MessageInputBar> {
   }
 
   Future<void> _submit() async {
-    if (!widget.enabled) return;
+    if (!widget.enabled || _isSubmitting) return;
     final text = _controller.text.trim();
     if (text.isEmpty) return;
     final onSend = widget.onSend;
     if (onSend == null) return;
-    final accepted = await onSend(text);
-    if (!mounted || !accepted) return;
-    _controller.clear();
+
+    setState(() => _isSubmitting = true);
+    try {
+      final accepted = await onSend(text);
+      if (!mounted || !accepted) return;
+      _controller.clear();
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -113,6 +120,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
               _SendButton(
                 controller: _controller,
                 enabled: widget.enabled,
+                isSubmitting: _isSubmitting,
                 onSubmit: () => unawaited(_submit()),
               ),
             ],
@@ -128,11 +136,13 @@ class _SendButton extends StatefulWidget {
     required this.controller,
     required this.onSubmit,
     required this.enabled,
+    required this.isSubmitting,
   });
 
   final TextEditingController controller;
   final VoidCallback onSubmit;
   final bool enabled;
+  final bool isSubmitting;
 
   @override
   State<_SendButton> createState() => _SendButtonState();
@@ -169,7 +179,7 @@ class _SendButtonState extends State<_SendButton> {
 
   @override
   Widget build(BuildContext context) {
-    final canSend = widget.enabled && _hasText;
+    final canSend = widget.enabled && !widget.isSubmitting && _hasText;
     return Semantics(
       button: true,
       enabled: canSend,

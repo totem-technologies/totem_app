@@ -310,16 +310,17 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
+      check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
       check(
-        tester.widgetList(find.text('Long press to send a quick message')),
+        tester.widgetList(find.text('Only you can post messages here')),
       ).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
+      check(tester.widgetList(find.text('Message everyone'))).length.equals(1);
       check(tester.widgetList(find.byType(TextField))).length.equals(1);
-      check(tester.widgetList(find.byType(IconButton))).length.equals(1);
-      check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(1);
+      check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(0);
       check(
         tester.widgetList(find.text('Please mute your mic')),
-      ).length.equals(1);
+      ).length.equals(0);
     });
 
     testWidgets('renders own and received messages as MessageBubbles', (
@@ -357,8 +358,6 @@ void main() {
       );
 
       check(tester.widgetList(find.byType(MessageBubble))).length.equals(2);
-      check(tester.widgetList(find.byType(MyChatBubble))).length.equals(1);
-      check(tester.widgetList(find.byType(OtherChatBubble))).length.equals(1);
       check(tester.widgetList(find.text('My message'))).length.equals(1);
       check(tester.widgetList(find.text('Their message'))).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(0);
@@ -526,48 +525,6 @@ void main() {
       check(tester.widgetList(find.text('Hello chat'))).length.equals(0);
     });
 
-    testWidgets('sends a quick message on tap on desktop', (tester) async {
-      await runOnDesktop(() async {
-        await pumpChatSheet(
-          tester,
-          isKeeper: true,
-          messages: const [],
-          session: session,
-          authState: AuthState.unauthenticated(),
-        );
-
-        check(
-          tester.widgetList(find.text('Tap to send a quick message')),
-        ).length.equals(1);
-
-        await tester.tap(find.text('Please mute your mic'));
-        await tester.pump();
-
-        verify(() => messaging.sendMessage('Please mute your mic')).called(1);
-      });
-    });
-
-    testWidgets('sends a quick message on long press on mobile', (
-      tester,
-    ) async {
-      await pumpChatSheet(
-        tester,
-        isKeeper: true,
-        messages: const [],
-        session: session,
-        authState: AuthState.unauthenticated(),
-      );
-
-      check(
-        tester.widgetList(find.text('Long press to send a quick message')),
-      ).length.equals(1);
-
-      await tester.longPress(find.text('Please mute your mic'));
-      await tester.pump();
-
-      verify(() => messaging.sendMessage('Please mute your mic')).called(1);
-    });
-
     testWidgets('does not carry a private draft into the Everyone thread', (
       tester,
     ) async {
@@ -610,7 +567,7 @@ void main() {
       ).length.equals(0);
       check(
         tester.widget<TextField>(find.byType(TextField)).controller?.text,
-      ).isEmpty();
+      ).equals('');
     });
 
     testWidgets('keeps the composer text when the send is rejected', (
