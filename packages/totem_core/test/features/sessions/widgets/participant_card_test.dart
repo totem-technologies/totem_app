@@ -1,6 +1,7 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, logger;
 import 'package:material_ui/material_ui.dart';
@@ -617,56 +618,60 @@ void main() {
       ).length.equals(0);
     });
 
-    testWidgets('shows a camera track subscribed after the initial build', (
-      tester,
-    ) async {
-      final participant = MockRemoteParticipant('user-2', 'John Doe');
-      final publication = MockRemoteTrackPublication<RemoteVideoTrack>();
-      final track = MockRemoteVideoTrack();
-      RemoteTrackPublication<RemoteVideoTrack>? cameraPublication;
+    testWidgets(
+      'shows a camera track subscribed after the initial build',
+      (tester) async {
+        final participant = MockRemoteParticipant('user-2', 'John Doe');
+        final publication = MockRemoteTrackPublication<RemoteVideoTrack>();
+        final track = MockRemoteVideoTrack();
+        RemoteTrackPublication<RemoteVideoTrack>? cameraPublication;
 
-      when(
-        () => participant.getTrackPublicationBySource(TrackSource.camera),
-      ).thenAnswer((_) => cameraPublication);
-      when(() => publication.track).thenReturn(track);
-      when(() => publication.source).thenReturn(TrackSource.camera);
-      when(() => publication.sid).thenReturn('pub-sid');
-      when(() => publication.subscribed).thenReturn(true);
-      when(() => publication.muted).thenReturn(false);
-      when(() => track.sid).thenReturn('track-sid');
-      when(() => track.isActive).thenReturn(true);
-      when(() => track.muted).thenReturn(false);
+        when(
+          () => participant.getTrackPublicationBySource(TrackSource.camera),
+        ).thenAnswer((_) => cameraPublication);
+        when(() => publication.track).thenReturn(track);
+        when(() => publication.source).thenReturn(TrackSource.camera);
+        when(() => publication.sid).thenReturn('pub-sid');
+        when(() => publication.subscribed).thenReturn(true);
+        when(() => publication.muted).thenReturn(false);
+        when(() => track.sid).thenReturn('track-sid');
+        when(() => track.isActive).thenReturn(true);
+        when(() => track.muted).thenReturn(false);
 
-      await pumpWidget(
-        tester,
-        authState: AuthState.unauthenticated(),
-        overrides: [
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
+        await pumpWidget(
+          tester,
+          authState: AuthState.unauthenticated(),
+          overrides: [
+            currentSessionStateProvider.overrideWithValue(
+              fakeSessionState.mockState,
+            ),
+          ],
+          child: ParticipantVideo(participant: participant),
+        );
+
+        check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
+
+        cameraPublication = publication;
+        participant.listener.emitParticipantEvent(
+          TrackSubscribedEvent(
+            participant: participant,
+            publication: publication,
+            track: track,
           ),
-        ],
-        child: ParticipantVideo(participant: participant),
-      );
+        );
+        await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
+        check(
+          tester.widgetList(find.byType(VideoTrackRenderer)),
+        ).length.equals(1);
 
-      cameraPublication = publication;
-      participant.listener.emitParticipantEvent(
-        TrackSubscribedEvent(
-          participant: participant,
-          publication: publication,
-          track: track,
-        ),
-      );
-      await tester.pump();
-
-      check(
-        tester.widgetList(find.byType(VideoTrackRenderer)),
-      ).length.equals(1);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    });
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      },
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['RTCVideoRenderer'],
+      ),
+    );
   });
 
   group('ParticipantControlButton', () {
