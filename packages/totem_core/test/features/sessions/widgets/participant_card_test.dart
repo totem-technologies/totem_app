@@ -648,7 +648,7 @@ void main() {
         child: ParticipantVideo(participant: participant),
       );
 
-      expect(find.byType(VideoTrackRenderer), findsNothing);
+      check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
 
       cameraPublication = publication;
       participant.listener.emitParticipantEvent(
@@ -660,7 +660,12 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byType(VideoTrackRenderer), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(VideoTrackRenderer)),
+      ).length.equals(1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     });
   });
 
