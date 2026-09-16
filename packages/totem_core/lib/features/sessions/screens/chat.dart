@@ -45,7 +45,7 @@ Future<void> showSessionChat(BuildContext context) {
     bottomSheetBackgroundColor: AppTheme.cream,
     dialogBackgroundColor: AppTheme.cream,
     dialogAlignment: AlignmentDirectional.centerEnd,
-    dialogInsetPadding: const EdgeInsetsDirectional.only(end: 24, top: 16),
+    dialogInsetPadding: EdgeInsets.zero,
     dialogShape: const RoundedRectangleBorder(
       borderRadius: BorderRadiusDirectional.horizontal(
         start: Radius.circular(20),
@@ -66,10 +66,9 @@ Future<void> showSessionChat(BuildContext context) {
       );
     },
     largeScreenBuilder: (context) {
-      final height = MediaQuery.sizeOf(context).height;
       return SizedBox(
         width: sessionChatPanelWidth,
-        height: height - 32,
+        height: MediaQuery.sizeOf(context).height,
         child: const SessionChatPanel(),
       );
     },
