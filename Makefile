@@ -91,15 +91,11 @@ install:
 	flutter pub get
 
 test:
-	@echo "Running tests in parallel..."
-	(cd $(APP_DIR) && flutter test) & app_pid=$$!; \
-	(cd $(CORE_DIR) && flutter test) & core_pid=$$!; \
-	(cd $(WEB_DIR) && flutter test --platform chrome) & web_pid=$$!; \
-	status=0; \
-	wait $$app_pid || status=1; \
-	wait $$core_pid || status=1; \
-	wait $$web_pid || status=1; \
-	exit $$status
+	@echo "Running tests..."
+	flutter test scripts/test
+	cd $(APP_DIR) && flutter test
+	cd $(CORE_DIR) && flutter test
+	cd $(WEB_DIR) && flutter test --platform chrome
 
 test-app:
 	@echo "Running app tests..."
@@ -112,6 +108,9 @@ test-web:
 test-core:
 	@echo "Running core tests..."
 	cd $(CORE_DIR) && flutter test
+
+test-scripts:
+	flutter test scripts/test
 
 lint:
 	@echo "Running linter..."

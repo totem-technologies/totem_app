@@ -20,6 +20,8 @@
 # Deploy is handled by .github/workflows/web.yml:
 #   wrangler deploy --env staging      (on tag push)
 #   wrangler deploy --env production   (on release published)
+# PR previews use .github/workflows/web-preview.yml:
+#   wrangler versions upload --env preview --preview-alias <pr-alias>
 #
 # Local:
 #   cd packages/totem_web
@@ -37,6 +39,12 @@ compatibility_date = "2026-05-24"
 directory = "./build/web"
 # Django serves the HTML and owns SPA routing; the Worker only serves real files.
 not_found_handling = "none"
+
+[env.preview]
+# Each PR uploads a version with its own preview alias under this Worker.
+name = "totem-web-preview"
+workers_dev = true
+preview_urls = true
 
 [env.staging]
 name = "totem-web-staging"
