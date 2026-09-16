@@ -506,8 +506,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       );
     }
 
-    final dockChat =
-        shouldDockSessionChat(context) && ref.watch(sessionChatOpenProvider);
+    // Keep the rail mounted on wide windows even while closed so the
+    // close animation has a widget to slide out.
+    final dockChatSlot = shouldDockSessionChat(context);
 
     return SessionKeyboardShortcuts(
       navigatorKey: _roomNavigatorKey,
@@ -556,11 +557,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
                 ],
               ),
             ),
-            if (dockChat)
-              const SizedBox(
-                width: sessionChatPanelWidth,
-                child: SessionChatPanel(embedded: true),
-              ),
+            if (dockChatSlot) const DockedSessionChatRail(),
           ],
         ),
       ),

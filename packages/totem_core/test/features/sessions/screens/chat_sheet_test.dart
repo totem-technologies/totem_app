@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -595,6 +597,47 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Message Lucas'), findsOneWidget);
+    });
+
+    testWidgets('slides the overlay drawer in from the trailing edge', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(900, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _sharedOverrides(
+            isKeeper: false,
+            messages: const [],
+            session: session,
+            authState: AuthState.unauthenticated(),
+          ).cast(),
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: TextButton(
+                    onPressed: () => unawaited(showSessionChat(context)),
+                    child: const Text('Open'),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pump();
+
+      expect(find.byType(SessionChatPanel), findsOneWidget);
+      expect(find.byType(SlideTransition), findsWidgets);
+
+      await tester.pumpAndSettle();
+      expect(find.text('Everyone'), findsWidgets);
     });
 
     testWidgets('typing in the composer disables session shortcuts', (
