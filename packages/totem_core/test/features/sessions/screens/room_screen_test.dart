@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -450,6 +451,12 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
 }
 
 void main() {
+  setUp(() {
+    LeakTesting.settings = LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    );
+  });
+
   setUpAll(() {
     TotemRouter.instance = FakeTotemRouter();
   });

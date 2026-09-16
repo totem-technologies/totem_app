@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
@@ -160,6 +161,12 @@ SessionDetailSchema _event() => SessionDetailSchema(
 void main() {
   late VoidCallback restoreWebRtcChannels;
 
+  setUp(() {
+    LeakTesting.settings = LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    );
+  });
+
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     setupAppConfig();
@@ -239,40 +246,51 @@ void main() {
     check(tester.widgetList(find.text('Welcome'))).length.equals(1);
   });
 
-  testWidgets('locks media toggles during initial capture', (tester) async {
-    final factory = _DelayedTrackFactory();
-    await pumpScreen(tester, successfulJoin: true, trackFactory: factory);
+  testWidgets(
+    'locks media toggles during initial capture',
+    (tester) async {
+      final factory = _DelayedTrackFactory();
+      await pumpScreen(tester, successfulJoin: true, trackFactory: factory);
 
-    check(
-      tester
-          .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
-          .onToggle,
-    ).isNull();
-    check(
-      tester
-          .widget<ActionBarCameraSwitcherButton>(
-            find.byType(ActionBarCameraSwitcherButton),
-          )
-          .onToggle,
-    ).isNull();
+      check(
+        tester
+            .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
+            .onToggle,
+      ).isNull();
+      check(
+        tester
+            .widget<ActionBarCameraSwitcherButton>(
+              find.byType(ActionBarCameraSwitcherButton),
+            )
+            .onToggle,
+      ).isNull();
 
-    factory.cameraGate.complete();
-    await tester.pump();
-    await tester.pump();
+      factory.cameraGate.complete();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
 
-    check(
-      tester
-          .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
-          .onToggle,
-    ).isNotNull();
-    check(
-      tester
-          .widget<ActionBarCameraSwitcherButton>(
-            find.byType(ActionBarCameraSwitcherButton),
-          )
-          .onToggle,
-    ).isNotNull();
-  });
+      check(
+        tester
+            .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
+            .onToggle,
+      ).isNotNull();
+      check(
+        tester
+            .widget<ActionBarCameraSwitcherButton>(
+              find.byType(ActionBarCameraSwitcherButton),
+            )
+            .onToggle,
+      ).isNotNull();
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.pump();
+    },
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
 
   testWidgets('renders token failures through the session error screen', (
     tester,

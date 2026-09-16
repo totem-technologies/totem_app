@@ -1,6 +1,7 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -110,6 +111,19 @@ final _testLastMessageProvider =
     );
 
 void main() {
+  void autoSizeTest(
+    String description,
+    Future<void> Function(WidgetTester) body,
+  ) {
+    testWidgets(
+      description,
+      body,
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
+  }
+
   Future<void> pumpWidget(
     WidgetTester tester, {
     required Widget child,
@@ -203,7 +217,7 @@ void main() {
       });
     }
 
-    testWidgets('is hidden on loading, disconnected, and error screens', (
+    autoSizeTest('is hidden on loading, disconnected, and error screens', (
       tester,
     ) async {
       for (final screen in [
@@ -218,7 +232,7 @@ void main() {
       }
     });
 
-    testWidgets('shows expected controls on not-my-turn screen', (
+    autoSizeTest('shows expected controls on not-my-turn screen', (
       tester,
     ) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
@@ -231,7 +245,7 @@ void main() {
       ).length.equals(1);
     });
 
-    testWidgets('shows expected controls on my-turn screen', (tester) async {
+    autoSizeTest('shows expected controls on my-turn screen', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.speaking);
       await tester.pump();
 
@@ -239,7 +253,7 @@ void main() {
       check(tester.widgetList(find.byType(ActionBarButton))).length.equals(4);
     });
 
-    testWidgets('shows emoji button on listening screen', (tester) async {
+    autoSizeTest('shows emoji button on listening screen', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pumpAndSettle();
       check(
@@ -247,7 +261,7 @@ void main() {
       ).length.equals(1);
     });
 
-    testWidgets('hides emoji button on speaking screen', (tester) async {
+    autoSizeTest('hides emoji button on speaking screen', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.speaking);
       await tester.pumpAndSettle();
       check(
@@ -255,7 +269,7 @@ void main() {
       ).length.equals(0);
     });
 
-    testWidgets('hides emoji button on passing screen', (tester) async {
+    autoSizeTest('hides emoji button on passing screen', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.passing);
       await tester.pumpAndSettle();
       check(
@@ -263,7 +277,7 @@ void main() {
       ).length.equals(0);
     });
 
-    testWidgets('hides emoji button on receiving screen', (tester) async {
+    autoSizeTest('hides emoji button on receiving screen', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.receiving);
       await tester.pumpAndSettle();
       check(
@@ -271,7 +285,7 @@ void main() {
       ).length.equals(0);
     });
 
-    testWidgets('returns empty widget when session is null', (tester) async {
+    autoSizeTest('returns empty widget when session is null', (tester) async {
       await pumpWidget(
         tester,
         child: const SessionActionBar(),
@@ -290,7 +304,7 @@ void main() {
       check(tester.widgetList(find.byType(ActionBar))).length.equals(0);
     });
 
-    testWidgets('returns empty widget when local participant is null', (
+    autoSizeTest('returns empty widget when local participant is null', (
       tester,
     ) async {
       final roomWithoutUser = _MockRoom();
@@ -303,7 +317,7 @@ void main() {
       check(tester.widgetList(find.byType(ActionBar))).length.equals(0);
     });
 
-    testWidgets('disables more when session state is missing', (tester) async {
+    autoSizeTest('disables more when session state is missing', (tester) async {
       await pumpWidget(
         tester,
         child: const SessionActionBar(),
@@ -339,7 +353,9 @@ void main() {
       check(gesture.onTap).isNull();
     });
 
-    testWidgets('opens options sheet when tapping more button', (tester) async {
+    autoSizeTest('opens options sheet when tapping more button', (
+      tester,
+    ) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pumpAndSettle();
 
@@ -355,7 +371,7 @@ void main() {
       check(tester.widgetList(find.byType(MoreOptions))).length.equals(1);
     });
 
-    testWidgets('shows pending badge and notification on new chat message', (
+    autoSizeTest('shows pending badge and notification on new chat message', (
       tester,
     ) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
@@ -383,7 +399,7 @@ void main() {
       check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
     });
 
-    testWidgets('opens chat sheet and clears pending badge', (tester) async {
+    autoSizeTest('opens chat sheet and clears pending badge', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pump();
 

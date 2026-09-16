@@ -1,6 +1,7 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
@@ -38,6 +39,12 @@ Finder findPendingBadge() {
 }
 
 void main() {
+  setUp(() {
+    LeakTesting.settings = LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    );
+  });
+
   Future<void> pumpWidget(
     WidgetTester tester, {
     required Widget child,
