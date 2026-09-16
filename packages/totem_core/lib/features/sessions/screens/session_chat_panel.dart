@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+
 import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -236,34 +237,36 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                       Expanded(
                         child: Stack(
                           children: [
-                            ListView.separated(
-                              controller: scrollController,
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                20,
-                                14,
-                                20,
-                                16,
+                            SelectionArea(
+                              child: ListView.separated(
+                                controller: scrollController,
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                  20,
+                                  14,
+                                  20,
+                                  16,
+                                ),
+                                itemCount: threadMessages.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 14),
+                                itemBuilder: (context, index) {
+                                  final message = threadMessages[index];
+                                  final isOwn =
+                                      message.sender ||
+                                      (localIdentity != null &&
+                                          message.participant?.identity ==
+                                              localIdentity);
+                                  return MessageBubble(
+                                    text: message.message,
+                                    timestamp: DateFormat.jm().format(
+                                      DateTime.fromMillisecondsSinceEpoch(
+                                        message.timestamp,
+                                      ).toLocal(),
+                                    ),
+                                    isOwn: isOwn,
+                                  );
+                                },
                               ),
-                              itemCount: threadMessages.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 14),
-                              itemBuilder: (context, index) {
-                                final message = threadMessages[index];
-                                final isOwn =
-                                    message.sender ||
-                                    (localIdentity != null &&
-                                        message.participant?.identity ==
-                                            localIdentity);
-                                return MessageBubble(
-                                  text: message.message,
-                                  timestamp: DateFormat.jm().format(
-                                    DateTime.fromMillisecondsSinceEpoch(
-                                      message.timestamp,
-                                    ).toLocal(),
-                                  ),
-                                  isOwn: isOwn,
-                                );
-                              },
                             ),
                             if (threadMessages.isEmpty)
                               const IgnorePointer(

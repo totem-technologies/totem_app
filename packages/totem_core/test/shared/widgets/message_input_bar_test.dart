@@ -39,4 +39,21 @@ void main() {
 
     check(sendCount).equals(2);
   });
+
+  testWidgets('keeps focus after submitting from the keyboard', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: MessageInputBar(onSend: (_) async => true)),
+      ),
+    );
+
+    await tester.tap(find.byType(TextField));
+    await tester.enterText(find.byType(TextField), 'Hello');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    await tester.pump();
+
+    check(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+    ).isTrue();
+  });
 }

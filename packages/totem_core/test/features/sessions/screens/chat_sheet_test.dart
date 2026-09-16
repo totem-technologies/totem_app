@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -384,6 +385,7 @@ void main() {
       );
 
       check(tester.widgetList(find.byType(MessageBubble))).length.equals(2);
+      check(tester.widgetList(find.byType(SelectionArea))).length.equals(1);
       check(tester.widgetList(find.text('My message'))).length.equals(1);
       check(tester.widgetList(find.text('Their message'))).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(0);

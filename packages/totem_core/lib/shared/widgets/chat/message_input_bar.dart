@@ -32,10 +32,12 @@ class MessageInputBar extends StatefulWidget {
 
 class _MessageInputBarState extends State<MessageInputBar> {
   final _controller = TextEditingController();
+  final _focusNode = FocusNode();
   var _isSubmitting = false;
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -76,10 +78,12 @@ class _MessageInputBarState extends State<MessageInputBar> {
               Expanded(
                 child: TextFormField(
                   controller: _controller,
+                  focusNode: _focusNode,
                   enabled: widget.enabled,
                   autofocus: widget.autofocus,
                   maxLines: 1,
                   textInputAction: TextInputAction.send,
+                  onEditingComplete: _focusNode.requestFocus,
                   onFieldSubmitted: (_) => unawaited(_submit()),
                   style: const TextStyle(
                     color: AppTheme.textHeading,
