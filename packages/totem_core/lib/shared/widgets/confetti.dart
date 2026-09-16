@@ -20,12 +20,15 @@ class ConfettiController {
   }
 
   static void _trackOverlay(BuildContext context, OverlayEntry overlay) {
+    overlay.addListener(() {
+      if (!overlay.mounted) _activeOverlays.remove(overlay);
+    });
     _activeOverlays.add(overlay);
     Overlay.of(context).insert(overlay);
   }
 
   static void _removeOverlay(OverlayEntry overlay) {
-    _activeOverlays.remove(overlay);
+    if (!_activeOverlays.remove(overlay)) return;
     if (overlay.mounted) overlay.remove();
     overlay.dispose();
   }

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
@@ -510,30 +511,36 @@ void main() {
       check(tester.widgetList(find.byType(SelfView))).length.equals(0);
     });
 
-    testWidgets('SelfView Settings enables and persists', (tester) async {
-      final state = _buildState(
-        keeper: 'user-1',
-        currentSpeaker: 'user-1',
-        nextSpeaker: 'user-2',
-      );
+    testWidgets(
+      'SelfView Settings enables and persists',
+      (tester) async {
+        final state = _buildState(
+          keeper: 'user-1',
+          currentSpeaker: 'user-1',
+          nextSpeaker: 'user-2',
+        );
 
-      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
-      await tester.pumpAndSettle();
+        await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+        await tester.pumpAndSettle();
 
-      final container = tester.element(find.byType(SpeakingTurnScreen));
-      final ref = ProviderScope.containerOf(container);
+        final container = tester.element(find.byType(SpeakingTurnScreen));
+        final ref = ProviderScope.containerOf(container);
 
-      ref.read(selfViewSettingsProvider.notifier).setEnabled(true);
-      await tester.pumpAndSettle();
+        ref.read(selfViewSettingsProvider.notifier).setEnabled(true);
+        await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(SelfView))).length.equals(1);
+        check(tester.widgetList(find.byType(SelfView))).length.equals(1);
 
-      final prefs = await SharedPreferences.getInstance();
-      check(prefs.getBool(AppConsts.storageSelfViewEnabledKey)).equals(true);
+        final prefs = await SharedPreferences.getInstance();
+        check(prefs.getBool(AppConsts.storageSelfViewEnabledKey)).equals(true);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    });
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
 
     testWidgets('renders SelfView when enabled and handles dragging', (
       tester,

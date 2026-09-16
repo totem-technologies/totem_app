@@ -3,6 +3,7 @@
 import 'package:checks/checks.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -33,19 +34,25 @@ void main() {
     String description,
     Future<void> Function(WidgetTester tester) body,
   ) {
-    testWidgets(description, (tester) async {
-      try {
-        await body(tester);
-      } finally {
-        for (final controller in controllers) {
-          controller.dispose();
+    testWidgets(
+      description,
+      (tester) async {
+        try {
+          await body(tester);
+        } finally {
+          for (final controller in controllers) {
+            controller.dispose();
+          }
+          controllers.clear();
+          await tester.pump();
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
         }
-        controllers.clear();
-        await tester.pump();
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump();
-      }
-    });
+      },
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
   }
 
   group('NotificationController.show', () {

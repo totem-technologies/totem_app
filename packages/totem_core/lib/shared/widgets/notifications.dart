@@ -133,6 +133,7 @@ class NotificationRequest {
     if (_isShown || _isCancelled || _isClosed) return;
 
     _isCancelled = true;
+    _entryRemoved = true;
     overlayEntry.dispose();
   }
 
@@ -175,13 +176,14 @@ class NotificationController {
   NotificationRequest? _activeRequest;
   bool _isBulkDismissing = false;
   bool _blocked = false;
+  bool _disposed = false;
 
   /// When `true`, all active notifications are dismissed and any new
   /// notification requests are silently dropped.
   bool get blocked => _blocked;
 
   set blocked(bool value) {
-    if (_blocked == value) return;
+    if (_disposed || _blocked == value) return;
     _blocked = value;
     if (_blocked) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -212,7 +214,7 @@ class NotificationController {
   }
 
   NotificationRequest _enqueue(NotificationRequest request) {
-    if (_blocked) {
+    if (_disposed || _blocked) {
       request.cancelQueued();
       return request;
     }
@@ -255,22 +257,29 @@ class NotificationController {
     }
   }
 
-  void dismissAll() {
+  void dismissAll({bool immediate = false}) {
     final requests = <NotificationRequest>[..._queue, ?_activeRequest];
 
     if (requests.isEmpty) return;
 
     _isBulkDismissing = true;
-    for (final request in requests) {
-      if (request == _activeRequest) {
-        request.dismissActive();
-      } else {
-        request.cancelQueued();
+    try {
+      for (final request in requests) {
+        if (request == _activeRequest) {
+          if (immediate) {
+            request.dismissImmediately();
+          } else {
+            request.dismissActive();
+          }
+        } else {
+          request.cancelQueued();
+        }
       }
+      _queue.clear();
+      _activeRequest = null;
+    } finally {
+      _isBulkDismissing = false;
     }
-    _queue.clear();
-    _activeRequest = null;
-    _isBulkDismissing = false;
   }
 
   /// Releases all entries without waiting for their exit animations.
@@ -278,19 +287,9 @@ class NotificationController {
   /// Use this when the owning overlay is being disposed, such as during a
   /// route change or test-host teardown.
   void dispose() {
-    final requests = <NotificationRequest>[..._queue, ?_activeRequest];
-
-    _isBulkDismissing = true;
-    for (final request in requests) {
-      if (request == _activeRequest) {
-        request.dismissImmediately();
-      } else {
-        request.cancelQueued();
-      }
-    }
-    _queue.clear();
-    _activeRequest = null;
-    _isBulkDismissing = false;
+    if (_disposed) return;
+    _disposed = true;
+    dismissAll(immediate: true);
   }
 
   // ---------------------------------------------------------------------------

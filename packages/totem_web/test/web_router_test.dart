@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:checks/checks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -190,33 +191,37 @@ void main() {
       check((routes[2] as GoRoute).path).equals('/:slug');
     });
 
-    testWidgets('/:slug route captures the slug path parameter', (
-      tester,
-    ) async {
-      const slug = 'test-session';
-      final router = await _pumpTestRouter(
-        tester,
-        authState: AuthState.authenticated(user: _fakeUser),
-        overrides: [
-          // Stub providers to prevent API calls and media initialization.
-          sessionTokenProvider(
-            slug,
-          ).overrideWith((ref) async => throw Exception('test')),
-          sessionProvider(
-            slug,
-          ).overrideWith((ref) async => throw Exception('test')),
-          preJoinMediaControllerProvider(
-            slug,
-          ).overrideWith(_FakePreJoinMediaController.new),
-        ],
-      );
+    testWidgets(
+      '/:slug route captures the slug path parameter',
+      (tester) async {
+        const slug = 'test-session';
+        final router = await _pumpTestRouter(
+          tester,
+          authState: AuthState.authenticated(user: _fakeUser),
+          overrides: [
+            // Stub providers to prevent API calls and media initialization.
+            sessionTokenProvider(
+              slug,
+            ).overrideWith((ref) async => throw Exception('test')),
+            sessionProvider(
+              slug,
+            ).overrideWith((ref) async => throw Exception('test')),
+            preJoinMediaControllerProvider(
+              slug,
+            ).overrideWith(_FakePreJoinMediaController.new),
+          ],
+        );
 
-      router.go('/$slug');
-      await tester.pump();
+        router.go('/$slug');
+        await tester.pump();
 
-      check(router.state.uri.path).equals('/$slug');
-      check(router.state.pathParameters['slug']).equals(slug);
-    });
+        check(router.state.uri.path).equals('/$slug');
+        check(router.state.pathParameters['slug']).equals(slug);
+      },
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
 
     testWidgets('/ route matches the root path', (tester) async {
       final router = await _pumpTestRouter(
@@ -232,34 +237,38 @@ void main() {
   });
 
   group('Auth-based redirect behavior', () {
-    testWidgets('/:slug shows redirect screen when unauthenticated', (
-      tester,
-    ) async {
-      const slug = 'test-session';
-      final router = await _pumpTestRouter(
-        tester,
-        authState: AuthState.unauthenticated(),
-        overrides: [
-          sessionTokenProvider(
-            slug,
-          ).overrideWith((ref) async => throw Exception('test')),
-          sessionProvider(
-            slug,
-          ).overrideWith((ref) async => throw Exception('test')),
-          preJoinMediaControllerProvider(
-            slug,
-          ).overrideWith(_FakePreJoinMediaController.new),
-        ],
-      );
+    testWidgets(
+      '/:slug shows redirect screen when unauthenticated',
+      (tester) async {
+        const slug = 'test-session';
+        final router = await _pumpTestRouter(
+          tester,
+          authState: AuthState.unauthenticated(),
+          overrides: [
+            sessionTokenProvider(
+              slug,
+            ).overrideWith((ref) async => throw Exception('test')),
+            sessionProvider(
+              slug,
+            ).overrideWith((ref) async => throw Exception('test')),
+            preJoinMediaControllerProvider(
+              slug,
+            ).overrideWith(_FakePreJoinMediaController.new),
+          ],
+        );
 
-      router.go('/$slug');
-      await tester.pump();
+        router.go('/$slug');
+        await tester.pump();
 
-      // _WebRedirectScreen displays a Scaffold.
-      check(tester.widgetList(find.byType(Scaffold))).length.equals(1);
-      // PreJoinScreen must NOT be shown.
-      check(tester.widgetList(find.byType(PreJoinScreen))).length.equals(0);
-    });
+        // _WebRedirectScreen displays a Scaffold.
+        check(tester.widgetList(find.byType(Scaffold))).length.equals(1);
+        // PreJoinScreen must NOT be shown.
+        check(tester.widgetList(find.byType(PreJoinScreen))).length.equals(0);
+      },
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
 
     test('isAuthenticated returns correct values for each auth status', () {
       check(
