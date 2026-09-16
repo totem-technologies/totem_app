@@ -100,6 +100,8 @@ abstract class TotemRouter {
 
   GoRouter createRouter(WidgetRef ref);
 
+  void dispose() {}
+
   void setTabCloseConfirmationEnabled(bool enabled);
 }
 

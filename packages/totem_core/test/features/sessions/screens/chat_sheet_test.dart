@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -278,16 +279,15 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
-      expect(find.text('Everyone'), findsWidgets);
-      expect(
-        find.text('Only the Keeper can post messages here'),
-        findsOneWidget,
-      );
-      expect(find.text('No messages yet'), findsOneWidget);
-      expect(find.text('Message Keeper'), findsOneWidget);
-      expect(find.text('Message everyone'), findsOneWidget);
-      expect(find.byType(MessageInputBar), findsOneWidget);
-      expect(
+      check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
+      check(
+        tester.widgetList(find.text('Only the Keeper can post messages here')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
+      check(tester.widgetList(find.text('Message Keeper'))).length.equals(1);
+      check(tester.widgetList(find.text('Message everyone'))).length.equals(1);
+      check(tester.widgetList(find.byType(MessageInputBar))).length.equals(1);
+      check(
         tester
             .widget<Material>(
               find
@@ -298,8 +298,7 @@ void main() {
                   .first,
             )
             .color,
-        AppTheme.mauve,
-      );
+      ).equals(AppTheme.mauve);
     });
 
     testWidgets('shows the keeper composer for Everyone', (tester) async {
@@ -311,13 +310,16 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
-      expect(find.text('Everyone'), findsWidgets);
-      expect(find.text('Only you can post messages here'), findsOneWidget);
-      expect(find.text('No messages yet'), findsOneWidget);
-      expect(find.text('Message everyone'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Welcome! 🙏'), findsNothing);
-      expect(find.text('Please mute your mic'), findsNothing);
+      check(
+        tester.widgetList(find.text('Long press to send a quick message')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
+      check(tester.widgetList(find.byType(TextField))).length.equals(1);
+      check(tester.widgetList(find.byType(IconButton))).length.equals(1);
+      check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(1);
+      check(
+        tester.widgetList(find.text('Please mute your mic')),
+      ).length.equals(1);
     });
 
     testWidgets('renders own and received messages as MessageBubbles', (
@@ -354,10 +356,12 @@ void main() {
         ),
       );
 
-      expect(find.byType(MessageBubble), findsNWidgets(2));
-      expect(find.text('My message'), findsOneWidget);
-      expect(find.text('Their message'), findsOneWidget);
-      expect(find.text('No messages yet'), findsNothing);
+      check(tester.widgetList(find.byType(MessageBubble))).length.equals(2);
+      check(tester.widgetList(find.byType(MyChatBubble))).length.equals(1);
+      check(tester.widgetList(find.byType(OtherChatBubble))).length.equals(1);
+      check(tester.widgetList(find.text('My message'))).length.equals(1);
+      check(tester.widgetList(find.text('Their message'))).length.equals(1);
+      check(tester.widgetList(find.text('No messages yet'))).length.equals(0);
     });
 
     testWidgets('hides private messages while viewing Everyone', (
@@ -469,13 +473,13 @@ void main() {
       final listView = tester.widget<ListView>(find.byType(ListView));
       final controller = listView.controller!;
 
-      expect(find.text('Message 19'), findsOneWidget);
+      check(tester.widgetList(find.text('Message 19'))).length.equals(1);
 
       controller.jumpTo(0);
       await tester.pumpAndSettle();
 
-      expect(controller.position.pixels, 0);
-      expect(find.text('Message 0'), findsOneWidget);
+      check(controller.position.pixels).equals(0);
+      check(tester.widgetList(find.text('Message 0'))).length.equals(1);
 
       final updatedMessages = [
         ...messages,
@@ -494,7 +498,9 @@ void main() {
       await tester.pump();
       await tester.pumpAndSettle();
 
-      expect(controller.position.pixels, controller.position.maxScrollExtent);
+      check(
+        controller.position.pixels,
+      ).equals(controller.position.maxScrollExtent);
     });
 
     testWidgets('sends a trimmed message from the composer', (tester) async {
@@ -517,7 +523,49 @@ void main() {
           recipientIdentity: any(named: 'recipientIdentity'),
         ),
       ).called(1);
-      expect(find.text('Hello chat'), findsNothing);
+      check(tester.widgetList(find.text('Hello chat'))).length.equals(0);
+    });
+
+    testWidgets('sends a quick message on tap on desktop', (tester) async {
+      await runOnDesktop(() async {
+        await pumpChatSheet(
+          tester,
+          isKeeper: true,
+          messages: const [],
+          session: session,
+          authState: AuthState.unauthenticated(),
+        );
+
+        check(
+          tester.widgetList(find.text('Tap to send a quick message')),
+        ).length.equals(1);
+
+        await tester.tap(find.text('Please mute your mic'));
+        await tester.pump();
+
+        verify(() => messaging.sendMessage('Please mute your mic')).called(1);
+      });
+    });
+
+    testWidgets('sends a quick message on long press on mobile', (
+      tester,
+    ) async {
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: const [],
+        session: session,
+        authState: AuthState.unauthenticated(),
+      );
+
+      check(
+        tester.widgetList(find.text('Long press to send a quick message')),
+      ).length.equals(1);
+
+      await tester.longPress(find.text('Please mute your mic'));
+      await tester.pump();
+
+      verify(() => messaging.sendMessage('Please mute your mic')).called(1);
     });
 
     testWidgets('does not carry a private draft into the Everyone thread', (
@@ -553,13 +601,16 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Everyone').last);
       await tester.pumpAndSettle();
-      expect(find.textContaining('only you can post'), findsOneWidget);
+      check(
+        tester.widgetList(find.textContaining('only you can post')),
+      ).length.equals(1);
 
-      expect(find.text('Checking in privately'), findsNothing);
-      expect(
+      check(
+        tester.widgetList(find.text('Checking in privately')),
+      ).length.equals(0);
+      check(
         tester.widget<TextField>(find.byType(TextField)).controller?.text,
-        isEmpty,
-      );
+      ).isEmpty();
     });
 
     testWidgets('keeps the composer text when the send is rejected', (

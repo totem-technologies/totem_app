@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
@@ -109,8 +110,10 @@ void main() {
         ),
       );
 
-      expect(find.text('John Doe'), findsOneWidget);
-      expect(find.byType(SpeakingIndicatorOrEmoji), findsOneWidget);
+      check(tester.widgetList(find.text('John Doe'))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(SpeakingIndicatorOrEmoji)),
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -141,7 +144,9 @@ void main() {
           ),
         );
 
-        expect(find.byType(ParticipantControlButton), findsNothing);
+        check(
+          tester.widgetList(find.byType(ParticipantControlButton)),
+        ).length.equals(0);
       },
     );
 
@@ -186,7 +191,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(TotemIconLogo), findsOneWidget);
+      check(tester.widgetList(find.byType(TotemIconLogo))).length.equals(1);
     });
 
     testWidgets('keeps compact corner chrome on phone-sized windows', (
@@ -208,12 +213,11 @@ void main() {
         ),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(20, 20),
-      );
-      expect(overlayPosition(tester).top, 10);
-      expect(overlayPosition(tester).start, 10);
+      ).equals(const Size(20, 20));
+      check(overlayPosition(tester).top).equals(10);
+      check(overlayPosition(tester).start).equals(10);
     });
 
     testWidgets('uses larger corner chrome on desktop-class windows', (
@@ -235,12 +239,11 @@ void main() {
         ),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(40, 40),
-      );
-      expect(overlayPosition(tester).top, 12);
-      expect(overlayPosition(tester).start, 12);
+      ).equals(const Size(40, 40));
+      check(overlayPosition(tester).top).equals(12);
+      check(overlayPosition(tester).start).equals(12);
     });
 
     testWidgets('scales the keeper logo badge on desktop-class windows', (
@@ -284,8 +287,12 @@ void main() {
         ),
       );
 
-      expect(tester.widget<TotemIconLogo>(find.byType(TotemIconLogo)).size, 22);
-      expect(tester.getSize(find.byType(TotemIconLogo)), const Size(22, 22));
+      check(
+        tester.widget<TotemIconLogo>(find.byType(TotemIconLogo)).size,
+      ).equals(22);
+      check(
+        tester.getSize(find.byType(TotemIconLogo)),
+      ).equals(const Size(22, 22));
     });
   });
 
@@ -326,8 +333,10 @@ void main() {
         child: const FeaturedParticipantCard(),
       );
 
-      expect(find.text('Waiting room'), findsOneWidget);
-      expect(find.byType(TotemIcon), findsOneWidget); // clock icon
+      check(tester.widgetList(find.text('Waiting room'))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(TotemIcon)),
+      ).length.equals(1); // clock icon
     });
 
     testWidgets('keeps 24dp overlay badges on phone-sized windows', (
@@ -372,25 +381,21 @@ void main() {
         child: const FeaturedParticipantCard(),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(24, 24),
-      );
-      expect(
-        tester
-            .widget<Container>(
-              find.descendant(
-                of: find.byType(SpeakingIndicatorOrEmoji),
-                matching: find.byType(Container),
-              ),
-            )
-            .decoration,
-        isA<BoxDecoration>().having(
-          (decoration) => decoration.boxShadow,
-          'boxShadow',
-          kElevationToShadow[6],
-        ),
-      );
+      ).equals(const Size(24, 24));
+      final decoration = tester
+          .widget<Container>(
+            find.descendant(
+              of: find.byType(SpeakingIndicatorOrEmoji),
+              matching: find.byType(Container),
+            ),
+          )
+          .decoration;
+      check(decoration).isA<BoxDecoration>();
+      check(
+        (decoration! as BoxDecoration).boxShadow!,
+      ).deepEquals(kElevationToShadow[6]!);
     });
 
     testWidgets('uses keeper timers to send a private reminder', (
@@ -555,10 +560,9 @@ void main() {
         child: const FeaturedParticipantCard(),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(40, 40),
-      );
+      ).equals(const Size(40, 40));
     });
   });
 
@@ -598,7 +602,9 @@ void main() {
       await show();
       await tester.pumpAndSettle();
 
-      expect(find.byType(VideoTrackRenderer), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(VideoTrackRenderer)),
+      ).length.equals(1);
 
       when(() => mockPublication.muted).thenReturn(true);
       when(() => mockTrack.muted).thenReturn(true);
@@ -606,7 +612,9 @@ void main() {
       await show();
       await tester.pumpAndSettle();
 
-      expect(find.byType(VideoTrackRenderer), findsNothing);
+      check(
+        tester.widgetList(find.byType(VideoTrackRenderer)),
+      ).length.equals(0);
     });
   });
 
@@ -644,8 +652,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // The menu should be visible.
-      expect(find.text('Remove'), findsOneWidget);
-      expect(find.text('Ban'), findsOneWidget);
+      check(tester.widgetList(find.text('Remove'))).length.equals(1);
+      check(tester.widgetList(find.text('Ban'))).length.equals(1);
 
       // Unmount the control button by toggling visibility.
       final _ = tester
@@ -654,8 +662,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // The menu should be gone.
-      expect(find.text('Remove'), findsNothing);
-      expect(find.text('Ban'), findsNothing);
+      check(tester.widgetList(find.text('Remove'))).length.equals(0);
+      check(tester.widgetList(find.text('Ban'))).length.equals(0);
     });
 
     testWidgets('uses a compact badge on phone-sized windows', (tester) async {
@@ -669,11 +677,10 @@ void main() {
         ),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(ParticipantControlButton)),
-        const Size(20, 20),
-      );
-      expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 16);
+      ).equals(const Size(20, 20));
+      check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(16);
     });
 
     testWidgets('uses a larger badge on desktop-class windows', (tester) async {
@@ -687,11 +694,10 @@ void main() {
         ),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(ParticipantControlButton)),
-        const Size(40, 40),
-      );
-      expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 22);
+      ).equals(const Size(40, 40));
+      check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(22);
     });
   });
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,19 +15,22 @@ void main() {
 
   group('isOfflineConnectivity', () {
     test('treats empty and none results as offline', () {
-      expect(isOfflineConnectivity(const []), isTrue);
-      expect(isOfflineConnectivity(const [ConnectivityResult.none]), isTrue);
+      check(isOfflineConnectivity(const [])).equals(true);
+      check(
+        isOfflineConnectivity(const [ConnectivityResult.none]),
+      ).equals(true);
     });
 
     test('treats available transports as online', () {
-      expect(isOfflineConnectivity(const [ConnectivityResult.wifi]), isFalse);
-      expect(
+      check(
+        isOfflineConnectivity(const [ConnectivityResult.wifi]),
+      ).equals(false);
+      check(
         isOfflineConnectivity(const [
           ConnectivityResult.wifi,
           ConnectivityResult.mobile,
         ]),
-        isFalse,
-      );
+      ).equals(false);
     });
   });
 
@@ -34,7 +38,7 @@ void main() {
     final connectivity = _MockConnectivity();
     when(connectivity.checkConnectivity).thenThrow(Exception('unavailable'));
 
-    expect(await checkIsOffline(connectivity), isFalse);
+    check(await checkIsOffline(connectivity)).equals(false);
   });
 
   group('isOfflineProvider', () {
@@ -66,15 +70,15 @@ void main() {
 
       changes.add(const [ConnectivityResult.none]);
       await tester.pump();
-      expect(values, isEmpty);
+      check(values).isEmpty();
 
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump();
 
-      expect(values, [false]);
+      check(values).deepEquals([false]);
       initialCheck.complete(const [ConnectivityResult.wifi]);
       await tester.pump();
-      expect(values, [false]);
+      check(values).deepEquals([false]);
     });
 
     testWidgets('publishes a confirmed initial offline result', (tester) async {
@@ -101,12 +105,12 @@ void main() {
       addTearDown(subscription.close);
 
       await tester.pump();
-      expect(values, isEmpty);
+      check(values).isEmpty();
 
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump();
 
-      expect(values, [true]);
+      check(values).deepEquals([true]);
     });
 
     testWidgets('combines confirmed, distinct connectivity changes', (
@@ -139,18 +143,18 @@ void main() {
       currentConnectivity = const [ConnectivityResult.none];
       changes.add(const [ConnectivityResult.none]);
       await tester.pump();
-      expect(values, [false]);
+      check(values).deepEquals([false]);
 
       changes.add(const []);
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump();
-      expect(values, [false, true]);
+      check(values).deepEquals([false, true]);
 
       currentConnectivity = const [ConnectivityResult.mobile];
       changes.add(const [ConnectivityResult.mobile]);
       await tester.pump();
 
-      expect(values, [false, true, false]);
+      check(values).deepEquals([false, true, false]);
     });
 
     testWidgets('filters a transient offline result after initialization', (
@@ -178,14 +182,14 @@ void main() {
       );
       addTearDown(subscription.close);
 
-      expect(await container.read(isOfflineProvider.future), isFalse);
+      check(await container.read(isOfflineProvider.future)).equals(false);
 
       changes.add(const [ConnectivityResult.none]);
       await tester.pump();
       changes.add(const [ConnectivityResult.wifi]);
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(values, [false]);
+      check(values).deepEquals([false]);
     });
 
     testWidgets('ignores a stale offline confirmation after reconnecting', (
@@ -218,7 +222,7 @@ void main() {
       );
       addTearDown(subscription.close);
 
-      expect(await container.read(isOfflineProvider.future), isFalse);
+      check(await container.read(isOfflineProvider.future)).equals(false);
 
       changes.add(const [ConnectivityResult.none]);
       await tester.pump(const Duration(milliseconds: 500));
@@ -227,7 +231,7 @@ void main() {
       confirmation.complete(const [ConnectivityResult.none]);
       await tester.pump();
 
-      expect(values, [false]);
+      check(values).deepEquals([false]);
     });
 
     test('ignores a stale check after a newer stream update', () async {
@@ -255,11 +259,11 @@ void main() {
 
       changes.add(const [ConnectivityResult.wifi]);
       await pumpEventQueue();
-      expect(container.read(isOfflineProvider).value, isFalse);
+      check(container.read(isOfflineProvider).value).equals(false);
 
       currentCheck.complete(const [ConnectivityResult.none]);
       await pumpEventQueue();
-      expect(container.read(isOfflineProvider).value, isFalse);
+      check(container.read(isOfflineProvider).value).equals(false);
     });
 
     testWidgets('refreshes the current status when the app resumes', (
@@ -289,7 +293,7 @@ void main() {
       );
       addTearDown(subscription.close);
 
-      expect(await container.read(isOfflineProvider.future), isFalse);
+      check(await container.read(isOfflineProvider.future)).equals(false);
 
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
@@ -300,14 +304,14 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(checks, 2);
-      expect(container.read(isOfflineProvider).value, isFalse);
+      check(checks).equals(2);
+      check(container.read(isOfflineProvider).value).equals(false);
 
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump();
 
-      expect(checks, 3);
-      expect(container.read(isOfflineProvider).value, isTrue);
+      check(checks).equals(3);
+      check(container.read(isOfflineProvider).value).equals(true);
     });
 
     testWidgets(
@@ -343,7 +347,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
         await tester.pump();
-        expect(container.read(isOfflineProvider).value, isTrue);
+        check(container.read(isOfflineProvider).value).equals(true);
 
         tester.binding.handleAppLifecycleStateChanged(
           AppLifecycleState.inactive,
@@ -358,14 +362,14 @@ void main() {
           AppLifecycleState.resumed,
         );
         await tester.pump();
-        expect(checks, 3);
+        check(checks).equals(3);
 
         changes.add(const [ConnectivityResult.none]);
         await tester.pump();
         resumedCheck.complete(const [ConnectivityResult.wifi]);
         await tester.pump();
 
-        expect(container.read(isOfflineProvider).value, isFalse);
+        check(container.read(isOfflineProvider).value).equals(false);
       },
     );
   });

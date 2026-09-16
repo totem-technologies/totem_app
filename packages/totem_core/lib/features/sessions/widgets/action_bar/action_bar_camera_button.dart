@@ -39,6 +39,7 @@ class _ActionBarCameraSwitcherButtonState
     extends State<ActionBarCameraSwitcherButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _menuController;
+  late final CurvedAnimation _menuAnimation;
   final _portalController = OverlayPortalController();
   final GlobalKey _buttonKey = GlobalKey();
   var _isOpen = false;
@@ -50,10 +51,15 @@ class _ActionBarCameraSwitcherButtonState
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
+    _menuAnimation = CurvedAnimation(
+      parent: _menuController,
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
   void dispose() {
+    _menuAnimation.dispose();
     _menuController.dispose();
     super.dispose();
   }
@@ -142,12 +148,7 @@ class _ActionBarCameraSwitcherButtonState
                   animation: _menuController,
                   builder: (context, child) {
                     return Transform.rotate(
-                      angle:
-                          CurvedAnimation(
-                            parent: _menuController,
-                            curve: Curves.easeOutCubic,
-                          ).value *
-                          math.pi,
+                      angle: _menuAnimation.value * math.pi,
                       child: child,
                     );
                   },
@@ -217,13 +218,14 @@ class _ActionBarCameraSwitcherButtonOverlayState
         vsync: this,
         duration: const Duration(milliseconds: 220),
       );
-  late final Animation<Offset> _slideAnimation =
-      Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero).animate(
-        CurvedAnimation(
-          parent: _overlayAnimationController,
-          curve: Curves.easeOutCubic,
-        ),
-      );
+  late final CurvedAnimation _slideCurve = CurvedAnimation(
+    parent: _overlayAnimationController,
+    curve: Curves.easeOutCubic,
+  );
+  late final Animation<Offset> _slideAnimation = Tween<Offset>(
+    begin: const Offset(0, 0.15),
+    end: Offset.zero,
+  ).animate(_slideCurve);
 
   @override
   void initState() {
@@ -233,6 +235,7 @@ class _ActionBarCameraSwitcherButtonOverlayState
 
   @override
   void dispose() {
+    _slideCurve.dispose();
     _overlayAnimationController.dispose();
     super.dispose();
   }

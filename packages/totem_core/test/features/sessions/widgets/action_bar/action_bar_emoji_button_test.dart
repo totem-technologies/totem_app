@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
@@ -12,6 +13,8 @@ void main() {
       ),
     );
 
-    expect(find.bySemanticsLabel('Send reaction'), findsOneWidget);
+    check(
+      tester.widgetList(find.bySemanticsLabel('Send reaction')),
+    ).length.equals(1);
   });
 }

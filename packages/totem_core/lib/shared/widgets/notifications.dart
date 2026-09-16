@@ -32,6 +32,7 @@ class AnimatedNotification extends StatefulWidget {
 class AnimatedNotificationState extends State<AnimatedNotification>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  late CurvedAnimation _offsetCurve;
   late Animation<Offset> _offsetAnimation;
   Timer? _autoDismissTimer;
   bool _isDismissing = false;
@@ -44,14 +45,15 @@ class AnimatedNotificationState extends State<AnimatedNotification>
       vsync: this,
     );
 
-    _offsetAnimation =
-        Tween<Offset>(begin: const Offset(0, -2), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _controller,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          ),
-        );
+    _offsetCurve = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0, -2),
+      end: Offset.zero,
+    ).animate(_offsetCurve);
 
     _controller.forward();
 
@@ -71,6 +73,7 @@ class AnimatedNotificationState extends State<AnimatedNotification>
   @override
   void dispose() {
     _autoDismissTimer?.cancel();
+    _offsetCurve.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -106,6 +109,7 @@ class NotificationRequest {
   bool _isCancelled = false;
   bool _isClosed = false;
   bool _isDismissing = false;
+  bool _entryRemoved = false;
 
   bool get isCancelled => _isCancelled;
 
@@ -117,10 +121,20 @@ class NotificationRequest {
     onShown?.call();
   }
 
+  void _removeEntry() {
+    if (_entryRemoved) return;
+    _entryRemoved = true;
+    overlayEntry
+      ..remove()
+      ..dispose();
+  }
+
   void cancelQueued() {
     if (_isShown || _isCancelled || _isClosed) return;
 
     _isCancelled = true;
+    _entryRemoved = true;
+    overlayEntry.dispose();
   }
 
   void dismissActive() {
@@ -137,9 +151,7 @@ class NotificationRequest {
     // An entry inserted while no frames were rendered (e.g. a hidden
     // browser tab) never mounts but still sits in the overlay — remove it
     // whenever it was inserted, not only when it is mounted.
-    if (_isShown) {
-      overlayEntry.remove();
-    }
+    if (_isShown) _removeEntry();
     close();
   }
 
@@ -147,9 +159,7 @@ class NotificationRequest {
     if (_isClosed || _isDismissing) return;
 
     _isDismissing = true;
-    if (_isShown) {
-      overlayEntry.remove();
-    }
+    if (_isShown) _removeEntry();
     close();
   }
 
@@ -166,13 +176,14 @@ class NotificationController {
   NotificationRequest? _activeRequest;
   bool _isBulkDismissing = false;
   bool _blocked = false;
+  bool _disposed = false;
 
   /// When `true`, all active notifications are dismissed and any new
   /// notification requests are silently dropped.
   bool get blocked => _blocked;
 
   set blocked(bool value) {
-    if (_blocked == value) return;
+    if (_disposed || _blocked == value) return;
     _blocked = value;
     if (_blocked) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -203,7 +214,7 @@ class NotificationController {
   }
 
   NotificationRequest _enqueue(NotificationRequest request) {
-    if (_blocked) {
+    if (_disposed || _blocked) {
       request.cancelQueued();
       return request;
     }
@@ -246,22 +257,39 @@ class NotificationController {
     }
   }
 
-  void dismissAll() {
+  void dismissAll({bool immediate = false}) {
     final requests = <NotificationRequest>[..._queue, ?_activeRequest];
 
     if (requests.isEmpty) return;
 
     _isBulkDismissing = true;
-    for (final request in requests) {
-      if (request == _activeRequest) {
-        request.dismissActive();
-      } else {
-        request.cancelQueued();
+    try {
+      for (final request in requests) {
+        if (request == _activeRequest) {
+          if (immediate) {
+            request.dismissImmediately();
+          } else {
+            request.dismissActive();
+          }
+        } else {
+          request.cancelQueued();
+        }
       }
+      _queue.clear();
+      _activeRequest = null;
+    } finally {
+      _isBulkDismissing = false;
     }
-    _queue.clear();
-    _activeRequest = null;
-    _isBulkDismissing = false;
+  }
+
+  /// Releases all entries without waiting for their exit animations.
+  ///
+  /// Use this when the owning overlay is being disposed, such as during a
+  /// route change or test-host teardown.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    dismissAll(immediate: true);
   }
 
   // ---------------------------------------------------------------------------
@@ -296,10 +324,9 @@ class NotificationController {
             animationDuration: animationDuration,
             duration: duration,
             onDismissed: () {
-              if (entry.mounted) {
-                entry.remove();
-              }
-              request.close();
+              request
+                .._removeEntry()
+                ..close();
             },
             notification: Builder(builder: builder),
           ),

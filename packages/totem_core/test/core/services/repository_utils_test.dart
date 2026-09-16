@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:checks/checks.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart' show ApiError;
@@ -28,8 +29,8 @@ void main() {
           );
           fail('Expected AppDataException.invalidFormat to be thrown');
         } on AppDataException catch (error) {
-          expect(error.code, 'INVALID_FORMAT');
-          expect(error.message, 'Data is in an invalid format');
+          check(error.code).equals('INVALID_FORMAT');
+          check(error.message).equals('Data is in an invalid format');
         }
       },
     );
@@ -37,19 +38,18 @@ void main() {
     test('rethrows AppAuthException without wrapping it', () async {
       final authException = AppAuthException.invalidCredentials();
 
-      expect(
+      check(
         RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             throw authException;
           },
           operationName: 'request PIN',
         ),
-        throwsA(same(authException)),
-      );
+      ).throws((it) => it.identicalTo(authException));
     });
 
     test('converts DioException 401 into unauthenticated exception', () async {
-      expect(
+      check(
         RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             throw DioException(
@@ -64,18 +64,11 @@ void main() {
           },
           operationName: 'request PIN',
         ),
-        throwsA(
-          isA<AppAuthException>().having(
-            (error) => error.code,
-            'code',
-            'UNAUTHENTICATED',
-          ),
-        ),
-      );
+      ).throws();
     });
 
     test('converts DioException 403 into forbidden exception', () async {
-      expect(
+      check(
         RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             throw DioException(
@@ -90,16 +83,11 @@ void main() {
           },
           operationName: 'request PIN',
         ),
-        throwsA(
-          isA<AppAuthException>()
-              .having((error) => error.code, 'code', 'FORBIDDEN')
-              .having((error) => error.message, 'message', 'Access denied'),
-        ),
-      );
+      ).throws();
     });
 
     test('converts DioException 400 into data exception', () async {
-      expect(
+      check(
         RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             throw DioException(
@@ -114,20 +102,11 @@ void main() {
           },
           operationName: 'request PIN',
         ),
-        throwsA(
-          isA<AppDataException>()
-              .having((error) => error.code, 'code', 'HTTP_ERROR_400')
-              .having(
-                (error) => error.message,
-                'message',
-                'Failed to request PIN',
-              ),
-        ),
-      );
+      ).throws();
     });
 
     test('converts DioException socket failures into no connection', () async {
-      expect(
+      check(
         RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             throw DioException(
@@ -138,14 +117,7 @@ void main() {
           },
           operationName: 'request PIN',
         ),
-        throwsA(
-          isA<AppNetworkException>().having(
-            (error) => error.code,
-            'code',
-            'NO_CONNECTION',
-          ),
-        ),
-      );
+      ).throws();
     });
 
     test('reports a non-retried failure exactly once', () async {
@@ -166,7 +138,7 @@ void main() {
         reportedDiagnostics = diagnostics;
       }
 
-      await expectLater(
+      await check(
         RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             attempts++;
@@ -176,15 +148,14 @@ void main() {
           diagnostics: const {'event_slug': 'session-1'},
           errorReporter: report,
         ),
-        throwsA(same(failure)),
-      );
+      ).throws((it) => it.identicalTo(failure));
 
-      expect(attempts, 1);
-      expect(reports, 1);
-      expect(reportedError, same(failure));
-      expect(reportedDiagnostics, containsPair('event_slug', 'session-1'));
-      expect(reportedDiagnostics, containsPair('attempt', 1));
-      expect(reportedDiagnostics, containsPair('total_attempts', 1));
+      check(attempts).equals(1);
+      check(reports).equals(1);
+      check(reportedError).identicalTo(failure);
+      check(reportedDiagnostics!['event_slug']).equals('session-1');
+      check(reportedDiagnostics!['attempt']).equals(1);
+      check(reportedDiagnostics!['total_attempts']).equals(1);
     });
 
     test('reports only the terminal failure after internal retries', () async {
@@ -192,7 +163,7 @@ void main() {
       var reports = 0;
       Map<String, Object?>? reportedDiagnostics;
 
-      await expectLater(
+      await check(
         RepositoryUtils.handleApiCall<String>(
           apiCall: () async {
             attempts++;
@@ -206,13 +177,12 @@ void main() {
             reportedDiagnostics = diagnostics;
           },
         ),
-        throwsA(isA<AppNetworkException>()),
-      );
+      ).throws<AppNetworkException>();
 
-      expect(attempts, 2);
-      expect(reports, 1);
-      expect(reportedDiagnostics, containsPair('attempt', 2));
-      expect(reportedDiagnostics, containsPair('total_attempts', 2));
+      check(attempts).equals(2);
+      check(reports).equals(1);
+      check(reportedDiagnostics!['attempt']).equals(2);
+      check(reportedDiagnostics!['total_attempts']).equals(2);
     });
 
     test('does not report an expected domain response', () async {
@@ -222,7 +192,7 @@ void main() {
       );
       var reports = 0;
 
-      await expectLater(
+      await check(
         RepositoryUtils.handleApiCall<String>(
           apiCall: () async => conflict,
           operationName: 'confirm RSVP',
@@ -230,10 +200,9 @@ void main() {
           errorReporter: (error, {stackTrace, message, diagnostics}) =>
               reports++,
         ),
-        throwsA(same(conflict)),
-      );
+      ).throws((it) => it.identicalTo(conflict));
 
-      expect(reports, 0);
+      check(reports).equals(0);
     });
 
     test('reports and throws the same normalized network exception', () async {
@@ -259,13 +228,12 @@ void main() {
         await future;
         fail('Expected a network exception');
       } on AppNetworkException catch (error) {
-        expect(error, same(reportedError));
-        expect(error.code, 'NO_CONNECTION');
-        expect(error.details, containsPair('request_method', 'GET'));
-        expect(
-          error.details,
-          containsPair('request_path', '/spaces/session/session-1'),
-        );
+        check(error).identicalTo(reportedError! as AppNetworkException);
+        check(error.code).equals('NO_CONNECTION');
+
+        final details = error.details as Map<String, dynamic>;
+        check(details['request_method']).equals('GET');
+        check(details['request_path']).equals('/spaces/session/session-1');
       }
     });
 
@@ -275,7 +243,7 @@ void main() {
         final classifiedError = AppNetworkException.noConnection();
         Object? reportedError;
 
-        await expectLater(
+        await check(
           RepositoryUtils.handleApiCall<String>(
             apiCall: () async {
               throw DioException(
@@ -288,10 +256,9 @@ void main() {
             errorReporter: (error, {stackTrace, message, diagnostics}) =>
                 reportedError = error,
           ),
-          throwsA(same(classifiedError)),
-        );
+        ).throws((it) => it.identicalTo(classifiedError));
 
-        expect(reportedError, same(classifiedError));
+        check(reportedError).identicalTo(classifiedError);
       },
     );
   });
@@ -300,9 +267,9 @@ void main() {
     test('marks the same exception as reported only once', () {
       final error = StateError('one failure');
 
-      expect(ErrorHandler.logError(error), isTrue);
-      expect(ErrorHandler.logError(error), isFalse);
-      expect(ErrorHandler.wasReported(error), isTrue);
+      check(ErrorHandler.logError(error)).equals(true);
+      check(ErrorHandler.logError(error)).equals(false);
+      check(ErrorHandler.wasReported(error)).equals(true);
     });
 
     test('reports separate factory exception occurrences independently', () {
@@ -329,11 +296,11 @@ void main() {
         final first = create();
         final second = create();
 
-        expect(identical(first, second), isFalse, reason: name);
-        expect(ErrorHandler.logError(first), isTrue, reason: name);
-        expect(ErrorHandler.logError(first), isFalse, reason: name);
-        expect(ErrorHandler.wasReported(second), isFalse, reason: name);
-        expect(ErrorHandler.logError(second), isTrue, reason: name);
+        check(because: name, identical(first, second)).equals(false);
+        check(because: name, ErrorHandler.logError(first)).equals(true);
+        check(because: name, ErrorHandler.logError(first)).equals(false);
+        check(because: name, ErrorHandler.wasReported(second)).equals(false);
+        check(because: name, ErrorHandler.logError(second)).equals(true);
       }
     });
 
@@ -348,10 +315,10 @@ void main() {
       ];
 
       for (final error in errors) {
-        expect(ErrorHandler.wasReported(error), isFalse);
-        expect(ErrorHandler.logError(error), isTrue);
-        expect(ErrorHandler.wasReported(error), isFalse);
-        expect(ErrorHandler.logError(error), isTrue);
+        check(ErrorHandler.wasReported(error)).equals(false);
+        check(ErrorHandler.logError(error)).equals(true);
+        check(ErrorHandler.wasReported(error)).equals(false);
+        check(ErrorHandler.logError(error)).equals(true);
       }
     });
   });

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -33,7 +34,7 @@ void main() {
     await tester.tap(find.byType(ActionBarButton));
     await tester.pump();
 
-    expect(requested, isTrue);
+    check(requested).equals(true);
   });
 
   testWidgets('ActionBarMicButton ignores re-entry while busy', (tester) async {
@@ -59,7 +60,7 @@ void main() {
     await tester.tap(find.byType(ActionBarButton));
     await tester.pump();
 
-    expect(callCount, 1);
+    check(callCount).equals(1);
 
     completer.complete();
     await tester.pumpAndSettle();
