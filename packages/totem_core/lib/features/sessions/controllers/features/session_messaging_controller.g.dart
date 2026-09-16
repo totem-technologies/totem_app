@@ -13,7 +13,7 @@ part of 'session_messaging_controller.dart';
 final sessionMessagingControllerProvider = SessionMessagingControllerFamily._();
 
 final class SessionMessagingControllerProvider
-    extends $NotifierProvider<SessionMessagingController, void> {
+    extends $NotifierProvider<SessionMessagingController, DateTime?> {
   SessionMessagingControllerProvider._({
     required SessionMessagingControllerFamily super.from,
     required SessionController super.argument,
@@ -40,10 +40,10 @@ final class SessionMessagingControllerProvider
   SessionMessagingController create() => SessionMessagingController();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(void value) {
+  Override overrideWithValue(DateTime? value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<void>(value),
+      providerOverride: $SyncValueProvider<DateTime?>(value),
     );
   }
 
@@ -60,15 +60,15 @@ final class SessionMessagingControllerProvider
 }
 
 String _$sessionMessagingControllerHash() =>
-    r'5cbebb3022a48831fa402d44605705319c01f700';
+    r'ae8257fb15c30390debc1e5ea20890e08493e7be';
 
 final class SessionMessagingControllerFamily extends $Family
     with
         $ClassFamilyOverride<
           SessionMessagingController,
-          void,
-          void,
-          void,
+          DateTime?,
+          DateTime?,
+          DateTime?,
           SessionController
         > {
   SessionMessagingControllerFamily._()
@@ -87,20 +87,20 @@ final class SessionMessagingControllerFamily extends $Family
   String toString() => r'sessionMessagingControllerProvider';
 }
 
-abstract class _$SessionMessagingController extends $Notifier<void> {
+abstract class _$SessionMessagingController extends $Notifier<DateTime?> {
   late final _$args = ref.$arg as SessionController;
   SessionController get session => _$args;
 
-  void build(SessionController session);
+  DateTime? build(SessionController session);
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
-    final ref = this.ref as $Ref<void, void>;
+    final ref = this.ref as $Ref<DateTime?, DateTime?>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<void, void>,
-              void,
+              AnyNotifier<DateTime?, DateTime?>,
+              DateTime?,
               Object?,
               Object?
             >;

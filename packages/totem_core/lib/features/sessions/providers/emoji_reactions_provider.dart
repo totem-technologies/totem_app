@@ -90,7 +90,7 @@ class EmojiReactions extends _$EmojiReactions {
     bool isInListeningTurnScreen, {
 
     /// The minimum amount of time the reaction will live before being removed.
-    Duration minAliveDuration = const Duration(milliseconds: 3500),
+    Duration minAliveDuration = const Duration(milliseconds: 4000),
   }) async {
     // While the app is hidden (e.g. a backgrounded browser tab) no frames
     // are rendered, so overlay entries would accumulate unbuilt and all

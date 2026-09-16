@@ -305,6 +305,15 @@ class SessionController extends _$SessionController {
       if (state.status == RoomStatus.ended) {
         _disableLocalMediaTracks();
       }
+
+      final previousRoomState = this.state.roomState;
+      if ((previousRoomState.status == RoomStatus.active &&
+              state.status != RoomStatus.active) ||
+          (previousRoomState.turnState != TurnState.passing &&
+              state.turnState == TurnState.passing) ||
+          state.currentSpeaker != previousRoomState.currentSpeaker) {
+        messaging.clearShareTimeReminder();
+      }
       _dispatch(RoomStateChanged(state));
     }
 

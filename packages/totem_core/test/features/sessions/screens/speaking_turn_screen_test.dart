@@ -123,6 +123,7 @@ SessionRoomState _buildState({
   String currentSpeaker = 'user-1',
   String? nextSpeaker = 'user-2',
   List<Participant>? participants,
+  DateTime? turnStartedAt,
 }) {
   final defaultParticipants =
       participants ??
@@ -155,6 +156,7 @@ SessionRoomState _buildState({
         roundNumber: 1,
       ),
     ),
+    turnStartedAt: turnStartedAt,
   );
 }
 
@@ -211,6 +213,7 @@ void main() {
     required SessionRoomState sessionState,
     required bool isKeeper,
     SessionCuesService? cuesService,
+    DateTime? shareTimeReminder,
   }) async {
     when(() => session.isCurrentUserKeeper()).thenReturn(isKeeper);
     final testCuesService = cuesService ?? _TestSessionCuesService();
@@ -234,6 +237,9 @@ void main() {
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
           currentSessionProvider.overrideWith((ref) => session),
+          sessionMessagingControllerProvider(
+            session,
+          ).overrideWithValue(shareTimeReminder),
           sessionCuesServiceProvider.overrideWithValue(testCuesService),
           userProfileProvider.overrideWith((ref, slug) async {
             return PublicUserSchema(
@@ -397,6 +403,39 @@ void main() {
 
       verify(() => keeper.passTotem(roundMessage: 'A round message')).called(1);
       expect(cuesService.swipePulseCount, 1);
+    });
+
+    testWidgets('shows elapsed time only after a keeper reminder', (
+      tester,
+    ) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view
+        ..physicalSize = const Size(1280, 1000)
+        ..devicePixelRatio = 1;
+      when(() => session.session).thenReturn(_createTestSession());
+
+      final state = _buildState(
+        keeper: 'keeper-1',
+        currentSpeaker: 'user-1',
+        turnStartedAt: DateTime.now(),
+      );
+      final elapsedTimer = find.textContaining(RegExp(r'^02:\d{2}$'));
+
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: false);
+      expect(elapsedTimer, findsNothing);
+
+      await pumpSpeakingTurn(
+        tester,
+        sessionState: state,
+        isKeeper: false,
+        shareTimeReminder: DateTime.now().subtract(
+          const Duration(minutes: 2, seconds: 5),
+        ),
+      );
+      expect(elapsedTimer, findsOneWidget);
     });
 
     testWidgets('shows the standard pass card when the user is not keeper', (

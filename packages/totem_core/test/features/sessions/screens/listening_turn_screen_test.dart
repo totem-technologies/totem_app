@@ -396,7 +396,7 @@ void main() {
     });
 
     group('waitingRoom status without keeper', () {
-      testWidgets('shows "Waiting for the Keeper to join..." text', (
+      testWidgets('shows "Waiting for the Keeper to join" text', (
         tester,
       ) async {
         final state = _buildState(
@@ -410,7 +410,7 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.text('Waiting for the Keeper to join...'), findsOneWidget);
+        expect(find.text('Waiting for the Keeper to join'), findsOneWidget);
       });
 
       testWidgets('shows GroundingMarquee for non-keeper', (tester) async {
@@ -429,14 +429,14 @@ void main() {
     });
 
     group('waitingRoom status with keeper', () {
-      testWidgets('shows "The session is about to start..." text', (
+      testWidgets('shows "Your session is about to start" text', (
         tester,
       ) async {
         final state = _buildState(status: RoomStatus.waitingRoom);
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.text('The session is about to start...'), findsOneWidget);
+        expect(find.text('Your session is about to start'), findsOneWidget);
       });
 
       testWidgets('non-keeper sees GroundingMarquee instead of start button', (
@@ -504,9 +504,7 @@ void main() {
     });
 
     group('active status without keeper (paused)', () {
-      testWidgets('shows "The session has been paused..." text', (
-        tester,
-      ) async {
+      testWidgets('shows "The session has been paused" text', (tester) async {
         final state = _buildState(
           status: RoomStatus.active,
           keeper: 'keeper-1',
@@ -518,7 +516,7 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        expect(find.text('The session has been paused...'), findsOneWidget);
+        expect(find.text('The session has been paused'), findsOneWidget);
       });
     });
 

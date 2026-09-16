@@ -145,6 +145,7 @@ class _OfflineIndicatorPageState extends ConsumerState<OfflineIndicatorPage> {
       bottom: false,
       child: Column(
         children: [
+          // TODO(totem): Fix this offline indicator positioning
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 350),
             transitionBuilder: (child, animation) {

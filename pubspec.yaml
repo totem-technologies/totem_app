@@ -8,3 +8,5 @@ workspace:
   - packages/totem_web
 dev_dependencies:
   meta: any
+  flutter_test:
+    sdk: flutter

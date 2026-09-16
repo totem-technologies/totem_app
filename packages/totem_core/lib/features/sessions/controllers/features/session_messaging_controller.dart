@@ -109,7 +109,8 @@ class SessionChatMessage {
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
   chat('lk-chat-topic'),
-  participantRemoved('lk-participant-removed-topic');
+  participantRemoved('lk-participant-removed-topic'),
+  shareTimeReminder('lk-share-time-reminder-topic');
 
   const SessionCommunicationTopics(this.topic);
   final String topic;
@@ -118,7 +119,7 @@ enum SessionCommunicationTopics {
 @Riverpod(keepAlive: true)
 class SessionMessagingController extends _$SessionMessagingController {
   @override
-  void build(SessionController session) {}
+  DateTime? build(SessionController session) => null;
 
   SessionRoomState get _state => session.state;
 
@@ -181,6 +182,44 @@ class SessionMessagingController extends _$SessionMessagingController {
           error,
           stackTrace: stackTrace,
           message: 'Error decoding chat message',
+        );
+      }
+      return;
+    }
+
+    if (event.topic == SessionCommunicationTopics.shareTimeReminder.topic) {
+      final room = _room;
+      final roomState = _state.roomState;
+      if (event.participant?.identity != roomState.keeper ||
+          room == null ||
+          roomState.status != RoomStatus.active ||
+          roomState.turnState == TurnState.passing ||
+          !_state.amSpeaking(room)) {
+        return;
+      }
+
+      try {
+        final payload =
+            jsonDecode(const Utf8Decoder().convert(event.data))
+                as Map<String, dynamic>;
+        final elapsedMilliseconds = payload['elapsedMilliseconds'];
+        if (elapsedMilliseconds is! num ||
+            !elapsedMilliseconds.isFinite ||
+            elapsedMilliseconds < 0) {
+          throw const FormatException('Invalid elapsed milliseconds');
+        }
+
+        final ms = elapsedMilliseconds.toInt().clamp(
+          0,
+          const Duration(hours: 6).inMilliseconds,
+        );
+
+        state = DateTime.timestamp().subtract(Duration(milliseconds: ms));
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error decoding share time reminder',
         );
       }
       return;
@@ -260,6 +299,67 @@ class SessionMessagingController extends _$SessionMessagingController {
         error,
         stackTrace: stackTrace,
         message: 'Error sending emoji',
+      );
+    }
+  }
+
+  void clearShareTimeReminder() => state = null;
+
+  Future<void> sendShareTimeReminder(String participantIdentity) async {
+    if (!session.isCurrentUserKeeper()) {
+      logger.w(
+        'Attempted to send a share time reminder without being the keeper, ignoring',
+      );
+      return;
+    }
+
+    final room = _room;
+    final roomState = _state.roomState;
+    final turnStartedAt = _state.turnStartedAt;
+    if (room?.localParticipant == null ||
+        roomState.status != RoomStatus.active ||
+        roomState.turnState == TurnState.passing ||
+        roomState.currentSpeaker != participantIdentity ||
+        turnStartedAt == null ||
+        room!.localParticipant!.identity == participantIdentity) {
+      logger.w(
+        'Attempted to send a share time reminder to someone other than the current speaker, ignoring',
+      );
+      return;
+    }
+
+    final elapsedMilliseconds = DateTime.timestamp()
+        .difference(turnStartedAt)
+        .inMilliseconds;
+    if (elapsedMilliseconds < 0) {
+      logger.w('Attempted to send a share time reminder before the turn began');
+      return;
+    }
+
+    try {
+      await room.localParticipant!
+          .publishData(
+            const Utf8Encoder().convert(
+              jsonEncode({'elapsedMilliseconds': elapsedMilliseconds}),
+            ),
+            reliable: true,
+            destinationIdentities: [participantIdentity],
+            topic: SessionCommunicationTopics.shareTimeReminder.topic,
+          )
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              ErrorHandler.logError(
+                TimeoutException('Sending share time reminder timed out'),
+                message: 'Warning: Sending share time reminder timed out',
+              );
+            },
+          );
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Error sending share time reminder',
       );
     }
   }

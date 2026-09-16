@@ -33,6 +33,9 @@ jobs:
         working-directory: packages/totem_core
         run: flutter test
 
+      - name: Run script tests
+        run: flutter test scripts/test
+
       - name: Run app tests
         working-directory: packages/totem_app
         run: flutter test
