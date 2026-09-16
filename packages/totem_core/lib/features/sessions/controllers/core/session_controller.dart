@@ -430,10 +430,12 @@ class SessionController extends _$SessionController {
         url: AppConfig.instance.liveKitUrl,
         token: options.token,
       );
+      if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
       await ref
           .read(sessionInfraControllerProvider.notifier)
           .activate(event: session);
+      if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
       _syncTimer?.cancel();
       _syncTimer = Timer.periodic(
@@ -469,6 +471,7 @@ class SessionController extends _$SessionController {
         token: options.token,
         connectOptions: connectOptions,
       );
+      if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
       final localParticipant = room?.localParticipant;
       if (localParticipant == null) {
@@ -481,19 +484,30 @@ class SessionController extends _$SessionController {
             initialCameraTrack,
             publishOptions: defaultVideoPublishOptions,
           );
+          if (!ref.mounted) return SessionJoinResult.retryableFailure;
           _joinMediaOwner.releaseToRoom(initialCameraTrack);
         } else if (options.cameraEnabled) {
           await localParticipant.setCameraEnabled(true);
+          if (!ref.mounted) return SessionJoinResult.retryableFailure;
         }
 
+        if (!ref.mounted) return SessionJoinResult.retryableFailure;
         if (initialMicrophoneTrack != null) {
+          if (!_shouldEnableMicrophone()) {
+            await initialMicrophoneTrack.mute(stopOnMute: false);
+            if (!ref.mounted) return SessionJoinResult.retryableFailure;
+          }
           await localParticipant.publishAudioTrack(initialMicrophoneTrack);
+          if (!ref.mounted) return SessionJoinResult.retryableFailure;
           _joinMediaOwner.releaseToRoom(initialMicrophoneTrack);
-        } else if (options.microphoneEnabled) {
+        } else if (options.microphoneEnabled && _shouldEnableMicrophone()) {
           await localParticipant.setMicrophoneEnabled(true);
+          if (!ref.mounted) return SessionJoinResult.retryableFailure;
         }
 
+        if (!ref.mounted) return SessionJoinResult.retryableFailure;
         await _applyJoinMediaState();
+        if (!ref.mounted) return SessionJoinResult.retryableFailure;
       } catch (error, stackTrace) {
         ErrorHandler.logError(
           error,
@@ -763,25 +777,24 @@ class SessionController extends _$SessionController {
     await _joinMediaOwner.disposeAll();
   }
 
+  bool _shouldEnableMicrophone() {
+    if (state.roomState.status == RoomStatus.waitingRoom && !state.hasKeeper) {
+      return options.microphoneEnabled;
+    }
+    if (state.roomState.status == RoomStatus.active) {
+      if (state.speakingNow == room?.localParticipant?.identity) {
+        return options.microphoneEnabled;
+      }
+      return false;
+    }
+    return isCurrentUserKeeper() && options.microphoneEnabled;
+  }
+
   Future<void> _applyJoinMediaState() async {
     final currentRoom = room;
     if (currentRoom == null) return;
 
-    final shouldEnableMicrophone = () {
-      if (state.roomState.status == RoomStatus.waitingRoom &&
-          !state.hasKeeper) {
-        return options.microphoneEnabled;
-      }
-      if (state.roomState.status == RoomStatus.active) {
-        if (state.speakingNow == currentRoom.localParticipant?.identity) {
-          return options.microphoneEnabled;
-        }
-        return false;
-      }
-      return isCurrentUserKeeper() && options.microphoneEnabled;
-    }();
-
-    if (!shouldEnableMicrophone) {
+    if (!_shouldEnableMicrophone()) {
       try {
         await devices.disableMicrophone();
       } catch (error, stackTrace) {

@@ -488,7 +488,7 @@ void main() {
       );
 
       test(
-        'applies the initial microphone restriction after explicit publication',
+        'mutes restricted microphone media before explicit publication',
         () async {
           const eventSlug = 'test-session';
           final container = _createContainerWithEventOverride(eventSlug);
@@ -569,6 +569,10 @@ void main() {
             ),
           ).equals(SessionJoinResult.success);
 
+          verifyInOrder([
+            () => microphoneTrack.mute(stopOnMute: false),
+            () => localParticipant.publishAudioTrack(microphoneTrack),
+          ]);
           verify(() => localParticipant.setMicrophoneEnabled(false)).called(1);
           verifyNever(() => localParticipant.setMicrophoneEnabled(true));
           verifyNever(() => localParticipant.setCameraEnabled(any<bool>()));
@@ -882,6 +886,70 @@ void main() {
         verifyNever(microphoneTrack.stop);
         verifyNever(microphoneTrack.dispose);
       });
+
+      test(
+        'join stops publishing when disposed during video publication',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          final cameraTrack = MockLocalVideoTrack();
+          final microphoneTrack = MockLocalAudioTrack();
+          final cameraPublication =
+              Completer<LocalTrackPublication<LocalVideoTrack>>();
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.publishVideoTrack(
+              cameraTrack,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          ).thenAnswer((_) => cameraPublication.future);
+
+          final room = _CountingRoom(localParticipant);
+          controller.room = room;
+          final joinResult = controller.join(
+            joinMedia: SessionJoinMedia(
+              cameraTrack: cameraTrack,
+              microphoneTrack: microphoneTrack,
+            ),
+          );
+          await pumpEventQueue();
+
+          container.dispose();
+          await pumpEventQueue();
+          cameraPublication.complete(MockLocalTrackPublication());
+
+          expect(await joinResult, SessionJoinResult.retryableFailure);
+          verifyNever(
+            () => localParticipant.publishAudioTrack(microphoneTrack),
+          );
+        },
+      );
 
       test(
         'join keeps published media and cleans up a publication failure',
