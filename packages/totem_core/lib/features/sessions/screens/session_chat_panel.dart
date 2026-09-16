@@ -15,12 +15,13 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
 import 'package:totem_core/shared/widgets/chat/message_input_bar.dart';
+import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 const _headerHorizontalPadding = 20.0;
 const _headerCloseButtonSize = 32.0;
-const _headerControlGap = 8.0;
+const _headerControlGap = 12.0;
 const _headerRecipientRuleWidth = 1.0;
 const _headerRecipientStartPadding = 10.0;
 const _recipientRowHorizontalPadding = 16.0;
@@ -195,47 +196,47 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       return accepted;
     }
 
-    return Material(
-      color: AppTheme.cream,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (widget.showDragHandle) const SheetDragHandle(),
-          _SessionChatHeader(
-            isKeeper: isKeeper,
-            threadTarget: threadTarget,
-            keeperIdentity: keeperIdentity,
-            participants: participants,
-            dropdownOpen: _dropdownOpen,
-            onClose: _closePanel,
-            onToggleDropdown: () => _setDropdownOpen(!_dropdownOpen),
-          ),
-          Expanded(
-            child: Stack(
-              // Let the popover shadow paint past the stack bounds.
-              clipBehavior: Clip.none,
-              children: [
-                Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsetsDirectional.fromSTEB(
-                        20,
-                        16,
-                        20,
-                        0,
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Material(
+        color: AppTheme.cream,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.showDragHandle)
+              const ColoredBox(
+                color: AppTheme.surfaceCard,
+                child: SheetDragHandle(),
+              ),
+            _SessionChatHeader(
+              isKeeper: isKeeper,
+              threadTarget: threadTarget,
+              keeperIdentity: keeperIdentity,
+              participants: participants,
+              dropdownOpen: _dropdownOpen,
+              onClose: _closePanel,
+              onToggleDropdown: () => _setDropdownOpen(!_dropdownOpen),
+            ),
+            Expanded(
+              child: Stack(
+                // Let the popover shadow paint past the stack bounds.
+                clipBehavior: Clip.none,
+                children: [
+                  Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          20,
+                          16,
+                          20,
+                          0,
+                        ),
+                        child: _PinnedHintPill(text: hintText),
                       ),
-                      child: _PinnedHintPill(text: hintText),
-                    ),
-                    Expanded(
-                      child: threadMessages.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No messages yet',
-                                style: TextStyle(color: AppTheme.gray),
-                                textAlign: TextAlign.center,
-                              ),
-                            )
-                          : ListView.separated(
+                      Expanded(
+                        child: Stack(
+                          children: [
+                            ListView.separated(
                               controller: scrollController,
                               padding: const EdgeInsetsDirectional.fromSTEB(
                                 20,
@@ -264,77 +265,97 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                                 );
                               },
                             ),
-                    ),
-                  ],
-                ),
-                if (_dropdownOpen)
-                  Positioned.fill(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => _setDropdownOpen(false),
-                      child: const ColoredBox(color: Colors.transparent),
-                    ),
+                            if (threadMessages.isEmpty)
+                              const IgnorePointer(
+                                child: Center(
+                                  child: Text(
+                                    'No messages yet',
+                                    style: TextStyle(color: AppTheme.gray),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                _RecipientDropdownOverlay(
-                  animation: _dropdownController,
-                  interactive: _dropdownOpen,
-                  isKeeper: isKeeper,
-                  threadTarget: threadTarget,
-                  keeperIdentity: keeperIdentity,
-                  localIdentity: localIdentity,
-                  participants: participants,
-                  onSelectEveryone: () {
-                    ref.read(sessionChatThreadTargetProvider.notifier).target =
-                        null;
-                    _setDropdownOpen(false);
-                  },
-                  onSelectParticipant: (identity) {
-                    ref.read(sessionChatThreadTargetProvider.notifier).target =
-                        identity;
-                    _setDropdownOpen(false);
-                  },
-                ),
-              ],
-            ),
-          ),
-          if (!isKeeper)
-            _ParticipantThreadChip(
-              isPrivateThread: isPrivateThread,
-              onMessageKeeper: () {
-                final keeper = keeperIdentity;
-                if (keeper == null || keeper.isEmpty) return;
-                _setDropdownOpen(false);
-                ref.read(sessionChatThreadTargetProvider.notifier).target =
-                    keeper;
-              },
-              onViewGroup: () {
-                _setDropdownOpen(false);
-                ref.read(sessionChatThreadTargetProvider.notifier).target =
-                    null;
-              },
-            ),
-          if (canCompose)
-            MessageInputBar(
-              // A fresh State per thread, so a private draft can
-              // never be sent to Everyone after a thread switch.
-              key: ValueKey(threadTarget),
-              hintText: _composerHint(
-                isPrivateThread: isPrivateThread,
-                threadTarget: threadTarget,
-                participants: participants,
-                keeperIdentity: keeperIdentity,
+                  if (_dropdownOpen)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _setDropdownOpen(false),
+                        child: const ColoredBox(color: Colors.transparent),
+                      ),
+                    ),
+                  _RecipientDropdownOverlay(
+                    animation: _dropdownController,
+                    interactive: _dropdownOpen,
+                    isKeeper: isKeeper,
+                    threadTarget: threadTarget,
+                    keeperIdentity: keeperIdentity,
+                    localIdentity: localIdentity,
+                    participants: participants,
+                    onSelectEveryone: () {
+                      ref
+                              .read(sessionChatThreadTargetProvider.notifier)
+                              .target =
+                          null;
+                      _setDropdownOpen(false);
+                    },
+                    onSelectParticipant: (identity) {
+                      ref
+                              .read(sessionChatThreadTargetProvider.notifier)
+                              .target =
+                          identity;
+                      _setDropdownOpen(false);
+                    },
+                  ),
+                ],
               ),
-              autofocus: switch (defaultTargetPlatform) {
-                TargetPlatform.android ||
-                TargetPlatform.iOS ||
-                TargetPlatform.fuchsia => false,
-                _ => true,
-              },
-              onSend: send,
-            )
-          else
-            const MessageInputBar(hintText: 'Message everyone', enabled: false),
-        ],
+            ),
+            if (!isKeeper)
+              _ParticipantThreadChip(
+                isPrivateThread: isPrivateThread,
+                onMessageKeeper: () {
+                  final keeper = keeperIdentity;
+                  if (keeper == null || keeper.isEmpty) return;
+                  _setDropdownOpen(false);
+                  ref.read(sessionChatThreadTargetProvider.notifier).target =
+                      keeper;
+                },
+                onViewGroup: () {
+                  _setDropdownOpen(false);
+                  ref.read(sessionChatThreadTargetProvider.notifier).target =
+                      null;
+                },
+              ),
+            if (canCompose)
+              MessageInputBar(
+                // A fresh State per thread, so a private draft can
+                // never be sent to Everyone after a thread switch.
+                key: ValueKey(threadTarget),
+                hintText: _composerHint(
+                  isPrivateThread: isPrivateThread,
+                  threadTarget: threadTarget,
+                  participants: participants,
+                  keeperIdentity: keeperIdentity,
+                ),
+                autofocus: switch (defaultTargetPlatform) {
+                  TargetPlatform.android ||
+                  TargetPlatform.iOS ||
+                  TargetPlatform.fuchsia => false,
+                  _ => true,
+                },
+                onSend: send,
+              )
+            else
+              const MessageInputBar(
+                hintText: 'Message everyone',
+                enabled: false,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -417,38 +438,27 @@ class _SessionChatHeader extends StatelessWidget {
         horizontal: _headerHorizontalPadding,
       ),
       child: Row(
+        spacing: _headerControlGap,
         children: [
           Semantics(
             button: true,
             label: 'Close chat',
-            child: IconButton(
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(
-                width: _headerCloseButtonSize,
-                height: _headerCloseButtonSize,
-              ),
+            child: CircleIconButton(
+              color: Colors.transparent,
+              icon: TotemIcons.closeRounded,
               onPressed: onClose,
-              icon: const TotemIcon(
-                TotemIcons.closeRounded,
-                size: 20,
-                color: AppTheme.slate,
-              ),
             ),
           ),
-          const SizedBox(width: _headerControlGap),
+          const SizedBox(height: 44, child: VerticalDivider(width: 1)),
           Expanded(
-            child: InkWell(
-              onTap: onToggleDropdown,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                height: 44,
-                decoration: const BoxDecoration(
-                  border: Border(left: BorderSide(color: AppTheme.gray)),
-                ),
-                padding: const EdgeInsetsDirectional.only(
-                  start: _headerRecipientStartPadding,
-                ),
+            child: Container(
+              height: 44,
+              padding: const EdgeInsetsDirectional.only(
+                start: _headerRecipientStartPadding,
+              ),
+              child: InkWell(
+                onTap: onToggleDropdown,
+                borderRadius: BorderRadius.circular(12),
                 child: Row(
                   children: [
                     _HeaderAvatar(threadTarget: threadTarget),
@@ -499,13 +509,11 @@ class _HeaderAvatar extends StatelessWidget {
 class _EveryoneAvatar extends StatelessWidget {
   const _EveryoneAvatar();
 
-  static const double size = 32;
-
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      width: 32,
+      height: 32,
       decoration: const BoxDecoration(
         color: AppTheme.mauve,
         shape: BoxShape.circle,

@@ -164,6 +164,7 @@ void main() {
     required SessionController session,
     required AuthState authState,
     RoomScreen currentScreen = RoomScreen.listening,
+    bool useScaffold = true,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -174,9 +175,11 @@ void main() {
           authState: authState,
           currentScreen: currentScreen,
         ).cast(),
-        child: const MaterialApp(
+        child: MaterialApp(
           home: SessionKeyboardShortcuts(
-            child: Scaffold(body: SessionChatPanel()),
+            child: useScaffold
+                ? const Scaffold(body: SessionChatPanel())
+                : const SessionChatPanel(),
           ),
         ),
       ),
@@ -284,6 +287,7 @@ void main() {
         tester.widgetList(find.text('Only the Keeper can post messages here')),
       ).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
+      check(tester.widgetList(find.byType(ListView))).length.equals(1);
       check(tester.widgetList(find.text('Message Keeper'))).length.equals(1);
       check(tester.widgetList(find.text('Message everyone'))).length.equals(1);
       check(tester.widgetList(find.byType(MessageInputBar))).length.equals(1);
@@ -321,6 +325,28 @@ void main() {
       check(
         tester.widgetList(find.text('Please mute your mic')),
       ).length.equals(0);
+    });
+
+    testWidgets('keeps the composer above the keyboard', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetViewInsets);
+
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: const [],
+        session: session,
+        authState: AuthState.unauthenticated(),
+        useScaffold: false,
+      );
+
+      check(
+        tester.getBottomLeft(find.byType(MessageInputBar)).dy <= 500,
+      ).isTrue();
     });
 
     testWidgets('renders own and received messages as MessageBubbles', (
