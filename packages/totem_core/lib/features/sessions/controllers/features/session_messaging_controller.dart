@@ -152,7 +152,7 @@ class SessionMessagingController extends _$SessionMessagingController {
           // Everyone is keeper-broadcast only. Drop group posts from anyone
           // else so a stale or malicious client cannot write into the main
           // thread.
-          if (senderId != null && senderId != keeperIdentity) {
+          if (senderId == null || senderId != keeperIdentity) {
             logger.w(
               'Ignoring Everyone chat message from non-keeper $senderId',
             );

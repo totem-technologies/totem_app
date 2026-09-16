@@ -108,7 +108,7 @@ void main() {
 
         final chatEvent = DataReceivedEvent(
           data: utf8.encode(jsonEncode(messageData)),
-          participant: null,
+          participant: MockRemoteParticipant('keeper-1', 'Keeper'),
           topic: SessionCommunicationTopics.chat.topic,
         );
 
@@ -525,6 +525,30 @@ void main() {
           expect(mockSession.addedChatMessages, isEmpty);
         },
       );
+
+      test('ignores Everyone messages without a sender', () async {
+        final mockSession = FakeSessionController();
+        final container = ProviderContainer();
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        final chatEvent = DataReceivedEvent(
+          data: utf8.encode(
+            jsonEncode({
+              'message': 'Unattributed',
+              'timestamp': 1,
+              'id': 'bad-0',
+            }),
+          ),
+          participant: null,
+          topic: SessionCommunicationTopics.chat.topic,
+        );
+
+        controller.handleDataReceived(chatEvent);
+
+        check(mockSession.addedChatMessages).isEmpty();
+      });
 
       test('ignores Everyone messages from a non-keeper sender', () async {
         final mockSession = FakeSessionController();
