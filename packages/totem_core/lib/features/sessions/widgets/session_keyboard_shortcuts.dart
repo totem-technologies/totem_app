@@ -65,7 +65,8 @@ class _SessionKeyboardShortcutsState
     }
     if (_hasModifierPressed() ||
         _hasEditableFocus() ||
-        _hasBlockingNavigatorRoute()) {
+        _hasBlockingNavigatorRoute() ||
+        ref.read(sessionChatOpenProvider)) {
       return false;
     }
 

@@ -684,5 +684,32 @@ void main() {
         verifyNever(() => messaging.sendReaction(any()));
       });
     });
+
+    testWidgets('an open docked chat disables session shortcuts', (
+      tester,
+    ) async {
+      await runOnDesktop(() async {
+        await pumpChatSheet(
+          tester,
+          isKeeper: true,
+          messages: const [],
+          session: session,
+          authState: AuthState.unauthenticated(),
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SessionChatPanel)),
+          listen: false,
+        );
+        container.read(sessionChatOpenProvider.notifier).open = true;
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pump();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+        await tester.pump();
+
+        verifyNever(() => devices.enableMicrophone());
+      });
+    });
   });
 }

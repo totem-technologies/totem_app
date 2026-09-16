@@ -148,6 +148,15 @@ class _SendButtonState extends State<_SendButton> {
   }
 
   @override
+  void didUpdateWidget(covariant _SendButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller == widget.controller) return;
+    oldWidget.controller.removeListener(_onTextChanged);
+    widget.controller.addListener(_onTextChanged);
+    _onTextChanged();
+  }
+
+  @override
   void dispose() {
     widget.controller.removeListener(_onTextChanged);
     super.dispose();
