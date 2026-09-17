@@ -38,12 +38,8 @@ jobs:
         include:
           - flavor: staging
             package_name: org.totem.app.dev
-            track: ${{ vars.GOOGLE_PLAY_STAGING_TRACK }}
-            release_status: ${{ vars.GOOGLE_PLAY_STAGING_RELEASE_STATUS }}
           - flavor: production
             package_name: org.totem.app
-            track: ${{ vars.GOOGLE_PLAY_PRODUCTION_TRACK }}
-            release_status: ${{ vars.GOOGLE_PLAY_PRODUCTION_RELEASE_STATUS }}
 
     steps:
       - uses: actions/checkout@v6
@@ -85,8 +81,8 @@ jobs:
           node ../../.github/scripts/google-play-upload.mjs \
             --aab artifacts/totem-${{ matrix.flavor }}-${{ github.ref_name }}.aab \
             --package-name "${{ matrix.package_name }}" \
-            --track "${{ matrix.track }}" \
-            --status "${{ matrix.release_status }}"
+            --track internal \
+            --status completed
 
   ios:
     name: iOS (${{ matrix.flavor }})

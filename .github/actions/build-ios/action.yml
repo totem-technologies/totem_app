@@ -63,20 +63,29 @@ runs:
         IOS_GITHUB_KEYCHAIN_PASSWORD: ${{ inputs.keychain-password }}
       run: |
         # create variables
-        CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+        CERTIFICATE_PATH="$RUNNER_TEMP/build_certificate.p12"
+        KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
         # import certificate from secrets
-        echo -n "$IOS_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+        printf '%s' "$IOS_BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
 
         # create temporary keychain
-        security create-keychain -p "$IOS_GITHUB_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-        security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-        security unlock-keychain -p "$IOS_GITHUB_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security create-keychain -p "$IOS_GITHUB_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+        security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+        security unlock-keychain -p "$IOS_GITHUB_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
         # import certificate to keychain
-        security import $CERTIFICATE_PATH -P "$IOS_BUILD_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-        security list-keychain -d user -s $KEYCHAIN_PATH
-        security find-identity -v
+        security import "$CERTIFICATE_PATH" -P "$IOS_BUILD_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -f pkcs12 -k "$KEYCHAIN_PATH"
+        security list-keychains -d user -s "$KEYCHAIN_PATH"
+
+        SIGNING_IDENTITIES=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH")
+        printf '%s\n' "$SIGNING_IDENTITIES"
+        if ! printf '%s\n' "$SIGNING_IDENTITIES" | grep -Eq '"(Apple|iPhone) Distribution:'; then
+          echo "::error::IOS_BUILD_CERTIFICATE_BASE64 must contain a valid distribution certificate and its private key exported together as a .p12. Check certificate expiry and update IOS_BUILD_CERTIFICATE_PASSWORD to the export password."
+          exit 1
+        fi
+
+        # Allow Apple signing tools to use the private key without a UI prompt.
+        security set-key-partition-list -S apple-tool:,apple: -s -k "$IOS_GITHUB_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
     - name: Download App Store provisioning profiles
       id: profiles

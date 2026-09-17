@@ -161,18 +161,9 @@ and signing secrets:
 | `APP_STORE_CONNECT_PRIVATE_KEY` | Complete contents of the API key's downloaded `AuthKey_<KEY_ID>.p8` file | Both iOS apps |
 | `ANDROID_SERVICE_ACCOUNT_JSON` | Complete JSON key for the dedicated Google service account linked to Play Console | Both Android apps |
 
-Configure these non-sensitive GitHub repository **variables**. Tracks are
-required explicitly because this repository does not document a staging track;
-do not choose `production` unless these tag builds are intended to go public.
-The previous production-only workflow used the custom `qa` track with
-`completed` status.
-
-| Variable | Value | Applies to |
-| --- | --- | --- |
-| `GOOGLE_PLAY_STAGING_TRACK` | Existing Play track name for `org.totem.app.dev` (for example, a configured custom/internal testing track) | Staging Android |
-| `GOOGLE_PLAY_STAGING_RELEASE_STATUS` | Android Publisher status: `draft`, `completed`, `halted`, or `inProgress` | Staging Android |
-| `GOOGLE_PLAY_PRODUCTION_TRACK` | Existing Play track name for `org.totem.app` (previously `qa`) | Production Android |
-| `GOOGLE_PLAY_PRODUCTION_RELEASE_STATUS` | Android Publisher status: `draft`, `completed`, `halted`, or `inProgress` (previously `completed`) | Production Android |
+Both Android apps upload to their own Google Play `internal` testing track:
+`org.totem.app.dev` for staging and `org.totem.app` for production. The workflow
+sets the track to `internal` and release status to `completed` for both apps.
 
 The Android package names come from the checked-in Gradle flavor configuration
 and are intentionally not duplicated as secrets or variables.
@@ -210,6 +201,16 @@ Keep `IOS_BUILD_CERTIFICATE_BASE64`, `IOS_BUILD_CERTIFICATE_PASSWORD`, and
 `IOS_GITHUB_KEYCHAIN_PASSWORD`: downloading a profile does not supply the signing
 certificate's private key.
 
+If the certificate import reports `0 valid identities found`, check the
+certificate's expiry and that its matching private key is present on the Mac
+exporting it. In Keychain Access, use My Certificates and expand the distribution
+certificate to verify that it has a private key. Export the certificate and key
+together as a password-protected `.p12`, then update
+`IOS_BUILD_CERTIFICATE_BASE64` with the Base64-encoded file and
+`IOS_BUILD_CERTIFICATE_PASSWORD` with its export password. The certificate must
+be included in both provisioning profiles. The App Store Connect API cannot
+recover a missing signing private key.
+
 The workflow writes the private key temporarily to the path expected by
 `xcrun altool`, uploads the local IPA, and deletes the temporary key even when
 the command fails. It does not wait for Apple processing or submit for review.
@@ -218,15 +219,15 @@ the command fails. It does not wait for Apple processing or submit for review.
 
 Create a dedicated Google Cloud service account, enable the Google Play Android
 Developer API for its project, link the service account in Play Console, and
-limit its Play Console access to the two apps. Grant only the release permission
-needed by the configured tracks (testing-track release permission for testing
-tracks, plus production release permission only if a production track is
-actually configured). Both package records must already exist in Play Console,
+limit its Play Console access to the two apps. For each app, grant
+View app information (read-only) and Release apps to testing tracks.
+Both package records must already exist in Play Console,
 and Play App Signing must be configured as required by Google.
 
 The repository-owned `.github/scripts/google-play-upload.mjs` uses no npm
 packages. It creates an Android Publisher edit, uploads the local AAB, assigns
-the returned version code to the configured track/status, and commits the edit.
+the returned version code to the app's internal track with `completed` status,
+and commits the edit.
 On failure it attempts to delete the uncommitted edit.
 
 ### Remaining manual release work
@@ -236,8 +237,7 @@ desired TestFlight groups in App Store Connect. TestFlight groups and testers
 are not managed by CI.
 
 For Google Play, `completed` makes the release available according to the
-selected track's existing audience and review rules. A `draft` release still
-requires review/completion in Play Console. CI does not add testers, change a
+internal track's existing audience and review rules. CI does not add testers, change a
 track's tester lists, perform staged-rollout management, or promote a build to a
 different track.
 
@@ -249,11 +249,10 @@ Run the dependency-free script tests locally first:
 node --test .github/scripts/google-play-upload.test.mjs
 ```
 
-Before relying on a normal release, configure both Android targets as
-non-production testing tracks (or `draft` where supported), use a new unique
-Flutter build number, and run the normal `make release` flow. Confirm all four
+To validate a release, use a new unique Flutter build number and run the normal
+`make release` flow. Both Android targets release to internal testers. Confirm all four
 artifacts remain on the GitHub draft release, both Play edits are committed to
-the intended tracks/statuses, and both IPAs appear in App Store Connect. Apple
+their internal tracks with `completed` status, and both IPAs appear in App Store Connect. Apple
 and Google do not allow an accepted build/version code to be overwritten, so a
 store upload cannot be safely tested by repeatedly reusing the same version.
 
