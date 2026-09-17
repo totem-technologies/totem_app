@@ -22,7 +22,13 @@ void main() {
       ),
     );
 
+    final bubble = find.ancestor(
+      of: find.text('Hello'),
+      matching: find.byType(DecoratedBox),
+    );
+
     check(tester.widgetList(find.byType(IntrinsicWidth))).isEmpty();
     check(tester.getSize(find.byType(MessageBubble)).width).equals(400);
+    check(tester.getSize(bubble).width).isLessThan(336);
   });
 }
