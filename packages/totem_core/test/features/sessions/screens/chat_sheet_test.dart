@@ -295,6 +295,12 @@ void main() {
         tester.widgetList(find.text('Only the Keeper can post messages here')),
       ).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
+      check(tester.widgetList(find.byType(CustomScrollView))).length.equals(1);
+      check(
+        tester
+            .widget<CustomScrollView>(find.byType(CustomScrollView))
+            .controller,
+      ).isNotNull();
 
       check(tester.widgetList(find.text('Message Keeper'))).length.equals(1);
       check(tester.widgetList(find.text('Message everyone'))).length.equals(1);
@@ -533,8 +539,10 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
-      final listView = tester.widget<ListView>(find.byType(ListView));
-      final controller = listView.controller!;
+      final scrollView = tester.widget<CustomScrollView>(
+        find.byType(CustomScrollView),
+      );
+      final controller = scrollView.controller!;
 
       check(tester.widgetList(find.text('Message 19'))).length.equals(1);
 
@@ -585,8 +593,10 @@ void main() {
         session: session,
         authState: AuthState.unauthenticated(),
       );
-      final listView = tester.widget<ListView>(find.byType(ListView));
-      final controller = listView.controller!;
+      final scrollView = tester.widget<CustomScrollView>(
+        find.byType(CustomScrollView),
+      );
+      final controller = scrollView.controller!;
       controller.jumpTo(controller.position.maxScrollExtent - 10);
       await tester.pump();
 
@@ -735,6 +745,35 @@ void main() {
           find.text('Only you and Lucas can see these messages'),
         ),
       ).length.equals(1);
+    });
+
+    testWidgets('bounds and lazily builds a long recipient list', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 500);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: const [],
+        session: session,
+        authState: AuthState.unauthenticated(),
+        participants: List.generate(
+          50,
+          (index) =>
+              MockRemoteParticipant('participant-$index', 'Participant $index'),
+        ),
+      );
+
+      await tester.tap(find.text('Everyone').first);
+      await tester.pumpAndSettle();
+
+      check(tester.widgetList(find.byType(CustomScrollView))).length.equals(1);
+      check(tester.widgetList(find.byType(ListView))).length.equals(1);
+      check(tester.widgetList(find.text('Participant 49'))).isEmpty();
     });
 
     testWidgets('slides the overlay drawer in from the trailing edge', (

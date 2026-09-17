@@ -799,6 +799,118 @@ final class SessionMessagesProvider
 
 String _$sessionMessagesHash() => r'fc346f31bc9ace6128030e70f72ae61264bb02db';
 
+/// Messages visible in a single chat thread.
+
+@ProviderFor(sessionThreadMessages)
+final sessionThreadMessagesProvider = SessionThreadMessagesFamily._();
+
+/// Messages visible in a single chat thread.
+
+final class SessionThreadMessagesProvider
+    extends
+        $FunctionalProvider<
+          List<SessionChatMessage>,
+          List<SessionChatMessage>,
+          List<SessionChatMessage>
+        >
+    with $Provider<List<SessionChatMessage>> {
+  /// Messages visible in a single chat thread.
+  SessionThreadMessagesProvider._({
+    required SessionThreadMessagesFamily super.from,
+    required (
+      List<SessionChatMessage>,
+      ({String? localIdentity, String? threadTarget}),
+    )
+    super.argument,
+  }) : super(
+         retry: null,
+         name: r'sessionThreadMessagesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionThreadMessagesHash();
+
+  @override
+  String toString() {
+    return r'sessionThreadMessagesProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $ProviderElement<List<SessionChatMessage>> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  List<SessionChatMessage> create(Ref ref) {
+    final argument =
+        this.argument
+            as (
+              List<SessionChatMessage>,
+              ({String? localIdentity, String? threadTarget}),
+            );
+    return sessionThreadMessages(ref, argument.$1, argument.$2);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<SessionChatMessage> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<SessionChatMessage>>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SessionThreadMessagesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$sessionThreadMessagesHash() =>
+    r'8d46018769e347bc7e291ca4a9544f3a5d791211';
+
+/// Messages visible in a single chat thread.
+
+final class SessionThreadMessagesFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          List<SessionChatMessage>,
+          (
+            List<SessionChatMessage>,
+            ({String? localIdentity, String? threadTarget}),
+          )
+        > {
+  SessionThreadMessagesFamily._()
+    : super(
+        retry: null,
+        name: r'sessionThreadMessagesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Messages visible in a single chat thread.
+
+  SessionThreadMessagesProvider call(
+    List<SessionChatMessage> messages,
+    ({String? localIdentity, String? threadTarget}) thread,
+  ) =>
+      SessionThreadMessagesProvider._(argument: (messages, thread), from: this);
+
+  @override
+  String toString() => r'sessionThreadMessagesProvider';
+}
+
 /// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
 ///
 /// Reset on room entry, so a docked sidebar in one circle doesn't open the
@@ -844,7 +956,7 @@ final class SessionChatOpenProvider
   }
 }
 
-String _$sessionChatOpenHash() => r'c5282f3458b1bbe403075ec93e19f37826ce385d';
+String _$sessionChatOpenHash() => r'85d240ecb76b049ba96aa04d99d52f9bf5eab316';
 
 /// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
 ///
@@ -915,7 +1027,7 @@ final class SessionChatThreadTargetProvider
 }
 
 String _$sessionChatThreadTargetHash() =>
-    r'408635a13d9cd0461edb452f4eea2b53a6674419';
+    r'adf11fc3d780beaf532b047a1ab893c516798a0e';
 
 /// Current in-call thread. Null is the Everyone group thread.
 ///

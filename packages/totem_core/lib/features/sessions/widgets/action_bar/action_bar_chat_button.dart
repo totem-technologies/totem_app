@@ -28,6 +28,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
   /// needs to see that a private support request arrived.
   final Set<String?> _unreadThreads = {};
   String? _latestUnreadThread;
+  final _notificationController = NotificationController();
   NotificationRequest? _notification;
 
   void _markThreadRead(String? thread) {
@@ -67,7 +68,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
 
   @override
   void dispose() {
-    _notification?.dismissActive();
+    _notificationController.dispose();
     super.dispose();
   }
 
@@ -131,7 +132,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       if (isChatOpen && thread == visibleThread) return;
       _notification?.dismissActive();
       _latestUnreadThread = thread;
-      _notification = NotificationController().showTimed(
+      _notification = _notificationController.showTimed(
         context,
         icon: TotemIcons.chat,
         title: _notificationTitle(next),

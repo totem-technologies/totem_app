@@ -202,6 +202,23 @@ List<SessionChatMessage> sessionMessages(Ref ref) {
       const [];
 }
 
+/// Messages visible in a single chat thread.
+@riverpod
+List<SessionChatMessage> sessionThreadMessages(
+  Ref ref,
+  List<SessionChatMessage> messages,
+  ({String? localIdentity, String? threadTarget}) thread,
+) {
+  return messages
+      .where(
+        (message) => message.belongsToThread(
+          localIdentity: thread.localIdentity,
+          threadTarget: thread.threadTarget,
+        ),
+      )
+      .toList(growable: false);
+}
+
 /// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
 ///
 /// Reset on room entry, so a docked sidebar in one circle doesn't open the

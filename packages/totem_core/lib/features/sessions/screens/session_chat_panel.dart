@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
@@ -26,6 +27,8 @@ const _headerControlGap = 12.0;
 const _headerRecipientRuleWidth = 1.0;
 const _headerRecipientStartPadding = 10.0;
 const _recipientRowHorizontalPadding = 16.0;
+const _recipientRowEstimatedHeight = 61.0;
+const _recipientMenuMaxHeightFactor = 0.6;
 
 /// In-call chat panel used as a phone sheet, tablet dialog, or docked sidebar.
 class SessionChatPanel extends ConsumerStatefulWidget {
@@ -160,7 +163,6 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
 
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
     final threadTarget = ref.watch(sessionChatThreadTargetProvider);
-    final allMessages = ref.watch(sessionMessagesProvider);
     final participants = ref.watch(sessionParticipantsProvider);
     final sessionState = ref.watch(currentSessionStateProvider);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
@@ -179,14 +181,13 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       spaceAuthor: ref.watch(currentSessionEventProvider)?.space.author.slug,
     );
 
-    final threadMessages = allMessages
-        .where(
-          (message) => message.belongsToThread(
-            localIdentity: localIdentity,
-            threadTarget: threadTarget,
-          ),
-        )
-        .toList();
+    final threadMessages = ref.watch(
+      sessionThreadMessagesProvider((
+        localIdentity: localIdentity,
+        threadTarget: threadTarget,
+      )),
+    );
+    final timeFormat = DateFormat.jm();
 
     final isPrivateThread = threadTarget != null;
     final canCompose = isKeeper || isPrivateThread;
@@ -247,52 +248,69 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                         ),
                         child: _PinnedHintPill(text: hintText),
                       ),
-                      if (threadMessages.isEmpty)
-                        const Expanded(
-                          child: IgnorePointer(
-                            child: Center(
-                              child: Text(
-                                'No messages yet',
-                                style: TextStyle(color: AppTheme.gray),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        Expanded(
-                          child: SelectionArea(
-                            child: ListView.separated(
-                              controller: scrollController,
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                20,
-                                14,
-                                20,
-                                16,
-                              ),
-                              itemCount: threadMessages.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: 14),
-                              itemBuilder: (context, index) {
-                                final message = threadMessages[index];
-                                final isOwn =
-                                    message.sender ||
-                                    (localIdentity != null &&
-                                        message.participant?.identity ==
-                                            localIdentity);
-                                return MessageBubble(
-                                  text: message.message,
-                                  timestamp: DateFormat.jm().format(
-                                    DateTime.fromMillisecondsSinceEpoch(
-                                      message.timestamp,
-                                    ).toLocal(),
+                      Expanded(
+                        child: SelectionArea(
+                          child: CustomScrollView(
+                            controller: scrollController,
+                            slivers: [
+                              if (threadMessages.isEmpty)
+                                const SliverFillRemaining(
+                                  hasScrollBody: false,
+                                  child: Padding(
+                                    padding: EdgeInsetsDirectional.fromSTEB(
+                                      20,
+                                      14,
+                                      20,
+                                      16,
+                                    ),
+                                    child: IgnorePointer(
+                                      child: Center(
+                                        child: Text(
+                                          'No messages yet',
+                                          style: TextStyle(
+                                            color: AppTheme.gray,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                  isOwn: isOwn,
-                                );
-                              },
-                            ),
+                                )
+                              else
+                                SliverPadding(
+                                  padding: const EdgeInsetsDirectional.fromSTEB(
+                                    20,
+                                    14,
+                                    20,
+                                    16,
+                                  ),
+                                  sliver: SliverList.separated(
+                                    itemCount: threadMessages.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 14),
+                                    itemBuilder: (context, index) {
+                                      final message = threadMessages[index];
+                                      final isOwn =
+                                          message.sender ||
+                                          (localIdentity != null &&
+                                              message.participant?.identity ==
+                                                  localIdentity);
+                                      return MessageBubble(
+                                        text: message.message,
+                                        timestamp: timeFormat.format(
+                                          DateTime.fromMillisecondsSinceEpoch(
+                                            message.timestamp,
+                                          ).toLocal(),
+                                        ),
+                                        isOwn: isOwn,
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
+                      ),
                     ],
                   ),
                   if (_dropdownOpen)
@@ -773,6 +791,16 @@ class _RecipientDropdownOverlay extends StatelessWidget {
 
     final count = participants.length;
     final countLabel = '$count ${count == 1 ? 'participant' : 'participants'}';
+    final availableHeight =
+        MediaQuery.sizeOf(context).height -
+        MediaQuery.viewInsetsOf(context).bottom;
+    final maxMenuHeight = math.max(
+      0.0,
+      availableHeight * _recipientMenuMaxHeightFactor,
+    );
+    final preferredMenuHeight =
+        _recipientRowEstimatedHeight * (rows.length + 1) + rows.length;
+    final menuHeight = math.min(preferredMenuHeight, maxMenuHeight).toDouble();
 
     return AnimatedBuilder(
       animation: animation,
@@ -823,31 +851,36 @@ class _RecipientDropdownOverlay extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: Material(
             color: AppTheme.white,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const _RecipientHairline(),
-                _RecipientRow(
-                  selected: threadTarget == null,
-                  title: 'Everyone',
-                  subtitle: isKeeper
-                      ? '$countLabel · only you can post'
-                      : '$countLabel · only the Keeper can post',
-                  leading: const _EveryoneAvatar(),
-                  onTap: onSelectEveryone,
-                ),
-                for (final participant in rows) ...[
-                  const _RecipientHairline(),
-                  _RecipientRow(
+            child: SizedBox(
+              height: menuHeight,
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                itemCount: rows.length + 1,
+                separatorBuilder: (_, _) => const _RecipientHairline(),
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return _RecipientRow(
+                      selected: threadTarget == null,
+                      title: 'Everyone',
+                      subtitle: isKeeper
+                          ? '$countLabel · only you can post'
+                          : '$countLabel · only the Keeper can post',
+                      leading: const _EveryoneAvatar(),
+                      onTap: onSelectEveryone,
+                    );
+                  }
+
+                  final participant = rows[index - 1];
+                  return _RecipientRow(
                     selected: threadTarget == participant.identity,
                     title: participant.name.isNotEmpty
                         ? participant.name
                         : participant.identity,
                     leading: _ParticipantAvatar(identity: participant.identity),
                     onTap: () => onSelectParticipant(participant.identity),
-                  ),
-                ],
-              ],
+                  );
+                },
+              ),
             ),
           ),
         ),
