@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:js_interop';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -12,17 +11,21 @@ import 'package:totem_core/features/keeper/repositories/keeper_repository.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
+import 'package:totem_web/core/navigation/browser_environment.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import 'package:web/web.dart' as web;
 
 class WebTotemRouter extends TotemRouter {
+  WebTotemRouter({BrowserEnvironment? browser})
+    : _browser = browser ?? BrowserEnvironment();
+
+  final BrowserEnvironment _browser;
   final _navigatorKey = GlobalKey<NavigatorState>();
   GoRouterRefreshStream? _refreshStream;
 
   @override
   Uri get baseUri {
-    final scheme = Uri.base.scheme;
-    final host = Uri.base.host;
+    final scheme = _browser.currentUri.scheme;
+    final host = _browser.currentUri.host;
     return Uri(scheme: scheme, host: host, path: '/');
   }
 
@@ -58,7 +61,7 @@ class WebTotemRouter extends TotemRouter {
                   next.maybeWhen(
                     data: (data) {
                       if (data.title.isNotEmpty) {
-                        web.document.title = 'Totem - ${data.title}';
+                        _browser.setDocumentTitle('Totem - ${data.title}');
                       }
                     },
                     orElse: () {},
@@ -83,18 +86,9 @@ class WebTotemRouter extends TotemRouter {
     _refreshStream = null;
   }
 
-  static void _beforeUnloadListener(web.Event event) {
-    final beforeUnloadEvent = event as web.BeforeUnloadEvent;
-    beforeUnloadEvent.returnValue = 'Are you sure you want to leave?';
-  }
-
   @override
   void setTabCloseConfirmationEnabled(bool enabled) {
-    if (enabled) {
-      web.window.onbeforeunload = _beforeUnloadListener.toJS;
-    } else {
-      web.window.onbeforeunload = null;
-    }
+    _browser.setTabCloseConfirmationEnabled(enabled);
   }
 
   @override

@@ -97,7 +97,7 @@ install:
 
 test: install
 	@echo "Running tests..."
-	$(MAKE) --jobs=$(TEST_JOBS) test-web test-core test-app test-scripts TEST_PUB=--no-pub
+	$(MAKE) --jobs=$(TEST_JOBS) test-core test-app test-web test-scripts TEST_PUB=--no-pub
 
 test-app:
 	@echo "Running app tests..."
@@ -105,7 +105,7 @@ test-app:
 
 test-web:
 	@echo "Running web tests..."
-	cd $(WEB_DIR) && flutter test --platform chrome $(TEST_PUB) $(TEST_ARGS)
+	cd $(WEB_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
 
 test-core:
 	@echo "Running core tests..."
