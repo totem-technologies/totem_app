@@ -30,7 +30,10 @@ void main() {
     // 260 * 0.09 = 23.4, rounded.
     check(metrics.badgeSize).equals(23);
     check(metrics.iconSize).equals(18);
-    check(metrics.cornerInset).equals(11.5);
+    check(metrics.badgePadding).equals(2.5);
+    check(metrics.emojiFontSize).equals(11.5);
+    // 23 * 0.5 = 11.5, rounded so the badge never lands on a half pixel.
+    check(metrics.cornerInset).equals(12);
   });
 
   test('scales off the shortest side, not the longest', () {
@@ -52,10 +55,12 @@ void main() {
     }
   });
 
-  test('falls back to compact chrome for an empty or unbounded card', () {
+  test('clamps an unbounded card down to compact chrome', () {
     final compact = ParticipantOverlayMetrics.forCard(const Size(160, 120));
 
-    check(ParticipantOverlayMetrics.forCard(Size.zero)).equals(compact);
+    // Without the isFinite guard this would clamp *up* to the ceiling.
     check(ParticipantOverlayMetrics.forCard(Size.infinite)).equals(compact);
+    // An empty card needs no guard — the floor already covers it.
+    check(ParticipantOverlayMetrics.forCard(Size.zero)).equals(compact);
   });
 }

@@ -5,7 +5,14 @@ import 'package:flutter/widgets.dart';
 /// Derived from the card's own size rather than the viewport, so the chrome
 /// stays proportional to the video it sits on: a 12-person grid tile keeps the
 /// compact badge no matter how large the window is, while a featured tile or a
-/// 2-person grid grows up to [_maxBadge].
+/// 2-person grid gets a larger one.
+///
+/// The clamp is tight enough that most cards land on it rather than on the
+/// ratio: with [_badgeToCardRatio] against [_minBadge]/[_maxBadge], the badge
+/// only tracks the card for a shortest side of roughly 222–311dp. Below that
+/// it pins to [_minBadge] (dense grids, phone portrait tiles), above it to
+/// [_maxBadge] (featured tiles, sparse grids). The band mostly covers
+/// mid-size tiles such as a phone-landscape grid.
 @immutable
 class ParticipantOverlayMetrics {
   const ParticipantOverlayMetrics({
@@ -25,10 +32,10 @@ class ParticipantOverlayMetrics {
   /// construction.
   factory ParticipantOverlayMetrics.forCard(Size cardSize) {
     final shortestSide = cardSize.shortestSide;
+    // An unbounded card would otherwise clamp *up* to the ceiling. A zero-size
+    // card needs no guard: the clamp already lifts it to the floor.
     final badgeSize =
-        (shortestSide.isFinite && shortestSide > 0
-                ? shortestSide * _badgeToCardRatio
-                : _minBadge)
+        (shortestSide.isFinite ? shortestSide * _badgeToCardRatio : _minBadge)
             .clamp(_minBadge, _maxBadge)
             .roundToDouble();
     final iconSize = (badgeSize * _iconToBadgeRatio).roundToDouble();
@@ -38,10 +45,9 @@ class ParticipantOverlayMetrics {
       iconSize: iconSize,
       badgePadding: (badgeSize - iconSize) / 2,
       emojiFontSize: badgeSize * _emojiToBadgeRatio,
-      cornerInset: (badgeSize * _insetToBadgeRatio).clamp(
-        _minCornerInset,
-        _maxCornerInset,
-      ),
+      cornerInset: (badgeSize * _insetToBadgeRatio)
+          .clamp(_minCornerInset, _maxCornerInset)
+          .roundToDouble(),
     );
   }
 

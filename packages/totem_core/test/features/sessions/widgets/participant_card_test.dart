@@ -97,6 +97,10 @@ void main() {
   /// A sparse-grid or featured tile: large enough to clamp to the ceiling.
   const largeCardSize = Size(600, 500);
 
+  /// A mid-size tile, inside the band where the badge tracks the card instead
+  /// of sitting on either clamp. 240 * 0.09 = 21.6, so badge 22 / inset 11.
+  const midCardSize = Size(400, 240);
+
   PositionedDirectional overlayPosition(WidgetTester tester) {
     return tester.widget<PositionedDirectional>(
       find
@@ -263,6 +267,36 @@ void main() {
       ).equals(const Size(28, 28));
       check(overlayPosition(tester).top).equals(12);
       check(overlayPosition(tester).start).equals(12);
+    });
+
+    testWidgets('sizes corner chrome off the tile between the clamps', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: sizedCard(
+          midCardSize,
+          ParticipantCard(
+            participant: remoteParticipant,
+            session: null,
+            participantIdentity: remoteParticipant.identity,
+          ),
+        ),
+      );
+
+      // Neither the 20dp floor nor the 28dp ceiling: the tile drives the size.
+      check(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+      ).equals(const Size(22, 22));
+      check(overlayPosition(tester).top).equals(11);
+      check(overlayPosition(tester).start).equals(11);
     });
 
     testWidgets('scales the keeper logo badge with the card', (tester) async {
