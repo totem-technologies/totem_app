@@ -502,7 +502,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'I need help');
       await tester.pump();
-      await tester.tap(find.byTooltip('Send'));
+      await tester.tap(find.byKey(const ValueKey('message-input-send')));
       await tester.pump();
 
       verify(
@@ -628,7 +628,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), '  Hello chat  ');
       await tester.pump();
-      await tester.tap(find.byTooltip('Send'));
+      await tester.tap(find.byKey(const ValueKey('message-input-send')));
       await tester.pump();
 
       verify(
@@ -705,7 +705,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'Dropped message');
       await tester.pump();
-      await tester.tap(find.byTooltip('Send'));
+      await tester.tap(find.byKey(const ValueKey('message-input-send')));
       await tester.pumpAndSettle();
 
       // A rejected send must not silently swallow what the user typed.

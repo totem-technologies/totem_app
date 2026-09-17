@@ -27,7 +27,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Hello');
     await tester.pump();
 
-    await tester.tap(find.byTooltip('Send'));
+    await tester.tap(find.byKey(const ValueKey('message-input-send')));
     await tester.testTextInput.receiveAction(TextInputAction.send);
     await tester.pump();
 
@@ -35,7 +35,7 @@ void main() {
 
     sendCompleter.complete(false);
     await tester.pump();
-    await tester.tap(find.byTooltip('Send'));
+    await tester.tap(find.byKey(const ValueKey('message-input-send')));
     await tester.pump();
 
     check(sendCount).equals(2);
@@ -64,7 +64,7 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField), 'Retry me');
-    await tester.tap(find.byTooltip('Send'));
+    await tester.tap(find.byKey(const ValueKey('message-input-send')));
     await tester.pump();
 
     check(

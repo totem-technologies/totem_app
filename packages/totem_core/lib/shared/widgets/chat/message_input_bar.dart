@@ -196,6 +196,7 @@ class _SendButtonState extends State<_SendButton> {
   Widget build(BuildContext context) {
     final canSend = widget.enabled && !widget.isSubmitting && _hasText;
     return IconButton(
+      key: const ValueKey('message-input-send'),
       onPressed: canSend ? widget.onSubmit : null,
       style: IconButton.styleFrom(
         minimumSize: const Size(48, 48),
