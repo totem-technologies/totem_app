@@ -429,7 +429,7 @@ void main() {
       );
 
       test(
-        'FastConnect remains the sole initial media enablement path',
+        'RoomConnected never duplicates initial camera or microphone enablement',
         () async {
           const eventSlug = 'test-session';
           final container = _createContainerWithEventOverride(eventSlug);
@@ -488,7 +488,7 @@ void main() {
       );
 
       test(
-        'applies a microphone restriction after FastConnect publishes',
+        'mutes restricted microphone media before explicit publication',
         () async {
           const eventSlug = 'test-session';
           final container = _createContainerWithEventOverride(eventSlug);
@@ -514,6 +514,8 @@ void main() {
             sessionControllerProvider(options).notifier,
           );
           final localParticipant = MockLocalParticipant();
+          final cameraTrack = MockLocalVideoTrack();
+          final microphoneTrack = MockLocalAudioTrack();
           var microphoneEnabled = false;
           when(
             () => localParticipant.setCameraEnabled(any<bool>()),
@@ -521,6 +523,18 @@ void main() {
           when(
             localParticipant.isMicrophoneEnabled,
           ).thenAnswer((_) => microphoneEnabled);
+          when(
+            () => localParticipant.publishVideoTrack(
+              cameraTrack,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          ).thenAnswer((_) async => MockLocalTrackPublication());
+          when(
+            () => localParticipant.publishAudioTrack(microphoneTrack),
+          ).thenAnswer((_) async {
+            microphoneEnabled = true;
+            return MockLocalAudioTrackPublication();
+          });
           when(() => localParticipant.setMicrophoneEnabled(false)).thenAnswer((
             _,
           ) async {
@@ -529,43 +543,36 @@ void main() {
           });
 
           final room = _CountingRoom(localParticipant);
-          controller.room = room;
-          check(await controller.join()).equals(SessionJoinResult.success);
+          controller
+            ..room = room
+            ..applyRoomState(
+              const RoomState(
+                keeper: 'keeper',
+                nextSpeaker: '',
+                currentSpeaker: 'another-participant',
+                status: RoomStatus.active,
+                turnState: TurnState.idle,
+                sessionSlug: eventSlug,
+                statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+                talkingOrder: [],
+                version: 1,
+                roundNumber: 1,
+              ),
+            );
 
-          controller.applyRoomState(
-            const RoomState(
-              keeper: 'keeper',
-              nextSpeaker: '',
-              currentSpeaker: 'another-participant',
-              status: RoomStatus.active,
-              turnState: TurnState.idle,
-              sessionSlug: eventSlug,
-              statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
-              talkingOrder: [],
-              version: 1,
-              roundNumber: 1,
+          check(
+            await controller.join(
+              joinMedia: SessionJoinMedia(
+                cameraTrack: cameraTrack,
+                microphoneTrack: microphoneTrack,
+              ),
             ),
-          );
+          ).equals(SessionJoinResult.success);
 
-          await room.listener.trigger(
-            RoomConnectedEvent(room: room, metadata: null),
-          );
-          await pumpEventQueue();
-
-          // RoomConnected can arrive before FastConnect has registered its
-          // publication. Enforce the mute when publication completes without
-          // ever issuing a second enable operation.
-          microphoneEnabled = true;
-          final publication = MockLocalTrackPublication();
-          when(() => publication.source).thenReturn(TrackSource.microphone);
-          await room.listener.trigger(
-            LocalTrackPublishedEvent(
-              participant: localParticipant,
-              publication: publication,
-            ),
-          );
-          await pumpEventQueue();
-
+          verifyInOrder([
+            () => microphoneTrack.mute(stopOnMute: false),
+            () => localParticipant.publishAudioTrack(microphoneTrack),
+          ]);
           verify(() => localParticipant.setMicrophoneEnabled(false)).called(1);
           verifyNever(() => localParticipant.setMicrophoneEnabled(true));
           verifyNever(() => localParticipant.setCameraEnabled(any<bool>()));
@@ -662,6 +669,15 @@ void main() {
 
           final firstCameraTrack = MockLocalVideoTrack();
           final firstMicrophoneTrack = MockLocalAudioTrack();
+          when(
+            () => localParticipant.publishVideoTrack(
+              firstCameraTrack,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          ).thenAnswer((_) async => MockLocalTrackPublication());
+          when(
+            () => localParticipant.publishAudioTrack(firstMicrophoneTrack),
+          ).thenAnswer((_) async => MockLocalAudioTrackPublication());
           final firstJoin = controller.join(
             joinMedia: SessionJoinMedia(
               cameraTrack: firstCameraTrack,
@@ -695,12 +711,16 @@ void main() {
           controller.initializationGate.complete();
           check(await firstJoin).equals(SessionJoinResult.success);
           check(room.connectCount).equals(1);
-          check(
-            room.lastFastConnectOptions?.camera.track,
-          ).identicalTo(firstCameraTrack);
-          check(
-            room.lastFastConnectOptions?.microphone.track,
-          ).identicalTo(firstMicrophoneTrack);
+          check(room.lastFastConnectOptions).isNull();
+          verify(
+            () => localParticipant.publishVideoTrack(
+              firstCameraTrack,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          ).called(1);
+          verify(
+            () => localParticipant.publishAudioTrack(firstMicrophoneTrack),
+          ).called(1);
           verifyNever(firstCameraTrack.stop);
           verifyNever(firstCameraTrack.dispose);
           verifyNever(firstMicrophoneTrack.stop);
@@ -769,8 +789,170 @@ void main() {
         },
       );
 
+      test('join waits for transferred pre-join tracks to publish', () async {
+        const eventSlug = 'test-session';
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: true,
+          microphoneEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant();
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        final cameraTrack = MockLocalVideoTrack();
+        final microphoneTrack = MockLocalAudioTrack();
+        final cameraPublication =
+            Completer<LocalTrackPublication<LocalVideoTrack>>();
+        final microphonePublication =
+            Completer<LocalTrackPublication<LocalAudioTrack>>();
+        when(
+          () => localParticipant.publishVideoTrack(
+            cameraTrack,
+            publishOptions: SessionController.defaultVideoPublishOptions,
+          ),
+        ).thenAnswer((_) => cameraPublication.future);
+        when(
+          () => localParticipant.publishAudioTrack(microphoneTrack),
+        ).thenAnswer((_) => microphonePublication.future);
+
+        final room = _CountingRoom(localParticipant);
+        controller.room = room;
+
+        var joinCompleted = false;
+        final joinResult = controller
+            .join(
+              joinMedia: SessionJoinMedia(
+                cameraTrack: cameraTrack,
+                microphoneTrack: microphoneTrack,
+              ),
+            )
+            .then((result) {
+              joinCompleted = true;
+              return result;
+            });
+        await pumpEventQueue();
+
+        check(joinCompleted).isFalse();
+        check(room.lastFastConnectOptions).isNull();
+        verify(
+          () => localParticipant.publishVideoTrack(
+            cameraTrack,
+            publishOptions: SessionController.defaultVideoPublishOptions,
+          ),
+        ).called(1);
+        verifyNever(() => localParticipant.publishAudioTrack(microphoneTrack));
+
+        cameraPublication.complete(MockLocalTrackPublication());
+        await pumpEventQueue();
+
+        check(joinCompleted).isFalse();
+        verify(
+          () => localParticipant.publishAudioTrack(microphoneTrack),
+        ).called(1);
+
+        microphonePublication.complete(MockLocalAudioTrackPublication());
+        check(await joinResult).equals(SessionJoinResult.success);
+        verifyNever(cameraTrack.stop);
+        verifyNever(cameraTrack.dispose);
+        verifyNever(microphoneTrack.stop);
+        verifyNever(microphoneTrack.dispose);
+
+        await controller.disposeConnection();
+
+        check(room.disposeCount).equals(1);
+        verifyNever(cameraTrack.stop);
+        verifyNever(cameraTrack.dispose);
+        verifyNever(microphoneTrack.stop);
+        verifyNever(microphoneTrack.dispose);
+      });
+
       test(
-        'join transfers pre-join tracks without waiting for publications',
+        'join stops publishing when disposed during video publication',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          final cameraTrack = MockLocalVideoTrack();
+          final microphoneTrack = MockLocalAudioTrack();
+          final cameraPublication =
+              Completer<LocalTrackPublication<LocalVideoTrack>>();
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.publishVideoTrack(
+              cameraTrack,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          ).thenAnswer((_) => cameraPublication.future);
+
+          final room = _CountingRoom(localParticipant);
+          controller.room = room;
+          final joinResult = controller.join(
+            joinMedia: SessionJoinMedia(
+              cameraTrack: cameraTrack,
+              microphoneTrack: microphoneTrack,
+            ),
+          );
+          await pumpEventQueue();
+
+          container.dispose();
+          await pumpEventQueue();
+          cameraPublication.complete(MockLocalTrackPublication());
+
+          expect(await joinResult, SessionJoinResult.retryableFailure);
+          verifyNever(
+            () => localParticipant.publishAudioTrack(microphoneTrack),
+          );
+        },
+      );
+
+      test(
+        'join keeps published media and cleans up a publication failure',
         () async {
           const eventSlug = 'test-session';
           final container = _createContainerWithEventOverride(eventSlug);
@@ -796,45 +978,48 @@ void main() {
             sessionControllerProvider(options).notifier,
           );
           final localParticipant = MockLocalParticipant();
+          final cameraTrack = MockLocalVideoTrack();
+          final microphoneTrack = MockLocalAudioTrack();
           when(
             () => localParticipant.setCameraEnabled(any<bool>()),
           ).thenAnswer((_) async => null);
           when(
             () => localParticipant.setMicrophoneEnabled(any<bool>()),
           ).thenAnswer((_) async => null);
-          final cameraTrack = MockLocalVideoTrack();
-          final microphoneTrack = MockLocalAudioTrack();
+          when(
+            () => localParticipant.publishVideoTrack(
+              cameraTrack,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          ).thenAnswer((_) async => MockLocalTrackPublication());
+          when(
+            () => localParticipant.publishAudioTrack(microphoneTrack),
+          ).thenThrow(TrackPublishException('microphone publication failed'));
 
           final room = _CountingRoom(localParticipant);
           controller.room = room;
 
-          final joined = await controller.join(
+          final result = await controller.join(
             joinMedia: SessionJoinMedia(
               cameraTrack: cameraTrack,
               microphoneTrack: microphoneTrack,
             ),
           );
 
-          check(joined).equals(SessionJoinResult.success);
-          check(
-            room.lastFastConnectOptions?.camera.track,
-          ).identicalTo(cameraTrack);
-          check(
-            room.lastFastConnectOptions?.microphone.track,
-          ).identicalTo(microphoneTrack);
+          check(result).equals(SessionJoinResult.retryableFailure);
+          check(room.lastFastConnectOptions).isNull();
           verifyNever(cameraTrack.stop);
           verifyNever(cameraTrack.dispose);
-          verifyNever(microphoneTrack.stop);
-          verifyNever(microphoneTrack.dispose);
-          check(localParticipant.getTrackPublications()).isEmpty();
+          verify(microphoneTrack.stop).called(1);
+          verify(microphoneTrack.dispose).called(1);
+          verify(
+            () => localParticipant.publishAudioTrack(microphoneTrack),
+          ).called(1);
 
-          await controller.disposeConnection();
+          await controller.resetAfterFailedJoin();
 
-          check(room.disposeCount).equals(1);
-          verifyNever(cameraTrack.stop);
-          verifyNever(cameraTrack.dispose);
-          verifyNever(microphoneTrack.stop);
-          verifyNever(microphoneTrack.dispose);
+          expect(room.disposeCount, 1);
+          expect(controller.room, isNull);
         },
       );
 
@@ -982,14 +1167,18 @@ void main() {
           );
 
           check(result).equals(testCase.result);
-          check(previewAttached).equals(false);
+          check(previewAttached).isFalse();
           check(room.connectCount).equals(1);
-          check(
-            room.lastFastConnectOptions?.camera.track,
-          ).identicalTo(cameraTrack);
-          check(
-            room.lastFastConnectOptions?.microphone.track,
-          ).identicalTo(microphoneTrack);
+          check(room.lastFastConnectOptions).isNull();
+          verifyNever(
+            () => localParticipant.publishVideoTrack(
+              cameraTrack,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          );
+          verifyNever(
+            () => localParticipant.publishAudioTrack(microphoneTrack),
+          );
           verify(cameraTrack.stop).called(1);
           verify(cameraTrack.dispose).called(1);
           verify(microphoneTrack.stop).called(1);
