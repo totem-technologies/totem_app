@@ -136,63 +136,64 @@ TurnState turnState(Ref ref) {
       TurnState.idle;
 }
 
-@Riverpod(dependencies: [currentSession, currentSessionState, connectionState])
+@Riverpod(dependencies: [currentSession, connectionState])
+String? localParticipantIdentity(Ref ref) {
+  ref.watch(connectionStateProvider);
+  return ref.watch(currentSessionProvider)?.room?.localParticipant?.identity;
+}
+
+@Riverpod(dependencies: [currentSessionState, localParticipantIdentity])
 RoomScreen? resolveCurrentScreen(Ref ref) {
-  final session = ref.watch(currentSessionProvider);
-  final sessionState = ref.watch(currentSessionStateProvider);
-  final connectionState = ref.watch(connectionStateProvider);
+  final route = ref.watch(
+    currentSessionStateProvider.select(
+      (state) => state == null
+          ? null
+          : (
+              connection: state.connection,
+              roomStatus: state.roomState.status,
+              turnState: state.roomState.turnState,
+              speakingNow: state.speakingNow,
+              nextSpeaker: state.roomState.nextSpeaker,
+            ),
+    ),
+  );
+  if (route == null) return null;
 
-  if (session == null || sessionState == null) {
-    return null;
-  }
-
-  switch (connectionState) {
+  switch (route.connection.state) {
     case RoomConnectionState.connecting:
       return RoomScreen.loading;
     case RoomConnectionState.error:
       return RoomScreen.error;
     case RoomConnectionState.disconnected:
-      final error = sessionState.connection.error;
+      final error = route.connection.error;
       final isTransientJoinDisconnect =
-          sessionState.roomState.status == RoomStatus.waitingRoom &&
-          sessionState.connection.wasJoining &&
+          route.roomStatus == RoomStatus.waitingRoom &&
+          route.connection.wasJoining &&
           ((error is RoomDisconnectionError &&
                   isTransientJoinDisconnectReason(error.reason)) ||
               error == null);
 
-      if (isTransientJoinDisconnect) {
-        return RoomScreen.loading;
-      }
-
-      if (sessionState.phase == SessionPhase.idle) {
+      if (isTransientJoinDisconnect ||
+          route.connection.phase == SessionPhase.idle) {
         return RoomScreen.loading;
       }
       return RoomScreen.disconnected;
     case RoomConnectionState.connected:
-      if (session.room == null) {
+      if (route.roomStatus == RoomStatus.ended) {
         return RoomScreen.disconnected;
       }
 
-      final room = session.room!;
+      final localIdentity = ref.watch(localParticipantIdentityProvider);
+      if (localIdentity == null) return RoomScreen.disconnected;
 
-      if (sessionState.roomState.status == RoomStatus.ended) {
-        return RoomScreen.disconnected;
-      }
-
-      if (room.localParticipant == null) {
-        return RoomScreen.disconnected;
-      }
-
-      if (sessionState.roomState.turnState == TurnState.passing &&
-          sessionState.amNext(room)) {
+      if (route.turnState == TurnState.passing &&
+          route.nextSpeaker == localIdentity) {
         return RoomScreen.receiving;
       }
 
-      if (sessionState.amSpeaking(session.room!)) {
-        return RoomScreen.speaking;
-      } else {
-        return RoomScreen.listening;
-      }
+      return route.speakingNow == localIdentity
+          ? RoomScreen.speaking
+          : RoomScreen.listening;
   }
 }
 
@@ -329,6 +330,26 @@ String? roundMessage(Ref ref) {
   );
 }
 
+@Riverpod(dependencies: [currentSessionState])
+String? keeperIdentity(Ref ref) {
+  return ref.watch(
+    currentSessionStateProvider.select((s) => s?.roomState.keeper),
+  );
+}
+
+@Riverpod(dependencies: [currentSessionState])
+String speakingNowIdentity(Ref ref) {
+  return ref.watch(currentSessionStateProvider.select((s) => s?.speakingNow)) ??
+      '';
+}
+
+@Riverpod(dependencies: [currentSessionState])
+String? nextSpeakerIdentity(Ref ref) {
+  return ref.watch(
+    currentSessionStateProvider.select((s) => s?.roomState.nextSpeaker),
+  );
+}
+
 /// Whether the keeper participant is currently present in the room.
 @Riverpod(dependencies: [currentSessionState])
 bool hasKeeper(Ref ref) {
@@ -366,32 +387,29 @@ SessionDetailSchema? currentSessionEvent(Ref ref) {
 }
 
 /// Whether the signed-in user is keeper for the current session.
-@Riverpod(dependencies: [currentSession])
+@Riverpod(dependencies: [currentSession, keeperIdentity])
 bool isCurrentUserKeeper(Ref ref) {
-  final session = ref.watch(currentSessionProvider);
-  if (session == null) return false;
-  return session.isCurrentUserKeeper();
+  ref.watch(keeperIdentityProvider);
+  return ref.watch(currentSessionProvider)?.isCurrentUserKeeper() ?? false;
 }
 
 /// Whether it's the current user's turn to speak.
-@Riverpod(dependencies: [currentSession, currentSessionState])
+@Riverpod(dependencies: [localParticipantIdentity, speakingNowIdentity])
 bool isMyTurn(Ref ref) {
-  final currentSession = ref.watch(currentSessionProvider);
-  final state = ref.watch(currentSessionStateProvider);
-  if (currentSession?.room == null || state == null) return false;
-  return state.amSpeaking(currentSession!.room!);
+  final localIdentity = ref.watch(localParticipantIdentityProvider);
+  return localIdentity != null &&
+      localIdentity == ref.watch(speakingNowIdentityProvider);
 }
 
 /// Whether the current user is next to speak.
-@Riverpod(dependencies: [currentSession, currentSessionState])
+@Riverpod(dependencies: [localParticipantIdentity, nextSpeakerIdentity])
 bool amNextSpeaker(Ref ref) {
-  final currentSession = ref.watch(currentSessionProvider);
-  final state = ref.watch(currentSessionStateProvider);
-  if (currentSession?.room == null || state == null) return false;
-  return state.amNext(currentSession!.room!);
+  final localIdentity = ref.watch(localParticipantIdentityProvider);
+  return localIdentity != null &&
+      localIdentity == ref.watch(nextSpeakerIdentityProvider);
 }
 
-@Riverpod(dependencies: [currentSession, currentSessionState])
+@Riverpod(dependencies: [currentSession])
 bool isCameraOn(Ref ref) {
   final session = ref.watch(currentSessionProvider);
   if (session == null) return false;

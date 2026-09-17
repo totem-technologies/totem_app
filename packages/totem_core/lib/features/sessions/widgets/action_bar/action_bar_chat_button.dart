@@ -98,7 +98,9 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
         ref.watch(sessionChatOpenProvider) && shouldDockSessionChat(context);
     final isChatOpen = _chatSheetOpen || dockedOpen;
     final visibleThread = ref.watch(sessionChatThreadTargetProvider);
-    final unreadThreads = ref.watch(sessionChatUnreadThreadsProvider);
+    final hasUnreadThreads = ref.watch(
+      sessionChatUnreadThreadsProvider.select((threads) => threads.isNotEmpty),
+    );
 
     ref.listen(lastSessionMessageProvider, (previous, next) {
       if (next == null || identical(previous, next)) return;
@@ -137,7 +139,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
         clipBehavior: Clip.none,
         children: [
           const TotemIcon(TotemIcons.chat),
-          if (unreadThreads.isNotEmpty)
+          if (hasUnreadThreads)
             Container(
               height: 4,
               width: 4,

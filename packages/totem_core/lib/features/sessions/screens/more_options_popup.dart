@@ -72,7 +72,16 @@ class MoreOptions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final currentSession = ref.watch(currentSessionProvider)!;
-    final state = ref.watch(currentSessionStateProvider)!;
+    final state = ref.watch(
+      currentSessionStateProvider.select(
+        (state) => state == null
+            ? null
+            : (
+                roomState: state.roomState,
+                participants: state.participantsList,
+              ),
+      ),
+    )!;
     final deviceState = ref.watch(
       sessionDeviceControllerProvider(currentSession),
     );
@@ -170,7 +179,14 @@ class MoreOptions extends ConsumerWidget {
                 icon: TotemIcons.removePerson,
                 onTap: () {
                   Navigator.of(context).pop();
-                  showBannedParticipantsModal(context, currentSession, state);
+                  final sessionState = ref.read(currentSessionStateProvider);
+                  if (sessionState != null) {
+                    showBannedParticipantsModal(
+                      context,
+                      currentSession,
+                      sessionState,
+                    );
+                  }
                 },
               ),
               if (state.roomState.status == mobile_api.RoomStatus.active)
@@ -200,10 +216,10 @@ class MoreOptions extends ConsumerWidget {
                   builder: (context) {
                     final next = state.roomState
                         .nextParticipantForcePassIdentity(
-                          participants: state.participantsList,
+                          participants: state.participants,
                         );
                     final nextParticipantName = next != null
-                        ? state.participantsList
+                        ? state.participants
                               .firstWhereOrNull((p) => p.identity == next)
                               ?.name
                         : null;
@@ -216,12 +232,17 @@ class MoreOptions extends ConsumerWidget {
                           state.roomState.turnState != mobile_api.TurnState.idle
                           ? () {
                               Navigator.of(context).pop();
-                              onForcePass(
-                                context,
-                                nextParticipantName,
-                                currentSession,
-                                state,
+                              final sessionState = ref.read(
+                                currentSessionStateProvider,
                               );
+                              if (sessionState != null) {
+                                onForcePass(
+                                  context,
+                                  nextParticipantName,
+                                  currentSession,
+                                  sessionState,
+                                );
+                              }
                             }
                           : null,
                     );
@@ -275,7 +296,7 @@ class MoreOptions extends ConsumerWidget {
                 builder: (context) {
                   final String? userName =
                       state.roomState.currentSpeaker != null
-                      ? state.participantsList
+                      ? state.participants
                             .firstWhereOrNull(
                               (p) =>
                                   p.identity == state.roomState.currentSpeaker,
@@ -330,8 +351,7 @@ class MoreOptions extends ConsumerWidget {
       builder: (context) {
         return Consumer(
           builder: (context, ref, child) {
-            final currentSession = ref.watch(currentSessionProvider)!;
-            final isKeeper = currentSession.isCurrentUserKeeper();
+            final isKeeper = ref.watch(isCurrentUserKeeperProvider);
             final isEnded = ref.watch(
               currentSessionStateProvider.select(
                 (s) => s?.roomState.status == mobile_api.RoomStatus.ended,
@@ -348,6 +368,8 @@ class MoreOptions extends ConsumerWidget {
                 if (isKeeper && !isEnded)
                   ConfirmationDialogButton.outlined(
                     onConfirm: () async {
+                      final currentSession = ref.read(currentSessionProvider);
+                      if (currentSession == null) return;
                       await _endSession(context, currentSession);
                       TotemRouter.instance.setTabCloseConfirmationEnabled(
                         false,

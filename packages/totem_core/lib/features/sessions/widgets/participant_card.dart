@@ -34,7 +34,6 @@ class FeaturedParticipantCard extends ConsumerWidget {
     );
     if (!hasSession) return const SizedBox.shrink();
 
-    final sessionController = ref.watch(currentSessionProvider);
     final activeSpeaker = ref.watch(featuredParticipantProvider);
     final roomStatus = ref.watch(roomStatusProvider);
     final hasKeeper = ref.watch(hasKeeperProvider);
@@ -172,19 +171,23 @@ class FeaturedParticipantCard extends ConsumerWidget {
                                     if (isCurrentUserKeeper &&
                                         roomStatus == RoomStatus.active)
                                       SessionElapsedTimer(
-                                        onTap: sessionController == null
-                                            ? null
-                                            : () => unawaited(
-                                                ref
-                                                    .read(
-                                                      sessionMessagingControllerProvider(
-                                                        sessionController,
-                                                      ).notifier,
-                                                    )
-                                                    .sendShareTimeReminder(
-                                                      activeSpeaker.identity,
-                                                    ),
-                                              ),
+                                        onTap: () {
+                                          final session = ref.read(
+                                            currentSessionProvider,
+                                          );
+                                          if (session == null) return;
+                                          unawaited(
+                                            ref
+                                                .read(
+                                                  sessionMessagingControllerProvider(
+                                                    session,
+                                                  ).notifier,
+                                                )
+                                                .sendShareTimeReminder(
+                                                  activeSpeaker.identity,
+                                                ),
+                                          );
+                                        },
                                       ),
                                     SpeakingIndicatorOrEmoji(
                                       participant: activeSpeaker,
@@ -253,7 +256,6 @@ class ParticipantCard extends ConsumerWidget {
             sessionParticipantPresentation(session, participant.identity),
       ),
     );
-    final sessionController = ref.watch(currentSessionProvider);
     final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
 
@@ -300,19 +302,23 @@ class ParticipantCard extends ConsumerWidget {
                                 presentation.isSpeaking &&
                                 presentation.roomStatus == RoomStatus.active)
                               SessionElapsedTimer(
-                                onTap: sessionController == null
-                                    ? null
-                                    : () => unawaited(
-                                        ref
-                                            .read(
-                                              sessionMessagingControllerProvider(
-                                                sessionController,
-                                              ).notifier,
-                                            )
-                                            .sendShareTimeReminder(
-                                              participant.identity,
-                                            ),
-                                      ),
+                                onTap: () {
+                                  final session = ref.read(
+                                    currentSessionProvider,
+                                  );
+                                  if (session == null) return;
+                                  unawaited(
+                                    ref
+                                        .read(
+                                          sessionMessagingControllerProvider(
+                                            session,
+                                          ).notifier,
+                                        )
+                                        .sendShareTimeReminder(
+                                          participant.identity,
+                                        ),
+                                  );
+                                },
                               ),
                           ],
                         ),
