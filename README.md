@@ -119,18 +119,25 @@ Notifications are handled using Firebase Cloud Messaging (FCM). In the notificat
 
 ## 🚢 Release (for developers)
 
-The release process is automated via a Dart script that handles versioning, tagging, and pushing to the repository.
+The release script handles versioning, tagging, and pushing. The resulting `v*`
+tag starts `.github/workflows/draft-release-on-tag.yml`, which:
+
+1. Creates or updates a GitHub draft release with generated notes.
+2. Builds signed staging and production Android App Bundles and iOS IPAs.
+3. Attaches all four artifacts to the draft release.
+4. Uploads each AAB to its configured Google Play track.
+5. Uploads each IPA to the corresponding App Store Connect app for TestFlight processing.
 
 ### Prerequisites
 
 Before creating a release, ensure:
-- You are on the `main` branch
-- Your working tree is clean (no uncommitted changes)
-- Your local `main` branch is up-to-date with `origin/main`
+
+- You are on the `main` branch.
+- Your working tree is clean (no uncommitted changes).
+- Your local `main` branch is up-to-date with `origin/main`.
+- The repository store-upload configuration below is complete.
 
 ### Creating a Release
-
-Run the release command:
 
 ```bash
 make release
@@ -140,6 +147,91 @@ The script will:
 1. Display the current version from `pubspec.yaml`
 2. Suggest a default version (increments patch and build number)
 3. Prompt you to enter a new version
+   Build numbers and Android version codes are immutable in both stores; a failed job must be retried with a new version if the store already accepted that build.
+
+### Store upload configuration
+
+Configure these GitHub repository **secrets** in addition to the existing build
+and signing secrets:
+
+| Secret | Source | Applies to |
+| --- | --- | --- |
+| `APP_STORE_CONNECT_KEY_ID` | Key ID shown for an App Store Connect API key under Users and Access → Integrations | Both iOS apps |
+| `APP_STORE_CONNECT_ISSUER_ID` | Issuer ID shown on the App Store Connect API keys page | Both iOS apps |
+| `APP_STORE_CONNECT_PRIVATE_KEY` | Complete contents of the API key's downloaded `AuthKey_<KEY_ID>.p8` file | Both iOS apps |
+| `ANDROID_SERVICE_ACCOUNT_JSON` | Complete JSON key for the dedicated Google service account linked to Play Console | Both Android apps |
+
+Configure these non-sensitive GitHub repository **variables**. Tracks are
+required explicitly because this repository does not document a staging track;
+do not choose `production` unless these tag builds are intended to go public.
+The previous production-only workflow used the custom `qa` track with
+`completed` status.
+
+| Variable | Value | Applies to |
+| --- | --- | --- |
+| `GOOGLE_PLAY_STAGING_TRACK` | Existing Play track name for `org.totem.app.dev` (for example, a configured custom/internal testing track) | Staging Android |
+| `GOOGLE_PLAY_STAGING_RELEASE_STATUS` | Android Publisher status: `draft`, `completed`, `halted`, or `inProgress` | Staging Android |
+| `GOOGLE_PLAY_PRODUCTION_TRACK` | Existing Play track name for `org.totem.app` (previously `qa`) | Production Android |
+| `GOOGLE_PLAY_PRODUCTION_RELEASE_STATUS` | Android Publisher status: `draft`, `completed`, `halted`, or `inProgress` (previously `completed`) | Production Android |
+
+The Android package names come from the checked-in Gradle flavor configuration
+and are intentionally not duplicated as secrets or variables.
+
+#### App Store Connect setup
+
+Create an App Store Connect team API key that can upload builds to both
+`org.totem.ios` and `org.totem.ios.dev`. Give it only the minimum role that can
+upload builds (normally Developer or App Manager), then store the key metadata
+and one-time-download `.p8` contents in the secrets above. Both app records,
+bundle IDs, distribution certificates, and provisioning profiles must already
+exist.
+
+The workflow writes the private key temporarily to the path expected by
+`xcrun altool`, uploads the local IPA, and deletes the temporary key even when
+the command fails. It does not wait for Apple processing or submit for review.
+
+#### Google Play setup
+
+Create a dedicated Google Cloud service account, enable the Google Play Android
+Developer API for its project, link the service account in Play Console, and
+limit its Play Console access to the two apps. Grant only the release permission
+needed by the configured tracks (testing-track release permission for testing
+tracks, plus production release permission only if a production track is
+actually configured). Both package records must already exist in Play Console,
+and Play App Signing must be configured as required by Google.
+
+The repository-owned `.github/scripts/google-play-upload.mjs` uses no npm
+packages. It creates an Android Publisher edit, uploads the local AAB, assigns
+the returned version code to the configured track/status, and commits the edit.
+On failure it attempts to delete the uncommitted edit.
+
+### Remaining manual release work
+
+After Apple finishes processing the build, assign the appropriate build to the
+desired TestFlight groups in App Store Connect. TestFlight groups and testers
+are not managed by CI.
+
+For Google Play, `completed` makes the release available according to the
+selected track's existing audience and review rules. A `draft` release still
+requires review/completion in Play Console. CI does not add testers, change a
+track's tester lists, perform staged-rollout management, or promote a build to a
+different track.
+
+### Testing store deployment safely
+
+Run the dependency-free script tests locally first:
+
+```bash
+node --test .github/scripts/google-play-upload.test.mjs
+```
+
+Before relying on a normal release, configure both Android targets as
+non-production testing tracks (or `draft` where supported), use a new unique
+Flutter build number, and run the normal `make release` flow. Confirm all four
+artifacts remain on the GitHub draft release, both Play edits are committed to
+the intended tracks/statuses, and both IPAs appear in App Store Connect. Apple
+and Google do not allow an accepted build/version code to be overwritten, so a
+store upload cannot be safely tested by repeatedly reusing the same version.
 
 ## 🌐 Web hosting (Cloudflare Workers)
 

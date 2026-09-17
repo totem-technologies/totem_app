@@ -35,7 +35,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        flavor: [staging, production]
+        include:
+          - flavor: staging
+            package_name: org.totem.app.dev
+            track: ${{ vars.GOOGLE_PLAY_STAGING_TRACK }}
+            release_status: ${{ vars.GOOGLE_PLAY_STAGING_RELEASE_STATUS }}
+          - flavor: production
+            package_name: org.totem.app
+            track: ${{ vars.GOOGLE_PLAY_PRODUCTION_TRACK }}
+            release_status: ${{ vars.GOOGLE_PLAY_PRODUCTION_RELEASE_STATUS }}
 
     steps:
       - uses: actions/checkout@v6
@@ -69,6 +77,16 @@ jobs:
           tag_name: ${{ github.ref_name }}
           draft: true
           files: packages/totem_app/artifacts/*.aab
+
+      - name: Upload AAB to Google Play
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
+        run: |
+          node ../../.github/scripts/google-play-upload.mjs \
+            --aab artifacts/totem-${{ matrix.flavor }}-${{ github.ref_name }}.aab \
+            --package-name "${{ matrix.package_name }}" \
+            --track "${{ matrix.track }}" \
+            --status "${{ matrix.release_status }}"
 
   ios:
     name: iOS (${{ matrix.flavor }})
@@ -122,3 +140,23 @@ jobs:
           tag_name: ${{ github.ref_name }}
           draft: true
           files: packages/totem_app/artifacts/*.ipa
+
+      - name: Upload IPA to App Store Connect
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          key_directory="$HOME/.appstoreconnect/private_keys"
+          key_path="$key_directory/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
+          mkdir -p "$key_directory"
+          chmod 700 "$key_directory"
+          printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          trap 'rm -f "$key_path"' EXIT
+
+          xcrun altool --upload-app \
+            --type ios \
+            --file "artifacts/totem-${{ matrix.flavor }}-${{ github.ref_name }}.ipa" \
+            --apiKey "$APP_STORE_CONNECT_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
