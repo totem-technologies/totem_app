@@ -1,7 +1,7 @@
 name: totem_core
 description: "Guided introspection groups."
 publish_to: "none"
-version: 0.0.82+82
+version: 0.0.83+83
 environment:
   sdk: ^3.11.3
 resolution: workspace
