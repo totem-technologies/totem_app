@@ -40,6 +40,17 @@ void main() {
     check(sendCount).equals(2);
   });
 
+  testWidgets('grows from one line to at most three lines', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: MessageInputBar())),
+    );
+
+    final editableText = tester.widget<EditableText>(find.byType(EditableText));
+
+    check(editableText.minLines).equals(1);
+    check(editableText.maxLines).equals(3);
+  });
+
   testWidgets('keeps focus after submitting from the keyboard', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

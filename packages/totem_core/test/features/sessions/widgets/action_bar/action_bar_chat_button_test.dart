@@ -102,7 +102,9 @@ void main() {
     await tester.pump();
 
     check(tester.widgetList(findPendingBadge())).length.equals(1);
-    check(tester.widgetList(find.text('New message'))).length.equals(1);
+    check(
+      tester.widgetList(find.text('New message from Keeper')),
+    ).length.equals(1);
     check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
 
     await tester.tap(find.bySemanticsLabel('Chat'));
@@ -153,7 +155,9 @@ void main() {
     container.read(_testLastMessageProvider.notifier).set(message);
     await tester.pump();
 
-    check(tester.widgetList(find.text('New message'))).length.equals(1);
+    check(
+      tester.widgetList(find.textContaining('New message')),
+    ).length.equals(1);
   });
 
   testWidgets('does not show popup while chat is open', (tester) async {
@@ -237,8 +241,65 @@ void main() {
         );
     await tester.pump();
 
-    expect(find.text('New message'), findsOneWidget);
+    check(
+      tester.widgetList(find.text('New message from Lucas')),
+    ).length.equals(1);
   });
+
+  testWidgets(
+    'keeps other-thread unread badges visible in docked chat and clears them when read',
+    (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await pumpWidget(
+        tester,
+        child: const ActionBarChatButton(),
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => FakeAuthController(AuthState.unauthenticated()),
+          ),
+          lastSessionMessageProvider.overrideWith(
+            (ref) => ref.watch(_testLastMessageProvider),
+          ),
+          sessionMessagesProvider.overrideWith((ref) => const []),
+          isCurrentUserKeeperProvider.overrideWith((ref) => true),
+          currentSessionEventProvider.overrideWith((ref) => null),
+        ],
+      );
+
+      final context = tester.element(find.byType(ActionBarChatButton));
+      final container = ProviderScope.containerOf(context, listen: false);
+      container.read(sessionChatOpenProvider.notifier).open = true;
+      await tester.pump();
+
+      container
+          .read(_testLastMessageProvider.notifier)
+          .set(
+            SessionChatMessage(
+              id: 'msg-docked-dm',
+              sender: false,
+              message: 'I need support',
+              timestamp: 7,
+              recipientIdentity: 'keeper-1',
+              participant: MockRemoteParticipant('lucas', 'Lucas'),
+            ),
+          );
+      await tester.pump();
+
+      check(tester.widgetList(findPendingBadge())).length.equals(1);
+      check(
+        tester.widgetList(find.textContaining('New message')),
+      ).length.equals(1);
+
+      container.read(sessionChatThreadTargetProvider.notifier).target = 'lucas';
+      await tester.pump();
+
+      check(tester.widgetList(findPendingBadge())).length.equals(0);
+    },
+  );
 
   testWidgets('a docked flag on a narrow viewport still opens the sheet', (
     tester,
@@ -326,7 +387,9 @@ void main() {
         );
     await tester.pump();
 
-    expect(find.text('New message'), findsOneWidget);
+    check(
+      tester.widgetList(find.textContaining('New message')),
+    ).length.equals(1);
 
     await tester.tap(find.bySemanticsLabel('Chat'));
     await tester.pumpAndSettle();

@@ -62,73 +62,76 @@ class _MessageInputBarState extends State<MessageInputBar> {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppTheme.surfaceCard,
-        border: Border(top: BorderSide(color: AppTheme.divider)),
-      ),
-      child: SafeArea(
-        top: false,
-        left: false,
-        right: false,
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 8, 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  enabled: widget.enabled,
-                  autofocus: widget.autofocus,
-                  maxLines: 1,
-                  textInputAction: TextInputAction.send,
-                  onEditingComplete: _focusNode.requestFocus,
-                  onFieldSubmitted: (_) => unawaited(_submit()),
-                  style: const TextStyle(
-                    color: AppTheme.textHeading,
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: widget.hintText,
-                    hintStyle: const TextStyle(
-                      color: AppTheme.textMuted,
+    return TextFieldTapRegion(
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: AppTheme.surfaceCard,
+          border: Border(top: BorderSide(color: AppTheme.divider)),
+        ),
+        child: SafeArea(
+          top: false,
+          left: false,
+          right: false,
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 8, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    enabled: widget.enabled,
+                    autofocus: widget.autofocus,
+                    minLines: 1,
+                    maxLines: 3,
+                    textInputAction: TextInputAction.send,
+                    onEditingComplete: _focusNode.requestFocus,
+                    onFieldSubmitted: (_) => unawaited(_submit()),
+                    style: const TextStyle(
+                      color: AppTheme.textHeading,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w400,
                     ),
-                    filled: true,
-                    fillColor: AppTheme.messageInputFill,
-                    contentPadding: const EdgeInsetsDirectional.fromSTEB(
-                      20,
-                      12,
-                      16,
-                      12,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25),
-                      borderSide: const BorderSide(color: AppTheme.divider),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25),
-                      borderSide: const BorderSide(color: AppTheme.divider),
-                    ),
-                    disabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25),
-                      borderSide: const BorderSide(color: AppTheme.divider),
+                    decoration: InputDecoration(
+                      hintText: widget.hintText,
+                      hintStyle: const TextStyle(
+                        color: AppTheme.textMuted,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      filled: true,
+                      fillColor: AppTheme.messageInputFill,
+                      contentPadding: const EdgeInsetsDirectional.fromSTEB(
+                        20,
+                        12,
+                        16,
+                        12,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: const BorderSide(color: AppTheme.divider),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: const BorderSide(color: AppTheme.divider),
+                      ),
+                      disabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: const BorderSide(color: AppTheme.divider),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              _SendButton(
-                controller: _controller,
-                enabled: widget.enabled,
-                isSubmitting: _isSubmitting,
-                onSubmit: () => unawaited(_submit()),
-              ),
-            ],
+                const SizedBox(width: 8),
+                _SendButton(
+                  controller: _controller,
+                  enabled: widget.enabled,
+                  isSubmitting: _isSubmitting,
+                  onSubmit: () => unawaited(_submit()),
+                ),
+              ],
+            ),
           ),
         ),
       ),

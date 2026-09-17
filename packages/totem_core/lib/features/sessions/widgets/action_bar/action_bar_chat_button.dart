@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart'
+    show SessionChatMessage;
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
@@ -33,6 +35,23 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     if (_latestUnreadThread == thread) {
       _latestUnreadThread = _unreadThreads.isEmpty ? null : _unreadThreads.last;
     }
+  }
+
+  String _notificationTitle(SessionChatMessage message) {
+    final participant = message.participant;
+    final keeperIdentity = ref
+        .read(currentSessionStateProvider)
+        ?.roomState
+        .keeper;
+    final isFromKeeper =
+        message.isEveryoneThread ||
+        (keeperIdentity != null &&
+            keeperIdentity.isNotEmpty &&
+            participant?.identity == keeperIdentity);
+    if (isFromKeeper) return 'New message from Keeper';
+
+    final name = participant?.name;
+    return 'New message from ${name != null && name.isNotEmpty ? name : 'someone'}';
   }
 
   String? _localIdentity() {
@@ -115,7 +134,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       _notification = NotificationController().showTimed(
         context,
         icon: TotemIcons.chat,
-        title: 'New message',
+        title: _notificationTitle(next),
         message: next.message,
         onTap: () {
           unawaited(_openChat(thread: thread, fromUnread: true));

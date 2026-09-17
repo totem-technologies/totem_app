@@ -395,7 +395,9 @@ void main() {
       await tester.pump();
 
       check(tester.widgetList(findPendingBadge())).length.equals(1);
-      check(tester.widgetList(find.text('New message'))).length.equals(1);
+      check(
+        tester.widgetList(find.text('New message from Keeper')),
+      ).length.equals(1);
       check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
     });
 
