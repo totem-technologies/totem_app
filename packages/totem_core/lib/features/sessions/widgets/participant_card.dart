@@ -29,13 +29,20 @@ class FeaturedParticipantCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
-    final session = ref.watch(currentSessionStateProvider);
-    if (session == null) {
-      return const SizedBox.shrink();
-    }
+    final hasSession = ref.watch(
+      currentSessionStateProvider.select((session) => session != null),
+    );
+    if (!hasSession) return const SizedBox.shrink();
 
     final sessionController = ref.watch(currentSessionProvider);
-    final activeSpeaker = session.featuredParticipant();
+    final activeSpeaker = ref.watch(featuredParticipantProvider);
+    final roomStatus = ref.watch(roomStatusProvider);
+    final hasKeeper = ref.watch(hasKeeperProvider);
+    final keeperIdentity = ref.watch(
+      currentSessionStateProvider.select(
+        (session) => session?.roomState.keeper,
+      ),
+    );
     final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
 
     final theme = Theme.of(context);
@@ -56,8 +63,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (session.roomState.status == RoomStatus.waitingRoom &&
-                !session.hasKeeper)
+            if (roomStatus == RoomStatus.waitingRoom && !hasKeeper)
               Positioned.fill(
                 child: Container(
                   color: AppTheme.slate,
@@ -127,7 +133,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               spacing: 2,
                               children: [
-                                if (session.isKeeper(activeSpeaker.identity))
+                                if (keeperIdentity == activeSpeaker.identity)
                                   Container(
                                     padding:
                                         const EdgeInsetsDirectional.symmetric(
@@ -164,8 +170,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
                                     if (isCurrentUserKeeper &&
-                                        session.roomState.status ==
-                                            RoomStatus.active)
+                                        roomStatus == RoomStatus.active)
                                       SessionElapsedTimer(
                                         onTap: sessionController == null
                                             ? null
@@ -242,13 +247,15 @@ class ParticipantCard extends ConsumerWidget {
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
-    final session = ref.watch(currentSessionStateProvider);
+    final presentation = ref.watch(
+      currentSessionStateProvider.select(
+        (session) =>
+            sessionParticipantPresentation(session, participant.identity),
+      ),
+    );
     final sessionController = ref.watch(currentSessionProvider);
     final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
-
-    final isKeeper = session?.isKeeper(participant.identity) ?? false;
-    final isSpeaking = participant.identity == session?.speakingNow;
 
     const borderRadius = 20.0;
 
@@ -290,8 +297,8 @@ class ParticipantCard extends ConsumerWidget {
                               metrics: overlay,
                             ),
                             if (isCurrentUserKeeper &&
-                                isSpeaking &&
-                                session?.roomState.status == RoomStatus.active)
+                                presentation.isSpeaking &&
+                                presentation.roomStatus == RoomStatus.active)
                               SessionElapsedTimer(
                                 onTap: sessionController == null
                                     ? null
@@ -310,7 +317,7 @@ class ParticipantCard extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      if (session != null &&
+                      if (presentation.hasSession &&
                           isCurrentUserKeeper &&
                           currentUserSlug != participant.identity)
                         PositionedDirectional(
@@ -322,7 +329,7 @@ class ParticipantCard extends ConsumerWidget {
                             metrics: overlay,
                           ),
                         )
-                      else if (isKeeper)
+                      else if (presentation.isKeeper)
                         PositionedDirectional(
                           top: overlayPadding,
                           end: overlayPadding,

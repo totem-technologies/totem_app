@@ -12,6 +12,41 @@ import 'package:totem_core/features/sessions/controllers/features/session_device
 
 part 'session_scope_provider.g.dart';
 
+typedef SessionParticipantPresentation = ({
+  bool hasSession,
+  bool isKeeper,
+  bool isSpeaking,
+  RoomStatus? roomStatus,
+});
+
+typedef SessionParticipantLayout = ({
+  List<Participant> participants,
+  List<String> talkingOrder,
+  String speakingNow,
+  String? nextSpeaker,
+});
+
+SessionParticipantPresentation sessionParticipantPresentation(
+  SessionRoomState? session,
+  String participantIdentity,
+) {
+  return (
+    hasSession: session != null,
+    isKeeper: session?.isKeeper(participantIdentity) ?? false,
+    isSpeaking: participantIdentity == session?.speakingNow,
+    roomStatus: session?.roomState.status,
+  );
+}
+
+SessionParticipantLayout sessionParticipantLayout(SessionRoomState? session) {
+  return (
+    participants: session?.participants.participants ?? const <Participant>[],
+    talkingOrder: session?.roomState.talkingOrder ?? const <String>[],
+    speakingNow: session?.speakingNow ?? '',
+    nextSpeaker: session?.roomState.nextSpeaker,
+  );
+}
+
 class SessionParticipantKeys {
   final Map<String, GlobalKey> _participantKeys = {};
 
@@ -23,9 +58,15 @@ class SessionParticipantKeys {
   }
 }
 
-final sessionParticipantKeysProvider = Provider<SessionParticipantKeys>((ref) {
-  return SessionParticipantKeys();
-}, name: 'Participant Video Keys');
+final Provider<SessionParticipantKeys> sessionParticipantKeysProvider =
+    Provider.autoDispose<SessionParticipantKeys>(
+      (ref) {
+        ref.watch(sessionScopeProvider);
+        return SessionParticipantKeys();
+      },
+      name: 'Participant Video Keys',
+      dependencies: [sessionScopeProvider],
+    );
 
 /// Provider that will be overridden at room scope.
 /// Returns the current session options for the active room.

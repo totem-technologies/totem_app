@@ -818,7 +818,9 @@ class SessionController extends _$SessionController {
 
     return participantsSorting(
       originalParticipants: participants,
-      state: state,
+      talkingOrder: state.roomState.talkingOrder,
+      speakingNow: state.speakingNow,
+      nextSpeaker: state.roomState.nextSpeaker,
       showSpeakingNow: true,
     );
   }
