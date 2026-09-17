@@ -397,39 +397,43 @@ class MoreOptions extends ConsumerWidget {
   ) async {
     final controller = TextEditingController(text: currentPrompt);
     final formKey = GlobalKey<FormState>();
-    final result = await showDialog<String>(
-      context: context,
-      useRootNavigator: false,
-      builder: (context) => ConfirmationDialog(
-        title: 'Update Round Prompt',
-        content: 'Enter a prompt for this round',
-        confirmButtonText: 'Update',
-        type: ConfirmationDialogType.standard,
-        contentWidget: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: controller,
-            autofocus: true,
-            maxLines: 3,
-            minLines: 1,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter a prompt';
-              }
-              return null;
-            },
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+    String? result;
+    try {
+      result = await showDialog<String>(
+        context: context,
+        useRootNavigator: false,
+        builder: (context) => ConfirmationDialog(
+          title: 'Update Round Prompt',
+          content: 'Enter a prompt for this round',
+          confirmButtonText: 'Update',
+          type: ConfirmationDialogType.standard,
+          contentWidget: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              autofocus: true,
+              maxLines: 3,
+              minLines: 1,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter a prompt';
+                }
+                return null;
+              },
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            ),
           ),
+          onConfirm: () async {
+            if (!formKey.currentState!.validate()) return;
+            final message = controller.text.trim();
+            await session.keeper.setPrompt(message);
+            if (context.mounted) Navigator.of(context).pop(message);
+          },
         ),
-        onConfirm: () async {
-          if (!formKey.currentState!.validate()) return;
-          final message = controller.text.trim();
-          await session.keeper.setPrompt(message);
-          if (context.mounted) Navigator.of(context).pop(message);
-        },
-      ),
-    );
-    controller.dispose();
+      );
+    } finally {
+      controller.dispose();
+    }
     if (result != null && result.isNotEmpty && context.mounted) {
       ScaffoldMessenger.of(
         context,

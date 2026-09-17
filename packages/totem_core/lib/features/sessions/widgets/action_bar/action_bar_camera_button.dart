@@ -246,7 +246,11 @@ class _ActionBarCameraSwitcherButtonOverlayState
     if (_isDismissing) return;
     _isDismissing = true;
 
-    await _overlayAnimationController.reverse();
+    try {
+      await _overlayAnimationController.reverse().orCancel;
+    } on TickerCanceled {
+      return;
+    }
     if (mounted) {
       widget.onDismissOverlay();
     }
@@ -520,9 +524,23 @@ class _SessionActionBarCameraButtonState
   void _bindParticipantListener() {
     _participantListener?.dispose();
     _participantListener = widget.participant.createListener()
-      ..on<ParticipantEvent>((_) {
-        if (mounted) setState(() {});
-      });
+      ..on<TrackPublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackUnpublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackMutedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackUnmutedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      );
+  }
+
+  void _onCameraPublicationChanged(TrackPublication<Track> publication) {
+    if (!mounted || publication.source != TrackSource.camera) return;
+    setState(() {});
   }
 
   void _listenToCameraDevices() {
@@ -538,9 +556,8 @@ class _SessionActionBarCameraButtonState
     );
 
     Hardware.instance.videoInputs().then((devices) {
-      _availableCameraDevices = devices;
       if (!mounted) return;
-      setState(() {});
+      setState(() => _availableCameraDevices = devices);
     });
   }
 

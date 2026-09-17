@@ -128,6 +128,7 @@ class _BannedParticipantsState extends ConsumerState<BannedParticipants> {
                         participantSlug: participantSlug,
                         session: widget.session,
                         onUnbanned: () {
+                          if (!mounted) return;
                           setState(() {
                             _unbannedSlugs.add(participantSlug);
                           });
@@ -175,6 +176,7 @@ class _BannedParticipantItemState
     setState(() => _loading = true);
     try {
       await widget.session.keeper.unbanParticipant(widget.participantSlug);
+      if (!mounted) return;
       widget.onUnbanned();
     } catch (error) {
       if (mounted && context.mounted) {
