@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 /// Pill composer + circular send button shared by DMs and session chat.
@@ -55,6 +56,12 @@ class _MessageInputBarState extends State<MessageInputBar> {
       final accepted = await onSend(text);
       if (!mounted || !accepted) return;
       _controller.clear();
+    } catch (error, stackTrace) {
+      logger.e(
+        'Error sending chat message',
+        error: error,
+        stackTrace: stackTrace,
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -188,30 +195,19 @@ class _SendButtonState extends State<_SendButton> {
   @override
   Widget build(BuildContext context) {
     final canSend = widget.enabled && !widget.isSubmitting && _hasText;
-    return Semantics(
-      button: true,
-      enabled: canSend,
-      label: 'Send',
-      child: Tooltip(
-        message: 'Send',
-        child: GestureDetector(
-          onTap: canSend ? widget.onSubmit : null,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            width: 45,
-            height: 45,
-            decoration: BoxDecoration(
-              color: canSend ? AppTheme.mauve : AppTheme.messageGray,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: const TotemIcon(
-              TotemIcons.sendMessage,
-              color: AppTheme.white,
-              size: 22,
-            ),
-          ),
-        ),
+    return IconButton(
+      onPressed: canSend ? widget.onSubmit : null,
+      style: IconButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        backgroundColor: AppTheme.mauve,
+        disabledBackgroundColor: AppTheme.messageGray,
+        foregroundColor: AppTheme.white,
+        shape: const CircleBorder(),
+      ),
+      icon: const TotemIcon(
+        TotemIcons.sendMessage,
+        color: AppTheme.white,
+        size: 22,
       ),
     );
   }

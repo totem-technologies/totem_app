@@ -92,6 +92,29 @@ void main() {
     });
   });
 
+  group('session chat unread threads', () {
+    test('persists unread threads until the visible panel marks them read', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final controller =
+          container.read(sessionChatUnreadThreadsProvider.notifier)
+            ..markUnread('lucas')
+            ..markUnread(null);
+
+      check(container.read(sessionChatUnreadThreadsProvider)).contains('lucas');
+      check(container.read(sessionChatUnreadThreadsProvider)).contains(null);
+      check(controller.latestUnreadThread).isNull();
+
+      controller.markRead(null);
+
+      check(container.read(sessionChatUnreadThreadsProvider)).contains('lucas');
+      check(
+        container.read(sessionChatUnreadThreadsProvider).contains(null),
+      ).isFalse();
+      check(controller.latestUnreadThread).equals('lucas');
+    });
+  });
+
   group('session scope selectors', () {
     test('defaults when scope is not overridden', () {
       final container = ProviderContainer();

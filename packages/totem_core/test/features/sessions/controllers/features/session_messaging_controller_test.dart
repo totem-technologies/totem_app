@@ -332,9 +332,19 @@ void main() {
     });
 
     group('Send Message', () {
-      test('sendMessage completes when keeper', () async {
-        final mockSession = FakeSessionController();
-        mockSession.isCurrentUserKeeperValue = true;
+      test('adds a message after reliable publication succeeds', () async {
+        final keeper = MockLocalParticipant('keeper-1');
+        when(
+          () => keeper.publishData(
+            any(),
+            reliable: true,
+            destinationIdentities: null,
+            topic: SessionCommunicationTopics.chat.topic,
+          ),
+        ).thenAnswer((_) async {});
+        final mockSession = FakeSessionController()
+          ..isCurrentUserKeeperValue = true
+          ..mockRoom = FakeRoom(keeper);
 
         final container = ProviderContainer();
         final controller = container.read(
@@ -349,6 +359,46 @@ void main() {
           mockSession.addedChatMessages.first.message,
         ).equals('Hello everyone!');
         check(mockSession.addedChatMessages.first.recipientIdentity).isNull();
+      });
+
+      test('does not add a message when the room is unavailable', () async {
+        final mockSession = FakeSessionController()
+          ..isCurrentUserKeeperValue = true;
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        final accepted = await controller.sendMessage('Hello everyone!');
+
+        check(accepted).isFalse();
+        check(mockSession.addedChatMessages).isEmpty();
+      });
+
+      test('does not add a message when publication fails', () async {
+        final keeper = MockLocalParticipant('keeper-1');
+        when(
+          () => keeper.publishData(
+            any(),
+            reliable: true,
+            destinationIdentities: null,
+            topic: SessionCommunicationTopics.chat.topic,
+          ),
+        ).thenThrow(StateError('publication failed'));
+        final mockSession = FakeSessionController()
+          ..isCurrentUserKeeperValue = true
+          ..mockRoom = FakeRoom(keeper);
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        final accepted = await controller.sendMessage('Hello everyone!');
+
+        check(accepted).isFalse();
+        check(mockSession.addedChatMessages).isEmpty();
       });
 
       test(
@@ -370,8 +420,18 @@ void main() {
       );
 
       test('keeper can send a private message', () async {
-        final mockSession = FakeSessionController();
-        mockSession.isCurrentUserKeeperValue = true;
+        final keeper = MockLocalParticipant('keeper-1');
+        when(
+          () => keeper.publishData(
+            any(),
+            reliable: true,
+            destinationIdentities: const ['lucas'],
+            topic: SessionCommunicationTopics.chat.topic,
+          ),
+        ).thenAnswer((_) async {});
+        final mockSession = FakeSessionController()
+          ..isCurrentUserKeeperValue = true
+          ..mockRoom = FakeRoom(keeper);
 
         final container = ProviderContainer();
         final controller = container.read(
@@ -389,8 +449,18 @@ void main() {
       });
 
       test('participant can send a private message to the keeper', () async {
-        final mockSession = FakeSessionController();
-        mockSession.isCurrentUserKeeperValue = false;
+        final participant = MockLocalParticipant('user-1');
+        when(
+          () => participant.publishData(
+            any(),
+            reliable: true,
+            destinationIdentities: const ['keeper-1'],
+            topic: SessionCommunicationTopics.chat.topic,
+          ),
+        ).thenAnswer((_) async {});
+        final mockSession = FakeSessionController()
+          ..isCurrentUserKeeperValue = false
+          ..mockRoom = FakeRoom(participant);
 
         final container = ProviderContainer();
         final controller = container.read(

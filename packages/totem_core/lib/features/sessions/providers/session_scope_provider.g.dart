@@ -817,11 +817,7 @@ final class SessionThreadMessagesProvider
   /// Messages visible in a single chat thread.
   SessionThreadMessagesProvider._({
     required SessionThreadMessagesFamily super.from,
-    required (
-      List<SessionChatMessage>,
-      ({String? localIdentity, String? threadTarget}),
-    )
-    super.argument,
+    required ({String? localIdentity, String? threadTarget}) super.argument,
   }) : super(
          retry: null,
          name: r'sessionThreadMessagesProvider',
@@ -830,6 +826,12 @@ final class SessionThreadMessagesProvider
          $allTransitiveDependencies: null,
        );
 
+  static final $allTransitiveDependencies0 = sessionMessagesProvider;
+  static final $allTransitiveDependencies1 =
+      SessionMessagesProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      SessionMessagesProvider.$allTransitiveDependencies1;
+
   @override
   String debugGetCreateSourceHash() => _$sessionThreadMessagesHash();
 
@@ -837,7 +839,7 @@ final class SessionThreadMessagesProvider
   String toString() {
     return r'sessionThreadMessagesProvider'
         ''
-        '$argument';
+        '($argument)';
   }
 
   @$internal
@@ -849,12 +851,8 @@ final class SessionThreadMessagesProvider
   @override
   List<SessionChatMessage> create(Ref ref) {
     final argument =
-        this.argument
-            as (
-              List<SessionChatMessage>,
-              ({String? localIdentity, String? threadTarget}),
-            );
-    return sessionThreadMessages(ref, argument.$1, argument.$2);
+        this.argument as ({String? localIdentity, String? threadTarget});
+    return sessionThreadMessages(ref, argument);
   }
 
   /// {@macro riverpod.override_with_value}
@@ -877,7 +875,7 @@ final class SessionThreadMessagesProvider
 }
 
 String _$sessionThreadMessagesHash() =>
-    r'8d46018769e347bc7e291ca4a9544f3a5d791211';
+    r'9c6aac7ae0b1cae15709104daa31df71928de559';
 
 /// Messages visible in a single chat thread.
 
@@ -885,27 +883,26 @@ final class SessionThreadMessagesFamily extends $Family
     with
         $FunctionalFamilyOverride<
           List<SessionChatMessage>,
-          (
-            List<SessionChatMessage>,
-            ({String? localIdentity, String? threadTarget}),
-          )
+          ({String? localIdentity, String? threadTarget})
         > {
   SessionThreadMessagesFamily._()
     : super(
         retry: null,
         name: r'sessionThreadMessagesProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[sessionMessagesProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          SessionThreadMessagesProvider.$allTransitiveDependencies0,
+          SessionThreadMessagesProvider.$allTransitiveDependencies1,
+          SessionThreadMessagesProvider.$allTransitiveDependencies2,
+        ],
         isAutoDispose: true,
       );
 
   /// Messages visible in a single chat thread.
 
   SessionThreadMessagesProvider call(
-    List<SessionChatMessage> messages,
     ({String? localIdentity, String? threadTarget}) thread,
-  ) =>
-      SessionThreadMessagesProvider._(argument: (messages, thread), from: this);
+  ) => SessionThreadMessagesProvider._(argument: thread, from: this);
 
   @override
   String toString() => r'sessionThreadMessagesProvider';
@@ -1045,6 +1042,65 @@ abstract class _$SessionChatThreadTarget extends $Notifier<String?> {
             as $ClassProviderElement<
               AnyNotifier<String?, String?>,
               String?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Threads with messages the user has not viewed in a mounted chat panel.
+
+@ProviderFor(SessionChatUnreadThreads)
+final sessionChatUnreadThreadsProvider = SessionChatUnreadThreadsProvider._();
+
+/// Threads with messages the user has not viewed in a mounted chat panel.
+final class SessionChatUnreadThreadsProvider
+    extends $NotifierProvider<SessionChatUnreadThreads, Set<String?>> {
+  /// Threads with messages the user has not viewed in a mounted chat panel.
+  SessionChatUnreadThreadsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionChatUnreadThreadsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionChatUnreadThreadsHash();
+
+  @$internal
+  @override
+  SessionChatUnreadThreads create() => SessionChatUnreadThreads();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Set<String?> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Set<String?>>(value),
+    );
+  }
+}
+
+String _$sessionChatUnreadThreadsHash() =>
+    r'a208f087beb0a2420fdf5f78f1f288158335e6af';
+
+/// Threads with messages the user has not viewed in a mounted chat panel.
+
+abstract class _$SessionChatUnreadThreads extends $Notifier<Set<String?>> {
+  Set<String?> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<Set<String?>, Set<String?>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<Set<String?>, Set<String?>>,
+              Set<String?>,
               Object?,
               Object?
             >;

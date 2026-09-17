@@ -401,46 +401,45 @@ class SessionMessagingController extends _$SessionMessagingController {
       return false;
     }
 
-    final room = _room;
+    final localParticipant = _room?.localParticipant;
+    if (localParticipant == null) {
+      logger.w(
+        'Cannot send chat message without a connected local participant',
+      );
+      return false;
+    }
+
     final message = SessionChatMessage(
       message: text,
       timestamp: DateTime.now().millisecondsSinceEpoch,
       id: const Uuid().v4(),
       sender: true,
-      participant: room?.localParticipant,
+      participant: localParticipant,
       recipientIdentity: trimmedRecipient,
     );
 
     try {
-      session.addSessionChatMessage(message);
-      await room?.localParticipant
-          ?.publishData(
+      await localParticipant
+          .publishData(
             const Utf8Encoder().convert(message.toJson()),
+            reliable: true,
             topic: SessionCommunicationTopics.chat.topic,
             // LiveKit delivers private payloads only to this identity.
             destinationIdentities: trimmedRecipient == null
                 ? null
                 : [trimmedRecipient],
           )
-          .timeout(
-            const Duration(seconds: 5),
-            onTimeout: () {
-              ErrorHandler.logError(
-                TimeoutException('Sending chat message timed out'),
-                message: 'Warning: Sending chat message timed out',
-              );
-            },
-          );
+          .timeout(const Duration(seconds: 5));
     } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
+      logger.e(
+        'Error sending chat message',
+        error: error,
         stackTrace: stackTrace,
-        message: 'Error sending chat message',
       );
+      return false;
     }
 
-    // The message is already in local state; a publish failure is surfaced
-    // through the error handler, not by rejecting the composer's text.
+    session.addSessionChatMessage(message);
     return true;
   }
 }

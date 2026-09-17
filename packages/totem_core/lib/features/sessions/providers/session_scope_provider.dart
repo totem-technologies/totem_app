@@ -203,13 +203,13 @@ List<SessionChatMessage> sessionMessages(Ref ref) {
 }
 
 /// Messages visible in a single chat thread.
-@riverpod
+@Riverpod(dependencies: [sessionMessages])
 List<SessionChatMessage> sessionThreadMessages(
   Ref ref,
-  List<SessionChatMessage> messages,
   ({String? localIdentity, String? threadTarget}) thread,
 ) {
-  return messages
+  return ref
+      .watch(sessionMessagesProvider)
       .where(
         (message) => message.belongsToThread(
           localIdentity: thread.localIdentity,
@@ -248,6 +248,26 @@ class SessionChatThreadTarget extends _$SessionChatThreadTarget {
   String? get target => state;
 
   set target(String? identity) => state = identity;
+}
+
+/// Threads with messages the user has not viewed in a mounted chat panel.
+@Riverpod(keepAlive: true)
+class SessionChatUnreadThreads extends _$SessionChatUnreadThreads {
+  @override
+  Set<String?> build() => <String?>{};
+
+  String? get latestUnreadThread => state.isEmpty ? null : state.last;
+
+  void markUnread(String? thread) {
+    state = {...state}
+      ..remove(thread)
+      ..add(thread);
+  }
+
+  void markRead(String? thread) {
+    if (!state.contains(thread)) return;
+    state = {...state}..remove(thread);
+  }
 }
 
 /// Last chat message if available.

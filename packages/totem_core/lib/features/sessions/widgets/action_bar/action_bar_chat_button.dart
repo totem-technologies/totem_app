@@ -23,20 +23,8 @@ class ActionBarChatButton extends ConsumerStatefulWidget {
 class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
   bool _chatSheetOpen = false;
 
-  /// Threads with unread messages. Null is the Everyone thread, so this is
-  /// per-thread rather than a single flag: a keeper reading Everyone still
-  /// needs to see that a private support request arrived.
-  final Set<String?> _unreadThreads = {};
-  String? _latestUnreadThread;
   final _notificationController = NotificationController();
   NotificationRequest? _notification;
-
-  void _markThreadRead(String? thread) {
-    _unreadThreads.remove(thread);
-    if (_latestUnreadThread == thread) {
-      _latestUnreadThread = _unreadThreads.isEmpty ? null : _unreadThreads.last;
-    }
-  }
 
   String _notificationTitle(SessionChatMessage message) {
     final participant = message.participant;
@@ -78,11 +66,6 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
 
     if (fromUnread) {
       ref.read(sessionChatThreadTargetProvider.notifier).target = thread;
-      setState(() => _markThreadRead(thread));
-    } else {
-      setState(
-        () => _markThreadRead(ref.read(sessionChatThreadTargetProvider)),
-      );
     }
 
     // Wide desktop docks the panel beside the video; everything else
@@ -115,13 +98,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
         ref.watch(sessionChatOpenProvider) && shouldDockSessionChat(context);
     final isChatOpen = _chatSheetOpen || dockedOpen;
     final visibleThread = ref.watch(sessionChatThreadTargetProvider);
-
-    ref.listen(sessionChatThreadTargetProvider, (previous, next) {
-      if (!isChatOpen || previous == next || !_unreadThreads.contains(next)) {
-        return;
-      }
-      setState(() => _markThreadRead(next));
-    });
+    final unreadThreads = ref.watch(sessionChatUnreadThreadsProvider);
 
     ref.listen(lastSessionMessageProvider, (previous, next) {
       if (next == null || identical(previous, next)) return;
@@ -131,7 +108,6 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       // needs to be announced even while the panel is open.
       if (isChatOpen && thread == visibleThread) return;
       _notification?.dismissActive();
-      _latestUnreadThread = thread;
       _notification = _notificationController.showTimed(
         context,
         icon: TotemIcons.chat,
@@ -141,22 +117,23 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
           unawaited(_openChat(thread: thread, fromUnread: true));
         },
       );
-      setState(() => _unreadThreads.add(thread));
+      ref.read(sessionChatUnreadThreadsProvider.notifier).markUnread(thread);
     });
     return ActionBarButton(
       semanticsLabel: 'Chat',
       role: ActionBarButtonRole.sheet(open: isChatOpen),
       onPressed: () {
-        final hasUnread = _unreadThreads.isNotEmpty;
-        unawaited(
-          _openChat(thread: _latestUnreadThread, fromUnread: hasUnread),
-        );
+        final hasUnread = unreadThreads.isNotEmpty;
+        final latestUnreadThread = ref
+            .read(sessionChatUnreadThreadsProvider.notifier)
+            .latestUnreadThread;
+        unawaited(_openChat(thread: latestUnreadThread, fromUnread: hasUnread));
       },
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           const TotemIcon(TotemIcons.chat),
-          if (_unreadThreads.isNotEmpty)
+          if (unreadThreads.isNotEmpty)
             Container(
               height: 4,
               width: 4,

@@ -256,7 +256,15 @@ void main() {
 
       await pumpWidget(
         tester,
-        child: const ActionBarChatButton(),
+        child: const SizedBox(
+          height: 500,
+          child: Column(
+            children: [
+              Expanded(child: SessionChatPanel(embedded: true)),
+              ActionBarChatButton(),
+            ],
+          ),
+        ),
         overrides: [
           authControllerProvider.overrideWith(
             () => FakeAuthController(AuthState.unauthenticated()),
@@ -295,6 +303,7 @@ void main() {
       ).length.equals(1);
 
       container.read(sessionChatThreadTargetProvider.notifier).target = 'lucas';
+      await tester.pump();
       await tester.pump();
 
       check(tester.widgetList(findPendingBadge())).length.equals(0);

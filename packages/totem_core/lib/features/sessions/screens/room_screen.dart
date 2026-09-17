@@ -73,7 +73,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     // keeper, from carrying into this one.
     ref
       ..invalidate(sessionChatOpenProvider)
-      ..invalidate(sessionChatThreadTargetProvider);
+      ..invalidate(sessionChatThreadTargetProvider)
+      ..invalidate(sessionChatUnreadThreadsProvider);
 
     _listenToBatteryChanges();
     _warmEmojiGlyphs();

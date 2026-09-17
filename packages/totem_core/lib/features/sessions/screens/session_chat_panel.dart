@@ -69,6 +69,9 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     _dropdownController = AnimationController.unbounded(vsync: this);
     // Open on the most recent message; [ref.listen] only covers later arrivals.
     unawaited(_scrollToBottom());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _markVisibleThreadRead();
+    });
   }
 
   @override
@@ -132,6 +135,12 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     );
   }
 
+  void _markVisibleThreadRead() {
+    ref
+        .read(sessionChatUnreadThreadsProvider.notifier)
+        .markRead(ref.read(sessionChatThreadTargetProvider));
+  }
+
   void _closePanel() {
     _setDropdownOpen(false);
     if (widget.embedded) {
@@ -159,6 +168,9 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     // A newly selected thread should open at its most recent message.
     ref.listen(sessionChatThreadTargetProvider, (previous, next) {
       unawaited(_scrollToBottom());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _markVisibleThreadRead();
+      });
     });
 
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
@@ -800,7 +812,7 @@ class _RecipientDropdownOverlay extends StatelessWidget {
     );
     final preferredMenuHeight =
         _recipientRowEstimatedHeight * (rows.length + 1) + rows.length;
-    final menuHeight = math.min(preferredMenuHeight, maxMenuHeight).toDouble();
+    final menuHeight = math.min(preferredMenuHeight, maxMenuHeight);
 
     return AnimatedBuilder(
       animation: animation,
