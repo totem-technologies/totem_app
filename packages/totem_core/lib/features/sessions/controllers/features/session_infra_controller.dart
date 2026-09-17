@@ -21,33 +21,27 @@ class SessionInfraController extends _$SessionInfraController {
   }
 
   Timer? _notificationTimer;
+  Future<void> _operation = Future.value();
   bool _disposed = false;
-  int _operationGeneration = 0;
 
   static const _notificationPeriod = Duration(minutes: 1);
 
-  Future<void> activate({SessionDetailSchema? event}) async {
+  Future<void> activate({SessionDetailSchema? event}) {
+    return _enqueue(() => _setupBackgroundMode(event));
+  }
+
+  Future<void> deactivate() {
+    return _enqueue(_endBackgroundMode);
+  }
+
+  Future<void> _enqueue(Future<void> Function() operation) =>
+      _operation = _operation.catchError((_) {}).then((_) => operation());
+
+  Future<void> _setupBackgroundMode(SessionDetailSchema? event) async {
     if (_disposed) return;
-    final generation = ++_operationGeneration;
-    await _setupBackgroundMode(event, generation);
-  }
-
-  Future<void> deactivate() async {
-    ++_operationGeneration;
-    await _endBackgroundMode();
-  }
-
-  bool _isOperationCurrent(int generation) {
-    return !_disposed && generation == _operationGeneration;
-  }
-
-  Future<void> _setupBackgroundMode(
-    SessionDetailSchema? event,
-    int generation,
-  ) async {
     try {
       await requestPermissions();
-      if (!_isOperationCurrent(generation)) return;
+      if (_disposed) return;
 
       if (canUseForegroundTask) {
         FlutterForegroundTask.init(
@@ -68,10 +62,7 @@ class SessionInfraController extends _$SessionInfraController {
           ),
         );
         await _startBackgroundService(event);
-        if (!_isOperationCurrent(generation)) {
-          await _endBackgroundMode();
-          return;
-        }
+        if (_disposed) await _endBackgroundMode();
       }
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -181,9 +172,6 @@ class SessionInfraController extends _$SessionInfraController {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
-    ++_operationGeneration;
-    _notificationTimer?.cancel();
-    _notificationTimer = null;
-    unawaited(_endBackgroundMode());
+    unawaited(_enqueue(_endBackgroundMode));
   }
 }

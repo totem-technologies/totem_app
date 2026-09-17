@@ -450,14 +450,18 @@ class SessionDeviceController extends _$SessionDeviceController {
     _emitState();
   }
 
-  Future<void> dispose() async {
-    if (_disposed) return;
-    _disposed = true;
+  Future<void> stopDeviceChangeListener() async {
     _audioRouteNotificationsEnabled = false;
     await _becomingNoisySubscription?.cancel();
     _becomingNoisySubscription = null;
     await _devicesChangedSubscription?.cancel();
     _devicesChangedSubscription = null;
     _deviceListenerSetup = null;
+  }
+
+  Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
+    await stopDeviceChangeListener();
   }
 }

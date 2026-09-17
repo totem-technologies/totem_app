@@ -104,7 +104,9 @@ class SessionController extends _$SessionController {
   Timer? _statePollTimer;
   Future<void>? _cleanupFuture;
   Future<void>? _statePollFuture;
+  bool _pollPending = false;
   bool _pendingReconcile = false;
+  int _connectionGeneration = 0;
   static const syncTimerDuration = Duration(seconds: 20);
   static const _statePollInterval = Duration(seconds: 15);
 
@@ -174,6 +176,7 @@ class SessionController extends _$SessionController {
   SessionRoomState build(SessionOptions options) {
     ref
       ..listen(sessionDeviceControllerProvider(this), (_, _) {})
+      ..listen(sessionInfraControllerProvider, (_, _) {})
       ..listen(sessionKeeperControllerProvider(this), (_, _) {})
       ..listen(sessionMessagingControllerProvider(this), (_, _) {});
 
@@ -341,8 +344,11 @@ class SessionController extends _$SessionController {
     }
   }
 
-  Future<void> _pollServerState({bool attemptReconcile = false}) async {
-    if (!ref.mounted) return;
+  Future<void> _pollServerState({
+    required int connectionGeneration,
+    bool attemptReconcile = false,
+  }) async {
+    if (!ref.mounted || connectionGeneration != _connectionGeneration) return;
     if (state.connectionState != RoomConnectionState.connected) return;
 
     try {
@@ -352,9 +358,10 @@ class SessionController extends _$SessionController {
           attemptReconcile: attemptReconcile,
         ).future,
       );
-      if (!ref.mounted) return;
+      if (!ref.mounted || connectionGeneration != _connectionGeneration) {
+        return;
+      }
 
-      // Protects against out-of-order application from overlapping polls
       if (roomState.version > state.roomState.version) {
         applyRoomState(roomState);
         logger.d('Polled server state: version ${roomState.version}');
@@ -370,17 +377,23 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> _scheduleServerStatePoll({bool attemptReconcile = false}) {
+    _pollPending = true;
     _pendingReconcile = _pendingReconcile || attemptReconcile;
     return _statePollFuture ??= _drainServerStatePolls();
   }
 
   Future<void> _drainServerStatePolls() async {
     try {
-      do {
+      while (_pollPending && ref.mounted) {
+        final connectionGeneration = _connectionGeneration;
         final attemptReconcile = _pendingReconcile;
+        _pollPending = false;
         _pendingReconcile = false;
-        await _pollServerState(attemptReconcile: attemptReconcile);
-      } while (_pendingReconcile && ref.mounted);
+        await _pollServerState(
+          connectionGeneration: connectionGeneration,
+          attemptReconcile: attemptReconcile,
+        );
+      }
     } finally {
       _statePollFuture = null;
     }
@@ -666,8 +679,12 @@ class SessionController extends _$SessionController {
   Future<void> _performCleanup() async {
     logger.d('Disposing SessionService and closing connections.');
 
+    ++_connectionGeneration;
+    _pollPending = false;
+    _pendingReconcile = false;
+
     if (ref.mounted) {
-      unawaited(ref.read(sessionInfraControllerProvider.notifier).deactivate());
+      await ref.read(sessionInfraControllerProvider.notifier).deactivate();
     }
 
     if (ref.mounted) {
@@ -689,7 +706,7 @@ class SessionController extends _$SessionController {
         keeper.disposePresenceTracking();
       } catch (_) {}
       try {
-        devices.dispose();
+        await devices.stopDeviceChangeListener();
       } catch (_) {}
     }
 
@@ -697,8 +714,6 @@ class SessionController extends _$SessionController {
     _syncTimer = null;
     _statePollTimer?.cancel();
     _statePollTimer = null;
-    _pendingReconcile = false;
-
     await disposeConnection();
   }
 
