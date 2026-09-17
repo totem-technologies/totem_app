@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
+import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
@@ -60,6 +61,12 @@ void main() {
       ),
     );
   }
+
+  /// Chrome a dense-grid tile resolves to, and what a large card caps at.
+  final compactMetrics = ParticipantOverlayMetrics.forCard(
+    const Size(160, 120),
+  );
+  final largeMetrics = ParticipantOverlayMetrics.forCard(const Size(600, 500));
 
   TotemIcon overlayMuteIcon(WidgetTester tester) {
     return tester.widget<TotemIcon>(
@@ -251,7 +258,10 @@ void main() {
             remoteParticipant.identity,
           ).overrideWith((ref) => ['🔥']),
         ],
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: compactMetrics,
+        ),
       );
 
       await tester.pumpAndSettle();
@@ -263,7 +273,10 @@ void main() {
     testWidgets('updates when the emoji provider changes', (tester) async {
       await pumpWidget(
         tester,
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: compactMetrics,
+        ),
       );
 
       final container = ProviderScope.containerOf(
@@ -287,13 +300,13 @@ void main() {
       check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
     });
 
-    testWidgets('uses compact overlay sizes on phone-sized windows', (
-      tester,
-    ) async {
+    testWidgets('uses the compact metrics of a small tile', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(400, 800),
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: compactMetrics,
+        ),
       );
 
       check(
@@ -302,70 +315,57 @@ void main() {
       check(overlayMuteIcon(tester).size).equals(16);
     });
 
-    testWidgets('uses compact overlay sizes in phone landscape', (
-      tester,
-    ) async {
+    testWidgets('uses the larger metrics of a big card', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(800, 400),
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: largeMetrics,
+        ),
       );
 
       check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(20, 20));
-      check(overlayMuteIcon(tester).size).equals(16);
-    });
-
-    testWidgets('uses comfortable overlay sizes on desktop-class windows', (
-      tester,
-    ) async {
-      await pumpWidget(
-        tester,
-        viewSize: const Size(1200, 900),
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
-      );
-
-      check(
-        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(40, 40));
+      ).equals(const Size(28, 28));
       check(overlayMuteIcon(tester).size).equals(22);
     });
 
-    testWidgets('renders a larger emoji glyph on desktop-class windows', (
-      tester,
-    ) async {
+    testWidgets('renders a larger emoji glyph on a big card', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(1200, 900),
         overrides: [
           participantEmojisProvider(
             remoteParticipant.identity,
           ).overrideWith((ref) => ['🔥']),
         ],
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: largeMetrics,
+        ),
       );
 
       await tester.pumpAndSettle();
 
       check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(40, 40));
-      check(tester.widget<Text>(find.text('🔥')).style?.fontSize).equals(20);
+      ).equals(const Size(28, 28));
+      check(tester.widget<Text>(find.text('🔥')).style?.fontSize).equals(14);
     });
 
-    testWidgets('keeps the compact emoji glyph on phone-sized windows', (
+    testWidgets('keeps the compact emoji glyph on a small tile', (
       tester,
     ) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(400, 800),
         overrides: [
           participantEmojisProvider(
             remoteParticipant.identity,
           ).overrideWith((ref) => ['🔥']),
         ],
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: compactMetrics,
+        ),
       );
 
       await tester.pumpAndSettle();

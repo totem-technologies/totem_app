@@ -39,8 +39,6 @@ class FeaturedParticipantCard extends ConsumerWidget {
     final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
 
     final theme = Theme.of(context);
-    // Featured tiles keep a slightly larger compact badge (24dp) than grid tiles.
-    final overlay = ParticipantOverlayMetrics.featuredOf(context);
     final speakerVideoBorderRadius = switch (MediaQuery.orientationOf(
       context,
     )) {
@@ -55,148 +53,159 @@ class FeaturedParticipantCard extends ConsumerWidget {
       child: ClipRRect(
         clipBehavior: Clip.antiAlias,
         borderRadius: speakerVideoBorderRadius,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (session.roomState.status == RoomStatus.waitingRoom &&
-                !session.hasKeeper)
-              Positioned.fill(
-                child: Container(
-                  color: AppTheme.slate,
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 60,
-                    vertical: 20,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: 20,
-                    children: [
-                      const TotemIcon(
-                        TotemIcons.clockCircle,
-                        size: 70,
-                        color: Colors.white,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Chrome scales with the card, so the hero tile's badges stay
+            // proportional to the video instead of jumping at a breakpoint.
+            final overlay = ParticipantOverlayMetrics.forCard(
+              constraints.biggest,
+            );
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                if (session.roomState.status == RoomStatus.waitingRoom &&
+                    !session.hasKeeper)
+                  Positioned.fill(
+                    child: Container(
+                      color: AppTheme.slate,
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 60,
+                        vertical: 20,
                       ),
-                      Text(
-                        'Waiting room',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      Text(
-                        'Please wait for your Keeper to arrive and begin the session.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else if (activeSpeaker == null)
-              const Positioned.fill(child: ColoredBox(color: Colors.black54))
-            else ...[
-              Positioned.fill(
-                child: ParticipantVideo(
-                  key: participantKeys.getKey(activeSpeaker.sid),
-                  participant: activeSpeaker,
-                ),
-              ),
-              PositionedDirectional(
-                start: 20,
-                end: 20,
-                bottom: 20,
-                child: SafeArea(
-                  bottom: false,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    spacing: 2,
-                    children: [
-                      if (session.isKeeper(activeSpeaker.identity))
-                        Container(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(42),
-                            color: Colors.black54,
-                            boxShadow: kElevationToShadow[1],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: 5,
-                            children: [
-                              const TotemIconLogo(
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              Text(
-                                'Keeper',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      Row(
-                        spacing: 12,
-                        mainAxisAlignment: MainAxisAlignment.end,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        spacing: 20,
                         children: [
-                          if (isCurrentUserKeeper &&
-                              session.roomState.status == RoomStatus.active)
-                            SessionElapsedTimer(
-                              onTap: sessionController == null
-                                  ? null
-                                  : () => unawaited(
-                                      ref
-                                          .read(
-                                            sessionMessagingControllerProvider(
-                                              sessionController,
-                                            ).notifier,
-                                          )
-                                          .sendShareTimeReminder(
-                                            activeSpeaker.identity,
-                                          ),
-                                    ),
-                            ),
-                          SpeakingIndicatorOrEmoji(
-                            participant: activeSpeaker,
-                            metrics: overlay,
+                          const TotemIcon(
+                            TotemIcons.clockCircle,
+                            size: 70,
+                            color: Colors.white,
                           ),
-                          if (isCurrentUserKeeper &&
-                              currentUserSlug != activeSpeaker.identity)
-                            ParticipantControlButton(
-                              menuVerticalOffset: -overlay.badgeSize - 8,
-                              participant: activeSpeaker,
-                              metrics: overlay,
+                          Text(
+                            'Waiting room',
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                             ),
-                          Flexible(
-                            child: SmartNameText(
-                              name: activeSpeaker.name,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                shadows: kElevationToShadow[6],
-                              ),
-                              textAlign: TextAlign.end,
+                            textAlign: TextAlign.center,
+                          ),
+                          Text(
+                            'Please wait for your Keeper to arrive and begin the session.',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.white,
                             ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
+                  )
+                else if (activeSpeaker == null)
+                  const Positioned.fill(
+                    child: ColoredBox(color: Colors.black54),
+                  )
+                else ...[
+                  Positioned.fill(
+                    child: ParticipantVideo(
+                      key: participantKeys.getKey(activeSpeaker.sid),
+                      participant: activeSpeaker,
+                    ),
                   ),
-                ),
-              ),
-            ],
-          ],
+                  PositionedDirectional(
+                    start: 20,
+                    end: 20,
+                    bottom: 20,
+                    child: SafeArea(
+                      bottom: false,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        spacing: 2,
+                        children: [
+                          if (session.isKeeper(activeSpeaker.identity))
+                            Container(
+                              padding: const EdgeInsetsDirectional.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(42),
+                                color: Colors.black54,
+                                boxShadow: kElevationToShadow[1],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                spacing: 5,
+                                children: [
+                                  const TotemIconLogo(
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                  Text(
+                                    'Keeper',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          Row(
+                            spacing: 12,
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (isCurrentUserKeeper &&
+                                  session.roomState.status == RoomStatus.active)
+                                SessionElapsedTimer(
+                                  onTap: sessionController == null
+                                      ? null
+                                      : () => unawaited(
+                                          ref
+                                              .read(
+                                                sessionMessagingControllerProvider(
+                                                  sessionController,
+                                                ).notifier,
+                                              )
+                                              .sendShareTimeReminder(
+                                                activeSpeaker.identity,
+                                              ),
+                                        ),
+                                ),
+                              SpeakingIndicatorOrEmoji(
+                                participant: activeSpeaker,
+                                metrics: overlay,
+                              ),
+                              if (isCurrentUserKeeper &&
+                                  currentUserSlug != activeSpeaker.identity)
+                                ParticipantControlButton(
+                                  menuVerticalOffset: -overlay.badgeSize - 8,
+                                  participant: activeSpeaker,
+                                  metrics: overlay,
+                                ),
+                              Flexible(
+                                child: SmartNameText(
+                                  name: activeSpeaker.name,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    shadows: kElevationToShadow[6],
+                                  ),
+                                  textAlign: TextAlign.end,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );
@@ -225,8 +234,6 @@ class ParticipantCard extends ConsumerWidget {
     final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
 
-    final overlay = ParticipantOverlayMetrics.of(context);
-    final overlayPadding = overlay.cornerInset;
     final isKeeper = session?.isKeeper(participant.identity) ?? false;
     final isSpeaking = participant.identity == session?.speakingNow;
 
@@ -236,86 +243,103 @@ class ParticipantCard extends ConsumerWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
         clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: ParticipantVideo(
-                key: participantKeys.getKey(participant.sid),
-                participant: participant,
-              ),
-            ),
-            PositionedDirectional(
-              top: overlayPadding,
-              start: overlayPadding,
-              child: Row(
-                spacing: 8,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SpeakingIndicatorOrEmoji(participant: participant),
-                  if (isCurrentUserKeeper &&
-                      isSpeaking &&
-                      session?.roomState.status == RoomStatus.active)
-                    SessionElapsedTimer(
-                      onTap: sessionController == null
-                          ? null
-                          : () => unawaited(
-                              ref
-                                  .read(
-                                    sessionMessagingControllerProvider(
-                                      sessionController,
-                                    ).notifier,
-                                  )
-                                  .sendShareTimeReminder(participant.identity),
-                            ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Chrome scales with the tile, so a dense grid keeps compact
+            // badges while a sparse one grows them.
+            final overlay = ParticipantOverlayMetrics.forCard(
+              constraints.biggest,
+            );
+            final overlayPadding = overlay.cornerInset;
+
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: ParticipantVideo(
+                    key: participantKeys.getKey(participant.sid),
+                    participant: participant,
+                  ),
+                ),
+                PositionedDirectional(
+                  top: overlayPadding,
+                  start: overlayPadding,
+                  child: Row(
+                    spacing: 8,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SpeakingIndicatorOrEmoji(
+                        participant: participant,
+                        metrics: overlay,
+                      ),
+                      if (isCurrentUserKeeper &&
+                          isSpeaking &&
+                          session?.roomState.status == RoomStatus.active)
+                        SessionElapsedTimer(
+                          onTap: sessionController == null
+                              ? null
+                              : () => unawaited(
+                                  ref
+                                      .read(
+                                        sessionMessagingControllerProvider(
+                                          sessionController,
+                                        ).notifier,
+                                      )
+                                      .sendShareTimeReminder(
+                                        participant.identity,
+                                      ),
+                                ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (session != null &&
+                    isCurrentUserKeeper &&
+                    currentUserSlug != participant.identity)
+                  PositionedDirectional(
+                    end: overlayPadding,
+                    top: overlayPadding,
+                    child: ParticipantControlButton(
+                      participant: participant,
+                      menuVerticalOffset: overlayPadding,
+                      metrics: overlay,
                     ),
-                ],
-              ),
-            ),
-            if (session != null &&
-                isCurrentUserKeeper &&
-                currentUserSlug != participant.identity)
-              PositionedDirectional(
-                end: overlayPadding,
-                top: overlayPadding,
-                child: ParticipantControlButton(
-                  participant: participant,
-                  menuVerticalOffset: overlayPadding,
-                ),
-              )
-            else if (isKeeper)
-              PositionedDirectional(
-                top: overlayPadding,
-                end: overlayPadding,
-                child: Container(
-                  width: overlay.badgeSize,
-                  height: overlay.badgeSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black54,
-                    boxShadow: kElevationToShadow[6],
+                  )
+                else if (isKeeper)
+                  PositionedDirectional(
+                    top: overlayPadding,
+                    end: overlayPadding,
+                    child: Container(
+                      width: overlay.badgeSize,
+                      height: overlay.badgeSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black54,
+                        boxShadow: kElevationToShadow[6],
+                      ),
+                      padding: EdgeInsetsDirectional.all(overlay.badgePadding),
+                      child: TotemIconLogo(
+                        color: AppTheme.white,
+                        size: overlay.iconSize,
+                      ),
+                    ),
                   ),
-                  padding: EdgeInsetsDirectional.all(overlay.badgePadding),
-                  child: TotemIconLogo(
-                    color: AppTheme.white,
-                    size: overlay.iconSize,
+                PositionedDirectional(
+                  bottom: 8,
+                  start: 8,
+                  end: 8,
+                  child: SmartNameText(
+                    name: participant.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      shadows: [Shadow(offset: Offset(0, 1), blurRadius: 4)],
+                    ),
                   ),
                 ),
-              ),
-            PositionedDirectional(
-              bottom: 8,
-              start: 8,
-              end: 8,
-              child: SmartNameText(
-                name: participant.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  shadows: [Shadow(offset: Offset(0, 1), blurRadius: 4)],
-                ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );

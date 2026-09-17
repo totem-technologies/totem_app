@@ -1,14 +1,11 @@
 import 'package:flutter/widgets.dart';
-import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 /// Overlay badge sizes for participant tiles.
 ///
-/// Compact covers phone, including landscape (`shortestSide <= 600`).
-/// Comfortable applies at shortest side > 600dp (tablet portrait and desktop).
-///
-/// Not keyed off [ViewportKind.isLarge] — that flag also treats phone
-/// landscape as large, which would blow these badges up on a 400×800 phone
-/// rotated sideways.
+/// Derived from the card's own size rather than the viewport, so the chrome
+/// stays proportional to the video it sits on: a 12-person grid tile keeps the
+/// compact badge no matter how large the window is, while a featured tile or a
+/// 2-person grid grows up to [_maxBadge].
 @immutable
 class ParticipantOverlayMetrics {
   const ParticipantOverlayMetrics({
@@ -19,56 +16,54 @@ class ParticipantOverlayMetrics {
     required this.cornerInset,
   });
 
-  /// Grid-tile chrome on phones. `badgeSize - 2 * badgePadding == iconSize`.
-  static const compact = ParticipantOverlayMetrics(
-    badgeSize: 20,
-    iconSize: 16,
-    badgePadding: 2,
-    emojiFontSize: 10,
-    cornerInset: 10,
-  );
+  /// Chrome for a card of [cardSize].
+  ///
+  /// [badgeSize] tracks the card's shortest side, clamped so small tiles keep
+  /// a legible badge and large cards don't let it dominate the video. The
+  /// remaining values are derived from it, which keeps the
+  /// `badgeSize - 2 * badgePadding == iconSize` invariant true by
+  /// construction.
+  factory ParticipantOverlayMetrics.forCard(Size cardSize) {
+    final shortestSide = cardSize.shortestSide;
+    final badgeSize =
+        (shortestSide.isFinite && shortestSide > 0
+                ? shortestSide * _badgeToCardRatio
+                : _minBadge)
+            .clamp(_minBadge, _maxBadge)
+            .roundToDouble();
+    final iconSize = (badgeSize * _iconToBadgeRatio).roundToDouble();
 
-  /// Featured-tile chrome on phones. Slightly larger than [compact] so the
-  /// hero video keeps the 24dp badge it used before overlay metrics existed.
-  static const compactFeatured = ParticipantOverlayMetrics(
-    badgeSize: 24,
-    iconSize: 20,
-    badgePadding: 2,
-    emojiFontSize: 12,
-    cornerInset: 10,
-  );
+    return ParticipantOverlayMetrics(
+      badgeSize: badgeSize,
+      iconSize: iconSize,
+      badgePadding: (badgeSize - iconSize) / 2,
+      emojiFontSize: badgeSize * _emojiToBadgeRatio,
+      cornerInset: (badgeSize * _insetToBadgeRatio).clamp(
+        _minCornerInset,
+        _maxCornerInset,
+      ),
+    );
+  }
 
-  /// Tablet / desktop chrome. Shared by grid tiles and the featured tile.
-  static const comfortable = ParticipantOverlayMetrics(
-    badgeSize: 40,
-    iconSize: 22,
-    badgePadding: 9,
-    emojiFontSize: 20,
-    cornerInset: 12,
-  );
+  /// Floor: the badge a phone grid tile has always used. Below this the glyph
+  /// stops reading as an icon.
+  static const _minBadge = 20.0;
+
+  /// Ceiling: past this the badge starts dominating the video on a hero tile.
+  static const _maxBadge = 28.0;
+
+  static const _badgeToCardRatio = 0.09;
+  static const _iconToBadgeRatio = 0.8;
+  static const _emojiToBadgeRatio = 0.5;
+  static const _insetToBadgeRatio = 0.5;
+  static const _minCornerInset = 10.0;
+  static const _maxCornerInset = 12.0;
 
   final double badgeSize;
   final double iconSize;
   final double badgePadding;
   final double emojiFontSize;
   final double cornerInset;
-
-  /// Metrics for grid participant-card overlays.
-  static ParticipantOverlayMetrics of(BuildContext context) {
-    return switch (ViewportResolver.getViewportKind(context)) {
-      ViewportKind.mediumSmall || ViewportKind.mediumPlus => comfortable,
-      ViewportKind.smallPortrait || ViewportKind.smallLandscape => compact,
-    };
-  }
-
-  /// Metrics for featured participant-card overlays.
-  static ParticipantOverlayMetrics featuredOf(BuildContext context) {
-    return switch (ViewportResolver.getViewportKind(context)) {
-      ViewportKind.mediumSmall || ViewportKind.mediumPlus => comfortable,
-      ViewportKind.smallPortrait ||
-      ViewportKind.smallLandscape => compactFeatured,
-    };
-  }
 
   @override
   bool operator ==(Object other) {

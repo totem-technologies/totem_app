@@ -199,23 +199,19 @@ class _SpeakingIndicatorCoreState extends State<_SpeakingIndicatorCore> {
 class SpeakingIndicatorOrEmoji extends StatelessWidget {
   const SpeakingIndicatorOrEmoji({
     required this.participant,
+    required this.metrics,
     this.backgroundColor = Colors.black54,
-    this.metrics,
     super.key,
   });
 
   final Participant participant;
   final Color backgroundColor;
 
-  /// When null, resolves via [ParticipantOverlayMetrics.of] (grid tiles).
-  /// Featured tiles pass [ParticipantOverlayMetrics.featuredOf] so phone
-  /// chrome stays at 24dp instead of shrinking to the grid's 20dp.
-  final ParticipantOverlayMetrics? metrics;
+  /// Chrome sizes, resolved by the card from its own size.
+  final ParticipantOverlayMetrics metrics;
 
   @override
   Widget build(BuildContext context) {
-    final metrics = this.metrics ?? ParticipantOverlayMetrics.of(context);
-
     return Consumer(
       builder: (context, ref, child) {
         final emojis = ref.watch(
