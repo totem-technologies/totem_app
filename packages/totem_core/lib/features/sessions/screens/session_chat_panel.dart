@@ -234,53 +234,52 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                         ),
                         child: _PinnedHintPill(text: hintText),
                       ),
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            SelectionArea(
-                              child: ListView.separated(
-                                controller: scrollController,
-                                padding: const EdgeInsetsDirectional.fromSTEB(
-                                  20,
-                                  14,
-                                  20,
-                                  16,
-                                ),
-                                itemCount: threadMessages.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(height: 14),
-                                itemBuilder: (context, index) {
-                                  final message = threadMessages[index];
-                                  final isOwn =
-                                      message.sender ||
-                                      (localIdentity != null &&
-                                          message.participant?.identity ==
-                                              localIdentity);
-                                  return MessageBubble(
-                                    text: message.message,
-                                    timestamp: DateFormat.jm().format(
-                                      DateTime.fromMillisecondsSinceEpoch(
-                                        message.timestamp,
-                                      ).toLocal(),
-                                    ),
-                                    isOwn: isOwn,
-                                  );
-                                },
+                      if (threadMessages.isEmpty)
+                        const Expanded(
+                          child: IgnorePointer(
+                            child: Center(
+                              child: Text(
+                                'No messages yet',
+                                style: TextStyle(color: AppTheme.gray),
+                                textAlign: TextAlign.center,
                               ),
                             ),
-                            if (threadMessages.isEmpty)
-                              const IgnorePointer(
-                                child: Center(
-                                  child: Text(
-                                    'No messages yet',
-                                    style: TextStyle(color: AppTheme.gray),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: SelectionArea(
+                            child: ListView.separated(
+                              controller: scrollController,
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                20,
+                                14,
+                                20,
+                                16,
                               ),
-                          ],
+                              itemCount: threadMessages.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 14),
+                              itemBuilder: (context, index) {
+                                final message = threadMessages[index];
+                                final isOwn =
+                                    message.sender ||
+                                    (localIdentity != null &&
+                                        message.participant?.identity ==
+                                            localIdentity);
+                                return MessageBubble(
+                                  text: message.message,
+                                  timestamp: DateFormat.jm().format(
+                                    DateTime.fromMillisecondsSinceEpoch(
+                                      message.timestamp,
+                                    ).toLocal(),
+                                  ),
+                                  isOwn: isOwn,
+                                );
+                              },
+                            ),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   if (_dropdownOpen)

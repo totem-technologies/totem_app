@@ -288,7 +288,7 @@ void main() {
         tester.widgetList(find.text('Only the Keeper can post messages here')),
       ).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
-      check(tester.widgetList(find.byType(ListView))).length.equals(1);
+
       check(tester.widgetList(find.text('Message Keeper'))).length.equals(1);
       check(tester.widgetList(find.text('Message everyone'))).length.equals(1);
       check(tester.widgetList(find.byType(MessageInputBar))).length.equals(1);
