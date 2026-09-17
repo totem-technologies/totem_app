@@ -15,6 +15,7 @@ import 'package:totem_core/features/sessions/controllers/features/session_messag
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
+import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
@@ -80,6 +81,25 @@ void main() {
       ),
     );
   }
+
+  /// Lays [child] out at an exact size, which is what now drives the overlay
+  /// chrome. [Scaffold] hands its body tight constraints, so the [Center] is
+  /// what lets the box keep the size we ask for.
+  Widget sizedCard(Size size, Widget child) {
+    return Center(
+      child: SizedBox.fromSize(size: size, child: child),
+    );
+  }
+
+  /// A dense-grid tile: small enough to clamp to the compact chrome.
+  const gridTileSize = Size(160, 120);
+
+  /// A sparse-grid or featured tile: large enough to clamp to the ceiling.
+  const largeCardSize = Size(600, 500);
+
+  /// A mid-size tile, inside the band where the badge tracks the card instead
+  /// of sitting on either clamp. 240 * 0.09 = 21.6, so badge 22 / inset 11.
+  const midCardSize = Size(400, 240);
 
   PositionedDirectional overlayPosition(WidgetTester tester) {
     return tester.widget<PositionedDirectional>(
@@ -195,22 +215,23 @@ void main() {
       check(tester.widgetList(find.byType(TotemIconLogo))).length.equals(1);
     });
 
-    testWidgets('keeps compact corner chrome on phone-sized windows', (
-      tester,
-    ) async {
+    testWidgets('keeps compact corner chrome on small tiles', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(400, 800),
+        viewSize: const Size(1200, 900),
         authState: AuthState.unauthenticated(),
         overrides: [
           currentSessionStateProvider.overrideWithValue(
             fakeSessionState.mockState,
           ),
         ],
-        child: ParticipantCard(
-          participant: remoteParticipant,
-          session: null,
-          participantIdentity: remoteParticipant.identity,
+        child: sizedCard(
+          gridTileSize,
+          ParticipantCard(
+            participant: remoteParticipant,
+            session: null,
+            participantIdentity: remoteParticipant.identity,
+          ),
         ),
       );
 
@@ -221,7 +242,34 @@ void main() {
       check(overlayPosition(tester).start).equals(10);
     });
 
-    testWidgets('uses larger corner chrome on desktop-class windows', (
+    testWidgets('grows corner chrome on large cards', (tester) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: sizedCard(
+          largeCardSize,
+          ParticipantCard(
+            participant: remoteParticipant,
+            session: null,
+            participantIdentity: remoteParticipant.identity,
+          ),
+        ),
+      );
+
+      check(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+      ).equals(const Size(28, 28));
+      check(overlayPosition(tester).top).equals(12);
+      check(overlayPosition(tester).start).equals(12);
+    });
+
+    testWidgets('sizes corner chrome off the tile between the clamps', (
       tester,
     ) async {
       await pumpWidget(
@@ -233,23 +281,25 @@ void main() {
             fakeSessionState.mockState,
           ),
         ],
-        child: ParticipantCard(
-          participant: remoteParticipant,
-          session: null,
-          participantIdentity: remoteParticipant.identity,
+        child: sizedCard(
+          midCardSize,
+          ParticipantCard(
+            participant: remoteParticipant,
+            session: null,
+            participantIdentity: remoteParticipant.identity,
+          ),
         ),
       );
 
+      // Neither the 20dp floor nor the 28dp ceiling: the tile drives the size.
       check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(40, 40));
-      check(overlayPosition(tester).top).equals(12);
-      check(overlayPosition(tester).start).equals(12);
+      ).equals(const Size(22, 22));
+      check(overlayPosition(tester).top).equals(11);
+      check(overlayPosition(tester).start).equals(11);
     });
 
-    testWidgets('scales the keeper logo badge on desktop-class windows', (
-      tester,
-    ) async {
+    testWidgets('scales the keeper logo badge with the card', (tester) async {
       final keeperParticipant = MockRemoteParticipant('keeper-1', 'The Keeper');
 
       fakeSessionState.mockState = SessionRoomState(
@@ -281,10 +331,13 @@ void main() {
             fakeSessionState.mockState,
           ),
         ],
-        child: ParticipantCard(
-          participant: keeperParticipant,
-          session: null,
-          participantIdentity: keeperParticipant.identity,
+        child: sizedCard(
+          largeCardSize,
+          ParticipantCard(
+            participant: keeperParticipant,
+            session: null,
+            participantIdentity: keeperParticipant.identity,
+          ),
         ),
       );
 
@@ -340,7 +393,7 @@ void main() {
       ).length.equals(1); // clock icon
     });
 
-    testWidgets('keeps 24dp overlay badges on phone-sized windows', (
+    testWidgets('sizes overlay badges from the card on phone-sized windows', (
       tester,
     ) async {
       final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
@@ -384,7 +437,7 @@ void main() {
 
       check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(24, 24));
+      ).equals(const Size(28, 28));
       final decoration = tester
           .widget<Container>(
             find.descendant(
@@ -519,9 +572,7 @@ void main() {
       semantics.dispose();
     });
 
-    testWidgets('uses 40dp overlay badges on desktop-class windows', (
-      tester,
-    ) async {
+    testWidgets('caps overlay badges on desktop-class windows', (tester) async {
       final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
       when(
         () => speaker.getTrackPublicationBySource(TrackSource.camera),
@@ -563,7 +614,7 @@ void main() {
 
       check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(40, 40));
+      ).equals(const Size(28, 28));
     });
   });
 
@@ -722,14 +773,14 @@ void main() {
       check(tester.widgetList(find.text('Ban'))).length.equals(0);
     });
 
-    testWidgets('uses a compact badge on phone-sized windows', (tester) async {
+    testWidgets('renders the compact metrics it is given', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(400, 800),
         authState: AuthState.unauthenticated(),
         child: ParticipantControlButton(
           participant: remoteParticipant,
           menuVerticalOffset: 10,
+          metrics: ParticipantOverlayMetrics.forCard(gridTileSize),
         ),
       );
 
@@ -739,20 +790,20 @@ void main() {
       check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(16);
     });
 
-    testWidgets('uses a larger badge on desktop-class windows', (tester) async {
+    testWidgets('renders the large-card metrics it is given', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(1200, 900),
         authState: AuthState.unauthenticated(),
         child: ParticipantControlButton(
           participant: remoteParticipant,
           menuVerticalOffset: 12,
+          metrics: ParticipantOverlayMetrics.forCard(largeCardSize),
         ),
       );
 
       check(
         tester.getSize(find.byType(ParticipantControlButton)),
-      ).equals(const Size(40, 40));
+      ).equals(const Size(28, 28));
       check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(22);
     });
   });
@@ -779,6 +830,7 @@ class _MenuCloseTestWrapperState extends State<_MenuCloseTestWrapper> {
           ? ParticipantControlButton(
               participant: widget.participant,
               menuVerticalOffset: 10,
+              metrics: ParticipantOverlayMetrics.forCard(const Size(160, 120)),
             )
           : const SizedBox.shrink(),
     );
