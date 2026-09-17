@@ -20,7 +20,7 @@ final class SessionMessagingControllerProvider
   }) : super(
          retry: null,
          name: r'sessionMessagingControllerProvider',
-         isAutoDispose: false,
+         isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -60,7 +60,7 @@ final class SessionMessagingControllerProvider
 }
 
 String _$sessionMessagingControllerHash() =>
-    r'e75bd1d3181ee17af705efa73a838a55665f3aee';
+    r'89a720a7e4020e911c2793d25dace509c2f3011f';
 
 final class SessionMessagingControllerFamily extends $Family
     with
@@ -77,7 +77,7 @@ final class SessionMessagingControllerFamily extends $Family
         name: r'sessionMessagingControllerProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: false,
+        isAutoDispose: true,
       );
 
   SessionMessagingControllerProvider call(SessionController session) =>

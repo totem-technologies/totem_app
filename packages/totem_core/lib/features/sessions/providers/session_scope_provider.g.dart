@@ -1086,7 +1086,7 @@ final class SessionChatUnreadThreadsProvider
 }
 
 String _$sessionChatUnreadThreadsHash() =>
-    r'a208f087beb0a2420fdf5f78f1f288158335e6af';
+    r'26894ef8f4624f90ecca15b9d25faa3749a3558f';
 
 /// Threads with messages the user has not viewed in a mounted chat panel.
 
