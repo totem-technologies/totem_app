@@ -71,6 +71,13 @@ Run all tests:
 make test
 ```
 
+This resolves workspace dependencies once, then runs two package suites at a
+time, including the web tests in Chrome. Leak detection remains enabled. Use
+`make test TEST_JOBS=1` to run suites sequentially on machines with limited
+memory. Individual suites are available through `make test-core`,
+`make test-app`, `make test-web`, and `make test-scripts`. Pass Flutter test
+options with `TEST_ARGS`, for example `make test-core TEST_ARGS="--reporter expanded"`.
+
 ### Deep Linking
 
 To test deep linking, with the app running, you can use the following commands:
