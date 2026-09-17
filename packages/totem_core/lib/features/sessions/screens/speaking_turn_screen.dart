@@ -14,7 +14,7 @@ import 'package:totem_core/features/sessions/providers/session_cues_provider.dar
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
-import 'package:totem_core/features/sessions/widgets/background.dart';
+
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
@@ -72,7 +72,6 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final roomStatus = ref.watch(roomStatusProvider);
     final turnState = ref.watch(turnStateProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
     final nextUp = ref.watch(speakingNextParticipantProvider);
@@ -212,18 +211,15 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
       },
     );
 
-    return RoomBackground(
-      status: roomStatus,
-      child: SafeArea(
-        child: selfViewEnabled
-            ? Stack(
-                children: [
-                  Positioned.fill(child: body),
-                  const SelfView(),
-                ],
-              )
-            : body,
-      ),
+    return SafeArea(
+      child: selfViewEnabled
+          ? Stack(
+              children: [
+                Positioned.fill(child: body),
+                const SelfView(),
+              ],
+            )
+          : body,
     );
   }
 }

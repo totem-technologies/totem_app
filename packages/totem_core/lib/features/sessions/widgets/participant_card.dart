@@ -594,10 +594,17 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     );
 
     if (kDebugMode || currentUser?.isStaff == true) {
-      return _ParticipantVideoStatistics(
-        participant: widget.participant,
-        trackPublication: trackPublication,
-        child: content,
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          content,
+          Positioned.fill(
+            child: _ParticipantVideoStatistics(
+              participant: widget.participant,
+              trackPublication: trackPublication,
+            ),
+          ),
+        ],
       );
     }
 
@@ -609,12 +616,10 @@ class _ParticipantVideoStatistics extends StatefulWidget {
   const _ParticipantVideoStatistics({
     required this.participant,
     required this.trackPublication,
-    required this.child,
   });
 
   final Participant<TrackPublication<Track>> participant;
   final TrackPublication<Track>? trackPublication;
-  final Widget child;
 
   @override
   State<_ParticipantVideoStatistics> createState() =>
@@ -729,41 +734,35 @@ class _ParticipantVideoStatisticsState
       behavior: HitTestBehavior.opaque,
       onTap: () =>
           setState(() => _shouldShowStatistics = !_shouldShowStatistics),
-      child: _shouldShowStatistics
-          ? Stack(
-              fit: StackFit.expand,
-              children: [
-                widget.child,
-                Positioned.fill(
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'Bitrate: $_currentBitrate\n'
-                        'Res: ${frameWidth}x$frameHeight\n'
-                        'FPS: $fps\n'
-                        'Mime: ${mimeType ?? 'None'}\n'
-                        'Is off: $_isTrackInactive',
-                        style: const TextStyle(
-                          color: Colors.greenAccent,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          height: 1.3,
-                        ),
-                      ),
+      child: RepaintBoundary(
+        child: _shouldShowStatistics
+            ? Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Bitrate: $_currentBitrate\n'
+                    'Res: ${frameWidth}x$frameHeight\n'
+                    'FPS: $fps\n'
+                    'Mime: ${mimeType ?? 'None'}\n'
+                    'Is off: $_isTrackInactive',
+                    style: const TextStyle(
+                      color: Colors.greenAccent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      height: 1.3,
                     ),
                   ),
                 ),
-              ],
-            )
-          : widget.child,
+              )
+            : const SizedBox.expand(),
+      ),
     );
   }
 }

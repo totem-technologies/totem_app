@@ -9,7 +9,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
-import 'package:totem_core/features/sessions/widgets/background.dart';
+
 import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
@@ -28,222 +28,219 @@ class ListeningTurnScreen extends ConsumerWidget {
     final nextUp = ref.watch(speakingNextParticipantProvider);
     final hasKeeper = ref.watch(hasKeeperProvider);
 
-    return RoomBackground(
-      status: roomStatus,
-      child: ViewportResolver(
-        builder: (context, viewportKind) {
-          final theme = Theme.of(context);
-          final nextUpText = () {
-            if (roomStatus == RoomStatus.waitingRoom) {
-              const baseColor = Colors.black;
-              final highlightColor = Colors.grey.shade500;
-              return Shimmer(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    baseColor,
-                    baseColor,
-                    baseColor,
-                    highlightColor,
-                    baseColor,
-                    baseColor,
-                    baseColor,
-                  ],
-                  stops: const <double>[
-                    0.0,
-                    0.49,
-                    0.49999,
-                    0.5,
-                    0.51,
-                    0.51111,
-                    1.0,
+    return ViewportResolver(
+      builder: (context, viewportKind) {
+        final theme = Theme.of(context);
+        final nextUpText = () {
+          if (roomStatus == RoomStatus.waitingRoom) {
+            const baseColor = Colors.black;
+            final highlightColor = Colors.grey.shade500;
+            return Shimmer(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  baseColor,
+                  baseColor,
+                  baseColor,
+                  highlightColor,
+                  baseColor,
+                  baseColor,
+                  baseColor,
+                ],
+                stops: const <double>[
+                  0.0,
+                  0.49,
+                  0.49999,
+                  0.5,
+                  0.51,
+                  0.51111,
+                  1.0,
+                ],
+              ),
+              period: const Duration(seconds: 6),
+              child: Text(
+                () {
+                  if (!hasKeeper) {
+                    return 'Waiting for the Keeper to join';
+                  }
+                  return 'Your session is about to start';
+                }(),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 1),
+                    ),
                   ],
                 ),
-                period: const Duration(seconds: 6),
-                child: Text(
-                  () {
-                    if (!hasKeeper) {
-                      return 'Waiting for the Keeper to join';
-                    }
-                    return 'Your session is about to start';
-                  }(),
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withValues(alpha: 0.25),
-                        blurRadius: 6,
-                        offset: const Offset(0, 1),
+              ),
+            );
+          } else if (roomStatus == RoomStatus.active) {
+            if (!hasKeeper) {
+              return Text(
+                'The session has been paused',
+                style: theme.textTheme.bodyLarge,
+              );
+            } else if (nextUp != null) {
+              return RichText(
+                text: TextSpan(
+                  children: [
+                    if (amNext)
+                      const TextSpan(
+                        text: 'You are Next',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      )
+                    else ...[
+                      const TextSpan(text: 'Next up '),
+                      TextSpan(
+                        text: nextUp.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ],
-                  ),
+                  ],
+                  style: theme.textTheme.bodyLarge,
                 ),
               );
-            } else if (roomStatus == RoomStatus.active) {
-              if (!hasKeeper) {
-                return Text(
-                  'The session has been paused',
-                  style: theme.textTheme.bodyLarge,
-                );
-              } else if (nextUp != null) {
-                return RichText(
-                  text: TextSpan(
-                    children: [
-                      if (amNext)
-                        const TextSpan(
-                          text: 'You are Next',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        )
-                      else ...[
-                        const TextSpan(text: 'Next up '),
-                        TextSpan(
-                          text: nextUp.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ],
-                    style: theme.textTheme.bodyLarge,
-                  ),
-                );
-              }
             }
+          }
 
-            // Return a sized box because we want the spacing to remain consistent.
-            return const SizedBox.shrink();
-          }();
+          // Return a sized box because we want the spacing to remain consistent.
+          return const SizedBox.shrink();
+        }();
 
-          final participantGrid = _ListeningTurnGrid(
-            session: session,
-            speakingNow: activeSpeaker?.identity,
-          );
+        final participantGrid = _ListeningTurnGrid(
+          session: session,
+          speakingNow: activeSpeaker?.identity,
+        );
 
-          final Widget? marquee = roomStatus == RoomStatus.waitingRoom
-              ? const GroundingMarquee()
-              : null;
+        final Widget? marquee = roomStatus == RoomStatus.waitingRoom
+            ? const GroundingMarquee()
+            : null;
 
-          switch (viewportKind) {
-            case ViewportKind.smallPortrait:
-              return SafeArea(
-                top: false,
-                bottom: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: 16,
-                  children: [
-                    SizedBox(
-                      height: MediaQuery.heightOf(context) * 0.475,
-                      child: const FeaturedParticipantCard(),
+        switch (viewportKind) {
+          case ViewportKind.smallPortrait:
+            return SafeArea(
+              top: false,
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 16,
+                children: [
+                  SizedBox(
+                    height: MediaQuery.heightOf(context) * 0.475,
+                    child: const FeaturedParticipantCard(),
+                  ),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 28,
                     ),
-                    Padding(
+                    child: nextUpText,
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
                       padding: const EdgeInsetsDirectional.symmetric(
                         horizontal: 28,
                       ),
-                      child: nextUpText,
+                      child: participantGrid,
                     ),
-                    Expanded(
-                      flex: 2,
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.symmetric(
-                          horizontal: 28,
-                        ),
-                        child: participantGrid,
-                      ),
-                    ),
-                    ?marquee,
-                    const Center(child: SessionActionBar()),
-                  ],
-                ),
-              );
-            case ViewportKind.smallLandscape:
-              final isLTR = Directionality.of(context) == TextDirection.ltr;
-              return SafeArea(
-                top: false,
-                bottom: false,
-                left: !isLTR,
-                right: isLTR,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Expanded(flex: 2, child: FeaturedParticipantCard()),
-                    Expanded(
-                      flex: 3,
-                      child: SafeArea(
-                        left: false,
-                        right: true,
-                        child: Overlay.wrap(
-                          child: Padding(
-                            padding: const EdgeInsetsDirectional.only(
-                              start: 16,
-                              end: 16,
-                              top: 16,
-                            ),
-                            child: Column(
-                              spacing: 16,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                nextUpText,
-                                Expanded(
-                                  child: Padding(
-                                    padding:
-                                        const EdgeInsetsDirectional.symmetric(
-                                          vertical: 8,
-                                        ),
-                                    child: participantGrid,
-                                  ),
+                  ),
+                  ?marquee,
+                  const Center(child: SessionActionBar()),
+                ],
+              ),
+            );
+          case ViewportKind.smallLandscape:
+            final isLTR = Directionality.of(context) == TextDirection.ltr;
+            return SafeArea(
+              top: false,
+              bottom: false,
+              left: !isLTR,
+              right: isLTR,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Expanded(flex: 2, child: FeaturedParticipantCard()),
+                  Expanded(
+                    flex: 3,
+                    child: SafeArea(
+                      left: false,
+                      right: true,
+                      child: Overlay.wrap(
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            start: 16,
+                            end: 16,
+                            top: 16,
+                          ),
+                          child: Column(
+                            spacing: 16,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              nextUpText,
+                              Expanded(
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                        vertical: 8,
+                                      ),
+                                  child: participantGrid,
                                 ),
-                                ?marquee,
-                                const Center(child: SessionActionBar()),
-                              ],
-                            ),
+                              ),
+                              ?marquee,
+                              const Center(child: SessionActionBar()),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-              );
-            case ViewportKind.mediumSmall:
-            case ViewportKind.mediumPlus:
-              return Padding(
-                padding: const EdgeInsetsDirectional.only(
-                  top: 40,
-                  bottom: 28,
-                  start: 60,
-                  end: 60,
-                ),
-                child: Column(
-                  spacing: 10,
-                  children: [
-                    const SessionTitle(),
-                    Expanded(
-                      child: Center(
-                        child: _ListeningTurnGrid(
-                          session: session,
-                          speakingNow: activeSpeaker?.identity,
-                          showSpeakingNowParticipant: true,
-                          gap: 20,
-                        ),
+                  ),
+                ],
+              ),
+            );
+          case ViewportKind.mediumSmall:
+          case ViewportKind.mediumPlus:
+            return Padding(
+              padding: const EdgeInsetsDirectional.only(
+                top: 40,
+                bottom: 28,
+                start: 60,
+                end: 60,
+              ),
+              child: Column(
+                spacing: 10,
+                children: [
+                  const SessionTitle(),
+                  Expanded(
+                    child: Center(
+                      child: _ListeningTurnGrid(
+                        session: session,
+                        speakingNow: activeSpeaker?.identity,
+                        showSpeakingNowParticipant: true,
+                        gap: 20,
                       ),
                     ),
-                    if (roomStatus == RoomStatus.waitingRoom) ...[
-                      const SizedBox.shrink(),
-                      ?marquee,
-                      const SizedBox.shrink(),
-                    ],
-                    Row(
-                      spacing: 12,
-                      children: [
-                        Expanded(child: nextUpText),
-                        const SessionActionBar(),
-                        const Spacer(),
-                      ],
-                    ),
+                  ),
+                  if (roomStatus == RoomStatus.waitingRoom) ...[
+                    const SizedBox.shrink(),
+                    ?marquee,
+                    const SizedBox.shrink(),
                   ],
-                ),
-              );
-          }
-        },
-      ),
+                  Row(
+                    spacing: 12,
+                    children: [
+                      Expanded(child: nextUpText),
+                      const SessionActionBar(),
+                      const Spacer(),
+                    ],
+                  ),
+                ],
+              ),
+            );
+        }
+      },
     );
   }
 }
