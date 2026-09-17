@@ -40,19 +40,15 @@ Leak tracking is enabled through:
 
 ## Validation
 
-Run validation from each package directory, sequentially. Concurrent Flutter commands contend for the SDK startup lock and can introduce shared plugin/framework flakiness.
-
 ```sh
-cd packages/totem_core && flutter analyze && flutter test
-cd ../totem_app && flutter analyze && flutter test
-cd ../totem_web && flutter analyze && flutter test --platform chrome
+make lint
+make test
 ```
 
-Run the focused test file first after a lifecycle or timing fix, then run the affected package suite. `make test` is the final aggregate check, but its package commands currently run concurrently; investigate package failures individually if its output is interleaved.
+Run the focused test file first after a lifecycle or timing fix, then run the affected package suite.
 
 ## Test performance
 
 - Prefer unit tests over widget tests when logic can be tested without a widget tree.
 - Do not reduce coverage solely to make tests faster. Instead remove real waits, avoid unnecessary full-screen mounts, use representative layout boundaries, and replace expensive setup with minimal fakes.
 - For layout breakpoints, test transition boundaries and representative variants rather than every equivalent size/count.
-- Profile with `flutter test --reporter json` when a suite is slow, identify individual slow tests, then optimize verified bottlenecks only.

@@ -1,466 +1,236 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:totem_core/auth/controllers/auth_controller.dart';
-import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
-import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/features/sessions/screens/session_chat_panel.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
-import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
-import 'package:totem_core/shared/widgets/user_avatar.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
+
+export 'keeper_profile_sheet.dart';
+export 'session_chat_panel.dart' show SessionChatPanel;
+
+/// Width of the Figma desktop chat column.
+const double sessionChatPanelWidth = 412;
+
+/// Video plus 412px sidebar needs at least this much horizontal room.
+const double sessionChatDockMinWidth = 1100;
+
+/// Tap-to-open drawer timing. Ease-out cubic over ~0.3s approximates a
+/// critically damped spring (no bounce — this isn't a flicked sheet).
+const Duration sessionChatDrawerDuration = Duration(milliseconds: 320);
+
+/// Slightly snappier on the way out so dismiss feels decisive.
+const Duration sessionChatDrawerReverseDuration = Duration(milliseconds: 260);
+
+const Curve sessionChatDrawerCurve = Curves.easeOutCubic;
+
+/// Dock the panel on wide tablet/desktop. Phones and narrow tablets use a modal.
+bool shouldDockSessionChat(BuildContext context) {
+  final kind = ViewportResolver.getViewportKind(context);
+  final isTabletOrDesktop =
+      kind == ViewportKind.mediumSmall || kind == ViewportKind.mediumPlus;
+  return isTabletOrDesktop &&
+      MediaQuery.sizeOf(context).width >= sessionChatDockMinWidth;
+}
 
 Future<void> showSessionChat(BuildContext context) {
-  return showResponsiveModal<void>(
-    context: context,
-    useRootNavigator: false,
-    showDragHandle: false,
-    useSafeArea: false,
-    bottomSheetBackgroundColor: Colors.white,
-    dialogBackgroundColor: Colors.white,
-    dialogAlignment: AlignmentDirectional.centerEnd,
-    dialogInsetPadding: const EdgeInsetsDirectional.only(end: 40, top: 20),
-    dialogShape: const RoundedRectangleBorder(
-      borderRadius: BorderRadiusDirectional.vertical(top: Radius.circular(20)),
-    ),
-    dialogBarrierColor: Colors.black26,
-    bottomSheetBuilder: (context) {
-      return DraggableScrollableSheet(
-        maxChildSize: 0.9,
-        initialChildSize: 0.75,
-        expand: false,
-        builder: (context, scrollController) {
-          return SessionChatMessages(scrollController: scrollController);
+  switch (ViewportResolver.getViewportKind(context)) {
+    case ViewportKind.smallPortrait:
+    case ViewportKind.smallLandscape:
+      // Phones already get the platform sheet slide; leave that path alone.
+      return showResponsiveModal<void>(
+        context: context,
+        useRootNavigator: false,
+        showDragHandle: false,
+        useSafeArea: false,
+        bottomSheetBackgroundColor: AppTheme.cream,
+        dialogBackgroundColor: AppTheme.cream,
+        dialogBarrierColor: Colors.black26,
+        bottomSheetBuilder: (context) {
+          return DraggableScrollableSheet(
+            maxChildSize: 0.9,
+            initialChildSize: 0.9,
+            expand: false,
+            builder: (context, scrollController) {
+              return SessionChatPanel(
+                scrollController: scrollController,
+                showDragHandle: true,
+              );
+            },
+          );
         },
+        largeScreenBuilder: (_) => const SizedBox.shrink(),
       );
-    },
-    largeScreenBuilder: (context) {
-      return const SizedBox(
-        width: 400,
-        child: SessionChatMessages(shouldShowCloseButton: true),
+    case ViewportKind.mediumSmall:
+    case ViewportKind.mediumPlus:
+      // Overlay drawer on the room navigator so it sits above the circle,
+      // not the app shell, and dismisses with the room back gesture.
+      return Navigator.of(context, rootNavigator: false).push<void>(
+        _SessionChatDrawerRoute(
+          barrierLabel: MaterialLocalizations.of(
+            context,
+          ).modalBarrierDismissLabel,
+        ),
       );
-    },
+  }
+}
+
+/// Trailing-edge overlay: the panel slides in from `Offset(1, 0)`, which
+/// [SlideTransition] flips in RTL so it always arrives from the end edge.
+///
+/// The route's default fade is stripped — a drawer should materialize by
+/// moving, not by dissolving. The barrier still fades with [animation].
+class _SessionChatDrawerRoute extends RawDialogRoute<void> {
+  _SessionChatDrawerRoute({required String barrierLabel})
+    : super(
+        barrierLabel: barrierLabel,
+        barrierDismissible: true,
+        barrierColor: Colors.black26,
+        transitionDuration: sessionChatDrawerDuration,
+        transitionBuilder: _holdChild,
+        pageBuilder: _buildPage,
+      );
+
+  /// Identity transition so [RawDialogRoute] doesn't fade the page on top
+  /// of the slide we apply in [_buildPage].
+  static Widget _holdChild(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return child;
+  }
+
+  static Widget _buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    final panel = Material(
+      color: AppTheme.cream,
+      elevation: 6,
+      shadowColor: const Color.fromRGBO(0, 0, 0, 0.16),
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        width: sessionChatPanelWidth,
+        height: MediaQuery.sizeOf(context).height,
+        child: const SessionChatPanel(),
+      ),
+    );
+
+    // Slide the 412px panel, not a full-screen Dialog: Offset(1, 0) is then
+    // one panel-width, so the drawer tucks in from the window edge.
+    return Align(
+      alignment: AlignmentDirectional.centerEnd,
+      child: _slideFromTrailing(
+        context: context,
+        animation: animation,
+        child: panel,
+      ),
+    );
+  }
+
+  @override
+  Duration get reverseTransitionDuration => sessionChatDrawerReverseDuration;
+}
+
+/// Shared drive: ease-out on the way in, and the same curve played backward
+/// on dismiss so the path out mirrors the path in.
+Widget _slideFromTrailing({
+  required BuildContext context,
+  required Animation<double> animation,
+  required Widget child,
+}) {
+  if (MediaQuery.disableAnimationsOf(context)) return child;
+  return SlideTransition(
+    position: animation.drive(
+      Tween<Offset>(
+        begin: const Offset(1, 0),
+        end: Offset.zero,
+      ).chain(CurveTween(curve: sessionChatDrawerCurve)),
+    ),
+    child: child,
   );
 }
 
-class SessionChatMessages extends ConsumerStatefulWidget {
-  const SessionChatMessages({
-    super.key,
-    this.scrollController,
-    this.shouldShowCloseButton = false,
-  });
-
-  final ScrollController? scrollController;
-  final bool shouldShowCloseButton;
+/// Wide-window rail that grows from the trailing edge so the video yields
+/// space instead of the drawer covering it. Stays mounted at width 0 while
+/// closed so the close animation can play.
+class DockedSessionChatRail extends ConsumerStatefulWidget {
+  const DockedSessionChatRail({super.key});
 
   @override
-  ConsumerState<SessionChatMessages> createState() =>
-      _SessionChatMessagesState();
+  ConsumerState<DockedSessionChatRail> createState() =>
+      _DockedSessionChatRailState();
 }
 
-class _SessionChatMessagesState extends ConsumerState<SessionChatMessages> {
-  ScrollController? _localController;
-  ScrollController get scrollController =>
-      widget.scrollController ?? (_localController ??= ScrollController());
+class _DockedSessionChatRailState extends ConsumerState<DockedSessionChatRail>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
 
-  final _messageController = TextEditingController();
-  int _previousMessageCount = 0;
-
-  Future<void> _scrollToBottom(ScrollController scrollController) async {
-    Future<void> jumpToBottom() async {
-      if (!scrollController.hasClients) return;
-
-      final position = scrollController.position;
-      if (!position.hasContentDimensions) return;
-
-      scrollController.jumpTo(position.maxScrollExtent);
-    }
-
-    await SchedulerBinding.instance.endOfFrame;
-    await jumpToBottom();
-    await SchedulerBinding.instance.endOfFrame;
-    await jumpToBottom();
+  @override
+  void initState() {
+    super.initState();
+    final open = ref.read(sessionChatOpenProvider);
+    _controller = AnimationController(
+      vsync: this,
+      duration: sessionChatDrawerDuration,
+      reverseDuration: sessionChatDrawerReverseDuration,
+      value: open ? 1 : 0,
+    );
   }
 
   @override
   void dispose() {
-    _messageController.dispose();
-    _localController?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final user = ref.watch(authControllerProvider.select((auth) => auth.user));
-    final sessionEvent = ref.watch(currentSessionEventProvider);
-    final isKeeper = ref.watch(isCurrentUserKeeperProvider);
-    final isDesktop =
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux;
-
-    const fastMessages = [
-      'Welcome! 🙏',
-      'Please mute your mic',
-      'Thank you for sharing',
-      "Let's begin",
-      'Please unmute to share',
-      'Take your time',
-    ];
-
-    final messages = ref.watch(sessionMessagesProvider);
-
-    if (messages.length != _previousMessageCount) {
-      _previousMessageCount = messages.length;
-      if (messages.isNotEmpty) {
-        _scrollToBottom(scrollController);
-      }
+  void _animateTo(bool open) {
+    // Reduce Motion: skip the slide and snap, matching Apple's cross-fade
+    // guidance for vestibular safety.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = open ? 1 : 0;
+      return;
     }
-
-    void send() {
-      final message = _messageController.text.trim();
-      if (message.isNotEmpty) {
-        ref.read(currentSessionProvider)?.messaging.sendMessage(message);
-        _messageController.clear();
-        _scrollToBottom(scrollController);
-      }
+    if (open) {
+      _controller.forward();
+      return;
     }
-
-    final closeButton = widget.shouldShowCloseButton
-        ? Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 12.0,
-              vertical: 8,
-            ),
-            child: Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: IconButton(
-                icon: const TotemIcon(TotemIcons.closeRounded, size: 20),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-          )
-        : null;
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      // use scaffold to get proper virtual keyboard padding handling
-      body: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsetsDirectional.only(bottom: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SheetDragHandle(),
-              ?closeButton,
-              if (!isKeeper)
-                const Padding(
-                  padding: EdgeInsetsDirectional.only(
-                    bottom: 8,
-                    start: 20,
-                    end: 20,
-                  ),
-                  child: Text(
-                    'Only the Keeper can post messages here',
-                    style: TextStyle(color: Color(0xFF787D7E)),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              if (messages.isEmpty) ...[
-                const Padding(
-                  padding: EdgeInsetsDirectional.only(
-                    top: 20,
-                    bottom: 8,
-                    start: 20,
-                    end: 20,
-                  ),
-                  child: Text(
-                    'No messages yet',
-                    style: TextStyle(color: Color(0xFF787D7E)),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const Spacer(),
-              ] else
-                Expanded(
-                  child: ListView.separated(
-                    padding: EdgeInsetsDirectional.only(
-                      bottom: isKeeper ? 8 : 0,
-                      start: 20,
-                      end: 20,
-                    ),
-                    controller: scrollController,
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      final isMine = msg.participant?.identity == user?.email;
-                      if (isMine) {
-                        return MyChatBubble(message: msg);
-                      } else {
-                        final showAvatar =
-                            index == 0 ||
-                            messages[index - 1].participant?.identity !=
-                                msg.participant?.identity;
-                        return OtherChatBubble(
-                          showAvatar: showAvatar,
-                          message: msg,
-                          session: sessionEvent,
-                        );
-                      }
-                    },
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  ),
-                ),
-              if (isKeeper) ...[
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    top: 8,
-                    start: 20,
-                    end: 20,
-                  ),
-                  child: Text(
-                    isDesktop
-                        ? 'Tap to send a quick message'
-                        : 'Long press to send a quick message',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.black54,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(top: 8),
-                  child: SizedBox(
-                    height: 36,
-                    child: ListView.separated(
-                      padding: const EdgeInsetsDirectional.only(
-                        start: 20,
-                        end: 20,
-                      ),
-                      scrollDirection: Axis.horizontal,
-                      itemCount: fastMessages.length,
-                      itemBuilder: (context, index) {
-                        final label = fastMessages[index];
-                        return QuickMessageChip(
-                          label: label,
-                          isDesktop: isDesktop,
-                          onSend: () => ref
-                              .read(currentSessionProvider)
-                              ?.messaging
-                              .sendMessage(label),
-                        );
-                      },
-                      separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    top: 8,
-                    start: 20,
-                    end: 20,
-                  ),
-                  child: TextField(
-                    autofocus: switch (defaultTargetPlatform) {
-                      TargetPlatform.android ||
-                      TargetPlatform.iOS ||
-                      TargetPlatform.fuchsia => false,
-                      _ => true,
-                    },
-                    controller: _messageController,
-                    onSubmitted: (_) => send(),
-                    textInputAction: TextInputAction.send,
-                    style: TextStyle(color: theme.colorScheme.onSurface),
-                    decoration: InputDecoration(
-                      hintText: 'Message',
-                      border: const OutlineInputBorder(),
-                      suffixIcon: Container(
-                        margin: const EdgeInsetsDirectional.only(
-                          end: 8,
-                          top: 6,
-                          bottom: 6,
-                        ),
-                        constraints: const BoxConstraints(
-                          maxHeight: 42,
-                          maxWidth: 42,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
-                          borderRadius: const BorderRadius.all(
-                            Radius.circular(16),
-                          ),
-                        ),
-                        child: IconButton(
-                          icon: const TotemIcon(TotemIcons.send, size: 20),
-                          color: theme.colorScheme.onPrimary,
-                          onPressed: send,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
+    _controller.reverse();
   }
-}
-
-class OtherChatBubble extends StatelessWidget {
-  const OtherChatBubble({
-    required this.showAvatar,
-    required this.message,
-    required this.session,
-    super.key,
-  });
-
-  final bool showAvatar;
-  final SessionChatMessage message;
-  final SessionDetailSchema? session;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (showAvatar)
-          UserAvatar.fromUserSchema(
-            session?.space.author,
-            radius: 20,
-            onTap: session?.space.author.slug != null
-                ? () => showKeeperProfileSheet(
-                    context,
-                    session!.space.author.slug!,
-                  )
-                : null,
-          )
-        else
-          const SizedBox(width: 40),
-        const SizedBox(width: 10),
-        Flexible(
-          child: Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: const BorderRadius.all(Radius.circular(16)),
-            ),
-            padding: const EdgeInsetsDirectional.all(10),
-            child: Text(
-              message.message,
-              style: TextStyle(color: theme.colorScheme.onSurface),
+    ref.listen<bool>(sessionChatOpenProvider, (previous, next) {
+      _animateTo(next);
+    });
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        // Drop the panel once the close finishes so the composer isn't
+        // sitting in an invisible 0-width rail.
+        if (_controller.value == 0 && !_controller.isAnimating) {
+          return const SizedBox.shrink();
+        }
+
+        // widthFactor + trailing alignment clips from the leading edge, so
+        // the rail appears to slide in from the window's end while the Row
+        // actually shrinks the video.
+        final t = sessionChatDrawerCurve.transform(_controller.value);
+        return ClipRect(
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            widthFactor: t,
+            child: const SizedBox(
+              width: sessionChatPanelWidth,
+              child: SessionChatPanel(embedded: true),
             ),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class MyChatBubble extends StatelessWidget {
-  const MyChatBubble({required this.message, super.key});
-
-  final SessionChatMessage message;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Align(
-      alignment: AlignmentDirectional.centerEnd,
-      child: Container(
-        margin: const EdgeInsetsDirectional.only(start: 50),
-        padding: const EdgeInsetsDirectional.all(10),
-        decoration: const BoxDecoration(
-          color: AppTheme.slate,
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-        ),
-        child: Text(
-          message.message,
-          style: TextStyle(color: theme.colorScheme.onInverseSurface),
-        ),
-      ),
-    );
-  }
-}
-
-Future<void> showKeeperProfileSheet(BuildContext context, String slug) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    useSafeArea: true,
-    backgroundColor: Colors.white,
-    builder: (context) {
-      return KeeperProfileSheet(slug: slug);
-    },
-  );
-}
-
-class KeeperProfileSheet extends StatelessWidget {
-  const KeeperProfileSheet({required this.slug, super.key});
-
-  final String slug;
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      maxChildSize: 0.8,
-      initialChildSize: 0.8,
-      expand: false,
-      builder: (context, controller) {
-        return PrimaryScrollController(
-          controller: controller,
-          child: KeeperProfileScreen(slug: slug, showAppBar: false),
         );
       },
-    );
-  }
-}
-
-@visibleForTesting
-class QuickMessageChip extends StatelessWidget {
-  const QuickMessageChip({
-    required this.label,
-    required this.onSend,
-    required this.isDesktop,
-    super.key,
-  });
-
-  final String label;
-  final VoidCallback onSend;
-  final bool isDesktop;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.primaryContainer,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: isDesktop ? onSend : null,
-        onLongPress: isDesktop ? null : onSend,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: theme.colorScheme.onPrimaryContainer,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

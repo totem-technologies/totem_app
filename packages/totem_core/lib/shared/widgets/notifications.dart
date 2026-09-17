@@ -363,6 +363,7 @@ class NotificationController {
     required TotemIconData icon,
     required String title,
     required String message,
+    VoidCallback? onTap,
   }) {
     final view = View.of(context);
     return show(
@@ -376,7 +377,16 @@ class NotificationController {
         );
       },
       builder: (context) {
-        return NotificationBanner(icon: icon, title: title, message: message);
+        final banner = NotificationBanner(
+          icon: icon,
+          title: title,
+          message: message,
+        );
+        if (onTap == null) return banner;
+        return Semantics(
+          button: true,
+          child: GestureDetector(onTap: onTap, child: banner),
+        );
       },
     );
   }

@@ -1,18 +1,26 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:livekit_client/livekit_client.dart' show Participant;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
+import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
+import 'package:totem_core/shared/widgets/chat/message_input_bar.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
@@ -61,6 +69,7 @@ SessionDetailSchema _createSessionEvent() {
         profileAvatarType: ProfileAvatarTypeEnum.td,
         dateCreated: DateTime(2024),
         slug: 'keeper-1',
+        name: 'Heather',
       ),
       category: null,
       subscribers: 0,
@@ -90,13 +99,21 @@ SessionDetailSchema _createSessionEvent() {
 
 SessionRoomState _createSessionState({
   List<SessionChatMessage> messages = const [],
+  List<Participant>? participants,
 }) {
   return SessionRoomState(
     connection: const ConnectionState(
       phase: SessionPhase.connected,
       state: RoomConnectionState.connected,
     ),
-    participants: const ParticipantsState(),
+    participants: ParticipantsState(
+      participants:
+          participants ??
+          [
+            MockRemoteParticipant('keeper-1', 'Heather'),
+            MockRemoteParticipant('lucas', 'Lucas'),
+          ],
+    ),
     chat: ChatState(messages: messages),
     turn: const SessionTurnState(
       roomState: RoomState(
@@ -115,6 +132,36 @@ SessionRoomState _createSessionState({
   );
 }
 
+List<Object?> _sharedOverrides({
+  required bool isKeeper,
+  required List<SessionChatMessage> messages,
+  required SessionController session,
+  required AuthState authState,
+  RoomScreen currentScreen = RoomScreen.listening,
+  List<Participant>? participants,
+}) {
+  return [
+    authControllerProvider.overrideWith(() => FakeAuthController(authState)),
+    currentSessionProvider.overrideWith((ref) => session),
+    currentSessionEventProvider.overrideWith((ref) => _createSessionEvent()),
+    currentSessionStateProvider.overrideWithValue(
+      _createSessionState(messages: messages, participants: participants),
+    ),
+    isCurrentUserKeeperProvider.overrideWith((ref) => isKeeper),
+    resolveCurrentScreenProvider.overrideWith((ref) => currentScreen),
+    userProfileProvider.overrideWith(
+      (ref, slug) => Future.value(
+        PublicUserSchema(
+          slug: slug,
+          name: slug == 'keeper-1' ? 'Heather' : 'Mocked User $slug',
+          profileAvatarType: ProfileAvatarTypeEnum.td,
+          dateCreated: DateTime(2024),
+        ),
+      ),
+    ),
+  ];
+}
+
 void main() {
   Future<void> pumpChatSheet(
     WidgetTester tester, {
@@ -123,26 +170,24 @@ void main() {
     required SessionController session,
     required AuthState authState,
     RoomScreen currentScreen = RoomScreen.listening,
+    List<Participant>? participants,
+    bool useScaffold = true,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(
-            () => FakeAuthController(authState),
-          ),
-          currentSessionProvider.overrideWith((ref) => session),
-          currentSessionEventProvider.overrideWith(
-            (ref) => _createSessionEvent(),
-          ),
-          currentSessionStateProvider.overrideWithValue(
-            _createSessionState(messages: messages),
-          ),
-          isCurrentUserKeeperProvider.overrideWith((ref) => isKeeper),
-          resolveCurrentScreenProvider.overrideWith((ref) => currentScreen),
-        ],
-        child: const MaterialApp(
+        overrides: _sharedOverrides(
+          isKeeper: isKeeper,
+          messages: messages,
+          session: session,
+          authState: authState,
+          currentScreen: currentScreen,
+          participants: participants,
+        ).cast(),
+        child: MaterialApp(
           home: SessionKeyboardShortcuts(
-            child: Scaffold(body: SessionChatMessages()),
+            child: useScaffold
+                ? const Scaffold(body: SessionChatPanel())
+                : const SessionChatPanel(),
           ),
         ),
       ),
@@ -167,25 +212,20 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          authControllerProvider.overrideWith(
-            () => FakeAuthController(authState),
-          ),
-          currentSessionProvider.overrideWith((ref) => session),
-          currentSessionEventProvider.overrideWith(
-            (ref) => _createSessionEvent(),
-          ),
-          currentSessionStateProvider.overrideWithValue(
-            _createSessionState(messages: messages),
-          ),
-          isCurrentUserKeeperProvider.overrideWith((ref) => isKeeper),
-          resolveCurrentScreenProvider.overrideWith((ref) => currentScreen),
+          ..._sharedOverrides(
+            isKeeper: isKeeper,
+            messages: messages,
+            session: session,
+            authState: authState,
+            currentScreen: currentScreen,
+          ).cast(),
           sessionMessagesProvider.overrideWith(
             (ref) => ref.watch(messagesProvider),
           ),
         ],
         child: const MaterialApp(
           home: SessionKeyboardShortcuts(
-            child: Scaffold(body: SessionChatMessages()),
+            child: Scaffold(body: SessionChatPanel()),
           ),
         ),
       ),
@@ -194,7 +234,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final container = ProviderScope.containerOf(
-      tester.element(find.byType(SessionChatMessages)),
+      tester.element(find.byType(SessionChatPanel)),
       listen: false,
     );
 
@@ -215,7 +255,12 @@ void main() {
       devices = MockSessionDeviceController();
       when(() => session.messaging).thenReturn(messaging);
       when(() => session.devices).thenReturn(devices);
-      when(() => messaging.sendMessage(any())).thenAnswer((_) async {});
+      when(
+        () => messaging.sendMessage(
+          any(),
+          recipientIdentity: any(named: 'recipientIdentity'),
+        ),
+      ).thenAnswer((_) async => true);
       when(() => messaging.sendReaction(any())).thenAnswer((_) async {});
       when(() => devices.enableMicrophone()).thenAnswer((_) async {});
       when(() => devices.disableMicrophone()).thenAnswer((_) async {});
@@ -234,7 +279,7 @@ void main() {
       }
     }
 
-    testWidgets('shows the keeper hint and no composer for non-keeper', (
+    testWidgets('shows the keeper hint and Message Keeper CTA for non-keeper', (
       tester,
     ) async {
       await pumpChatSheet(
@@ -245,16 +290,36 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
+      check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
       check(
         tester.widgetList(find.text('Only the Keeper can post messages here')),
       ).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
-      check(tester.widgetList(find.byType(TextField))).length.equals(0);
-      check(tester.widgetList(find.byType(IconButton))).length.equals(0);
-      check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(0);
+      check(tester.widgetList(find.byType(CustomScrollView))).length.equals(1);
+      check(
+        tester
+            .widget<CustomScrollView>(find.byType(CustomScrollView))
+            .controller,
+      ).isNotNull();
+
+      check(tester.widgetList(find.text('Message Keeper'))).length.equals(1);
+      check(tester.widgetList(find.text('Message everyone'))).length.equals(1);
+      check(tester.widgetList(find.byType(MessageInputBar))).length.equals(1);
+      check(
+        tester
+            .widget<Material>(
+              find
+                  .ancestor(
+                    of: find.text('Message Keeper'),
+                    matching: find.byType(Material),
+                  )
+                  .first,
+            )
+            .color,
+      ).equals(AppTheme.mauve);
     });
 
-    testWidgets('shows the keeper composer and quick messages', (tester) async {
+    testWidgets('shows the keeper composer for Everyone', (tester) async {
       await pumpChatSheet(
         tester,
         isKeeper: true,
@@ -263,32 +328,57 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
+      check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
       check(
-        tester.widgetList(find.text('Long press to send a quick message')),
+        tester.widgetList(find.text('Only you can post messages here')),
       ).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
+      check(tester.widgetList(find.text('Message everyone'))).length.equals(1);
       check(tester.widgetList(find.byType(TextField))).length.equals(1);
-      check(tester.widgetList(find.byType(IconButton))).length.equals(1);
-      check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(1);
+      check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(0);
       check(
         tester.widgetList(find.text('Please mute your mic')),
-      ).length.equals(1);
+      ).length.equals(0);
     });
 
-    testWidgets('renders my messages and other messages', (tester) async {
+    testWidgets('keeps the composer above the keyboard', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetViewInsets);
+
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: const [],
+        session: session,
+        authState: AuthState.unauthenticated(),
+        useScaffold: false,
+      );
+
+      check(
+        tester.getBottomLeft(find.byType(MessageInputBar)).dy <= 500,
+      ).isTrue();
+    });
+
+    testWidgets('renders own and received messages as MessageBubbles', (
+      tester,
+    ) async {
       final mine = SessionChatMessage(
         id: 'msg-1',
         sender: true,
         message: 'My message',
-        timestamp: 1,
+        timestamp: DateTime(2024, 1, 1, 10, 25).millisecondsSinceEpoch,
         participant: MockLocalParticipant('me@example.com'),
       );
       final other = SessionChatMessage(
         id: 'msg-2',
         sender: false,
         message: 'Their message',
-        timestamp: 2,
-        participant: MockRemoteParticipant('user-2', 'Other User'),
+        timestamp: DateTime(2024, 1, 1, 10, 34).millisecondsSinceEpoch,
+        participant: MockRemoteParticipant('keeper-1', 'Heather'),
       );
 
       await pumpChatSheet(
@@ -307,14 +397,127 @@ void main() {
         ),
       );
 
-      check(tester.widgetList(find.byType(MyChatBubble))).length.equals(1);
-      check(tester.widgetList(find.byType(OtherChatBubble))).length.equals(1);
+      check(tester.widgetList(find.byType(MessageBubble))).length.equals(2);
+      check(tester.widgetList(find.byType(SelectionArea))).length.equals(1);
       check(tester.widgetList(find.text('My message'))).length.equals(1);
       check(tester.widgetList(find.text('Their message'))).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(0);
     });
 
-    testWidgets('scrolls to the newest message when a new message arrives', (
+    testWidgets('hides private messages while viewing Everyone', (
+      tester,
+    ) async {
+      const group = SessionChatMessage(
+        id: 'group-1',
+        sender: true,
+        message: 'Welcome everyone',
+        timestamp: 1,
+      );
+      final private = SessionChatMessage(
+        id: 'dm-1',
+        sender: true,
+        message: 'Secret for Lucas',
+        timestamp: 2,
+        recipientIdentity: 'lucas',
+        participant: MockLocalParticipant('keeper-1'),
+      );
+
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: [group, private],
+        session: session,
+        authState: AuthState.authenticated(
+          user: UserSchema(
+            email: 'keeper@example.com',
+            slug: 'keeper-1',
+            name: 'Heather',
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            circleCount: 0,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+      );
+
+      expect(find.text('Welcome everyone'), findsOneWidget);
+      expect(find.text('Secret for Lucas'), findsNothing);
+    });
+
+    testWidgets('hides keeper thread affordances while the keeper is absent', (
+      tester,
+    ) async {
+      await pumpChatSheet(
+        tester,
+        isKeeper: false,
+        messages: const [],
+        session: session,
+        authState: AuthState.authenticated(
+          user: UserSchema(
+            email: 'lucas@example.com',
+            slug: 'lucas',
+            name: 'Lucas',
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            circleCount: 0,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+        participants: [MockRemoteParticipant('lucas', 'Lucas')],
+      );
+
+      check(tester.widgetList(find.text('Message Keeper'))).length.equals(0);
+
+      await tester.tap(find.text('Everyone').first);
+      await tester.pumpAndSettle();
+
+      check(tester.widgetList(find.text('Heather'))).length.equals(0);
+    });
+
+    testWidgets('participant can open a private keeper thread', (tester) async {
+      await pumpChatSheet(
+        tester,
+        isKeeper: false,
+        messages: const [],
+        session: session,
+        authState: AuthState.authenticated(
+          user: UserSchema(
+            email: 'lucas@example.com',
+            slug: 'lucas',
+            name: 'Lucas',
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            circleCount: 0,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Message Keeper'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('View Group Messages'), findsOneWidget);
+      expect(
+        find.text('Only the keeper can see these messages'),
+        findsOneWidget,
+      );
+      expect(find.text('Message Heather'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'I need help');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('message-input-send')));
+      await tester.pump();
+
+      verify(
+        () =>
+            messaging.sendMessage('I need help', recipientIdentity: 'keeper-1'),
+      ).called(1);
+
+      await tester.tap(find.text('View Group Messages'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Message Keeper'), findsOneWidget);
+      expect(find.text('Everyone'), findsWidgets);
+    });
+
+    testWidgets('does not scroll when the reader is away from the bottom', (
       tester,
     ) async {
       final messages = List.generate(
@@ -336,8 +539,10 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
-      final listView = tester.widget<ListView>(find.byType(ListView));
-      final controller = listView.controller!;
+      final scrollView = tester.widget<CustomScrollView>(
+        find.byType(CustomScrollView),
+      );
+      final controller = scrollView.controller!;
 
       check(tester.widgetList(find.text('Message 19'))).length.equals(1);
 
@@ -364,6 +569,49 @@ void main() {
       await tester.pump();
       await tester.pumpAndSettle();
 
+      check(controller.position.pixels).equals(0);
+    });
+
+    testWidgets('follows new messages when the reader is near the bottom', (
+      tester,
+    ) async {
+      final messages = List.generate(
+        20,
+        (index) => SessionChatMessage(
+          id: 'near-bottom-$index',
+          sender: false,
+          message: 'Message $index',
+          timestamp: index,
+          participant: MockRemoteParticipant('user-$index', 'User $index'),
+        ),
+      );
+
+      final harness = await pumpChatSheetWithMutableMessages(
+        tester,
+        isKeeper: false,
+        messages: messages,
+        session: session,
+        authState: AuthState.unauthenticated(),
+      );
+      final scrollView = tester.widget<CustomScrollView>(
+        find.byType(CustomScrollView),
+      );
+      final controller = scrollView.controller!;
+      controller.jumpTo(controller.position.maxScrollExtent - 10);
+      await tester.pump();
+
+      harness.container.read(harness.messagesProvider.notifier).set([
+        ...messages,
+        SessionChatMessage(
+          id: 'near-bottom-new',
+          sender: false,
+          message: 'Newest message',
+          timestamp: 20,
+          participant: MockRemoteParticipant('user-20', 'User 20'),
+        ),
+      ]);
+      await tester.pumpAndSettle();
+
       check(
         controller.position.pixels,
       ).equals(controller.position.maxScrollExtent);
@@ -379,65 +627,194 @@ void main() {
       );
 
       await tester.enterText(find.byType(TextField), '  Hello chat  ');
-      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('message-input-send')));
       await tester.pump();
 
-      verify(() => messaging.sendMessage('Hello chat')).called(1);
+      verify(
+        () => messaging.sendMessage(
+          'Hello chat',
+          recipientIdentity: any(named: 'recipientIdentity'),
+        ),
+      ).called(1);
       check(tester.widgetList(find.text('Hello chat'))).length.equals(0);
     });
 
-    testWidgets('sends a quick message on tap on desktop', (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-      try {
-        await pumpChatSheet(
-          tester,
-          isKeeper: true,
-          messages: const [],
-          session: session,
-          authState: AuthState.unauthenticated(),
-        );
-
-        check(
-          tester.widgetList(find.text('Tap to send a quick message')),
-        ).length.equals(1);
-
-        await tester.tap(find.text('Please mute your mic'));
-        await tester.pump();
-
-        verify(() => messaging.sendMessage('Please mute your mic')).called(1);
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
-    });
-
-    testWidgets('sends a quick message on long press on mobile', (
+    testWidgets('does not carry a private draft into the Everyone thread', (
       tester,
     ) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      try {
-        await pumpChatSheet(
-          tester,
-          isKeeper: true,
-          messages: const [],
-          session: session,
-          authState: AuthState.unauthenticated(),
-        );
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: const [],
+        session: session,
+        authState: AuthState.authenticated(
+          user: UserSchema(
+            email: 'keeper@example.com',
+            slug: 'keeper-1',
+            name: 'Heather',
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            circleCount: 0,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+      );
 
-        check(
-          tester.widgetList(find.text('Long press to send a quick message')),
-        ).length.equals(1);
+      await tester.tap(find.text('Everyone').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lucas').last);
+      await tester.pumpAndSettle();
 
-        // A plain tap should not send on mobile.
-        await tester.tap(find.text('Please mute your mic'));
-        await tester.pump();
-        verifyNever(() => messaging.sendMessage(any()));
+      await tester.enterText(find.byType(TextField), 'Checking in privately');
+      await tester.pump();
 
-        await tester.longPress(find.text('Please mute your mic'));
-        await tester.pump();
-        verify(() => messaging.sendMessage('Please mute your mic')).called(1);
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
+      // Back to Everyone: the private draft must not follow.
+      await tester.tap(find.text('Lucas').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Everyone').last);
+      await tester.pumpAndSettle();
+      check(
+        tester.widgetList(find.textContaining('only you can post')),
+      ).length.equals(1);
+
+      check(
+        tester.widgetList(find.text('Checking in privately')),
+      ).length.equals(0);
+      check(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      ).equals('');
+    });
+
+    testWidgets('keeps the composer text when the send is rejected', (
+      tester,
+    ) async {
+      when(
+        () => messaging.sendMessage(
+          any(),
+          recipientIdentity: any(named: 'recipientIdentity'),
+        ),
+      ).thenAnswer((_) async => false);
+
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: const [],
+        session: session,
+        authState: AuthState.unauthenticated(),
+      );
+
+      await tester.enterText(find.byType(TextField), 'Dropped message');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('message-input-send')));
+      await tester.pumpAndSettle();
+
+      // A rejected send must not silently swallow what the user typed.
+      expect(find.text('Dropped message'), findsOneWidget);
+    });
+
+    testWidgets('opens the recipient dropdown from the header', (tester) async {
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: const [],
+        session: session,
+        authState: AuthState.authenticated(
+          user: UserSchema(
+            email: 'keeper@example.com',
+            slug: 'keeper-1',
+            name: 'Heather',
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            circleCount: 0,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Everyone').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Lucas'), findsWidgets);
+      expect(find.textContaining('only you can post'), findsOneWidget);
+
+      await tester.tap(find.text('Lucas').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Message Lucas'), findsOneWidget);
+      check(
+        tester.widgetList(
+          find.text('Only you and Lucas can see these messages'),
+        ),
+      ).length.equals(1);
+    });
+
+    testWidgets('bounds and lazily builds a long recipient list', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 500);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await pumpChatSheet(
+        tester,
+        isKeeper: true,
+        messages: const [],
+        session: session,
+        authState: AuthState.unauthenticated(),
+        participants: List.generate(
+          50,
+          (index) =>
+              MockRemoteParticipant('participant-$index', 'Participant $index'),
+        ),
+      );
+
+      await tester.tap(find.text('Everyone').first);
+      await tester.pumpAndSettle();
+
+      check(tester.widgetList(find.byType(CustomScrollView))).length.equals(1);
+      check(tester.widgetList(find.byType(ListView))).length.equals(1);
+      check(tester.widgetList(find.text('Participant 49'))).isEmpty();
+    });
+
+    testWidgets('slides the overlay drawer in from the trailing edge', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(900, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _sharedOverrides(
+            isKeeper: false,
+            messages: const [],
+            session: session,
+            authState: AuthState.unauthenticated(),
+          ).cast(),
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: TextButton(
+                    onPressed: () => unawaited(showSessionChat(context)),
+                    child: const Text('Open'),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pump();
+
+      expect(find.byType(SessionChatPanel), findsOneWidget);
+      expect(find.byType(SlideTransition), findsWidgets);
+
+      await tester.pumpAndSettle();
+      expect(find.text('Everyone'), findsWidgets);
     });
 
     testWidgets('typing in the composer disables session shortcuts', (
@@ -462,6 +839,33 @@ void main() {
 
         verifyNever(() => devices.enableMicrophone());
         verifyNever(() => messaging.sendReaction(any()));
+      });
+    });
+
+    testWidgets('an open docked chat disables session shortcuts', (
+      tester,
+    ) async {
+      await runOnDesktop(() async {
+        await pumpChatSheet(
+          tester,
+          isKeeper: true,
+          messages: const [],
+          session: session,
+          authState: AuthState.unauthenticated(),
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SessionChatPanel)),
+          listen: false,
+        );
+        container.read(sessionChatOpenProvider.notifier).open = true;
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pump();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+        await tester.pump();
+
+        verifyNever(() => devices.enableMicrophone());
       });
     });
   });

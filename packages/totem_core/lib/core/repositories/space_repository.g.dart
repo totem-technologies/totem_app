@@ -107,7 +107,7 @@ final class SessionProvider
   }
 }
 
-String _$sessionHash() => r'25b3e427ca9703490eb7d3511af9ac7d0044b346';
+String _$sessionHash() => r'855a799e09bba2ff6f7e3709aef4fb1525074836';
 
 final class SessionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SessionDetailSchema>, String> {
@@ -184,7 +184,7 @@ final class SpaceProvider
   }
 }
 
-String _$spaceHash() => r'ccaebcce5b8ab82c6ff9505b422f17bdb7ef0dd3';
+String _$spaceHash() => r'dd929220daeabd286c5a4379fce709a29f8f9540';
 
 final class SpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<MobileSpaceDetailSchema>, String> {
@@ -295,7 +295,7 @@ final class SubscribeToSpaceProvider
   }
 }
 
-String _$subscribeToSpaceHash() => r'ecf0b8a817fda6f5b376dcece6b9675bf0ce4a10';
+String _$subscribeToSpaceHash() => r'b6cb7df45e47b4a5d62171cf9b4bf6d0461cd7b3';
 
 final class SubscribeToSpaceFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<bool>, String> {
@@ -443,7 +443,7 @@ final class ListSpacesByKeeperProvider
 }
 
 String _$listSpacesByKeeperHash() =>
-    r'1c487eb346577b71acdde85ac7156c252d6a1026';
+    r'6c6f63d936fb657dc0d0a29f41ce2a3306108477';
 
 final class ListSpacesByKeeperFamily extends $Family
     with

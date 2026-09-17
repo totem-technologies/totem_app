@@ -441,6 +441,27 @@ void main() {
           check(next.messages.first.message).equals('hello');
         });
 
+        test('ignores a message with an existing ID', () {
+          const message = SessionChatMessage(
+            message: 'hello',
+            timestamp: 123,
+            id: 'm1',
+            sender: true,
+          );
+          final current = reducer.reduceState(
+            _initialState(),
+            const SessionChatMessageAdded(message),
+          );
+
+          final next = reducer.reduceState(
+            current,
+            const SessionChatMessageAdded(message),
+          );
+
+          check(next.messages).length.equals(1);
+          check(next.messages.single.id).equals('m1');
+        });
+
         test('dispatches event correctly', () {
           final state = _initialState();
           const message = SessionChatMessage(

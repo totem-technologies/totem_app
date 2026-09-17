@@ -108,7 +108,7 @@ void main() {
 
         final chatEvent = DataReceivedEvent(
           data: utf8.encode(jsonEncode(messageData)),
-          participant: null,
+          participant: MockRemoteParticipant('keeper-1', 'Keeper'),
           topic: SessionCommunicationTopics.chat.topic,
         );
 
@@ -332,25 +332,154 @@ void main() {
     });
 
     group('Send Message', () {
-      test('sendMessage completes when keeper', () async {
-        final mockSession = FakeSessionController();
-        mockSession.isCurrentUserKeeperValue = true;
+      test('adds a message after reliable publication succeeds', () async {
+        final keeper = MockLocalParticipant('keeper-1');
+        when(
+          () => keeper.publishData(
+            any(),
+            reliable: true,
+            destinationIdentities: null,
+            topic: SessionCommunicationTopics.chat.topic,
+          ),
+        ).thenAnswer((_) async {});
+        final mockSession = FakeSessionController()
+          ..isCurrentUserKeeperValue = true
+          ..mockRoom = FakeRoom(keeper);
 
         final container = ProviderContainer();
         final controller = container.read(
           sessionMessagingControllerProvider(mockSession).notifier,
         );
 
-        // Should not throw
-        await controller.sendMessage('Hello everyone!');
+        final accepted = await controller.sendMessage('Hello everyone!');
 
+        check(accepted).isTrue();
         check(mockSession.addedChatMessages).isNotEmpty();
         check(
           mockSession.addedChatMessages.first.message,
         ).equals('Hello everyone!');
+        check(mockSession.addedChatMessages.first.recipientIdentity).isNull();
       });
 
-      test('sendMessage logs warning when not keeper', () async {
+      test('does not add a message when the room is unavailable', () async {
+        final mockSession = FakeSessionController()
+          ..isCurrentUserKeeperValue = true;
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        final accepted = await controller.sendMessage('Hello everyone!');
+
+        check(accepted).isFalse();
+        check(mockSession.addedChatMessages).isEmpty();
+      });
+
+      test('does not add a message when publication fails', () async {
+        final keeper = MockLocalParticipant('keeper-1');
+        when(
+          () => keeper.publishData(
+            any(),
+            reliable: true,
+            destinationIdentities: null,
+            topic: SessionCommunicationTopics.chat.topic,
+          ),
+        ).thenThrow(StateError('publication failed'));
+        final mockSession = FakeSessionController()
+          ..isCurrentUserKeeperValue = true
+          ..mockRoom = FakeRoom(keeper);
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        final accepted = await controller.sendMessage('Hello everyone!');
+
+        check(accepted).isFalse();
+        check(mockSession.addedChatMessages).isEmpty();
+      });
+
+      test(
+        'sendMessage logs warning when not keeper posts to Everyone',
+        () async {
+          final mockSession = FakeSessionController();
+          mockSession.isCurrentUserKeeperValue = false;
+
+          final container = ProviderContainer();
+          final controller = container.read(
+            sessionMessagingControllerProvider(mockSession).notifier,
+          );
+
+          final accepted = await controller.sendMessage('Hello');
+
+          expect(accepted, isFalse);
+          expect(mockSession.addedChatMessages, isEmpty);
+        },
+      );
+
+      test('keeper can send a private message', () async {
+        final keeper = MockLocalParticipant('keeper-1');
+        when(
+          () => keeper.publishData(
+            any(),
+            reliable: true,
+            destinationIdentities: const ['lucas'],
+            topic: SessionCommunicationTopics.chat.topic,
+          ),
+        ).thenAnswer((_) async {});
+        final mockSession = FakeSessionController()
+          ..isCurrentUserKeeperValue = true
+          ..mockRoom = FakeRoom(keeper);
+
+        final container = ProviderContainer();
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        await controller.sendMessage('Hi Lucas', recipientIdentity: 'lucas');
+
+        expect(mockSession.addedChatMessages, hasLength(1));
+        expect(mockSession.addedChatMessages.first.recipientIdentity, 'lucas');
+        expect(
+          mockSession.addedChatMessages.first.toMap()['recipientIdentity'],
+          'lucas',
+        );
+      });
+
+      test('participant can send a private message to the keeper', () async {
+        final participant = MockLocalParticipant('user-1');
+        when(
+          () => participant.publishData(
+            any(),
+            reliable: true,
+            destinationIdentities: const ['keeper-1'],
+            topic: SessionCommunicationTopics.chat.topic,
+          ),
+        ).thenAnswer((_) async {});
+        final mockSession = FakeSessionController()
+          ..isCurrentUserKeeperValue = false
+          ..mockRoom = FakeRoom(participant);
+
+        final container = ProviderContainer();
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        await controller.sendMessage(
+          'I need help',
+          recipientIdentity: 'keeper-1',
+        );
+
+        expect(mockSession.addedChatMessages, hasLength(1));
+        expect(
+          mockSession.addedChatMessages.first.recipientIdentity,
+          'keeper-1',
+        );
+      });
+
+      test('participant cannot DM another participant', () async {
         final mockSession = FakeSessionController();
         mockSession.isCurrentUserKeeperValue = false;
 
@@ -359,9 +488,262 @@ void main() {
           sessionMessagingControllerProvider(mockSession).notifier,
         );
 
-        await controller.sendMessage('Hello');
+        final accepted = await controller.sendMessage(
+          'Nope',
+          recipientIdentity: 'lucas',
+        );
+
+        // The composer relies on this to keep the user's text.
+        expect(accepted, isFalse);
+        expect(mockSession.addedChatMessages, isEmpty);
+      });
+
+      DataReceivedEvent privateChatEvent({
+        required String senderIdentity,
+        required String recipientIdentity,
+        String id = 'dm-1',
+      }) {
+        return DataReceivedEvent(
+          data: utf8.encode(
+            jsonEncode({
+              'message': 'Private',
+              'timestamp': 1,
+              'id': id,
+              'recipientIdentity': recipientIdentity,
+            }),
+          ),
+          participant: MockRemoteParticipant(senderIdentity, senderIdentity),
+          topic: SessionCommunicationTopics.chat.topic,
+        );
+      }
+
+      test('ignores a participant-to-participant DM', () async {
+        // LiveKit lets a patched client publish straight to another
+        // participant; the receive side has to drop it.
+        final mockSession = FakeSessionController()
+          ..mockRoom = FakeRoom(MockLocalParticipant('user-2'));
+        final container = ProviderContainer();
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        controller.handleDataReceived(
+          privateChatEvent(
+            senderIdentity: 'lucas',
+            recipientIdentity: 'user-2',
+          ),
+        );
+
+        expect(mockSession.addedChatMessages, isEmpty);
+      });
+
+      test('accepts a DM from the keeper', () async {
+        final mockSession = FakeSessionController()
+          ..mockRoom = FakeRoom(MockLocalParticipant('user-2'));
+        final container = ProviderContainer();
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        controller.handleDataReceived(
+          privateChatEvent(
+            senderIdentity: 'keeper-1',
+            recipientIdentity: 'user-2',
+          ),
+        );
+
+        expect(mockSession.addedChatMessages, hasLength(1));
+        expect(mockSession.addedChatMessages.first.recipientIdentity, 'user-2');
+      });
+
+      test('ignores a keeper DM delivered to another participant', () async {
+        final mockSession = FakeSessionController()
+          ..mockRoom = FakeRoom(MockLocalParticipant('bob'));
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        controller.handleDataReceived(
+          privateChatEvent(
+            senderIdentity: 'keeper-1',
+            recipientIdentity: 'alice',
+          ),
+        );
 
         check(mockSession.addedChatMessages).isEmpty();
+      });
+
+      test('keeper accepts a DM addressed to them', () async {
+        final mockSession = FakeSessionController()
+          ..mockRoom = FakeRoom(MockLocalParticipant('keeper-1'));
+        final container = ProviderContainer();
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        controller.handleDataReceived(
+          privateChatEvent(
+            senderIdentity: 'lucas',
+            recipientIdentity: 'keeper-1',
+          ),
+        );
+
+        expect(mockSession.addedChatMessages, hasLength(1));
+      });
+
+      test(
+        'ignores a DM to the keeper that was fanned out to others',
+        () async {
+          // Same payload as above, but delivered to a non-keeper client.
+          final mockSession = FakeSessionController()
+            ..mockRoom = FakeRoom(MockLocalParticipant('user-2'));
+          final container = ProviderContainer();
+          final controller = container.read(
+            sessionMessagingControllerProvider(mockSession).notifier,
+          );
+
+          controller.handleDataReceived(
+            privateChatEvent(
+              senderIdentity: 'lucas',
+              recipientIdentity: 'keeper-1',
+            ),
+          );
+
+          expect(mockSession.addedChatMessages, isEmpty);
+        },
+      );
+
+      test('ignores Everyone messages without a sender', () async {
+        final mockSession = FakeSessionController();
+        final container = ProviderContainer();
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        final chatEvent = DataReceivedEvent(
+          data: utf8.encode(
+            jsonEncode({
+              'message': 'Unattributed',
+              'timestamp': 1,
+              'id': 'bad-0',
+            }),
+          ),
+          participant: null,
+          topic: SessionCommunicationTopics.chat.topic,
+        );
+
+        controller.handleDataReceived(chatEvent);
+
+        check(mockSession.addedChatMessages).isEmpty();
+      });
+
+      test('ignores Everyone messages from a non-keeper sender', () async {
+        final mockSession = FakeSessionController();
+        final container = ProviderContainer();
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        final chatEvent = DataReceivedEvent(
+          data: utf8.encode(
+            jsonEncode({'message': 'Hijack', 'timestamp': 1, 'id': 'bad-1'}),
+          ),
+          participant: MockRemoteParticipant('lucas', 'Lucas'),
+          topic: SessionCommunicationTopics.chat.topic,
+        );
+
+        controller.handleDataReceived(chatEvent);
+
+        check(mockSession.addedChatMessages).isEmpty();
+      });
+    });
+
+    group('Thread filtering', () {
+      test('belongsToThread keeps Everyone and private messages apart', () {
+        const everyone = SessionChatMessage(
+          id: 'g1',
+          sender: true,
+          message: 'hi all',
+          timestamp: 1,
+        );
+        final private = SessionChatMessage(
+          id: 'd1',
+          sender: true,
+          message: 'hi lucas',
+          timestamp: 2,
+          recipientIdentity: 'lucas',
+          participant: MockLocalParticipant('keeper-1'),
+        );
+
+        expect(
+          everyone.belongsToThread(
+            localIdentity: 'keeper-1',
+            threadTarget: null,
+          ),
+          isTrue,
+        );
+        expect(
+          private.belongsToThread(
+            localIdentity: 'keeper-1',
+            threadTarget: null,
+          ),
+          isFalse,
+        );
+        expect(
+          private.belongsToThread(
+            localIdentity: 'keeper-1',
+            threadTarget: 'lucas',
+          ),
+          isTrue,
+        );
+        expect(
+          everyone.belongsToThread(
+            localIdentity: 'keeper-1',
+            threadTarget: 'lucas',
+          ),
+          isFalse,
+        );
+      });
+
+      test('threadTargetFor opens the other party, not Everyone', () {
+        const everyone = SessionChatMessage(
+          id: 'g1',
+          sender: false,
+          message: 'hi all',
+          timestamp: 1,
+        );
+        final incoming = SessionChatMessage(
+          id: 'd1',
+          sender: false,
+          message: 'need help',
+          timestamp: 2,
+          recipientIdentity: 'keeper-1',
+          participant: MockRemoteParticipant('lucas', 'Lucas'),
+        );
+        final echo = SessionChatMessage(
+          id: 'd2',
+          sender: false,
+          message: 'hang tight',
+          timestamp: 3,
+          recipientIdentity: 'lucas',
+          participant: MockRemoteParticipant('keeper-1', 'Heather'),
+        );
+        final sent = SessionChatMessage(
+          id: 'd3',
+          sender: true,
+          message: 'hang tight',
+          timestamp: 4,
+          recipientIdentity: 'lucas',
+          participant: MockLocalParticipant('keeper-1'),
+        );
+
+        expect(everyone.threadTargetFor('keeper-1'), isNull);
+        expect(incoming.threadTargetFor('keeper-1'), 'lucas');
+        expect(incoming.threadTargetFor('lucas'), 'keeper-1');
+        expect(echo.threadTargetFor('keeper-1'), 'lucas');
+        expect(sent.threadTargetFor('keeper-1'), 'lucas');
       });
     });
   });

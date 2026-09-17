@@ -395,7 +395,9 @@ void main() {
       await tester.pump();
 
       check(tester.widgetList(findPendingBadge())).length.equals(1);
-      check(tester.widgetList(find.text('New message'))).length.equals(1);
+      check(
+        tester.widgetList(find.text('New message from Keeper')),
+      ).length.equals(1);
       check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
     });
 
@@ -422,9 +424,7 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Chat'));
       await tester.pumpAndSettle();
 
-      check(
-        tester.widgetList(find.byType(SessionChatMessages)),
-      ).length.equals(1);
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
       check(tester.widgetList(findPendingBadge())).length.equals(0);
 
@@ -434,9 +434,7 @@ void main() {
       ).pop();
       await tester.pumpAndSettle();
 
-      check(
-        tester.widgetList(find.byType(SessionChatMessages)),
-      ).length.equals(0);
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(0);
       check(tester.widgetList(findPendingBadge())).length.equals(0);
     });
   });

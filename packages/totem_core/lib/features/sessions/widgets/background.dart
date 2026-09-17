@@ -30,11 +30,6 @@ class RoomBackground extends StatefulWidget {
   /// The [Color] passed is the background color the room is rendering.
   static ValueChanged<Color>? onBackgroundChanged;
 
-  static RoomStatus of(BuildContext context) {
-    return context.findAncestorWidgetOfExactType<RoomBackground>()?.status ??
-        RoomStatus.waitingRoom;
-  }
-
   @override
   State<RoomBackground> createState() => _RoomBackgroundState();
 }

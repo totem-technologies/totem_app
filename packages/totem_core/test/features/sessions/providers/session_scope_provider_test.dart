@@ -92,6 +92,35 @@ void main() {
     });
   });
 
+  group('session chat unread threads', () {
+    test('persists unread threads until the visible panel marks them read', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final controller =
+          container.read(sessionChatUnreadThreadsProvider.notifier)
+            ..markUnread('lucas')
+            ..markUnread(null);
+
+      check(container.read(sessionChatUnreadThreadsProvider)).contains('lucas');
+      check(container.read(sessionChatUnreadThreadsProvider)).contains(null);
+      final everyoneUnread = controller.latestUnreadThread;
+      check(everyoneUnread).isNotNull();
+      check(everyoneUnread?.thread).isNull();
+
+      controller.markRead(null);
+
+      check(container.read(sessionChatUnreadThreadsProvider)).contains('lucas');
+      check(
+        container.read(sessionChatUnreadThreadsProvider).contains(null),
+      ).isFalse();
+      check(controller.latestUnreadThread?.thread).equals('lucas');
+
+      controller.markRead('lucas');
+
+      check(controller.latestUnreadThread).isNull();
+    });
+  });
+
   group('session scope selectors', () {
     test('defaults when scope is not overridden', () {
       final container = ProviderContainer();
