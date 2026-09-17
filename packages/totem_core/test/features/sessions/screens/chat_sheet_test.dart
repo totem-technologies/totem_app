@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:livekit_client/livekit_client.dart' show Participant;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -98,6 +99,7 @@ SessionDetailSchema _createSessionEvent() {
 
 SessionRoomState _createSessionState({
   List<SessionChatMessage> messages = const [],
+  List<Participant>? participants,
 }) {
   return SessionRoomState(
     connection: const ConnectionState(
@@ -105,10 +107,12 @@ SessionRoomState _createSessionState({
       state: RoomConnectionState.connected,
     ),
     participants: ParticipantsState(
-      participants: [
-        MockRemoteParticipant('keeper-1', 'Heather'),
-        MockRemoteParticipant('lucas', 'Lucas'),
-      ],
+      participants:
+          participants ??
+          [
+            MockRemoteParticipant('keeper-1', 'Heather'),
+            MockRemoteParticipant('lucas', 'Lucas'),
+          ],
     ),
     chat: ChatState(messages: messages),
     turn: const SessionTurnState(
@@ -134,13 +138,14 @@ List<Object?> _sharedOverrides({
   required SessionController session,
   required AuthState authState,
   RoomScreen currentScreen = RoomScreen.listening,
+  List<Participant>? participants,
 }) {
   return [
     authControllerProvider.overrideWith(() => FakeAuthController(authState)),
     currentSessionProvider.overrideWith((ref) => session),
     currentSessionEventProvider.overrideWith((ref) => _createSessionEvent()),
     currentSessionStateProvider.overrideWithValue(
-      _createSessionState(messages: messages),
+      _createSessionState(messages: messages, participants: participants),
     ),
     isCurrentUserKeeperProvider.overrideWith((ref) => isKeeper),
     resolveCurrentScreenProvider.overrideWith((ref) => currentScreen),
@@ -165,6 +170,7 @@ void main() {
     required SessionController session,
     required AuthState authState,
     RoomScreen currentScreen = RoomScreen.listening,
+    List<Participant>? participants,
     bool useScaffold = true,
   }) async {
     await tester.pumpWidget(
@@ -175,6 +181,7 @@ void main() {
           session: session,
           authState: authState,
           currentScreen: currentScreen,
+          participants: participants,
         ).cast(),
         child: MaterialApp(
           home: SessionKeyboardShortcuts(
@@ -430,6 +437,35 @@ void main() {
       expect(find.text('Secret for Lucas'), findsNothing);
     });
 
+    testWidgets('hides keeper thread affordances while the keeper is absent', (
+      tester,
+    ) async {
+      await pumpChatSheet(
+        tester,
+        isKeeper: false,
+        messages: const [],
+        session: session,
+        authState: AuthState.authenticated(
+          user: UserSchema(
+            email: 'lucas@example.com',
+            slug: 'lucas',
+            name: 'Lucas',
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            circleCount: 0,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+        participants: [MockRemoteParticipant('lucas', 'Lucas')],
+      );
+
+      check(tester.widgetList(find.text('Message Keeper'))).length.equals(0);
+
+      await tester.tap(find.text('Everyone').first);
+      await tester.pumpAndSettle();
+
+      check(tester.widgetList(find.text('Heather'))).length.equals(0);
+    });
+
     testWidgets('participant can open a private keeper thread', (tester) async {
       await pumpChatSheet(
         tester,
@@ -475,7 +511,7 @@ void main() {
       expect(find.text('Everyone'), findsWidgets);
     });
 
-    testWidgets('scrolls to the newest message when a new message arrives', (
+    testWidgets('does not scroll when the reader is away from the bottom', (
       tester,
     ) async {
       final messages = List.generate(
@@ -523,6 +559,47 @@ void main() {
           .read(harness.messagesProvider.notifier)
           .set(updatedMessages);
       await tester.pump();
+      await tester.pumpAndSettle();
+
+      check(controller.position.pixels).equals(0);
+    });
+
+    testWidgets('follows new messages when the reader is near the bottom', (
+      tester,
+    ) async {
+      final messages = List.generate(
+        20,
+        (index) => SessionChatMessage(
+          id: 'near-bottom-$index',
+          sender: false,
+          message: 'Message $index',
+          timestamp: index,
+          participant: MockRemoteParticipant('user-$index', 'User $index'),
+        ),
+      );
+
+      final harness = await pumpChatSheetWithMutableMessages(
+        tester,
+        isKeeper: false,
+        messages: messages,
+        session: session,
+        authState: AuthState.unauthenticated(),
+      );
+      final listView = tester.widget<ListView>(find.byType(ListView));
+      final controller = listView.controller!;
+      controller.jumpTo(controller.position.maxScrollExtent - 10);
+      await tester.pump();
+
+      harness.container.read(harness.messagesProvider.notifier).set([
+        ...messages,
+        SessionChatMessage(
+          id: 'near-bottom-new',
+          sender: false,
+          message: 'Newest message',
+          timestamp: 20,
+          participant: MockRemoteParticipant('user-20', 'User 20'),
+        ),
+      ]);
       await tester.pumpAndSettle();
 
       check(
@@ -653,6 +730,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Message Lucas'), findsOneWidget);
+      check(
+        tester.widgetList(
+          find.text('Only you and Lucas can see these messages'),
+        ),
+      ).length.equals(1);
     });
 
     testWidgets('slides the overlay drawer in from the trailing edge', (

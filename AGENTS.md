@@ -40,8 +40,6 @@ Leak tracking is enabled through:
 
 ## Validation
 
-Run validation from each package directory, sequentially. Concurrent Flutter commands contend for the SDK startup lock and can introduce shared plugin/framework flakiness.
-
 ```sh
 make lint
 make test

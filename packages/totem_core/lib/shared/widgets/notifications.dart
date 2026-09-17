@@ -383,7 +383,10 @@ class NotificationController {
           message: message,
         );
         if (onTap == null) return banner;
-        return GestureDetector(onTap: onTap, child: banner);
+        return Semantics(
+          button: true,
+          child: GestureDetector(onTap: onTap, child: banner),
+        );
       },
     );
   }

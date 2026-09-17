@@ -49,6 +49,8 @@ class SessionChatPanel extends ConsumerStatefulWidget {
 
 class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     with SingleTickerProviderStateMixin {
+  static const _autoScrollThreshold = 80.0;
+
   ScrollController? _localController;
   ScrollController get scrollController =>
       widget.scrollController ?? (_localController ??= ScrollController());
@@ -71,6 +73,13 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     _dropdownController.dispose();
     _localController?.dispose();
     super.dispose();
+  }
+
+  bool get _isNearBottom {
+    if (!scrollController.hasClients) return false;
+    final position = scrollController.position;
+    if (!position.hasContentDimensions) return false;
+    return position.maxScrollExtent - position.pixels <= _autoScrollThreshold;
   }
 
   Future<void> _scrollToBottom() async {
@@ -141,7 +150,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
         localIdentity: _localIdentity(),
         threadTarget: ref.read(sessionChatThreadTargetProvider),
       );
-      if (belongs) unawaited(_scrollToBottom());
+      if (belongs && _isNearBottom) unawaited(_scrollToBottom());
     });
 
     // A newly selected thread should open at its most recent message.
@@ -181,9 +190,13 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
 
     final isPrivateThread = threadTarget != null;
     final canCompose = isKeeper || isPrivateThread;
+    final keeperIsPresent =
+        _participantFor(participants, keeperIdentity) != null;
+    final recipientName = _participantFor(participants, threadTarget)?.name;
     final hintText = _pinnedHint(
       isKeeper: isKeeper,
       isPrivateThread: isPrivateThread,
+      recipientName: recipientName,
     );
 
     Future<bool> send(String text) async {
@@ -316,7 +329,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                 ],
               ),
             ),
-            if (!isKeeper)
+            if (!isKeeper && (isPrivateThread || keeperIsPresent))
               _ParticipantThreadChip(
                 isPrivateThread: isPrivateThread,
                 onMessageKeeper: () {
@@ -379,9 +392,15 @@ Participant? _participantFor(List<Participant> participants, String? identity) {
   );
 }
 
-String _pinnedHint({required bool isKeeper, required bool isPrivateThread}) {
+String _pinnedHint({
+  required bool isKeeper,
+  required bool isPrivateThread,
+  required String? recipientName,
+}) {
   if (isPrivateThread) {
-    return 'Only the keeper can see these messages';
+    if (!isKeeper) return 'Only the keeper can see these messages';
+    final name = recipientName;
+    return 'Only you and ${name != null && name.isNotEmpty ? name : 'this participant'} can see these messages';
   }
   if (isKeeper) {
     return 'Only you can post messages here';
