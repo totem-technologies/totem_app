@@ -123,11 +123,15 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       semanticsLabel: 'Chat',
       role: ActionBarButtonRole.sheet(open: isChatOpen),
       onPressed: () {
-        final hasUnread = unreadThreads.isNotEmpty;
-        final latestUnreadThread = ref
+        final latestUnread = ref
             .read(sessionChatUnreadThreadsProvider.notifier)
             .latestUnreadThread;
-        unawaited(_openChat(thread: latestUnreadThread, fromUnread: hasUnread));
+        unawaited(
+          _openChat(
+            thread: latestUnread?.thread,
+            fromUnread: latestUnread != null,
+          ),
+        );
       },
       child: Stack(
         clipBehavior: Clip.none,

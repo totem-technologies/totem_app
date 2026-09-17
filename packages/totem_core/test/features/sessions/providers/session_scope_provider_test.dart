@@ -103,7 +103,9 @@ void main() {
 
       check(container.read(sessionChatUnreadThreadsProvider)).contains('lucas');
       check(container.read(sessionChatUnreadThreadsProvider)).contains(null);
-      check(controller.latestUnreadThread).isNull();
+      final everyoneUnread = controller.latestUnreadThread;
+      check(everyoneUnread).isNotNull();
+      check(everyoneUnread?.thread).isNull();
 
       controller.markRead(null);
 
@@ -111,7 +113,11 @@ void main() {
       check(
         container.read(sessionChatUnreadThreadsProvider).contains(null),
       ).isFalse();
-      check(controller.latestUnreadThread).equals('lucas');
+      check(controller.latestUnreadThread?.thread).equals('lucas');
+
+      controller.markRead('lucas');
+
+      check(controller.latestUnreadThread).isNull();
     });
   });
 

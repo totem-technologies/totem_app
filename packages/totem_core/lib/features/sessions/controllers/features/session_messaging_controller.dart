@@ -159,18 +159,27 @@ class SessionMessagingController extends _$SessionMessagingController {
             return;
           }
         } else {
-          // Private threads always have the keeper on one end: either the
-          // keeper is DMing us, or we are the keeper being DMed.
+          // Private messages must be addressed to this client. LiveKit routes
+          // by destination but does not make the destination trustworthy.
           final localIdentity = _room?.localParticipant?.identity;
-          final fromKeeper = senderId != null && senderId == keeperIdentity;
+          if (senderId == null || localIdentity == null) {
+            logger.w('Ignoring private chat message without both identities');
+            return;
+          }
+
+          final recipientIdentity = message.recipientIdentity!;
+          final fromKeeperToLocal =
+              senderId == keeperIdentity &&
+              recipientIdentity == localIdentity &&
+              localIdentity != keeperIdentity;
           final toLocalKeeper =
-              localIdentity != null &&
               localIdentity == keeperIdentity &&
-              message.recipientIdentity == localIdentity;
-          if (!fromKeeper && !toLocalKeeper) {
+              recipientIdentity == localIdentity &&
+              senderId != keeperIdentity;
+          if (!fromKeeperToLocal && !toLocalKeeper) {
             logger.w(
               'Ignoring private chat message from $senderId to '
-              '${message.recipientIdentity}: neither end is the keeper',
+              '$recipientIdentity: it is not addressed to this client',
             );
             return;
           }

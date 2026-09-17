@@ -256,7 +256,10 @@ class SessionChatUnreadThreads extends _$SessionChatUnreadThreads {
   @override
   Set<String?> build() => <String?>{};
 
-  String? get latestUnreadThread => state.isEmpty ? null : state.last;
+  /// Null means there are no unread threads; a non-null value can contain a
+  /// null thread for the Everyone thread.
+  ({String? thread})? get latestUnreadThread =>
+      state.isEmpty ? null : (thread: state.last);
 
   void markUnread(String? thread) {
     state = {...state}

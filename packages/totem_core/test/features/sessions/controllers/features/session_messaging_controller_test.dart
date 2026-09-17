@@ -556,6 +556,25 @@ void main() {
         expect(mockSession.addedChatMessages.first.recipientIdentity, 'user-2');
       });
 
+      test('ignores a keeper DM delivered to another participant', () async {
+        final mockSession = FakeSessionController()
+          ..mockRoom = FakeRoom(MockLocalParticipant('bob'));
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        controller.handleDataReceived(
+          privateChatEvent(
+            senderIdentity: 'keeper-1',
+            recipientIdentity: 'alice',
+          ),
+        );
+
+        check(mockSession.addedChatMessages).isEmpty();
+      });
+
       test('keeper accepts a DM addressed to them', () async {
         final mockSession = FakeSessionController()
           ..mockRoom = FakeRoom(MockLocalParticipant('keeper-1'));

@@ -4,7 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
 
 void main() {
-  testWidgets('lays out a content-width bubble without intrinsic sizing', (
+  testWidgets('lays out a content-width bubble with trailing timestamp', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -27,8 +27,11 @@ void main() {
       matching: find.byType(DecoratedBox),
     );
 
-    check(tester.widgetList(find.byType(IntrinsicWidth))).isEmpty();
+    check(tester.widgetList(find.byType(IntrinsicWidth))).length.equals(1);
     check(tester.getSize(find.byType(MessageBubble)).width).equals(400);
     check(tester.getSize(bubble).width).isLessThan(336);
+    check(
+      tester.getTopRight(find.text('10:25 AM')).dx,
+    ).isCloseTo(tester.getTopRight(bubble).dx - 14, 0.1);
   });
 }
