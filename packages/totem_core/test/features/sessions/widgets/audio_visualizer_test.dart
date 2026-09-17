@@ -4,6 +4,26 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
 
 void main() {
+  group('audioVisualizerSamplesChanged', () {
+    test('ignores imperceptible changes and detects visible changes', () {
+      check(
+        audioVisualizerSamplesChanged(
+          const [0.1, 0.5, 0.9],
+          const [0.105, 0.495, 0.9],
+        ),
+      ).isFalse();
+      check(
+        audioVisualizerSamplesChanged(
+          const [0.1, 0.5, 0.9],
+          const [0.111, 0.5, 0.9],
+        ),
+      ).isTrue();
+      check(
+        audioVisualizerSamplesChanged(const [0.1], const [0.1, 0.2]),
+      ).isTrue();
+    });
+  });
+
   group('AudioVisualizerWidgetOptions Tests', () {
     test('should create with default values', () {
       const options = AudioVisualizerWidgetOptions();
