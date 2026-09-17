@@ -180,11 +180,35 @@ and are intentionally not duplicated as secrets or variables.
 #### App Store Connect setup
 
 Create an App Store Connect team API key that can upload builds to both
-`org.totem.ios` and `org.totem.ios.dev`. Give it only the minimum role that can
-upload builds (normally Developer or App Manager), then store the key metadata
+`org.totem.ios` and `org.totem.ios.dev` and download their provisioning profiles.
+The download action recommends at least App Manager access. Store the key metadata
 and one-time-download `.p8` contents in the secrets above. Both app records,
 bundle IDs, distribution certificates, and provisioning profiles must already
 exist.
+
+CI downloads active App Store distribution profiles using
+`apple-actions/download-provisioning-profiles@v6` and the same API key used for
+uploads. The team key must have access to the provisioning API; upload permission
+alone is insufficient. CI selects these profiles for team `LNLXP4VK97` and
+installs them in Xcode's profile directory. Each profile must include the distribution certificate
+stored in `IOS_BUILD_CERTIFICATE_BASE64` and be unexpired. The profile names must
+match both the Runner release signing settings and the export options plist.
+
+| Flavor | Bundle ID | Profile name |
+| --- | --- | --- |
+| Production | `org.totem.ios` | `org.totem.ios Profile 2` |
+| Staging | `org.totem.ios.dev` | `org.totem.dev Profile 2` |
+
+The profile names also appear in the release workflow matrix. Renew profiles in
+Apple's developer portal before they expire; CI downloads them on each run but
+does not create or renew them. If a profile is renamed, update the matrix,
+Runner signing settings, and export options together.
+
+`IOS_MOBILE_PROVISIONING_PROFILE_BASE64` and
+`IOS_STAGING_PROVISIONING_PROFILE_BASE64` are not needed by this workflow.
+Keep `IOS_BUILD_CERTIFICATE_BASE64`, `IOS_BUILD_CERTIFICATE_PASSWORD`, and
+`IOS_GITHUB_KEYCHAIN_PASSWORD`: downloading a profile does not supply the signing
+certificate's private key.
 
 The workflow writes the private key temporarily to the path expected by
 `xcrun altool`, uploads the local IPA, and deletes the temporary key even when

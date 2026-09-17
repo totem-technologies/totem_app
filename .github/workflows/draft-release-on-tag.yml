@@ -102,10 +102,12 @@ jobs:
         include:
           - flavor: production
             export_plist: ios/GithubActionsExportOptions.plist
-            provisioning_profile_secret: IOS_MOBILE_PROVISIONING_PROFILE_BASE64
+            bundle_id: org.totem.ios
+            provisioning_profile_name: org.totem.ios Profile 2
           - flavor: staging
             export_plist: ios/GithubActionsExportOptions-staging.plist
-            provisioning_profile_secret: IOS_STAGING_PROVISIONING_PROFILE_BASE64
+            bundle_id: org.totem.ios.dev
+            provisioning_profile_name: org.totem.dev Profile 2
 
     steps:
       - uses: actions/checkout@v6
@@ -124,7 +126,11 @@ jobs:
           build-cmd: flutter build ipa --release --flavor ${{ matrix.flavor }} --export-options-plist=${{ matrix.export_plist }}
           certificate-base64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
           certificate-password: ${{ secrets.IOS_BUILD_CERTIFICATE_PASSWORD }}
-          provisioning-profile-base64: ${{ secrets[matrix.provisioning_profile_secret] }}
+          bundle-id: ${{ matrix.bundle_id }}
+          provisioning-profile-name: ${{ matrix.provisioning_profile_name }}
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          api-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           keychain-password: ${{ secrets.IOS_GITHUB_KEYCHAIN_PASSWORD }}
 
       - name: Rename IPA for clarity

@@ -21,8 +21,20 @@ inputs:
   certificate-password:
     description: "password of the above certificate"
     required: true
-  provisioning-profile-base64:
-    description: "base 64 of your.mobileprovision"
+  bundle-id:
+    description: The bundle identifier to download an App Store profile for
+    required: true
+  provisioning-profile-name:
+    description: The profile name used by the archive and export signing settings
+    required: true
+  issuer-id:
+    description: App Store Connect team API key issuer ID
+    required: true
+  api-key-id:
+    description: App Store Connect API key ID
+    required: true
+  api-private-key:
+    description: Complete App Store Connect API private key contents
     required: true
   keychain-password:
     description: "random string in secrets"
@@ -43,25 +55,18 @@ runs:
       shell: bash
 
     # see https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development for more info
-    - name: Install the Apple certificate and provisioning profile
+    - name: Install the Apple certificate
       shell: bash
       env:
         IOS_BUILD_CERTIFICATE_BASE64: ${{ inputs.certificate-base64 }}
         IOS_BUILD_CERTIFICATE_PASSWORD: ${{ inputs.certificate-password }}
-        IOS_MOBILE_PROVISIONING_PROFILE_BASE64: ${{ inputs.provisioning-profile-base64 }}
         IOS_GITHUB_KEYCHAIN_PASSWORD: ${{ inputs.keychain-password }}
-        # Slight modification in the script from https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
-        # that adds the uuid to the mobile provision so xcode can find it
       run: |
         # create variables
         CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
         KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-        PP_PATH=$RUNNER_TEMP/temp.mobileprovision
-
-
-        # import certificate and provisioning profile from secrets
+        # import certificate from secrets
         echo -n "$IOS_BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-        echo -n "$IOS_MOBILE_PROVISIONING_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
         # create temporary keychain
         security create-keychain -p "$IOS_GITHUB_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
@@ -73,15 +78,36 @@ runs:
         security list-keychain -d user -s $KEYCHAIN_PATH
         security find-identity -v
 
-        # use uuid for the name of provisioning profile
-        UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(/usr/bin/security cms -D -i $PP_PATH))
+    - name: Download App Store provisioning profiles
+      id: profiles
+      uses: apple-actions/download-provisioning-profiles@v6
+      with:
+        bundle-id: ${{ inputs.bundle-id }}
+        profile-type: IOS_APP_STORE
+        issuer-id: ${{ inputs.issuer-id }}
+        api-key-id: ${{ inputs.api-key-id }}
+        api-private-key: ${{ inputs.api-private-key }}
 
-        # apply provisioning profile
-        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-        cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+    - name: Install the selected profile for Xcode
+      shell: bash
+      env:
+        DOWNLOADED_PROFILES: ${{ steps.profiles.outputs.profiles }}
+        PROFILE_NAME: ${{ inputs.provisioning-profile-name }}
+      run: |
+        UUID=$(printf '%s' "$DOWNLOADED_PROFILES" | jq -er --arg name "$PROFILE_NAME" '
+          [.[] | select(.name == $name and .type == "IOS_APP_STORE")]
+          | if length == 1 then .[0].udid
+            else error("Expected exactly one active App Store profile named " + $name)
+            end
+        ')
+        # Xcode 16 and later load profiles from their UserData directory.
+        PROFILE_DIRECTORY="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+        mkdir -p "$PROFILE_DIRECTORY"
+        cp "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision" \
+          "$PROFILE_DIRECTORY/$UUID.mobileprovision"
 
     - name: List profiles
-      run: cd ~/Library/MobileDevice/Provisioning\ Profiles && ls
+      run: ls "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
       shell: bash
 
     - name: Build
