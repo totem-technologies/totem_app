@@ -28,6 +28,13 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
   String? _latestUnreadThread;
   NotificationRequest? _notification;
 
+  void _markThreadRead(String? thread) {
+    _unreadThreads.remove(thread);
+    if (_latestUnreadThread == thread) {
+      _latestUnreadThread = _unreadThreads.isEmpty ? null : _unreadThreads.last;
+    }
+  }
+
   String? _localIdentity() {
     final user = ref.read(authControllerProvider).user;
     final roomIdentity = ref
@@ -51,10 +58,10 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
 
     if (fromUnread) {
       ref.read(sessionChatThreadTargetProvider.notifier).target = thread;
-      setState(() => _unreadThreads.remove(thread));
+      setState(() => _markThreadRead(thread));
     } else {
       setState(
-        () => _unreadThreads.remove(ref.read(sessionChatThreadTargetProvider)),
+        () => _markThreadRead(ref.read(sessionChatThreadTargetProvider)),
       );
     }
 
@@ -89,6 +96,13 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     final isChatOpen = _chatSheetOpen || dockedOpen;
     final visibleThread = ref.watch(sessionChatThreadTargetProvider);
 
+    ref.listen(sessionChatThreadTargetProvider, (previous, next) {
+      if (!isChatOpen || previous == next || !_unreadThreads.contains(next)) {
+        return;
+      }
+      setState(() => _markThreadRead(next));
+    });
+
     ref.listen(lastSessionMessageProvider, (previous, next) {
       if (next == null || identical(previous, next)) return;
       if (!mounted || next.sender) return;
@@ -122,7 +136,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
         clipBehavior: Clip.none,
         children: [
           const TotemIcon(TotemIcons.chat),
-          if (_unreadThreads.isNotEmpty && !dockedOpen)
+          if (_unreadThreads.isNotEmpty)
             Container(
               height: 4,
               width: 4,

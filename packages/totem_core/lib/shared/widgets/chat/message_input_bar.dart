@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 /// Pill composer + circular send button shared by DMs and session chat.
 class MessageInputBar extends StatefulWidget {
@@ -200,8 +201,9 @@ class _SendButtonState extends State<_SendButton> {
               color: canSend ? AppTheme.mauve : AppTheme.messageGray,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.arrow_forward_rounded,
+            alignment: Alignment.center,
+            child: const TotemIcon(
+              TotemIcons.sendMessage,
               color: AppTheme.white,
               size: 22,
             ),
