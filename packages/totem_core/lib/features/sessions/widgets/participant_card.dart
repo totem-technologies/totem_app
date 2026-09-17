@@ -466,31 +466,47 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void _setupListeners() {
     _listener?.dispose();
     _listener = widget.participant.createListener()
+      ..on<TrackPublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackUnpublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackSubscribedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackUnsubscribedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
       ..on<TrackMutedEvent>(_onTrackMuted)
-      ..on<TrackUnmutedEvent>(_onTrackUnmuted)
-      ..on<ParticipantEvent>(_onParticipantUpdated);
+      ..on<TrackUnmutedEvent>(_onTrackUnmuted);
+  }
+
+  void _onCameraPublicationChanged(TrackPublication<Track> publication) {
+    if (!mounted || publication.source != TrackSource.camera) return;
+    setState(() {});
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
-    if (event.publication.source != TrackSource.camera) return;
-    if (!mounted) return;
-    setState(() {});
+    _onCameraPublicationChanged(event.publication);
   }
 
   void _onTrackUnmuted(TrackUnmutedEvent event) {
-    if (event.publication.source != TrackSource.camera) return;
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  void _onParticipantUpdated(ParticipantEvent _) {
-    if (mounted) setState(() {});
+    _onCameraPublicationChanged(event.publication);
   }
 
   @override
   void initState() {
     super.initState();
     _setupListeners();
+  }
+
+  @override
+  void didUpdateWidget(covariant ParticipantVideo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.participant.sid != widget.participant.sid) {
+      _setupListeners();
+    }
   }
 
   @override

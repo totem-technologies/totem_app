@@ -156,7 +156,7 @@ class SessionController extends _$SessionController {
   }
 
   void applyRoomState(RoomState roomState) {
-    _onRoomChanges(roomState);
+    _updateRoomState(roomState);
   }
 
   Future<void> disconnectFromRoom() {
@@ -242,7 +242,7 @@ class SessionController extends _$SessionController {
       '"${room?.localParticipant?.identity}".',
     );
 
-    _onRoomChanges();
+    _updateRoomState();
 
     unawaited(_applyJoinMediaState());
     _dispatch(
@@ -296,8 +296,7 @@ class SessionController extends _$SessionController {
     _dispatch(SessionErrorChanged(RoomLiveKitError(error)));
   }
 
-  void _onRoomChanges([RoomState? newSessionState]) {
-    _updateParticipantsList();
+  void _updateRoomState([RoomState? newSessionState]) {
     void handleStateChange(RoomState state) {
       if (state.version <= this.state.roomState.version) return;
 
@@ -438,10 +437,10 @@ class SessionController extends _$SessionController {
       if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
       _syncTimer?.cancel();
-      _syncTimer = Timer.periodic(
-        SessionController.syncTimerDuration,
-        (_) => _onRoomChanges(),
-      );
+      _syncTimer = Timer.periodic(SessionController.syncTimerDuration, (_) {
+        _updateRoomState();
+        _updateParticipantsList();
+      });
       _startStatePolling();
 
       final connectOptions = defaultTargetPlatform == TargetPlatform.iOS
@@ -677,10 +676,8 @@ class SessionController extends _$SessionController {
     await room.prepareConnection(url, token);
 
     _listener ??= room.createListener()
-      ..on((_) {
-        if (ref.mounted) {
-          _onRoomChanges();
-        }
+      ..on<RoomMetadataChangedEvent>((_) {
+        if (ref.mounted) _updateRoomState();
       })
       ..on<RoomConnectedEvent>((_) => _onConnected())
       ..on<RoomDisconnectedEvent>((event) {

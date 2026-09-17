@@ -72,6 +72,8 @@ class _CountingRoomEventsListener implements EventsListener<RoomEvent> {
   int disposeCount = 0;
   final Map<Type, List<FutureOr<void> Function(Object?)>> _listeners = {};
 
+  Set<Type> get listenerTypes => _listeners.keys.toSet();
+
   @override
   CancelListenFunc on<E>(
     FutureOr<void> Function(E event) listener, {
@@ -476,6 +478,11 @@ void main() {
             url: 'wss://example.livekit.cloud',
             token: options.token,
           );
+
+          check(room.listener.listenerTypes.contains(RoomEvent)).isFalse();
+          check(
+            room.listener.listenerTypes.contains(RoomMetadataChangedEvent),
+          ).isTrue();
 
           await room.listener.trigger(
             RoomConnectedEvent(room: room, metadata: null),
