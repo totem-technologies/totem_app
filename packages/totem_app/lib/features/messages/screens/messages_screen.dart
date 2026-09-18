@@ -1,17 +1,19 @@
 import 'dart:async';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_core/core/config/theme.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:totem_app/features/messages/widgets/chat_card.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/messages/providers/conversations_provider.dart';
 import 'package:totem_core/features/messages/providers/messaging_sync_coordinator.dart';
 import 'package:totem_core/features/messages/repositories/messages_repository.dart';
 import 'package:totem_core/shared/router.dart';
-
-import '../widgets/chat_card.dart';
+import 'package:totem_core/shared/widgets/error_screen.dart';
+import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
@@ -53,7 +55,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
       backgroundColor: AppTheme.cream,
       appBar: AppBar(
         backgroundColor: AppTheme.surfaceCard,
-        title: Text('Messages'),
+        title: const Text('Messages'),
         centerTitle: false,
         actions: [
           Padding(
@@ -79,72 +81,90 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(20, 18, 20, 18),
-            child: TextField(
-              onChanged: _onSearchChanged,
-              decoration: InputDecoration(
-                hintText: 'Search messages',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: asyncInbox.asData?.value.isSearching == true
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator.adaptive(
-                            strokeWidth: 2,
+      body: asyncInbox.when(
+        loading: LoadingIndicator.new,
+        error: (error, stack) {
+          return ErrorScreen(
+            error: error,
+            showHomeButton: false,
+            onRetry: _refresh,
+          );
+        },
+        data: (inbox) {
+          if (inbox.searchError != null) {
+            return _SearchError(
+              onRetry: () => ref
+                  .read(conversationsProvider.notifier)
+                  .search(inbox.query, force: true),
+            );
+          }
+
+          if (inbox.conversations.isEmpty) {
+            if (inbox.query.isEmpty) {
+              return const _EmptyState();
+            } else {
+              return const _NoSearchResults();
+            }
+          }
+
+          return NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.extentAfter < 240) {
+                ref.read(conversationsProvider.notifier).loadMore();
+              }
+              return false;
+            },
+            child: RefreshIndicator.adaptive(
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        20,
+                        18,
+                        20,
+                        18,
+                      ),
+                      child: TextField(
+                        onChanged: _onSearchChanged,
+                        decoration: InputDecoration(
+                          hintText: 'Search messages',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: inbox.isSearching
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator.adaptive(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: AppTheme.messageSearchBg,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none,
                           ),
                         ),
-                      )
-                    : null,
-                filled: true,
-                fillColor: AppTheme.messageSearchBg,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
-                ),
+                      ),
+                    ),
+                  ),
+                  _ConversationList(
+                    conversations: inbox.conversations,
+                    isLoadingMore: inbox.isLoadingMore,
+                    loadMoreError: inbox.loadMoreError,
+                    onLoadMore: () =>
+                        ref.read(conversationsProvider.notifier).loadMore(),
+                  ),
+                ],
               ),
             ),
-          ),
-          Expanded(
-            child: asyncInbox.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator.adaptive()),
-              error: (_, _) => Center(
-                child: TextButton(
-                  onPressed: () => ref.invalidate(conversationsProvider),
-                  child: const Text('Could not load messages. Try again.'),
-                ),
-              ),
-              data: (inbox) {
-                if (inbox.searchError != null) {
-                  return _SearchError(
-                    onRetry: () => ref
-                        .read(conversationsProvider.notifier)
-                        .search(inbox.query, force: true),
-                  );
-                }
-                if (inbox.conversations.isEmpty) {
-                  return inbox.query.isEmpty
-                      ? const _EmptyState()
-                      : const _NoSearchResults();
-                }
-                return _ConversationList(
-                  conversations: inbox.conversations,
-                  isLoadingMore: inbox.isLoadingMore,
-                  loadMoreError: inbox.loadMoreError,
-                  onRefresh: _refresh,
-                  onLoadMore: () =>
-                      ref.read(conversationsProvider.notifier).loadMore(),
-                );
-              },
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -161,7 +181,7 @@ class _NoSearchResults extends StatelessWidget {
 class _SearchError extends StatelessWidget {
   const _SearchError({required this.onRetry});
 
-  final Future<void> Function() onRetry;
+  final AsyncCallback onRetry;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -269,61 +289,49 @@ class _ConversationList extends StatelessWidget {
     required this.conversations,
     required this.isLoadingMore,
     required this.loadMoreError,
-    required this.onRefresh,
     required this.onLoadMore,
   });
 
   final List<Conversation> conversations;
   final bool isLoadingMore;
   final Object? loadMoreError;
-  final Future<void> Function() onRefresh;
   final VoidCallback onLoadMore;
 
   @override
-  Widget build(BuildContext context) {
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification.metrics.extentAfter < 240) onLoadMore();
-        return false;
-      },
-      child: RefreshIndicator.adaptive(
-        onRefresh: onRefresh,
-        child: ListView.separated(
-          padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 20),
-          itemCount:
-              conversations.length +
-              (isLoadingMore || loadMoreError != null ? 1 : 0),
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            if (index == conversations.length) {
-              if (loadMoreError != null) {
-                return TextButton(
-                  onPressed: onLoadMore,
-                  child: const Text('Retry loading more'),
-                );
-              }
-              return const Center(child: CircularProgressIndicator.adaptive());
-            }
-            final conversation = conversations[index];
-            final lastMessage = conversation.lastMessage;
-            final preview = lastMessage == null
-                ? ''
-                : lastMessage.isOwn
-                ? 'You: ${lastMessage.text}'
-                : lastMessage.text;
-            return ChatCard(
-              name: conversation.peer.name ?? 'Unknown',
-              lastMessage: preview,
-              timestamp: conversation.updatedAt,
-              avatarSeed: conversation.peer.profileAvatarSeed,
-              unreadCount: conversation.unreadCount,
-              isOwnLastMessage: lastMessage?.isOwn ?? false,
-              onTap: () =>
-                  context.push(RouteNames.messageThread(conversation.id)),
+  Widget build(BuildContext context) => SliverPadding(
+    padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 20),
+    sliver: SliverList.separated(
+      itemCount:
+          conversations.length +
+          (isLoadingMore || loadMoreError != null ? 1 : 0),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        if (index == conversations.length) {
+          if (loadMoreError != null) {
+            return TextButton(
+              onPressed: onLoadMore,
+              child: const Text('Retry loading more'),
             );
-          },
-        ),
-      ),
-    );
-  }
+          }
+          return const Center(child: CircularProgressIndicator.adaptive());
+        }
+        final conversation = conversations[index];
+        final lastMessage = conversation.lastMessage;
+        final preview = lastMessage == null
+            ? ''
+            : lastMessage.isOwn
+            ? 'You: ${lastMessage.text}'
+            : lastMessage.text;
+        return ChatCard(
+          name: conversation.peer.name ?? 'Unknown',
+          lastMessage: preview,
+          timestamp: conversation.updatedAt,
+          avatarSeed: conversation.peer.profileAvatarSeed,
+          unreadCount: conversation.unreadCount,
+          isOwnLastMessage: lastMessage?.isOwn ?? false,
+          onTap: () => context.push(RouteNames.messageThread(conversation.id)),
+        );
+      },
+    ),
+  );
 }

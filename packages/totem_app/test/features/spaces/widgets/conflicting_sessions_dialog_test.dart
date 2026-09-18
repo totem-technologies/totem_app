@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:checks/checks.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/features/spaces/widgets/conflicting_sessions_dialog.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 

@@ -1,8 +1,8 @@
+import 'package:checks/checks.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/auth/services/notifications_service.dart';
@@ -42,7 +42,7 @@ void setupFirebaseMocks() {
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(
         const MethodChannel('plugins.flutter.io/firebase_core'),
-        (MethodCall methodCall) async {
+        (methodCall) async {
           if (methodCall.method == 'Firebase#initializeCore') {
             return [
               {
@@ -53,15 +53,16 @@ void setupFirebaseMocks() {
                   'messagingSenderId': '123',
                   'projectId': '123',
                 },
-                'pluginConstants': {},
+                'pluginConstants': <void, void>{},
               },
             ];
           }
           if (methodCall.method == 'Firebase#initializeApp') {
+            final args = methodCall.arguments as Map<String, dynamic>;
             return {
-              'name': methodCall.arguments['appName'] ?? '[DEFAULT]',
-              'options': methodCall.arguments['options'],
-              'pluginConstants': {},
+              'name': args['appName'] ?? '[DEFAULT]',
+              'options': args['options'],
+              'pluginConstants': <void, void>{},
             };
           }
           return null;
@@ -72,7 +73,7 @@ void setupFirebaseMocks() {
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(
         const MethodChannel('plugins.flutter.io/firebase_messaging'),
-        (MethodCall methodCall) async => null,
+        (methodCall) async => null,
       );
 }
 
@@ -108,7 +109,7 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('dev.fluttercommunity.plus/connectivity'),
-          (MethodCall methodCall) async => ['wifi'],
+          (methodCall) async => ['wifi'],
         );
 
     setupFirebaseMocks();
@@ -133,7 +134,7 @@ void main() {
 
     container = ProviderContainer(
       overrides: [
-        authControllerProvider.overrideWith(() => MobileAuthController()),
+        authControllerProvider.overrideWith(MobileAuthController.new),
         authRepositoryProvider.overrideWithValue(mockAuthRepository),
         userRepositoryProvider.overrideWithValue(mockUserRepository),
         secureStorageProvider.overrideWithValue(mockSecureStorage),
@@ -158,10 +159,10 @@ void main() {
 
   group('MobileAuthController - requestPin', () {
     test('successfully requests PIN and updates state', () async {
-      final email = 'test@example.com';
+      const email = 'test@example.com';
       when(
         () => mockAuthRepository.requestPin(email, false),
-      ).thenAnswer((_) async => MessageResponse(message: 'Success'));
+      ).thenAnswer((_) async => const MessageResponse(message: 'Success'));
       when(
         () => mockAnalyticsService.logEvent(
           any(),
@@ -192,14 +193,14 @@ void main() {
     test(
       'successfully verifies PIN, stores tokens, and authenticates',
       () async {
-        final email = 'test@example.com';
-        final pin = '123456';
+        const email = 'test@example.com';
+        const pin = '123456';
         final mockUser = _buildUserSchema(
           slug: '1',
           name: 'John',
           email: email,
         );
-        final mockTokenResponse = TokenResponse(
+        const mockTokenResponse = TokenResponse(
           accessToken: 'access',
           refreshToken: 'refresh',
           expiresIn: 3600,
@@ -207,7 +208,7 @@ void main() {
 
         when(
           () => mockAuthRepository.requestPin(email, false),
-        ).thenAnswer((_) async => MessageResponse(message: 'OK'));
+        ).thenAnswer((_) async => const MessageResponse(message: 'OK'));
         when(
           () => mockAnalyticsService.logEvent(
             any(),
@@ -268,12 +269,12 @@ void main() {
   group('MobileAuthController - logout & deleteAccount', () {
     // Helper to setup an authenticated state before testing logout/delete
     Future<void> authenticateUser() async {
-      final email = 'test@example.com';
+      const email = 'test@example.com';
       when(
         () => mockAuthRepository.requestPin(email, false),
-      ).thenAnswer((_) async => MessageResponse(message: 'OK'));
+      ).thenAnswer((_) async => const MessageResponse(message: 'OK'));
       when(() => mockAuthRepository.verifyPin(email, '123456')).thenAnswer(
-        (_) async => TokenResponse(
+        (_) async => const TokenResponse(
           accessToken: 'access',
           refreshToken: 'refresh',
           expiresIn: 3600,
@@ -321,7 +322,7 @@ void main() {
       when(() => mockCacheService.clearCache()).thenAnswer((_) async {});
       when(
         () => mockAuthRepository.logout('refresh_token'),
-      ).thenAnswer((_) async => MessageResponse(message: 'OK'));
+      ).thenAnswer((_) async => const MessageResponse(message: 'OK'));
 
       when(() => mockAnalyticsService.logLogout()).thenAnswer((_) async {});
 
@@ -362,16 +363,19 @@ void main() {
 
   group('MobileAuthController - syncUser', () {
     test('syncUser updates user object if authenticated', () async {
-      final email = 'test@example.com';
+      const email = 'test@example.com';
       final initialUser = _buildUserSchema(slug: '1', name: 'John');
       final updatedUser = _buildUserSchema(slug: '1', name: 'John Doe');
 
       when(
         () => mockAuthRepository.requestPin(email, false),
-      ).thenAnswer((_) async => MessageResponse(message: 'OK'));
+      ).thenAnswer((_) async => const MessageResponse(message: 'OK'));
       when(() => mockAuthRepository.verifyPin(email, '123456')).thenAnswer(
-        (_) async =>
-            TokenResponse(accessToken: 'a', refreshToken: 'r', expiresIn: 3600),
+        (_) async => const TokenResponse(
+          accessToken: 'a',
+          refreshToken: 'r',
+          expiresIn: 3600,
+        ),
       );
       when(
         () => mockSecureStorage.write(

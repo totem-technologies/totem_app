@@ -1,8 +1,8 @@
 import 'dart:io';
 
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
@@ -149,7 +149,7 @@ void main() {
           referralOther: any(named: 'referralOther'),
           yearBorn: any(named: 'yearBorn'),
         ),
-      ).thenAnswer((_) async => OnboardSchema(hopes: 'Sports'));
+      ).thenAnswer((_) async => const OnboardSchema(hopes: 'Sports'));
 
       when(
         () => mockAnalyticsService.logEvent(

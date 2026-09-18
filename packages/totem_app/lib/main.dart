@@ -2,17 +2,17 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/auth/services/notifications_service.dart';
 import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/app_config.dart';
-import 'package:totem_core/features/messages/providers/messaging_sync_coordinator.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/messages/providers/messaging_sync_coordinator.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
@@ -20,7 +20,7 @@ import 'package:totem_core/shared_main.dart';
 Future<void> main() async {
   try {
     await sharedMain(
-      TotemApp(),
+      const TotemApp(),
       () async {
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,

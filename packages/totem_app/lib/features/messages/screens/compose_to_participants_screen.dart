@@ -1,6 +1,6 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/messages/providers/compose_to_participants_provider.dart';
@@ -406,7 +406,7 @@ class _SendResultDialog extends StatelessWidget {
                               '${_participantCountLabel(sentCount)} of '
                               '${_participantCountLabel(requestedCount)} '
                               'in $sessionName.'
-                  : 'We couldn\'t send your message. Please check your '
+                  : "We couldn't send your message. Please check your "
                         'connection and try again.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(

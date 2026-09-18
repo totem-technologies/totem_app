@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
@@ -52,7 +52,7 @@ class _StatusBanner extends StatelessWidget {
                 ConnectivityStatus.online ||
                 ConnectivityStatus.recentlyReconnected => "You're back online",
               },
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 color: Colors.white,
                 fontWeight: FontWeight.w500,

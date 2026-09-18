@@ -1,9 +1,12 @@
 import 'package:flutter/gestures.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
+import 'package:totem_app/features/auth/widgets/referral_source_modal.dart';
+import 'package:totem_app/features/auth/widgets/suggested_space_card_widget.dart';
+import 'package:totem_app/features/profile/screens/profile_image_picker.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
@@ -15,10 +18,6 @@ import 'package:totem_core/shared/widgets/card_screen.dart';
 import 'package:totem_core/shared/widgets/info_text.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import '../../profile/screens/profile_image_picker.dart';
-import '../widgets/referral_source_modal.dart';
-import '../widgets/suggested_space_card_widget.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});

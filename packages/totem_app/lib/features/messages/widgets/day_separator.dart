@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 
 class DaySeparator extends StatelessWidget {
-  const DaySeparator({super.key, required this.label});
+  const DaySeparator({required this.label, super.key});
 
   final String label;
 

@@ -1,5 +1,10 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:totem_app/features/blog/repositories/blog_repository.dart';
+import 'package:totem_app/features/home/screens/home_loading_screen.dart';
+import 'package:totem_app/features/home/widgets/home_blog_card.dart';
+import 'package:totem_app/features/home/widgets/next_session_card.dart';
+import 'package:totem_app/features/home/widgets/welcome_card.dart';
 import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -12,12 +17,6 @@ import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/empty_indicator.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/upcoming_session_card.dart';
-
-import '../../blog/repositories/blog_repository.dart';
-import '../widgets/home_blog_card.dart';
-import '../widgets/next_session_card.dart';
-import '../widgets/welcome_card.dart';
-import 'home_loading_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});

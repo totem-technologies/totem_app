@@ -2,8 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 class MessageAvatar extends StatelessWidget {
   const MessageAvatar({
-    super.key,
     required this.color,
+    super.key,
     this.secondary,
     this.size = 44,
   });

@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:js_interop';
 
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
@@ -84,8 +84,8 @@ class WebTotemRouter extends TotemRouter {
   }
 
   static void _beforeUnloadListener(web.Event event) {
-    final beforeUnloadEvent = event as web.BeforeUnloadEvent;
-    beforeUnloadEvent.returnValue = 'Are you sure you want to leave?';
+    final _ = event as web.BeforeUnloadEvent
+      ..returnValue = 'Are you sure you want to leave?';
   }
 
   @override

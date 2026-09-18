@@ -100,7 +100,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     return const PreJoinMediaState();
   }
 
-  Future<void> _guardInitialization(Future<void> Function() operation) async {
+  Future<void> _guardInitialization(AsyncCallback operation) async {
     try {
       await operation();
     } catch (error, stackTrace) {

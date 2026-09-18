@@ -1,43 +1,40 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
+import 'package:totem_app/features/auth/screens/login_screen.dart';
+import 'package:totem_app/features/auth/screens/onboarding_screen.dart';
+import 'package:totem_app/features/auth/screens/pin_entry_screen.dart';
+import 'package:totem_app/features/auth/screens/profile_setup_screen.dart';
+import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
+import 'package:totem_app/features/blog/screens/blog_screen.dart';
+import 'package:totem_app/features/home/screens/home_screen.dart';
+import 'package:totem_app/features/home/widgets/join_ongoing_session_card.dart';
+import 'package:totem_app/features/messages/screens/compose_to_participants_screen.dart';
+import 'package:totem_app/features/messages/screens/messages_screen.dart';
+import 'package:totem_app/features/messages/screens/new_message_screen.dart';
+import 'package:totem_app/features/messages/screens/session_participants_screen.dart';
+import 'package:totem_app/features/messages/screens/thread_screen.dart';
+import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
+import 'package:totem_app/features/profile/screens/profile_screen.dart';
+import 'package:totem_app/features/spaces/screens/session_deep_link_screen.dart';
+import 'package:totem_app/features/spaces/screens/session_history.dart';
+import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
+import 'package:totem_app/features/spaces/screens/spaces_discovery_screen.dart';
+import 'package:totem_app/features/spaces/screens/subcribed_spaces.dart';
 import 'package:totem_app/widgets/offline_indicator.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
-import 'package:totem_core/core/api/api_client/api_client.dart';
-
 import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
-
-import '../features/auth/screens/login_screen.dart';
-import '../features/auth/screens/onboarding_screen.dart';
-import '../features/auth/screens/pin_entry_screen.dart';
-import '../features/auth/screens/profile_setup_screen.dart';
-import '../features/blog/screens/blog_list_screen.dart';
-import '../features/blog/screens/blog_screen.dart';
-import '../features/home/screens/home_screen.dart';
-import '../features/home/widgets/join_ongoing_session_card.dart';
-import '../features/messages/screens/messages_screen.dart';
-import '../features/messages/screens/new_message_screen.dart';
-
-import '../features/messages/screens/compose_to_participants_screen.dart';
-import '../features/messages/screens/session_participants_screen.dart';
-import '../features/messages/screens/thread_screen.dart';
-import '../features/profile/screens/profile_details_screen.dart';
-import '../features/profile/screens/profile_screen.dart';
-import '../features/spaces/screens/session_deep_link_screen.dart';
-import '../features/spaces/screens/session_history.dart';
-import '../features/spaces/screens/space_detail_screen.dart';
-import '../features/spaces/screens/spaces_discovery_screen.dart';
-import '../features/spaces/screens/subcribed_spaces.dart';
 
 class BottomNavScaffold extends ConsumerWidget {
   const BottomNavScaffold({
@@ -88,7 +85,7 @@ class BottomNavScaffold extends ConsumerWidget {
           bottomNavigationBar: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SafeArea(bottom: false, child: const JoinOngoingSessionCard()),
+              const SafeArea(bottom: false, child: JoinOngoingSessionCard()),
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(30),
@@ -207,7 +204,7 @@ class AppTotemRouter extends TotemRouter {
   }
 
   @override
-  Future toSpaceSession(
+  Future<void> toSpaceSession(
     BuildContext context,
     String spaceSlug,
     String? sessionSlug, [
@@ -223,7 +220,7 @@ class AppTotemRouter extends TotemRouter {
     if (replacement) {
       return context.pushReplacement(route);
     } else {
-      return context.push(route);
+      return await context.push<void>(route);
     }
   }
 

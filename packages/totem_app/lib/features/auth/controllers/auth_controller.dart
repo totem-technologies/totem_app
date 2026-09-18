@@ -1,6 +1,5 @@
 import 'dart:async';
 
-// ignore: depend_on_referenced_packages
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_app/features/auth/services/notifications_service.dart';

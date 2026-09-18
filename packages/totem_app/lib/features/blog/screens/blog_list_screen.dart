@@ -1,14 +1,13 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:totem_app/features/blog/repositories/blog_repository.dart';
+import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
+import 'package:totem_app/features/home/widgets/home_blog_card.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/empty_indicator.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
-
-import '../../home/widgets/home_blog_card.dart';
-import '../repositories/blog_repository.dart';
-import '../widgets/featured_blog_post.dart';
 
 class BlogListScreen extends ConsumerWidget {
   const BlogListScreen({super.key});

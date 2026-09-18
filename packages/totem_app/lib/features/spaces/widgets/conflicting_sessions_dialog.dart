@@ -15,7 +15,7 @@ Future<bool?> showConflictingSessionsDialog(
   SessionDetailSchema newSession,
   AsyncValueGetter<bool> onSwitch,
 ) async {
-  return showDialog<bool>(
+  return await showDialog<bool>(
     context: context,
     builder: (context) => ConflictingSessionsDialog(
       conflict: conflict,
@@ -26,16 +26,15 @@ Future<bool?> showConflictingSessionsDialog(
 }
 
 class ConflictingSessionsDialog extends StatelessWidget {
-  final SessionConflictSchema conflict;
-  final SessionDetailSchema newSession;
-  final AsyncValueGetter<bool> onSwitch;
-
   const ConflictingSessionsDialog({
-    super.key,
     required this.conflict,
     required this.newSession,
     required this.onSwitch,
+    super.key,
   });
+  final SessionConflictSchema conflict;
+  final SessionDetailSchema newSession;
+  final AsyncValueGetter<bool> onSwitch;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +48,7 @@ class ConflictingSessionsDialog extends StatelessWidget {
           const TextSpan(text: 'To join '),
           TextSpan(
             text: newSession.title,
-            style: TextStyle(fontWeight: FontWeight.w500),
+            style: const TextStyle(fontWeight: FontWeight.w500),
           ),
           const TextSpan(text: ', you’ll need to give up your spot in '),
           ..._sessionTitleListSpans(conflict.conflictingSessions),
@@ -167,7 +166,7 @@ class _SessionCard extends StatelessWidget {
     final imageUrl = session.space.imageLink;
     return IntrinsicHeight(
       child: Container(
-        constraints: BoxConstraints(minHeight: 100),
+        constraints: const BoxConstraints(minHeight: 100),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: switch (type) {

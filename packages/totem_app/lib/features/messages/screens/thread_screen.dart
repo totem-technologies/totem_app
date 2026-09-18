@@ -1,24 +1,25 @@
 import 'dart:async';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:totem_app/features/auth/services/notifications_service.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:totem_app/features/auth/services/notifications_service.dart';
+import 'package:totem_app/features/messages/widgets/day_separator.dart';
+import 'package:totem_app/features/messages/widgets/message_bubble.dart';
+import 'package:totem_app/features/messages/widgets/message_input_bar.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/messages/models/message.dart';
 import 'package:totem_core/features/messages/providers/conversations_provider.dart';
 import 'package:totem_core/features/messages/providers/messaging_sync_coordinator.dart';
 import 'package:totem_core/features/messages/providers/thread_provider.dart';
+import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
-import '../widgets/day_separator.dart';
-import '../widgets/message_bubble.dart';
-import '../widgets/message_input_bar.dart';
-
 class ThreadScreen extends ConsumerStatefulWidget {
-  const ThreadScreen({super.key, required this.conversationId});
+  const ThreadScreen({required this.conversationId, super.key});
 
   final String conversationId;
 
@@ -78,10 +79,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     );
 
     return asyncConversation.when(
-      loading: () => const Scaffold(
-        backgroundColor: AppTheme.cream,
-        body: Center(child: CircularProgressIndicator.adaptive()),
-      ),
+      loading: () => const LoadingScreen(),
       error: (_, _) => const _UnavailableConversation(),
       data: (conversation) {
         return _ThreadBody(
@@ -106,7 +104,7 @@ class _ThreadBody extends ConsumerWidget {
   final Conversation conversation;
   final String conversationId;
   final ValueChanged<ThreadState> onMessagesVisible;
-  final Future<void> Function() onRefresh;
+  final AsyncCallback onRefresh;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -119,12 +117,13 @@ class _ThreadBody extends ConsumerWidget {
           _ThreadHeader(conversation: conversation),
           Expanded(
             child: asyncThread.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator.adaptive()),
+              loading: () => const LoadingIndicator(),
               error: (_, _) => _ThreadError(onRetry: onRefresh),
               data: (thread) {
                 onMessagesVisible(thread);
-                if (thread.messages.isEmpty) return const _ThreadEmptyState();
+                if (thread.messages.isEmpty) {
+                  return _ThreadEmptyState(conversation: conversation);
+                }
                 return _MessageList(
                   thread: thread,
                   onLoadMore: () => ref
@@ -142,7 +141,7 @@ class _ThreadBody extends ConsumerWidget {
               await ref
                   .read(threadProvider(conversationId).notifier)
                   .send(text);
-              // return true;
+              return true;
             },
           ),
         ],
@@ -206,8 +205,8 @@ class _MessageList extends StatelessWidget {
                     text: message.text,
                     timestamp: DateFormat.jm().format(message.sentAt),
                     isOwn: message.isOwn,
-                    status: message.status,
-                    onRetry: () => onRetry(message),
+                    // status: message.status,
+                    // onRetry: () => onRetry(message),
                   ),
                 ),
                 if (showsDay)
@@ -230,30 +229,37 @@ bool _isSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
 class _ThreadEmptyState extends StatelessWidget {
-  const _ThreadEmptyState();
+  const _ThreadEmptyState({required this.conversation});
+  final Conversation conversation;
 
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
     child: Padding(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.forum_outlined, size: 40, color: AppTheme.messagePurple),
-          SizedBox(height: 12),
-          Text(
+          const Icon(
+            Icons.forum_outlined,
+            size: 40,
+            color: AppTheme.messagePurple,
+          ),
+          const SizedBox(height: 12),
+          const Text(
             'Start your conversation',
             style: TextStyle(
               color: AppTheme.textHeading,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
-          ),
-          SizedBox(height: 6),
-          Text(
-            'Send a message to get started.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textMuted),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Say hello${conversation.peer.name != null ? ' to ${conversation.peer.name}' : ''}. '
+            'This is a safe place to share and connect.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppTheme.textMuted),
           ),
         ],
       ),
@@ -268,8 +274,8 @@ class _ThreadHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.paddingOf(context).top;
     final peer = conversation.peer;
-    final topPadding = MediaQuery.of(context).padding.top;
 
     return Container(
       color: AppTheme.surfaceCard,
@@ -316,7 +322,7 @@ class _ThreadHeader extends StatelessWidget {
 class _ThreadError extends StatelessWidget {
   const _ThreadError({required this.onRetry});
 
-  final Future<void> Function() onRetry;
+  final AsyncCallback onRetry;
 
   @override
   Widget build(BuildContext context) {

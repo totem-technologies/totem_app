@@ -12,11 +12,11 @@ String previewAlias(String number, String branch) {
   var slug = branch
       .toLowerCase()
       .replaceAll(RegExp('[^a-z0-9]+'), '-')
-      .replaceAll(RegExp('^-+|-+\$'), '');
+      .replaceAll(RegExp(r'^-+|-+$'), '');
   if (slug.isEmpty) slug = 'preview';
   final available = 63 - prefix.length - '-$previewWorkerName'.length;
   if (slug.length > available) slug = slug.substring(0, available);
-  return '$prefix$slug'.replaceAll(RegExp('-+\$'), '');
+  return '$prefix$slug'.replaceAll(RegExp(r'-+$'), '');
 }
 
 Map<String, String> previewOutputs(String number, String branch) {

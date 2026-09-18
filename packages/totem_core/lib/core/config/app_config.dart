@@ -7,7 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// Fatal and non-recoverable: the build is broken, not the runtime. Entry
 /// points should let it crash the process (e.g. `exit(1)`) so CI smoke
 /// tests can detect it.
-class ConfigError extends Error {
+class ConfigError implements Exception {
   ConfigError(this.message);
 
   final String message;

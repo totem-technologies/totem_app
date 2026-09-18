@@ -1,7 +1,7 @@
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:checks/checks.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_message_participants_card.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/shared/router.dart';

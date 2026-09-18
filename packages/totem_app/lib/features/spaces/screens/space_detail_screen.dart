@@ -1,13 +1,16 @@
 import 'dart:async';
 
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:totem_app/features/spaces/widgets/attending_dialog.dart';
+import 'package:totem_app/features/spaces/widgets/conflicting_sessions_dialog.dart';
+import 'package:totem_app/features/spaces/widgets/info_text.dart';
+import 'package:totem_app/features/spaces/widgets/keeper_message_participants_card.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
@@ -32,10 +35,6 @@ import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import '../widgets/conflicting_sessions_dialog.dart';
-import '../widgets/info_text.dart';
-import '../widgets/keeper_message_participants_card.dart';
 
 enum SpaceJoinCardState {
   ended,
@@ -392,8 +391,9 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                             currentSessionSlug: effectiveSessionSlug,
                             onRefresh: () {
                               if (!mounted) return;
-                              ref.invalidate(spacesSummaryProvider);
-                              ref.invalidate(spaceProvider(widget.slug));
+                              ref
+                                ..invalidate(spacesSummaryProvider)
+                                ..invalidate(spaceProvider(widget.slug));
                               if (effectiveSessionSlug != null) {
                                 ref.invalidate(
                                   sessionProvider(effectiveSessionSlug),

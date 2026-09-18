@@ -1,8 +1,9 @@
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:totem_app/features/profile/screens/delete_account.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/shared/router.dart';
@@ -11,8 +12,6 @@ import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:totem_core/shared/widgets/user_feedback.dart';
 import 'package:url_launcher/link.dart';
-
-import 'delete_account.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});

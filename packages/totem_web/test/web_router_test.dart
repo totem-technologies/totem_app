@@ -1,25 +1,24 @@
 @TestOn('chrome')
-// ignore_for_file: depend_on_referenced_packages
 library;
 
 import 'dart:async';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
-import 'package:checks/checks.dart';
 import 'package:go_router/go_router.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/models/profile_avatar_type_enum.dart';
 import 'package:totem_core/core/api/api_client/models/user_schema.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
-import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
+import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_web/core/navigation/web_router.dart';
 import 'package:url_launcher_platform_interface/link.dart';
@@ -114,7 +113,7 @@ Future<GoRouter> _pumpTestRouter(
       child: Consumer(
         builder: (context, ref, _) {
           router ??= routerOwner.createRouter(ref);
-          return MaterialApp.router(routerConfig: router!);
+          return MaterialApp.router(routerConfig: router);
         },
       ),
     ),
