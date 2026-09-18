@@ -207,31 +207,35 @@ class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {
 
 class _MockParticipantEventsListener extends Mock
     implements EventsListener<ParticipantEvent> {
-  void Function(TrackMutedEvent event)? onMuted;
-  void Function(TrackUnmutedEvent event)? onUnmuted;
-  void Function(ParticipantEvent event)? onParticipantEvent;
+  final Map<Type, List<FutureOr<void> Function(Object)>> _listeners = {};
 
   @override
   CancelListenFunc on<E>(
     FutureOr<void> Function(E event) listener, {
     bool Function(E)? filter,
   }) {
-    if (E == TrackMutedEvent) {
-      onMuted = listener as void Function(TrackMutedEvent);
-    } else if (E == TrackUnmutedEvent) {
-      onUnmuted = listener as void Function(TrackUnmutedEvent);
-    } else if (E == ParticipantEvent) {
-      onParticipantEvent = listener as void Function(ParticipantEvent);
-    }
+    _listeners.putIfAbsent(E, () => []).add((event) {
+      final typedEvent = event as E;
+      if (filter == null || filter(typedEvent)) return listener(typedEvent);
+    });
     return () async {};
   }
 
-  void emitMuted(TrackMutedEvent event) => onMuted?.call(event);
+  void _emit(Type type, ParticipantEvent event) {
+    final listeners = _listeners[type];
+    if (listeners == null) return;
+    for (final listener in listeners) {
+      listener(event);
+    }
+  }
 
-  void emitUnmuted(TrackUnmutedEvent event) => onUnmuted?.call(event);
+  void emitMuted(TrackMutedEvent event) => _emit(TrackMutedEvent, event);
 
-  void emitParticipantEvent(ParticipantEvent event) =>
-      onParticipantEvent?.call(event);
+  void emitUnmuted(TrackUnmutedEvent event) => _emit(TrackUnmutedEvent, event);
+
+  void emitParticipantEvent(ParticipantEvent event) {
+    _emit(event.runtimeType, event);
+  }
 
   @override
   Future<bool> dispose() async {

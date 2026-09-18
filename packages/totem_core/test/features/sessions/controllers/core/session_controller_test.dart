@@ -72,6 +72,8 @@ class _CountingRoomEventsListener implements EventsListener<RoomEvent> {
   int disposeCount = 0;
   final Map<Type, List<FutureOr<void> Function(Object?)>> _listeners = {};
 
+  Set<Type> get listenerTypes => _listeners.keys.toSet();
+
   @override
   CancelListenFunc on<E>(
     FutureOr<void> Function(E event) listener, {
@@ -365,6 +367,45 @@ void main() {
         check(room.disposeCount).equals(1);
       });
 
+      test('concurrent leave calls dispose the connection once', () async {
+        const eventSlug = 'test-session';
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: true,
+          microphoneEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant();
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        final room = _CountingRoom(localParticipant);
+        controller.room = room;
+
+        await Future.wait([controller.leave(), controller.leave()]);
+
+        check(room.disposeCount).equals(1);
+        check(controller.room).isNull();
+      });
+
       test(
         'transient join disconnect keeps room available for retry',
         () async {
@@ -476,6 +517,11 @@ void main() {
             url: 'wss://example.livekit.cloud',
             token: options.token,
           );
+
+          check(room.listener.listenerTypes.contains(RoomEvent)).isFalse();
+          check(
+            room.listener.listenerTypes.contains(RoomMetadataChangedEvent),
+          ).isTrue();
 
           await room.listener.trigger(
             RoomConnectedEvent(room: room, metadata: null),

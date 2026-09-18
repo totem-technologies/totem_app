@@ -206,7 +206,6 @@ class _ParticipantControlButtonState
             final user = ref.watch(
               userProfileProvider(widget.participant.identity),
             );
-            final currentSession = ref.watch(currentSessionProvider);
             return ConfirmationDialog(
               iconWidget: user
                   .whenData(
@@ -218,9 +217,10 @@ class _ParticipantControlButtonState
               content: 'They can unmute themselves anytime.',
               onConfirm: () async {
                 try {
-                  await currentSession?.keeper.muteParticipant(
-                    widget.participant.identity,
-                  );
+                  await ref
+                      .read(currentSessionProvider)
+                      ?.keeper
+                      .muteParticipant(widget.participant.identity);
                 } catch (error) {
                   if (!context.mounted) return;
                   await ErrorHandler.handleApiError(context, error);
@@ -248,7 +248,6 @@ class _ParticipantControlButtonState
             final user = ref.watch(
               userProfileProvider(widget.participant.identity),
             );
-            final currentSession = ref.watch(currentSessionProvider);
             return ConfirmationDialog(
               iconWidget: user
                   .whenData(
@@ -260,9 +259,10 @@ class _ParticipantControlButtonState
               content: 'They can enable their camera anytime.',
               onConfirm: () async {
                 try {
-                  await currentSession?.keeper.disableParticipantCamera(
-                    widget.participant.identity,
-                  );
+                  await ref
+                      .read(currentSessionProvider)
+                      ?.keeper
+                      .disableParticipantCamera(widget.participant.identity);
                 } catch (error) {
                   if (!context.mounted) return;
                   await ErrorHandler.handleApiError(context, error);
@@ -290,7 +290,6 @@ class _ParticipantControlButtonState
             final user = ref.watch(
               userProfileProvider(widget.participant.identity),
             );
-            final currentSession = ref.watch(currentSessionProvider);
             return ConfirmationDialog(
               iconWidget: user
                   .whenData(
@@ -303,9 +302,10 @@ class _ParticipantControlButtonState
                   '${widget.participant.name}?',
               onConfirm: () async {
                 try {
-                  await currentSession?.keeper.removeParticipant(
-                    widget.participant.identity,
-                  );
+                  await ref
+                      .read(currentSessionProvider)
+                      ?.keeper
+                      .removeParticipant(widget.participant.identity);
                 } catch (error) {
                   if (!context.mounted) return;
                   await ErrorHandler.handleApiError(context, error);
@@ -332,7 +332,6 @@ class _ParticipantControlButtonState
             final user = ref.watch(
               userProfileProvider(widget.participant.identity),
             );
-            final currentSession = ref.watch(currentSessionProvider);
             return ConfirmationDialog(
               iconWidget: user
                   .whenData(
@@ -345,9 +344,10 @@ class _ParticipantControlButtonState
                   '${widget.participant.name}? They will not be able to rejoin the session.',
               onConfirm: () async {
                 try {
-                  await currentSession?.keeper.banParticipant(
-                    widget.participant.identity,
-                  );
+                  await ref
+                      .read(currentSessionProvider)
+                      ?.keeper
+                      .banParticipant(widget.participant.identity);
                 } catch (error) {
                   if (!context.mounted) return;
                   await ErrorHandler.handleApiError(context, error);

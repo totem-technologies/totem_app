@@ -39,10 +39,14 @@ class EmojiBarOverlayState extends State<EmojiBarOverlay>
     super.dispose();
   }
 
-  void _dismiss() async {
+  Future<void> _dismiss() async {
     if (_isDismissing) return;
     _isDismissing = true;
-    await _animationController.reverse();
+    try {
+      await _animationController.reverse().orCancel;
+    } on TickerCanceled {
+      return;
+    }
     if (mounted) {
       widget.onDismissed();
     }

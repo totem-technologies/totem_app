@@ -178,6 +178,23 @@ void main() {
         check(controller.keeperDisconnectedTimer).isNull();
       });
 
+      test('provider disposal cancels presence tracking', () async {
+        final mockSession = FakeSessionController();
+        mockSession.mockDevices = FakeSessionDeviceController();
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final provider = sessionKeeperControllerProvider(mockSession);
+        final subscription = container.listen(provider, (_, _) {});
+        final controller = container.read(provider.notifier)
+          ..onKeeperDisconnected(RoomStatus.active);
+        check(controller.keeperDisconnectedTimer).isNotNull();
+
+        subscription.close();
+        await container.pump();
+
+        check(controller.keeperDisconnectedTimer).isNull();
+      });
+
       test('disposePresenceTracking is safe when no timer exists', () async {
         final mockSession = MockSessionController();
         final container = ProviderContainer();

@@ -47,10 +47,25 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
 
   void _bindListener() {
     _participantListener?.dispose();
-    _participantListener = widget.participant?.createListener()
-      ?..on<ParticipantEvent>((_) {
-        if (mounted) setState(() {});
-      });
+    _participantListener = widget.participant?.createListener();
+    _participantListener
+      ?..on<TrackPublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<TrackUnpublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<TrackMutedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<TrackUnmutedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      );
+  }
+
+  void _onMicrophonePublicationChanged(TrackPublication<Track> publication) {
+    if (!mounted || publication.source != TrackSource.microphone) return;
+    setState(() {});
   }
 
   @override

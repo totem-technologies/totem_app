@@ -470,28 +470,26 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         sessionDeviceControllerProvider(currentSession).notifier,
       );
 
-      ref.listen(sessionDeviceControllerProvider(currentSession), (
-        previous,
-        next,
-      ) {
-        if (!mounted || previous == null) return;
+      ref.listen(
+        sessionDeviceControllerProvider(currentSession).select(
+          (state) => (
+            speakerphone: state.isSpeakerphoneEnabled,
+            outputDeviceId: state.selectedAudioOutputDeviceId,
+          ),
+        ),
+        (previous, next) {
+          if (!mounted || previous == null || previous == next) return;
+          if (!audioRouteNotifier.audioRouteNotificationsEnabled) return;
+          if (ref.read(connectionStateProvider) !=
+              RoomConnectionState.connected) {
+            return;
+          }
 
-        if (!audioRouteNotifier.audioRouteNotificationsEnabled) return;
-
-        if (ref.read(connectionStateProvider) !=
-            RoomConnectionState.connected) {
-          return;
-        }
-
-        final routeChanged =
-            previous.isSpeakerphoneEnabled != next.isSpeakerphoneEnabled ||
-            previous.selectedAudioOutputDeviceId !=
-                next.selectedAudioOutputDeviceId;
-
-        if (!routeChanged) return;
-
-        _onAudioRouteChanged(next);
-      });
+          _onAudioRouteChanged(
+            ref.read(sessionDeviceControllerProvider(currentSession)),
+          );
+        },
+      );
     }
 
     if (currentSession == null || currentSessionEvent == null) {

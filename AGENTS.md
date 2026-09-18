@@ -1,3 +1,5 @@
+Always prefer generated providers using `@riverpod` than manually written providers.
+
 # Testing and Leak Detection
 
 ## Test style

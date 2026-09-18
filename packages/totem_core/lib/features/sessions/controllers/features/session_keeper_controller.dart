@@ -11,7 +11,7 @@ import 'package:totem_core/shared/logger.dart';
 
 part 'session_keeper_controller.g.dart';
 
-@Riverpod(keepAlive: true)
+@riverpod
 class SessionKeeperController extends _$SessionKeeperController {
   static const keeperDisconnectionTimeout = Duration(minutes: 3);
 
@@ -19,7 +19,9 @@ class SessionKeeperController extends _$SessionKeeperController {
   Timer? keeperDisconnectedTimer;
 
   @override
-  void build(SessionController session) {}
+  void build(SessionController session) {
+    ref.onDispose(disposePresenceTracking);
+  }
 
   SessionRoomState get _state => session.state;
 

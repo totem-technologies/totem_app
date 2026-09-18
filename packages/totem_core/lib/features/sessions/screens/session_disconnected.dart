@@ -159,15 +159,17 @@ class _SessionDisconnectedScreenState
 
   @override
   Widget build(BuildContext context) {
-    final sessionState = ref.watch(currentSessionStateProvider);
-    final disconnectReason =
-        widget.disconnectReason ?? sessionState?.disconnectReason;
     final sessionReason =
         widget.sessionDisconnectedReason ??
-        resolveDisconnectedReason(
-          disconnectReason: disconnectReason,
-          sessionState: sessionState,
-        );
+        ref.watch(
+          currentSessionStateProvider.select(
+            (sessionState) => resolveDisconnectedReason(
+              disconnectReason:
+                  widget.disconnectReason ?? sessionState?.disconnectReason,
+              sessionState: sessionState,
+            ),
+          ),
+        )!;
 
     final isBanned = sessionReason == SessionDisconnectedReason.banned;
 

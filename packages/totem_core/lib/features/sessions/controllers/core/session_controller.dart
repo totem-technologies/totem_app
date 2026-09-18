@@ -102,6 +102,11 @@ class SessionController extends _$SessionController {
   KeepAliveLink? _keepAliveLink;
   Timer? _syncTimer;
   Timer? _statePollTimer;
+  Future<void>? _cleanupFuture;
+  Future<void>? _statePollFuture;
+  bool _pollPending = false;
+  bool _pendingReconcile = false;
+  int _connectionGeneration = 0;
   static const syncTimerDuration = Duration(seconds: 20);
   static const _statePollInterval = Duration(seconds: 15);
 
@@ -156,7 +161,7 @@ class SessionController extends _$SessionController {
   }
 
   void applyRoomState(RoomState roomState) {
-    _onRoomChanges(roomState);
+    _updateRoomState(roomState);
   }
 
   Future<void> disconnectFromRoom() {
@@ -169,6 +174,12 @@ class SessionController extends _$SessionController {
 
   @override
   SessionRoomState build(SessionOptions options) {
+    ref
+      ..listen(sessionDeviceControllerProvider(this), (_, _) {})
+      ..listen(sessionInfraControllerProvider, (_, _) {})
+      ..listen(sessionKeeperControllerProvider(this), (_, _) {})
+      ..listen(sessionMessagingControllerProvider(this), (_, _) {});
+
     ref
         .watch(sessionProvider(options.sessionSlug))
         .whenData((event) => session = event);
@@ -242,7 +253,7 @@ class SessionController extends _$SessionController {
       '"${room?.localParticipant?.identity}".',
     );
 
-    _onRoomChanges();
+    _updateRoomState();
 
     unawaited(_applyJoinMediaState());
     _dispatch(
@@ -255,7 +266,7 @@ class SessionController extends _$SessionController {
     // Fetch server state immediately on join so the client is never stuck with
     // stale local state when LiveKit metadata is empty (e.g. room was killed and
     // recreated on Livekit but alive on the Totem server).
-    unawaited(_pollServerState());
+    unawaited(_scheduleServerStatePoll());
 
     final speakerPref = options.speakerEnabled;
     devices.resetSpeakerRoutingDefaults(speakerPref);
@@ -296,8 +307,7 @@ class SessionController extends _$SessionController {
     _dispatch(SessionErrorChanged(RoomLiveKitError(error)));
   }
 
-  void _onRoomChanges([RoomState? newSessionState]) {
-    _updateParticipantsList();
+  void _updateRoomState([RoomState? newSessionState]) {
     void handleStateChange(RoomState state) {
       if (state.version <= this.state.roomState.version) return;
 
@@ -334,8 +344,11 @@ class SessionController extends _$SessionController {
     }
   }
 
-  Future<void> _pollServerState({bool attemptReconcile = false}) async {
-    if (!ref.mounted) return;
+  Future<void> _pollServerState({
+    required int connectionGeneration,
+    bool attemptReconcile = false,
+  }) async {
+    if (!ref.mounted || connectionGeneration != _connectionGeneration) return;
     if (state.connectionState != RoomConnectionState.connected) return;
 
     try {
@@ -345,9 +358,10 @@ class SessionController extends _$SessionController {
           attemptReconcile: attemptReconcile,
         ).future,
       );
-      if (!ref.mounted) return;
+      if (!ref.mounted || connectionGeneration != _connectionGeneration) {
+        return;
+      }
 
-      // Protects against out-of-order application from overlapping polls
       if (roomState.version > state.roomState.version) {
         applyRoomState(roomState);
         logger.d('Polled server state: version ${roomState.version}');
@@ -362,10 +376,33 @@ class SessionController extends _$SessionController {
     }
   }
 
+  Future<void> _scheduleServerStatePoll({bool attemptReconcile = false}) {
+    _pollPending = true;
+    _pendingReconcile = _pendingReconcile || attemptReconcile;
+    return _statePollFuture ??= _drainServerStatePolls();
+  }
+
+  Future<void> _drainServerStatePolls() async {
+    try {
+      while (_pollPending && ref.mounted) {
+        final connectionGeneration = _connectionGeneration;
+        final attemptReconcile = _pendingReconcile;
+        _pollPending = false;
+        _pendingReconcile = false;
+        await _pollServerState(
+          connectionGeneration: connectionGeneration,
+          attemptReconcile: attemptReconcile,
+        );
+      }
+    } finally {
+      _statePollFuture = null;
+    }
+  }
+
   void _startStatePolling() {
     _statePollTimer?.cancel();
     _statePollTimer = Timer.periodic(_statePollInterval, (_) {
-      unawaited(_pollServerState());
+      unawaited(_scheduleServerStatePoll());
     });
   }
 
@@ -373,7 +410,7 @@ class SessionController extends _$SessionController {
   void _attemptReconcile() {
     if (!isCurrentUserKeeper()) return;
     if (state.roomState.status == RoomStatus.ended) return;
-    _pollServerState(attemptReconcile: true);
+    unawaited(_scheduleServerStatePoll(attemptReconcile: true));
   }
 
   void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
@@ -392,6 +429,12 @@ class SessionController extends _$SessionController {
   }
 
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
+    final previousCleanup = _cleanupFuture;
+    if (previousCleanup != null) {
+      await previousCleanup;
+      _cleanupFuture = null;
+    }
+
     final retainedJoinMedia = _joinMediaOwner.retain(joinMedia);
 
     if (state.connectionState == RoomConnectionState.connected ||
@@ -438,10 +481,10 @@ class SessionController extends _$SessionController {
       if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
       _syncTimer?.cancel();
-      _syncTimer = Timer.periodic(
-        SessionController.syncTimerDuration,
-        (_) => _onRoomChanges(),
-      );
+      _syncTimer = Timer.periodic(SessionController.syncTimerDuration, (_) {
+        _updateRoomState();
+        _updateParticipantsList();
+      });
       _startStatePolling();
 
       final connectOptions = defaultTargetPlatform == TargetPlatform.iOS
@@ -629,11 +672,19 @@ class SessionController extends _$SessionController {
     }
   }
 
-  Future<void> _cleanUp() async {
+  Future<void> _cleanUp() {
+    return _cleanupFuture ??= _performCleanup();
+  }
+
+  Future<void> _performCleanup() async {
     logger.d('Disposing SessionService and closing connections.');
 
+    ++_connectionGeneration;
+    _pollPending = false;
+    _pendingReconcile = false;
+
     if (ref.mounted) {
-      unawaited(ref.read(sessionInfraControllerProvider.notifier).deactivate());
+      await ref.read(sessionInfraControllerProvider.notifier).deactivate();
     }
 
     if (ref.mounted) {
@@ -655,7 +706,7 @@ class SessionController extends _$SessionController {
         keeper.disposePresenceTracking();
       } catch (_) {}
       try {
-        devices.dispose();
+        await devices.stopDeviceChangeListener();
       } catch (_) {}
     }
 
@@ -663,7 +714,6 @@ class SessionController extends _$SessionController {
     _syncTimer = null;
     _statePollTimer?.cancel();
     _statePollTimer = null;
-
     await disposeConnection();
   }
 
@@ -677,10 +727,8 @@ class SessionController extends _$SessionController {
     await room.prepareConnection(url, token);
 
     _listener ??= room.createListener()
-      ..on((_) {
-        if (ref.mounted) {
-          _onRoomChanges();
-        }
+      ..on<RoomMetadataChangedEvent>((_) {
+        if (ref.mounted) _updateRoomState();
       })
       ..on<RoomConnectedEvent>((_) => _onConnected())
       ..on<RoomDisconnectedEvent>((event) {
@@ -818,7 +866,9 @@ class SessionController extends _$SessionController {
 
     return participantsSorting(
       originalParticipants: participants,
-      state: state,
+      talkingOrder: state.roomState.talkingOrder,
+      speakingNow: state.speakingNow,
+      nextSpeaker: state.roomState.nextSpeaker,
       showSpeakingNow: true,
     );
   }

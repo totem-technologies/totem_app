@@ -21,21 +21,27 @@ class SessionInfraController extends _$SessionInfraController {
   }
 
   Timer? _notificationTimer;
-  bool _backgroundModeEnabled = false;
+  Future<void> _operation = Future.value();
+  bool _disposed = false;
 
   static const _notificationPeriod = Duration(minutes: 1);
 
-  Future<void> activate({SessionDetailSchema? event}) async {
-    _setupBackgroundMode(event);
+  Future<void> activate({SessionDetailSchema? event}) {
+    return _enqueue(() => _setupBackgroundMode(event));
   }
 
-  Future<void> deactivate() async {
-    _endBackgroundMode();
+  Future<void> deactivate() {
+    return _enqueue(_endBackgroundMode);
   }
+
+  Future<void> _enqueue(Future<void> Function() operation) =>
+      _operation = _operation.catchError((_) {}).then((_) => operation());
 
   Future<void> _setupBackgroundMode(SessionDetailSchema? event) async {
+    if (_disposed) return;
     try {
       await requestPermissions();
+      if (_disposed) return;
 
       if (canUseForegroundTask) {
         FlutterForegroundTask.init(
@@ -56,8 +62,8 @@ class SessionInfraController extends _$SessionInfraController {
           ),
         );
         await _startBackgroundService(event);
+        if (_disposed) await _endBackgroundMode();
       }
-      _backgroundModeEnabled = true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -127,7 +133,6 @@ class SessionInfraController extends _$SessionInfraController {
         );
       }
     }
-    _backgroundModeEnabled = false;
   }
 
   static Future<bool> requestPermissions() async {
@@ -165,9 +170,8 @@ class SessionInfraController extends _$SessionInfraController {
   }
 
   void dispose() {
-    _notificationTimer?.cancel();
-    if (_backgroundModeEnabled) {
-      deactivate();
-    }
+    if (_disposed) return;
+    _disposed = true;
+    unawaited(_enqueue(_endBackgroundMode));
   }
 }

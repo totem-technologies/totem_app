@@ -20,7 +20,7 @@ final class SessionKeeperControllerProvider
   }) : super(
          retry: null,
          name: r'sessionKeeperControllerProvider',
-         isAutoDispose: false,
+         isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -60,7 +60,7 @@ final class SessionKeeperControllerProvider
 }
 
 String _$sessionKeeperControllerHash() =>
-    r'ea215a6b7eeef7ae979130733f50347beed5a50b';
+    r'337099ad7e43c0b8e9af2e56115d00e151e7b82c';
 
 final class SessionKeeperControllerFamily extends $Family
     with
@@ -77,7 +77,7 @@ final class SessionKeeperControllerFamily extends $Family
         name: r'sessionKeeperControllerProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: false,
+        isAutoDispose: true,
       );
 
   SessionKeeperControllerProvider call(SessionController session) =>

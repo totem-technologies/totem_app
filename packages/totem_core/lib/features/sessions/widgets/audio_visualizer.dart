@@ -90,6 +90,15 @@ class SoundWaveformWidget extends StatefulWidget {
 
 const agentStateAttributeKey = 'lk.agent.state';
 
+@visibleForTesting
+bool audioVisualizerSamplesChanged(List<double> current, List<double> next) {
+  if (current.length != next.length) return true;
+  for (var i = 0; i < current.length; i++) {
+    if ((current[i] - next[i]).abs() > 0.01) return true;
+  }
+  return false;
+}
+
 class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     with SingleTickerProviderStateMixin {
   static const Duration _watchdogInterval = Duration(seconds: 2);
@@ -102,7 +111,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
 
   List<double> samples = <double>[];
   List<double> _backgroundSamples = <double>[];
-  Timer? _uiThrottleTimer;
+  Timer? _pendingUiUpdate;
   Timer? _visualizerWatchdogTimer;
 
   sdk.AudioVisualizer? _visualizer;
@@ -118,6 +127,8 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   List<double>? _lastSamples;
 
   int _listenerGeneration = 0;
+  Future<void> _lifecycle = Future.value();
+  DateTime? _lastUiUpdateAt;
   DateTime? _lastVisualizerEventAt;
   DateTime? _lastRestartAttemptAt;
   int _consecutiveRestartAttempts = 0;
@@ -157,17 +168,15 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     return DateTime.now().difference(lastEventAt) > const Duration(seconds: 3);
   }
 
-  Future<void> _detachListeners() async {
-    final visualizerListener = _visualizerListener;
-    _visualizerListener = null;
+  Future<void> _disposeResources({
+    sdk.AudioVisualizer? visualizer,
+    sdk.EventsListener<sdk.AudioVisualizerEvent>? visualizerListener,
+    sdk.EventsListener<sdk.ParticipantEvent>? participantListener,
+  }) async {
     await _safeAsyncAction(
       () async => await visualizerListener?.dispose(),
       failureMessage: 'Failed to dispose visualizer listener',
     );
-
-    final visualizer = _visualizer;
-    _visualizer = null;
-
     if (visualizer != null) {
       await _safeAsyncAction(
         visualizer.stop,
@@ -178,27 +187,83 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
         failureMessage: 'Failed to dispose visualizer',
       );
     }
-
-    final participantListener = _participantListener;
-    _participantListener = null;
     await _safeAsyncAction(
       () async => await participantListener?.dispose(),
       failureMessage: 'Failed to dispose participant listener',
     );
   }
 
-  Future<void> _reattachListeners() async {
-    final generation = ++_listenerGeneration;
-    await _detachListeners();
-    if (!mounted || generation != _listenerGeneration) return;
-    _backgroundSamples = List.filled(widget.options.barCount, 0);
-    if (mounted) {
-      setState(() {
-        samples = List.filled(widget.options.barCount, 0);
-      });
-    }
-    await _attachListeners(generation: generation);
+  Future<void> _detachListeners() async {
+    final visualizerListener = _visualizerListener;
+    final visualizer = _visualizer;
+    final participantListener = _participantListener;
+    _visualizerListener = null;
+    _visualizer = null;
+    _participantListener = null;
+    await _disposeResources(
+      visualizer: visualizer,
+      visualizerListener: visualizerListener,
+      participantListener: participantListener,
+    );
   }
+
+  void _reattachListeners() {
+    final generation = ++_listenerGeneration;
+    _lifecycle = _lifecycle.then((_) async {
+      await _detachListeners();
+      if (!mounted || generation != _listenerGeneration) return;
+      _resetSamples();
+      await _attachListeners(generation: generation);
+    });
+  }
+
+  void _resetSamples() {
+    _pendingUiUpdate?.cancel();
+    _pendingUiUpdate = null;
+    _lastUiUpdateAt = null;
+    _lastVisualizerEventAt = null;
+    _backgroundSamples = List.filled(
+      widget.options.barCount,
+      0,
+      growable: false,
+    );
+    if (!mounted) return;
+    setState(() {
+      samples = List.filled(widget.options.barCount, 0, growable: false);
+      _cachedBarItems = null;
+      _lastSamples = null;
+    });
+  }
+
+  void _scheduleUiUpdate() {
+    if (!mounted || _pendingUiUpdate != null) return;
+
+    const minimumInterval = Duration(milliseconds: 140);
+    final lastUpdateAt = _lastUiUpdateAt;
+    final elapsed = lastUpdateAt == null
+        ? minimumInterval
+        : DateTime.now().difference(lastUpdateAt);
+    if (elapsed >= minimumInterval) {
+      _flushUiUpdate();
+      return;
+    }
+
+    _pendingUiUpdate = Timer(minimumInterval - elapsed, () {
+      _pendingUiUpdate = null;
+      _flushUiUpdate();
+    });
+  }
+
+  void _flushUiUpdate() {
+    if (!mounted || !_samplesChanged()) return;
+    _lastUiUpdateAt = DateTime.now();
+    setState(() {
+      samples = List<double>.of(_backgroundSamples, growable: false);
+    });
+  }
+
+  bool _samplesChanged() =>
+      audioVisualizerSamplesChanged(samples, _backgroundSamples);
 
   @override
   void initState() {
@@ -220,31 +285,6 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       parent: _controller,
       curve: Curves.easeInOut,
     );
-
-    // THE UI LOOP: Runs safely at ~7-8 FPS (every 140ms) instead of per-packet
-    _uiThrottleTimer = Timer.periodic(const Duration(milliseconds: 140), (_) {
-      if (!mounted) return;
-
-      bool hasChanges = false;
-
-      // Only trigger a rebuild if the volume delta is large enough to see (> 1%)
-      if (_backgroundSamples.length == samples.length) {
-        for (var i = 0; i < samples.length; i++) {
-          if ((samples[i] - _backgroundSamples[i]).abs() > 0.01) {
-            hasChanges = true;
-            break;
-          }
-        }
-      } else {
-        hasChanges = true;
-      }
-
-      if (hasChanges) {
-        setState(() {
-          samples = List.of(_backgroundSamples);
-        });
-      }
-    });
 
     _visualizerWatchdogTimer = Timer.periodic(_watchdogInterval, (_) {
       if (!mounted || !_hasStalledVisualizer) return;
@@ -268,23 +308,31 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   }
 
   Future<void> _attachListeners({required int generation}) async {
+    sdk.EventsListener<sdk.ParticipantEvent>? participantListener;
+    sdk.AudioVisualizer? visualizer;
+    sdk.EventsListener<sdk.AudioVisualizerEvent>? visualizerListener;
+
     try {
       if (!mounted || generation != _listenerGeneration) return;
 
-      if (widget.participant != null) {
-        _participantListener = widget.participant?.createListener();
-        _participantListener?.on<sdk.TrackMutedEvent>((e) {
-          if (!mounted) return;
-          _backgroundSamples = List.filled(widget.options.barCount, 0);
-          setState(() {
-            samples = List.filled(widget.options.barCount, 0);
+      final participant = widget.participant;
+      if (participant != null) {
+        participantListener = participant.createListener()
+          ..on<sdk.TrackMutedEvent>((event) {
+            if (!mounted ||
+                generation != _listenerGeneration ||
+                event.publication.source != sdk.TrackSource.microphone) {
+              return;
+            }
+            _resetSamples();
           });
-        });
 
-        if (widget.participant?.kind == sdk.ParticipantKind.AGENT) {
-          _participantListener?.on<sdk.ParticipantAttributesChanged>((e) {
-            if (!mounted) return;
-            final agentAttributes = sdk.AgentAttributes.fromJson(e.attributes);
+        if (participant.kind == sdk.ParticipantKind.AGENT) {
+          participantListener.on<sdk.ParticipantAttributesChanged>((event) {
+            if (!mounted || generation != _listenerGeneration) return;
+            final agentAttributes = sdk.AgentAttributes.fromJson(
+              event.attributes,
+            );
             setState(() {
               _agentState =
                   agentAttributes.lkAgentState ?? sdk.AgentState.initializing;
@@ -293,38 +341,64 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
         }
       }
 
-      if (widget.audioTrack != null) {
-        _visualizer = sdk.createVisualizer(
-          widget.audioTrack!,
+      final audioTrack = widget.audioTrack;
+      if (audioTrack != null) {
+        visualizer = sdk.createVisualizer(
+          audioTrack,
           options: sdk.AudioVisualizerOptions(
             barCount: widget.options.barCount,
             centeredBands: widget.options.centeredBands,
           ),
         );
 
-        _visualizerListener = _visualizer?.createListener();
-        _visualizerListener?.on<sdk.AudioVisualizerEvent>((element) {
-          if (!mounted) return;
+        visualizerListener = visualizer.createListener()
+          ..on<sdk.AudioVisualizerEvent>((element) {
+            if (!mounted || generation != _listenerGeneration) return;
 
-          _lastVisualizerEventAt = DateTime.now();
-          _lastRestartAttemptAt = null;
-          _consecutiveRestartAttempts = 0;
-          final events = element.event;
-          for (
-            var i = 0;
-            i < _backgroundSamples.length && i < events.length;
-            i++
-          ) {
-            final v = events[i];
-            _backgroundSamples[i] = (v is num) ? v.toDouble() : 0.0;
-          }
-        });
+            _lastVisualizerEventAt = DateTime.now();
+            _lastRestartAttemptAt = null;
+            _consecutiveRestartAttempts = 0;
+            final events = element.event;
+            final sampleCount = min(_backgroundSamples.length, events.length);
+            for (var i = 0; i < sampleCount; i++) {
+              final value = events[i];
+              _backgroundSamples[i] = value is num ? value.toDouble() : 0;
+            }
+            for (var i = sampleCount; i < _backgroundSamples.length; i++) {
+              _backgroundSamples[i] = 0;
+            }
+            _scheduleUiUpdate();
+          });
 
-        if (!mounted || generation != _listenerGeneration) return;
-        await _visualizer!.start();
+        await visualizer.start();
+        if (!mounted || generation != _listenerGeneration) {
+          await _disposeResources(
+            visualizer: visualizer,
+            visualizerListener: visualizerListener,
+            participantListener: participantListener,
+          );
+          return;
+        }
         _lastVisualizerEventAt ??= DateTime.now();
       }
+
+      if (!mounted || generation != _listenerGeneration) {
+        await _disposeResources(
+          visualizer: visualizer,
+          visualizerListener: visualizerListener,
+          participantListener: participantListener,
+        );
+        return;
+      }
+      _participantListener = participantListener;
+      _visualizer = visualizer;
+      _visualizerListener = visualizerListener;
     } catch (error, stackTrace) {
+      await _disposeResources(
+        visualizer: visualizer,
+        visualizerListener: visualizerListener,
+        participantListener: participantListener,
+      );
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
@@ -350,12 +424,12 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
 
   @override
   void dispose() {
-    _uiThrottleTimer?.cancel();
+    _pendingUiUpdate?.cancel();
     _visualizerWatchdogTimer?.cancel();
     _listenerGeneration++;
     _pulseAnimation.dispose();
     _controller.dispose();
-    _detachListeners();
+    _lifecycle = _lifecycle.then((_) => _detachListeners());
     super.dispose();
   }
 

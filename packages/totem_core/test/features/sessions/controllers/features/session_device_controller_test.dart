@@ -127,6 +127,15 @@ void main() {
         )..resetSpeakerRoutingDefaults();
         check(controller.userSpeakerPreference).equals(true);
       });
+
+      test('disposed controller rejects late device listener setup', () async {
+        final controller = container.read(
+          sessionDeviceControllerProvider(mockSession).notifier,
+        );
+
+        await controller.dispose();
+        await controller.setupDeviceChangeListener();
+      });
     });
   });
 }

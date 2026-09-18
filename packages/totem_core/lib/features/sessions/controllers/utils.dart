@@ -1,17 +1,16 @@
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
 List<Participant> participantsSorting({
   required List<Participant> originalParticipants,
-  required SessionRoomState state,
-
-  String? speakingNow,
+  required List<String> talkingOrder,
+  required String speakingNow,
+  required String? nextSpeaker,
 
   /// Whether to show the track of the participant who is currently speaking.
   bool showSpeakingNow = false,
 }) {
-  final speakingNowIdentity = speakingNow ?? state.speakingNow;
+  final speakingNowIdentity = speakingNow;
   final participants = originalParticipants.where((participant) {
     // Only show tracks from participants other than the speaking now
     if (participant.identity == speakingNowIdentity) {
@@ -20,13 +19,13 @@ List<Participant> participantsSorting({
     return true;
   }).toList();
 
-  if (state.roomState.talkingOrder.isNotEmpty) {
+  if (talkingOrder.isNotEmpty) {
     final participantsMap = {for (final p in participants) p.identity: p};
 
-    final speakingOrderSet = state.roomState.talkingOrder.toSet();
+    final speakingOrderSet = talkingOrder.toSet();
     final sortedParticipants = <Participant>[];
 
-    for (final identity in state.roomState.talkingOrder) {
+    for (final identity in talkingOrder) {
       final participant = participantsMap[identity];
       if (participant != null) {
         sortedParticipants.add(participant);
@@ -40,7 +39,6 @@ List<Participant> participantsSorting({
       }
     }
 
-    final nextSpeaker = state.roomState.nextSpeaker;
     if (nextSpeaker != null) {
       final nextIndex = sortedParticipants.indexWhere(
         (p) => p.identity == nextSpeaker,
