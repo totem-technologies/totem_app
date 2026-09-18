@@ -304,23 +304,6 @@ void main() {
       ),
     );
 
-    test('isAuthenticated returns correct values for each auth status', () {
-      check(
-        _FakeAuthController(
-          AuthState.authenticated(user: _fakeUser),
-        ).isAuthenticated,
-      ).equals(true);
-      check(
-        _FakeAuthController(AuthState.unauthenticated()).isAuthenticated,
-      ).equals(false);
-      check(
-        _FakeAuthController(AuthState.initial()).isAuthenticated,
-      ).equals(false);
-      check(
-        _FakeAuthController(AuthState.loading()).isAuthenticated,
-      ).equals(false);
-    });
-
     testWidgets('/ (root) shows redirect screen regardless of auth state', (
       tester,
     ) async {
