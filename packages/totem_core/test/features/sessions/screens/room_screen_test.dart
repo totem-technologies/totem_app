@@ -630,6 +630,7 @@ void main() {
         check(
           tester.widgetList(find.byType(SessionErrorScreen)),
         ).length.equals(0);
+        check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
         await tester.pump(const Duration(seconds: 3));
       },
     );

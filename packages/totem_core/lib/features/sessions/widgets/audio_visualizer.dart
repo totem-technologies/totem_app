@@ -94,7 +94,10 @@ const agentStateAttributeKey = 'lk.agent.state';
 bool audioVisualizerSamplesChanged(List<double> current, List<double> next) {
   if (current.length != next.length) return true;
   for (var i = 0; i < current.length; i++) {
-    if ((current[i] - next[i]).abs() > 0.01) return true;
+    if ((current[i] - next[i]).abs() > 0.01 ||
+        (current[i] != 0 && next[i] == 0)) {
+      return true;
+    }
   }
   return false;
 }
@@ -255,8 +258,9 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   }
 
   void _flushUiUpdate() {
-    if (!mounted || !_samplesChanged()) return;
+    if (!mounted) return;
     _lastUiUpdateAt = DateTime.now();
+    if (!_samplesChanged()) return;
     setState(() {
       samples = List<double>.of(_backgroundSamples, growable: false);
     });

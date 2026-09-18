@@ -22,6 +22,10 @@ void main() {
         audioVisualizerSamplesChanged(const [0.1], const [0.1, 0.2]),
       ).isTrue();
     });
+
+    test('settles a previously visible waveform to silence', () {
+      check(audioVisualizerSamplesChanged(const [0.009], const [0])).isTrue();
+    });
   });
 
   group('AudioVisualizerWidgetOptions Tests', () {

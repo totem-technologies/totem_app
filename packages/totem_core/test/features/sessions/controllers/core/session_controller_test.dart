@@ -406,6 +406,49 @@ void main() {
         check(controller.room).isNull();
       });
 
+      test('sequential leave calls clean up each new connection', () async {
+        const eventSlug = 'test-session';
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: true,
+          microphoneEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(subscription.close);
+
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant();
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+
+        final firstRoom = _CountingRoom(localParticipant);
+        controller.room = firstRoom;
+        await controller.leave();
+
+        final secondRoom = _CountingRoom(localParticipant);
+        controller.room = secondRoom;
+        await controller.leave();
+
+        check(firstRoom.disposeCount).equals(1);
+        check(secondRoom.disposeCount).equals(1);
+      });
+
       test(
         'transient join disconnect keeps room available for retry',
         () async {

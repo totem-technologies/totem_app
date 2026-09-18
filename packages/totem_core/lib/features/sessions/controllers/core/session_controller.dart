@@ -270,12 +270,13 @@ class SessionController extends _$SessionController {
 
     final speakerPref = options.speakerEnabled;
     devices.resetSpeakerRoutingDefaults(speakerPref);
+    final connectionGeneration = _connectionGeneration;
     // Delay setting up the listener and applying the initial routing up to a bit.
     // This allows initial publication and incoming WebRTC streams to settle,
     // avoiding the earpiece/default audio routing from overriding our preference.
     Future.delayed(const Duration(milliseconds: 500), () {
-      if (!ref.mounted) return;
-      devices.setupDeviceChangeListener();
+      if (!ref.mounted || connectionGeneration != _connectionGeneration) return;
+      unawaited(devices.setupDeviceChangeListener());
     });
 
     _updateParticipantsList();
@@ -430,10 +431,7 @@ class SessionController extends _$SessionController {
 
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
     final previousCleanup = _cleanupFuture;
-    if (previousCleanup != null) {
-      await previousCleanup;
-      _cleanupFuture = null;
-    }
+    if (previousCleanup != null) await previousCleanup;
 
     final retainedJoinMedia = _joinMediaOwner.retain(joinMedia);
 
@@ -673,7 +671,17 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> _cleanUp() {
-    return _cleanupFuture ??= _performCleanup();
+    final cleanup = _cleanupFuture;
+    if (cleanup != null) return cleanup;
+
+    late final Future<void> newCleanup;
+    newCleanup = _performCleanup().whenComplete(() {
+      if (identical(_cleanupFuture, newCleanup)) {
+        _cleanupFuture = null;
+      }
+    });
+    _cleanupFuture = newCleanup;
+    return newCleanup;
   }
 
   Future<void> _performCleanup() async {
