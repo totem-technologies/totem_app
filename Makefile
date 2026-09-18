@@ -4,6 +4,11 @@ APP_DIR := packages/totem_app
 CORE_DIR := packages/totem_core
 WEB_DIR := packages/totem_web
 
+# Each Flutter suite also runs test files concurrently. Bound package-level
+# parallelism to avoid starting four compilers and their workers at once.
+TEST_JOBS ?= 2
+TEST_ARGS ?=
+
 clean:
 	@echo "Cleaning build artifacts..."
 	cd $(CORE_DIR) && flutter clean
@@ -90,27 +95,24 @@ install:
 	@echo "Getting dependencies..."
 	flutter pub get
 
-test:
+test: install
 	@echo "Running tests..."
-	flutter test scripts/test
-	cd $(APP_DIR) && flutter test
-	cd $(CORE_DIR) && flutter test
-	cd $(WEB_DIR) && flutter test --platform chrome
+	$(MAKE) --jobs=$(TEST_JOBS) test-core test-app test-web test-scripts TEST_PUB=--no-pub
 
 test-app:
 	@echo "Running app tests..."
-	cd $(APP_DIR) && flutter test
+	cd $(APP_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
 
 test-web:
 	@echo "Running web tests..."
-	cd $(WEB_DIR) && flutter test --platform chrome
+	cd $(WEB_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
 
 test-core:
 	@echo "Running core tests..."
-	cd $(CORE_DIR) && flutter test
+	cd $(CORE_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
 
 test-scripts:
-	flutter test scripts/test
+	flutter test scripts/test $(TEST_PUB) $(TEST_ARGS)
 
 lint:
 	@echo "Running linter..."

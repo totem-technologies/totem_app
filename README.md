@@ -71,6 +71,21 @@ Run all tests:
 make test
 ```
 
+This resolves workspace dependencies once, then runs two package suites at a
+time on the Flutter VM, including the web package. No browser is launched.
+Leak detection remains enabled. Use
+`make test TEST_JOBS=1` to run suites sequentially on machines with limited
+memory. Individual suites are available through `make test-core`,
+`make test-app`, `make test-web`, and `make test-scripts`. Pass Flutter test
+options with `TEST_ARGS`, for example `make test-core TEST_ARGS="--reporter expanded"`.
+
+Web routing tests inject a fake browser environment, and codec tests exercise
+native, JavaScript-web, and Wasm choices explicitly. CI's Web workflow compiles
+the actual browser implementation. This covers our routing and codec logic;
+it does not validate browser API behavior or rendering in Chrome. To run the
+web tests in Chrome when investigating a platform issue, use
+`make test-web TEST_ARGS="--platform chrome"`.
+
 ### Deep Linking
 
 To test deep linking, with the app running, you can use the following commands:
