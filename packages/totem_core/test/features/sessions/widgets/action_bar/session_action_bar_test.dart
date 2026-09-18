@@ -1,5 +1,7 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -109,6 +111,19 @@ final _testLastMessageProvider =
     );
 
 void main() {
+  void autoSizeTest(
+    String description,
+    Future<void> Function(WidgetTester) body,
+  ) {
+    testWidgets(
+      description,
+      body,
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
+  }
+
   Future<void> pumpWidget(
     WidgetTester tester, {
     required Widget child,
@@ -202,7 +217,7 @@ void main() {
       });
     }
 
-    testWidgets('is hidden on loading, disconnected, and error screens', (
+    autoSizeTest('is hidden on loading, disconnected, and error screens', (
       tester,
     ) async {
       for (final screen in [
@@ -213,54 +228,64 @@ void main() {
         await pumpSessionActionBar(tester, screen: screen);
         await tester.pump();
 
-        expect(find.byType(ActionBar), findsNothing);
+        check(tester.widgetList(find.byType(ActionBar))).length.equals(0);
       }
     });
 
-    testWidgets('shows expected controls on not-my-turn screen', (
+    autoSizeTest('shows expected controls on not-my-turn screen', (
       tester,
     ) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pump();
 
-      expect(find.byType(ActionBar), findsOneWidget);
-      expect(find.byType(ActionBarButton), findsNWidgets(5));
-      expect(find.byType(SessionActionBarCameraButton), findsOneWidget);
+      check(tester.widgetList(find.byType(ActionBar))).length.equals(1);
+      check(tester.widgetList(find.byType(ActionBarButton))).length.equals(5);
+      check(
+        tester.widgetList(find.byType(SessionActionBarCameraButton)),
+      ).length.equals(1);
     });
 
-    testWidgets('shows expected controls on my-turn screen', (tester) async {
+    autoSizeTest('shows expected controls on my-turn screen', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.speaking);
       await tester.pump();
 
-      expect(find.byType(ActionBar), findsOneWidget);
-      expect(find.byType(ActionBarButton), findsNWidgets(4));
+      check(tester.widgetList(find.byType(ActionBar))).length.equals(1);
+      check(tester.widgetList(find.byType(ActionBarButton))).length.equals(4);
     });
 
-    testWidgets('shows emoji button on listening screen', (tester) async {
+    autoSizeTest('shows emoji button on listening screen', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pumpAndSettle();
-      expect(find.byType(ActionBarEmojiButton), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(ActionBarEmojiButton)),
+      ).length.equals(1);
     });
 
-    testWidgets('hides emoji button on speaking screen', (tester) async {
+    autoSizeTest('hides emoji button on speaking screen', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.speaking);
       await tester.pumpAndSettle();
-      expect(find.byType(ActionBarEmojiButton), findsNothing);
+      check(
+        tester.widgetList(find.byType(ActionBarEmojiButton)),
+      ).length.equals(0);
     });
 
-    testWidgets('hides emoji button on passing screen', (tester) async {
+    autoSizeTest('hides emoji button on passing screen', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.passing);
       await tester.pumpAndSettle();
-      expect(find.byType(ActionBarEmojiButton), findsNothing);
+      check(
+        tester.widgetList(find.byType(ActionBarEmojiButton)),
+      ).length.equals(0);
     });
 
-    testWidgets('hides emoji button on receiving screen', (tester) async {
+    autoSizeTest('hides emoji button on receiving screen', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.receiving);
       await tester.pumpAndSettle();
-      expect(find.byType(ActionBarEmojiButton), findsNothing);
+      check(
+        tester.widgetList(find.byType(ActionBarEmojiButton)),
+      ).length.equals(0);
     });
 
-    testWidgets('returns empty widget when session is null', (tester) async {
+    autoSizeTest('returns empty widget when session is null', (tester) async {
       await pumpWidget(
         tester,
         child: const SessionActionBar(),
@@ -276,10 +301,10 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.byType(ActionBar), findsNothing);
+      check(tester.widgetList(find.byType(ActionBar))).length.equals(0);
     });
 
-    testWidgets('returns empty widget when local participant is null', (
+    autoSizeTest('returns empty widget when local participant is null', (
       tester,
     ) async {
       final roomWithoutUser = _MockRoom();
@@ -289,10 +314,10 @@ void main() {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pump();
 
-      expect(find.byType(ActionBar), findsNothing);
+      check(tester.widgetList(find.byType(ActionBar))).length.equals(0);
     });
 
-    testWidgets('disables more when session state is missing', (tester) async {
+    autoSizeTest('disables more when session state is missing', (tester) async {
       await pumpWidget(
         tester,
         child: const SessionActionBar(),
@@ -321,14 +346,16 @@ void main() {
         of: find.byTooltip(moreLabel),
         matching: find.byType(ActionBarButton),
       );
-      expect(moreButton, findsOneWidget);
+      check(tester.widgetList(moreButton)).length.equals(1);
       final gesture = tester.widget<GestureDetector>(
         find.descendant(of: moreButton, matching: find.byType(GestureDetector)),
       );
-      expect(gesture.onTap, isNull);
+      check(gesture.onTap).isNull();
     });
 
-    testWidgets('opens options sheet when tapping more button', (tester) async {
+    autoSizeTest('opens options sheet when tapping more button', (
+      tester,
+    ) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pumpAndSettle();
 
@@ -341,16 +368,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(MoreOptions), findsOneWidget);
+      check(tester.widgetList(find.byType(MoreOptions))).length.equals(1);
     });
 
-    testWidgets('shows pending badge and notification on new chat message', (
+    autoSizeTest('shows pending badge and notification on new chat message', (
       tester,
     ) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pump();
 
-      expect(findPendingBadge(), findsNothing);
+      check(tester.widgetList(findPendingBadge())).length.equals(0);
 
       final context = tester.element(find.byType(SessionActionBar));
       final container = ProviderScope.containerOf(context, listen: false);
@@ -367,12 +394,14 @@ void main() {
 
       await tester.pump();
 
-      expect(findPendingBadge(), findsOneWidget);
-      expect(find.text('New message'), findsOneWidget);
-      expect(find.text('hello from chat'), findsOneWidget);
+      check(tester.widgetList(findPendingBadge())).length.equals(1);
+      check(
+        tester.widgetList(find.text('New message from Keeper')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
     });
 
-    testWidgets('opens chat sheet and clears pending badge', (tester) async {
+    autoSizeTest('opens chat sheet and clears pending badge', (tester) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pump();
 
@@ -390,14 +419,14 @@ void main() {
           );
       await tester.pump();
 
-      expect(findPendingBadge(), findsOneWidget);
+      check(tester.widgetList(findPendingBadge())).length.equals(1);
 
       await tester.tap(find.bySemanticsLabel('Chat'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SessionChatMessages), findsOneWidget);
-      expect(find.text('No messages yet'), findsOneWidget);
-      expect(findPendingBadge(), findsNothing);
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
+      check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
+      check(tester.widgetList(findPendingBadge())).length.equals(0);
 
       Navigator.of(
         tester.element(find.byType(SessionActionBar)),
@@ -405,8 +434,8 @@ void main() {
       ).pop();
       await tester.pumpAndSettle();
 
-      expect(find.byType(SessionChatMessages), findsNothing);
-      expect(findPendingBadge(), findsNothing);
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(0);
+      check(tester.widgetList(findPendingBadge())).length.equals(0);
     });
   });
 }

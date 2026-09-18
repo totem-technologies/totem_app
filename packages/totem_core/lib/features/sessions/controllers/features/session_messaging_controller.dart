@@ -19,18 +19,24 @@ class SessionChatMessage {
     required this.id,
     required this.sender,
     this.participant,
+    this.recipientIdentity,
   });
 
   factory SessionChatMessage.fromMap(
     Map<String, dynamic> map,
     Participant? participant,
   ) {
+    final recipient = map['recipientIdentity'] as String?;
     return SessionChatMessage(
       message: map['message'] as String,
       timestamp: map['timestamp'] as int,
       id: map['id'] as String,
       participant: participant,
       sender: false,
+      // Older clients omit this key — treat that as the Everyone thread.
+      recipientIdentity: (recipient == null || recipient.isEmpty)
+          ? null
+          : recipient,
     );
   }
 
@@ -40,8 +46,61 @@ class SessionChatMessage {
   final bool sender;
   final Participant? participant;
 
+  /// LiveKit identity of the private recipient. Null means Everyone.
+  final String? recipientIdentity;
+
+  /// [SessionChatMessage.fromMap] and every send-side caller normalize empty
+  /// to null.
+  bool get isEveryoneThread => recipientIdentity == null;
+
+  String? threadTargetFor(String? localIdentity) {
+    if (isEveryoneThread) return null;
+    if (sender) return recipientIdentity;
+
+    final senderId = participant?.identity;
+    if (localIdentity != null &&
+        senderId != null &&
+        senderId == localIdentity) {
+      return recipientIdentity;
+    }
+    return senderId;
+  }
+
+  /// Whether this message belongs in [threadTarget] for [localIdentity].
+  ///
+  /// [threadTarget] is null for Everyone. A private thread with X includes
+  /// messages we sent to X and messages X sent to us.
+  bool belongsToThread({
+    required String? localIdentity,
+    required String? threadTarget,
+  }) {
+    if (threadTarget == null) {
+      return isEveryoneThread;
+    }
+    if (isEveryoneThread) {
+      return false;
+    }
+
+    // [sender] is authoritative for locally-created messages: [participant] may
+    // be null when the room isn't attached, and the UI's identity fallback
+    // (slug/email) never matches a LiveKit identity.
+    if (sender) {
+      return recipientIdentity == threadTarget;
+    }
+
+    final senderId = participant?.identity;
+    final recipientId = recipientIdentity;
+    return (senderId == localIdentity && recipientId == threadTarget) ||
+        (senderId == threadTarget && recipientId == localIdentity);
+  }
+
   Map<String, dynamic> toMap() {
-    return {'message': message, 'timestamp': timestamp, 'id': id};
+    return {
+      'message': message,
+      'timestamp': timestamp,
+      'id': id,
+      if (recipientIdentity != null) 'recipientIdentity': recipientIdentity,
+    };
   }
 
   String toJson() => const JsonEncoder().convert(toMap());
@@ -50,7 +109,8 @@ class SessionChatMessage {
 enum SessionCommunicationTopics {
   emoji('lk-emoji-topic'),
   chat('lk-chat-topic'),
-  participantRemoved('lk-participant-removed-topic');
+  participantRemoved('lk-participant-removed-topic'),
+  shareTimeReminder('lk-share-time-reminder-topic');
 
   const SessionCommunicationTopics(this.topic);
   final String topic;
@@ -59,7 +119,7 @@ enum SessionCommunicationTopics {
 @Riverpod(keepAlive: true)
 class SessionMessagingController extends _$SessionMessagingController {
   @override
-  void build(SessionController session) {}
+  DateTime? build(SessionController session) => null;
 
   SessionRoomState get _state => session.state;
 
@@ -83,12 +143,92 @@ class SessionMessagingController extends _$SessionMessagingController {
           jsonDecode(data) as Map<String, dynamic>,
           event.participant,
         );
+
+        // LiveKit lets any client publish with arbitrary destinations, so the
+        // receive side has to enforce the same rules as [sendMessage].
+        final senderId = event.participant?.identity;
+        final keeperIdentity = _state.roomState.keeper;
+        if (message.isEveryoneThread) {
+          // Everyone is keeper-broadcast only. Drop group posts from anyone
+          // else so a stale or malicious client cannot write into the main
+          // thread.
+          if (senderId == null || senderId != keeperIdentity) {
+            logger.w(
+              'Ignoring Everyone chat message from non-keeper $senderId',
+            );
+            return;
+          }
+        } else {
+          // Private messages must be addressed to this client. LiveKit routes
+          // by destination but does not make the destination trustworthy.
+          final localIdentity = _room?.localParticipant?.identity;
+          if (senderId == null || localIdentity == null) {
+            logger.w('Ignoring private chat message without both identities');
+            return;
+          }
+
+          final recipientIdentity = message.recipientIdentity!;
+          final fromKeeperToLocal =
+              senderId == keeperIdentity &&
+              recipientIdentity == localIdentity &&
+              localIdentity != keeperIdentity;
+          final toLocalKeeper =
+              localIdentity == keeperIdentity &&
+              recipientIdentity == localIdentity &&
+              senderId != keeperIdentity;
+          if (!fromKeeperToLocal && !toLocalKeeper) {
+            logger.w(
+              'Ignoring private chat message from $senderId to '
+              '$recipientIdentity: it is not addressed to this client',
+            );
+            return;
+          }
+        }
+
         session.addSessionChatMessage(message);
       } catch (error, stackTrace) {
         ErrorHandler.logError(
           error,
           stackTrace: stackTrace,
           message: 'Error decoding chat message',
+        );
+      }
+      return;
+    }
+
+    if (event.topic == SessionCommunicationTopics.shareTimeReminder.topic) {
+      final room = _room;
+      final roomState = _state.roomState;
+      if (event.participant?.identity != roomState.keeper ||
+          room == null ||
+          roomState.status != RoomStatus.active ||
+          roomState.turnState == TurnState.passing ||
+          !_state.amSpeaking(room)) {
+        return;
+      }
+
+      try {
+        final payload =
+            jsonDecode(const Utf8Decoder().convert(event.data))
+                as Map<String, dynamic>;
+        final elapsedMilliseconds = payload['elapsedMilliseconds'];
+        if (elapsedMilliseconds is! num ||
+            !elapsedMilliseconds.isFinite ||
+            elapsedMilliseconds < 0) {
+          throw const FormatException('Invalid elapsed milliseconds');
+        }
+
+        final ms = elapsedMilliseconds.toInt().clamp(
+          0,
+          const Duration(hours: 6).inMilliseconds,
+        );
+
+        state = DateTime.timestamp().subtract(Duration(milliseconds: ms));
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error decoding share time reminder',
         );
       }
       return;
@@ -172,36 +312,55 @@ class SessionMessagingController extends _$SessionMessagingController {
     }
   }
 
-  Future<void> sendMessage(String text) async {
+  void clearShareTimeReminder() => state = null;
+
+  Future<void> sendShareTimeReminder(String participantIdentity) async {
     if (!session.isCurrentUserKeeper()) {
       logger.w(
-        'Attempted to send chat message without being the keeper, ignoring',
+        'Attempted to send a share time reminder without being the keeper, ignoring',
       );
       return;
     }
 
     final room = _room;
-    final message = SessionChatMessage(
-      message: text,
-      timestamp: DateTime.now().millisecondsSinceEpoch,
-      id: const Uuid().v4(),
-      sender: true,
-      participant: room?.localParticipant,
-    );
+    final roomState = _state.roomState;
+    final turnStartedAt = _state.turnStartedAt;
+    if (room?.localParticipant == null ||
+        roomState.status != RoomStatus.active ||
+        roomState.turnState == TurnState.passing ||
+        roomState.currentSpeaker != participantIdentity ||
+        turnStartedAt == null ||
+        room!.localParticipant!.identity == participantIdentity) {
+      logger.w(
+        'Attempted to send a share time reminder to someone other than the current speaker, ignoring',
+      );
+      return;
+    }
+
+    final elapsedMilliseconds = DateTime.timestamp()
+        .difference(turnStartedAt)
+        .inMilliseconds;
+    if (elapsedMilliseconds < 0) {
+      logger.w('Attempted to send a share time reminder before the turn began');
+      return;
+    }
 
     try {
-      session.addSessionChatMessage(message);
-      await room?.localParticipant
-          ?.publishData(
-            const Utf8Encoder().convert(message.toJson()),
-            topic: SessionCommunicationTopics.chat.topic,
+      await room.localParticipant!
+          .publishData(
+            const Utf8Encoder().convert(
+              jsonEncode({'elapsedMilliseconds': elapsedMilliseconds}),
+            ),
+            reliable: true,
+            destinationIdentities: [participantIdentity],
+            topic: SessionCommunicationTopics.shareTimeReminder.topic,
           )
           .timeout(
             const Duration(seconds: 5),
             onTimeout: () {
               ErrorHandler.logError(
-                TimeoutException('Sending chat message timed out'),
-                message: 'Warning: Sending chat message timed out',
+                TimeoutException('Sending share time reminder timed out'),
+                message: 'Warning: Sending share time reminder timed out',
               );
             },
           );
@@ -209,8 +368,87 @@ class SessionMessagingController extends _$SessionMessagingController {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        message: 'Error sending chat message',
+        message: 'Error sending share time reminder',
       );
     }
+  }
+
+  /// Sends [text] to Everyone when [recipientIdentity] is null, or as a
+  /// private LiveKit data message when a recipient is set.
+  ///
+  /// Everyone is keeper-only. Participants may only DM the keeper.
+  ///
+  /// Returns false when the message was rejected before publishing, so the
+  /// composer can keep the user's text instead of silently dropping it.
+  Future<bool> sendMessage(String text, {String? recipientIdentity}) async {
+    final isKeeper = session.isCurrentUserKeeper();
+    final keeperIdentity = _state.roomState.keeper;
+    final localIdentity = _room?.localParticipant?.identity;
+    final trimmedRecipient =
+        (recipientIdentity == null || recipientIdentity.isEmpty)
+        ? null
+        : recipientIdentity;
+
+    if (trimmedRecipient == null) {
+      if (!isKeeper) {
+        logger.w(
+          'Attempted to send an Everyone chat message without being the '
+          'keeper, ignoring',
+        );
+        return false;
+      }
+    } else if (isKeeper) {
+      if (trimmedRecipient == localIdentity) {
+        logger.w('Keeper attempted to DM themselves, ignoring');
+        return false;
+      }
+    } else if (trimmedRecipient != keeperIdentity) {
+      logger.w(
+        'Participant attempted to DM $trimmedRecipient instead of the '
+        'keeper, ignoring',
+      );
+      return false;
+    }
+
+    final localParticipant = _room?.localParticipant;
+    if (localParticipant == null) {
+      logger.w(
+        'Cannot send chat message without a connected local participant',
+      );
+      return false;
+    }
+
+    final message = SessionChatMessage(
+      message: text,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+      id: const Uuid().v4(),
+      sender: true,
+      participant: localParticipant,
+      recipientIdentity: trimmedRecipient,
+    );
+
+    try {
+      await localParticipant
+          .publishData(
+            const Utf8Encoder().convert(message.toJson()),
+            reliable: true,
+            topic: SessionCommunicationTopics.chat.topic,
+            // LiveKit delivers private payloads only to this identity.
+            destinationIdentities: trimmedRecipient == null
+                ? null
+                : [trimmedRecipient],
+          )
+          .timeout(const Duration(seconds: 5));
+    } catch (error, stackTrace) {
+      logger.e(
+        'Error sending chat message',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+
+    session.addSessionChatMessage(message);
+    return true;
   }
 }

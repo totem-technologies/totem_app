@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
@@ -56,7 +58,7 @@ class _DelayedTrackFactory extends _TrackFactory {
     CameraCaptureOptions cameraOptions,
   ) async {
     await cameraGate.future;
-    return await super.createVideoTrack(cameraOptions);
+    return null;
   }
 }
 
@@ -159,6 +161,12 @@ SessionDetailSchema _event() => SessionDetailSchema(
 void main() {
   late VoidCallback restoreWebRtcChannels;
 
+  setUp(() {
+    LeakTesting.settings = LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    );
+  });
+
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     setupAppConfig();
@@ -233,57 +241,64 @@ void main() {
   testWidgets('renders declarative pre-join controls', (tester) async {
     await pumpScreen(tester);
 
-    expect(find.byType(ActionBar), findsOneWidget);
-    expect(find.byType(ActionSliderButton), findsOneWidget);
-    expect(find.text('Welcome'), findsOneWidget);
+    check(tester.widgetList(find.byType(ActionBar))).length.equals(1);
+    check(tester.widgetList(find.byType(ActionSliderButton))).length.equals(1);
+    check(tester.widgetList(find.text('Welcome'))).length.equals(1);
   });
 
-  testWidgets('locks media toggles during initial capture', (tester) async {
-    final factory = _DelayedTrackFactory();
-    await pumpScreen(tester, successfulJoin: true, trackFactory: factory);
+  testWidgets(
+    'locks media toggles during initial capture',
+    (tester) async {
+      final factory = _DelayedTrackFactory();
+      await pumpScreen(tester, successfulJoin: true, trackFactory: factory);
 
-    expect(
-      tester
-          .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
-          .onToggle,
-      isNull,
-    );
-    expect(
-      tester
-          .widget<ActionBarCameraSwitcherButton>(
-            find.byType(ActionBarCameraSwitcherButton),
-          )
-          .onToggle,
-      isNull,
-    );
+      check(
+        tester
+            .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
+            .onToggle,
+      ).isNull();
+      check(
+        tester
+            .widget<ActionBarCameraSwitcherButton>(
+              find.byType(ActionBarCameraSwitcherButton),
+            )
+            .onToggle,
+      ).isNull();
 
-    factory.cameraGate.complete();
-    await tester.pump();
-    await tester.pump();
+      factory.cameraGate.complete();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
 
-    expect(
-      tester
-          .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
-          .onToggle,
-      isNotNull,
-    );
-    expect(
-      tester
-          .widget<ActionBarCameraSwitcherButton>(
-            find.byType(ActionBarCameraSwitcherButton),
-          )
-          .onToggle,
-      isNotNull,
-    );
-  });
+      check(
+        tester
+            .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
+            .onToggle,
+      ).isNotNull();
+      check(
+        tester
+            .widget<ActionBarCameraSwitcherButton>(
+              find.byType(ActionBarCameraSwitcherButton),
+            )
+            .onToggle,
+      ).isNotNull();
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.pump();
+    },
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
 
   testWidgets('renders token failures through the session error screen', (
     tester,
   ) async {
     await pumpScreen(tester, tokenError: Exception('token failed'));
 
-    expect(find.byType(SessionErrorScreen), findsOneWidget);
-    expect(find.text('Try Joining Again'), findsOneWidget);
+    check(tester.widgetList(find.byType(SessionErrorScreen))).length.equals(1);
+    check(tester.widgetList(find.text('Try Joining Again'))).length.equals(1);
   });
 
   testWidgets('renders offline error when internet prevents joining', (
@@ -295,15 +310,16 @@ void main() {
       initiallyOffline: true,
     );
 
-    expect(find.byType(SessionErrorScreen), findsOneWidget);
-    expect(find.text("You're Offline"), findsOneWidget);
-    expect(
-      find.text(
-        'Video sessions require an active internet connection.\n'
-        'Check your Wi-Fi or mobile data, then tap below to rejoin.',
+    check(tester.widgetList(find.byType(SessionErrorScreen))).length.equals(1);
+    check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
+    check(
+      tester.widgetList(
+        find.text(
+          'Video sessions require an active internet connection.\n'
+          'Check your Wi-Fi or mobile data, then tap below to rejoin.',
+        ),
       ),
-      findsOneWidget,
-    );
+    ).length.equals(1);
   });
 
   testWidgets('successful join transitions to VideoSessionScreen', (
@@ -314,10 +330,10 @@ void main() {
     final join = tester.widget<ActionSliderButton>(
       find.byType(ActionSliderButton),
     );
-    expect(await join.onActionCompleted(), isTrue);
+    check(await join.onActionCompleted()).equals(true);
     await tester.pump();
 
-    expect(find.byType(VideoSessionScreen), findsOneWidget);
+    check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
   });
 
   testWidgets('transitions while the room connection is still pending', (
@@ -333,16 +349,15 @@ void main() {
     final joinFuture = join.onActionCompleted();
     await tester.pump();
 
-    expect(find.byType(VideoSessionScreen), findsOneWidget);
-    expect(
+    check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
+    check(
       tester.element(find.byType(VideoTrackRenderer)),
-      same(previewRenderer),
-    );
+    ).identicalTo(previewRenderer);
 
     _PendingSessionController.joinCompleter!.complete(
       SessionJoinResult.success,
     );
-    expect(await joinFuture, isTrue);
+    check(await joinFuture).equals(true);
   });
 
   testWidgets('shows replacement confirmation only after joining', (
@@ -351,7 +366,9 @@ void main() {
     await pumpScreen(tester, alreadyPresent: true, successfulJoin: true);
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text("You're Already in This Session"), findsNothing);
+    check(
+      tester.widgetList(find.text("You're Already in This Session")),
+    ).length.equals(0);
 
     final join = tester.widget<ActionSliderButton>(
       find.byType(ActionSliderButton),
@@ -360,16 +377,20 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text("You're Already in This Session"), findsOneWidget);
-    expect(find.text('Join Here'), findsOneWidget);
+    check(
+      tester.widgetList(find.text("You're Already in This Session")),
+    ).length.equals(1);
+    check(tester.widgetList(find.text('Join Here'))).length.equals(1);
 
     await tester.tap(find.text('Join Here'));
     await tester.pump();
-    expect(await joinFuture, isTrue);
+    check(await joinFuture).equals(true);
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text("You're Already in This Session"), findsNothing);
-    expect(find.byType(VideoSessionScreen), findsOneWidget);
+    check(
+      tester.widgetList(find.text("You're Already in This Session")),
+    ).length.equals(0);
+    check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
   });
 
   testWidgets('already-present dialog returns true on confirm', (tester) async {
@@ -389,6 +410,6 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Join Here'));
     await tester.pumpAndSettle();
-    expect(await result, isTrue);
+    check(await result).equals(true);
   });
 }

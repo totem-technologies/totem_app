@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/user_feedback.dart';
@@ -35,9 +38,9 @@ void main() {
   testWidgets('renders feedback form', (tester) async {
     await pumpPopup(tester);
 
-    expect(find.text('Feedback'), findsOneWidget);
-    expect(find.byType(TextFormField), findsOneWidget);
-    expect(find.text('Submit Feedback'), findsOneWidget);
+    check(tester.widgetList(find.text('Feedback'))).length.equals(1);
+    check(tester.widgetList(find.byType(TextFormField))).length.equals(1);
+    check(tester.widgetList(find.text('Submit Feedback'))).length.equals(1);
   });
 
   testWidgets('shows validation errors for empty feedback', (tester) async {
@@ -46,7 +49,9 @@ void main() {
     await tester.tap(find.text('Submit Feedback'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Please enter your feedback'), findsOneWidget);
+    check(
+      tester.widgetList(find.text('Please enter your feedback')),
+    ).length.equals(1);
   });
 
   testWidgets('shows validation errors for short feedback', (tester) async {
@@ -56,21 +61,23 @@ void main() {
     await tester.tap(find.text('Submit Feedback'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text(
-        'Please provide more detailed feedback (at least 8 characters)',
+    check(
+      tester.widgetList(
+        find.text(
+          'Please provide more detailed feedback (at least 8 characters)',
+        ),
       ),
-      findsOneWidget,
-    );
+    ).length.equals(1);
   });
 
   testWidgets('submits successfully with valid text', (tester) async {
     String? submittedFeedback;
+    final submission = Completer<void>();
     await pumpPopup(
       tester,
       onSubmitted: (text) async {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
         submittedFeedback = text;
+        await submission.future;
       },
     );
 
@@ -82,19 +89,21 @@ void main() {
     await tester.pump();
 
     // Verify loading indicator is shown
-    expect(find.byType(LoadingIndicator), findsOneWidget);
+    check(tester.widgetList(find.byType(LoadingIndicator))).length.equals(1);
 
+    submission.complete();
     await tester.pumpAndSettle();
 
     // Verify callback was called
-    expect(submittedFeedback, 'This is a valid piece of feedback.');
+    check(submittedFeedback).equals('This is a valid piece of feedback.');
 
     // Verify success snackbar and dialog closed
-    expect(
-      find.text('Thank you for your feedback!\nWe appreciate your input.'),
-      findsOneWidget,
-    );
-    expect(find.byType(UserFeedback), findsNothing);
+    check(
+      tester.widgetList(
+        find.text('Thank you for your feedback!\nWe appreciate your input.'),
+      ),
+    ).length.equals(1);
+    check(tester.widgetList(find.byType(UserFeedback))).length.equals(0);
   });
 
   testWidgets(
@@ -109,14 +118,16 @@ void main() {
         ..maybePop();
       await tester.pumpAndSettle();
 
-      expect(find.byType(ConfirmationDialog), findsOneWidget);
-      expect(find.text('Discard Feedback?'), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(ConfirmationDialog)),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Discard Feedback?'))).length.equals(1);
 
       // Tap Discard
       await tester.tap(find.text('Discard'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(UserFeedback), findsNothing);
+      check(tester.widgetList(find.byType(UserFeedback))).length.equals(0);
     },
   );
 
@@ -129,8 +140,10 @@ void main() {
         ..maybePop();
       await tester.pumpAndSettle();
 
-      expect(find.byType(ConfirmationDialog), findsNothing);
-      expect(find.byType(UserFeedback), findsNothing);
+      check(
+        tester.widgetList(find.byType(ConfirmationDialog)),
+      ).length.equals(0);
+      check(tester.widgetList(find.byType(UserFeedback))).length.equals(0);
     },
   );
 }

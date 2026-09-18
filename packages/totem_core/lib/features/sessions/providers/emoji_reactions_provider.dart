@@ -8,6 +8,10 @@ import 'package:uuid/uuid.dart';
 
 part 'emoji_reactions_provider.g.dart';
 
+final emojiReactionClockProvider = Provider<DateTime Function()>(
+  (ref) => DateTime.timestamp,
+);
+
 @immutable
 class SessionEmojiReaction {
   const SessionEmojiReaction({
@@ -58,7 +62,7 @@ class EmojiReactions extends _$EmojiReactions {
   List<SessionEmojiReaction> build() => <SessionEmojiReaction>[];
 
   Future<void> emitIncomingReaction(String userIdentity, String emoji) async {
-    final now = DateTime.timestamp();
+    final now = ref.read(emojiReactionClockProvider)();
     final lastTime = state
         .lastWhereOrNull((r) => r.userIdentity == userIdentity)
         ?.timestamp;
@@ -90,7 +94,7 @@ class EmojiReactions extends _$EmojiReactions {
     bool isInListeningTurnScreen, {
 
     /// The minimum amount of time the reaction will live before being removed.
-    Duration minAliveDuration = const Duration(milliseconds: 3500),
+    Duration minAliveDuration = const Duration(milliseconds: 4000),
   }) async {
     // While the app is hidden (e.g. a backgrounded browser tab) no frames
     // are rendered, so overlay entries would accumulate unbuilt and all

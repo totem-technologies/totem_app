@@ -94,7 +94,6 @@ class SessionController extends _$SessionController {
   }
 
   EventsListener<RoomEvent>? _listener;
-  bool _awaitingInitialMicrophonePublication = false;
 
   final JoinMediaOwner _joinMediaOwner = JoinMediaOwner();
 
@@ -261,7 +260,7 @@ class SessionController extends _$SessionController {
     final speakerPref = options.speakerEnabled;
     devices.resetSpeakerRoutingDefaults(speakerPref);
     // Delay setting up the listener and applying the initial routing up to a bit.
-    // This allows LiveKit's FastConnect and incoming WebRTC streams to settle,
+    // This allows initial publication and incoming WebRTC streams to settle,
     // avoiding the earpiece/default audio routing from overriding our preference.
     Future.delayed(const Duration(milliseconds: 500), () {
       if (!ref.mounted) return;
@@ -304,6 +303,15 @@ class SessionController extends _$SessionController {
 
       if (state.status == RoomStatus.ended) {
         _disableLocalMediaTracks();
+      }
+
+      final previousRoomState = this.state.roomState;
+      if ((previousRoomState.status == RoomStatus.active &&
+              state.status != RoomStatus.active) ||
+          (previousRoomState.turnState != TurnState.passing &&
+              state.turnState == TurnState.passing) ||
+          state.currentSpeaker != previousRoomState.currentSpeaker) {
+        messaging.clearShareTimeReminder();
       }
       _dispatch(RoomStateChanged(state));
     }
@@ -422,10 +430,12 @@ class SessionController extends _$SessionController {
         url: AppConfig.instance.liveKitUrl,
         token: options.token,
       );
+      if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
       await ref
           .read(sessionInfraControllerProvider.notifier)
           .activate(event: session);
+      if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
       _syncTimer?.cancel();
       _syncTimer = Timer.periodic(
@@ -454,39 +464,59 @@ class SessionController extends _$SessionController {
           ? _joinMediaOwner.track<LocalAudioTrack>()
           : null;
 
-      final fastConnectOptions = FastConnectOptions(
-        microphone: initialMicrophoneTrack != null
-            ? TrackOption(track: initialMicrophoneTrack)
-            : TrackOption(enabled: options.microphoneEnabled),
-        camera: initialCameraTrack != null
-            ? TrackOption(track: initialCameraTrack)
-            : TrackOption(enabled: options.cameraEnabled),
+      // FastConnect publishes supplied tracks asynchronously after connect
+      // completes. Publish explicitly so join cannot report a false success.
+      await _connect(
+        url: AppConfig.instance.liveKitUrl,
+        token: options.token,
+        connectOptions: connectOptions,
       );
+      if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
-      // A successful Room.connect transfers ownership even though the
-      // LocalTrackPublication may not be visible yet: LiveKit's
-      // EngineJoinResponseEvent handler performs FastConnect publication
-      // asynchronously. If connect throws, retain ownership so failed-join
-      // cleanup below can stop the raw capture before join returns.
-      _awaitingInitialMicrophonePublication = options.microphoneEnabled;
-      try {
-        await _connect(
-          url: AppConfig.instance.liveKitUrl,
-          token: options.token,
-          fastConnectOptions: fastConnectOptions,
-          connectOptions: connectOptions,
-        );
-      } catch (_) {
-        _awaitingInitialMicrophonePublication = false;
-        rethrow;
+      final localParticipant = room?.localParticipant;
+      if (localParticipant == null) {
+        throw StateError('Room connected without a local participant');
       }
-      _joinMediaOwner
-        ..releaseToRoom(initialCameraTrack)
-        ..releaseToRoom(initialMicrophoneTrack);
-      // Residual SDK limitation: Room.connect can succeed before FastConnect
-      // publication finishes. If that later asynchronous publication fails,
-      // LiveKit exposes no completion/error future through which ownership can
-      // be reclaimed, so the raw track can remain live until browser cleanup.
+
+      try {
+        if (initialCameraTrack != null) {
+          await localParticipant.publishVideoTrack(
+            initialCameraTrack,
+            publishOptions: defaultVideoPublishOptions,
+          );
+          if (!ref.mounted) return SessionJoinResult.retryableFailure;
+          _joinMediaOwner.releaseToRoom(initialCameraTrack);
+        } else if (options.cameraEnabled) {
+          await localParticipant.setCameraEnabled(true);
+          if (!ref.mounted) return SessionJoinResult.retryableFailure;
+        }
+
+        if (!ref.mounted) return SessionJoinResult.retryableFailure;
+        if (initialMicrophoneTrack != null) {
+          if (!_shouldEnableMicrophone()) {
+            await initialMicrophoneTrack.mute(stopOnMute: false);
+            if (!ref.mounted) return SessionJoinResult.retryableFailure;
+          }
+          await localParticipant.publishAudioTrack(initialMicrophoneTrack);
+          if (!ref.mounted) return SessionJoinResult.retryableFailure;
+          _joinMediaOwner.releaseToRoom(initialMicrophoneTrack);
+        } else if (options.microphoneEnabled && _shouldEnableMicrophone()) {
+          await localParticipant.setMicrophoneEnabled(true);
+          if (!ref.mounted) return SessionJoinResult.retryableFailure;
+        }
+
+        if (!ref.mounted) return SessionJoinResult.retryableFailure;
+        await _applyJoinMediaState();
+        if (!ref.mounted) return SessionJoinResult.retryableFailure;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Error publishing initial session media',
+        );
+        return SessionJoinResult.retryableFailure;
+      }
+
       return SessionJoinResult.success;
     }
     // For ConnectException and MediaConnectException, we log the error but don't
@@ -536,7 +566,7 @@ class SessionController extends _$SessionController {
       );
       return SessionJoinResult.retryableFailure;
     } finally {
-      // Successful FastConnect tracks were removed from the owner above, so
+      // Successfully published tracks were removed from the owner above, so
       // this only disposes media that LiveKit did not accept. In particular,
       // fatal failures keep rendering the Session error UI and never run the
       // retry reset path, so join itself must release their live capture.
@@ -682,16 +712,6 @@ class SessionController extends _$SessionController {
       ..on<DataReceivedEvent>((data) {
         if (ref.mounted) messaging.handleDataReceived(data);
       })
-      ..on<LocalTrackPublishedEvent>((event) {
-        if (!_awaitingInitialMicrophonePublication ||
-            event.participant != room.localParticipant ||
-            event.publication.source != TrackSource.microphone) {
-          return;
-        }
-
-        _awaitingInitialMicrophonePublication = false;
-        unawaited(_applyJoinMediaState());
-      })
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
       ..on<ParticipantConnectedEvent>(_onParticipantConnected);
 
@@ -701,15 +721,9 @@ class SessionController extends _$SessionController {
   Future<void> _connect({
     required String url,
     required String token,
-    FastConnectOptions? fastConnectOptions,
     ConnectOptions? connectOptions,
   }) async {
-    await _room?.connect(
-      url,
-      token,
-      connectOptions: connectOptions,
-      fastConnectOptions: fastConnectOptions,
-    );
+    await _room?.connect(url, token, connectOptions: connectOptions);
   }
 
   Future<void> _disconnect() async {
@@ -746,7 +760,6 @@ class SessionController extends _$SessionController {
 
   @visibleForTesting
   Future<void> disposeConnection() async {
-    _awaitingInitialMicrophonePublication = false;
     await _disableLocalMediaTracks();
 
     try {
@@ -764,31 +777,24 @@ class SessionController extends _$SessionController {
     await _joinMediaOwner.disposeAll();
   }
 
+  bool _shouldEnableMicrophone() {
+    if (state.roomState.status == RoomStatus.waitingRoom && !state.hasKeeper) {
+      return options.microphoneEnabled;
+    }
+    if (state.roomState.status == RoomStatus.active) {
+      if (state.speakingNow == room?.localParticipant?.identity) {
+        return options.microphoneEnabled;
+      }
+      return false;
+    }
+    return isCurrentUserKeeper() && options.microphoneEnabled;
+  }
+
   Future<void> _applyJoinMediaState() async {
     final currentRoom = room;
     if (currentRoom == null) return;
 
-    // FastConnect is the sole owner of initial capture enablement. Its
-    // publication continues asynchronously after Room.connect completes, so
-    // enabling either source here can open a second getUserMedia capture before
-    // the first publication is registered. Camera needs no post-connect policy
-    // adjustment: FastConnect already received options.cameraEnabled.
-
-    final shouldEnableMicrophone = () {
-      if (state.roomState.status == RoomStatus.waitingRoom &&
-          !state.hasKeeper) {
-        return options.microphoneEnabled;
-      }
-      if (state.roomState.status == RoomStatus.active) {
-        if (state.speakingNow == currentRoom.localParticipant?.identity) {
-          return options.microphoneEnabled;
-        }
-        return false;
-      }
-      return isCurrentUserKeeper() && options.microphoneEnabled;
-    }();
-
-    if (!shouldEnableMicrophone) {
+    if (!_shouldEnableMicrophone()) {
       try {
         await devices.disableMicrophone();
       } catch (error, stackTrace) {

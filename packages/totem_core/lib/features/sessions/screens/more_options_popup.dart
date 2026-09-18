@@ -469,7 +469,6 @@ class MoreOptions extends ConsumerWidget {
     BuildContext context,
     SessionController session,
   ) async {
-    final controller = TextEditingController();
     await showDialog<void>(
       context: context,
       useRootNavigator: false,
@@ -478,25 +477,12 @@ class MoreOptions extends ConsumerWidget {
         content: 'Are you sure you want to start the session?',
         confirmButtonText: 'Start Session',
         type: ConfirmationDialogType.standard,
-        contentWidget: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Optional: enter a prompt for the first round',
-          ),
-          maxLines: 3,
-          minLines: 1,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-        ),
         onConfirm: () async {
-          final prompt = controller.text.trim();
-          final success = await session.keeper.startSession(
-            prompt: prompt.isEmpty ? null : prompt,
-          );
+          final success = await session.keeper.startSession();
           if (success && context.mounted) Navigator.of(context).pop();
         },
       ),
     );
-    controller.dispose();
   }
 
   static Future<void> _onEndSession(

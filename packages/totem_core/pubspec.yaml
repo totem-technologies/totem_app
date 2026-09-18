@@ -1,7 +1,7 @@
 name: totem_core
 description: "Guided introspection groups."
 publish_to: "none"
-version: 0.0.79+79
+version: 0.0.83+83
 environment:
   sdk: ^3.11.3
 resolution: workspace
@@ -40,11 +40,11 @@ dependencies:
   sentry_dio: ^9.21.0
 
   # Video Experience
-  # livekit_client: ^2.8.0
+  # livekit_client: ^2.13.0
   livekit_client:
     git:
       url: https://github.com/livekit/client-sdk-flutter
-      ref: f48ada022e95cff588deb7187607dd4d8673f69b
+      ref: ac9d3906eefc8eea91338651b53f4f2d0d2a37cb
   # path: ../client-sdk-flutter
   # git:
   # url: https://github.com/livekit/client-sdk-flutter/
@@ -104,6 +104,8 @@ dev_dependencies:
   wakelock_plus_platform_interface: any
   flutter_webrtc: any
   platform: any
+  checks: ^0.3.2
+  leak_tracker_flutter_testing: any
 flutter:
   default-flavor: production
   uses-material-design: true

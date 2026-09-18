@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
+
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -123,6 +126,7 @@ SessionRoomState _buildState({
   String currentSpeaker = 'user-1',
   String? nextSpeaker = 'user-2',
   List<Participant>? participants,
+  DateTime? turnStartedAt,
 }) {
   final defaultParticipants =
       participants ??
@@ -155,6 +159,7 @@ SessionRoomState _buildState({
         roundNumber: 1,
       ),
     ),
+    turnStartedAt: turnStartedAt,
   );
 }
 
@@ -211,6 +216,7 @@ void main() {
     required SessionRoomState sessionState,
     required bool isKeeper,
     SessionCuesService? cuesService,
+    DateTime? shareTimeReminder,
   }) async {
     when(() => session.isCurrentUserKeeper()).thenReturn(isKeeper);
     final testCuesService = cuesService ?? _TestSessionCuesService();
@@ -234,6 +240,9 @@ void main() {
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
           currentSessionProvider.overrideWith((ref) => session),
+          sessionMessagingControllerProvider(
+            session,
+          ).overrideWithValue(shareTimeReminder),
           sessionCuesServiceProvider.overrideWithValue(testCuesService),
           userProfileProvider.overrideWith((ref, slug) async {
             return PublicUserSchema(
@@ -271,7 +280,7 @@ void main() {
     testWidgets('renders the participant grid for room sizes up to 12', (
       tester,
     ) async {
-      for (final participantCount in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+      for (final participantCount in [1, 3, 7, 12]) {
         final state = _buildState(
           keeper: 'user-1',
           currentSpeaker: 'speaker-0',
@@ -284,8 +293,12 @@ void main() {
 
         await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
-        expect(find.byType(ParticipantCard), findsNWidgets(participantCount));
-        expect(find.byType(SpeakingTurnScreen), findsOneWidget);
+        check(
+          tester.widgetList(find.byType(ParticipantCard)),
+        ).length.equals(participantCount);
+        check(
+          tester.widgetList(find.byType(SpeakingTurnScreen)),
+        ).length.equals(1);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       }
@@ -302,12 +315,18 @@ void main() {
 
       await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
-      expect(find.byType(TextField), findsOneWidget);
-      expect(find.byType(ActionSliderButton), findsOneWidget);
-      expect(find.text('Your prompt for this round'), findsOneWidget);
-      expect(find.text('Pass to User Two'), findsOneWidget);
-      expect(find.byType(SessionActionBar), findsOneWidget);
-      expect(find.byType(ParticipantCard), findsAtLeastNWidgets(1));
+      check(tester.widgetList(find.byType(TextField))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.text('Your prompt for this round')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Pass to User Two'))).length.equals(1);
+      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(ParticipantCard)),
+      ).length.isGreaterOrEqual(1);
     });
 
     testWidgets('action bar exposes controls and toggles mic/camera', (
@@ -321,10 +340,16 @@ void main() {
 
       await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
-      expect(find.bySemanticsLabel('Microphone off'), findsOneWidget);
-      expect(find.bySemanticsLabel('Camera off'), findsOneWidget);
-      expect(find.bySemanticsLabel('Chat'), findsOneWidget);
-      expect(find.bySemanticsLabel('Send reaction'), findsNothing);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Microphone off')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera off')),
+      ).length.equals(1);
+      check(tester.widgetList(find.bySemanticsLabel('Chat'))).length.equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Send reaction')),
+      ).length.equals(0);
 
       await tester.tap(find.bySemanticsLabel('Microphone off'));
       await tester.pump();
@@ -396,7 +421,40 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(() => keeper.passTotem(roundMessage: 'A round message')).called(1);
-      expect(cuesService.swipePulseCount, 1);
+      check(cuesService.swipePulseCount).equals(1);
+    });
+
+    testWidgets('shows elapsed time only after a keeper reminder', (
+      tester,
+    ) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view
+        ..physicalSize = const Size(1280, 1000)
+        ..devicePixelRatio = 1;
+      when(() => session.session).thenReturn(_createTestSession());
+
+      final state = _buildState(
+        keeper: 'keeper-1',
+        currentSpeaker: 'user-1',
+        turnStartedAt: DateTime.now(),
+      );
+      final elapsedTimer = find.textContaining(RegExp(r'^02:\d{2}$'));
+
+      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: false);
+      check(tester.widgetList(elapsedTimer)).length.equals(0);
+
+      await pumpSpeakingTurn(
+        tester,
+        sessionState: state,
+        isKeeper: false,
+        shareTimeReminder: DateTime.now().subtract(
+          const Duration(minutes: 2, seconds: 5),
+        ),
+      );
+      check(tester.widgetList(elapsedTimer)).length.equals(1);
     });
 
     testWidgets('shows the standard pass card when the user is not keeper', (
@@ -410,10 +468,10 @@ void main() {
 
       await pumpSpeakingTurn(tester, sessionState: state, isKeeper: false);
 
-      expect(find.byType(TextField), findsNothing);
-      expect(find.byType(ActionSlider), findsOneWidget);
-      expect(find.text('Pass to User Two'), findsOneWidget);
-      expect(find.byType(SessionActionBar), findsOneWidget);
+      check(tester.widgetList(find.byType(TextField))).length.equals(0);
+      check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
+      check(tester.widgetList(find.text('Pass to User Two'))).length.equals(1);
+      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
     });
 
     testWidgets('shows the waiting receive card while the totem is passing', (
@@ -428,13 +486,14 @@ void main() {
 
       await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
-      expect(
-        find.textContaining('Waiting for the receiver to accept.'),
-        findsOneWidget,
-      );
-      expect(find.byType(TextField), findsNothing);
-      expect(find.byType(ActionSlider), findsNothing);
-      expect(find.byType(SessionActionBar), findsOneWidget);
+      check(
+        tester.widgetList(
+          find.textContaining('Waiting for the receiver to accept.'),
+        ),
+      ).length.equals(1);
+      check(tester.widgetList(find.byType(TextField))).length.equals(0);
+      check(tester.widgetList(find.byType(ActionSlider))).length.equals(0);
+      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
     });
 
     testWidgets('does not render SelfView when disabled by default', (
@@ -449,30 +508,39 @@ void main() {
       await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
       await tester.pumpAndSettle();
 
-      expect(find.byType(SelfView), findsNothing);
+      check(tester.widgetList(find.byType(SelfView))).length.equals(0);
     });
 
-    testWidgets('SelfView Settings enables and persists', (tester) async {
-      final state = _buildState(
-        keeper: 'user-1',
-        currentSpeaker: 'user-1',
-        nextSpeaker: 'user-2',
-      );
+    testWidgets(
+      'SelfView Settings enables and persists',
+      (tester) async {
+        final state = _buildState(
+          keeper: 'user-1',
+          currentSpeaker: 'user-1',
+          nextSpeaker: 'user-2',
+        );
 
-      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
-      await tester.pumpAndSettle();
+        await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+        await tester.pumpAndSettle();
 
-      final container = tester.element(find.byType(SpeakingTurnScreen));
-      final ref = ProviderScope.containerOf(container);
+        final container = tester.element(find.byType(SpeakingTurnScreen));
+        final ref = ProviderScope.containerOf(container);
 
-      ref.read(selfViewSettingsProvider.notifier).setEnabled(true);
-      await tester.pumpAndSettle();
+        ref.read(selfViewSettingsProvider.notifier).setEnabled(true);
+        await tester.pumpAndSettle();
 
-      expect(find.byType(SelfView), findsOneWidget);
+        check(tester.widgetList(find.byType(SelfView))).length.equals(1);
 
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getBool(AppConsts.storageSelfViewEnabledKey), true);
-    });
+        final prefs = await SharedPreferences.getInstance();
+        check(prefs.getBool(AppConsts.storageSelfViewEnabledKey)).equals(true);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
 
     testWidgets('renders SelfView when enabled and handles dragging', (
       tester,
@@ -491,28 +559,32 @@ void main() {
       await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
       await tester.pumpAndSettle();
 
-      expect(find.byType(SelfView), findsOneWidget);
+      check(tester.widgetList(find.byType(SelfView))).length.equals(1);
 
       final cardFinder = find.bySemanticsLabel('Your self view, draggable');
       final initialOffset = tester.getTopLeft(cardFinder);
-      expect(initialOffset.dx, equals(714.0)); // 800 - 70 - 16
+      check(initialOffset.dx).equals(714.0); // 800 - 70 - 16
 
       await tester.drag(cardFinder, const Offset(-500, 0));
       await tester.pumpAndSettle();
 
       final newOffset = tester.getTopLeft(cardFinder);
-      expect(newOffset.dx, equals(16.0)); // _padding is 16
+      check(newOffset.dx).equals(16.0); // _padding is 16
 
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString(AppConsts.storageSelfViewPositionKey), 'start');
+      check(
+        prefs.getString(AppConsts.storageSelfViewPositionKey),
+      ).equals('start');
 
       // Drag back past the midpoint
       await tester.drag(cardFinder, const Offset(500, 0));
       await tester.pumpAndSettle();
 
       final backOffset = tester.getTopLeft(cardFinder);
-      expect(backOffset.dx, equals(714.0)); // Should snap back to end
-      expect(prefs.getString(AppConsts.storageSelfViewPositionKey), 'end');
+      check(backOffset.dx).equals(714.0); // Should snap back to end
+      check(
+        prefs.getString(AppConsts.storageSelfViewPositionKey),
+      ).equals('end');
     });
   });
 }

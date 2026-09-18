@@ -13,8 +13,8 @@ class ParticipantControlButton extends ConsumerStatefulWidget {
   const ParticipantControlButton({
     required this.participant,
     required this.menuVerticalOffset,
+    required this.metrics,
     this.backgroundColor = Colors.black54,
-    this.metrics,
     super.key,
   });
 
@@ -29,8 +29,8 @@ class ParticipantControlButton extends ConsumerStatefulWidget {
 
   final Color backgroundColor;
 
-  /// When null, resolves via [ParticipantOverlayMetrics.of] (grid tiles).
-  final ParticipantOverlayMetrics? metrics;
+  /// Chrome sizes, resolved by the card from its own size.
+  final ParticipantOverlayMetrics metrics;
 
   static const _menuTextStyle = TextStyle(
     color: Colors.white,
@@ -76,7 +76,7 @@ class _ParticipantControlButtonState
 
   @override
   Widget build(BuildContext context) {
-    final metrics = widget.metrics ?? ParticipantOverlayMetrics.of(context);
+    final metrics = widget.metrics;
 
     return MenuAnchor(
       controller: _menuController,

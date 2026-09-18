@@ -35,7 +35,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        flavor: [staging, production]
+        include:
+          - flavor: staging
+            package_name: org.totem.app.dev
+          - flavor: production
+            package_name: org.totem.app
 
     steps:
       - uses: actions/checkout@v6
@@ -70,6 +74,16 @@ jobs:
           draft: true
           files: packages/totem_app/artifacts/*.aab
 
+      - name: Upload AAB to Google Play
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
+        run: |
+          node ../../.github/scripts/google-play-upload.mjs \
+            --aab artifacts/totem-${{ matrix.flavor }}-${{ github.ref_name }}.aab \
+            --package-name "${{ matrix.package_name }}" \
+            --track internal \
+            --status completed
+
   ios:
     name: iOS (${{ matrix.flavor }})
     runs-on: macos-26
@@ -84,10 +98,12 @@ jobs:
         include:
           - flavor: production
             export_plist: ios/GithubActionsExportOptions.plist
-            provisioning_profile_secret: IOS_MOBILE_PROVISIONING_PROFILE_BASE64
+            bundle_id: org.totem.ios
+            provisioning_profile_name: org.totem.ios Profile 2
           - flavor: staging
             export_plist: ios/GithubActionsExportOptions-staging.plist
-            provisioning_profile_secret: IOS_STAGING_PROVISIONING_PROFILE_BASE64
+            bundle_id: org.totem.ios.dev
+            provisioning_profile_name: org.totem.dev Profile 2
 
     steps:
       - uses: actions/checkout@v6
@@ -106,7 +122,11 @@ jobs:
           build-cmd: flutter build ipa --release --flavor ${{ matrix.flavor }} --export-options-plist=${{ matrix.export_plist }}
           certificate-base64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
           certificate-password: ${{ secrets.IOS_BUILD_CERTIFICATE_PASSWORD }}
-          provisioning-profile-base64: ${{ secrets[matrix.provisioning_profile_secret] }}
+          bundle-id: ${{ matrix.bundle_id }}
+          provisioning-profile-name: ${{ matrix.provisioning_profile_name }}
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          api-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           keychain-password: ${{ secrets.IOS_GITHUB_KEYCHAIN_PASSWORD }}
 
       - name: Rename IPA for clarity
@@ -122,3 +142,23 @@ jobs:
           tag_name: ${{ github.ref_name }}
           draft: true
           files: packages/totem_app/artifacts/*.ipa
+
+      - name: Upload IPA to App Store Connect
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          key_directory="$HOME/.appstoreconnect/private_keys"
+          key_path="$key_directory/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
+          mkdir -p "$key_directory"
+          chmod 700 "$key_directory"
+          printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          trap 'rm -f "$key_path"' EXIT
+
+          xcrun altool --upload-app \
+            --type ios \
+            --file "artifacts/totem-${{ matrix.flavor }}-${{ github.ref_name }}.ipa" \
+            --apiKey "$APP_STORE_CONNECT_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"

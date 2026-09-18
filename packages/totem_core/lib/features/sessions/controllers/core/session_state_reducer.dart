@@ -81,6 +81,11 @@ class SessionStateReducer {
           turnStartedAt: current.turnStartedAt,
         );
       case SessionChatMessageAdded():
+        if (current.chat.messages.any(
+          (message) => message.id == event.message.id,
+        )) {
+          return current;
+        }
         return SessionRoomState(
           connection: current.connection,
           participants: current.participants,

@@ -209,6 +209,7 @@ class _MockParticipantEventsListener extends Mock
     implements EventsListener<ParticipantEvent> {
   void Function(TrackMutedEvent event)? onMuted;
   void Function(TrackUnmutedEvent event)? onUnmuted;
+  void Function(ParticipantEvent event)? onParticipantEvent;
 
   @override
   CancelListenFunc on<E>(
@@ -219,6 +220,8 @@ class _MockParticipantEventsListener extends Mock
       onMuted = listener as void Function(TrackMutedEvent);
     } else if (E == TrackUnmutedEvent) {
       onUnmuted = listener as void Function(TrackUnmutedEvent);
+    } else if (E == ParticipantEvent) {
+      onParticipantEvent = listener as void Function(ParticipantEvent);
     }
     return () async {};
   }
@@ -226,6 +229,9 @@ class _MockParticipantEventsListener extends Mock
   void emitMuted(TrackMutedEvent event) => onMuted?.call(event);
 
   void emitUnmuted(TrackUnmutedEvent event) => onUnmuted?.call(event);
+
+  void emitParticipantEvent(ParticipantEvent event) =>
+      onParticipantEvent?.call(event);
 
   @override
   Future<bool> dispose() async {
@@ -235,6 +241,9 @@ class _MockParticipantEventsListener extends Mock
 
 class MockRemoteTrackPublication<T extends RemoteTrack> extends Mock
     implements RemoteTrackPublication<T> {}
+
+class MockLocalAudioTrackPublication extends Mock
+    implements LocalTrackPublication<LocalAudioTrack> {}
 
 class MockLocalTrackPublication extends Mock
     implements LocalTrackPublication<LocalVideoTrack> {

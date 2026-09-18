@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -60,7 +61,9 @@ void main() {
       await tester.tap(find.byIcon(Icons.keyboard_arrow_down));
       await tester.pumpAndSettle();
 
-      expect(find.byType(ActionBarCameraSwitcherButtonOverlay), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(ActionBarCameraSwitcherButtonOverlay)),
+      ).length.equals(1);
     });
 
     testWidgets('switch-camera chevron is labeled for semantics', (
@@ -90,7 +93,9 @@ void main() {
         ),
       );
 
-      expect(find.bySemanticsLabel('Switch camera'), findsOneWidget);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Switch camera')),
+      ).length.equals(1);
     });
 
     testWidgets('one-camera mode is platform-adaptive', (tester) async {
@@ -136,13 +141,17 @@ void main() {
           .evaluate()
           .isNotEmpty;
       if (!hasSwitcherArrow) {
-        expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
+        check(
+          tester.widgetList(find.byIcon(Icons.keyboard_arrow_down)),
+        ).length.equals(0);
         await tester.tap(find.byType(ActionBarButton));
         await tester.pump();
 
-        expect(toggles, 1);
+        check(toggles).equals(1);
       } else {
-        expect(find.byIcon(Icons.keyboard_arrow_down), findsOneWidget);
+        check(
+          tester.widgetList(find.byIcon(Icons.keyboard_arrow_down)),
+        ).length.equals(1);
       }
     });
 
@@ -172,11 +181,13 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.byType(ActionBarCameraSwitcherButtonOverlay), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(ActionBarCameraSwitcherButtonOverlay)),
+      ).length.equals(1);
       await tester.tapAt(const Offset(2, 2));
       await tester.pumpAndSettle();
 
-      expect(dismissed, isTrue);
+      check(dismissed).equals(true);
     });
 
     testWidgets('desktop overlay shows empty state with no cameras', (
@@ -201,7 +212,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('No cameras found'), findsOneWidget);
+      check(tester.widgetList(find.text('No cameras found'))).length.equals(1);
     });
 
     testWidgets('desktop overlay selects device and dismisses', (tester) async {
@@ -237,8 +248,8 @@ void main() {
       await tester.tap(find.text('Rear Camera'));
       await tester.pump();
 
-      expect(selected?.deviceId, 'camera-2');
-      expect(dismissed, isTrue);
+      check(selected?.deviceId).equals('camera-2');
+      check(dismissed).equals(true);
     });
 
     testWidgets('mobile overlay toggles front/back camera position', (
@@ -270,7 +281,9 @@ void main() {
       await tester.tap(find.text('Back'));
       await tester.pump();
 
-      expect(selectedPositions, [CameraPosition.back, CameraPosition.front]);
+      check(
+        selectedPositions,
+      ).deepEquals([CameraPosition.back, CameraPosition.front]);
     });
   });
 
@@ -294,8 +307,8 @@ void main() {
       await tester.tap(find.byType(ActionBarButton));
       await tester.pumpAndSettle();
 
-      expect(devices.enableCameraCalled, isTrue);
-      expect(devices.disableCameraCalled, isFalse);
+      check(devices.enableCameraCalled).equals(true);
+      check(devices.disableCameraCalled).equals(false);
 
       // force disabled state
       when(
@@ -307,7 +320,7 @@ void main() {
       await tester.tap(find.byType(ActionBarButton));
       await tester.pumpAndSettle();
 
-      expect(devices.disableCameraCalled, isTrue);
+      check(devices.disableCameraCalled).equals(true);
     });
   });
 }

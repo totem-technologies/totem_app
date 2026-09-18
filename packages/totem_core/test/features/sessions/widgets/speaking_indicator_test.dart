@@ -1,3 +1,4 @@
+import 'package:checks/checks.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
+import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
@@ -60,6 +62,12 @@ void main() {
     );
   }
 
+  /// Chrome a dense-grid tile resolves to, and what a large card caps at.
+  final compactMetrics = ParticipantOverlayMetrics.forCard(
+    const Size(160, 120),
+  );
+  final largeMetrics = ParticipantOverlayMetrics.forCard(const Size(600, 500));
+
   TotemIcon overlayMuteIcon(WidgetTester tester) {
     return tester.widget<TotemIcon>(
       find.descendant(
@@ -84,7 +92,7 @@ void main() {
         child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
       );
 
-      expect(find.byType(TotemIcon), findsOneWidget);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
     });
 
     testWidgets('shows the muted icon when no audio track is provided', (
@@ -95,8 +103,8 @@ void main() {
         child: const SpeakingIndicatorAudioTrack(audioTrack: null),
       );
 
-      expect(find.byType(TotemIcon), findsOneWidget);
-      expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+      check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(20);
     });
 
     testWidgets(
@@ -108,7 +116,7 @@ void main() {
           child: const SpeakingIndicatorAudioTrack(audioTrack: null),
         );
 
-        expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
+        check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(20);
       },
     );
 
@@ -121,7 +129,7 @@ void main() {
           child: const SpeakingIndicatorAudioTrack(audioTrack: null),
         );
 
-        expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 20);
+        check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(20);
       },
     );
 
@@ -140,22 +148,31 @@ void main() {
           child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
         );
 
-        expect(find.byType(SoundWaveformWidget), findsOneWidget);
-        expect(find.byType(TotemIcon), findsNothing);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
 
         await audioTrack.mute(stopOnMute: false);
         trackListener.emit(MockTrackEvent());
         await tester.pump();
 
-        expect(find.byType(TotemIcon), findsOneWidget);
-        expect(find.byType(SoundWaveformWidget), findsNothing);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(0);
 
         await audioTrack.unmute(stopOnMute: false);
         trackListener.emit(MockTrackEvent());
         await tester.pump();
 
-        expect(find.byType(SoundWaveformWidget), findsOneWidget);
-        expect(find.byType(TotemIcon), findsNothing);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
       },
     );
   });
@@ -169,7 +186,7 @@ void main() {
         child: SpeakingIndicator(participant: remoteParticipant),
       );
 
-      expect(find.byType(TotemIcon), findsOneWidget);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
     });
 
     testWidgets(
@@ -199,24 +216,33 @@ void main() {
           child: SpeakingIndicator(participant: participant),
         );
 
-        expect(find.byType(SoundWaveformWidget), findsOneWidget);
-        expect(find.byType(TotemIcon), findsNothing);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
 
         audioTrack.setMuted(true);
         participant.listener.emitMuted(mutedEvent);
         audioTrack.trackListener.emit(MockTrackEvent());
         await tester.pump();
 
-        expect(find.byType(TotemIcon), findsOneWidget);
-        expect(find.byType(SoundWaveformWidget), findsNothing);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(0);
 
         audioTrack.setMuted(false);
         participant.listener.emitUnmuted(unmutedEvent);
         audioTrack.trackListener.emit(MockTrackEvent());
         await tester.pump();
 
-        expect(find.byType(SoundWaveformWidget), findsOneWidget);
-        expect(find.byType(TotemIcon), findsNothing);
+        check(
+          tester.widgetList(find.byType(SoundWaveformWidget)),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
       },
     );
   });
@@ -232,19 +258,25 @@ void main() {
             remoteParticipant.identity,
           ).overrideWith((ref) => ['🔥']),
         ],
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: compactMetrics,
+        ),
       );
 
       await tester.pumpAndSettle();
 
-      expect(find.text('🔥'), findsOneWidget);
-      expect(find.byType(TotemIcon), findsNothing);
+      check(tester.widgetList(find.text('🔥'))).length.equals(1);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
     });
 
     testWidgets('updates when the emoji provider changes', (tester) async {
       await pumpWidget(
         tester,
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: compactMetrics,
+        ),
       );
 
       final container = ProviderScope.containerOf(
@@ -252,114 +284,96 @@ void main() {
       );
       final notifier = container.read(emojiReactionsProvider.notifier);
 
-      expect(find.byType(TotemIcon), findsOneWidget);
-      expect(find.text('🔥'), findsNothing);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+      check(tester.widgetList(find.text('🔥'))).length.equals(0);
 
       await notifier.emitIncomingReaction(remoteParticipant.identity, '🔥');
       await tester.pump();
 
-      expect(find.text('🔥'), findsOneWidget);
-      expect(find.byType(TotemIcon), findsNothing);
+      check(tester.widgetList(find.text('🔥'))).length.equals(1);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
 
       notifier.clear();
       await tester.pumpAndSettle();
 
-      expect(find.text('🔥'), findsNothing);
-      expect(find.byType(TotemIcon), findsOneWidget);
+      check(tester.widgetList(find.text('🔥'))).length.equals(0);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
     });
 
-    testWidgets('uses compact overlay sizes on phone-sized windows', (
-      tester,
-    ) async {
+    testWidgets('uses the compact metrics of a small tile', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(400, 800),
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: compactMetrics,
+        ),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(20, 20),
-      );
-      expect(overlayMuteIcon(tester).size, 16);
+      ).equals(const Size(20, 20));
+      check(overlayMuteIcon(tester).size).equals(16);
     });
 
-    testWidgets('uses compact overlay sizes in phone landscape', (
-      tester,
-    ) async {
+    testWidgets('uses the larger metrics of a big card', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(800, 400),
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: largeMetrics,
+        ),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(20, 20),
-      );
-      expect(overlayMuteIcon(tester).size, 16);
+      ).equals(const Size(28, 28));
+      check(overlayMuteIcon(tester).size).equals(22);
     });
 
-    testWidgets('uses comfortable overlay sizes on desktop-class windows', (
-      tester,
-    ) async {
+    testWidgets('renders a larger emoji glyph on a big card', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(1200, 900),
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
-      );
-
-      expect(
-        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(40, 40),
-      );
-      expect(overlayMuteIcon(tester).size, 22);
-    });
-
-    testWidgets('renders a larger emoji glyph on desktop-class windows', (
-      tester,
-    ) async {
-      await pumpWidget(
-        tester,
-        viewSize: const Size(1200, 900),
         overrides: [
           participantEmojisProvider(
             remoteParticipant.identity,
           ).overrideWith((ref) => ['🔥']),
         ],
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: largeMetrics,
+        ),
       );
 
       await tester.pumpAndSettle();
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(40, 40),
-      );
-      expect(tester.widget<Text>(find.text('🔥')).style?.fontSize, 20);
+      ).equals(const Size(28, 28));
+      check(tester.widget<Text>(find.text('🔥')).style?.fontSize).equals(14);
     });
 
-    testWidgets('keeps the compact emoji glyph on phone-sized windows', (
+    testWidgets('keeps the compact emoji glyph on a small tile', (
       tester,
     ) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(400, 800),
         overrides: [
           participantEmojisProvider(
             remoteParticipant.identity,
           ).overrideWith((ref) => ['🔥']),
         ],
-        child: SpeakingIndicatorOrEmoji(participant: remoteParticipant),
+        child: SpeakingIndicatorOrEmoji(
+          participant: remoteParticipant,
+          metrics: compactMetrics,
+        ),
       );
 
       await tester.pumpAndSettle();
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(20, 20),
-      );
-      expect(tester.widget<Text>(find.text('🔥')).style?.fontSize, 10);
+      ).equals(const Size(20, 20));
+      check(tester.widget<Text>(find.text('🔥')).style?.fontSize).equals(10);
     });
   });
 }

@@ -17,6 +17,7 @@ import 'package:web/web.dart' as web;
 
 class WebTotemRouter extends TotemRouter {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  GoRouterRefreshStream? _refreshStream;
 
   @override
   Uri get baseUri {
@@ -30,10 +31,13 @@ class WebTotemRouter extends TotemRouter {
 
   @override
   GoRouter createRouter(WidgetRef ref) {
+    _refreshStream?.dispose();
     final authController = ref.read(authControllerProvider.notifier);
+    _refreshStream = GoRouterRefreshStream(authController.authStateChanges);
+
     return GoRouter(
       initialLocation: '/',
-      refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
+      refreshListenable: _refreshStream,
       observers: [SentryNavigatorObserver()],
       routes: [
         GoRoute(
@@ -71,6 +75,12 @@ class WebTotemRouter extends TotemRouter {
       ],
       errorBuilder: (context, state) => const ErrorScreen(),
     );
+  }
+
+  @override
+  void dispose() {
+    _refreshStream?.dispose();
+    _refreshStream = null;
   }
 
   static void _beforeUnloadListener(web.Event event) {

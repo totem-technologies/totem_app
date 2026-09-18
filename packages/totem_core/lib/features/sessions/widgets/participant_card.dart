@@ -8,10 +8,12 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/loading_video_placeholder.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
+import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -28,17 +30,15 @@ class FeaturedParticipantCard extends ConsumerWidget {
     );
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final session = ref.watch(currentSessionStateProvider);
-
     if (session == null) {
       return const SizedBox.shrink();
     }
 
+    final sessionController = ref.watch(currentSessionProvider);
     final activeSpeaker = session.featuredParticipant();
-    final amKeeper = session.isKeeper(currentUserSlug);
+    final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
 
     final theme = Theme.of(context);
-    // Featured tiles keep a slightly larger compact badge (24dp) than grid tiles.
-    final overlay = ParticipantOverlayMetrics.featuredOf(context);
     final speakerVideoBorderRadius = switch (MediaQuery.orientationOf(
       context,
     )) {
@@ -51,6 +51,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
     };
     return RepaintBoundary(
       child: ClipRRect(
+        clipBehavior: Clip.antiAlias,
         borderRadius: speakerVideoBorderRadius,
         child: Stack(
           fit: StackFit.expand,
@@ -102,158 +103,122 @@ class FeaturedParticipantCard extends ConsumerWidget {
                   participant: activeSpeaker,
                 ),
               ),
-              PositionedDirectional(
-                start: 20,
-                end: 20,
-                bottom: 20,
-                child: SafeArea(
-                  bottom: false,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    spacing: 2,
-                    children: [
-                      if (session.isKeeper(activeSpeaker.identity))
-                        Container(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(42),
-                            color: Colors.black54,
-                            boxShadow: kElevationToShadow[1],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: 5,
-                            children: [
-                              const TotemIconLogo(
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              Text(
-                                'Keeper',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
+              // Only the overlays depend on the card size, so the video stays
+              // outside the builder and skips the constraint-driven rebuilds.
+              Positioned.fill(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Chrome scales with the card, so the hero tile's badges
+                    // stay proportional to the video instead of jumping at a
+                    // breakpoint.
+                    final overlay = ParticipantOverlayMetrics.forCard(
+                      constraints.biggest,
+                    );
+                    return Stack(
+                      children: [
+                        PositionedDirectional(
+                          start: 20,
+                          end: 20,
+                          bottom: 20,
+                          child: SafeArea(
+                            bottom: false,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              spacing: 2,
+                              children: [
+                                if (session.isKeeper(activeSpeaker.identity))
+                                  Container(
+                                    padding:
+                                        const EdgeInsetsDirectional.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(42),
+                                      color: Colors.black54,
+                                      boxShadow: kElevationToShadow[1],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      spacing: 5,
+                                      children: [
+                                        const TotemIconLogo(
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                        Text(
+                                          'Keeper',
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 12,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                Row(
+                                  spacing: 12,
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    if (isCurrentUserKeeper &&
+                                        session.roomState.status ==
+                                            RoomStatus.active)
+                                      SessionElapsedTimer(
+                                        onTap: sessionController == null
+                                            ? null
+                                            : () => unawaited(
+                                                ref
+                                                    .read(
+                                                      sessionMessagingControllerProvider(
+                                                        sessionController,
+                                                      ).notifier,
+                                                    )
+                                                    .sendShareTimeReminder(
+                                                      activeSpeaker.identity,
+                                                    ),
+                                              ),
+                                      ),
+                                    SpeakingIndicatorOrEmoji(
+                                      participant: activeSpeaker,
+                                      metrics: overlay,
+                                    ),
+                                    if (isCurrentUserKeeper &&
+                                        currentUserSlug !=
+                                            activeSpeaker.identity)
+                                      ParticipantControlButton(
+                                        menuVerticalOffset:
+                                            -overlay.badgeSize - 8,
+                                        participant: activeSpeaker,
+                                        metrics: overlay,
+                                      ),
+                                    Flexible(
+                                      child: SmartNameText(
+                                        name: activeSpeaker.name,
+                                        style: theme.textTheme.titleLarge
+                                            ?.copyWith(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              shadows: kElevationToShadow[6],
+                                            ),
+                                        textAlign: TextAlign.end,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      Row(
-                        spacing: 12,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (amKeeper &&
-                              session.roomState.status == RoomStatus.active)
-                            const _ElapsedTimer(),
-                          SpeakingIndicatorOrEmoji(
-                            participant: activeSpeaker,
-                            metrics: overlay,
-                          ),
-                          if (amKeeper &&
-                              currentUserSlug != activeSpeaker.identity)
-                            ParticipantControlButton(
-                              menuVerticalOffset: -overlay.badgeSize - 8,
-                              participant: activeSpeaker,
-                              metrics: overlay,
-                            ),
-                          Flexible(
-                            child: SmartNameText(
-                              name: activeSpeaker.name,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                shadows: kElevationToShadow[6],
-                              ),
-                              textAlign: TextAlign.end,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ElapsedTimer extends ConsumerStatefulWidget {
-  const _ElapsedTimer();
-
-  @override
-  ConsumerState<_ElapsedTimer> createState() => _ElapsedTimerState();
-}
-
-class _ElapsedTimerState extends ConsumerState<_ElapsedTimer> {
-  Timer? _tick;
-  DateTime? _start;
-
-  @override
-  void initState() {
-    super.initState();
-    _start = ref.read(featuredTurnStartTimeProvider);
-    _syncTimer();
-    ref.listenManual(featuredTurnStartTimeProvider, (_, next) {
-      setState(() => _start = next);
-      _syncTimer();
-    });
-  }
-
-  void _syncTimer() {
-    _tick?.cancel();
-    if (_start != null) {
-      _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) setState(() {});
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _tick?.cancel();
-    super.dispose();
-  }
-
-  String _format(Duration d) {
-    final hours = d.inHours;
-    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    if (hours > 0) {
-      return '$hours:$minutes:$seconds';
-    }
-    return '$minutes:$seconds';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_start == null) return const SizedBox.shrink();
-
-    final elapsed = DateTime.now().difference(_start!);
-
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 10,
-        vertical: 4,
-      ),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(42),
-        color: Colors.black54,
-      ),
-      child: Text(
-        _format(elapsed),
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Colors.white70,
-          fontWeight: FontWeight.w600,
-          fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),
     );
@@ -278,11 +243,10 @@ class ParticipantCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final session = ref.watch(currentSessionStateProvider);
-    final amKeeper = session?.isKeeper(currentUserSlug) ?? false;
+    final sessionController = ref.watch(currentSessionProvider);
+    final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
 
-    final overlay = ParticipantOverlayMetrics.of(context);
-    final overlayPadding = overlay.cornerInset;
     final isKeeper = session?.isKeeper(participant.identity) ?? false;
     final isSpeaking = participant.identity == session?.speakingNow;
 
@@ -300,63 +264,104 @@ class ParticipantCard extends ConsumerWidget {
                 participant: participant,
               ),
             ),
-            PositionedDirectional(
-              top: overlayPadding,
-              start: overlayPadding,
-              child: Row(
-                spacing: 8,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SpeakingIndicatorOrEmoji(participant: participant),
-                  if (amKeeper &&
-                      isSpeaking &&
-                      session?.roomState.status == RoomStatus.active)
-                    const _ElapsedTimer(),
-                ],
-              ),
-            ),
-            if (session != null &&
-                amKeeper &&
-                currentUserSlug != participant.identity)
-              PositionedDirectional(
-                end: overlayPadding,
-                top: overlayPadding,
-                child: ParticipantControlButton(
-                  participant: participant,
-                  menuVerticalOffset: overlayPadding,
-                ),
-              )
-            else if (isKeeper)
-              PositionedDirectional(
-                top: overlayPadding,
-                end: overlayPadding,
-                child: Container(
-                  width: overlay.badgeSize,
-                  height: overlay.badgeSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black54,
-                    boxShadow: kElevationToShadow[6],
-                  ),
-                  padding: EdgeInsetsDirectional.all(overlay.badgePadding),
-                  child: TotemIconLogo(
-                    color: AppTheme.white,
-                    size: overlay.iconSize,
-                  ),
-                ),
-              ),
-            PositionedDirectional(
-              bottom: 8,
-              start: 8,
-              end: 8,
-              child: SmartNameText(
-                name: participant.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  shadows: [Shadow(offset: Offset(0, 1), blurRadius: 4)],
-                ),
+            // Only the overlays depend on the tile size, so the video stays
+            // outside the builder and skips the constraint-driven rebuilds.
+            Positioned.fill(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Chrome scales with the tile, so a dense grid keeps compact
+                  // badges while a sparse one grows them.
+                  final overlay = ParticipantOverlayMetrics.forCard(
+                    constraints.biggest,
+                  );
+                  final overlayPadding = overlay.cornerInset;
+
+                  return Stack(
+                    children: [
+                      PositionedDirectional(
+                        top: overlayPadding,
+                        start: overlayPadding,
+                        child: Row(
+                          spacing: 8,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SpeakingIndicatorOrEmoji(
+                              participant: participant,
+                              metrics: overlay,
+                            ),
+                            if (isCurrentUserKeeper &&
+                                isSpeaking &&
+                                session?.roomState.status == RoomStatus.active)
+                              SessionElapsedTimer(
+                                onTap: sessionController == null
+                                    ? null
+                                    : () => unawaited(
+                                        ref
+                                            .read(
+                                              sessionMessagingControllerProvider(
+                                                sessionController,
+                                              ).notifier,
+                                            )
+                                            .sendShareTimeReminder(
+                                              participant.identity,
+                                            ),
+                                      ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (session != null &&
+                          isCurrentUserKeeper &&
+                          currentUserSlug != participant.identity)
+                        PositionedDirectional(
+                          end: overlayPadding,
+                          top: overlayPadding,
+                          child: ParticipantControlButton(
+                            participant: participant,
+                            menuVerticalOffset: overlayPadding,
+                            metrics: overlay,
+                          ),
+                        )
+                      else if (isKeeper)
+                        PositionedDirectional(
+                          top: overlayPadding,
+                          end: overlayPadding,
+                          child: Container(
+                            width: overlay.badgeSize,
+                            height: overlay.badgeSize,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black54,
+                              boxShadow: kElevationToShadow[6],
+                            ),
+                            padding: EdgeInsetsDirectional.all(
+                              overlay.badgePadding,
+                            ),
+                            child: TotemIconLogo(
+                              color: AppTheme.white,
+                              size: overlay.iconSize,
+                            ),
+                          ),
+                        ),
+                      PositionedDirectional(
+                        bottom: 8,
+                        start: 8,
+                        end: 8,
+                        child: SmartNameText(
+                          name: participant.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            shadows: [
+                              Shadow(offset: Offset(0, 1), blurRadius: 4),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],

@@ -15,7 +15,7 @@
     <key>provisioningProfiles</key>
     <dict>
     <key>org.totem.ios.dev</key>
-    <string>org.totem.ios.dev Profile</string>
+    <string>org.totem.dev Profile 2</string>
     </dict>
 	<key>stripSwiftSymbols</key>
 	<true/>

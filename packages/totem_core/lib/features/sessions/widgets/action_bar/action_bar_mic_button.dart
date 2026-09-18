@@ -1,7 +1,9 @@
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
+
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
@@ -92,20 +94,24 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
 
     return ActionBarButton(
       semanticsLabel: 'Microphone ${isEnabled ? 'on' : 'off'}',
-      // Live mic stays ghost; cut mic gets the pinkTint "off" circle.
       role: ActionBarButtonRole.media(enabled: isEnabled),
       onPressed: _busy ? null : _toggleMicrophone,
       child: isEnabled
-          ? SpeakingIndicatorAudioTrack(
-              audioTrack: widget.audioTrack,
-              participant: widget.participant,
-              // Follow the action-bar ghost color so prejoin cream-on-cream
-              // doesn't eat the bars.
-              foregroundColor:
-                  widget.indicatorColor ??
-                  IconTheme.of(context).color ??
-                  AppTheme.cream,
-              barCount: widget.indicatorBarCount,
+          ? Builder(
+              builder: (context) {
+                return SpeakingIndicatorAudioTrack(
+                  audioTrack: widget.audioTrack,
+                  participant: widget.participant,
+                  // Follow the action-bar ghost color so prejoin cream-on-cream
+                  // doesn't eat the bars.
+                  foregroundColor:
+                      widget.indicatorColor ??
+                      IconTheme.of(context).color ??
+                      AppTheme.cream,
+                  iconSize: IconTheme.of(context).size ?? 20,
+                  barCount: widget.indicatorBarCount,
+                );
+              },
             )
           : const TotemIcon(TotemIcons.microphoneOff),
     );

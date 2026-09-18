@@ -202,6 +202,77 @@ List<SessionChatMessage> sessionMessages(Ref ref) {
       const [];
 }
 
+/// Messages visible in a single chat thread.
+@Riverpod(dependencies: [sessionMessages])
+List<SessionChatMessage> sessionThreadMessages(
+  Ref ref,
+  ({String? localIdentity, String? threadTarget}) thread,
+) {
+  return ref
+      .watch(sessionMessagesProvider)
+      .where(
+        (message) => message.belongsToThread(
+          localIdentity: thread.localIdentity,
+          threadTarget: thread.threadTarget,
+        ),
+      )
+      .toList(growable: false);
+}
+
+/// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
+///
+/// Reset on room entry, so a docked sidebar in one circle doesn't open the
+/// panel on entry to the next.
+@Riverpod(keepAlive: true)
+class SessionChatOpen extends _$SessionChatOpen {
+  @override
+  bool build() => false;
+
+  bool get open => state;
+
+  set open(bool value) => state = value;
+
+  void toggle() => state = !state;
+}
+
+/// Current in-call thread. Null is the Everyone group thread.
+///
+/// Reset alongside [SessionChatOpen]; a thread target from a previous circle
+/// names a keeper who isn't in this one, and every send would be rejected.
+@Riverpod(keepAlive: true)
+class SessionChatThreadTarget extends _$SessionChatThreadTarget {
+  @override
+  String? build() => null;
+
+  /// Null is the Everyone thread.
+  String? get target => state;
+
+  set target(String? identity) => state = identity;
+}
+
+/// Threads with messages the user has not viewed in a mounted chat panel.
+@Riverpod(keepAlive: true)
+class SessionChatUnreadThreads extends _$SessionChatUnreadThreads {
+  @override
+  Set<String?> build() => <String?>{};
+
+  /// Null means there are no unread threads; a non-null value can contain a
+  /// null thread for the Everyone thread.
+  ({String? thread})? get latestUnreadThread =>
+      state.isEmpty ? null : (thread: state.last);
+
+  void markUnread(String? thread) {
+    state = {...state}
+      ..remove(thread)
+      ..add(thread);
+  }
+
+  void markRead(String? thread) {
+    if (!state.contains(thread)) return;
+    state = {...state}..remove(thread);
+  }
+}
+
 /// Last chat message if available.
 @Riverpod(dependencies: [sessionMessages])
 SessionChatMessage? lastSessionMessage(Ref ref) {

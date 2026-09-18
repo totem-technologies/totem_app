@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/features/spaces/widgets/keeper_message_participants_card.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -47,9 +48,9 @@ SessionDetailSchema _mockSession() => SessionDetailSchema(
 );
 
 void main() {
-  Widget wrapCard() {
+  GoRouter createRouter() {
     final session = _mockSession();
-    final router = GoRouter(
+    return GoRouter(
       routes: [
         GoRoute(
           path: '/',
@@ -63,32 +64,46 @@ void main() {
         ),
       ],
     );
-    return MaterialApp.router(routerConfig: router);
   }
+
+  Widget wrapCard(GoRouter router) => MaterialApp.router(routerConfig: router);
 
   group('KeeperMessageParticipantsCard', () {
     testWidgets('renders badge, title, description and button', (tester) async {
-      await tester.pumpWidget(wrapCard());
+      final router = createRouter();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(wrapCard(router));
 
-      expect(find.text('\u{1F512}  Keeper Only'), findsOneWidget);
-      expect(find.text('Message Participants'), findsOneWidget);
-      expect(
-        find.text('Choose one participant to start a private conversation.'),
-        findsOneWidget,
-      );
-      expect(find.text('Message All Participants'), findsNothing);
-      expect(find.byType(ElevatedButton), findsOneWidget);
+      check(
+        tester.widgetList(find.text('\u{1F512}  Keeper Only')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.text('Message All Participants')),
+      ).length.equals(2);
+      check(
+        tester.widgetList(
+          find.text(
+            'Send an individual message to every participant registered '
+            'for this session.',
+          ),
+        ),
+      ).length.equals(1);
+      check(tester.widgetList(find.byType(ElevatedButton))).length.equals(1);
     });
 
     testWidgets('tapping the button opens the Session Participants screen', (
       tester,
     ) async {
-      await tester.pumpWidget(wrapCard());
+      final router = createRouter();
+      addTearDown(router.dispose);
+      await tester.pumpWidget(wrapCard(router));
 
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();
 
-      expect(find.text('Session Participants Screen'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Session Participants Screen')),
+      ).length.equals(1);
     });
   });
 }

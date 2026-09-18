@@ -138,12 +138,11 @@ class _ThreadBody extends ConsumerWidget {
             ),
           ),
           MessageInputBar(
-            isSending: asyncThread.asData?.value.isSending ?? false,
             onSend: (text) async {
-              final sent = await ref
+              await ref
                   .read(threadProvider(conversationId).notifier)
                   .send(text);
-              return sent;
+              // return true;
             },
           ),
         ],

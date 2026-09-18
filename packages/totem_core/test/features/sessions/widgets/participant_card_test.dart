@@ -1,5 +1,7 @@
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, logger;
 import 'package:material_ui/material_ui.dart';
@@ -9,9 +11,11 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
+import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
@@ -78,6 +82,25 @@ void main() {
     );
   }
 
+  /// Lays [child] out at an exact size, which is what now drives the overlay
+  /// chrome. [Scaffold] hands its body tight constraints, so the [Center] is
+  /// what lets the box keep the size we ask for.
+  Widget sizedCard(Size size, Widget child) {
+    return Center(
+      child: SizedBox.fromSize(size: size, child: child),
+    );
+  }
+
+  /// A dense-grid tile: small enough to clamp to the compact chrome.
+  const gridTileSize = Size(160, 120);
+
+  /// A sparse-grid or featured tile: large enough to clamp to the ceiling.
+  const largeCardSize = Size(600, 500);
+
+  /// A mid-size tile, inside the band where the badge tracks the card instead
+  /// of sitting on either clamp. 240 * 0.09 = 21.6, so badge 22 / inset 11.
+  const midCardSize = Size(400, 240);
+
   PositionedDirectional overlayPosition(WidgetTester tester) {
     return tester.widget<PositionedDirectional>(
       find
@@ -108,8 +131,10 @@ void main() {
         ),
       );
 
-      expect(find.text('John Doe'), findsOneWidget);
-      expect(find.byType(SpeakingIndicatorOrEmoji), findsOneWidget);
+      check(tester.widgetList(find.text('John Doe'))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(SpeakingIndicatorOrEmoji)),
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -140,7 +165,9 @@ void main() {
           ),
         );
 
-        expect(find.byType(ParticipantControlButton), findsNothing);
+        check(
+          tester.widgetList(find.byType(ParticipantControlButton)),
+        ).length.equals(0);
       },
     );
 
@@ -185,37 +212,64 @@ void main() {
         ),
       );
 
-      expect(find.byType(TotemIconLogo), findsOneWidget);
+      check(tester.widgetList(find.byType(TotemIconLogo))).length.equals(1);
     });
 
-    testWidgets('keeps compact corner chrome on phone-sized windows', (
-      tester,
-    ) async {
+    testWidgets('keeps compact corner chrome on small tiles', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(400, 800),
+        viewSize: const Size(1200, 900),
         authState: AuthState.unauthenticated(),
         overrides: [
           currentSessionStateProvider.overrideWithValue(
             fakeSessionState.mockState,
           ),
         ],
-        child: ParticipantCard(
-          participant: remoteParticipant,
-          session: null,
-          participantIdentity: remoteParticipant.identity,
+        child: sizedCard(
+          gridTileSize,
+          ParticipantCard(
+            participant: remoteParticipant,
+            session: null,
+            participantIdentity: remoteParticipant.identity,
+          ),
         ),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(20, 20),
-      );
-      expect(overlayPosition(tester).top, 10);
-      expect(overlayPosition(tester).start, 10);
+      ).equals(const Size(20, 20));
+      check(overlayPosition(tester).top).equals(10);
+      check(overlayPosition(tester).start).equals(10);
     });
 
-    testWidgets('uses larger corner chrome on desktop-class windows', (
+    testWidgets('grows corner chrome on large cards', (tester) async {
+      await pumpWidget(
+        tester,
+        viewSize: const Size(1200, 900),
+        authState: AuthState.unauthenticated(),
+        overrides: [
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: sizedCard(
+          largeCardSize,
+          ParticipantCard(
+            participant: remoteParticipant,
+            session: null,
+            participantIdentity: remoteParticipant.identity,
+          ),
+        ),
+      );
+
+      check(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+      ).equals(const Size(28, 28));
+      check(overlayPosition(tester).top).equals(12);
+      check(overlayPosition(tester).start).equals(12);
+    });
+
+    testWidgets('sizes corner chrome off the tile between the clamps', (
       tester,
     ) async {
       await pumpWidget(
@@ -227,24 +281,25 @@ void main() {
             fakeSessionState.mockState,
           ),
         ],
-        child: ParticipantCard(
-          participant: remoteParticipant,
-          session: null,
-          participantIdentity: remoteParticipant.identity,
+        child: sizedCard(
+          midCardSize,
+          ParticipantCard(
+            participant: remoteParticipant,
+            session: null,
+            participantIdentity: remoteParticipant.identity,
+          ),
         ),
       );
 
-      expect(
+      // Neither the 20dp floor nor the 28dp ceiling: the tile drives the size.
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(40, 40),
-      );
-      expect(overlayPosition(tester).top, 12);
-      expect(overlayPosition(tester).start, 12);
+      ).equals(const Size(22, 22));
+      check(overlayPosition(tester).top).equals(11);
+      check(overlayPosition(tester).start).equals(11);
     });
 
-    testWidgets('scales the keeper logo badge on desktop-class windows', (
-      tester,
-    ) async {
+    testWidgets('scales the keeper logo badge with the card', (tester) async {
       final keeperParticipant = MockRemoteParticipant('keeper-1', 'The Keeper');
 
       fakeSessionState.mockState = SessionRoomState(
@@ -276,15 +331,22 @@ void main() {
             fakeSessionState.mockState,
           ),
         ],
-        child: ParticipantCard(
-          participant: keeperParticipant,
-          session: null,
-          participantIdentity: keeperParticipant.identity,
+        child: sizedCard(
+          largeCardSize,
+          ParticipantCard(
+            participant: keeperParticipant,
+            session: null,
+            participantIdentity: keeperParticipant.identity,
+          ),
         ),
       );
 
-      expect(tester.widget<TotemIconLogo>(find.byType(TotemIconLogo)).size, 22);
-      expect(tester.getSize(find.byType(TotemIconLogo)), const Size(22, 22));
+      check(
+        tester.widget<TotemIconLogo>(find.byType(TotemIconLogo)).size,
+      ).equals(22);
+      check(
+        tester.getSize(find.byType(TotemIconLogo)),
+      ).equals(const Size(22, 22));
     });
   });
 
@@ -325,11 +387,13 @@ void main() {
         child: const FeaturedParticipantCard(),
       );
 
-      expect(find.text('Waiting room'), findsOneWidget);
-      expect(find.byType(TotemIcon), findsOneWidget); // clock icon
+      check(tester.widgetList(find.text('Waiting room'))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(TotemIcon)),
+      ).length.equals(1); // clock icon
     });
 
-    testWidgets('keeps 24dp overlay badges on phone-sized windows', (
+    testWidgets('sizes overlay badges from the card on phone-sized windows', (
       tester,
     ) async {
       final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
@@ -371,30 +435,144 @@ void main() {
         child: const FeaturedParticipantCard(),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(24, 24),
-      );
-      expect(
-        tester
-            .widget<Container>(
-              find.descendant(
-                of: find.byType(SpeakingIndicatorOrEmoji),
-                matching: find.byType(Container),
-              ),
-            )
-            .decoration,
-        isA<BoxDecoration>().having(
-          (decoration) => decoration.boxShadow,
-          'boxShadow',
-          kElevationToShadow[6],
-        ),
-      );
+      ).equals(const Size(28, 28));
+      final decoration = tester
+          .widget<Container>(
+            find.descendant(
+              of: find.byType(SpeakingIndicatorOrEmoji),
+              matching: find.byType(Container),
+            ),
+          )
+          .decoration;
+      check(decoration).isA<BoxDecoration>();
+      check(
+        (decoration! as BoxDecoration).boxShadow!,
+      ).deepEquals(kElevationToShadow[6]!);
     });
 
-    testWidgets('uses 40dp overlay badges on desktop-class windows', (
+    testWidgets('uses keeper timers to send a private reminder', (
       tester,
     ) async {
+      final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
+      when(
+        () => speaker.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(null);
+      when(
+        () => speaker.getTrackPublicationBySource(TrackSource.microphone),
+      ).thenReturn(null);
+      final keeper = MockLocalParticipant('keeper-1');
+      when(
+        () => keeper.publishData(
+          any(),
+          reliable: true,
+          destinationIdentities: const ['user-1'],
+          topic: SessionCommunicationTopics.shareTimeReminder.topic,
+        ),
+      ).thenAnswer((_) async {});
+      final semantics = tester.ensureSemantics();
+      fakeSessionState
+        ..isCurrentUserKeeperValue = true
+        ..mockRoom = FakeRoom(keeper)
+        ..mockState = SessionRoomState(
+          connection: fakeSessionState.mockState.connection,
+          chat: fakeSessionState.mockState.chat,
+          participants: ParticipantsState(participants: [speaker]),
+          turn: const SessionTurnState(
+            roomState: RoomState(
+              keeper: 'keeper-1',
+              nextSpeaker: 'user-2',
+              currentSpeaker: 'user-1',
+              status: RoomStatus.active,
+              turnState: TurnState.idle,
+              sessionSlug: 'test-session',
+              statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+              talkingOrder: ['user-1', 'user-2'],
+              version: 1,
+              roundNumber: 1,
+            ),
+          ),
+          turnStartedAt: DateTime.now(),
+        );
+
+      await pumpWidget(
+        tester,
+        authState: AuthState.authenticated(
+          user: UserSchema(
+            email: 'keeper@example.com',
+            name: 'Keeper',
+            slug: 'keeper-1',
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            circleCount: 0,
+            dateCreated: DateTime.now(),
+          ),
+        ),
+        overrides: [
+          currentSessionProvider.overrideWithValue(fakeSessionState),
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: const FeaturedParticipantCard(),
+      );
+
+      await tester.tap(
+        find.bySemanticsLabel(RegExp('Send a private share time reminder')),
+      );
+      await tester.pump();
+
+      verify(
+        () => keeper.publishData(
+          any(),
+          reliable: true,
+          destinationIdentities: const ['user-1'],
+          topic: SessionCommunicationTopics.shareTimeReminder.topic,
+        ),
+      ).called(1);
+
+      await pumpWidget(
+        tester,
+        authState: AuthState.authenticated(
+          user: UserSchema(
+            email: 'keeper@example.com',
+            name: 'Keeper',
+            slug: 'keeper-1',
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            circleCount: 0,
+            dateCreated: DateTime.now(),
+          ),
+        ),
+        overrides: [
+          currentSessionProvider.overrideWithValue(fakeSessionState),
+          currentSessionStateProvider.overrideWithValue(
+            fakeSessionState.mockState,
+          ),
+        ],
+        child: ParticipantCard(
+          participant: speaker,
+          session: null,
+          participantIdentity: speaker.identity,
+        ),
+      );
+
+      await tester.tap(
+        find.bySemanticsLabel(RegExp('Send a private share time reminder')),
+      );
+      await tester.pump();
+
+      verify(
+        () => keeper.publishData(
+          any(),
+          reliable: true,
+          destinationIdentities: const ['user-1'],
+          topic: SessionCommunicationTopics.shareTimeReminder.topic,
+        ),
+      ).called(1);
+      semantics.dispose();
+    });
+
+    testWidgets('caps overlay badges on desktop-class windows', (tester) async {
       final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
       when(
         () => speaker.getTrackPublicationBySource(TrackSource.camera),
@@ -434,10 +612,9 @@ void main() {
         child: const FeaturedParticipantCard(),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-        const Size(40, 40),
-      );
+      ).equals(const Size(28, 28));
     });
   });
 
@@ -477,7 +654,9 @@ void main() {
       await show();
       await tester.pumpAndSettle();
 
-      expect(find.byType(VideoTrackRenderer), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(VideoTrackRenderer)),
+      ).length.equals(1);
 
       when(() => mockPublication.muted).thenReturn(true);
       when(() => mockTrack.muted).thenReturn(true);
@@ -485,8 +664,65 @@ void main() {
       await show();
       await tester.pumpAndSettle();
 
-      expect(find.byType(VideoTrackRenderer), findsNothing);
+      check(
+        tester.widgetList(find.byType(VideoTrackRenderer)),
+      ).length.equals(0);
     });
+
+    testWidgets(
+      'shows a camera track subscribed after the initial build',
+      (tester) async {
+        final participant = MockRemoteParticipant('user-2', 'John Doe');
+        final publication = MockRemoteTrackPublication<RemoteVideoTrack>();
+        final track = MockRemoteVideoTrack();
+        RemoteTrackPublication<RemoteVideoTrack>? cameraPublication;
+
+        when(
+          () => participant.getTrackPublicationBySource(TrackSource.camera),
+        ).thenAnswer((_) => cameraPublication);
+        when(() => publication.track).thenReturn(track);
+        when(() => publication.source).thenReturn(TrackSource.camera);
+        when(() => publication.sid).thenReturn('pub-sid');
+        when(() => publication.subscribed).thenReturn(true);
+        when(() => publication.muted).thenReturn(false);
+        when(() => track.sid).thenReturn('track-sid');
+        when(() => track.isActive).thenReturn(true);
+        when(() => track.muted).thenReturn(false);
+
+        await pumpWidget(
+          tester,
+          authState: AuthState.unauthenticated(),
+          overrides: [
+            currentSessionStateProvider.overrideWithValue(
+              fakeSessionState.mockState,
+            ),
+          ],
+          child: ParticipantVideo(participant: participant),
+        );
+
+        check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
+
+        cameraPublication = publication;
+        participant.listener.emitParticipantEvent(
+          TrackSubscribedEvent(
+            participant: participant,
+            publication: publication,
+            track: track,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        check(
+          tester.widgetList(find.byType(VideoTrackRenderer)),
+        ).length.equals(1);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      },
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['RTCVideoRenderer'],
+      ),
+    );
   });
 
   group('ParticipantControlButton', () {
@@ -523,8 +759,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // The menu should be visible.
-      expect(find.text('Remove'), findsOneWidget);
-      expect(find.text('Ban'), findsOneWidget);
+      check(tester.widgetList(find.text('Remove'))).length.equals(1);
+      check(tester.widgetList(find.text('Ban'))).length.equals(1);
 
       // Unmount the control button by toggling visibility.
       final _ = tester
@@ -533,44 +769,42 @@ void main() {
       await tester.pumpAndSettle();
 
       // The menu should be gone.
-      expect(find.text('Remove'), findsNothing);
-      expect(find.text('Ban'), findsNothing);
+      check(tester.widgetList(find.text('Remove'))).length.equals(0);
+      check(tester.widgetList(find.text('Ban'))).length.equals(0);
     });
 
-    testWidgets('uses a compact badge on phone-sized windows', (tester) async {
+    testWidgets('renders the compact metrics it is given', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(400, 800),
         authState: AuthState.unauthenticated(),
         child: ParticipantControlButton(
           participant: remoteParticipant,
           menuVerticalOffset: 10,
+          metrics: ParticipantOverlayMetrics.forCard(gridTileSize),
         ),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(ParticipantControlButton)),
-        const Size(20, 20),
-      );
-      expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 16);
+      ).equals(const Size(20, 20));
+      check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(16);
     });
 
-    testWidgets('uses a larger badge on desktop-class windows', (tester) async {
+    testWidgets('renders the large-card metrics it is given', (tester) async {
       await pumpWidget(
         tester,
-        viewSize: const Size(1200, 900),
         authState: AuthState.unauthenticated(),
         child: ParticipantControlButton(
           participant: remoteParticipant,
           menuVerticalOffset: 12,
+          metrics: ParticipantOverlayMetrics.forCard(largeCardSize),
         ),
       );
 
-      expect(
+      check(
         tester.getSize(find.byType(ParticipantControlButton)),
-        const Size(40, 40),
-      );
-      expect(tester.widget<TotemIcon>(find.byType(TotemIcon)).size, 22);
+      ).equals(const Size(28, 28));
+      check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(22);
     });
   });
 }
@@ -596,6 +830,7 @@ class _MenuCloseTestWrapperState extends State<_MenuCloseTestWrapper> {
           ? ParticipantControlButton(
               participant: widget.participant,
               menuVerticalOffset: 10,
+              metrics: ParticipantOverlayMetrics.forCard(const Size(160, 120)),
             )
           : const SizedBox.shrink(),
     );

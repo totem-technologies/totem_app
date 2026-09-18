@@ -2,10 +2,12 @@
 
 import 'dart:ui';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -88,6 +90,12 @@ void main() {
   late MockSessionKeeperController keeper;
   late MockLocalParticipant localParticipant;
   late FakeRoom room;
+
+  setUp(() {
+    LeakTesting.settings = LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    );
+  });
 
   setUpAll(() {
     setupAppConfig();
@@ -207,14 +215,22 @@ void main() {
     ) async {
       await pumpReceiveTotem(tester, roundMessage: 'Take your time');
 
-      expect(find.byType(SessionActionBar), findsOneWidget);
-      expect(find.bySemanticsLabel('Microphone off'), findsOneWidget);
-      expect(find.bySemanticsLabel('Camera off'), findsOneWidget);
-      expect(find.bySemanticsLabel('Chat'), findsOneWidget);
-      expect(find.bySemanticsLabel('Send reaction'), findsNothing);
-      expect(find.byType(ActionSliderButton), findsOneWidget);
-      expect(find.text('Receive'), findsOneWidget);
-      expect(find.text('"Take your time"'), findsOneWidget);
+      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Microphone off')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera off')),
+      ).length.equals(1);
+      check(tester.widgetList(find.bySemanticsLabel('Chat'))).length.equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Send reaction')),
+      ).length.equals(0);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Receive'))).length.equals(1);
+      check(tester.widgetList(find.text('"Take your time"'))).length.equals(1);
     });
 
     testWidgets('hides round message text when no round message is provided', (
@@ -222,9 +238,11 @@ void main() {
     ) async {
       await pumpReceiveTotem(tester, roundMessage: null);
 
-      expect(find.byType(ActionSliderButton), findsOneWidget);
-      expect(find.text('Receive'), findsOneWidget);
-      expect(find.text('"Take your time"'), findsNothing);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Receive'))).length.equals(1);
+      check(tester.widgetList(find.text('"Take your time"'))).length.equals(0);
     });
 
     testWidgets('toggles mic and camera from action bar', (tester) async {
@@ -260,14 +278,14 @@ void main() {
 
       await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
-      expect(find.byType(ActionSlider), findsOneWidget);
+      check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
       final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
       await actionSlider.widget.onActionCompleted();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       verify(() => keeper.acceptTotem()).called(1);
-      expect(feedbackService.swipePulseCount, 1);
+      check(feedbackService.swipePulseCount).equals(1);
     });
 
     testWidgets('triggers soft haptic after successful receive swipe', (
@@ -277,13 +295,13 @@ void main() {
 
       await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
-      expect(find.byType(ActionSlider), findsOneWidget);
+      check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
       final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
       await actionSlider.widget.onActionCompleted();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(feedbackService.swipePulseCount, 1);
+      check(feedbackService.swipePulseCount).equals(1);
     });
 
     testWidgets('shows error notification when accept totem fails', (
@@ -297,19 +315,22 @@ void main() {
 
       await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
-      expect(find.byType(ActionSlider), findsOneWidget);
+      check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
       final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
       await actionSlider.widget.onActionCompleted();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       verify(() => keeper.acceptTotem()).called(1);
-      expect(find.text('Something went wrong'), findsOneWidget);
-      expect(
-        find.text('We were unable to accept the totem. Please try again.'),
-        findsOneWidget,
-      );
-      expect(feedbackService.swipePulseCount, 1);
+      check(
+        tester.widgetList(find.text('Something went wrong')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(
+          find.text('We were unable to accept the totem. Please try again.'),
+        ),
+      ).length.equals(1);
+      check(feedbackService.swipePulseCount).equals(1);
     });
 
     testWidgets('renders correctly in landscape orientation', (tester) async {
@@ -322,10 +343,14 @@ void main() {
 
       await pumpReceiveTotem(tester, roundMessage: 'Breathe and share');
 
-      expect(find.byType(SessionActionBar), findsOneWidget);
-      expect(find.byType(ActionSliderButton), findsOneWidget);
-      expect(find.text('Receive'), findsOneWidget);
-      expect(find.text('"Breathe and share"'), findsOneWidget);
+      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Receive'))).length.equals(1);
+      check(
+        tester.widgetList(find.text('"Breathe and share"')),
+      ).length.equals(1);
     });
 
     testWidgets('renders local participant card when camera is on', (
@@ -333,9 +358,11 @@ void main() {
     ) async {
       await pumpReceiveTotem(tester, isCameraOn: true);
 
-      expect(find.byType(ActionSliderButton), findsOneWidget);
-      expect(find.text('Receive'), findsOneWidget);
-      expect(find.byType(SessionActionBar), findsOneWidget);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Receive'))).length.equals(1);
+      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
     });
 
     testWidgets('allows retry after a failed receive attempt', (tester) async {
@@ -349,12 +376,14 @@ void main() {
 
       await pumpReceiveTotem(tester);
 
-      expect(find.byType(ActionSlider), findsOneWidget);
+      check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
       final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
       await actionSlider.widget.onActionCompleted();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Something went wrong'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Something went wrong')),
+      ).length.equals(1);
 
       await actionSlider.widget.onActionCompleted();
       await tester.pump();

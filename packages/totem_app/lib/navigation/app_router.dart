@@ -162,6 +162,7 @@ class BottomNavScaffold extends ConsumerWidget {
 
 class AppTotemRouter extends TotemRouter {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  GoRouterRefreshStream? _refreshStream;
 
   final shellNavigatorKey = GlobalKey<StatefulNavigationShellState>();
 
@@ -227,15 +228,23 @@ class AppTotemRouter extends TotemRouter {
   }
 
   @override
+  void dispose() {
+    _refreshStream?.dispose();
+    _refreshStream = null;
+  }
+
+  @override
   GoRouter createRouter(WidgetRef ref) {
+    _refreshStream?.dispose();
     final authController = ref.read(mobileAuthControllerProvider);
+    _refreshStream = GoRouterRefreshStream(authController.authStateChanges);
     final profileController = ref.read(userProfileControllerProvider.notifier);
 
     return GoRouter(
       navigatorKey: navigatorKey,
       initialLocation: '/',
       debugLogDiagnostics: true,
-      refreshListenable: GoRouterRefreshStream(authController.authStateChanges),
+      refreshListenable: _refreshStream,
       observers: [PosthogObserver(), SentryNavigatorObserver()],
       redirect: (context, state) async {
         logger.i('🛻 Router State Change: ${state.fullPath}');

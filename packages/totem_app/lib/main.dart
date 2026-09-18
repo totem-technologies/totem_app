@@ -89,6 +89,8 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    TotemRouter.instance.dispose();
+    _router.dispose();
     super.dispose();
   }
 

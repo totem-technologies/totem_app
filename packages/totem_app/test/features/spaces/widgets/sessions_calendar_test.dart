@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:checks/checks.dart';
 import 'package:totem_app/features/spaces/widgets/sessions_calendar.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
@@ -54,7 +55,9 @@ void main() {
       (tester) async {
         await tester.pumpWidget(wrapCalendar(sessions: const []));
 
-        expect(find.textContaining(RegExp(r'\w+ \d{4}')), findsOneWidget);
+        check(
+          tester.widgetList(find.textContaining(RegExp(r'\w+ \d{4}'))),
+        ).length.equals(1);
       },
     );
 
@@ -68,7 +71,7 @@ void main() {
         await tester.pumpWidget(wrapCalendar(sessions: events));
 
         // Check that March 2025 is displayed
-        expect(find.text('March 2025'), findsOneWidget);
+        check(tester.widgetList(find.text('March 2025'))).length.equals(1);
       },
     );
 
@@ -83,7 +86,7 @@ void main() {
       await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Should display May 2025 (first event's month)
-      expect(find.text('May 2025'), findsOneWidget);
+      check(tester.widgetList(find.text('May 2025'))).length.equals(1);
     });
   });
 
@@ -97,16 +100,16 @@ void main() {
       await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Verify initial month
-      expect(find.text('June 2025'), findsOneWidget);
+      check(tester.widgetList(find.text('June 2025'))).length.equals(1);
 
       // Find and tap the previous month button
       final prevButton = find.byIcon(Icons.chevron_left);
-      expect(prevButton, findsOneWidget);
+      check(tester.widgetList(prevButton)).length.equals(1);
       await tester.tap(prevButton);
       await tester.pumpAndSettle();
 
       // Should now show May 2025
-      expect(find.text('May 2025'), findsOneWidget);
+      check(tester.widgetList(find.text('May 2025'))).length.equals(1);
     });
 
     testWidgets('should navigate to next month when right arrow is tapped', (
@@ -118,16 +121,16 @@ void main() {
       await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Verify initial month
-      expect(find.text('June 2025'), findsOneWidget);
+      check(tester.widgetList(find.text('June 2025'))).length.equals(1);
 
       // Find and tap the next month button
       final nextButton = find.byIcon(Icons.chevron_right);
-      expect(nextButton, findsOneWidget);
+      check(tester.widgetList(nextButton)).length.equals(1);
       await tester.tap(nextButton);
       await tester.pumpAndSettle();
 
       // Should now show July 2025
-      expect(find.text('July 2025'), findsOneWidget);
+      check(tester.widgetList(find.text('July 2025'))).length.equals(1);
     });
 
     testWidgets('should handle month navigation across year boundaries', (
@@ -139,17 +142,17 @@ void main() {
       await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Start in January 2025
-      expect(find.text('January 2025'), findsOneWidget);
+      check(tester.widgetList(find.text('January 2025'))).length.equals(1);
 
       // Navigate to previous month (December 2024)
       await tester.tap(find.byIcon(Icons.chevron_left));
       await tester.pumpAndSettle();
-      expect(find.text('December 2024'), findsOneWidget);
+      check(tester.widgetList(find.text('December 2024'))).length.equals(1);
 
       // Navigate forward to January 2025 again
       await tester.tap(find.byIcon(Icons.chevron_right));
       await tester.pumpAndSettle();
-      expect(find.text('January 2025'), findsOneWidget);
+      check(tester.widgetList(find.text('January 2025'))).length.equals(1);
     });
   });
 
@@ -165,18 +168,22 @@ void main() {
       // Calendar should have 35 cells (5 rows x 7 columns)
       // We can verify by checking for GridView with 35 items
       final gridView = tester.widget<GridView>(find.byType(GridView));
-      expect(gridView.childrenDelegate, isNotNull);
+      check(gridView.childrenDelegate).isNotNull();
     });
 
     testWidgets('should display day abbreviations correctly', (tester) async {
       await tester.pumpWidget(wrapCalendar(sessions: const []));
 
       // Check for day abbreviations: S, M, T, W, T, F, S
-      expect(find.text('S'), findsNWidgets(2)); // Two S's (Sunday, Saturday)
-      expect(find.text('M'), findsOneWidget);
-      expect(find.text('T'), findsNWidgets(2)); // Two T's (Tuesday, Thursday)
-      expect(find.text('W'), findsOneWidget);
-      expect(find.text('F'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('S')),
+      ).length.equals(2); // Two S's (Sunday, Saturday)
+      check(tester.widgetList(find.text('M'))).length.equals(1);
+      check(
+        tester.widgetList(find.text('T')),
+      ).length.equals(2); // Two T's (Tuesday, Thursday)
+      check(tester.widgetList(find.text('W'))).length.equals(1);
+      check(tester.widgetList(find.text('F'))).length.equals(1);
     });
 
     testWidgets(
@@ -191,7 +198,7 @@ void main() {
 
         // June 1, 2025 is a Sunday, so the first day should be June 1
         // We can verify by checking that day 1 is visible
-        expect(find.text('1'), findsAtLeastNWidgets(1));
+        check(tester.widgetList(find.text('1'))).length.isGreaterOrEqual(1);
       },
     );
   });
@@ -208,7 +215,7 @@ void main() {
 
         // Find the day cell for June 15
         final day15 = find.text('15');
-        expect(day15, findsOneWidget);
+        check(tester.widgetList(day15)).length.equals(1);
 
         // Check that the DecoratedBox has grey background
         final decoratedBox = tester.widget<DecoratedBox>(
@@ -216,9 +223,9 @@ void main() {
         );
 
         final decoration = decoratedBox.decoration as BoxDecoration;
-        expect(decoration, isNotNull);
-        expect(decoration.color, equals(AppTheme.grey));
-        expect(decoration.shape, equals(BoxShape.circle));
+        check(decoration).isNotNull();
+        check(decoration.color).equals(AppTheme.grey);
+        check(decoration.shape).equals(BoxShape.circle);
       },
     );
 
@@ -233,7 +240,7 @@ void main() {
 
       // Find the day cell for June 15
       final day15 = find.text('15');
-      expect(day15, findsOneWidget);
+      check(tester.widgetList(day15)).length.equals(1);
 
       // Check that the DecoratedBox has mauve border
       final decoratedBox = tester.widget<DecoratedBox>(
@@ -241,10 +248,10 @@ void main() {
       );
 
       final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration, isNotNull);
-      expect(decoration.border, isNotNull);
-      expect(decoration.border?.top.color, equals(AppTheme.mauve));
-      expect(decoration.shape, equals(BoxShape.circle));
+      check(decoration).isNotNull();
+      check(decoration.border).isNotNull();
+      check(decoration.border?.top.color).equals(AppTheme.mauve);
+      check(decoration.shape).equals(BoxShape.circle);
     });
 
     testWidgets(
@@ -260,7 +267,7 @@ void main() {
 
         // Find the day cell for June 15
         final day15 = find.text('15');
-        expect(day15, findsOneWidget);
+        check(tester.widgetList(day15)).length.equals(1);
 
         // Check that the DecoratedBox has mauve background
         final decoratedBox = tester.widget<DecoratedBox>(
@@ -268,9 +275,9 @@ void main() {
         );
 
         final decoration = decoratedBox.decoration as BoxDecoration;
-        expect(decoration, isNotNull);
-        expect(decoration.color, equals(AppTheme.mauve));
-        expect(decoration.shape, equals(BoxShape.circle));
+        check(decoration).isNotNull();
+        check(decoration.color).equals(AppTheme.mauve);
+        check(decoration.shape).equals(BoxShape.circle);
       },
     );
 
@@ -283,7 +290,7 @@ void main() {
 
       // Find a day without an event (e.g., June 20)
       final day20 = find.text('20');
-      expect(day20, findsOneWidget);
+      check(tester.widgetList(day20)).length.equals(1);
 
       // Check that there is no DecoratedBox
       // (regular days don't have decoration)
@@ -292,7 +299,7 @@ void main() {
         of: day20,
         matching: find.byType(DecoratedBox),
       );
-      expect(decoratedBoxes, findsNothing);
+      check(tester.widgetList(decoratedBoxes)).length.equals(0);
     });
 
     testWidgets('should handle multiple events on the same day', (
@@ -309,7 +316,7 @@ void main() {
 
       // The day should still be highlighted (as an event day)
       final day15 = find.text('15');
-      expect(day15, findsOneWidget);
+      check(tester.widgetList(day15)).length.equals(1);
     });
 
     testWidgets('should prioritize attending over open status', (tester) async {
@@ -328,8 +335,8 @@ void main() {
       );
 
       final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.color, equals(AppTheme.mauve));
-      expect(decoration.border, isNull); // No border when attending
+      check(decoration.color).equals(AppTheme.mauve);
+      check(decoration.border).isNull(); // No border when attending
     });
   });
 
@@ -359,13 +366,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify callback was called with correct values
-      expect(tappedDay, isNotNull);
-      expect(tappedDay?.day, equals(15));
-      expect(tappedDay?.month, equals(6));
-      expect(tappedDay?.year, equals(2025));
-      expect(tappedEvents, isNotNull);
-      expect(tappedEvents?.length, equals(1));
-      expect(tappedEvents?.first.start.day, equals(15));
+      check(tappedDay).isNotNull();
+      check(tappedDay?.day).equals(15);
+      check(tappedDay?.month).equals(6);
+      check(tappedDay?.year).equals(2025);
+      check(tappedEvents).isNotNull();
+      check(tappedEvents).isNotNull();
+      check(tappedEvents!).length.equals(1);
+      check(tappedEvents?.first.start.day).equals(15);
     });
 
     testWidgets('should not call onEventDayTap when non-event day is tapped', (
@@ -391,7 +399,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Callback should not have been called
-      expect(callbackCalled, isFalse);
+      check(callbackCalled).equals(false);
     });
 
     testWidgets('should handle null onEventDayTap gracefully', (tester) async {
@@ -406,7 +414,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should not throw
-      expect(find.byType(SessionsCalendar), findsOneWidget);
+      check(tester.widgetList(find.byType(SessionsCalendar))).length.equals(1);
     });
 
     testWidgets('should pass all events for the day in callback', (
@@ -435,8 +443,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should receive both events
-      expect(tappedEvents, isNotNull);
-      expect(tappedEvents?.length, equals(2));
+      check(tappedEvents).isNotNull();
+      check(tappedEvents!).length.equals(2);
     });
   });
 
@@ -452,7 +460,7 @@ void main() {
       // Find a day in the current month without an event
       final day20 = find.text('20');
       final text = tester.widget<Text>(day20);
-      expect(text.style?.color, equals(Colors.black));
+      check(text.style?.color).equals(Colors.black);
     });
 
     testWidgets('should render previous/next month days with grey text', (
@@ -468,7 +476,7 @@ void main() {
       // Find a day that's likely from previous month (last few days of May)
       // We'll check by finding text that might be from previous month
       // This is a bit tricky, so we'll verify the general structure
-      expect(find.byType(Text), findsWidgets);
+      check(tester.widgetList(find.byType(Text))).length.isGreaterThan(0);
     });
 
     testWidgets(
@@ -481,7 +489,7 @@ void main() {
 
         final day15 = find.text('15');
         final text = tester.widget<Text>(day15);
-        expect(text.style?.color, equals(AppTheme.white));
+        check(text.style?.color).equals(AppTheme.white);
       },
     );
 
@@ -495,8 +503,8 @@ void main() {
 
       final day15 = find.text('15');
       final text = tester.widget<Text>(day15);
-      expect(text.style?.color, equals(AppTheme.slate));
-      expect(text.style?.fontWeight, equals(FontWeight.w600));
+      check(text.style?.color).equals(AppTheme.slate);
+      check(text.style?.fontWeight).equals(FontWeight.w600);
     });
 
     testWidgets('should render closed event day text with white color', (
@@ -509,7 +517,7 @@ void main() {
 
       final day15 = find.text('15');
       final text = tester.widget<Text>(day15);
-      expect(text.style?.color, equals(AppTheme.white));
+      check(text.style?.color).equals(AppTheme.white);
     });
   });
 
@@ -529,21 +537,21 @@ void main() {
 
       // All events should be recognized for the same day
       final day15 = find.text('15');
-      expect(day15, findsOneWidget);
+      check(tester.widgetList(day15)).length.equals(1);
 
       // The day should be highlighted
       final decoratedBox = tester.widget<DecoratedBox>(
         find.ancestor(of: day15, matching: find.byType(DecoratedBox)).first,
       );
-      expect(decoratedBox.decoration, isNotNull);
+      check(decoratedBox.decoration).isNotNull();
     });
 
     testWidgets('should handle empty events list', (tester) async {
       await tester.pumpWidget(wrapCalendar(sessions: const []));
 
       // Should render without errors
-      expect(find.byType(SessionsCalendar), findsOneWidget);
-      expect(find.byType(GridView), findsOneWidget);
+      check(tester.widgetList(find.byType(SessionsCalendar))).length.equals(1);
+      check(tester.widgetList(find.byType(GridView))).length.equals(1);
     });
 
     testWidgets('should handle events spanning multiple months', (
@@ -558,17 +566,17 @@ void main() {
       await tester.pumpWidget(wrapCalendar(sessions: events));
 
       // Should start on May (first event)
-      expect(find.text('May 2025'), findsOneWidget);
+      check(tester.widgetList(find.text('May 2025'))).length.equals(1);
 
       // Navigate to June
       await tester.tap(find.byIcon(Icons.chevron_right));
       await tester.pumpAndSettle();
-      expect(find.text('June 2025'), findsOneWidget);
+      check(tester.widgetList(find.text('June 2025'))).length.equals(1);
 
       // Navigate to July
       await tester.tap(find.byIcon(Icons.chevron_right));
       await tester.pumpAndSettle();
-      expect(find.text('July 2025'), findsOneWidget);
+      check(tester.widgetList(find.text('July 2025'))).length.equals(1);
     });
 
     testWidgets('should normalize dates correctly ignoring time components', (
@@ -585,7 +593,7 @@ void main() {
 
       // Both should be recognized as the same day
       final day15 = find.text('15');
-      expect(day15, findsOneWidget);
+      check(tester.widgetList(day15)).length.equals(1);
     });
   });
 }
