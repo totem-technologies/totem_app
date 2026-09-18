@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 
@@ -80,13 +81,14 @@ class _SessionStatusNoticeState extends State<SessionStatusNotice>
             ),
           ],
         ),
-        Text(
+        AutoSizeText(
           widget.message,
           style: theme.textTheme.titleLarge?.copyWith(
             fontSize: 18,
             fontWeight: FontWeight.w600,
             letterSpacing: 0,
           ),
+          maxLines: 2,
         ),
       ],
     );

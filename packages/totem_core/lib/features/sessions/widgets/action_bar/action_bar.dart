@@ -346,6 +346,7 @@ class PrejoinActionBar extends StatefulWidget {
   const PrejoinActionBar({
     required this.locked,
     required this.previewAudioTrack,
+    required this.isMicOn,
     required this.onToggleMic,
     required this.isSpeakerOn,
     required this.onToggleSpeaker,
@@ -360,6 +361,7 @@ class PrejoinActionBar extends StatefulWidget {
 
   final bool locked;
   final LocalAudioTrack? previewAudioTrack;
+  final bool isMicOn;
   final AsyncCallback onToggleMic;
   final bool isSpeakerOn;
   final VoidCallback onToggleSpeaker;
@@ -418,6 +420,7 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
         ActionBarMicButton(
           participant: null,
           audioTrack: widget.previewAudioTrack,
+          isMicOn: widget.isMicOn,
           onToggle: !widget.locked ? (v) => widget.onToggleMic() : null,
         ),
         // ActionBarSpeakerButton(
@@ -459,6 +462,7 @@ class SessionActionBar extends ConsumerWidget {
 
     final microphoneButton = ActionBarMicButton(
       participant: user,
+      initiallyEnabled: session.options.microphoneEnabled,
       onToggle: (shouldEnable) async {
         if (shouldEnable) {
           await session.devices.enableMicrophone();

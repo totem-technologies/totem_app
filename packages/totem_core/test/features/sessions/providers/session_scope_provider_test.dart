@@ -483,6 +483,18 @@ void main() {
         ).read(resolveCurrentScreenProvider),
       ).equals(RoomScreen.disconnected);
 
+      // Waiting rooms never show turn-taking controls, even when stale room
+      // metadata names the local participant as current or next speaker.
+      check(
+        containerForState(
+          RoomConnectionState.connected,
+          RoomStatus.waitingRoom,
+          TurnState.passing,
+          'alice',
+          'alice',
+        ).read(resolveCurrentScreenProvider),
+      ).equals(RoomScreen.listening);
+
       // TurnState.passing and amNextSpeaker -> RoomScreen.receiving
       check(
         containerForState(

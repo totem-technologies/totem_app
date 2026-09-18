@@ -182,6 +182,9 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
       if (route.roomStatus == RoomStatus.ended) {
         return RoomScreen.disconnected;
       }
+      if (route.roomStatus == RoomStatus.waitingRoom) {
+        return RoomScreen.listening;
+      }
 
       final localIdentity = ref.watch(localParticipantIdentityProvider);
       if (localIdentity == null) return RoomScreen.disconnected;
