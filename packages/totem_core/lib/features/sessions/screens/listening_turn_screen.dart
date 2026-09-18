@@ -3,15 +3,15 @@ import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
-import 'package:shimmer/shimmer.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
-
 import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
+
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_status_notice.dart';
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
@@ -23,90 +23,25 @@ class ListeningTurnScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final roomStatus = ref.watch(roomStatusProvider);
-    final amNext = ref.watch(amNextSpeakerProvider);
     final activeSpeaker = ref.watch(featuredParticipantProvider);
-    final nextUp = ref.watch(speakingNextParticipantProvider);
     final hasKeeper = ref.watch(hasKeeperProvider);
 
     return ViewportResolver(
       builder: (context, viewportKind) {
-        final theme = Theme.of(context);
         final nextUpText = () {
           if (roomStatus == RoomStatus.waitingRoom) {
-            const baseColor = Colors.black;
-            final highlightColor = Colors.grey.shade500;
-            return Shimmer(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  baseColor,
-                  baseColor,
-                  baseColor,
-                  highlightColor,
-                  baseColor,
-                  baseColor,
-                  baseColor,
-                ],
-                stops: const <double>[
-                  0.0,
-                  0.49,
-                  0.49999,
-                  0.5,
-                  0.51,
-                  0.51111,
-                  1.0,
-                ],
-              ),
-              period: const Duration(seconds: 6),
-              child: Text(
-                () {
-                  if (!hasKeeper) {
-                    return 'Waiting for the Keeper to join';
-                  }
-                  return 'Your session is about to start';
-                }(),
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 6,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          } else if (roomStatus == RoomStatus.active) {
             if (!hasKeeper) {
-              return Text(
-                'The session has been paused',
-                style: theme.textTheme.bodyLarge,
-              );
-            } else if (nextUp != null) {
-              return RichText(
-                text: TextSpan(
-                  children: [
-                    if (amNext)
-                      const TextSpan(
-                        text: 'You are Next',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      )
-                    else ...[
-                      const TextSpan(text: 'Next up '),
-                      TextSpan(
-                        text: nextUp.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ],
-                  style: theme.textTheme.bodyLarge,
-                ),
+              return const SessionStatusNotice(
+                label: 'Waiting room',
+                message: 'Waiting for the Keeper to join',
               );
             }
+            return const SessionStatusNotice(
+              label: 'Starting soon',
+              message: 'Your session is about to start',
+            );
           }
 
-          // Return a sized box because we want the spacing to remain consistent.
           return const SizedBox.shrink();
         }();
 

@@ -10,6 +10,10 @@ class AppTheme {
   static const Color cream = Color(0xFFF3F1E9);
   static const Color yellow = Color(0x80FFD000);
   static const Color mauve = Color(0xFF987AA5);
+
+  /// The soft mauve tint used at the bottom of the waiting room gradient.
+  static const Color waitingRoomMauve = Color(0xFFCFC1D6);
+
   static const Color slate = Color(0xFF262F37);
   static const Color deepGray = Color(0xFF514F4D);
   static const Color gray = Color(
