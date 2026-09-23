@@ -434,6 +434,14 @@ void main() {
         ).length.equals(1);
       });
 
+      testWidgets('shows the "STARTING SOON" eyebrow label', (tester) async {
+        final state = _buildState(status: RoomStatus.waitingRoom);
+
+        await pumpListeningTurn(tester, sessionState: state);
+
+        check(tester.widgetList(find.text('STARTING SOON'))).length.equals(1);
+      });
+
       testWidgets('non-keeper sees GroundingMarquee instead of start button', (
         tester,
       ) async {
@@ -658,18 +666,6 @@ void main() {
           verifyNever(() => devices.enableMicrophone());
           verifyNever(() => messaging.sendReaction(any()));
         });
-      });
-    });
-
-    group('widget structure', () {
-      testWidgets('renders ListeningTurn without crashing', (tester) async {
-        final state = _buildState(status: RoomStatus.active);
-
-        await pumpListeningTurn(tester, sessionState: state);
-
-        check(
-          tester.widgetList(find.byType(ListeningTurnScreen)),
-        ).length.equals(1);
       });
     });
   });

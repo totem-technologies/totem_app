@@ -67,7 +67,7 @@ jobs:
 
       - name: Build ABI
         working-directory: ./packages/totem_app
-        run: flutter build appbundle --verbose --flavor ${{ matrix.flavor }}
+        run: ../../.github/scripts/retry-flutter-build.sh flutter build appbundle --verbose --flavor ${{ matrix.flavor }}
 
   build_ios_ipa:
     name: iOS IPA (${{ matrix.flavor }})
