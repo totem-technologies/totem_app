@@ -55,6 +55,7 @@ Future<void> main() async {
       'build',
       'web',
       '--wasm',
+      '--dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true',
       '--base-href',
       '/room/',
       '--web-define=ASSET_BASE=$assetBase',

@@ -3,6 +3,7 @@
 APP_DIR := packages/totem_app
 CORE_DIR := packages/totem_core
 WEB_DIR := packages/totem_web
+WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
 
 # Each Flutter suite also runs test files concurrently. Bound package-level
 # parallelism to avoid starting four compilers and their workers at once.
@@ -48,11 +49,11 @@ run: env-dev
 # against the dev server's "/" base href.
 run-chrome: env-dev
 	@echo "Running app in Chrome..."
-	cd $(WEB_DIR) && flutter run -d chrome --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
+	cd $(WEB_DIR) && flutter run -d chrome $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
 
 run-web: env-dev
 	@echo "Running app in Web Server..."
-	cd $(WEB_DIR) && flutter run -d web-server --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
+	cd $(WEB_DIR) && flutter run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
 
 # Build the web app the way it deploys: mounted at /room/, assets fetched from
 # a separate origin (here the local serve-web "CDN" on :5173). The `development`

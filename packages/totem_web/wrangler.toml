@@ -25,7 +25,7 @@
 #
 # Local:
 #   cd packages/totem_web
-#   flutter build web --wasm --base-href /room/ --web-define=ASSET_BASE=<this-worker-url>/
+#   flutter build web --wasm --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true --base-href /room/ --web-define=ASSET_BASE=<this-worker-url>/
 #   bunx wrangler deploy --env staging
 #
 # The account id is supplied via the CLOUDFLARE_ACCOUNT_ID env var in CI.

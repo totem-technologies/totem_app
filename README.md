@@ -110,6 +110,14 @@ This lets the web client share the backend's login session and origin. Hosting
 configuration lives in [wrangler.toml](packages/totem_web/wrangler.toml), and
 deployment is managed by the [Web workflow](.github/workflows/web.yml).
 
+Web run and build commands enable HTML video with
+`--dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true`. The browser displays the
+video elements directly through `HtmlElementView`.
+Pass the same flag when invoking `flutter run` or `flutter build web` directly.
+The Flutter UI still uses CanvasKit or skwasm; COOP/COEP headers independently
+enable skwasm's rendering worker. When testing a build, check video clipping,
+mirroring, camera toggles, and controls and menus over the video.
+
 Cloudflare deployment requires these repository secrets:
 
 - `CLOUDFLARE_API_TOKEN` with **Workers Scripts: Edit** permission.
