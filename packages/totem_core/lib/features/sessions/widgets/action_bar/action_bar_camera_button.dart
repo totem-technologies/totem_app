@@ -21,6 +21,9 @@ class ActionBarCameraSwitcherButton extends StatefulWidget {
     super.key,
   });
 
+  /// Shared capsule around the camera toggle and its device caret.
+  static const deviceClusterKey = Key('action-bar-camera-device-cluster');
+
   final bool isCameraOn;
   final VoidCallback? onToggle;
 
@@ -36,33 +39,10 @@ class ActionBarCameraSwitcherButton extends StatefulWidget {
 }
 
 class _ActionBarCameraSwitcherButtonState
-    extends State<ActionBarCameraSwitcherButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _menuController;
-  late final CurvedAnimation _menuAnimation;
+    extends State<ActionBarCameraSwitcherButton> {
   final _portalController = OverlayPortalController();
   final GlobalKey _buttonKey = GlobalKey();
   var _isOpen = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _menuController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-    _menuAnimation = CurvedAnimation(
-      parent: _menuController,
-      curve: Curves.easeOutCubic,
-    );
-  }
-
-  @override
-  void dispose() {
-    _menuAnimation.dispose();
-    _menuController.dispose();
-    super.dispose();
-  }
 
   @override
   void didUpdateWidget(ActionBarCameraSwitcherButton oldWidget) {
@@ -72,20 +52,22 @@ class _ActionBarCameraSwitcherButtonState
       if (_isOpen) {
         _portalController.hide();
         _isOpen = false;
-        _menuController.reverse();
+        // didUpdateWidget runs inside the parent build, so the caret's
+        // open color has to refresh on the next frame.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() {});
+        });
       }
     }
   }
 
   void _showCameraPositionOptions() {
     if (_isOpen) return;
-    _menuController.forward();
     setState(() => _isOpen = true);
     _portalController.show();
   }
 
   void _dismissOverlay() {
-    _menuController.reverse();
     _portalController.hide();
     if (mounted) setState(() => _isOpen = false);
   }
@@ -127,52 +109,136 @@ class _ActionBarCameraSwitcherButtonState
           onDismissOverlay: _dismissOverlay,
         );
       },
-      // Chevron sits on the same glass as the rest of the pill — no
-      // nested black chip, which fought the compact-bar treatment.
-      child: Row(
+      // Caret trails the camera inside one capsule. It used to float in the
+      // bar gap, between the mic and the camera, and spin like a collapse
+      // control. Pointing up keeps it aimed at the menu that opens above.
+      child: _CameraDeviceCluster(
         key: _buttonKey,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Semantics(
-            button: true,
-            label: 'Switch camera',
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                if (widget.onToggle == null) return;
-                _showCameraPositionOptions();
-              },
-              child: Padding(
-                padding: EdgeInsetsDirectional.symmetric(
-                  horizontal: ActionBar.gapOf(context),
-                ),
-                child: AnimatedBuilder(
-                  animation: _menuController,
-                  builder: (context, child) {
-                    return Transform.rotate(
-                      angle: _menuAnimation.value * math.pi,
-                      child: child,
-                    );
-                  },
-                  child: Icon(
-                    Icons.keyboard_arrow_down,
-                    color: ActionBar.onLightBackgroundOf(context)
-                        ? AppTheme.slate
-                        : AppTheme.cream,
+        menuOpen: _isOpen,
+        onOpenDevices: widget.onToggle == null
+            ? null
+            : _showCameraPositionOptions,
+        camera: ActionBarButton(
+          semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
+          onPressed: widget.onToggle,
+          role: ActionBarButtonRole.media(enabled: widget.isCameraOn),
+          child: TotemIcon(
+            widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Camera toggle plus the device caret, as one control.
+///
+/// The shared fill is an inset in the action-bar pill, not a second chip.
+/// The caret stays smaller than the camera glyph so it reads as an accessory
+/// that opens device selection.
+class _CameraDeviceCluster extends StatefulWidget {
+  const _CameraDeviceCluster({
+    required this.camera,
+    required this.menuOpen,
+    required this.onOpenDevices,
+    super.key,
+  });
+
+  final Widget camera;
+  final bool menuOpen;
+  final VoidCallback? onOpenDevices;
+
+  @override
+  State<_CameraDeviceCluster> createState() => _CameraDeviceClusterState();
+}
+
+class _CameraDeviceClusterState extends State<_CameraDeviceCluster> {
+  var _pressed = false;
+
+  bool get _enabled => widget.onOpenDevices != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final onLight = ActionBar.onLightBackgroundOf(context);
+    final foreground = onLight ? AppTheme.slate : AppTheme.cream;
+    // Heavier than the parent pill so the pair separates from the mic,
+    // without stacking a lighter glass on top of the bar.
+    final fill = onLight
+        ? AppTheme.slate.withValues(alpha: 0.16)
+        : AppTheme.white.withValues(alpha: 0.14);
+
+    return DecoratedBox(
+      key: ActionBarCameraSwitcherButton.deviceClusterKey,
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(end: 2),
+        child: IntrinsicHeight(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              widget.camera,
+              Semantics(
+                button: true,
+                label: 'Choose camera',
+                hint: 'Opens camera selection',
+                enabled: _enabled,
+                child: MouseRegion(
+                  cursor: _enabled
+                      ? SystemMouseCursors.click
+                      : SystemMouseCursors.basic,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: widget.onOpenDevices,
+                    onTapDown: _enabled
+                        ? (_) => setState(() => _pressed = true)
+                        : null,
+                    onTapUp: _enabled
+                        ? (_) => setState(() => _pressed = false)
+                        : null,
+                    onTapCancel: _enabled
+                        ? () => setState(() => _pressed = false)
+                        : null,
+                    child: Tooltip(
+                      message: 'Cameras',
+                      excludeFromSemantics: true,
+                      child: SizedBox(
+                        width: 30,
+                        child: Center(
+                          child: AnimatedScale(
+                            scale: _pressed ? 0.96 : 1,
+                            duration: const Duration(milliseconds: 120),
+                            curve: Curves.easeOutCubic,
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 160),
+                              opacity: _enabled ? 1 : 0.4,
+                              // The shared glyph points down. Flip it so it
+                              // aims at the menu above, instead of reading
+                              // as a section that collapses.
+                              child: Transform.rotate(
+                                angle: math.pi,
+                                child: TotemIcon(
+                                  TotemIcons.chevronDown,
+                                  size: 15,
+                                  color: widget.menuOpen
+                                      ? AppTheme.mauve
+                                      : foreground,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-          ActionBarButton(
-            semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
-            onPressed: widget.onToggle,
-            role: ActionBarButtonRole.media(enabled: widget.isCameraOn),
-            child: TotemIcon(
-              widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
