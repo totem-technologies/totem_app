@@ -260,8 +260,9 @@ class _ParticipantProfileDialog extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('${participant.sessionsCount} sessions attended'),
-        if (participant.reviewsCount case final reviews?)
-          Text('$reviews reviews'),
+        // TODO(totem): Add reviews count
+        // if (participant case final reviews?)
+        //   Text('$reviews reviews'),
       ],
     ),
     actions: [

@@ -10,6 +10,7 @@ final class MessagePreviewSchema {
     required this.text,
     required this.createdAt,
     required this.isMine,
+    required this.isDeleted,
   });
 
   factory MessagePreviewSchema.fromJson(Map<String, dynamic> json) {
@@ -19,6 +20,7 @@ final class MessagePreviewSchema {
       text: json['text'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       isMine: json['is_mine'] as bool,
+      isDeleted: json['is_deleted'] as bool,
     );
   }
 
@@ -32,6 +34,8 @@ final class MessagePreviewSchema {
 
   final bool isMine;
 
+  final bool isDeleted;
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -39,6 +43,7 @@ final class MessagePreviewSchema {
       'text': text,
       'created_at': createdAt.toIso8601String(),
       'is_mine': isMine,
+      'is_deleted': isDeleted,
     };
   }
 
@@ -52,7 +57,9 @@ final class MessagePreviewSchema {
         json.containsKey('created_at') &&
         json['created_at'] is String &&
         json.containsKey('is_mine') &&
-        json['is_mine'] is bool;
+        json['is_mine'] is bool &&
+        json.containsKey('is_deleted') &&
+        json['is_deleted'] is bool;
   }
 
   MessagePreviewSchema copyWith({
@@ -61,6 +68,7 @@ final class MessagePreviewSchema {
     String? text,
     DateTime? createdAt,
     bool? isMine,
+    bool? isDeleted,
   }) {
     return MessagePreviewSchema(
       id: id ?? this.id,
@@ -68,6 +76,7 @@ final class MessagePreviewSchema {
       text: text ?? this.text,
       createdAt: createdAt ?? this.createdAt,
       isMine: isMine ?? this.isMine,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 
@@ -79,16 +88,17 @@ final class MessagePreviewSchema {
             senderSlug == other.senderSlug &&
             text == other.text &&
             createdAt == other.createdAt &&
-            isMine == other.isMine;
+            isMine == other.isMine &&
+            isDeleted == other.isDeleted;
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, senderSlug, text, createdAt, isMine);
+    return Object.hash(id, senderSlug, text, createdAt, isMine, isDeleted);
   }
 
   @override
   String toString() {
-    return 'MessagePreviewSchema(id: $id, senderSlug: $senderSlug, text: $text, createdAt: $createdAt, isMine: $isMine)';
+    return 'MessagePreviewSchema(id: $id, senderSlug: $senderSlug, text: $text, createdAt: $createdAt, isMine: $isMine, isDeleted: $isDeleted)';
   }
 }

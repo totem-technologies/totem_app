@@ -263,6 +263,27 @@ final class MessagesApi with ApiExecutor {
     );
   }
 
+  /// Delete Message Endpoint
+  ///
+  /// `DELETE /api/mobile/protected/messages/conversations/{conversation_id}/messages/{message_id}`
+  Future<ApiResult<void, Never>> totemMessagesMobileApiDeleteMessageEndpoint({
+    required String conversationId,
+    required String messageId,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+
+    final request = ApiRequest(
+      method: 'DELETE',
+      path:
+          '/api/mobile/protected/messages/conversations/${Uri.encodeComponent(conversationId)}/messages/${Uri.encodeComponent(messageId)}',
+      headers: headers,
+      options: options,
+    );
+
+    return execute(request, onSuccess: (_) {});
+  }
+
   /// Mark Read
   ///
   /// `POST /api/mobile/protected/messages/conversations/{conversation_id}/read`

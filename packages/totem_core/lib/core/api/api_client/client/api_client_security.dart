@@ -103,6 +103,11 @@ final class ClientSecurity {
         const ApiSecurityRequirement({'JWTAuth': []}),
         const ApiSecurityRequirement({'SessionAuth': []}),
       ];
+  static final totemMessagesMobileApiDeleteMessageEndpointRequirements =
+      <ApiSecurityRequirement>[
+        const ApiSecurityRequirement({'JWTAuth': []}),
+        const ApiSecurityRequirement({'SessionAuth': []}),
+      ];
   static final totemMessagesMobileApiMarkReadRequirements =
       <ApiSecurityRequirement>[
         const ApiSecurityRequirement({'JWTAuth': []}),

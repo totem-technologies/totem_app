@@ -8,7 +8,6 @@ final class SessionParticipantSchema {
   const SessionParticipantSchema({
     required this.profile,
     required this.sessionsCount,
-    this.reviewsCount,
   });
 
   factory SessionParticipantSchema.fromJson(Map<String, dynamic> json) {
@@ -17,9 +16,6 @@ final class SessionParticipantSchema {
         json['profile'] as Map<String, dynamic>,
       ),
       sessionsCount: (json['sessions_count'] as num).toInt(),
-      reviewsCount: json['reviews_count'] != null
-          ? (json['reviews_count'] as num).toInt()
-          : null,
     );
   }
 
@@ -27,14 +23,8 @@ final class SessionParticipantSchema {
 
   final int sessionsCount;
 
-  final int? reviewsCount;
-
   Map<String, dynamic> toJson() {
-    return {
-      'profile': profile.toJson(),
-      'sessions_count': sessionsCount,
-      'reviews_count': ?reviewsCount,
-    };
+    return {'profile': profile.toJson(), 'sessions_count': sessionsCount};
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -46,12 +36,10 @@ final class SessionParticipantSchema {
   SessionParticipantSchema copyWith({
     MessagePeerSchema? profile,
     int? sessionsCount,
-    int? Function()? reviewsCount,
   }) {
     return SessionParticipantSchema(
       profile: profile ?? this.profile,
       sessionsCount: sessionsCount ?? this.sessionsCount,
-      reviewsCount: reviewsCount != null ? reviewsCount() : this.reviewsCount,
     );
   }
 
@@ -60,17 +48,16 @@ final class SessionParticipantSchema {
     return identical(this, other) ||
         other is SessionParticipantSchema &&
             profile == other.profile &&
-            sessionsCount == other.sessionsCount &&
-            reviewsCount == other.reviewsCount;
+            sessionsCount == other.sessionsCount;
   }
 
   @override
   int get hashCode {
-    return Object.hash(profile, sessionsCount, reviewsCount);
+    return Object.hash(profile, sessionsCount);
   }
 
   @override
   String toString() {
-    return 'SessionParticipantSchema(profile: $profile, sessionsCount: $sessionsCount, reviewsCount: $reviewsCount)';
+    return 'SessionParticipantSchema(profile: $profile, sessionsCount: $sessionsCount)';
   }
 }
