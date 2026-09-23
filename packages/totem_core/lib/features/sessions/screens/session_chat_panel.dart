@@ -21,12 +21,7 @@ import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 const _headerHorizontalPadding = 20.0;
-const _headerCloseButtonSize = 32.0;
-const _headerControlGap = 12.0;
-const _headerChevronGap = 6.0;
 const _recipientRowHorizontalPadding = 16.0;
-const _recipientRowEstimatedHeight = 61.0;
-const _recipientMenuMaxHeightFactor = 0.6;
 
 const _messageChromeGap = 12.0;
 const _messageEdgeFadeExtent = 16.0;
@@ -489,7 +484,7 @@ class _SessionChatHeader extends StatelessWidget {
         horizontal: _headerHorizontalPadding,
       ),
       child: Row(
-        spacing: _headerControlGap,
+        spacing: 12.0,
         children: [
           Expanded(
             child: Align(
@@ -500,7 +495,6 @@ class _SessionChatHeader extends StatelessWidget {
                 child: SizedBox(
                   height: 44,
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       _HeaderAvatar(threadTarget: threadTarget),
                       const SizedBox(width: 12),
@@ -512,14 +506,14 @@ class _SessionChatHeader extends StatelessWidget {
                           participants: participants,
                         ),
                       ),
-                      const SizedBox(width: _headerChevronGap),
+                      const SizedBox(width: 8.0),
                       AnimatedRotation(
                         turns: dropdownOpen ? 0.5 : 0,
                         duration: const Duration(milliseconds: 220),
                         curve: Curves.easeOutCubic,
                         child: const TotemIcon(
                           TotemIcons.chevronDown,
-                          size: 14,
+                          size: 12,
                           color: AppTheme.gray,
                         ),
                       ),
@@ -538,8 +532,8 @@ class _SessionChatHeader extends StatelessWidget {
               mouseCursor: SystemMouseCursors.click,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints.tightFor(
-                width: _headerCloseButtonSize,
-                height: _headerCloseButtonSize,
+                width: 32.0,
+                height: 32.0,
               ),
               icon: const TotemIcon(
                 TotemIcons.close,
@@ -887,11 +881,9 @@ class _RecipientDropdownOverlay extends StatelessWidget {
         MediaQuery.viewInsetsOf(context).bottom;
     final maxMenuHeight = math.max(
       0.0,
-      availableHeight * _recipientMenuMaxHeightFactor,
+      // height * recipient menu max height factor
+      availableHeight * 0.6,
     );
-    final preferredMenuHeight =
-        _recipientRowEstimatedHeight * (rows.length + 1) + rows.length;
-    final menuHeight = math.min(preferredMenuHeight, maxMenuHeight);
 
     return AnimatedBuilder(
       animation: animation,
@@ -917,8 +909,6 @@ class _RecipientDropdownOverlay extends StatelessWidget {
           ),
         );
       },
-      // Figma 3518:10039 — white popover, 20px radius, 12% black shadow.
-      // Shadow lives outside the clip so cream selected rows don't square off.
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppTheme.white,
@@ -935,10 +925,11 @@ class _RecipientDropdownOverlay extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: Material(
             color: AppTheme.white,
-            child: SizedBox(
-              height: menuHeight,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxMenuHeight),
               child: ListView.separated(
-                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                padding: EdgeInsetsDirectional.zero,
                 itemCount: rows.length + 1,
                 separatorBuilder: (_, _) => const _RecipientHairline(),
                 itemBuilder: (context, index) {
@@ -1047,7 +1038,7 @@ class _RecipientRow extends StatelessWidget {
               if (selected)
                 const TotemIcon(
                   TotemIcons.checkmark,
-                  size: 18,
+                  size: 16,
                   color: AppTheme.mauve,
                 ),
             ],
