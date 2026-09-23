@@ -135,6 +135,12 @@ class TotemIcons {
 </svg>
 ''';
 
+  static const close = '''
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M14.5 5.5L5.5 14.5M5.5 5.5L14.5 14.5" stroke="#262F37" stroke-width="1.6" stroke-linecap="round"/>
+</svg>
+''';
+
   static const arrowForward = '''
 <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g clip-path="url(#clip0_335_660)">

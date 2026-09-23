@@ -17,15 +17,13 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
 import 'package:totem_core/shared/widgets/chat/message_input_bar.dart';
-import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 const _headerHorizontalPadding = 20.0;
 const _headerCloseButtonSize = 32.0;
 const _headerControlGap = 12.0;
-const _headerRecipientRuleWidth = 1.0;
-const _headerRecipientStartPadding = 10.0;
+const _headerChevronGap = 6.0;
 const _recipientRowHorizontalPadding = 16.0;
 const _recipientRowEstimatedHeight = 61.0;
 const _recipientMenuMaxHeightFactor = 0.6;
@@ -491,49 +489,60 @@ class _SessionChatHeader extends StatelessWidget {
       child: Row(
         spacing: _headerControlGap,
         children: [
-          Semantics(
-            button: true,
-            label: 'Close chat',
-            child: CircleIconButton(
-              color: Colors.transparent,
-              icon: TotemIcons.closeRounded,
-              onPressed: onClose,
-            ),
-          ),
-          const SizedBox(height: 44, child: VerticalDivider(width: 1)),
           Expanded(
-            child: Container(
-              height: 44,
-              padding: const EdgeInsetsDirectional.only(
-                start: _headerRecipientStartPadding,
-              ),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
               child: InkWell(
                 onTap: onToggleDropdown,
                 borderRadius: BorderRadius.circular(12),
-                child: Row(
-                  children: [
-                    _HeaderAvatar(threadTarget: threadTarget),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _HeaderTitle(
-                        threadTarget: threadTarget,
-                        keeperIdentity: keeperIdentity,
-                        isKeeper: isKeeper,
-                        participants: participants,
+                child: SizedBox(
+                  height: 44,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _HeaderAvatar(threadTarget: threadTarget),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: _HeaderTitle(
+                          threadTarget: threadTarget,
+                          keeperIdentity: keeperIdentity,
+                          isKeeper: isKeeper,
+                          participants: participants,
+                        ),
                       ),
-                    ),
-                    AnimatedRotation(
-                      turns: dropdownOpen ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      child: const TotemIcon(
-                        TotemIcons.chevronDown,
-                        size: 14,
-                        color: AppTheme.gray,
+                      const SizedBox(width: _headerChevronGap),
+                      AnimatedRotation(
+                        turns: dropdownOpen ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        child: const TotemIcon(
+                          TotemIcons.chevronDown,
+                          size: 14,
+                          color: AppTheme.gray,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 44, child: VerticalDivider(width: 1)),
+          Semantics(
+            button: true,
+            label: 'Close chat',
+            child: IconButton(
+              onPressed: onClose,
+              mouseCursor: SystemMouseCursors.click,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(
+                width: _headerCloseButtonSize,
+                height: _headerCloseButtonSize,
+              ),
+              icon: const TotemIcon(
+                TotemIcons.close,
+                size: 18,
+                color: AppTheme.textHeading,
               ),
             ),
           ),
@@ -821,16 +830,9 @@ class _RecipientDropdownOverlay extends StatelessWidget {
         if (t <= 0) {
           return const SizedBox.shrink();
         }
-        // Align the popover's 16px row inset with the header avatar.
         return PositionedDirectional(
           top: 10,
-          start:
-              _headerHorizontalPadding +
-              _headerCloseButtonSize +
-              _headerControlGap +
-              _headerRecipientRuleWidth +
-              _headerRecipientStartPadding -
-              _recipientRowHorizontalPadding,
+          start: _headerHorizontalPadding - _recipientRowHorizontalPadding,
           end: _headerHorizontalPadding,
           child: IgnorePointer(
             ignoring: !interactive || t < 0.5,
