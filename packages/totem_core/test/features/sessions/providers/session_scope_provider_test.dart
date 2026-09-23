@@ -1,7 +1,8 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:livekit_client/livekit_client.dart'
+    hide ConnectionState, SessionOptions;
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart'
     show RoomScreen;
@@ -73,6 +74,15 @@ SessionRoomState _state({
 
 void main() {
   group('SessionParticipantKeys', () {
+    SessionOptions options(String slug) => SessionOptions(
+      sessionSlug: slug,
+      token: 'token',
+      cameraEnabled: true,
+      microphoneEnabled: true,
+      speakerEnabled: true,
+      cameraOptions: const CameraCaptureOptions(),
+    );
+
     test('returns same key for same identity', () {
       final keys = SessionParticipantKeys();
 
@@ -89,6 +99,26 @@ void main() {
       final bob = keys.getKey('bob');
 
       check(identical(alice, bob)).equals(false);
+    });
+
+    test('recreates keys when the session scope changes', () {
+      final container = ProviderContainer(
+        overrides: [sessionScopeProvider.overrideWithValue(options('first'))],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        sessionParticipantKeysProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final first = subscription.read().getKey('alice');
+
+      container.updateOverrides([
+        sessionScopeProvider.overrideWithValue(options('second')),
+      ]);
+
+      final second = subscription.read().getKey('alice');
+      check(identical(first, second)).isFalse();
     });
   });
 
@@ -122,6 +152,33 @@ void main() {
   });
 
   group('session scope selectors', () {
+    test('participant projections ignore chat-only changes', () {
+      final participant = MockRemoteParticipant('alice', 'Alice');
+      final before = _state(participants: [participant]);
+      final after = SessionRoomState(
+        connection: before.connection,
+        participants: before.participants,
+        turn: before.turn,
+        chat: const ChatState(
+          messages: [
+            SessionChatMessage(
+              message: 'Hello',
+              timestamp: 1,
+              id: 'message-1',
+              sender: false,
+            ),
+          ],
+        ),
+      );
+
+      check(
+        sessionParticipantPresentation(before, participant.identity),
+      ).equals(sessionParticipantPresentation(after, participant.identity));
+      check(
+        sessionParticipantLayout(before),
+      ).equals(sessionParticipantLayout(after));
+    });
+
     test('defaults when scope is not overridden', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
@@ -425,6 +482,18 @@ void main() {
           'alice',
         ).read(resolveCurrentScreenProvider),
       ).equals(RoomScreen.disconnected);
+
+      // Waiting rooms never show turn-taking controls, even when stale room
+      // metadata names the local participant as current or next speaker.
+      check(
+        containerForState(
+          RoomConnectionState.connected,
+          RoomStatus.waitingRoom,
+          TurnState.passing,
+          'alice',
+          'alice',
+        ).read(resolveCurrentScreenProvider),
+      ).equals(RoomScreen.listening);
 
       // TurnState.passing and amNextSpeaker -> RoomScreen.receiving
       check(

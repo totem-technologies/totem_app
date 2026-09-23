@@ -12,6 +12,8 @@ class ActionBarMicButton extends StatefulWidget {
     required this.participant,
     required this.onToggle,
     this.audioTrack,
+    this.initiallyEnabled,
+    this.isMicOn,
     this.indicatorColor,
     this.indicatorBarCount = 5,
     super.key,
@@ -19,6 +21,12 @@ class ActionBarMicButton extends StatefulWidget {
 
   final LocalParticipant? participant;
   final AudioTrack? audioTrack;
+  final bool? initiallyEnabled;
+
+  /// When non-null, drives the displayed state directly and makes the button
+  /// controlled (e.g. the pre-join screen, where the selected preference is the
+  /// source of truth while the preview track is still initializing).
+  final bool? isMicOn;
   final ActionBarButtonToggleCallback? onToggle;
   final Color? indicatorColor;
   final int indicatorBarCount;
@@ -30,6 +38,7 @@ class ActionBarMicButton extends StatefulWidget {
 class _ActionBarMicButtonState extends State<ActionBarMicButton> {
   EventsListener<ParticipantEvent>? _participantListener;
   bool _busy = false;
+  late bool _microphoneIsEnabled = _initialMicrophoneEnabled();
 
   @override
   void initState() {
@@ -41,16 +50,39 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
   void didUpdateWidget(covariant ActionBarMicButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.participant?.sid != widget.participant?.sid) {
+      _microphoneIsEnabled = _initialMicrophoneEnabled();
       _bindListener();
     }
   }
 
   void _bindListener() {
     _participantListener?.dispose();
-    _participantListener = widget.participant?.createListener()
-      ?..on<ParticipantEvent>((_) {
-        if (mounted) setState(() {});
-      });
+    _participantListener = widget.participant?.createListener();
+    _participantListener
+      ?..on<TrackPublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<TrackUnpublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<LocalTrackPublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<LocalTrackUnpublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<TrackMutedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<TrackUnmutedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      );
+  }
+
+  void _onMicrophonePublicationChanged(TrackPublication<Track> publication) {
+    if (!mounted || publication.source != TrackSource.microphone) return;
+    if (widget.isMicOn != null) return;
+    setState(() => _microphoneIsEnabled = _isPublicationEnabled(publication));
   }
 
   @override
@@ -65,7 +97,18 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
     );
   }
 
-  bool get _isMicrophoneEnabled {
+  bool _initialMicrophoneEnabled() {
+    if (widget.isMicOn != null) return widget.isMicOn!;
+
+    final publication = _audioPublication;
+    if (widget.audioTrack != null || publication != null) {
+      return _microphoneEnabledFromMedia();
+    }
+
+    return widget.initiallyEnabled ?? false;
+  }
+
+  bool _microphoneEnabledFromMedia() {
     final publication = _audioPublication;
     if (widget.audioTrack == null && publication == null) return false;
 
@@ -75,12 +118,23 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
     return isActive && !isMuted;
   }
 
+  bool _isPublicationEnabled(TrackPublication<Track> publication) {
+    final track = publication.track;
+    final isMuted = track?.muted ?? publication.muted;
+    final isActive = track?.isActive ?? true;
+    return isActive && !isMuted;
+  }
+
+  bool get _isEnabled => widget.isMicOn ?? _microphoneIsEnabled;
+
   Future<void> _toggleMicrophone() async {
     if (_busy) return;
 
     setState(() => _busy = true);
     try {
-      await widget.onToggle?.call(!_isMicrophoneEnabled);
+      final shouldEnable = !_isEnabled;
+      await widget.onToggle?.call(shouldEnable);
+      if (mounted) setState(() => _microphoneIsEnabled = shouldEnable);
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -90,7 +144,7 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
 
   @override
   Widget build(BuildContext context) {
-    final isEnabled = _isMicrophoneEnabled;
+    final isEnabled = _isEnabled;
 
     return ActionBarButton(
       semanticsLabel: 'Microphone ${isEnabled ? 'on' : 'off'}',
@@ -99,6 +153,9 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
       child: isEnabled
           ? Builder(
               builder: (context) {
+                if (widget.audioTrack == null && _audioPublication == null) {
+                  return const TotemIcon(TotemIcons.microphoneOn);
+                }
                 return SpeakingIndicatorAudioTrack(
                   audioTrack: widget.audioTrack,
                   participant: widget.participant,

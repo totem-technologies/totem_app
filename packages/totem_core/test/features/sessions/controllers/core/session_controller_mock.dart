@@ -1,4 +1,5 @@
-import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:livekit_client/livekit_client.dart'
+    hide ConnectionState, SessionOptions;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -6,6 +7,15 @@ import 'package:totem_core/features/sessions/controllers/features/session_device
 
 import '../../livekit_mocks.dart';
 import '../features/session_device_controller_mock.dart';
+
+const testSessionOptions = SessionOptions(
+  sessionSlug: 'test-session',
+  token: 'test-token',
+  cameraEnabled: false,
+  microphoneEnabled: false,
+  speakerEnabled: true,
+  cameraOptions: SessionController.defaultCameraCaptureOptions,
+);
 
 class MockSessionController extends Mock implements SessionController {}
 
@@ -50,6 +60,7 @@ class FakeSessionController implements SessionController {
   bool disconnectFromRoomCalled = false;
   List<SessionChatMessage> addedChatMessages = [];
   bool isCurrentUserKeeperValue = false;
+  SessionOptions mockOptions = testSessionOptions;
   Room? mockRoom;
 
   @override
@@ -60,6 +71,9 @@ class FakeSessionController implements SessionController {
 
   @override
   Room? get room => mockRoom;
+
+  @override
+  SessionOptions get options => mockOptions;
 
   @override
   Future<void> disconnectFromRoom() async {

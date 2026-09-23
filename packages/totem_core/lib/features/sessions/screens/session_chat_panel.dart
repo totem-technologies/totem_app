@@ -179,21 +179,19 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
     final threadTarget = ref.watch(sessionChatThreadTargetProvider);
     final participants = ref.watch(sessionParticipantsProvider);
-    final sessionState = ref.watch(currentSessionStateProvider);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
-
-    final roomIdentity = ref
-        .watch(currentSessionProvider)
-        ?.room
-        ?.localParticipant
-        ?.identity;
+    final roomIdentity = ref.watch(localParticipantIdentityProvider);
     final localIdentity = _resolveLocalIdentity(
       roomIdentity,
       user?.slug ?? user?.email,
     );
     final keeperIdentity = _resolveKeeperIdentity(
-      roomKeeper: sessionState?.roomState.keeper,
-      spaceAuthor: ref.watch(currentSessionEventProvider)?.space.author.slug,
+      roomKeeper: ref.watch(keeperIdentityProvider),
+      spaceAuthor: ref.watch(
+        currentSessionEventProvider.select(
+          (session) => session?.space.author.slug,
+        ),
+      ),
     );
 
     final threadMessages = ref.watch(

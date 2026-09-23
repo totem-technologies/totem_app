@@ -53,6 +53,7 @@ class PreJoinView extends StatelessWidget {
     final actionBar = PrejoinActionBar(
       locked: locked,
       previewAudioTrack: mediaState.microphone.track,
+      isMicOn: preferences.isMicOn,
       onToggleMic: onToggleMicrophone,
       isSpeakerOn: preferences.isSpeakerOn,
       onToggleSpeaker: onToggleSpeaker,

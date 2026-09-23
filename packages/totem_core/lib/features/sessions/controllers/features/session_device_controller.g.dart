@@ -20,7 +20,7 @@ final class SessionDeviceControllerProvider
   }) : super(
          retry: null,
          name: r'sessionDeviceControllerProvider',
-         isAutoDispose: false,
+         isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -60,7 +60,7 @@ final class SessionDeviceControllerProvider
 }
 
 String _$sessionDeviceControllerHash() =>
-    r'42b1a3afef611ae25d25680198f48844b81916f2';
+    r'5f24c171fbf81f8b3e44b0c762ef350d44de4239';
 
 final class SessionDeviceControllerFamily extends $Family
     with
@@ -77,7 +77,7 @@ final class SessionDeviceControllerFamily extends $Family
         name: r'sessionDeviceControllerProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: false,
+        isAutoDispose: true,
       );
 
   SessionDeviceControllerProvider call(SessionController session) =>

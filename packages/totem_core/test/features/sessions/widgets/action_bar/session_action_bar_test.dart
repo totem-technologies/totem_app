@@ -2,7 +2,8 @@ import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
-import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:livekit_client/livekit_client.dart'
+    hide ConnectionState, SessionOptions;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -160,6 +161,17 @@ void main() {
 
       when(() => session.room).thenReturn(room);
       when(() => session.devices).thenReturn(deviceController);
+      when(() => session.state).thenReturn(_createSessionState());
+      when(() => session.options).thenReturn(
+        const SessionOptions(
+          sessionSlug: 'test-session',
+          token: 'test-token',
+          cameraEnabled: true,
+          microphoneEnabled: true,
+          speakerEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+        ),
+      );
       when(() => deviceController.isCameraEnabled).thenReturn(false);
       when(() => deviceController.selectedCameraDeviceId).thenReturn(null);
       when(() => deviceController.localVideoTrack).thenReturn(null);
@@ -177,6 +189,7 @@ void main() {
         () => participant.getTrackPublicationBySource(TrackSource.camera),
       ).thenReturn(null);
       when(() => participant.isMicrophoneEnabled()).thenReturn(false);
+      when(() => participant.isCameraEnabled()).thenReturn(false);
 
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
       when(() => session.session).thenReturn(_createSessionEvent());

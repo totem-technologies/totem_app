@@ -8,8 +8,8 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
-import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
+
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_status_notice.dart';
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
@@ -22,194 +22,190 @@ class ListeningTurnScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final roomStatus = ref.watch(roomStatusProvider);
+    final theme = Theme.of(context);
+
     final amNext = ref.watch(amNextSpeakerProvider);
+    final roomStatus = ref.watch(roomStatusProvider);
     final activeSpeaker = ref.watch(featuredParticipantProvider);
     final nextUp = ref.watch(speakingNextParticipantProvider);
     final hasKeeper = ref.watch(hasKeeperProvider);
 
-    return RoomBackground(
-      status: roomStatus,
-      child: ViewportResolver(
-        builder: (context, viewportKind) {
-          final theme = Theme.of(context);
-          final nextUpText = () {
-            if (roomStatus == RoomStatus.waitingRoom) {
-              if (!hasKeeper) {
-                return const SessionStatusNotice(
-                  label: 'Waiting room',
-                  message: 'Waiting for the Keeper to join',
-                );
-              }
+    return ViewportResolver(
+      builder: (context, viewportKind) {
+        final nextUpText = () {
+          if (roomStatus == RoomStatus.waitingRoom) {
+            if (!hasKeeper) {
               return const SessionStatusNotice(
-                label: 'Starting soon',
-                message: 'Your session is about to start',
+                label: 'Waiting room',
+                message: 'Waiting for the Keeper to join',
               );
-            } else if (roomStatus == RoomStatus.active) {
-              if (!hasKeeper) {
-                return Text(
-                  'The session has been paused',
-                  style: theme.textTheme.bodyLarge,
-                );
-              } else if (nextUp != null) {
-                return RichText(
-                  text: TextSpan(
-                    children: [
-                      if (amNext)
-                        const TextSpan(
-                          text: 'You are Next',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        )
-                      else ...[
-                        const TextSpan(text: 'Next up '),
-                        TextSpan(
-                          text: nextUp.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ],
-                    style: theme.textTheme.bodyLarge,
-                  ),
-                );
-              }
             }
-
-            // Return a sized box because we want the spacing to remain consistent.
-            return const SizedBox.shrink();
-          }();
-
-          final participantGrid = _ListeningTurnGrid(
-            session: session,
-            speakingNow: activeSpeaker?.identity,
-          );
-
-          final Widget? marquee = roomStatus == RoomStatus.waitingRoom
-              ? const GroundingMarquee()
-              : null;
-
-          switch (viewportKind) {
-            case ViewportKind.smallPortrait:
-              return SafeArea(
-                top: false,
-                bottom: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: 16,
+            return const SessionStatusNotice(
+              label: 'Starting soon',
+              message: 'Your session is about to start',
+            );
+          } else if (roomStatus == RoomStatus.active) {
+            if (!hasKeeper) {
+              return Text(
+                'The session has been paused',
+                style: theme.textTheme.bodyLarge,
+              );
+            } else if (nextUp != null) {
+              return RichText(
+                text: TextSpan(
                   children: [
-                    SizedBox(
-                      height: MediaQuery.heightOf(context) * 0.475,
-                      child: const FeaturedParticipantCard(),
+                    if (amNext)
+                      const TextSpan(
+                        text: 'You are Next',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      )
+                    else ...[
+                      const TextSpan(text: 'Next up '),
+                      TextSpan(
+                        text: nextUp.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ],
+                  style: theme.textTheme.bodyLarge,
+                ),
+              );
+            }
+          }
+
+          return const SizedBox.shrink();
+        }();
+        final participantGrid = _ListeningTurnGrid(
+          session: session,
+          speakingNow: activeSpeaker?.identity,
+        );
+
+        final Widget? marquee = roomStatus == RoomStatus.waitingRoom
+            ? const GroundingMarquee()
+            : null;
+
+        switch (viewportKind) {
+          case ViewportKind.smallPortrait:
+            return SafeArea(
+              top: false,
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 16,
+                children: [
+                  SizedBox(
+                    height: MediaQuery.heightOf(context) * 0.475,
+                    child: const FeaturedParticipantCard(),
+                  ),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 28,
                     ),
-                    Padding(
+                    child: nextUpText,
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
                       padding: const EdgeInsetsDirectional.symmetric(
                         horizontal: 28,
                       ),
-                      child: nextUpText,
+                      child: participantGrid,
                     ),
-                    Expanded(
-                      flex: 2,
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.symmetric(
-                          horizontal: 28,
-                        ),
-                        child: participantGrid,
-                      ),
-                    ),
-                    ?marquee,
-                    const Center(child: SessionActionBar()),
-                  ],
-                ),
-              );
-            case ViewportKind.smallLandscape:
-              final isLTR = Directionality.of(context) == TextDirection.ltr;
-              return SafeArea(
-                top: false,
-                bottom: false,
-                left: !isLTR,
-                right: isLTR,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Expanded(flex: 2, child: FeaturedParticipantCard()),
-                    Expanded(
-                      flex: 3,
-                      child: SafeArea(
-                        left: false,
-                        right: true,
-                        child: Overlay.wrap(
-                          child: Padding(
-                            padding: const EdgeInsetsDirectional.only(
-                              start: 16,
-                              end: 16,
-                              top: 16,
-                            ),
-                            child: Column(
-                              spacing: 16,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                nextUpText,
-                                Expanded(
-                                  child: Padding(
-                                    padding:
-                                        const EdgeInsetsDirectional.symmetric(
-                                          vertical: 8,
-                                        ),
-                                    child: participantGrid,
-                                  ),
+                  ),
+                  ?marquee,
+                  const Center(child: SessionActionBar()),
+                ],
+              ),
+            );
+          case ViewportKind.smallLandscape:
+            final isLTR = Directionality.of(context) == TextDirection.ltr;
+            return SafeArea(
+              top: false,
+              bottom: false,
+              left: !isLTR,
+              right: isLTR,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Expanded(flex: 2, child: FeaturedParticipantCard()),
+                  Expanded(
+                    flex: 3,
+                    child: SafeArea(
+                      left: false,
+                      right: true,
+                      child: Overlay.wrap(
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            start: 16,
+                            end: 16,
+                            top: 16,
+                          ),
+                          child: Column(
+                            spacing: 16,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              nextUpText,
+                              Expanded(
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                        vertical: 8,
+                                      ),
+                                  child: participantGrid,
                                 ),
-                                ?marquee,
-                                const Center(child: SessionActionBar()),
-                              ],
-                            ),
+                              ),
+                              ?marquee,
+                              const Center(child: SessionActionBar()),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-              );
-            case ViewportKind.mediumSmall:
-            case ViewportKind.mediumPlus:
-              return Padding(
-                padding: const EdgeInsetsDirectional.only(
-                  top: 40,
-                  bottom: 28,
-                  start: 60,
-                  end: 60,
-                ),
-                child: Column(
-                  spacing: 10,
-                  children: [
-                    const SessionTitle(),
-                    Expanded(
-                      child: Center(
-                        child: _ListeningTurnGrid(
-                          session: session,
-                          speakingNow: activeSpeaker?.identity,
-                          showSpeakingNowParticipant: true,
-                          gap: 20,
-                        ),
+                  ),
+                ],
+              ),
+            );
+          case ViewportKind.mediumSmall:
+          case ViewportKind.mediumPlus:
+            return Padding(
+              padding: const EdgeInsetsDirectional.only(
+                top: 40,
+                bottom: 28,
+                start: 60,
+                end: 60,
+              ),
+              child: Column(
+                spacing: 10,
+                children: [
+                  const SessionTitle(),
+                  Expanded(
+                    child: Center(
+                      child: _ListeningTurnGrid(
+                        session: session,
+                        speakingNow: activeSpeaker?.identity,
+                        showSpeakingNowParticipant: true,
+                        gap: 20,
                       ),
                     ),
-                    if (roomStatus == RoomStatus.waitingRoom) ...[
-                      const SizedBox.shrink(),
-                      ?marquee,
-                      const SizedBox.shrink(),
-                    ],
-                    Row(
-                      spacing: 12,
-                      children: [
-                        Expanded(child: nextUpText),
-                        const SessionActionBar(),
-                        const Spacer(),
-                      ],
-                    ),
+                  ),
+                  if (roomStatus == RoomStatus.waitingRoom) ...[
+                    const SizedBox.shrink(),
+                    ?marquee,
+                    const SizedBox.shrink(),
                   ],
-                ),
-              );
-          }
-        },
-      ),
+                  Row(
+                    spacing: 12,
+                    children: [
+                      Expanded(child: nextUpText),
+                      const SessionActionBar(),
+                      const Spacer(),
+                    ],
+                  ),
+                ],
+              ),
+            );
+        }
+      },
     );
   }
 }
@@ -229,13 +225,15 @@ class _ListeningTurnGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final participants = ref.watch(sessionParticipantsProvider);
-    final sessionState = ref.watch(currentSessionStateProvider)!;
-
+    final layout = ref.watch(
+      currentSessionStateProvider.select(sessionParticipantLayout),
+    );
+    final participants = layout.participants;
     final sortedParticipants = participantsSorting(
       originalParticipants: participants,
-      state: sessionState,
-      speakingNow: speakingNow,
+      talkingOrder: layout.talkingOrder,
+      speakingNow: speakingNow ?? layout.speakingNow,
+      nextSpeaker: layout.nextSpeaker,
       showSpeakingNow: showSpeakingNowParticipant,
     );
 

@@ -116,7 +116,7 @@ enum SessionCommunicationTopics {
   final String topic;
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 class SessionMessagingController extends _$SessionMessagingController {
   @override
   DateTime? build(SessionController session) => null;

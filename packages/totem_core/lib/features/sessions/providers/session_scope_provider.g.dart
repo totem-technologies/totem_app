@@ -8,6 +8,55 @@ part of 'session_scope_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+
+@ProviderFor(sessionParticipantKeys)
+final sessionParticipantKeysProvider = SessionParticipantKeysProvider._();
+
+final class SessionParticipantKeysProvider
+    extends
+        $FunctionalProvider<
+          SessionParticipantKeys,
+          SessionParticipantKeys,
+          SessionParticipantKeys
+        >
+    with $Provider<SessionParticipantKeys> {
+  SessionParticipantKeysProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionParticipantKeysProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionParticipantKeysHash();
+
+  @$internal
+  @override
+  $ProviderElement<SessionParticipantKeys> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SessionParticipantKeys create(Ref ref) {
+    return sessionParticipantKeys(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SessionParticipantKeys value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SessionParticipantKeys>(value),
+    );
+  }
+}
+
+String _$sessionParticipantKeysHash() =>
+    r'a60517fafb6dbdc95fbdce1da4134d007ebae239';
+
 /// Provider that will be overridden at room scope.
 /// Returns the current session options for the active room.
 
@@ -442,6 +491,63 @@ final class TurnStateProvider
 
 String _$turnStateHash() => r'2681884a14fea31b39e8e90e59ff498adad7720e';
 
+@ProviderFor(localParticipantIdentity)
+final localParticipantIdentityProvider = LocalParticipantIdentityProvider._();
+
+final class LocalParticipantIdentityProvider
+    extends $FunctionalProvider<String?, String?, String?>
+    with $Provider<String?> {
+  LocalParticipantIdentityProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'localParticipantIdentityProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[
+          currentSessionProvider,
+          connectionStateProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>{
+          LocalParticipantIdentityProvider.$allTransitiveDependencies0,
+          LocalParticipantIdentityProvider.$allTransitiveDependencies1,
+          LocalParticipantIdentityProvider.$allTransitiveDependencies2,
+          LocalParticipantIdentityProvider.$allTransitiveDependencies3,
+        },
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 = connectionStateProvider;
+  static final $allTransitiveDependencies3 =
+      ConnectionStateProvider.$allTransitiveDependencies0;
+
+  @override
+  String debugGetCreateSourceHash() => _$localParticipantIdentityHash();
+
+  @$internal
+  @override
+  $ProviderElement<String?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  String? create(Ref ref) {
+    return localParticipantIdentity(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$localParticipantIdentityHash() =>
+    r'e9c38305025a419d96cb8986654d8d5b19c178b4';
+
 @ProviderFor(resolveCurrentScreen)
 final resolveCurrentScreenProvider = ResolveCurrentScreenProvider._();
 
@@ -456,23 +562,26 @@ final class ResolveCurrentScreenProvider
         name: r'resolveCurrentScreenProvider',
         isAutoDispose: true,
         dependencies: <ProviderOrFamily>[
-          currentSessionProvider,
           currentSessionStateProvider,
-          connectionStateProvider,
+          localParticipantIdentityProvider,
         ],
         $allTransitiveDependencies: <ProviderOrFamily>{
           ResolveCurrentScreenProvider.$allTransitiveDependencies0,
           ResolveCurrentScreenProvider.$allTransitiveDependencies1,
           ResolveCurrentScreenProvider.$allTransitiveDependencies2,
           ResolveCurrentScreenProvider.$allTransitiveDependencies3,
+          ResolveCurrentScreenProvider.$allTransitiveDependencies4,
         },
       );
 
-  static final $allTransitiveDependencies0 = currentSessionProvider;
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
   static final $allTransitiveDependencies1 =
-      CurrentSessionProvider.$allTransitiveDependencies0;
-  static final $allTransitiveDependencies2 = currentSessionStateProvider;
-  static final $allTransitiveDependencies3 = connectionStateProvider;
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 = localParticipantIdentityProvider;
+  static final $allTransitiveDependencies3 =
+      LocalParticipantIdentityProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies4 =
+      LocalParticipantIdentityProvider.$allTransitiveDependencies2;
 
   @override
   String debugGetCreateSourceHash() => _$resolveCurrentScreenHash();
@@ -497,7 +606,7 @@ final class ResolveCurrentScreenProvider
 }
 
 String _$resolveCurrentScreenHash() =>
-    r'89cfb17d6ce71cc99dd82c616518b55210b28d61';
+    r'41780837d65b728589b9dc61ea2e1080c400887e';
 
 /// The list of participants in the session.
 
@@ -1086,7 +1195,7 @@ final class SessionChatUnreadThreadsProvider
 }
 
 String _$sessionChatUnreadThreadsHash() =>
-    r'a208f087beb0a2420fdf5f78f1f288158335e6af';
+    r'26894ef8f4624f90ecca15b9d25faa3749a3558f';
 
 /// Threads with messages the user has not viewed in a mounted chat panel.
 
@@ -1223,6 +1332,152 @@ final class RoundMessageProvider
 }
 
 String _$roundMessageHash() => r'abde7123ab37cc267d1221fbdc1a713e8142aa57';
+
+@ProviderFor(keeperIdentity)
+final keeperIdentityProvider = KeeperIdentityProvider._();
+
+final class KeeperIdentityProvider
+    extends $FunctionalProvider<String?, String?, String?>
+    with $Provider<String?> {
+  KeeperIdentityProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'keeperIdentityProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          KeeperIdentityProvider.$allTransitiveDependencies0,
+          KeeperIdentityProvider.$allTransitiveDependencies1,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
+
+  @override
+  String debugGetCreateSourceHash() => _$keeperIdentityHash();
+
+  @$internal
+  @override
+  $ProviderElement<String?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  String? create(Ref ref) {
+    return keeperIdentity(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$keeperIdentityHash() => r'33c31fab7c5b3cabd5681952425916f6d0d8a47b';
+
+@ProviderFor(speakingNowIdentity)
+final speakingNowIdentityProvider = SpeakingNowIdentityProvider._();
+
+final class SpeakingNowIdentityProvider
+    extends $FunctionalProvider<String, String, String>
+    with $Provider<String> {
+  SpeakingNowIdentityProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'speakingNowIdentityProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          SpeakingNowIdentityProvider.$allTransitiveDependencies0,
+          SpeakingNowIdentityProvider.$allTransitiveDependencies1,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
+
+  @override
+  String debugGetCreateSourceHash() => _$speakingNowIdentityHash();
+
+  @$internal
+  @override
+  $ProviderElement<String> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  String create(Ref ref) {
+    return speakingNowIdentity(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String>(value),
+    );
+  }
+}
+
+String _$speakingNowIdentityHash() =>
+    r'97153a1cc9e6da1c9ecf4abb4c9a8c2720d536a2';
+
+@ProviderFor(nextSpeakerIdentity)
+final nextSpeakerIdentityProvider = NextSpeakerIdentityProvider._();
+
+final class NextSpeakerIdentityProvider
+    extends $FunctionalProvider<String?, String?, String?>
+    with $Provider<String?> {
+  NextSpeakerIdentityProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'nextSpeakerIdentityProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          NextSpeakerIdentityProvider.$allTransitiveDependencies0,
+          NextSpeakerIdentityProvider.$allTransitiveDependencies1,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
+
+  @override
+  String debugGetCreateSourceHash() => _$nextSpeakerIdentityHash();
+
+  @$internal
+  @override
+  $ProviderElement<String?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  String? create(Ref ref) {
+    return nextSpeakerIdentity(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$nextSpeakerIdentityHash() =>
+    r'3e8ce1ec72b54fcadc0764ff8bfb45c11412a873';
 
 /// Whether the keeper participant is currently present in the room.
 
@@ -1533,16 +1788,24 @@ final class IsCurrentUserKeeperProvider
         retry: null,
         name: r'isCurrentUserKeeperProvider',
         isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[currentSessionProvider],
-        $allTransitiveDependencies: <ProviderOrFamily>[
+        dependencies: <ProviderOrFamily>[
+          currentSessionProvider,
+          keeperIdentityProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>{
           IsCurrentUserKeeperProvider.$allTransitiveDependencies0,
           IsCurrentUserKeeperProvider.$allTransitiveDependencies1,
-        ],
+          IsCurrentUserKeeperProvider.$allTransitiveDependencies2,
+          IsCurrentUserKeeperProvider.$allTransitiveDependencies3,
+        },
       );
 
   static final $allTransitiveDependencies0 = currentSessionProvider;
   static final $allTransitiveDependencies1 =
       CurrentSessionProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 = keeperIdentityProvider;
+  static final $allTransitiveDependencies3 =
+      KeeperIdentityProvider.$allTransitiveDependencies0;
 
   @override
   String debugGetCreateSourceHash() => _$isCurrentUserKeeperHash();
@@ -1567,7 +1830,7 @@ final class IsCurrentUserKeeperProvider
 }
 
 String _$isCurrentUserKeeperHash() =>
-    r'd54f8f6fa174808caf5f6b841000b486cec37169';
+    r'3d089eb9b7287165b5482187322a4135256857d8';
 
 /// Whether it's the current user's turn to speak.
 
@@ -1587,20 +1850,29 @@ final class IsMyTurnProvider extends $FunctionalProvider<bool, bool, bool>
         name: r'isMyTurnProvider',
         isAutoDispose: true,
         dependencies: <ProviderOrFamily>[
-          currentSessionProvider,
-          currentSessionStateProvider,
+          localParticipantIdentityProvider,
+          speakingNowIdentityProvider,
         ],
-        $allTransitiveDependencies: <ProviderOrFamily>[
+        $allTransitiveDependencies: <ProviderOrFamily>{
           IsMyTurnProvider.$allTransitiveDependencies0,
           IsMyTurnProvider.$allTransitiveDependencies1,
           IsMyTurnProvider.$allTransitiveDependencies2,
-        ],
+          IsMyTurnProvider.$allTransitiveDependencies3,
+          IsMyTurnProvider.$allTransitiveDependencies4,
+          IsMyTurnProvider.$allTransitiveDependencies5,
+        },
       );
 
-  static final $allTransitiveDependencies0 = currentSessionProvider;
+  static final $allTransitiveDependencies0 = localParticipantIdentityProvider;
   static final $allTransitiveDependencies1 =
-      CurrentSessionProvider.$allTransitiveDependencies0;
-  static final $allTransitiveDependencies2 = currentSessionStateProvider;
+      LocalParticipantIdentityProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      LocalParticipantIdentityProvider.$allTransitiveDependencies1;
+  static final $allTransitiveDependencies3 =
+      LocalParticipantIdentityProvider.$allTransitiveDependencies2;
+  static final $allTransitiveDependencies4 =
+      LocalParticipantIdentityProvider.$allTransitiveDependencies3;
+  static final $allTransitiveDependencies5 = speakingNowIdentityProvider;
 
   @override
   String debugGetCreateSourceHash() => _$isMyTurnHash();
@@ -1624,7 +1896,7 @@ final class IsMyTurnProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$isMyTurnHash() => r'3185a48fd2c924c5f5dbdb5dcbc3714f350e23e9';
+String _$isMyTurnHash() => r'48122ae72270b4e7d8bfc099bb96b89cfeb688e7';
 
 /// Whether the current user is next to speak.
 
@@ -1644,20 +1916,29 @@ final class AmNextSpeakerProvider extends $FunctionalProvider<bool, bool, bool>
         name: r'amNextSpeakerProvider',
         isAutoDispose: true,
         dependencies: <ProviderOrFamily>[
-          currentSessionProvider,
-          currentSessionStateProvider,
+          localParticipantIdentityProvider,
+          nextSpeakerIdentityProvider,
         ],
-        $allTransitiveDependencies: <ProviderOrFamily>[
+        $allTransitiveDependencies: <ProviderOrFamily>{
           AmNextSpeakerProvider.$allTransitiveDependencies0,
           AmNextSpeakerProvider.$allTransitiveDependencies1,
           AmNextSpeakerProvider.$allTransitiveDependencies2,
-        ],
+          AmNextSpeakerProvider.$allTransitiveDependencies3,
+          AmNextSpeakerProvider.$allTransitiveDependencies4,
+          AmNextSpeakerProvider.$allTransitiveDependencies5,
+        },
       );
 
-  static final $allTransitiveDependencies0 = currentSessionProvider;
+  static final $allTransitiveDependencies0 = localParticipantIdentityProvider;
   static final $allTransitiveDependencies1 =
-      CurrentSessionProvider.$allTransitiveDependencies0;
-  static final $allTransitiveDependencies2 = currentSessionStateProvider;
+      LocalParticipantIdentityProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      LocalParticipantIdentityProvider.$allTransitiveDependencies1;
+  static final $allTransitiveDependencies3 =
+      LocalParticipantIdentityProvider.$allTransitiveDependencies2;
+  static final $allTransitiveDependencies4 =
+      LocalParticipantIdentityProvider.$allTransitiveDependencies3;
+  static final $allTransitiveDependencies5 = nextSpeakerIdentityProvider;
 
   @override
   String debugGetCreateSourceHash() => _$amNextSpeakerHash();
@@ -1681,7 +1962,7 @@ final class AmNextSpeakerProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$amNextSpeakerHash() => r'fac9121165d1dc018fb2fc96eadf53038b0a264b';
+String _$amNextSpeakerHash() => r'367789500c1f18d4431062591ad70cb00e2c750e';
 
 @ProviderFor(isCameraOn)
 final isCameraOnProvider = IsCameraOnProvider._();
@@ -1695,21 +1976,16 @@ final class IsCameraOnProvider extends $FunctionalProvider<bool, bool, bool>
         retry: null,
         name: r'isCameraOnProvider',
         isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[
-          currentSessionProvider,
-          currentSessionStateProvider,
-        ],
+        dependencies: <ProviderOrFamily>[currentSessionProvider],
         $allTransitiveDependencies: <ProviderOrFamily>[
           IsCameraOnProvider.$allTransitiveDependencies0,
           IsCameraOnProvider.$allTransitiveDependencies1,
-          IsCameraOnProvider.$allTransitiveDependencies2,
         ],
       );
 
   static final $allTransitiveDependencies0 = currentSessionProvider;
   static final $allTransitiveDependencies1 =
       CurrentSessionProvider.$allTransitiveDependencies0;
-  static final $allTransitiveDependencies2 = currentSessionStateProvider;
 
   @override
   String debugGetCreateSourceHash() => _$isCameraOnHash();
@@ -1733,7 +2009,7 @@ final class IsCameraOnProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$isCameraOnHash() => r'8cd38fa32a571a61e9d32c8a2d998297e0619957';
+String _$isCameraOnHash() => r'dba9af29058febff4947ca2e89a47e72a9dc62d5';
 
 @ProviderFor(SelfViewSettings)
 final selfViewSettingsProvider = SelfViewSettingsProvider._();

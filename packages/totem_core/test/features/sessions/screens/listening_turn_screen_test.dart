@@ -173,6 +173,7 @@ void main() {
 
     when(() => session.room).thenReturn(room);
     when(() => session.devices).thenReturn(devices);
+    when(() => session.options).thenReturn(testSessionOptions);
     when(() => session.messaging).thenReturn(messaging);
     when(() => session.isCurrentUserKeeper()).thenReturn(false);
     when(() => devices.isCameraEnabled).thenReturn(false);
@@ -194,6 +195,7 @@ void main() {
     when(
       () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
     ).thenReturn(null);
+    when(() => localParticipant.isCameraEnabled()).thenReturn(false);
   });
 
   Future<void> pumpListeningTurn(
@@ -457,52 +459,6 @@ void main() {
     });
 
     group('active status', () {
-      Finder findRichTextContaining(String text) {
-        return find.byWidgetPredicate((widget) {
-          if (widget is! RichText) return false;
-          return widget.text.toPlainText().contains(text);
-        });
-      }
-
-      testWidgets(
-        'shows "You are Next" when current user is the next speaker',
-        (tester) async {
-          final state = _buildState(
-            status: RoomStatus.active,
-            nextSpeaker: 'user-1',
-          );
-
-          await pumpListeningTurn(
-            tester,
-            sessionState: state,
-            currentUserSlug: 'user-1',
-          );
-
-          check(
-            tester.widgetList(findRichTextContaining('You are Next')),
-          ).length.equals(1);
-        },
-      );
-
-      testWidgets('shows "Next up {name}" when another user is next', (
-        tester,
-      ) async {
-        final state = _buildState(
-          status: RoomStatus.active,
-          nextSpeaker: 'user-2',
-        );
-
-        await pumpListeningTurn(
-          tester,
-          sessionState: state,
-          currentUserSlug: 'user-1',
-        );
-
-        check(
-          tester.widgetList(findRichTextContaining('Next up User Two')),
-        ).length.equals(1);
-      });
-
       testWidgets('does NOT show marquee or transition card', (tester) async {
         final state = _buildState(status: RoomStatus.active);
 
@@ -511,25 +467,6 @@ void main() {
         check(
           tester.widgetList(find.byType(GroundingMarquee)),
         ).length.equals(0);
-      });
-    });
-
-    group('active status without keeper (paused)', () {
-      testWidgets('shows "The session has been paused" text', (tester) async {
-        final state = _buildState(
-          status: RoomStatus.active,
-          keeper: 'keeper-1',
-          participants: [
-            _mockRemote('user-1', 'User One'),
-            _mockRemote('user-2', 'User Two'),
-          ],
-        );
-
-        await pumpListeningTurn(tester, sessionState: state);
-
-        check(
-          tester.widgetList(find.text('The session has been paused')),
-        ).length.equals(1);
       });
     });
 

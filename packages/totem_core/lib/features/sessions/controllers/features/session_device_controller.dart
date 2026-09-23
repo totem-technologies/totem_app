@@ -78,7 +78,7 @@ class SessionDeviceState {
   }
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 class SessionDeviceController extends _$SessionDeviceController {
   SessionDeviceState _currentState() {
     return SessionDeviceState(
@@ -97,6 +97,7 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   @override
   SessionDeviceState build(SessionController session) {
+    ref.onDispose(dispose);
     return _currentState();
   }
 
@@ -105,6 +106,9 @@ class SessionDeviceController extends _$SessionDeviceController {
   StreamSubscription<void>? _becomingNoisySubscription;
   StreamSubscription<audio.AudioDevicesChangedEvent>?
   _devicesChangedSubscription;
+  Future<void>? _deviceListenerSetup;
+  int _deviceListenerGeneration = 0;
+  bool _disposed = false;
   bool _userSpeakerPreference = true;
   bool _hasExternalOutput = false;
   bool _audioRouteNotificationsEnabled = false;
@@ -138,15 +142,33 @@ class SessionDeviceController extends _$SessionDeviceController {
     _hasExternalOutput = false;
   }
 
-  Future<void> setupDeviceChangeListener() async {
+  bool _isDeviceListenerSetupCurrent(int generation) =>
+      !_disposed && generation == _deviceListenerGeneration;
+
+  Future<void> setupDeviceChangeListener() {
+    if (_disposed) return Future.value();
+    final setup = _deviceListenerSetup;
+    if (setup != null) return setup;
+
+    final generation = ++_deviceListenerGeneration;
+    final newSetup = _setupDeviceChangeListener(generation);
+    _deviceListenerSetup = newSetup;
+    return newSetup;
+  }
+
+  Future<void> _setupDeviceChangeListener(int generation) async {
     try {
       final session = await audio.AudioSession.instance;
+      if (!_isDeviceListenerSetupCurrent(generation)) return;
       await _refreshSpeakerphoneState();
+      if (!_isDeviceListenerSetupCurrent(generation)) return;
 
       final devices = await session.getDevices(includeInputs: false);
+      if (!_isDeviceListenerSetupCurrent(generation)) return;
       final hasExternalOutput = devices.any(
         (d) => externalAudioOutputTypes.contains(d.type),
       );
+      if (!_isDeviceListenerSetupCurrent(generation)) return;
       if (hasExternalOutput) {
         _hasExternalOutput = true;
         await _autoSetSpeakerphone(false);
@@ -154,7 +176,13 @@ class SessionDeviceController extends _$SessionDeviceController {
         await _autoSetSpeakerphone(_userSpeakerPreference);
       }
 
+      if (!_isDeviceListenerSetupCurrent(generation)) return;
+      await _becomingNoisySubscription?.cancel();
+      await _devicesChangedSubscription?.cancel();
+      if (!_isDeviceListenerSetupCurrent(generation)) return;
+
       _becomingNoisySubscription = session.becomingNoisyEventStream.listen((_) {
+        if (!_isDeviceListenerSetupCurrent(generation)) return;
         logger.i('Headphones unplugged, restoring to speaker.');
         _hasExternalOutput = false;
         unawaited(_autoSetSpeakerphone(true));
@@ -164,6 +192,7 @@ class SessionDeviceController extends _$SessionDeviceController {
       _devicesChangedSubscription = session.devicesChangedEventStream.listen((
         event,
       ) {
+        if (!_isDeviceListenerSetupCurrent(generation)) return;
         final addedExternal = event.devicesAdded
             .where((d) => d.isOutput)
             .any((d) => externalAudioOutputTypes.contains(d.type));
@@ -188,13 +217,18 @@ class SessionDeviceController extends _$SessionDeviceController {
         }
       });
     } catch (error, stackTrace) {
+      if (_isDeviceListenerSetupCurrent(generation)) {
+        _deviceListenerSetup = null;
+      }
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to setup device change listener',
       );
     } finally {
-      _audioRouteNotificationsEnabled = true;
+      if (_isDeviceListenerSetupCurrent(generation)) {
+        _audioRouteNotificationsEnabled = true;
+      }
     }
   }
 
@@ -434,10 +468,21 @@ class SessionDeviceController extends _$SessionDeviceController {
     _emitState();
   }
 
-  Future<void> dispose() async {
-    await _becomingNoisySubscription?.cancel();
+  Future<void> stopDeviceChangeListener() async {
+    ++_deviceListenerGeneration;
+    _audioRouteNotificationsEnabled = false;
+    final becomingNoisySubscription = _becomingNoisySubscription;
+    final devicesChangedSubscription = _devicesChangedSubscription;
     _becomingNoisySubscription = null;
-    await _devicesChangedSubscription?.cancel();
     _devicesChangedSubscription = null;
+    _deviceListenerSetup = null;
+    await becomingNoisySubscription?.cancel();
+    await devicesChangedSubscription?.cancel();
+  }
+
+  Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
+    await stopDeviceChangeListener();
   }
 }

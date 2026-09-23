@@ -29,13 +29,19 @@ class FeaturedParticipantCard extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user?.slug),
     );
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
-    final session = ref.watch(currentSessionStateProvider);
-    if (session == null) {
-      return const SizedBox.shrink();
-    }
+    final hasSession = ref.watch(
+      currentSessionStateProvider.select((session) => session != null),
+    );
+    if (!hasSession) return const SizedBox.shrink();
 
-    final sessionController = ref.watch(currentSessionProvider);
-    final activeSpeaker = session.featuredParticipant();
+    final activeSpeaker = ref.watch(featuredParticipantProvider);
+    final roomStatus = ref.watch(roomStatusProvider);
+    final hasKeeper = ref.watch(hasKeeperProvider);
+    final keeperIdentity = ref.watch(
+      currentSessionStateProvider.select(
+        (session) => session?.roomState.keeper,
+      ),
+    );
     final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
 
     final theme = Theme.of(context);
@@ -56,8 +62,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (session.roomState.status == RoomStatus.waitingRoom &&
-                !session.hasKeeper)
+            if (roomStatus == RoomStatus.waitingRoom && !hasKeeper)
               Positioned.fill(
                 child: Container(
                   color: AppTheme.slate,
@@ -127,7 +132,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               spacing: 2,
                               children: [
-                                if (session.isKeeper(activeSpeaker.identity))
+                                if (keeperIdentity == activeSpeaker.identity)
                                   Container(
                                     padding:
                                         const EdgeInsetsDirectional.symmetric(
@@ -164,22 +169,25 @@ class FeaturedParticipantCard extends ConsumerWidget {
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
                                     if (isCurrentUserKeeper &&
-                                        session.roomState.status ==
-                                            RoomStatus.active)
+                                        roomStatus == RoomStatus.active)
                                       SessionElapsedTimer(
-                                        onTap: sessionController == null
-                                            ? null
-                                            : () => unawaited(
-                                                ref
-                                                    .read(
-                                                      sessionMessagingControllerProvider(
-                                                        sessionController,
-                                                      ).notifier,
-                                                    )
-                                                    .sendShareTimeReminder(
-                                                      activeSpeaker.identity,
-                                                    ),
-                                              ),
+                                        onTap: () {
+                                          final session = ref.read(
+                                            currentSessionProvider,
+                                          );
+                                          if (session == null) return;
+                                          unawaited(
+                                            ref
+                                                .read(
+                                                  sessionMessagingControllerProvider(
+                                                    session,
+                                                  ).notifier,
+                                                )
+                                                .sendShareTimeReminder(
+                                                  activeSpeaker.identity,
+                                                ),
+                                          );
+                                        },
                                       ),
                                     SpeakingIndicatorOrEmoji(
                                       participant: activeSpeaker,
@@ -242,13 +250,14 @@ class ParticipantCard extends ConsumerWidget {
     final currentUserSlug = ref.watch(
       authControllerProvider.select((auth) => auth.user?.slug),
     );
-    final session = ref.watch(currentSessionStateProvider);
-    final sessionController = ref.watch(currentSessionProvider);
+    final presentation = ref.watch(
+      currentSessionStateProvider.select(
+        (session) =>
+            sessionParticipantPresentation(session, participant.identity),
+      ),
+    );
     final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
-
-    final isKeeper = session?.isKeeper(participant.identity) ?? false;
-    final isSpeaking = participant.identity == session?.speakingNow;
 
     const borderRadius = 20.0;
 
@@ -290,27 +299,31 @@ class ParticipantCard extends ConsumerWidget {
                               metrics: overlay,
                             ),
                             if (isCurrentUserKeeper &&
-                                isSpeaking &&
-                                session?.roomState.status == RoomStatus.active)
+                                presentation.isSpeaking &&
+                                presentation.roomStatus == RoomStatus.active)
                               SessionElapsedTimer(
-                                onTap: sessionController == null
-                                    ? null
-                                    : () => unawaited(
-                                        ref
-                                            .read(
-                                              sessionMessagingControllerProvider(
-                                                sessionController,
-                                              ).notifier,
-                                            )
-                                            .sendShareTimeReminder(
-                                              participant.identity,
-                                            ),
-                                      ),
+                                onTap: () {
+                                  final session = ref.read(
+                                    currentSessionProvider,
+                                  );
+                                  if (session == null) return;
+                                  unawaited(
+                                    ref
+                                        .read(
+                                          sessionMessagingControllerProvider(
+                                            session,
+                                          ).notifier,
+                                        )
+                                        .sendShareTimeReminder(
+                                          participant.identity,
+                                        ),
+                                  );
+                                },
                               ),
                           ],
                         ),
                       ),
-                      if (session != null &&
+                      if (presentation.hasSession &&
                           isCurrentUserKeeper &&
                           currentUserSlug != participant.identity)
                         PositionedDirectional(
@@ -322,7 +335,7 @@ class ParticipantCard extends ConsumerWidget {
                             metrics: overlay,
                           ),
                         )
-                      else if (isKeeper)
+                      else if (presentation.isKeeper)
                         PositionedDirectional(
                           top: overlayPadding,
                           end: overlayPadding,
@@ -459,31 +472,47 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void _setupListeners() {
     _listener?.dispose();
     _listener = widget.participant.createListener()
+      ..on<TrackPublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackUnpublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackSubscribedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackUnsubscribedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
       ..on<TrackMutedEvent>(_onTrackMuted)
-      ..on<TrackUnmutedEvent>(_onTrackUnmuted)
-      ..on<ParticipantEvent>(_onParticipantUpdated);
+      ..on<TrackUnmutedEvent>(_onTrackUnmuted);
+  }
+
+  void _onCameraPublicationChanged(TrackPublication<Track> publication) {
+    if (!mounted || publication.source != TrackSource.camera) return;
+    setState(() {});
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
-    if (event.publication.source != TrackSource.camera) return;
-    if (!mounted) return;
-    setState(() {});
+    _onCameraPublicationChanged(event.publication);
   }
 
   void _onTrackUnmuted(TrackUnmutedEvent event) {
-    if (event.publication.source != TrackSource.camera) return;
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  void _onParticipantUpdated(ParticipantEvent _) {
-    if (mounted) setState(() {});
+    _onCameraPublicationChanged(event.publication);
   }
 
   @override
   void initState() {
     super.initState();
     _setupListeners();
+  }
+
+  @override
+  void didUpdateWidget(covariant ParticipantVideo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.participant.sid != widget.participant.sid) {
+      _setupListeners();
+    }
   }
 
   @override
@@ -571,10 +600,17 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     );
 
     if (kDebugMode || currentUser?.isStaff == true) {
-      return _ParticipantVideoStatistics(
-        participant: widget.participant,
-        trackPublication: trackPublication,
-        child: content,
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          content,
+          Positioned.fill(
+            child: _ParticipantVideoStatistics(
+              participant: widget.participant,
+              trackPublication: trackPublication,
+            ),
+          ),
+        ],
       );
     }
 
@@ -586,12 +622,10 @@ class _ParticipantVideoStatistics extends StatefulWidget {
   const _ParticipantVideoStatistics({
     required this.participant,
     required this.trackPublication,
-    required this.child,
   });
 
   final Participant<TrackPublication<Track>> participant;
   final TrackPublication<Track>? trackPublication;
-  final Widget child;
 
   @override
   State<_ParticipantVideoStatistics> createState() =>
@@ -706,41 +740,35 @@ class _ParticipantVideoStatisticsState
       behavior: HitTestBehavior.opaque,
       onTap: () =>
           setState(() => _shouldShowStatistics = !_shouldShowStatistics),
-      child: _shouldShowStatistics
-          ? Stack(
-              fit: StackFit.expand,
-              children: [
-                widget.child,
-                Positioned.fill(
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'Bitrate: $_currentBitrate\n'
-                        'Res: ${frameWidth}x$frameHeight\n'
-                        'FPS: $fps\n'
-                        'Mime: ${mimeType ?? 'None'}\n'
-                        'Is off: $_isTrackInactive',
-                        style: const TextStyle(
-                          color: Colors.greenAccent,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          height: 1.3,
-                        ),
-                      ),
+      child: RepaintBoundary(
+        child: _shouldShowStatistics
+            ? Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Bitrate: $_currentBitrate\n'
+                    'Res: ${frameWidth}x$frameHeight\n'
+                    'FPS: $fps\n'
+                    'Mime: ${mimeType ?? 'None'}\n'
+                    'Is off: $_isTrackInactive',
+                    style: const TextStyle(
+                      color: Colors.greenAccent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      height: 1.3,
                     ),
                   ),
                 ),
-              ],
-            )
-          : widget.child,
+              )
+            : const SizedBox.expand(),
+      ),
     );
   }
 }

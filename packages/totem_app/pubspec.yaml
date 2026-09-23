@@ -43,7 +43,10 @@ dependencies:
   auto_size_text: ^3.0.0
   flutter_html: ^3.0.0
   # flutter_native_splash: ^2.4.6
-  pinput: ^6.0.1
+  pinput:
+    git:
+      url: https://github.com/qeepcologne/Flutter_Pinput/
+      ref: material-ui
   flutter_svg: ^2.2.4
   image_picker: ^1.2.2
   timeago: ^3.7.1

@@ -26,6 +26,7 @@ import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -484,6 +485,7 @@ void main() {
         () => localParticipant.setMicrophoneEnabled(false),
       ).thenAnswer((_) async => null);
       when(() => session.devices).thenReturn(devices);
+      when(() => session.options).thenReturn(testSessionOptions);
       when(() => devices.isCameraEnabled).thenReturn(false);
       when(() => devices.isMicrophoneEnabled).thenReturn(false);
       when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
@@ -629,6 +631,7 @@ void main() {
         check(
           tester.widgetList(find.byType(SessionErrorScreen)),
         ).length.equals(0);
+        check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
         await tester.pump(const Duration(seconds: 3));
       },
     );
@@ -687,6 +690,7 @@ void main() {
       check(
         tester.widgetList(find.byType(ReceiveTotemScreen)),
       ).length.equals(1);
+      check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
     });
 
     testWidgets('renders my turn screen for RoomScreen.myTurn', (tester) async {
@@ -705,6 +709,7 @@ void main() {
       check(
         tester.widgetList(find.byType(SpeakingTurnScreen)),
       ).length.equals(1);
+      check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
     });
 
     testWidgets('renders my turn screen for RoomScreen.passing', (
@@ -725,6 +730,7 @@ void main() {
       check(
         tester.widgetList(find.byType(SpeakingTurnScreen)),
       ).length.equals(1);
+      check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
     });
 
     testWidgets('clears leftover chat UI state when a room is entered', (
@@ -804,6 +810,7 @@ void main() {
       check(
         tester.widgetList(find.byType(ListeningTurnScreen)),
       ).length.equals(1);
+      check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
     });
 
     testWidgets(
@@ -1221,6 +1228,7 @@ void main() {
       final localParticipant = _buildMockParticipant('user-1');
       when(() => session.room).thenReturn(FakeRoom(localParticipant));
       when(() => session.devices).thenReturn(devices);
+      when(() => session.options).thenReturn(testSessionOptions);
       when(() => devices.isCameraEnabled).thenReturn(false);
       when(() => devices.isMicrophoneEnabled).thenReturn(false);
       when(() => devices.isSpeakerphoneEnabled).thenReturn(false);

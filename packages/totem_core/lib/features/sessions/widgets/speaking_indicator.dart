@@ -123,35 +123,44 @@ class _SpeakingIndicatorCoreState extends State<_SpeakingIndicatorCore> {
     _participantListener?.dispose();
     _participantListener = widget.participant?.createListener();
     _participantListener
-      ?..on<TrackMutedEvent>(_onTrackMuted)
-      ..on<TrackUnmutedEvent>(_onTrackUnmuted)
-      ..on<ParticipantEvent>(_onParticipantEvent);
+      ?..on<TrackPublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<TrackUnpublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<TrackSubscribedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<TrackUnsubscribedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<TrackMutedEvent>(_onTrackMuted)
+      ..on<TrackUnmutedEvent>(_onTrackUnmuted);
 
     _trackListener?.dispose();
     _trackListener = null;
     final resolvedTrack = _resolvedAudioTrack;
-    if (resolvedTrack != null) {
+    if (widget.participant == null && resolvedTrack != null) {
       _trackListener = resolvedTrack.createListener();
       _trackListener!.listen(_onTrackEvent);
     }
   }
 
-  void _onTrackMuted(TrackMutedEvent event) {
-    if (!mounted) return;
-    if (event.publication.source == TrackSource.microphone) setState(() {});
-  }
-
-  void _onTrackUnmuted(TrackUnmutedEvent event) {
-    if (!mounted) return;
-    if (event.publication.source == TrackSource.microphone) setState(() {});
-  }
-
-  void _onTrackEvent(TrackEvent event) {
-    if (!mounted) return;
+  void _onMicrophonePublicationChanged(TrackPublication<Track> publication) {
+    if (!mounted || publication.source != TrackSource.microphone) return;
     setState(() {});
   }
 
-  void _onParticipantEvent(ParticipantEvent event) {
+  void _onTrackMuted(TrackMutedEvent event) {
+    _onMicrophonePublicationChanged(event.publication);
+  }
+
+  void _onTrackUnmuted(TrackUnmutedEvent event) {
+    _onMicrophonePublicationChanged(event.publication);
+  }
+
+  void _onTrackEvent(TrackEvent event) {
     if (!mounted) return;
     setState(() {});
   }

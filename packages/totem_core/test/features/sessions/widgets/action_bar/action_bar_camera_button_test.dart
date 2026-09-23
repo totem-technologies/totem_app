@@ -1,9 +1,10 @@
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide SessionOptions;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -26,6 +27,7 @@ void main() {
   setUp(() {
     sessionController = FakeSessionController();
     participant = MockLocalParticipant();
+    when(() => participant.isCameraEnabled()).thenReturn(false);
     devices = sessionController.devices as FakeSessionDeviceController;
   });
 
@@ -406,6 +408,39 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
+    testWidgets(
+      'shows the local participant camera state when publication is unavailable',
+      (tester) async {
+        sessionController.mockOptions = const SessionOptions(
+          sessionSlug: 'test-session',
+          token: 'test-token',
+          cameraEnabled: true,
+          microphoneEnabled: false,
+          speakerEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+        );
+        when(() => participant.isCameraEnabled()).thenReturn(false);
+        when(
+          () => participant.getTrackPublicationBySource(TrackSource.camera),
+        ).thenReturn(null);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SessionActionBarCameraButton(
+                session: sessionController,
+                participant: participant,
+              ),
+            ),
+          ),
+        );
+
+        check(
+          tester.widgetList(find.bySemanticsLabel('Camera on')),
+        ).length.equals(1);
+      },
+    );
+
     testWidgets('toggling camera when tapped', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -424,12 +459,8 @@ void main() {
       check(devices.enableCameraCalled).equals(true);
       check(devices.disableCameraCalled).equals(false);
 
-      // force disabled state
-      when(
-        () => participant.getTrackPublicationBySource(TrackSource.camera),
-      ).thenAnswer(
-        (_) => MockLocalTrackPublication(muted: false, isActive: true),
-      );
+      // Model LiveKit's canonical local camera state after enabling it.
+      when(() => participant.isCameraEnabled()).thenReturn(true);
 
       await tester.tap(find.byType(ActionBarButton));
       await tester.pumpAndSettle();

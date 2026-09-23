@@ -7,6 +7,7 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
+import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
@@ -44,28 +45,40 @@ class SessionErrorScreen extends ConsumerWidget {
     if (resolvedError is RoomErrorResponse) {
       switch (resolvedError.code) {
         case ErrorCode.banned:
-          return SessionDisconnectedScreen(
-            session: session,
-            sessionDisconnectedReason: SessionDisconnectedReason.banned,
+          return RoomBackground(
+            status: RoomStatus.ended,
+            child: SessionDisconnectedScreen(
+              session: session,
+              sessionDisconnectedReason: SessionDisconnectedReason.banned,
+            ),
           );
         case ErrorCode.keeperNotInRoom:
-          return SessionDisconnectedScreen(
-            session: session,
-            sessionDisconnectedReason: SessionDisconnectedReason.keeperAbsent,
+          return RoomBackground(
+            status: RoomStatus.ended,
+            child: SessionDisconnectedScreen(
+              session: session,
+              sessionDisconnectedReason: SessionDisconnectedReason.keeperAbsent,
+            ),
           );
         case ErrorCode.roomAlreadyEnded:
         case ErrorCode.notJoinable:
         case ErrorCode.roomNotActive:
-          return SessionDisconnectedScreen(
-            session: session,
-            sessionDisconnectedReason: SessionDisconnectedReason.keeperEnded,
+          return RoomBackground(
+            status: RoomStatus.ended,
+            child: SessionDisconnectedScreen(
+              session: session,
+              sessionDisconnectedReason: SessionDisconnectedReason.keeperEnded,
+            ),
           );
         case ErrorCode.notInRoom:
         case ErrorCode.notFound:
         case ErrorCode.livekitError:
-          return SessionDisconnectedScreen(
-            session: session,
-            sessionDisconnectedReason: SessionDisconnectedReason.other,
+          return RoomBackground(
+            status: RoomStatus.ended,
+            child: SessionDisconnectedScreen(
+              session: session,
+              sessionDisconnectedReason: SessionDisconnectedReason.other,
+            ),
           );
         default:
           break;

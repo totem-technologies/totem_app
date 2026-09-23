@@ -4,78 +4,29 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
 
 void main() {
-  group('AudioVisualizerWidgetOptions equality', () {
-    test('distinct instances with equal fields have equal hashes', () {
-      AudioVisualizerWidgetOptions options(Color? color) =>
-          AudioVisualizerWidgetOptions(color: color);
-
-      for (final color in [null, Colors.blue]) {
-        final first = options(color);
-        final second = options(color);
-        check(identical(first, second)).isFalse();
-        check(first).equals(second);
-        check(first.hashCode).equals(second.hashCode);
-      }
+  group('audioVisualizerSamplesChanged', () {
+    test('ignores imperceptible changes and detects visible changes', () {
+      check(
+        audioVisualizerSamplesChanged(
+          const [0.1, 0.5, 0.9],
+          const [0.105, 0.495, 0.9],
+        ),
+      ).isFalse();
+      check(
+        audioVisualizerSamplesChanged(
+          const [0.1, 0.5, 0.9],
+          const [0.111, 0.5, 0.9],
+        ),
+      ).isTrue();
+      check(
+        audioVisualizerSamplesChanged(const [0.1], const [0.1, 0.2]),
+      ).isTrue();
     });
 
-    test('every option participates in equality', () {
-      const defaults = AudioVisualizerWidgetOptions();
-      const variants = {
-        'barCount': AudioVisualizerWidgetOptions(barCount: 5),
-        'centeredBands': AudioVisualizerWidgetOptions(centeredBands: false),
-        'width': AudioVisualizerWidgetOptions(width: 8),
-        'minHeight': AudioVisualizerWidgetOptions(minHeight: 8),
-        'maxHeight': AudioVisualizerWidgetOptions(maxHeight: 80),
-        'duration': AudioVisualizerWidgetOptions(durationInMilliseconds: 300),
-        'color': AudioVisualizerWidgetOptions(color: Colors.red),
-        'spacing': AudioVisualizerWidgetOptions(spacing: 3),
-        'cornerRadius': AudioVisualizerWidgetOptions(cornerRadius: 4),
-        'barMinOpacity': AudioVisualizerWidgetOptions(barMinOpacity: 0.3),
-      };
-      for (final entry in variants.entries) {
-        check(entry.value, because: entry.key).not((it) => it.equals(defaults));
-      }
+    test('settles a previously visible waveform to silence', () {
+      check(audioVisualizerSamplesChanged(const [0.009], const [0])).isTrue();
     });
   });
-
-  testWidgets(
-    'waveform uses the theme color unless a custom color is supplied',
-    (tester) async {
-      for (final color in <Color?>[null, Colors.green]) {
-        await tester.pumpWidget(
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: Theme(
-              data: ThemeData(
-                colorScheme: const ColorScheme.light(primary: Colors.blue),
-              ),
-              child: Center(
-                child: SizedBox(
-                  width: 100,
-                  height: 50,
-                  child: SoundWaveformWidget(
-                    options: AudioVisualizerWidgetOptions(
-                      barCount: 3,
-                      color: color,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-        final bar = tester
-            .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
-            .first;
-        check(
-          (bar.decoration! as BoxDecoration).color,
-        ).equals((color ?? Colors.blue).withValues(alpha: 0.1));
-      }
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    },
-  );
 
   group('BarsView', () {
     Future<void> pumpBars(

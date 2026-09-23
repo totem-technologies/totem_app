@@ -320,7 +320,11 @@ class _ActionBarCameraSwitcherButtonOverlayState
     if (_isDismissing) return;
     _isDismissing = true;
 
-    await _overlayAnimationController.reverse();
+    try {
+      await _overlayAnimationController.reverse().orCancel;
+    } on TickerCanceled {
+      return;
+    }
     if (mounted) {
       widget.onDismissOverlay();
     }
@@ -574,6 +578,7 @@ class SessionActionBarCameraButton extends StatefulWidget {
 class _SessionActionBarCameraButtonState
     extends State<SessionActionBarCameraButton> {
   bool _busy = false;
+  late bool _cameraIsEnabled = _initialCameraEnabled();
   List<MediaDevice> _availableCameraDevices = [];
   StreamSubscription<List<MediaDevice>>? _cameraDevicesSubscription;
   EventsListener<ParticipantEvent>? _participantListener;
@@ -589,6 +594,9 @@ class _SessionActionBarCameraButtonState
   void didUpdateWidget(covariant SessionActionBarCameraButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.participant.sid != widget.participant.sid) {
+      _cameraIsEnabled =
+          widget.participant.isCameraEnabled() ||
+          widget.session.options.cameraEnabled;
       _bindParticipantListener();
     }
   }
@@ -603,9 +611,47 @@ class _SessionActionBarCameraButtonState
   void _bindParticipantListener() {
     _participantListener?.dispose();
     _participantListener = widget.participant.createListener()
-      ..on<ParticipantEvent>((_) {
-        if (mounted) setState(() {});
-      });
+      ..on<TrackPublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackUnpublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<LocalTrackPublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<LocalTrackUnpublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackMutedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<TrackUnmutedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      );
+  }
+
+  bool _initialCameraEnabled() {
+    final publication = widget.participant.getTrackPublicationBySource(
+      TrackSource.camera,
+    );
+    if (publication != null) {
+      final track = publication.track;
+      final isMuted = track?.muted ?? publication.muted;
+      final isActive = track?.isActive ?? true;
+      return isActive && !isMuted;
+    }
+
+    if (widget.participant.isCameraEnabled()) return true;
+    return widget.session.options.cameraEnabled;
+  }
+
+  void _onCameraPublicationChanged(TrackPublication<Track> publication) {
+    if (!mounted || publication.source != TrackSource.camera) return;
+    final track = publication.track;
+    final isMuted = track?.muted ?? publication.muted;
+    final isActive = track?.isActive ?? true;
+    setState(() => _cameraIsEnabled = isActive && !isMuted);
   }
 
   void _listenToCameraDevices() {
@@ -621,29 +667,14 @@ class _SessionActionBarCameraButtonState
     );
 
     Hardware.instance.videoInputs().then((devices) {
-      _availableCameraDevices = devices;
       if (!mounted) return;
-      setState(() {});
+      setState(() => _availableCameraDevices = devices);
     });
-  }
-
-  TrackPublication<Track>? get _cameraPublication {
-    return widget.participant.getTrackPublicationBySource(TrackSource.camera);
-  }
-
-  bool get _isCameraEnabled {
-    final publication = _cameraPublication;
-    if (publication == null) return false;
-
-    final track = publication.track;
-    final isMuted = track?.muted ?? publication.muted;
-    final isActive = track?.isActive ?? true;
-    return isActive && !isMuted;
   }
 
   Future<void> _toggleCamera() async {
     final session = widget.session;
-    final shouldEnable = !_isCameraEnabled;
+    final shouldEnable = !_cameraIsEnabled;
 
     setState(() => _busy = true);
 
@@ -653,9 +684,12 @@ class _SessionActionBarCameraButtonState
       await session.devices.disableCamera();
     }
 
-    _busy = false;
-
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {
+        _busy = false;
+        _cameraIsEnabled = shouldEnable;
+      });
+    }
   }
 
   @override
@@ -665,24 +699,25 @@ class _SessionActionBarCameraButtonState
 
     if (!isDesktopPicker) {
       return ActionBarButton(
-        semanticsLabel: 'Camera ${_isCameraEnabled ? 'on' : 'off'}',
-        role: ActionBarButtonRole.media(enabled: _isCameraEnabled),
+        semanticsLabel: 'Camera ${_cameraIsEnabled ? 'on' : 'off'}',
+        role: ActionBarButtonRole.media(enabled: _cameraIsEnabled),
         onPressed: _busy ? null : _toggleCamera,
         child: TotemIcon(
-          _isCameraEnabled ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+          _cameraIsEnabled ? TotemIcons.cameraOn : TotemIcons.cameraOff,
         ),
       );
     }
 
     return ActionBarCameraSwitcherButton(
-      isCameraOn: _isCameraEnabled,
+      isCameraOn: _cameraIsEnabled,
       onToggle: () async {
-        if (_isCameraEnabled) {
-          await session.devices.disableCamera();
-        } else {
+        final shouldEnable = !_cameraIsEnabled;
+        if (shouldEnable) {
           await session.devices.enableCamera();
+        } else {
+          await session.devices.disableCamera();
         }
-        if (mounted) setState(() {});
+        if (mounted) setState(() => _cameraIsEnabled = shouldEnable);
       },
       cameraPosition: CameraPosition.front,
       availableCameraDevices: _availableCameraDevices,

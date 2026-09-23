@@ -346,6 +346,7 @@ class PrejoinActionBar extends StatefulWidget {
   const PrejoinActionBar({
     required this.locked,
     required this.previewAudioTrack,
+    required this.isMicOn,
     required this.onToggleMic,
     required this.isSpeakerOn,
     required this.onToggleSpeaker,
@@ -360,6 +361,7 @@ class PrejoinActionBar extends StatefulWidget {
 
   final bool locked;
   final LocalAudioTrack? previewAudioTrack;
+  final bool isMicOn;
   final AsyncCallback onToggleMic;
   final bool isSpeakerOn;
   final VoidCallback onToggleSpeaker;
@@ -418,6 +420,7 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
         ActionBarMicButton(
           participant: null,
           audioTrack: widget.previewAudioTrack,
+          isMicOn: widget.isMicOn,
           onToggle: !widget.locked ? (v) => widget.onToggleMic() : null,
         ),
         // ActionBarSpeakerButton(
@@ -459,6 +462,7 @@ class SessionActionBar extends ConsumerWidget {
 
     final microphoneButton = ActionBarMicButton(
       participant: user,
+      initiallyEnabled: session.options.microphoneEnabled,
       onToggle: (shouldEnable) async {
         if (shouldEnable) {
           await session.devices.enableMicrophone();
@@ -522,10 +526,11 @@ class _ActionBarMoreButtonState extends ConsumerState<_ActionBarMoreButton> {
 
   @override
   Widget build(BuildContext context) {
-    final session = ref.watch(currentSessionProvider);
-    final state = ref.watch(currentSessionStateProvider);
-    final sessionEvent = session?.session;
-    final canOpen = sessionEvent != null && state != null;
+    final sessionEvent = ref.watch(currentSessionEventProvider);
+    final hasSessionState = ref.watch(
+      currentSessionStateProvider.select((state) => state != null),
+    );
+    final canOpen = sessionEvent != null && hasSessionState;
     final tooltip = MaterialLocalizations.of(context).moreButtonTooltip;
 
     return ExcludeFocus(
@@ -538,7 +543,10 @@ class _ActionBarMoreButtonState extends ConsumerState<_ActionBarMoreButton> {
               ? () async {
                   setState(() => _open = true);
                   try {
-                    await showOptionsSheet(context, state, sessionEvent);
+                    final state = ref.read(currentSessionStateProvider);
+                    if (state != null) {
+                      await showOptionsSheet(context, state, sessionEvent);
+                    }
                   } finally {
                     if (mounted) setState(() => _open = false);
                   }

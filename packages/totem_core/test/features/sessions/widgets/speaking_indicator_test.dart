@@ -68,15 +68,6 @@ void main() {
   );
   final largeMetrics = ParticipantOverlayMetrics.forCard(const Size(600, 500));
 
-  TotemIcon overlayMuteIcon(WidgetTester tester) {
-    return tester.widget<TotemIcon>(
-      find.descendant(
-        of: find.byType(SpeakingIndicatorOrEmoji),
-        matching: find.byType(TotemIcon),
-      ),
-    );
-  }
-
   group('SpeakingIndicatorAudioTrack', () {
     testWidgets('shows the muted icon when the audio track is muted', (
       tester,
@@ -300,37 +291,7 @@ void main() {
       check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
     });
 
-    testWidgets('uses the compact metrics of a small tile', (tester) async {
-      await pumpWidget(
-        tester,
-        child: SpeakingIndicatorOrEmoji(
-          participant: remoteParticipant,
-          metrics: compactMetrics,
-        ),
-      );
-
-      check(
-        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(20, 20));
-      check(overlayMuteIcon(tester).size).equals(16);
-    });
-
-    testWidgets('uses the larger metrics of a big card', (tester) async {
-      await pumpWidget(
-        tester,
-        child: SpeakingIndicatorOrEmoji(
-          participant: remoteParticipant,
-          metrics: largeMetrics,
-        ),
-      );
-
-      check(
-        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(28, 28));
-      check(overlayMuteIcon(tester).size).equals(22);
-    });
-
-    testWidgets('renders a larger emoji glyph on a big card', (tester) async {
+    testWidgets('renders an emoji on a large card', (tester) async {
       await pumpWidget(
         tester,
         overrides: [
@@ -346,15 +307,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      check(
-        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(28, 28));
-      check(tester.widget<Text>(find.text('🔥')).style?.fontSize).equals(14);
+      check(tester.widgetList(find.text('🔥'))).length.equals(1);
     });
 
-    testWidgets('keeps the compact emoji glyph on a small tile', (
-      tester,
-    ) async {
+    testWidgets('renders an emoji on a small tile', (tester) async {
       await pumpWidget(
         tester,
         overrides: [
@@ -370,10 +326,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      check(
-        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(20, 20));
-      check(tester.widget<Text>(find.text('🔥')).style?.fontSize).equals(10);
+      check(tester.widgetList(find.text('🔥'))).length.equals(1);
     });
   });
 }

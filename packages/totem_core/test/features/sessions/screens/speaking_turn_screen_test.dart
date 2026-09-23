@@ -189,6 +189,7 @@ void main() {
     when(() => session.keeper).thenReturn(keeper);
     when(() => session.devices).thenReturn(devices);
     when(() => session.messaging).thenReturn(messaging);
+    when(() => session.options).thenReturn(testSessionOptions);
     when(() => session.isCurrentUserKeeper()).thenReturn(true);
     when(() => devices.isCameraEnabled).thenReturn(false);
     when(() => devices.isMicrophoneEnabled).thenReturn(false);
@@ -209,6 +210,7 @@ void main() {
     when(
       () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
     ).thenReturn(null);
+    when(() => localParticipant.isCameraEnabled()).thenReturn(false);
   });
 
   Future<void> pumpSpeakingTurn(

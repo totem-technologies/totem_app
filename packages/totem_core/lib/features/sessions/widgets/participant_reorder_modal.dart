@@ -45,25 +45,34 @@ class _ParticipantReorderWidgetState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final session = ref.watch(currentSessionProvider)!;
-    final sessionState = ref.watch(currentSessionStateProvider)!;
+    final sessionState = ref.watch(
+      currentSessionStateProvider.select(
+        (state) => state == null
+            ? null
+            : (
+                participants: state.participantsList,
+                talkingOrder: state.roomState.talkingOrder,
+                keeper: state.roomState.keeper,
+                speakingNow: state.speakingNow,
+              ),
+      ),
+    );
+    if (sessionState == null) return const SizedBox.shrink();
 
     if (!_initialized) {
-      final roomParticipants = sessionState.participantsList
+      final roomParticipants = sessionState.participants
           .map((p) => p.identity)
           .toSet();
-      _localOrder = sessionState.roomState.talkingOrder.isEmpty
-          ? {sessionState.roomState.keeper, ...roomParticipants}.toList()
+      _localOrder = sessionState.talkingOrder.isEmpty
+          ? {sessionState.keeper, ...roomParticipants}.toList()
           : Set<String>.from(
-              sessionState.roomState.talkingOrder.where(
-                roomParticipants.contains,
-              ),
+              sessionState.talkingOrder.where(roomParticipants.contains),
             ).toList();
       _initialized = true;
     }
 
     final participants = _localOrder;
-    final keeperSlug = sessionState.roomState.keeper;
+    final keeperSlug = sessionState.keeper;
     final reorderableParticipants = participants
         .where((participant) => participant != keeperSlug)
         .toList();
@@ -133,7 +142,7 @@ class _ParticipantReorderWidgetState
                             child: _ParticipantReorderItem(
                               key: ValueKey(keeperSlug),
                               participantIdentity: keeperSlug,
-                              participant: sessionState.participantsList
+                              participant: sessionState.participants
                                   .firstWhereOrNull(
                                     (p) => p.identity == keeperSlug,
                                   ),
@@ -199,7 +208,7 @@ class _ParticipantReorderWidgetState
                               final participantIdentity =
                                   reorderableParticipants[index];
 
-                              final participant = sessionState.participantsList
+                              final participant = sessionState.participants
                                   .firstWhereOrNull(
                                     (p) => p.identity == participantIdentity,
                                   );
@@ -275,6 +284,13 @@ class _ParticipantReorderWidgetState
                                         ? null
                                         : () async {
                                             setState(() => _loading = true);
+                                            final session = ref.read(
+                                              currentSessionProvider,
+                                            );
+                                            if (session == null) {
+                                              setState(() => _loading = false);
+                                              return;
+                                            }
                                             final wasSaved =
                                                 await _updateParticipantOrder(
                                                   session,
