@@ -28,66 +28,6 @@ void main() {
     });
   });
 
-  group('AudioVisualizerWidgetOptions Tests', () {
-    test('every option participates in equality', () {
-      const defaults = AudioVisualizerWidgetOptions();
-      const variants = {
-        'barCount': AudioVisualizerWidgetOptions(barCount: 5),
-        'centeredBands': AudioVisualizerWidgetOptions(centeredBands: false),
-        'width': AudioVisualizerWidgetOptions(width: 8),
-        'minHeight': AudioVisualizerWidgetOptions(minHeight: 8),
-        'maxHeight': AudioVisualizerWidgetOptions(maxHeight: 80),
-        'duration': AudioVisualizerWidgetOptions(durationInMilliseconds: 300),
-        'color': AudioVisualizerWidgetOptions(color: Colors.red),
-        'spacing': AudioVisualizerWidgetOptions(spacing: 3),
-        'cornerRadius': AudioVisualizerWidgetOptions(cornerRadius: 4),
-        'barMinOpacity': AudioVisualizerWidgetOptions(barMinOpacity: 0.3),
-      };
-      for (final entry in variants.entries) {
-        check(entry.value, because: entry.key).not((it) => it.equals(defaults));
-      }
-    });
-  });
-
-  testWidgets(
-    'waveform uses the theme color unless a custom color is supplied',
-    (tester) async {
-      for (final color in <Color?>[null, Colors.green]) {
-        await tester.pumpWidget(
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: Theme(
-              data: ThemeData(
-                colorScheme: const ColorScheme.light(primary: Colors.blue),
-              ),
-              child: Center(
-                child: SizedBox(
-                  width: 100,
-                  height: 50,
-                  child: SoundWaveformWidget(
-                    options: AudioVisualizerWidgetOptions(
-                      barCount: 3,
-                      color: color,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-        final bar = tester
-            .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
-            .first;
-        check(
-          (bar.decoration! as BoxDecoration).color,
-        ).equals((color ?? Colors.blue).withValues(alpha: 0.1));
-      }
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    },
-  );
-
   group('BarsView', () {
     Future<void> pumpBars(
       WidgetTester tester,

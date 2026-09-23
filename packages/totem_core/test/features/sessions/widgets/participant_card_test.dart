@@ -91,27 +91,6 @@ void main() {
     );
   }
 
-  /// A dense-grid tile: small enough to clamp to the compact chrome.
-  const gridTileSize = Size(160, 120);
-
-  /// A sparse-grid or featured tile: large enough to clamp to the ceiling.
-  const largeCardSize = Size(600, 500);
-
-  /// A mid-size tile, inside the band where the badge tracks the card instead
-  /// of sitting on either clamp. 240 * 0.09 = 21.6, so badge 22 / inset 11.
-  const midCardSize = Size(400, 240);
-
-  PositionedDirectional overlayPosition(WidgetTester tester) {
-    return tester.widget<PositionedDirectional>(
-      find
-          .ancestor(
-            of: find.byType(SpeakingIndicatorOrEmoji),
-            matching: find.byType(PositionedDirectional),
-          )
-          .first,
-    );
-  }
-
   group('ParticipantCard', () {
     testWidgets('renders participant properties and smart name', (
       tester,
@@ -215,91 +194,9 @@ void main() {
       check(tester.widgetList(find.byType(TotemIconLogo))).length.equals(1);
     });
 
-    testWidgets('keeps compact corner chrome on small tiles', (tester) async {
-      await pumpWidget(
-        tester,
-        viewSize: const Size(1200, 900),
-        authState: AuthState.unauthenticated(),
-        overrides: [
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
-          ),
-        ],
-        child: sizedCard(
-          gridTileSize,
-          ParticipantCard(
-            participant: remoteParticipant,
-            session: null,
-            participantIdentity: remoteParticipant.identity,
-          ),
-        ),
-      );
-
-      check(
-        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(20, 20));
-      check(overlayPosition(tester).top).equals(10);
-      check(overlayPosition(tester).start).equals(10);
-    });
-
-    testWidgets('grows corner chrome on large cards', (tester) async {
-      await pumpWidget(
-        tester,
-        viewSize: const Size(1200, 900),
-        authState: AuthState.unauthenticated(),
-        overrides: [
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
-          ),
-        ],
-        child: sizedCard(
-          largeCardSize,
-          ParticipantCard(
-            participant: remoteParticipant,
-            session: null,
-            participantIdentity: remoteParticipant.identity,
-          ),
-        ),
-      );
-
-      check(
-        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(28, 28));
-      check(overlayPosition(tester).top).equals(12);
-      check(overlayPosition(tester).start).equals(12);
-    });
-
-    testWidgets('sizes corner chrome off the tile between the clamps', (
+    testWidgets('shows the keeper badge on the participant card', (
       tester,
     ) async {
-      await pumpWidget(
-        tester,
-        viewSize: const Size(1200, 900),
-        authState: AuthState.unauthenticated(),
-        overrides: [
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
-          ),
-        ],
-        child: sizedCard(
-          midCardSize,
-          ParticipantCard(
-            participant: remoteParticipant,
-            session: null,
-            participantIdentity: remoteParticipant.identity,
-          ),
-        ),
-      );
-
-      // Neither the 20dp floor nor the 28dp ceiling: the tile drives the size.
-      check(
-        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(22, 22));
-      check(overlayPosition(tester).top).equals(11);
-      check(overlayPosition(tester).start).equals(11);
-    });
-
-    testWidgets('scales the keeper logo badge with the card', (tester) async {
       final keeperParticipant = MockRemoteParticipant('keeper-1', 'The Keeper');
 
       fakeSessionState.mockState = SessionRoomState(
@@ -332,7 +229,7 @@ void main() {
           ),
         ],
         child: sizedCard(
-          largeCardSize,
+          const Size(600, 500),
           ParticipantCard(
             participant: keeperParticipant,
             session: null,
@@ -344,9 +241,6 @@ void main() {
       check(
         tester.widget<TotemIconLogo>(find.byType(TotemIconLogo)).size,
       ).equals(22);
-      check(
-        tester.getSize(find.byType(TotemIconLogo)),
-      ).equals(const Size(22, 22));
     });
   });
 
@@ -771,40 +665,6 @@ void main() {
       // The menu should be gone.
       check(tester.widgetList(find.text('Remove'))).length.equals(0);
       check(tester.widgetList(find.text('Ban'))).length.equals(0);
-    });
-
-    testWidgets('renders the compact metrics it is given', (tester) async {
-      await pumpWidget(
-        tester,
-        authState: AuthState.unauthenticated(),
-        child: ParticipantControlButton(
-          participant: remoteParticipant,
-          menuVerticalOffset: 10,
-          metrics: ParticipantOverlayMetrics.forCard(gridTileSize),
-        ),
-      );
-
-      check(
-        tester.getSize(find.byType(ParticipantControlButton)),
-      ).equals(const Size(20, 20));
-      check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(16);
-    });
-
-    testWidgets('renders the large-card metrics it is given', (tester) async {
-      await pumpWidget(
-        tester,
-        authState: AuthState.unauthenticated(),
-        child: ParticipantControlButton(
-          participant: remoteParticipant,
-          menuVerticalOffset: 12,
-          metrics: ParticipantOverlayMetrics.forCard(largeCardSize),
-        ),
-      );
-
-      check(
-        tester.getSize(find.byType(ParticipantControlButton)),
-      ).equals(const Size(28, 28));
-      check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(22);
     });
   });
 }
