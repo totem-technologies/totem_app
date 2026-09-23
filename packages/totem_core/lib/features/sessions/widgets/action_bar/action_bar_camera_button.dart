@@ -578,9 +578,7 @@ class SessionActionBarCameraButton extends StatefulWidget {
 class _SessionActionBarCameraButtonState
     extends State<SessionActionBarCameraButton> {
   bool _busy = false;
-  late bool _cameraIsEnabled =
-      widget.participant.isCameraEnabled() ||
-      widget.session.options.cameraEnabled;
+  late bool _cameraIsEnabled = _initialCameraEnabled();
   List<MediaDevice> _availableCameraDevices = [];
   StreamSubscription<List<MediaDevice>>? _cameraDevicesSubscription;
   EventsListener<ParticipantEvent>? _participantListener;
@@ -619,12 +617,33 @@ class _SessionActionBarCameraButtonState
       ..on<TrackUnpublishedEvent>(
         (event) => _onCameraPublicationChanged(event.publication),
       )
+      ..on<LocalTrackPublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<LocalTrackUnpublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
       ..on<TrackMutedEvent>(
         (event) => _onCameraPublicationChanged(event.publication),
       )
       ..on<TrackUnmutedEvent>(
         (event) => _onCameraPublicationChanged(event.publication),
       );
+  }
+
+  bool _initialCameraEnabled() {
+    final publication = widget.participant.getTrackPublicationBySource(
+      TrackSource.camera,
+    );
+    if (publication != null) {
+      final track = publication.track;
+      final isMuted = track?.muted ?? publication.muted;
+      final isActive = track?.isActive ?? true;
+      return isActive && !isMuted;
+    }
+
+    if (widget.participant.isCameraEnabled()) return true;
+    return widget.session.options.cameraEnabled;
   }
 
   void _onCameraPublicationChanged(TrackPublication<Track> publication) {

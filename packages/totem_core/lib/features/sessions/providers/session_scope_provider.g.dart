@@ -8,6 +8,55 @@ part of 'session_scope_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+
+@ProviderFor(sessionParticipantKeys)
+final sessionParticipantKeysProvider = SessionParticipantKeysProvider._();
+
+final class SessionParticipantKeysProvider
+    extends
+        $FunctionalProvider<
+          SessionParticipantKeys,
+          SessionParticipantKeys,
+          SessionParticipantKeys
+        >
+    with $Provider<SessionParticipantKeys> {
+  SessionParticipantKeysProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionParticipantKeysProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionParticipantKeysHash();
+
+  @$internal
+  @override
+  $ProviderElement<SessionParticipantKeys> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SessionParticipantKeys create(Ref ref) {
+    return sessionParticipantKeys(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SessionParticipantKeys value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SessionParticipantKeys>(value),
+    );
+  }
+}
+
+String _$sessionParticipantKeysHash() =>
+    r'a60517fafb6dbdc95fbdce1da4134d007ebae239';
+
 /// Provider that will be overridden at room scope.
 /// Returns the current session options for the active room.
 
@@ -557,7 +606,7 @@ final class ResolveCurrentScreenProvider
 }
 
 String _$resolveCurrentScreenHash() =>
-    r'71625bdfd68d11d64f7e4cbbe0d252c250752d86';
+    r'41780837d65b728589b9dc61ea2e1080c400887e';
 
 /// The list of participants in the session.
 

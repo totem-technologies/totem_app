@@ -22,8 +22,12 @@ class ListeningTurnScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    final amNext = ref.watch(amNextSpeakerProvider);
     final roomStatus = ref.watch(roomStatusProvider);
     final activeSpeaker = ref.watch(featuredParticipantProvider);
+    final nextUp = ref.watch(speakingNextParticipantProvider);
     final hasKeeper = ref.watch(hasKeeperProvider);
 
     return ViewportResolver(
@@ -40,6 +44,33 @@ class ListeningTurnScreen extends ConsumerWidget {
               label: 'Starting soon',
               message: 'Your session is about to start',
             );
+          } else if (roomStatus == RoomStatus.active) {
+            if (!hasKeeper) {
+              return Text(
+                'The session has been paused',
+                style: theme.textTheme.bodyLarge,
+              );
+            } else if (nextUp != null) {
+              return RichText(
+                text: TextSpan(
+                  children: [
+                    if (amNext)
+                      const TextSpan(
+                        text: 'You are Next',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      )
+                    else ...[
+                      const TextSpan(text: 'Next up '),
+                      TextSpan(
+                        text: nextUp.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ],
+                  style: theme.textTheme.bodyLarge,
+                ),
+              );
+            }
           }
 
           return const SizedBox.shrink();

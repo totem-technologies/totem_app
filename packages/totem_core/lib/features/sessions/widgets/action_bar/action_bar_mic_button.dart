@@ -38,8 +38,7 @@ class ActionBarMicButton extends StatefulWidget {
 class _ActionBarMicButtonState extends State<ActionBarMicButton> {
   EventsListener<ParticipantEvent>? _participantListener;
   bool _busy = false;
-  late bool _microphoneIsEnabled =
-      widget.initiallyEnabled ?? _microphoneEnabledFromMedia();
+  late bool _microphoneIsEnabled = _initialMicrophoneEnabled();
 
   @override
   void initState() {
@@ -51,8 +50,7 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
   void didUpdateWidget(covariant ActionBarMicButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.participant?.sid != widget.participant?.sid) {
-      _microphoneIsEnabled =
-          widget.initiallyEnabled ?? _microphoneEnabledFromMedia();
+      _microphoneIsEnabled = _initialMicrophoneEnabled();
       _bindListener();
     }
   }
@@ -65,6 +63,12 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
         (event) => _onMicrophonePublicationChanged(event.publication),
       )
       ..on<TrackUnpublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<LocalTrackPublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<LocalTrackUnpublishedEvent>(
         (event) => _onMicrophonePublicationChanged(event.publication),
       )
       ..on<TrackMutedEvent>(
@@ -91,6 +95,17 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
     return widget.participant?.getTrackPublicationBySource(
       TrackSource.microphone,
     );
+  }
+
+  bool _initialMicrophoneEnabled() {
+    if (widget.isMicOn != null) return widget.isMicOn!;
+
+    final publication = _audioPublication;
+    if (widget.audioTrack != null || publication != null) {
+      return _microphoneEnabledFromMedia();
+    }
+
+    return widget.initiallyEnabled ?? false;
   }
 
   bool _microphoneEnabledFromMedia() {
@@ -139,7 +154,7 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
           ? Builder(
               builder: (context) {
                 if (widget.audioTrack == null && _audioPublication == null) {
-                  return const Icon(Icons.mic);
+                  return const TotemIcon(TotemIcons.microphoneOn);
                 }
                 return SpeakingIndicatorAudioTrack(
                   audioTrack: widget.audioTrack,

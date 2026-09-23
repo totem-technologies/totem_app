@@ -58,7 +58,7 @@ final class SessionControllerProvider
   }
 }
 
-String _$sessionControllerHash() => r'20f6c225d648322ea2f676cc814c27bb14c5e5fb';
+String _$sessionControllerHash() => r'5577a2f7a25c7f689d3a1362d862bde0f9e16b95';
 
 final class SessionControllerFamily extends $Family
     with

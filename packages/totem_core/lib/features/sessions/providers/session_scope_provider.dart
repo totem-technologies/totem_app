@@ -58,15 +58,11 @@ class SessionParticipantKeys {
   }
 }
 
-final Provider<SessionParticipantKeys> sessionParticipantKeysProvider =
-    Provider.autoDispose<SessionParticipantKeys>(
-      (ref) {
-        ref.watch(sessionScopeProvider);
-        return SessionParticipantKeys();
-      },
-      name: 'Participant Video Keys',
-      dependencies: [sessionScopeProvider],
-    );
+@riverpod
+SessionParticipantKeys sessionParticipantKeys(Ref ref) {
+  ref.watch(sessionScopeProvider);
+  return SessionParticipantKeys();
+}
 
 /// Provider that will be overridden at room scope.
 /// Returns the current session options for the active room.
