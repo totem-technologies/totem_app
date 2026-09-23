@@ -668,17 +668,5 @@ void main() {
         });
       });
     });
-
-    group('widget structure', () {
-      testWidgets('renders ListeningTurn without crashing', (tester) async {
-        final state = _buildState(status: RoomStatus.active);
-
-        await pumpListeningTurn(tester, sessionState: state);
-
-        check(
-          tester.widgetList(find.byType(ListeningTurnScreen)),
-        ).length.equals(1);
-      });
-    });
   });
 }

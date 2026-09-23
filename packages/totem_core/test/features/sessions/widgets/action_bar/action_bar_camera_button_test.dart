@@ -73,6 +73,66 @@ void main() {
       ).length.equals(1);
     });
 
+    testWidgets('positions overlay from button across render subtrees', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 400));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Row(
+              children: [
+                const Expanded(child: SizedBox()),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 120),
+                    ActionBarCameraSwitcherButton(
+                      isCameraOn: true,
+                      onToggle: () {},
+                      cameraPosition: CameraPosition.front,
+                      availableCameraDevices: const [
+                        MediaDevice(
+                          'camera-1',
+                          'Front Camera',
+                          'videoinput',
+                          null,
+                        ),
+                        MediaDevice(
+                          'camera-2',
+                          'Rear Camera',
+                          'videoinput',
+                          null,
+                        ),
+                      ],
+                      selectedCameraDeviceId: 'camera-1',
+                      onCameraPositionChanged: (_) {},
+                      onCameraDeviceSelected: (_) {},
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.bySemanticsLabel('Choose camera'));
+      await tester.pumpAndSettle();
+
+      final button = tester.getTopLeft(
+        find.byKey(ActionBarCameraSwitcherButton.deviceClusterKey),
+      );
+      final menu = tester.getTopLeft(find.text('Front Camera'));
+
+      check(menu.dx).isGreaterThan(0);
+      check(menu.dy).isLessThan(button.dy);
+    });
+
     testWidgets('device caret is labeled as camera selection', (tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 1000));
       addTearDown(() async {

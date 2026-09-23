@@ -1,4 +1,3 @@
-@TestOn('chrome')
 // ignore_for_file: depend_on_referenced_packages
 library;
 
@@ -22,10 +21,29 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_web/core/navigation/web_router.dart';
+import 'package:totem_web/core/navigation/browser_environment.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
+class _FakeBrowserEnvironment implements BrowserEnvironment {
+  @override
+  Uri get currentUri => Uri.parse('https://totem.org/room/');
+
+  String? title;
+  bool tabCloseConfirmationEnabled = false;
+
+  @override
+  void setDocumentTitle(String title) => this.title = title;
+
+  @override
+  void setTabCloseConfirmationEnabled(bool enabled) {
+    tabCloseConfirmationEnabled = enabled;
+  }
+}
+
 class _FakeUrlLauncher extends UrlLauncherPlatform {
+  final launches = <({String url, String? window})>[];
+
   @override
   LinkDelegate? get linkDelegate => null;
 
@@ -39,7 +57,10 @@ class _FakeUrlLauncher extends UrlLauncherPlatform {
     required bool universalLinksOnly,
     required Map<String, String> headers,
     String? webOnlyWindowName,
-  }) async => true;
+  }) async {
+    launches.add((url: url, window: webOnlyWindowName));
+    return true;
+  }
 }
 
 class _FakePreJoinMediaController extends PreJoinMediaController {
@@ -101,7 +122,7 @@ Future<GoRouter> _pumpTestRouter(
   List<Object?> overrides = const [],
 }) async {
   GoRouter? router;
-  final routerOwner = WebTotemRouter();
+  final routerOwner = WebTotemRouter(browser: _FakeBrowserEnvironment());
 
   await tester.pumpWidget(
     ProviderScope(
@@ -133,13 +154,15 @@ Future<GoRouter> _pumpTestRouter(
 
 void main() {
   late UrlLauncherPlatform originalUrlLauncher;
+  late _FakeUrlLauncher urlLauncher;
 
-  setUpAll(() {
+  setUp(() {
     originalUrlLauncher = UrlLauncherPlatform.instance;
-    UrlLauncherPlatform.instance = _FakeUrlLauncher();
+    urlLauncher = _FakeUrlLauncher();
+    UrlLauncherPlatform.instance = urlLauncher;
   });
 
-  tearDownAll(() {
+  tearDown(() {
     UrlLauncherPlatform.instance = originalUrlLauncher;
   });
 
@@ -158,25 +181,34 @@ void main() {
       termsOfServiceUrl: Uri.parse('https://totem.org/tos/'),
       communityGuidelinesUrl: Uri.parse('https://totem.org/guidelines/'),
     );
-    TotemRouter.instance = WebTotemRouter();
+    TotemRouter.instance = WebTotemRouter(browser: _FakeBrowserEnvironment());
   });
 
   group('buildHomeUrl', () {
-    final router = WebTotemRouter();
+    final router = WebTotemRouter(browser: _FakeBrowserEnvironment());
     test('returns correct URLs for each HomeRoute', () {
       check(
         router.buildHomeUrl(HomeRoutes.home),
-      ).equals(router.baseUri.resolve('users/dashboard/').toString());
+      ).equals('https://totem.org/users/dashboard/');
       check(
         router.buildHomeUrl(HomeRoutes.spaces),
-      ).equals(router.baseUri.resolve('spaces/').toString());
+      ).equals('https://totem.org/spaces/');
       check(
         router.buildHomeUrl(HomeRoutes.blog),
-      ).equals(router.baseUri.resolve('blog/').toString());
+      ).equals('https://totem.org/blog/');
       check(
         router.buildHomeUrl(HomeRoutes.profile),
-      ).equals(router.baseUri.resolve('users/profile/').toString());
+      ).equals('https://totem.org/users/profile/');
     });
+  });
+
+  test('tab-close confirmation follows the requested state', () {
+    final browser = _FakeBrowserEnvironment();
+    final router = WebTotemRouter(browser: browser);
+    router.setTabCloseConfirmationEnabled(true);
+    check(browser.tabCloseConfirmationEnabled).isTrue();
+    router.setTabCloseConfirmationEnabled(false);
+    check(browser.tabCloseConfirmationEnabled).isFalse();
   });
 
   group('GoRouter route configuration', () {
@@ -272,23 +304,6 @@ void main() {
       ),
     );
 
-    test('isAuthenticated returns correct values for each auth status', () {
-      check(
-        _FakeAuthController(
-          AuthState.authenticated(user: _fakeUser),
-        ).isAuthenticated,
-      ).equals(true);
-      check(
-        _FakeAuthController(AuthState.unauthenticated()).isAuthenticated,
-      ).equals(false);
-      check(
-        _FakeAuthController(AuthState.initial()).isAuthenticated,
-      ).equals(false);
-      check(
-        _FakeAuthController(AuthState.loading()).isAuthenticated,
-      ).equals(false);
-    });
-
     testWidgets('/ (root) shows redirect screen regardless of auth state', (
       tester,
     ) async {
@@ -302,6 +317,9 @@ void main() {
 
       // Root always redirects to origin via the redirect screen.
       check(tester.widgetList(find.byType(Scaffold))).length.equals(1);
+      check(
+        urlLauncher.launches,
+      ).deepEquals([(url: 'https://totem.org/', window: '_self')]);
     });
   });
 }

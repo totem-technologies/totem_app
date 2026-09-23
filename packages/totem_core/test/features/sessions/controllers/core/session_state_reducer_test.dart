@@ -1,11 +1,14 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_reducer.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+
+class _Participant extends Mock implements Participant {}
 
 RoomState _roomState({RoomStatus status = RoomStatus.waitingRoom}) {
   return RoomState(
@@ -82,71 +85,6 @@ void main() {
           check(next.connection.state).equals(RoomConnectionState.disconnected);
           check(next.phase).equals(SessionPhase.disconnected);
         });
-
-        test('tracks state changes correctly', () {
-          var state = _initialState();
-          check(state.connection.state).equals(RoomConnectionState.connecting);
-
-          state = reducer.reduceState(
-            state,
-            const ConnectionChanged(
-              RoomConnectionState.connected,
-              SessionPhase.connected,
-            ),
-          );
-          check(state.connection.state).equals(RoomConnectionState.connected);
-
-          state = reducer.reduceState(
-            state,
-            const ConnectionChanged(
-              RoomConnectionState.disconnected,
-              SessionPhase.disconnected,
-            ),
-          );
-          check(
-            state.connection.state,
-          ).equals(RoomConnectionState.disconnected);
-        });
-
-        test('transitions phases correctly', () {
-          var state = SessionRoomState(
-            connection: const ConnectionState(
-              phase: SessionPhase.idle,
-              state: RoomConnectionState.disconnected,
-            ),
-            participants: const ParticipantsState(),
-            chat: const ChatState(),
-            turn: SessionTurnState(roomState: _roomState()),
-          );
-          check(state.connection.phase).equals(SessionPhase.idle);
-
-          state = reducer.reduceState(
-            state,
-            const ConnectionChanged(
-              RoomConnectionState.connecting,
-              SessionPhase.connecting,
-            ),
-          );
-          check(state.connection.phase).equals(SessionPhase.connecting);
-
-          state = reducer.reduceState(
-            state,
-            const ConnectionChanged(
-              RoomConnectionState.connected,
-              SessionPhase.connected,
-            ),
-          );
-          check(state.connection.phase).equals(SessionPhase.connected);
-
-          state = reducer.reduceState(
-            state,
-            const ConnectionChanged(
-              RoomConnectionState.disconnected,
-              SessionPhase.disconnected,
-            ),
-          );
-          check(state.connection.phase).equals(SessionPhase.disconnected);
-        });
       });
 
       test(
@@ -198,22 +136,6 @@ void main() {
           check(next.connection.state).equals(current.connection.state);
           check(next.phase).equals(current.phase);
         });
-
-        test('handles error state properly', () {
-          var state = _initialState();
-
-          final error = RoomLiveKitError(
-            ConnectException(
-              'Connection failed',
-              reason: ConnectionErrorReason.NotAllowed,
-            ),
-          );
-
-          state = reducer.reduceState(state, SessionErrorChanged(error));
-
-          check(state.connection.error).isNotNull();
-          check(state.connection.state).equals(RoomConnectionState.error);
-        });
       });
     });
 
@@ -221,14 +143,16 @@ void main() {
       group('RoomStateChanged event', () {
         test('updates room state', () {
           final current = _initialState();
-          final nextRoomState = _roomState(status: RoomStatus.active);
+          final nextRoomState = _roomState(
+            status: RoomStatus.active,
+          ).copyWith(version: 2, talkingOrder: ['user-1', 'user-2']);
 
           final next = reducer.reduceState(
             current,
             RoomStateChanged(nextRoomState),
           );
 
-          check(next.roomState.status).equals(RoomStatus.active);
+          check(next.roomState).equals(nextRoomState);
           check(next.phase).equals(SessionPhase.connecting);
         });
 
@@ -243,32 +167,6 @@ void main() {
 
           check(next.roomState.status).equals(RoomStatus.ended);
           check(next.phase).equals(SessionPhase.ended);
-        });
-
-        test('applies room state updates correctly', () {
-          var state = _initialState();
-
-          const newRoomState = RoomState(
-            keeper: 'keeper-1',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
-            status: RoomStatus.active,
-            turnState: TurnState.speaking,
-            sessionSlug: 'test-session',
-            statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
-            talkingOrder: ['user-1', 'user-2'],
-            version: 2,
-            roundNumber: 1,
-          );
-
-          state = reducer.reduceState(
-            state,
-            const RoomStateChanged(newRoomState),
-          );
-
-          check(state.roomState.status).equals(RoomStatus.active);
-          check(state.roomState.version).equals(2);
-          check(state.roomState.talkingOrder).contains('user-1');
         });
 
         group('turnStartedAt', () {
@@ -371,52 +269,36 @@ void main() {
           );
 
           check(next.removed).equals(true);
-        });
-
-        test('dispatches event correctly', () {
-          final state = _initialState();
-
-          final newState = reducer.reduceState(
-            state,
-            const ParticipantRemoved(RemoveReason.remove),
-          );
-
-          check(newState.removed).equals(true);
-        });
-
-        test('tracks removal flag', () {
-          var state = SessionRoomState(
-            connection: const ConnectionState(
-              phase: SessionPhase.idle,
-              state: RoomConnectionState.disconnected,
-            ),
-            participants: const ParticipantsState(),
-            chat: const ChatState(),
-            turn: SessionTurnState(roomState: _roomState()),
-          );
-          check(state.removed).equals(false);
-
-          state = reducer.reduceState(
-            state,
-            const ParticipantRemoved(RemoveReason.remove),
-          );
-
-          check(state.removed).equals(true);
+          check(next.participants.removeReason).equals(RemoveReason.remove);
         });
       });
 
       group('ParticipantsChanged event', () {
-        test('replaces participants list', () {
-          final current = _initialState();
-          final participants = <Participant>[];
+        test(
+          'replaces and clears participants without changing the prior state',
+          () {
+            final original = _Participant();
+            final replacement = _Participant();
+            final current = reducer.reduceState(
+              _initialState(),
+              ParticipantsChanged([original]),
+            );
 
-          final next = reducer.reduceState(
-            current,
-            ParticipantsChanged(participants),
-          );
+            final next = reducer.reduceState(
+              current,
+              ParticipantsChanged([replacement]),
+            );
+            check(next.participantsList).deepEquals([replacement]);
+            check(current.participantsList).deepEquals([original]);
 
-          check(next.participantsList).isEmpty();
-        });
+            final cleared = reducer.reduceState(
+              next,
+              const ParticipantsChanged([]),
+            );
+            check(cleared.participantsList).isEmpty();
+            check(next.participantsList).deepEquals([replacement]);
+          },
+        );
       });
     });
 
@@ -460,25 +342,6 @@ void main() {
 
           check(next.messages).length.equals(1);
           check(next.messages.single.id).equals('m1');
-        });
-
-        test('dispatches event correctly', () {
-          final state = _initialState();
-          const message = SessionChatMessage(
-            message: 'Test message',
-            timestamp: 1000,
-            id: 'msg-1',
-            sender: true,
-          );
-
-          final newState = reducer.reduceState(
-            state,
-            const SessionChatMessageAdded(message),
-          );
-
-          check(newState.messages).length.equals(1);
-          check(newState.messages.first.message).equals('Test message');
-          check(newState.messages.first.id).equals('msg-1');
         });
 
         test('maintains message order', () {

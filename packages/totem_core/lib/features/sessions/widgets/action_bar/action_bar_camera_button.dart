@@ -93,6 +93,7 @@ class _ActionBarCameraSwitcherButtonState
 
     return OverlayPortal(
       controller: _portalController,
+      overlayLocation: OverlayChildLocation.rootOverlay,
       overlayChildBuilder: (_) {
         final buttonBox =
             _buttonKey.currentContext?.findRenderObject() as RenderBox?;
@@ -114,6 +115,7 @@ class _ActionBarCameraSwitcherButtonState
       // control. Pointing up keeps it aimed at the menu that opens above.
       child: _CameraDeviceCluster(
         key: _buttonKey,
+        isDesktopPicker: isDesktopPicker,
         menuOpen: _isOpen,
         onOpenDevices: widget.onToggle == null
             ? null
@@ -139,12 +141,14 @@ class _ActionBarCameraSwitcherButtonState
 class _CameraDeviceCluster extends StatefulWidget {
   const _CameraDeviceCluster({
     required this.camera,
+    required this.isDesktopPicker,
     required this.menuOpen,
     required this.onOpenDevices,
     super.key,
   });
 
   final Widget camera;
+  final bool isDesktopPicker;
   final bool menuOpen;
   final VoidCallback? onOpenDevices;
 
@@ -166,6 +170,12 @@ class _CameraDeviceClusterState extends State<_CameraDeviceCluster> {
     final fill = onLight
         ? AppTheme.slate.withValues(alpha: 0.16)
         : AppTheme.white.withValues(alpha: 0.14);
+    final caretLabel = widget.isDesktopPicker
+        ? 'Choose camera'
+        : 'Switch camera';
+    final caretHint = widget.isDesktopPicker
+        ? 'Opens camera selection'
+        : 'Switches between front and back camera';
 
     return DecoratedBox(
       key: ActionBarCameraSwitcherButton.deviceClusterKey,
@@ -183,9 +193,11 @@ class _CameraDeviceClusterState extends State<_CameraDeviceCluster> {
               widget.camera,
               Semantics(
                 button: true,
-                label: 'Choose camera',
-                hint: 'Opens camera selection',
+                expanded: widget.menuOpen,
+                label: caretLabel,
+                hint: caretHint,
                 enabled: _enabled,
+                onTap: widget.onOpenDevices,
                 child: MouseRegion(
                   cursor: _enabled
                       ? SystemMouseCursors.click
@@ -196,14 +208,10 @@ class _CameraDeviceClusterState extends State<_CameraDeviceCluster> {
                     onTapDown: _enabled
                         ? (_) => setState(() => _pressed = true)
                         : null,
-                    onTapUp: _enabled
-                        ? (_) => setState(() => _pressed = false)
-                        : null,
-                    onTapCancel: _enabled
-                        ? () => setState(() => _pressed = false)
-                        : null,
+                    onTapUp: (_) => setState(() => _pressed = false),
+                    onTapCancel: () => setState(() => _pressed = false),
                     child: Tooltip(
-                      message: 'Cameras',
+                      message: caretLabel,
                       excludeFromSemantics: true,
                       child: SizedBox(
                         width: 30,
@@ -413,10 +421,11 @@ class _ActionBarCameraSwitcherButtonOverlayState
         widget.buttonKey.currentContext?.findRenderObject() as RenderBox?;
 
     final overlaySize = overlayBox?.size ?? MediaQuery.sizeOf(context);
-    final buttonOffset = buttonBox?.localToGlobal(
-      Offset.zero,
-      ancestor: overlayBox,
-    );
+    final overlayOrigin = overlayBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+    final buttonGlobalOffset = buttonBox?.localToGlobal(Offset.zero);
+    final buttonOffset = buttonGlobalOffset == null
+        ? null
+        : buttonGlobalOffset - overlayOrigin;
 
     return Stack(
       children: [
@@ -466,16 +475,24 @@ class _CameraOverlayPositionDelegate extends SingleChildLayoutDelegate {
 
   @override
   Offset getPositionForChild(Size size, Size childSize) {
-    // Position the menu above the button (bottom of menu at button's top)
+    // Position the menu above the button (bottom of menu at button's top).
     final preferredX = preferredOffset.dx;
     final preferredY = preferredOffset.dy - childSize.height;
+    const edgeMargin = 16.0;
 
-    // Clamp to stay within bounds
-    final clampedX = preferredX.clamp(0.0, overlaySize.width - childSize.width);
-    final clampedY = preferredY.clamp(
-      0.0,
-      overlaySize.height - childSize.height,
+    // Keep the menu away from the screen edges. If it is larger than the
+    // available space, pin it to the leading edge rather than producing an
+    // invalid clamp range.
+    final maxX = math.max(
+      edgeMargin,
+      overlaySize.width - childSize.width - edgeMargin,
     );
+    final maxY = math.max(
+      edgeMargin,
+      overlaySize.height - childSize.height - edgeMargin,
+    );
+    final clampedX = preferredX.clamp(edgeMargin, maxX);
+    final clampedY = preferredY.clamp(edgeMargin, maxY);
 
     return Offset(clampedX, clampedY);
   }
