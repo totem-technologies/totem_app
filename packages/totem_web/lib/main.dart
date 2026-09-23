@@ -1,3 +1,5 @@
+import 'dart:js_interop';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,14 +15,17 @@ import 'package:totem_web/core/navigation/web_router.dart';
 import 'package:totem_web/core/services/web_api_service.dart';
 import 'package:web/web.dart' as web;
 
-void main() {
+@JS('removeSplashFromWeb')
+external void _removeSplashFromWeb();
+
+Future<void> main() async {
   RoomBackground.onBackgroundChanged = (color) {
     final hex =
         '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
     web.document.body?.style.setProperty('background-color', hex);
   };
 
-  sharedMain(
+  await sharedMain(
     const TotemWebApp(),
     () async {
       TotemRouter.instance = WebTotemRouter();
@@ -31,6 +36,10 @@ void main() {
       apiServiceProvider.overrideWith((ref) => ref.read(webApiServiceProvider)),
     ],
   );
+
+  // Keep the splash until the renderer finishes its first frame.
+  await WidgetsBinding.instance.waitUntilFirstFrameRasterized;
+  _removeSplashFromWeb();
 }
 
 class TotemWebApp extends ConsumerStatefulWidget {
