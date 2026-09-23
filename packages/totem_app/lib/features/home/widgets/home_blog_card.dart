@@ -17,8 +17,6 @@ class HomeBlogCard extends StatelessWidget {
   final BlogPostListSchema data;
 
   static const _borderRadius = 16.0;
-  static const _imageHeight = 200.0;
-  static const _contentPadding = EdgeInsetsDirectional.all(16);
 
   @override
   Widget build(BuildContext context) {
@@ -53,10 +51,10 @@ class HomeBlogCard extends StatelessWidget {
                 _BlogImage(
                   imageUrl: data.headerImageUrl,
                   readTime: data.readTime,
-                  height: _imageHeight,
+                  height: 200,
                 ),
                 Padding(
-                  padding: _contentPadding,
+                  padding: const EdgeInsetsDirectional.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

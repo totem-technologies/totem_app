@@ -15,8 +15,6 @@ class SessionCard extends StatelessWidget {
   final UpcomingSessionData data;
 
   static const _borderRadius = 16.0;
-  static const _imageHeight = 160.0;
-  static const _contentPadding = EdgeInsetsDirectional.all(12);
 
   @override
   Widget build(BuildContext context) {
@@ -45,9 +43,9 @@ class SessionCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _SessionImage(imageUrl: data.imageUrl, height: _imageHeight),
+                _SessionImage(imageUrl: data.imageUrl, height: 160),
                 Padding(
-                  padding: _contentPadding,
+                  padding: const EdgeInsetsDirectional.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
