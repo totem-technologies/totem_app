@@ -1,226 +1,337 @@
-import 'package:material_ui/material_ui.dart';
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:totem_app/features/messages/widgets/chat_card.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/messages/providers/conversations_provider.dart';
+import 'package:totem_core/features/messages/providers/messaging_sync_coordinator.dart';
+import 'package:totem_core/features/messages/repositories/messages_repository.dart';
 import 'package:totem_core/shared/router.dart';
-import 'package:totem_core/shared/widgets/user_avatar.dart';
+import 'package:totem_core/shared/widgets/error_screen.dart';
+import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
-import '../mocks/message_mocks.dart';
-import '../widgets/chat_card.dart';
-import '../widgets/message_search_field.dart';
-
-class MessagesScreen extends ConsumerWidget {
+class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final asyncConversations = ref.watch(conversationsProvider);
+  ConsumerState<MessagesScreen> createState() => _MessagesScreenState();
+}
+
+class _MessagesScreenState extends ConsumerState<MessagesScreen> {
+  Timer? _searchDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(messagingSyncCoordinatorProvider).setInboxVisible(true);
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    ref.read(messagingSyncCoordinatorProvider).setInboxVisible(false);
+    super.dispose();
+  }
+
+  Future<void> _refresh() => ref.read(conversationsProvider.notifier).refresh();
+
+  void _onSearchChanged(String query) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      unawaited(ref.read(conversationsProvider.notifier).search(query));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final asyncInbox = ref.watch(conversationsProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.cream,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            color: AppTheme.surfaceCard,
-            padding: EdgeInsetsDirectional.only(
-              top: MediaQuery.of(context).padding.top,
-            ),
-            child: SizedBox(
-              height: 56,
-              child: Padding(
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Messages',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: AppTheme.textHeading,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 21,
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () => context.push(RouteNames.newMessage),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          color: AppTheme.messagePurple,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.add,
-                          color: AppTheme.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ],
+      appBar: AppBar(
+        backgroundColor: AppTheme.surfaceCard,
+        title: const Text('Messages'),
+        centerTitle: false,
+        actions: [
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 20.0),
+            child: Semantics(
+              button: true,
+              label: 'New message',
+              child: InkWell(
+                onTap: () => context.push(RouteNames.newMessage),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.messagePurple,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.add, color: AppTheme.white, size: 20),
                 ),
               ),
             ),
           ),
-          const SizedBox(
-            height: 80,
-            child: Padding(
-              padding: EdgeInsetsDirectional.symmetric(
-                horizontal: 20,
-                vertical: 18,
-              ),
-              child: MessageSearchField(),
-            ),
-          ),
-          Expanded(
-            child: asyncConversations.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, _) =>
-                  const Center(child: Text('Could not load messages.')),
-              data: (conversations) => conversations.isEmpty
-                  ? const _EmptyState()
-                  : _ConversationList(conversations: conversations),
-            ),
-          ),
         ],
+      ),
+      body: asyncInbox.when(
+        loading: LoadingIndicator.new,
+        error: (error, stack) {
+          return ErrorScreen(
+            error: error,
+            showHomeButton: false,
+            onRetry: _refresh,
+          );
+        },
+        data: (inbox) {
+          if (inbox.searchError != null) {
+            return _SearchError(
+              onRetry: () => ref
+                  .read(conversationsProvider.notifier)
+                  .search(inbox.query, force: true),
+            );
+          }
+
+          if (inbox.conversations.isEmpty) {
+            if (inbox.query.isEmpty) {
+              return const _EmptyState();
+            } else {
+              return const _NoSearchResults();
+            }
+          }
+
+          return NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.extentAfter < 240) {
+                ref.read(conversationsProvider.notifier).loadMore();
+              }
+              return false;
+            },
+            child: RefreshIndicator.adaptive(
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        20,
+                        18,
+                        20,
+                        18,
+                      ),
+                      child: TextField(
+                        onChanged: _onSearchChanged,
+                        decoration: InputDecoration(
+                          hintText: 'Search messages',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: inbox.isSearching
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator.adaptive(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: AppTheme.messageSearchBg,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  _ConversationList(
+                    conversations: inbox.conversations,
+                    isLoadingMore: inbox.isLoadingMore,
+                    loadMoreError: inbox.loadMoreError,
+                    onLoadMore: () =>
+                        ref.read(conversationsProvider.notifier).loadMore(),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 }
 
-class _EmptyState extends StatelessWidget {
+class _NoSearchResults extends StatelessWidget {
+  const _NoSearchResults();
+
+  @override
+  Widget build(BuildContext context) =>
+      const Center(child: Text('No conversations match your search.'));
+}
+
+class _SearchError extends StatelessWidget {
+  const _SearchError({required this.onRetry});
+
+  final AsyncCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: TextButton(
+      onPressed: onRetry,
+      child: const Text('Could not search messages. Try again.'),
+    ),
+  );
+}
+
+class _EmptyState extends ConsumerWidget {
   const _EmptyState();
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppTheme.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Column(
-              children: [
-                Text(
-                  'Start a conversation',
-                  style: TextStyle(
-                    color: AppTheme.textHeading,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Recommended Keepers for you',
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 15),
-            ...mockRecommendedKeepers.map(
-              (k) => _KeeperCard(name: k.name, seed: k.seed),
-            ),
-          ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recipients = ref.watch(
+      recipientDirectoryProvider(RecipientDirectoryKind.keepers),
+    );
+    return recipients.when(
+      loading: () => const Center(child: CircularProgressIndicator.adaptive()),
+      error: (_, _) => Center(
+        child: TextButton(
+          onPressed: () => ref.invalidate(
+            recipientDirectoryProvider(RecipientDirectoryKind.keepers),
+          ),
+          child: const Text('Could not load recommended keepers. Try again.'),
         ),
       ),
-    );
-  }
-}
-
-class _KeeperCard extends StatelessWidget {
-  const _KeeperCard({required this.name, required this.seed});
-
-  final String name;
-  final String seed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Row(
-        children: [
-          UserAvatar.custom(seed: seed, radius: 24, borderWidth: 0),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              name,
-              style: const TextStyle(
+      data: (state) {
+        final keepers = state.directory.keepers;
+        if (keepers.isEmpty) {
+          return const Center(
+            child: Text('No keepers are available to message right now.'),
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          children: [
+            const Text(
+              'Start a conversation',
+              style: TextStyle(
                 color: AppTheme.textHeading,
-                fontSize: 13.5,
+                fontSize: 21,
                 fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 14,
-              vertical: 7,
+            const SizedBox(height: 8),
+            const Text(
+              'Recommended Keepers for you',
+              style: TextStyle(color: AppTheme.textMuted),
             ),
-            decoration: BoxDecoration(
-              color: AppTheme.messagePurpleLight,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'Message',
-              style: TextStyle(
-                color: AppTheme.mauve,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
+            const SizedBox(height: 12),
+            for (final keeper in keepers)
+              _RecommendedKeeperRow(
+                keeper: keeper,
+                onTap: () =>
+                    _openConversation(context, ref, keeper.profile.slug),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ConversationList extends StatelessWidget {
-  const _ConversationList({required this.conversations});
-
-  final List<Conversation> conversations;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 20),
-      itemCount: conversations.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final conv = conversations[index];
-        final lastMsg = conv.lastMessage;
-        final preview = lastMsg == null
-            ? ''
-            : lastMsg.isOwn
-            ? 'You: ${lastMsg.text}'
-            : lastMsg.text;
-
-        return ChatCard(
-          name: conv.peer.name ?? 'Unknown',
-          lastMessage: preview,
-          timestamp: conv.updatedAt,
-          avatarSeed: conv.peer.profileAvatarSeed,
-          unreadCount: conv.unreadCount,
-          isOwnLastMessage: lastMsg?.isOwn ?? false,
-          onTap: () =>
-              context.push(RouteNames.messageThread(conv.id), extra: conv),
+          ],
         );
       },
     );
   }
+
+  Future<void> _openConversation(
+    BuildContext context,
+    WidgetRef ref,
+    String recipientSlug,
+  ) async {
+    try {
+      final conversation = await ref
+          .read(messagesRepositoryProvider)
+          .openConversation(recipientSlug);
+      ref.read(conversationsProvider.notifier).upsert(conversation);
+      if (context.mounted) {
+        context.push(RouteNames.messageThread(conversation.id));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This keeper is unavailable.')),
+        );
+      }
+    }
+  }
+}
+
+class _RecommendedKeeperRow extends StatelessWidget {
+  const _RecommendedKeeperRow({required this.keeper, required this.onTap});
+
+  final KeeperRecipientSchema keeper;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    contentPadding: EdgeInsets.zero,
+    leading: CircleAvatar(child: Text(keeper.profile.name.characters.first)),
+    title: Text(keeper.profile.name),
+    trailing: FilledButton(onPressed: onTap, child: const Text('Message')),
+  );
+}
+
+class _ConversationList extends StatelessWidget {
+  const _ConversationList({
+    required this.conversations,
+    required this.isLoadingMore,
+    required this.loadMoreError,
+    required this.onLoadMore,
+  });
+
+  final List<Conversation> conversations;
+  final bool isLoadingMore;
+  final Object? loadMoreError;
+  final VoidCallback onLoadMore;
+
+  @override
+  Widget build(BuildContext context) => SliverPadding(
+    padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 20),
+    sliver: SliverList.separated(
+      itemCount:
+          conversations.length +
+          (isLoadingMore || loadMoreError != null ? 1 : 0),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        if (index == conversations.length) {
+          if (loadMoreError != null) {
+            return TextButton(
+              onPressed: onLoadMore,
+              child: const Text('Retry loading more'),
+            );
+          }
+          return const Center(child: CircularProgressIndicator.adaptive());
+        }
+        final conversation = conversations[index];
+        final lastMessage = conversation.lastMessage;
+        final preview = lastMessage == null
+            ? ''
+            : lastMessage.isOwn
+            ? 'You: ${lastMessage.text}'
+            : lastMessage.text;
+        return ChatCard(
+          name: conversation.peer.name ?? 'Unknown',
+          lastMessage: preview,
+          timestamp: conversation.updatedAt,
+          avatarSeed: conversation.peer.profileAvatarSeed,
+          unreadCount: conversation.unreadCount,
+          isOwnLastMessage: lastMessage?.isOwn ?? false,
+          onTap: () => context.push(RouteNames.messageThread(conversation.id)),
+        );
+      },
+    ),
+  );
 }

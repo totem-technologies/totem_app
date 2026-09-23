@@ -6,7 +6,7 @@ WEB_DIR := packages/totem_web
 
 # Each Flutter suite also runs test files concurrently. Bound package-level
 # parallelism to avoid starting four compilers and their workers at once.
-TEST_JOBS ?= 2
+TEST_JOBS ?= 1
 TEST_ARGS ?=
 
 clean:
@@ -105,7 +105,7 @@ test-app:
 
 test-web:
 	@echo "Running web tests..."
-	cd $(WEB_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
+	cd $(WEB_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS) --platform=chrome
 
 test-core:
 	@echo "Running core tests..."

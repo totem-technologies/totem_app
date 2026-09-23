@@ -1,6 +1,7 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
+import 'package:totem_app/features/profile/screens/profile_image_picker.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -9,8 +10,6 @@ import 'package:totem_core/shared/widgets/card_screen.dart';
 import 'package:totem_core/shared/widgets/info_text.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
-
-import 'profile_image_picker.dart';
 
 class ProfileDetailsScreen extends ConsumerStatefulWidget {
   const ProfileDetailsScreen({super.key});

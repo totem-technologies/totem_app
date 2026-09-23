@@ -55,4 +55,4 @@ final class MessagesRepositoryProvider
 }
 
 String _$messagesRepositoryHash() =>
-    r'50a81a1835e6da14512563562b6526d9b753bf77';
+    r'283cfd8911a56fe793eec9ec01103ee138fd8359';

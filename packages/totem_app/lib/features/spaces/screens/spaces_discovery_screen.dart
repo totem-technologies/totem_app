@@ -1,5 +1,9 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:totem_app/features/spaces/widgets/filter.dart';
+import 'package:totem_app/features/spaces/widgets/session_card.dart';
+import 'package:totem_app/features/spaces/widgets/session_date_group.dart';
+import 'package:totem_app/features/spaces/widgets/sessions_header.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/models/upcoming_session_data.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
@@ -8,11 +12,6 @@ import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/empty_indicator.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
-
-import '../widgets/filter.dart';
-import '../widgets/session_card.dart';
-import '../widgets/session_date_group.dart';
-import '../widgets/sessions_header.dart';
 
 // Filter state providers
 final selectedCategoryProvider =

@@ -2,9 +2,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -16,7 +16,7 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:uuid/uuid.dart';
 
 Future<void> showProfileImagePicker(BuildContext context) async {
-  return showModalBottomSheet(
+  return await showModalBottomSheet(
     context: context,
     showDragHandle: true,
     useSafeArea: true,

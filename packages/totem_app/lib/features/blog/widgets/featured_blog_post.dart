@@ -1,15 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:totem_app/features/blog/widgets/badge.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
-
-import 'badge.dart';
 
 class FeaturedBlogPost extends StatelessWidget {
   const FeaturedBlogPost({

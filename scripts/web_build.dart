@@ -11,7 +11,6 @@
 // Usage: dart scripts/web_build.dart   (run `make env-<flavor>` first)
 
 // OK to use print
-// ignore_for_file: avoid_print
 
 import 'dart:io';
 
@@ -35,7 +34,7 @@ Future<void> main() async {
   if (defaultAssetBase == null) {
     stderr
       ..writeln(
-        "web_build: ${envFile.path} is missing or has no known "
+        'web_build: ${envFile.path} is missing or has no known '
         "ENVIRONMENT (got: '${flavor ?? ''}').",
       )
       ..writeln(

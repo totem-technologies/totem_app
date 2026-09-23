@@ -1,7 +1,7 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/services/api_service.dart';
@@ -27,7 +27,7 @@ void main() {
       usePathUrlStrategy();
     },
     providerOverrides: [
-      authControllerProvider.overrideWith(() => WebAuthController()),
+      authControllerProvider.overrideWith(WebAuthController.new),
       apiServiceProvider.overrideWith((ref) => ref.read(webApiServiceProvider)),
     ],
   );

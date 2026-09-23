@@ -5,11 +5,11 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class ChatCard extends StatelessWidget {
   const ChatCard({
-    super.key,
     required this.name,
     required this.lastMessage,
     required this.timestamp,
     required this.avatarSeed,
+    super.key,
     this.unreadCount = 0,
     this.isOwnLastMessage = false,
     this.onTap,

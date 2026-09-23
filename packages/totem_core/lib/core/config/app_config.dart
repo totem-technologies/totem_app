@@ -7,7 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// Fatal and non-recoverable: the build is broken, not the runtime. Entry
 /// points should let it crash the process (e.g. `exit(1)`) so CI smoke
 /// tests can detect it.
-class ConfigError extends Error {
+class ConfigError implements Exception {
   ConfigError(this.message);
 
   final String message;
@@ -55,6 +55,7 @@ class AppConfig {
     required this.privacyPolicyUrl,
     required this.termsOfServiceUrl,
     required this.communityGuidelinesUrl,
+    this.messagesEnabled = false,
   });
 
   /// Parses an `.env`-formatted string and builds a validated config.
@@ -85,6 +86,7 @@ class AppConfig {
       vapidKey: env['VAPID_KEY'],
       analyticsEnabled:
           !kDebugMode && env['ENABLE_ANALYTICS']?.toLowerCase() != 'false',
+      messagesEnabled: env['ENABLE_MESSAGES']?.toLowerCase() == 'true',
       sentryDsn: env['SENTRY_DSN'],
       posthogApiKey: env['POSTHOG_API_KEY'],
       posthogHost: env['POSTHOG_HOST'] ?? 'https://us.i.posthog.com',
@@ -106,6 +108,7 @@ class AppConfig {
   final int maxPinAttempts;
   final String? vapidKey;
   final bool analyticsEnabled;
+  final bool messagesEnabled;
   final String? sentryDsn;
   final String? posthogApiKey;
   final String posthogHost;

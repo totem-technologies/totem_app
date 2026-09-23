@@ -27,7 +27,9 @@ class UserProfileController extends _$UserProfileController {
 
   /// Check if the user has seen the welcome onboarding screens before
   Future<bool> get hasSeenWelcomeOnboarding async {
-    return ref.read(localStorageServiceProvider).hasSeenWelcomeOnboarding();
+    return await ref
+        .read(localStorageServiceProvider)
+        .hasSeenWelcomeOnboarding();
   }
 
   /// Mark that the user has completed the welcome onboarding screens

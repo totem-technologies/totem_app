@@ -1,8 +1,9 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:totem_app/features/blog/repositories/blog_repository.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/keeper/screens/meet_user_card.dart';
@@ -17,8 +18,6 @@ import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
-
-import '../repositories/blog_repository.dart';
 
 class BlogScreen extends ConsumerStatefulWidget {
   const BlogScreen({required this.slug, super.key});
@@ -168,7 +167,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(16),
                               child: TotemImage(
-                                imageUrl: blog.headerImageUrl!,
+                                imageUrl: blog.headerImageUrl,
                                 memCacheWidth: ((screenWidth - 40) * pixelRatio)
                                     .round(),
                               ),

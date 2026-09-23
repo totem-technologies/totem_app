@@ -1,9 +1,9 @@
 import 'dart:async';
 
+import 'package:checks/checks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/main.dart' as app;
 import 'package:totem_app/navigation/app_router.dart';
@@ -47,7 +47,7 @@ void main() {
           authControllerProvider.overrideWith(() => fakeController),
           mobileAuthControllerProvider.overrideWith((ref) => fakeController),
         ],
-        child: app.TotemApp(),
+        child: const app.TotemApp(),
       ),
     );
     await tester.pumpAndSettle();

@@ -1,8 +1,7 @@
 import 'dart:js_interop';
 
+import 'package:totem_web/core/navigation/browser_environment.dart';
 import 'package:web/web.dart' as web;
-
-import 'browser_environment.dart';
 
 BrowserEnvironment createBrowserEnvironment() => _WebBrowserEnvironment();
 
@@ -16,8 +15,8 @@ class _WebBrowserEnvironment implements BrowserEnvironment {
   }
 
   static void _beforeUnloadListener(web.Event event) {
-    final beforeUnloadEvent = event as web.BeforeUnloadEvent;
-    beforeUnloadEvent.returnValue = 'Are you sure you want to leave?';
+    final _ = event as web.BeforeUnloadEvent
+      ..returnValue = 'Are you sure you want to leave?';
   }
 
   @override

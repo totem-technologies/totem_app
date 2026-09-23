@@ -1,8 +1,8 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:collection/collection.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
@@ -47,7 +47,7 @@ class JoinOngoingSessionCard extends ConsumerWidget {
           if (_shownSheetFor.length > 10) {
             _shownSheetFor.remove(_shownSheetFor.first);
           }
-          return showOngoingSessionSheet(context, next);
+          return await showOngoingSessionSheet(context, next);
         }
       }
     });
@@ -55,7 +55,7 @@ class JoinOngoingSessionCard extends ConsumerWidget {
     if (ongoingSession != null) {
       return GestureDetector(
         onTap: () async {
-          return showOngoingSessionSheet(context, ongoingSession);
+          return await showOngoingSessionSheet(context, ongoingSession);
         },
         child: Card(
           margin: const EdgeInsetsDirectional.only(

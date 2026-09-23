@@ -1,13 +1,12 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:totem_app/features/blog/widgets/badge.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
-
-import '../../blog/widgets/badge.dart';
 
 /// Compact blog card for the home screen, matching the Figma Blogs section design.
 /// Shows header image with read-time badge, title, description, author/date, and Read More.

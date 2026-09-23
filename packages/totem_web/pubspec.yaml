@@ -26,8 +26,8 @@ dependencies:
 
   go_router: ^18.0.1
   url_launcher: ^6.3.2
+  material_ui: ^1.2.0
 
-  material_ui: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

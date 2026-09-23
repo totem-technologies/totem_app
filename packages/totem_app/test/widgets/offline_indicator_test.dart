@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:material_ui/material_ui.dart';
+import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:checks/checks.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 

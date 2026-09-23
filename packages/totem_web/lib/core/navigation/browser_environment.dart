@@ -1,4 +1,4 @@
-import 'browser_environment_stub.dart'
+import 'package:totem_web/core/navigation/browser_environment_stub.dart'
     if (dart.library.js_interop) 'browser_environment_web.dart'
     as platform;
 

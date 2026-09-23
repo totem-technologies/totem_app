@@ -1,0 +1,98 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+import 'package:degenerate_runtime/degenerate_runtime.dart';
+import 'conversation_summary_schema.dart';
+
+/// Incremental conversation changes plus idempotent relationship-revocation tombstones.
+@immutable
+final class SyncPageSchema {
+  const SyncPageSchema({
+    required this.items,
+    required this.removedConversationIds,
+    required this.nextCursor,
+    required this.totalUnreadCount,
+  });
+
+  factory SyncPageSchema.fromJson(Map<String, dynamic> json) {
+    return SyncPageSchema(
+      items: (json['items'] as List<dynamic>)
+          .map(
+            (e) =>
+                ConversationSummarySchema.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
+      removedConversationIds:
+          (json['removed_conversation_ids'] as List<dynamic>)
+              .map((e) => e as String)
+              .toList(),
+      nextCursor: json['next_cursor'] as String?,
+      totalUnreadCount: (json['total_unread_count'] as num).toInt(),
+    );
+  }
+
+  final List<ConversationSummarySchema> items;
+
+  final List<String> removedConversationIds;
+
+  final String? nextCursor;
+
+  final int totalUnreadCount;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'items': items.map((e) => e.toJson()).toList(),
+      'removed_conversation_ids': removedConversationIds,
+      'next_cursor': ?nextCursor,
+      'total_unread_count': totalUnreadCount,
+    };
+  }
+
+  static bool canParse(Map<String, dynamic> json) {
+    return json.containsKey('items') &&
+        json.containsKey('removed_conversation_ids') &&
+        json.containsKey('next_cursor') &&
+        json['next_cursor'] is String &&
+        json.containsKey('total_unread_count') &&
+        json['total_unread_count'] is num;
+  }
+
+  SyncPageSchema copyWith({
+    List<ConversationSummarySchema>? items,
+    List<String>? removedConversationIds,
+    String? Function()? nextCursor,
+    int? totalUnreadCount,
+  }) {
+    return SyncPageSchema(
+      items: items ?? this.items,
+      removedConversationIds:
+          removedConversationIds ?? this.removedConversationIds,
+      nextCursor: nextCursor != null ? nextCursor() : this.nextCursor,
+      totalUnreadCount: totalUnreadCount ?? this.totalUnreadCount,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is SyncPageSchema &&
+            listEquals(items, other.items) &&
+            listEquals(removedConversationIds, other.removedConversationIds) &&
+            nextCursor == other.nextCursor &&
+            totalUnreadCount == other.totalUnreadCount;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      Object.hashAll(items),
+      Object.hashAll(removedConversationIds),
+      nextCursor,
+      totalUnreadCount,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'SyncPageSchema(items: $items, removedConversationIds: $removedConversationIds, nextCursor: $nextCursor, totalUnreadCount: $totalUnreadCount)';
+  }
+}
