@@ -122,9 +122,15 @@ class SessionController extends _$SessionController {
   ///
   /// Some Browsers have trouble encoding h265.
   /// Prefer h265 on mobile devices.
-  static const defaultVideoPublishOptions = VideoPublishOptions(
-    videoCodec: (kIsWeb || kIsWasm) ? 'h264' : 'h265',
-    backupVideoCodec: BackupVideoCodec(codec: 'h264'),
+  static final VideoPublishOptions defaultVideoPublishOptions =
+      videoPublishOptionsForPlatform(isWeb: kIsWeb, isWasm: kIsWasm);
+
+  static VideoPublishOptions videoPublishOptionsForPlatform({
+    required bool isWeb,
+    required bool isWasm,
+  }) => VideoPublishOptions(
+    videoCodec: (isWeb || isWasm) ? 'h264' : 'h265',
+    backupVideoCodec: const BackupVideoCodec(codec: 'h264'),
   );
 
   SessionDeviceController get devices {
