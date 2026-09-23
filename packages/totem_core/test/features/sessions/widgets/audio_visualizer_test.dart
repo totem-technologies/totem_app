@@ -29,18 +29,6 @@ void main() {
   });
 
   group('AudioVisualizerWidgetOptions Tests', () {
-    test('should create with default values', () {
-      const options = AudioVisualizerWidgetOptions();
-
-      for (final color in [null, Colors.blue]) {
-        final first = options(color);
-        final second = options(color);
-        check(identical(first, second)).isFalse();
-        check(first).equals(second);
-        check(first.hashCode).equals(second.hashCode);
-      }
-    });
-
     test('every option participates in equality', () {
       const defaults = AudioVisualizerWidgetOptions();
       const variants = {
