@@ -499,9 +499,12 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     final isOffline = ref.watch(isOfflineProvider).value ?? _lastIsOffline;
 
     if (currentSessionEvent.ended || roomStatus == RoomStatus.ended) {
-      return SessionDisconnectedScreen(
-        session: currentSessionEvent,
-        disconnectReason: disconnectReason,
+      return RoomBackground(
+        status: RoomStatus.ended,
+        child: SessionDisconnectedScreen(
+          session: currentSessionEvent,
+          disconnectReason: disconnectReason,
+        ),
       );
     }
 

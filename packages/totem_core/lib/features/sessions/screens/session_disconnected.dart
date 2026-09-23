@@ -14,7 +14,6 @@ import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
-import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -173,41 +172,38 @@ class _SessionDisconnectedScreenState
 
     final isBanned = sessionReason == SessionDisconnectedReason.banned;
 
-    return RoomBackground(
-      status: RoomStatus.ended,
-      child: PopScope(
-        canPop: false,
-        child: SafeArea(
-          child: ViewportResolver(
-            builder: (context, viewportKind) {
-              return switch (viewportKind) {
-                ViewportKind.smallPortrait => _PortraitLayout(
-                  session: widget.session,
-                  reason: sessionReason,
-                  isBanned: isBanned,
-                  onRefreshHome: _refreshHome,
-                ),
-                ViewportKind.smallLandscape => _LandscapeLayout(
-                  session: widget.session,
-                  reason: sessionReason,
-                  isBanned: isBanned,
-                  onRefreshHome: _refreshHome,
-                ),
-                ViewportKind.mediumSmall => _MediumSmallLayout(
-                  session: widget.session,
-                  reason: sessionReason,
-                  isBanned: isBanned,
-                  onRefreshHome: _refreshHome,
-                ),
-                ViewportKind.mediumPlus => _MediumPlusLayout(
-                  session: widget.session,
-                  reason: sessionReason,
-                  isBanned: isBanned,
-                  onRefreshHome: _refreshHome,
-                ),
-              };
-            },
-          ),
+    return PopScope(
+      canPop: false,
+      child: SafeArea(
+        child: ViewportResolver(
+          builder: (context, viewportKind) {
+            return switch (viewportKind) {
+              ViewportKind.smallPortrait => _PortraitLayout(
+                session: widget.session,
+                reason: sessionReason,
+                isBanned: isBanned,
+                onRefreshHome: _refreshHome,
+              ),
+              ViewportKind.smallLandscape => _LandscapeLayout(
+                session: widget.session,
+                reason: sessionReason,
+                isBanned: isBanned,
+                onRefreshHome: _refreshHome,
+              ),
+              ViewportKind.mediumSmall => _MediumSmallLayout(
+                session: widget.session,
+                reason: sessionReason,
+                isBanned: isBanned,
+                onRefreshHome: _refreshHome,
+              ),
+              ViewportKind.mediumPlus => _MediumPlusLayout(
+                session: widget.session,
+                reason: sessionReason,
+                isBanned: isBanned,
+                onRefreshHome: _refreshHome,
+              ),
+            };
+          },
         ),
       ),
     );

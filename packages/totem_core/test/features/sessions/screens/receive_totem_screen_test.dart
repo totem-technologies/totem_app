@@ -111,6 +111,7 @@ void main() {
 
     when(() => session.room).thenReturn(room);
     when(() => session.devices).thenReturn(devices);
+    when(() => session.options).thenReturn(testSessionOptions);
     when(() => session.keeper).thenReturn(keeper);
     when(() => session.isCurrentUserKeeper()).thenReturn(false);
     when(() => devices.isCameraEnabled).thenReturn(false);
@@ -133,6 +134,7 @@ void main() {
     when(
       () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
     ).thenReturn(null);
+    when(() => localParticipant.isCameraEnabled()).thenReturn(false);
   });
 
   Future<void> pumpReceiveTotem(

@@ -8,6 +8,15 @@ import 'package:totem_core/features/sessions/controllers/features/session_device
 import '../../livekit_mocks.dart';
 import '../features/session_device_controller_mock.dart';
 
+const testSessionOptions = SessionOptions(
+  sessionSlug: 'test-session',
+  token: 'test-token',
+  cameraEnabled: false,
+  microphoneEnabled: false,
+  speakerEnabled: true,
+  cameraOptions: SessionController.defaultCameraCaptureOptions,
+);
+
 class MockSessionController extends Mock implements SessionController {}
 
 RoomState _createRoomState({RoomStatus status = RoomStatus.waitingRoom}) {
@@ -51,14 +60,7 @@ class FakeSessionController implements SessionController {
   bool disconnectFromRoomCalled = false;
   List<SessionChatMessage> addedChatMessages = [];
   bool isCurrentUserKeeperValue = false;
-  SessionOptions mockOptions = const SessionOptions(
-    sessionSlug: 'test-session',
-    token: 'test-token',
-    cameraEnabled: false,
-    microphoneEnabled: false,
-    speakerEnabled: true,
-    cameraOptions: SessionController.defaultCameraCaptureOptions,
-  );
+  SessionOptions mockOptions = testSessionOptions;
   Room? mockRoom;
 
   @override

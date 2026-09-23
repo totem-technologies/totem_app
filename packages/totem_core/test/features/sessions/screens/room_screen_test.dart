@@ -485,6 +485,7 @@ void main() {
         () => localParticipant.setMicrophoneEnabled(false),
       ).thenAnswer((_) async => null);
       when(() => session.devices).thenReturn(devices);
+      when(() => session.options).thenReturn(testSessionOptions);
       when(() => devices.isCameraEnabled).thenReturn(false);
       when(() => devices.isMicrophoneEnabled).thenReturn(false);
       when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
@@ -1227,6 +1228,7 @@ void main() {
       final localParticipant = _buildMockParticipant('user-1');
       when(() => session.room).thenReturn(FakeRoom(localParticipant));
       when(() => session.devices).thenReturn(devices);
+      when(() => session.options).thenReturn(testSessionOptions);
       when(() => devices.isCameraEnabled).thenReturn(false);
       when(() => devices.isMicrophoneEnabled).thenReturn(false);
       when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
