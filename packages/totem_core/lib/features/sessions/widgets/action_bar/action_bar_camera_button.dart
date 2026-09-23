@@ -52,11 +52,6 @@ class _ActionBarCameraSwitcherButtonState
       if (_isOpen) {
         _portalController.hide();
         _isOpen = false;
-        // didUpdateWidget runs inside the parent build, so the caret's
-        // open color has to refresh on the next frame.
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) setState(() {});
-        });
       }
     }
   }
@@ -114,6 +109,7 @@ class _ActionBarCameraSwitcherButtonState
       // control. Pointing up keeps it aimed at the menu that opens above.
       child: _CameraDeviceCluster(
         key: _buttonKey,
+        isDesktopPicker: isDesktopPicker,
         menuOpen: _isOpen,
         onOpenDevices: widget.onToggle == null
             ? null
@@ -139,12 +135,14 @@ class _ActionBarCameraSwitcherButtonState
 class _CameraDeviceCluster extends StatefulWidget {
   const _CameraDeviceCluster({
     required this.camera,
+    required this.isDesktopPicker,
     required this.menuOpen,
     required this.onOpenDevices,
     super.key,
   });
 
   final Widget camera;
+  final bool isDesktopPicker;
   final bool menuOpen;
   final VoidCallback? onOpenDevices;
 
@@ -166,6 +164,12 @@ class _CameraDeviceClusterState extends State<_CameraDeviceCluster> {
     final fill = onLight
         ? AppTheme.slate.withValues(alpha: 0.16)
         : AppTheme.white.withValues(alpha: 0.14);
+    final caretLabel = widget.isDesktopPicker
+        ? 'Choose camera'
+        : 'Switch camera';
+    final caretHint = widget.isDesktopPicker
+        ? 'Opens camera selection'
+        : 'Switches between front and back camera';
 
     return DecoratedBox(
       key: ActionBarCameraSwitcherButton.deviceClusterKey,
@@ -183,9 +187,11 @@ class _CameraDeviceClusterState extends State<_CameraDeviceCluster> {
               widget.camera,
               Semantics(
                 button: true,
-                label: 'Choose camera',
-                hint: 'Opens camera selection',
+                expanded: widget.menuOpen,
+                label: caretLabel,
+                hint: caretHint,
                 enabled: _enabled,
+                onTap: widget.onOpenDevices,
                 child: MouseRegion(
                   cursor: _enabled
                       ? SystemMouseCursors.click
@@ -196,14 +202,10 @@ class _CameraDeviceClusterState extends State<_CameraDeviceCluster> {
                     onTapDown: _enabled
                         ? (_) => setState(() => _pressed = true)
                         : null,
-                    onTapUp: _enabled
-                        ? (_) => setState(() => _pressed = false)
-                        : null,
-                    onTapCancel: _enabled
-                        ? () => setState(() => _pressed = false)
-                        : null,
+                    onTapUp: (_) => setState(() => _pressed = false),
+                    onTapCancel: () => setState(() => _pressed = false),
                     child: Tooltip(
-                      message: 'Cameras',
+                      message: caretLabel,
                       excludeFromSemantics: true,
                       child: SizedBox(
                         width: 30,
