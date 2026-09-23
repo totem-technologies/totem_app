@@ -52,6 +52,11 @@ class _ActionBarCameraSwitcherButtonState
       if (_isOpen) {
         _portalController.hide();
         _isOpen = false;
+        // didUpdateWidget runs inside the parent build, so the caret's
+        // open color has to refresh on the next frame.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() {});
+        });
       }
     }
   }
@@ -88,6 +93,7 @@ class _ActionBarCameraSwitcherButtonState
 
     return OverlayPortal(
       controller: _portalController,
+      overlayLocation: OverlayChildLocation.rootOverlay,
       overlayChildBuilder: (_) {
         final buttonBox =
             _buttonKey.currentContext?.findRenderObject() as RenderBox?;
@@ -415,10 +421,11 @@ class _ActionBarCameraSwitcherButtonOverlayState
         widget.buttonKey.currentContext?.findRenderObject() as RenderBox?;
 
     final overlaySize = overlayBox?.size ?? MediaQuery.sizeOf(context);
-    final buttonOffset = buttonBox?.localToGlobal(
-      Offset.zero,
-      ancestor: overlayBox,
-    );
+    final overlayOrigin = overlayBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+    final buttonGlobalOffset = buttonBox?.localToGlobal(Offset.zero);
+    final buttonOffset = buttonGlobalOffset == null
+        ? null
+        : buttonGlobalOffset - overlayOrigin;
 
     return Stack(
       children: [
@@ -468,16 +475,24 @@ class _CameraOverlayPositionDelegate extends SingleChildLayoutDelegate {
 
   @override
   Offset getPositionForChild(Size size, Size childSize) {
-    // Position the menu above the button (bottom of menu at button's top)
+    // Position the menu above the button (bottom of menu at button's top).
     final preferredX = preferredOffset.dx;
     final preferredY = preferredOffset.dy - childSize.height;
+    const edgeMargin = 16.0;
 
-    // Clamp to stay within bounds
-    final clampedX = preferredX.clamp(0.0, overlaySize.width - childSize.width);
-    final clampedY = preferredY.clamp(
-      0.0,
-      overlaySize.height - childSize.height,
+    // Keep the menu away from the screen edges. If it is larger than the
+    // available space, pin it to the leading edge rather than producing an
+    // invalid clamp range.
+    final maxX = math.max(
+      edgeMargin,
+      overlaySize.width - childSize.width - edgeMargin,
     );
+    final maxY = math.max(
+      edgeMargin,
+      overlaySize.height - childSize.height - edgeMargin,
+    );
+    final clampedX = preferredX.clamp(edgeMargin, maxX);
+    final clampedY = preferredY.clamp(edgeMargin, maxY);
 
     return Offset(clampedX, clampedY);
   }
