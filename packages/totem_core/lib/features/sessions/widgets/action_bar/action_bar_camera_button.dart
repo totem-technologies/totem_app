@@ -21,6 +21,9 @@ class ActionBarCameraSwitcherButton extends StatefulWidget {
     super.key,
   });
 
+  /// Shared capsule around the camera toggle and its device caret.
+  static const deviceClusterKey = Key('action-bar-camera-device-cluster');
+
   final bool isCameraOn;
   final VoidCallback? onToggle;
 
@@ -36,33 +39,10 @@ class ActionBarCameraSwitcherButton extends StatefulWidget {
 }
 
 class _ActionBarCameraSwitcherButtonState
-    extends State<ActionBarCameraSwitcherButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _menuController;
-  late final CurvedAnimation _menuAnimation;
+    extends State<ActionBarCameraSwitcherButton> {
   final _portalController = OverlayPortalController();
   final GlobalKey _buttonKey = GlobalKey();
   var _isOpen = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _menuController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-    _menuAnimation = CurvedAnimation(
-      parent: _menuController,
-      curve: Curves.easeOutCubic,
-    );
-  }
-
-  @override
-  void dispose() {
-    _menuAnimation.dispose();
-    _menuController.dispose();
-    super.dispose();
-  }
 
   @override
   void didUpdateWidget(ActionBarCameraSwitcherButton oldWidget) {
@@ -72,20 +52,22 @@ class _ActionBarCameraSwitcherButtonState
       if (_isOpen) {
         _portalController.hide();
         _isOpen = false;
-        _menuController.reverse();
+        // didUpdateWidget runs inside the parent build, so the caret's
+        // open color has to refresh on the next frame.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() {});
+        });
       }
     }
   }
 
   void _showCameraPositionOptions() {
     if (_isOpen) return;
-    _menuController.forward();
     setState(() => _isOpen = true);
     _portalController.show();
   }
 
   void _dismissOverlay() {
-    _menuController.reverse();
     _portalController.hide();
     if (mounted) setState(() => _isOpen = false);
   }
@@ -111,6 +93,7 @@ class _ActionBarCameraSwitcherButtonState
 
     return OverlayPortal(
       controller: _portalController,
+      overlayLocation: OverlayChildLocation.rootOverlay,
       overlayChildBuilder: (_) {
         final buttonBox =
             _buttonKey.currentContext?.findRenderObject() as RenderBox?;
@@ -127,52 +110,143 @@ class _ActionBarCameraSwitcherButtonState
           onDismissOverlay: _dismissOverlay,
         );
       },
-      // Chevron sits on the same glass as the rest of the pill — no
-      // nested black chip, which fought the compact-bar treatment.
-      child: Row(
+      // Caret trails the camera inside one capsule. It used to float in the
+      // bar gap, between the mic and the camera, and spin like a collapse
+      // control. Pointing up keeps it aimed at the menu that opens above.
+      child: _CameraDeviceCluster(
         key: _buttonKey,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Semantics(
-            button: true,
-            label: 'Switch camera',
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                if (widget.onToggle == null) return;
-                _showCameraPositionOptions();
-              },
-              child: Padding(
-                padding: EdgeInsetsDirectional.symmetric(
-                  horizontal: ActionBar.gapOf(context),
-                ),
-                child: AnimatedBuilder(
-                  animation: _menuController,
-                  builder: (context, child) {
-                    return Transform.rotate(
-                      angle: _menuAnimation.value * math.pi,
-                      child: child,
-                    );
-                  },
-                  child: Icon(
-                    Icons.keyboard_arrow_down,
-                    color: ActionBar.onLightBackgroundOf(context)
-                        ? AppTheme.slate
-                        : AppTheme.cream,
+        isDesktopPicker: isDesktopPicker,
+        menuOpen: _isOpen,
+        onOpenDevices: widget.onToggle == null
+            ? null
+            : _showCameraPositionOptions,
+        camera: ActionBarButton(
+          semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
+          onPressed: widget.onToggle,
+          role: ActionBarButtonRole.media(enabled: widget.isCameraOn),
+          child: TotemIcon(
+            widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Camera toggle plus the device caret, as one control.
+///
+/// The shared fill is an inset in the action-bar pill, not a second chip.
+/// The caret stays smaller than the camera glyph so it reads as an accessory
+/// that opens device selection.
+class _CameraDeviceCluster extends StatefulWidget {
+  const _CameraDeviceCluster({
+    required this.camera,
+    required this.isDesktopPicker,
+    required this.menuOpen,
+    required this.onOpenDevices,
+    super.key,
+  });
+
+  final Widget camera;
+  final bool isDesktopPicker;
+  final bool menuOpen;
+  final VoidCallback? onOpenDevices;
+
+  @override
+  State<_CameraDeviceCluster> createState() => _CameraDeviceClusterState();
+}
+
+class _CameraDeviceClusterState extends State<_CameraDeviceCluster> {
+  var _pressed = false;
+
+  bool get _enabled => widget.onOpenDevices != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final onLight = ActionBar.onLightBackgroundOf(context);
+    final foreground = onLight ? AppTheme.slate : AppTheme.cream;
+    // Heavier than the parent pill so the pair separates from the mic,
+    // without stacking a lighter glass on top of the bar.
+    final fill = onLight
+        ? AppTheme.slate.withValues(alpha: 0.16)
+        : AppTheme.white.withValues(alpha: 0.14);
+    final caretLabel = widget.isDesktopPicker
+        ? 'Choose camera'
+        : 'Switch camera';
+    final caretHint = widget.isDesktopPicker
+        ? 'Opens camera selection'
+        : 'Switches between front and back camera';
+
+    return DecoratedBox(
+      key: ActionBarCameraSwitcherButton.deviceClusterKey,
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(end: 2),
+        child: IntrinsicHeight(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              widget.camera,
+              Semantics(
+                button: true,
+                expanded: widget.menuOpen,
+                label: caretLabel,
+                hint: caretHint,
+                enabled: _enabled,
+                onTap: widget.onOpenDevices,
+                child: MouseRegion(
+                  cursor: _enabled
+                      ? SystemMouseCursors.click
+                      : SystemMouseCursors.basic,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: widget.onOpenDevices,
+                    onTapDown: _enabled
+                        ? (_) => setState(() => _pressed = true)
+                        : null,
+                    onTapUp: (_) => setState(() => _pressed = false),
+                    onTapCancel: () => setState(() => _pressed = false),
+                    child: Tooltip(
+                      message: caretLabel,
+                      excludeFromSemantics: true,
+                      child: SizedBox(
+                        width: 30,
+                        child: Center(
+                          child: AnimatedScale(
+                            scale: _pressed ? 0.96 : 1,
+                            duration: const Duration(milliseconds: 120),
+                            curve: Curves.easeOutCubic,
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 160),
+                              opacity: _enabled ? 1 : 0.4,
+                              // The shared glyph points down. Flip it so it
+                              // aims at the menu above, instead of reading
+                              // as a section that collapses.
+                              child: Transform.rotate(
+                                angle: math.pi,
+                                child: TotemIcon(
+                                  TotemIcons.chevronDown,
+                                  size: 15,
+                                  color: widget.menuOpen
+                                      ? AppTheme.mauve
+                                      : foreground,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-          ActionBarButton(
-            semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
-            onPressed: widget.onToggle,
-            role: ActionBarButtonRole.media(enabled: widget.isCameraOn),
-            child: TotemIcon(
-              widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -347,10 +421,11 @@ class _ActionBarCameraSwitcherButtonOverlayState
         widget.buttonKey.currentContext?.findRenderObject() as RenderBox?;
 
     final overlaySize = overlayBox?.size ?? MediaQuery.sizeOf(context);
-    final buttonOffset = buttonBox?.localToGlobal(
-      Offset.zero,
-      ancestor: overlayBox,
-    );
+    final overlayOrigin = overlayBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+    final buttonGlobalOffset = buttonBox?.localToGlobal(Offset.zero);
+    final buttonOffset = buttonGlobalOffset == null
+        ? null
+        : buttonGlobalOffset - overlayOrigin;
 
     return Stack(
       children: [
@@ -400,16 +475,24 @@ class _CameraOverlayPositionDelegate extends SingleChildLayoutDelegate {
 
   @override
   Offset getPositionForChild(Size size, Size childSize) {
-    // Position the menu above the button (bottom of menu at button's top)
+    // Position the menu above the button (bottom of menu at button's top).
     final preferredX = preferredOffset.dx;
     final preferredY = preferredOffset.dy - childSize.height;
+    const edgeMargin = 16.0;
 
-    // Clamp to stay within bounds
-    final clampedX = preferredX.clamp(0.0, overlaySize.width - childSize.width);
-    final clampedY = preferredY.clamp(
-      0.0,
-      overlaySize.height - childSize.height,
+    // Keep the menu away from the screen edges. If it is larger than the
+    // available space, pin it to the leading edge rather than producing an
+    // invalid clamp range.
+    final maxX = math.max(
+      edgeMargin,
+      overlaySize.width - childSize.width - edgeMargin,
     );
+    final maxY = math.max(
+      edgeMargin,
+      overlaySize.height - childSize.height - edgeMargin,
+    );
+    final clampedX = preferredX.clamp(edgeMargin, maxX);
+    final clampedY = preferredY.clamp(edgeMargin, maxY);
 
     return Offset(clampedX, clampedY);
   }
