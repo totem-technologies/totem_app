@@ -19,6 +19,7 @@ import 'package:totem_core/features/sessions/controllers/features/session_messag
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
 import 'package:totem_core/shared/widgets/chat/message_input_bar.dart';
 
@@ -852,6 +853,55 @@ void main() {
         ),
       ).length.equals(1);
     });
+
+    testWidgets(
+      'places the channel chevron beside the name and a plain close on the trailing edge',
+      (tester) async {
+        await pumpChatSheet(
+          tester,
+          isKeeper: false,
+          messages: const [],
+          session: session,
+          authState: AuthState.unauthenticated(),
+        );
+
+        final closeIcon = find.byWidgetPredicate(
+          (widget) => widget is TotemIcon && widget.icon == TotemIcons.close,
+        );
+        check(tester.widgetList(closeIcon)).length.equals(1);
+        check(
+          tester.widgetList(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is TotemIcon && widget.icon == TotemIcons.closeRounded,
+            ),
+          ),
+        ).isEmpty();
+
+        final closeButton = tester.widget<IconButton>(
+          find.ancestor(of: closeIcon, matching: find.byType(IconButton)),
+        );
+        check(closeButton.mouseCursor).equals(SystemMouseCursors.click);
+
+        final title = tester.getRect(find.text('Everyone').first);
+        final chevron = tester.getRect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is TotemIcon && widget.icon == TotemIcons.chevronDown,
+          ),
+        );
+        final gap = chevron.left - title.right;
+        check(gap).isGreaterThan(0);
+        check(gap).isLessThan(16);
+        check(tester.getRect(closeIcon).left).isGreaterThan(chevron.right);
+
+        final panelWidth = tester.getSize(find.byType(SessionChatPanel)).width;
+        final closeButtonRect = tester.getRect(
+          find.ancestor(of: closeIcon, matching: find.byType(IconButton)),
+        );
+        check(panelWidth - closeButtonRect.right).isCloseTo(20, 1);
+      },
+    );
 
     testWidgets('bounds and lazily builds a long recipient list', (
       tester,

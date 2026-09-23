@@ -17,18 +17,11 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
 import 'package:totem_core/shared/widgets/chat/message_input_bar.dart';
-import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 const _headerHorizontalPadding = 20.0;
-const _headerCloseButtonSize = 32.0;
-const _headerControlGap = 12.0;
-const _headerRecipientRuleWidth = 1.0;
-const _headerRecipientStartPadding = 10.0;
 const _recipientRowHorizontalPadding = 16.0;
-const _recipientRowEstimatedHeight = 61.0;
-const _recipientMenuMaxHeightFactor = 0.6;
 
 const _messageChromeGap = 12.0;
 const _messageEdgeFadeExtent = 16.0;
@@ -491,51 +484,61 @@ class _SessionChatHeader extends StatelessWidget {
         horizontal: _headerHorizontalPadding,
       ),
       child: Row(
-        spacing: _headerControlGap,
+        spacing: 12.0,
         children: [
-          Semantics(
-            button: true,
-            label: 'Close chat',
-            child: CircleIconButton(
-              color: Colors.transparent,
-              icon: TotemIcons.closeRounded,
-              onPressed: onClose,
-            ),
-          ),
-          const SizedBox(height: 44, child: VerticalDivider(width: 1)),
           Expanded(
-            child: Container(
-              height: 44,
-              padding: const EdgeInsetsDirectional.only(
-                start: _headerRecipientStartPadding,
-              ),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
               child: InkWell(
                 onTap: onToggleDropdown,
                 borderRadius: BorderRadius.circular(12),
-                child: Row(
-                  children: [
-                    _HeaderAvatar(threadTarget: threadTarget),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _HeaderTitle(
-                        threadTarget: threadTarget,
-                        keeperIdentity: keeperIdentity,
-                        isKeeper: isKeeper,
-                        participants: participants,
+                child: SizedBox(
+                  height: 44,
+                  child: Row(
+                    children: [
+                      _HeaderAvatar(threadTarget: threadTarget),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: _HeaderTitle(
+                          threadTarget: threadTarget,
+                          keeperIdentity: keeperIdentity,
+                          isKeeper: isKeeper,
+                          participants: participants,
+                        ),
                       ),
-                    ),
-                    AnimatedRotation(
-                      turns: dropdownOpen ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      child: const TotemIcon(
-                        TotemIcons.chevronDown,
-                        size: 14,
-                        color: AppTheme.gray,
+                      const SizedBox(width: 8.0),
+                      AnimatedRotation(
+                        turns: dropdownOpen ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        child: const TotemIcon(
+                          TotemIcons.chevronDown,
+                          size: 12,
+                          color: AppTheme.gray,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 44, child: VerticalDivider(width: 1)),
+          Semantics(
+            button: true,
+            label: 'Close chat',
+            child: IconButton(
+              onPressed: onClose,
+              mouseCursor: SystemMouseCursors.click,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(
+                width: 32.0,
+                height: 32.0,
+              ),
+              icon: const TotemIcon(
+                TotemIcons.close,
+                size: 18,
+                color: AppTheme.textHeading,
               ),
             ),
           ),
@@ -878,11 +881,9 @@ class _RecipientDropdownOverlay extends StatelessWidget {
         MediaQuery.viewInsetsOf(context).bottom;
     final maxMenuHeight = math.max(
       0.0,
-      availableHeight * _recipientMenuMaxHeightFactor,
+      // height * recipient menu max height factor
+      availableHeight * 0.6,
     );
-    final preferredMenuHeight =
-        _recipientRowEstimatedHeight * (rows.length + 1) + rows.length;
-    final menuHeight = math.min(preferredMenuHeight, maxMenuHeight);
 
     return AnimatedBuilder(
       animation: animation,
@@ -891,16 +892,9 @@ class _RecipientDropdownOverlay extends StatelessWidget {
         if (t <= 0) {
           return const SizedBox.shrink();
         }
-        // Align the popover's 16px row inset with the header avatar.
         return PositionedDirectional(
           top: 10,
-          start:
-              _headerHorizontalPadding +
-              _headerCloseButtonSize +
-              _headerControlGap +
-              _headerRecipientRuleWidth +
-              _headerRecipientStartPadding -
-              _recipientRowHorizontalPadding,
+          start: _headerHorizontalPadding - _recipientRowHorizontalPadding,
           end: _headerHorizontalPadding,
           child: IgnorePointer(
             ignoring: !interactive || t < 0.5,
@@ -915,8 +909,6 @@ class _RecipientDropdownOverlay extends StatelessWidget {
           ),
         );
       },
-      // Figma 3518:10039 — white popover, 20px radius, 12% black shadow.
-      // Shadow lives outside the clip so cream selected rows don't square off.
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppTheme.white,
@@ -933,10 +925,11 @@ class _RecipientDropdownOverlay extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: Material(
             color: AppTheme.white,
-            child: SizedBox(
-              height: menuHeight,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxMenuHeight),
               child: ListView.separated(
-                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                padding: EdgeInsetsDirectional.zero,
                 itemCount: rows.length + 1,
                 separatorBuilder: (_, _) => const _RecipientHairline(),
                 itemBuilder: (context, index) {
@@ -1045,7 +1038,7 @@ class _RecipientRow extends StatelessWidget {
               if (selected)
                 const TotemIcon(
                   TotemIcons.checkmark,
-                  size: 18,
+                  size: 16,
                   color: AppTheme.mauve,
                 ),
             ],

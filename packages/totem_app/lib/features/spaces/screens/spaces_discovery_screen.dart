@@ -359,10 +359,8 @@ class _ScrollFadeWrapper extends StatelessWidget {
   final Widget child;
   final bool showShadow;
 
-  static const _fadeHeight = 20.0;
   // Offset the gradient to start after the date indicator column.
   // References the single source of truth in SliverStickyDateGroup.
-  static const double _dateColumnWidth = SliverStickyDateGroup.dateColumnWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -372,9 +370,9 @@ class _ScrollFadeWrapper extends StatelessWidget {
         // Fade gradient that appears when scrolling, only over session cards
         PositionedDirectional(
           top: 0,
-          start: _dateColumnWidth,
+          start: SliverStickyDateGroup.dateColumnWidth,
           end: 0,
-          height: _fadeHeight,
+          height: 20,
           child: IgnorePointer(
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 250),
