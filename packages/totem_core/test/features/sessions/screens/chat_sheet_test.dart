@@ -617,6 +617,112 @@ void main() {
       ).equals(controller.position.maxScrollExtent);
     });
 
+    testWidgets('long messages scroll clear of the hint and the thread chip', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(420, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final body = List.filled(
+        30,
+        'A full line of a long session message.',
+      ).join('\n');
+      final message = SessionChatMessage(
+        id: 'long-1',
+        sender: false,
+        message: body,
+        timestamp: DateTime(2024, 1, 1, 10, 45).millisecondsSinceEpoch,
+        participant: MockRemoteParticipant('keeper-1', 'Heather'),
+        recipientIdentity: 'lucas',
+      );
+
+      await pumpChatSheet(
+        tester,
+        isKeeper: false,
+        messages: [message],
+        session: session,
+        authState: AuthState.authenticated(
+          user: UserSchema(
+            email: 'lucas@example.com',
+            slug: 'lucas',
+            name: 'Lucas',
+            profileAvatarType: ProfileAvatarTypeEnum.td,
+            circleCount: 0,
+            dateCreated: DateTime(2024),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Message Keeper'));
+      await tester.pumpAndSettle();
+
+      final scrollView = tester.widget<CustomScrollView>(
+        find.byType(CustomScrollView),
+      );
+      final controller = scrollView.controller!;
+      check(controller.position.maxScrollExtent).isGreaterThan(0);
+
+      Rect scrollRect() => tester.getRect(find.byType(CustomScrollView));
+      Rect bubbleRect() => tester.getRect(find.byType(MessageBubble));
+      final pill = tester.getRect(
+        find
+            .ancestor(
+              of: find.text('Only the keeper can see these messages'),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final chip = tester.getRect(
+        find
+            .ancestor(
+              of: find.text('View Group Messages'),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+
+      check(
+        tester.widgetList(
+          find.byKey(const Key('session-chat-message-edge-fade-top')),
+        ),
+      ).length.equals(1);
+      check(
+        tester.widgetList(
+          find.byKey(const Key('session-chat-message-edge-fade-bottom')),
+        ),
+      ).length.equals(1);
+      check(
+        tester
+            .getSize(
+              find.byKey(const Key('session-chat-message-edge-fade-top')),
+            )
+            .height,
+      ).equals(16);
+      check(
+        tester
+            .getSize(
+              find.byKey(const Key('session-chat-message-edge-fade-bottom')),
+            )
+            .height,
+      ).equals(16);
+
+      controller.jumpTo(controller.position.maxScrollExtent);
+      await tester.pump();
+
+      check(scrollRect().top - pill.bottom).isGreaterOrEqual(10);
+      check(chip.top - scrollRect().bottom).isGreaterOrEqual(10);
+      check(scrollRect().bottom - bubbleRect().bottom).isGreaterOrEqual(12);
+      check(chip.top - bubbleRect().bottom).isGreaterOrEqual(12);
+
+      controller.jumpTo(0);
+      await tester.pump();
+
+      check(bubbleRect().top - scrollRect().top).isGreaterOrEqual(12);
+      check(bubbleRect().top - pill.bottom).isGreaterOrEqual(12);
+    });
+
     testWidgets('sends a trimmed message from the composer', (tester) async {
       await pumpChatSheet(
         tester,
