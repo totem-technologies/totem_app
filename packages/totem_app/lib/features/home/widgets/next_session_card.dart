@@ -17,7 +17,6 @@ class NextSessionCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   static const double _borderRadius = 20;
-  static const double _contentPadding = 16;
   static const double _imageAspectRatio = 16 / 9;
 
   @override
@@ -58,7 +57,7 @@ class NextSessionCard extends StatelessWidget {
                   child: TotemImage(imageUrl: session.space.imageLink),
                 ),
                 Padding(
-                  padding: const EdgeInsetsDirectional.all(_contentPadding),
+                  padding: const EdgeInsetsDirectional.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

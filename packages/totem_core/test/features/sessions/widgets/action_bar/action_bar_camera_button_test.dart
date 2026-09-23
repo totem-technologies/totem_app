@@ -7,10 +7,17 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 import '../../controllers/core/session_controller_mock.dart';
 import '../../controllers/features/session_device_controller_mock.dart';
 import '../../livekit_mocks.dart';
+
+Finder _cameraCaret() {
+  return find.byWidgetPredicate(
+    (widget) => widget is TotemIcon && widget.icon == TotemIcons.chevronDown,
+  );
+}
 
 void main() {
   late FakeSessionController sessionController;
@@ -60,7 +67,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.keyboard_arrow_down));
+      await tester.tap(find.bySemanticsLabel('Choose camera'));
       await tester.pumpAndSettle();
 
       check(
@@ -68,7 +75,104 @@ void main() {
       ).length.equals(1);
     });
 
-    testWidgets('switch-camera chevron is labeled for semantics', (
+    testWidgets('positions overlay from button across render subtrees', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 400));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Row(
+              children: [
+                const Expanded(child: SizedBox()),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 120),
+                    ActionBarCameraSwitcherButton(
+                      isCameraOn: true,
+                      onToggle: () {},
+                      cameraPosition: CameraPosition.front,
+                      availableCameraDevices: const [
+                        MediaDevice(
+                          'camera-1',
+                          'Front Camera',
+                          'videoinput',
+                          null,
+                        ),
+                        MediaDevice(
+                          'camera-2',
+                          'Rear Camera',
+                          'videoinput',
+                          null,
+                        ),
+                      ],
+                      selectedCameraDeviceId: 'camera-1',
+                      onCameraPositionChanged: (_) {},
+                      onCameraDeviceSelected: (_) {},
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.bySemanticsLabel('Choose camera'));
+      await tester.pumpAndSettle();
+
+      final button = tester.getTopLeft(
+        find.byKey(ActionBarCameraSwitcherButton.deviceClusterKey),
+      );
+      final menu = tester.getTopLeft(find.text('Front Camera'));
+
+      check(menu.dx).isGreaterThan(0);
+      check(menu.dy).isLessThan(button.dy);
+    });
+
+    testWidgets('device caret is labeled as camera selection', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ActionBarCameraSwitcherButton(
+              isCameraOn: true,
+              onToggle: () {},
+              cameraPosition: CameraPosition.front,
+              availableCameraDevices: const [
+                MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
+                MediaDevice('camera-2', 'Rear Camera', 'videoinput', null),
+              ],
+              selectedCameraDeviceId: 'camera-2',
+              onCameraPositionChanged: (_) {},
+              onCameraDeviceSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      check(
+        tester.widgetList(find.bySemanticsLabel('Choose camera')),
+      ).length.equals(1);
+      final caret = tester.widget<Semantics>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics && widget.properties.label == 'Choose camera',
+        ),
+      );
+      check(caret.properties.hint).equals('Opens camera selection');
+    });
+
+    testWidgets('caret is grouped on the trailing side of the camera', (
       tester,
     ) async {
       await tester.binding.setSurfaceSize(const Size(800, 1000));
@@ -95,9 +199,21 @@ void main() {
         ),
       );
 
+      final cluster = find.byKey(
+        ActionBarCameraSwitcherButton.deviceClusterKey,
+      );
+      final camera = find.descendant(
+        of: cluster,
+        matching: find.byType(ActionBarButton),
+      );
+      final caret = find.descendant(of: cluster, matching: _cameraCaret());
+
+      check(tester.widgetList(cluster)).length.equals(1);
+      check(tester.widgetList(camera)).length.equals(1);
+      check(tester.widgetList(caret)).length.equals(1);
       check(
-        tester.widgetList(find.bySemanticsLabel('Switch camera')),
-      ).length.equals(1);
+        tester.getCenter(caret).dx,
+      ).isGreaterThan(tester.getCenter(camera).dx);
     });
 
     testWidgets('one-camera mode is platform-adaptive', (tester) async {
@@ -138,22 +254,20 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      final hasSwitcherArrow = find
-          .byIcon(Icons.keyboard_arrow_down)
-          .evaluate()
-          .isNotEmpty;
+      final hasSwitcherArrow = _cameraCaret().evaluate().isNotEmpty;
       if (!hasSwitcherArrow) {
+        check(tester.widgetList(_cameraCaret())).length.equals(0);
         check(
-          tester.widgetList(find.byIcon(Icons.keyboard_arrow_down)),
+          tester.widgetList(
+            find.byKey(ActionBarCameraSwitcherButton.deviceClusterKey),
+          ),
         ).length.equals(0);
         await tester.tap(find.byType(ActionBarButton));
         await tester.pump();
 
         check(toggles).equals(1);
       } else {
-        check(
-          tester.widgetList(find.byIcon(Icons.keyboard_arrow_down)),
-        ).length.equals(1);
+        check(tester.widgetList(_cameraCaret())).length.equals(1);
       }
     });
 
