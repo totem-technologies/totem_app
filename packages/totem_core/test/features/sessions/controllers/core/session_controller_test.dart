@@ -1454,62 +1454,22 @@ void main() {
       );
     });
 
-    group('Static Defaults', () {
-      test('syncTimerDuration is 20 seconds', () {
+    test(
+      'default media settings preserve the native capture and codec budget',
+      () {
         check(
           SessionController.syncTimerDuration,
         ).equals(const Duration(seconds: 20));
-      });
+        final capture = SessionController.defaultCameraCaptureOptions.params;
+        check(capture.dimensions).equals(VideoDimensionsPresets.h720_43);
+        check(capture.encoding?.maxFramerate).equals(24);
+        check(capture.encoding?.maxBitrate).equals(1300 * 1000);
 
-      test('syncTimerDuration is positive', () {
-        check(SessionController.syncTimerDuration.isNegative).equals(false);
-      });
-
-      test('defaultCameraCaptureOptions is defined', () {
-        check(SessionController.defaultCameraCaptureOptions).isNotNull();
-      });
-
-      test('defaultCameraCaptureOptions has h720_43 dimensions', () {
-        check(
-          SessionController.defaultCameraCaptureOptions.params.dimensions,
-        ).equals(VideoDimensionsPresets.h720_43);
-      });
-
-      test('defaultCameraCaptureOptions has 24 fps framerate', () {
-        check(
-          SessionController
-              .defaultCameraCaptureOptions
-              .params
-              .encoding
-              ?.maxFramerate,
-        ).equals(24);
-      });
-
-      test('defaultCameraCaptureOptions has 1300kbps bitrate', () {
-        check(
-          SessionController
-              .defaultCameraCaptureOptions
-              .params
-              .encoding
-              ?.maxBitrate,
-        ).equals(1300 * 1000);
-      });
-
-      test('defaultVideoPublishOptions uses h265 codec on native', () {
-        check(
-          SessionController.defaultVideoPublishOptions.videoCodec,
-        ).equals('h265');
-      });
-
-      test(
-        'defaultVideoPublishOptions configures h264 as backup video codec',
-        () {
-          final backup =
-              SessionController.defaultVideoPublishOptions.backupVideoCodec;
-          check(backup.enabled).equals(true);
-          check(backup.codec).equals('h264');
-        },
-      );
-    });
+        final publish = SessionController.defaultVideoPublishOptions;
+        check(publish.videoCodec).equals('h265');
+        check(publish.backupVideoCodec.enabled).isTrue();
+        check(publish.backupVideoCodec.codec).equals('h264');
+      },
+    );
   });
 }
