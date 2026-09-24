@@ -97,7 +97,12 @@ class UserAvatar extends ConsumerWidget {
       return null;
     }
 
-    return CachedNetworkImageProvider(getFullUrl(profileImage));
+    final url = getFullUrl(profileImage);
+    // Flutter's default web decoder avoids the HTML-image CanvasKit path
+    // affected by flutter/flutter#191800.
+    if (kIsWeb || kIsWasm) return NetworkImage(url);
+
+    return CachedNetworkImageProvider(url);
   }
 
   Widget _buildSlugAvatar(WidgetRef ref) {
