@@ -3,9 +3,9 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
-
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 class ActionBarMicButton extends StatefulWidget {
   const ActionBarMicButton({
@@ -14,6 +14,7 @@ class ActionBarMicButton extends StatefulWidget {
     this.audioTrack,
     this.initiallyEnabled,
     this.isMicOn,
+    this.requiresUnmuteConfirmation = false,
     this.indicatorColor,
     this.indicatorBarCount = 5,
     super.key,
@@ -27,6 +28,7 @@ class ActionBarMicButton extends StatefulWidget {
   /// controlled (e.g. the pre-join screen, where the selected preference is the
   /// source of truth while the preview track is still initializing).
   final bool? isMicOn;
+  final bool requiresUnmuteConfirmation;
   final ActionBarButtonToggleCallback? onToggle;
   final Color? indicatorColor;
   final int indicatorBarCount;
@@ -133,6 +135,28 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
     setState(() => _busy = true);
     try {
       final shouldEnable = !_isEnabled;
+      if (shouldEnable && widget.requiresUnmuteConfirmation) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => ConfirmationDialog(
+            content:
+                'Someone else has the Totem.\n'
+                'Are you sure you want to unmute?',
+            confirmButtonText: 'Unmute Anyway',
+            type: ConfirmationDialogType.standard,
+            showCancel: false,
+            onConfirm: () async => Navigator.of(dialogContext).pop(true),
+            extraButtons: [
+              ConfirmationDialogButton.outlined(
+                onConfirm: () async => Navigator.of(dialogContext).pop(false),
+                child: const Text('Stay Muted'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) return;
+      }
+
       await widget.onToggle?.call(shouldEnable);
       if (mounted) setState(() => _microphoneIsEnabled = shouldEnable);
     } finally {

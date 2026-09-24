@@ -139,6 +139,7 @@ void main() {
     SessionRoomState? state,
     String? roundMessage,
     bool isCameraOn = false,
+    bool isStaff = false,
     SessionCuesService? feedbackService,
   }) async {
     final testCuesService = feedbackService ?? _TestSessionCuesService();
@@ -155,7 +156,7 @@ void main() {
       ProviderScope(
         overrides: [
           authControllerProvider.overrideWith(
-            () => FakeAuthController(testAuthenticatedState()),
+            () => FakeAuthController(testAuthenticatedState(isStaff: isStaff)),
           ),
           currentSessionProvider.overrideWith((ref) => session),
           currentSessionStateProvider.overrideWithValue(state ?? _buildState()),
@@ -201,7 +202,11 @@ void main() {
     testWidgets('shows receiving controls without emoji action', (
       tester,
     ) async {
-      await pumpReceiveTotem(tester, roundMessage: 'Take your time');
+      await pumpReceiveTotem(
+        tester,
+        roundMessage: 'Take your time',
+        isStaff: true,
+      );
 
       check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
       check(
@@ -234,10 +239,19 @@ void main() {
     });
 
     testWidgets('toggles mic and camera from action bar', (tester) async {
-      await pumpReceiveTotem(tester);
+      await pumpReceiveTotem(tester, isStaff: true);
 
       await tester.tap(find.bySemanticsLabel('Microphone off'));
-      await tester.pump();
+      await tester.pumpAndSettle();
+      check(
+        tester.widgetList(
+          find.text(
+            'Someone else has the Totem. Are you sure you want to unmute?',
+          ),
+        ),
+      ).length.equals(1);
+      await tester.tap(find.text('Unmute Anyway'));
+      await tester.pumpAndSettle();
       verify(() => devices.enableMicrophone()).called(1);
 
       await tester.tap(find.bySemanticsLabel('Camera off'));

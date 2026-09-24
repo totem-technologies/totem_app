@@ -197,13 +197,25 @@ void main() {
     Future<void> pumpSessionActionBar(
       WidgetTester tester, {
       required RoomScreen screen,
+      bool isStaff = false,
     }) async {
+      final authState = isStaff
+          ? AuthState.authenticated(
+              user: UserSchema(
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                circleCount: 0,
+                email: 'staff@example.com',
+                dateCreated: DateTime(2024),
+                isStaff: true,
+              ),
+            )
+          : AuthState.unauthenticated();
       await pumpWidget(
         tester,
         child: const SessionActionBar(),
         overrides: [
           authControllerProvider.overrideWith(
-            () => FakeAuthController(AuthState.unauthenticated()),
+            () => FakeAuthController(authState),
           ),
           currentSessionProvider.overrideWith((ref) => session),
           lastSessionMessageProvider.overrideWith(
@@ -243,6 +255,52 @@ void main() {
         check(tester.widgetList(find.byType(ActionBar))).length.equals(0);
       }
     });
+
+    autoSizeTest(
+      'confirms before unmuting when another participant has the Totem',
+      (tester) async {
+        when(
+          () => deviceController.disableMicrophone(),
+        ).thenAnswer((_) async {});
+        await pumpSessionActionBar(tester, screen: RoomScreen.listening);
+
+        await tester.tap(find.byType(ActionBarButton).first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(ActionBarButton).first);
+        await tester.pumpAndSettle();
+
+        check(
+          tester.widgetList(
+            find.text(
+              'Someone else has the Totem. Are you sure you want to unmute?',
+            ),
+          ),
+        ).length.equals(1);
+
+        await tester.tap(find.text('Stay Muted'));
+        await tester.pumpAndSettle();
+      },
+    );
+
+    autoSizeTest(
+      'shows the microphone on the receiving screen only for staff',
+      (tester) async {
+        for (final isStaff in [false, true]) {
+          await pumpSessionActionBar(
+            tester,
+            screen: RoomScreen.receiving,
+            isStaff: isStaff,
+          );
+
+          check(
+            tester.widgetList(find.bySemanticsLabel('Microphone on')),
+          ).length.equals(isStaff ? 1 : 0);
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      },
+    );
 
     autoSizeTest('offers reactions only while listening', (tester) async {
       for (final scenario in [

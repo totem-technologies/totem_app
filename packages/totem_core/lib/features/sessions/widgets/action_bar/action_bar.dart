@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -452,9 +454,19 @@ class SessionActionBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(
+      authControllerProvider.select((auth) => auth.user),
+    );
     final session = ref.watch(currentSessionProvider);
     final currentScreen = ref.watch(resolveCurrentScreenProvider);
     final user = session?.room?.localParticipant;
+    final totemState = ref.watch(
+      currentSessionStateProvider.select(
+        (state) => state == null
+            ? null
+            : (status: state.roomState.status, speaker: state.speakingNow),
+      ),
+    );
 
     if (session == null || currentScreen == null || user == null) {
       return const SizedBox.shrink();
@@ -463,6 +475,9 @@ class SessionActionBar extends ConsumerWidget {
     final microphoneButton = ActionBarMicButton(
       participant: user,
       initiallyEnabled: session.options.microphoneEnabled,
+      requiresUnmuteConfirmation:
+          totemState?.status == RoomStatus.active &&
+          totemState?.speaker != user.identity,
       onToggle: (shouldEnable) async {
         if (shouldEnable) {
           await session.devices.enableMicrophone();
@@ -504,10 +519,19 @@ class SessionActionBar extends ConsumerWidget {
         );
       case RoomScreen.speaking:
       case RoomScreen.passing:
-      case RoomScreen.receiving:
         return ActionBar(
           key: SessionActionBar.actionBarKey,
           children: [microphoneButton, cameraButton, chatButton, moreButton],
+        );
+      case RoomScreen.receiving:
+        return ActionBar(
+          key: SessionActionBar.actionBarKey,
+          children: [
+            if (currentUser?.isStaff == true) microphoneButton,
+            cameraButton,
+            chatButton,
+            moreButton,
+          ],
         );
     }
   }
