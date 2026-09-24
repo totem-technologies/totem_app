@@ -7,13 +7,11 @@ import 'package:totem_core/shared/widgets/responsive_modal.dart';
 
 void main() {
   Future<void> pumpHost(WidgetTester tester, {required Size size}) async {
-    final hostKey = GlobalKey();
-
     await tester.pumpWidget(
       MaterialApp(
         home: MediaQuery(
           data: MediaQueryData(size: size),
-          child: Scaffold(body: SizedBox(key: hostKey)),
+          child: const Scaffold(body: SizedBox()),
         ),
       ),
     );
@@ -21,22 +19,45 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> openModal(
+    WidgetTester tester, {
+    required WidgetBuilder bottomSheetBuilder,
+    required WidgetBuilder largeScreenBuilder,
+    bool showDragHandle = false,
+  }) async {
+    final context = tester.element(find.byType(SizedBox));
+    final modal = showResponsiveModal<void>(
+      context: context,
+      showDragHandle: showDragHandle,
+      bottomSheetBuilder: bottomSheetBuilder,
+      largeScreenBuilder: largeScreenBuilder,
+    );
+
+    addTearDown(() async {
+      if (find.byType(BottomSheet).evaluate().isNotEmpty ||
+          find.byType(Dialog).evaluate().isNotEmpty) {
+        await tester
+            .state<NavigatorState>(find.byType(Navigator).last)
+            .maybePop();
+        await tester.pumpAndSettle();
+      }
+      unawaited(modal);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+
+    await tester.pumpAndSettle();
+  }
+
   group('showResponsiveModal', () {
     testWidgets('uses a bottom sheet on small screens', (tester) async {
       await pumpHost(tester, size: const Size(500, 900));
-
-      final context = tester.element(find.byType(SizedBox));
-
-      unawaited(
-        showResponsiveModal<void>(
-          context: context,
-          showDragHandle: true,
-          bottomSheetBuilder: (context) => const Text('Small modal'),
-          largeScreenBuilder: (context) => const Text('Large modal'),
-        ),
+      await openModal(
+        tester,
+        showDragHandle: true,
+        bottomSheetBuilder: (context) => const Text('Small modal'),
+        largeScreenBuilder: (context) => const Text('Large modal'),
       );
-
-      await tester.pumpAndSettle();
 
       check(tester.widgetList(find.text('Small modal'))).length.equals(1);
       check(tester.widgetList(find.text('Large modal'))).length.equals(0);
@@ -46,18 +67,11 @@ void main() {
 
     testWidgets('uses a dialog on large screens', (tester) async {
       await pumpHost(tester, size: const Size(900, 900));
-
-      final context = tester.element(find.byType(SizedBox));
-
-      unawaited(
-        showResponsiveModal<void>(
-          context: context,
-          bottomSheetBuilder: (context) => const Text('Small modal'),
-          largeScreenBuilder: (context) => const Text('Large modal'),
-        ),
+      await openModal(
+        tester,
+        bottomSheetBuilder: (context) => const Text('Small modal'),
+        largeScreenBuilder: (context) => const Text('Large modal'),
       );
-
-      await tester.pumpAndSettle();
 
       check(tester.widgetList(find.text('Large modal'))).length.equals(1);
       check(tester.widgetList(find.text('Small modal'))).length.equals(0);

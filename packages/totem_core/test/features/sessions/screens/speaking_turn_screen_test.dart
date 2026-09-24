@@ -11,13 +11,13 @@ import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-import 'package:totem_core/auth/models/auth_state.dart';
+
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
@@ -31,12 +31,8 @@ import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
-
-class MockSessionKeeperController extends Mock
-    implements SessionKeeperController {}
-
-class MockSessionMessagingController extends Mock
-    implements SessionMessagingController {}
+import '../session_test_fixtures.dart';
+import '../session_test_mocks.dart';
 
 class _TestSessionCuesService extends SessionCuesService {
   int swipePulseCount = 0;
@@ -225,18 +221,7 @@ void main() {
       ProviderScope(
         overrides: [
           authControllerProvider.overrideWith(
-            () => FakeAuthController(
-              AuthState.authenticated(
-                user: UserSchema(
-                  email: 'test@test.com',
-                  name: 'Test User',
-                  slug: 'user-1',
-                  profileAvatarType: ProfileAvatarTypeEnum.td,
-                  circleCount: 0,
-                  dateCreated: DateTime.now(),
-                ),
-              ),
-            ),
+            () => FakeAuthController(testAuthenticatedState()),
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
           currentSessionProvider.overrideWith((ref) => session),

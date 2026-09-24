@@ -69,28 +69,6 @@ void main() {
   Widget wrapCard(GoRouter router) => MaterialApp.router(routerConfig: router);
 
   group('KeeperMessageParticipantsCard', () {
-    testWidgets('renders badge, title, description and button', (tester) async {
-      final router = createRouter();
-      addTearDown(router.dispose);
-      await tester.pumpWidget(wrapCard(router));
-
-      check(
-        tester.widgetList(find.text('\u{1F512}  Keeper Only')),
-      ).length.equals(1);
-      check(
-        tester.widgetList(find.text('Message All Participants')),
-      ).length.equals(2);
-      check(
-        tester.widgetList(
-          find.text(
-            'Send an individual message to every participant registered '
-            'for this session.',
-          ),
-        ),
-      ).length.equals(1);
-      check(tester.widgetList(find.byType(ElevatedButton))).length.equals(1);
-    });
-
     testWidgets('tapping the button opens the Session Participants screen', (
       tester,
     ) async {

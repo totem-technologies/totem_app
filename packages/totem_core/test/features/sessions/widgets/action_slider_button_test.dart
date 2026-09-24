@@ -196,9 +196,14 @@ void main() {
     });
   });
 
-  group('ActionSliderButton', () {
-    autoSizeTest('renders ActionButton on desktop platforms', (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+  testWidgets('selects the appropriate action control for the platform', (
+    tester,
+  ) async {
+    for (final scenario in [
+      (platform: TargetPlatform.macOS, desktop: true),
+      (platform: TargetPlatform.iOS, desktop: false),
+    ]) {
+      debugDefaultTargetPlatformOverride = scenario.platform;
       try {
         await pumpTestWidget(
           tester,
@@ -208,29 +213,23 @@ void main() {
           ),
         );
 
-        check(tester.widgetList(find.byType(ActionButton))).length.equals(1);
-        check(tester.widgetList(find.byType(ActionSlider))).length.equals(0);
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
-    });
-
-    autoSizeTest('renders ActionSlider on mobile platforms', (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      try {
-        await pumpTestWidget(
-          tester,
-          child: ActionSliderButton(
-            text: 'Continue',
-            onActionCompleted: () async => true,
+        check(
+          tester.widgetList(
+            scenario.desktop
+                ? find.byType(ActionButton)
+                : find.byType(ActionSlider),
           ),
-        );
-
-        check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
-        check(tester.widgetList(find.byType(ActionButton))).length.equals(0);
+        ).length.equals(1);
+        check(
+          tester.widgetList(
+            scenario.desktop
+                ? find.byType(ActionSlider)
+                : find.byType(ActionButton),
+          ),
+        ).length.equals(0);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
-    });
+    }
   });
 }

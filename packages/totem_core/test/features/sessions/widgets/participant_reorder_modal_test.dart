@@ -7,20 +7,12 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_reorder_modal.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
-class MockSessionController extends Mock implements SessionController {}
-
-class MockSessionKeeperController extends Mock
-    implements SessionKeeperController {}
-
-class MockSessionRoomState extends Mock implements SessionRoomState {}
-
-class MockParticipant extends Mock implements Participant {}
+import '../controllers/core/session_controller_mock.dart';
+import '../session_test_mocks.dart';
 
 class _ReorderTestHarness {
   _ReorderTestHarness({
@@ -273,37 +265,31 @@ void main() {
       await tester.binding.setSurfaceSize(null);
     });
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentSessionProvider.overrideWith((ref) => harness.session),
-          currentSessionStateProvider.overrideWith(
-            (ref) => harness.sessionState,
-          ),
-        ],
-        child: MaterialApp(
-          home: Navigator(
-            onGenerateRoute: (settings) {
-              return MaterialPageRoute<void>(
-                builder: (routeContext) {
-                  return Scaffold(
-                    body: Builder(
-                      builder: (context) {
-                        return Center(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              showParticipantReorderModals(context);
-                            },
-                            child: const Text('Open reorder modal'),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+    await _pumpReorderWidget(
+      tester,
+      harness,
+      child: MaterialApp(
+        home: Navigator(
+          onGenerateRoute: (settings) {
+            return MaterialPageRoute<void>(
+              builder: (routeContext) {
+                return Scaffold(
+                  body: Builder(
+                    builder: (context) {
+                      return Center(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            showParticipantReorderModals(context);
+                          },
+                          child: const Text('Open reorder modal'),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     );
@@ -352,37 +338,31 @@ void main() {
       await tester.binding.setSurfaceSize(null);
     });
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentSessionProvider.overrideWith((ref) => harness.session),
-          currentSessionStateProvider.overrideWith(
-            (ref) => harness.sessionState,
-          ),
-        ],
-        child: MaterialApp(
-          home: Navigator(
-            onGenerateRoute: (settings) {
-              return MaterialPageRoute<void>(
-                builder: (routeContext) {
-                  return Scaffold(
-                    body: Builder(
-                      builder: (context) {
-                        return Center(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              showParticipantReorderModals(context);
-                            },
-                            child: const Text('Open reorder modal'),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+    await _pumpReorderWidget(
+      tester,
+      harness,
+      child: MaterialApp(
+        home: Navigator(
+          onGenerateRoute: (settings) {
+            return MaterialPageRoute<void>(
+              builder: (routeContext) {
+                return Scaffold(
+                  body: Builder(
+                    builder: (context) {
+                      return Center(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            showParticipantReorderModals(context);
+                          },
+                          child: const Text('Open reorder modal'),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     );

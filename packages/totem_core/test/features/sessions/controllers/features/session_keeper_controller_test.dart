@@ -22,6 +22,7 @@ void main() {
           mockSession.mockDevices = mockDevices;
 
           final container = ProviderContainer();
+          addTearDown(container.dispose);
           final controller = container.read(
             sessionKeeperControllerProvider(mockSession).notifier,
           );
@@ -39,6 +40,7 @@ void main() {
           mockSession.mockDevices = mockDevices;
 
           final container = ProviderContainer();
+          addTearDown(container.dispose);
           final controller = container.read(
             sessionKeeperControllerProvider(mockSession).notifier,
           );
@@ -54,6 +56,7 @@ void main() {
         mockSession.mockDevices = mockDevices;
 
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );
@@ -72,6 +75,7 @@ void main() {
           mockSession.mockDevices = mockDevices;
 
           final container = ProviderContainer();
+          addTearDown(container.dispose);
           final controller = container.read(
             sessionKeeperControllerProvider(mockSession).notifier,
           );
@@ -93,6 +97,7 @@ void main() {
       test('onKeeperConnected marks keeper as connected', () async {
         final mockSession = FakeSessionController();
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );
@@ -107,6 +112,7 @@ void main() {
         mockSession.mockDevices = mockDevices;
 
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );
@@ -120,6 +126,7 @@ void main() {
       test('onKeeperConnected is idempotent', () async {
         final mockSession = FakeSessionController();
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );
@@ -135,6 +142,7 @@ void main() {
         final mockSession = FakeSessionController();
 
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );
@@ -152,6 +160,7 @@ void main() {
         final mockSession = FakeSessionController();
 
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );
@@ -168,6 +177,7 @@ void main() {
         mockSession.mockDevices = mockDevices;
 
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );
@@ -198,6 +208,7 @@ void main() {
       test('disposePresenceTracking is safe when no timer exists', () async {
         final mockSession = MockSessionController();
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );
@@ -209,6 +220,7 @@ void main() {
       test('disposePresenceTracking is idempotent', () async {
         final mockSession = MockSessionController();
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );
@@ -225,6 +237,7 @@ void main() {
         final mockSession = FakeSessionController();
 
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );

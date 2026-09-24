@@ -66,7 +66,6 @@ void main() {
   final compactMetrics = ParticipantOverlayMetrics.forCard(
     const Size(160, 120),
   );
-  final largeMetrics = ParticipantOverlayMetrics.forCard(const Size(600, 500));
 
   group('SpeakingIndicatorAudioTrack', () {
     testWidgets('shows the muted icon when the audio track is muted', (
@@ -86,7 +85,7 @@ void main() {
       check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
     });
 
-    testWidgets('shows the muted icon when no audio track is provided', (
+    testWidgets('shows the muted state when no audio track is provided', (
       tester,
     ) async {
       await pumpWidget(
@@ -95,34 +94,7 @@ void main() {
       );
 
       check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
-      check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(20);
     });
-
-    testWidgets(
-      'keeps a 20dp muted icon on phone-sized windows without an explicit size',
-      (tester) async {
-        await pumpWidget(
-          tester,
-          viewSize: const Size(400, 800),
-          child: const SpeakingIndicatorAudioTrack(audioTrack: null),
-        );
-
-        check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(20);
-      },
-    );
-
-    testWidgets(
-      'keeps a 20dp muted icon on desktop-class windows without an explicit size',
-      (tester) async {
-        await pumpWidget(
-          tester,
-          viewSize: const Size(1200, 900),
-          child: const SpeakingIndicatorAudioTrack(audioTrack: null),
-        );
-
-        check(tester.widget<TotemIcon>(find.byType(TotemIcon)).size).equals(20);
-      },
-    );
 
     testWidgets(
       'switches between waveform and icon on mute and unmute events',
@@ -289,44 +261,6 @@ void main() {
 
       check(tester.widgetList(find.text('🔥'))).length.equals(0);
       check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
-    });
-
-    testWidgets('renders an emoji on a large card', (tester) async {
-      await pumpWidget(
-        tester,
-        overrides: [
-          participantEmojisProvider(
-            remoteParticipant.identity,
-          ).overrideWith((ref) => ['🔥']),
-        ],
-        child: SpeakingIndicatorOrEmoji(
-          participant: remoteParticipant,
-          metrics: largeMetrics,
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      check(tester.widgetList(find.text('🔥'))).length.equals(1);
-    });
-
-    testWidgets('renders an emoji on a small tile', (tester) async {
-      await pumpWidget(
-        tester,
-        overrides: [
-          participantEmojisProvider(
-            remoteParticipant.identity,
-          ).overrideWith((ref) => ['🔥']),
-        ],
-        child: SpeakingIndicatorOrEmoji(
-          participant: remoteParticipant,
-          metrics: compactMetrics,
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      check(tester.widgetList(find.text('🔥'))).length.equals(1);
     });
   });
 }

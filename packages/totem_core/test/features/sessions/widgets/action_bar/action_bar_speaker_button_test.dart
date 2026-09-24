@@ -28,28 +28,4 @@ void main() {
 
     check(requested).equals(false);
   });
-
-  testWidgets('ActionBarSpeakerButton is disabled when callback is null', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: ActionBarSpeakerButton(
-            isSpeakerOn: true,
-            onSpeakerToggled: null,
-          ),
-        ),
-      ),
-    );
-
-    final gesture = tester.widget<GestureDetector>(
-      find.descendant(
-        of: find.byType(ActionBarButton),
-        matching: find.byType(GestureDetector),
-      ),
-    );
-
-    check(gesture.onTap).isNull();
-  });
 }

@@ -115,11 +115,19 @@ final _fakeUser = UserSchema(
   dateCreated: DateTime(2024),
 );
 
+List<dynamic> _sessionRouteOverrides(String slug) => [
+  sessionTokenProvider(slug).overrideWith((_) async => throw Exception('test')),
+  sessionProvider(slug).overrideWith((_) async => throw Exception('test')),
+  preJoinMediaControllerProvider(
+    slug,
+  ).overrideWith(_FakePreJoinMediaController.new),
+];
+
 /// Creates a test widget tree with a [ProviderScope] and [GoRouter].
 Future<GoRouter> _pumpTestRouter(
   WidgetTester tester, {
   required AuthState authState,
-  List<Object?> overrides = const [],
+  List<dynamic> overrides = const [],
 }) async {
   GoRouter? router;
   final routerOwner = WebTotemRouter(browser: _FakeBrowserEnvironment());
@@ -130,7 +138,7 @@ Future<GoRouter> _pumpTestRouter(
         authControllerProvider.overrideWith(
           () => _FakeAuthController(authState),
         ),
-        ...overrides.cast(),
+        ...overrides,
       ],
       child: Consumer(
         builder: (context, ref, _) {
@@ -232,18 +240,7 @@ void main() {
         final router = await _pumpTestRouter(
           tester,
           authState: AuthState.authenticated(user: _fakeUser),
-          overrides: [
-            // Stub providers to prevent API calls and media initialization.
-            sessionTokenProvider(
-              slug,
-            ).overrideWith((ref) async => throw Exception('test')),
-            sessionProvider(
-              slug,
-            ).overrideWith((ref) async => throw Exception('test')),
-            preJoinMediaControllerProvider(
-              slug,
-            ).overrideWith(_FakePreJoinMediaController.new),
-          ],
+          overrides: [..._sessionRouteOverrides(slug)],
         );
 
         router.go('/$slug');
@@ -278,17 +275,7 @@ void main() {
         final router = await _pumpTestRouter(
           tester,
           authState: AuthState.unauthenticated(),
-          overrides: [
-            sessionTokenProvider(
-              slug,
-            ).overrideWith((ref) async => throw Exception('test')),
-            sessionProvider(
-              slug,
-            ).overrideWith((ref) async => throw Exception('test')),
-            preJoinMediaControllerProvider(
-              slug,
-            ).overrideWith(_FakePreJoinMediaController.new),
-          ],
+          overrides: [..._sessionRouteOverrides(slug)],
         );
 
         router.go('/$slug');

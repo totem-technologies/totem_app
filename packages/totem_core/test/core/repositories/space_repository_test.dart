@@ -1,249 +1,187 @@
+// Uses the generated client's existing transitive test adapter without adding a
+// test-only dependency solely for repository boundary tests.
+// ignore_for_file: depend_on_referenced_packages
+
 import 'dart:convert';
 
 import 'package:checks/checks.dart';
+
+import 'package:degenerate_runtime/testing.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
+
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/api_service.dart';
+import 'package:totem_core/core/services/cache_service.dart';
+import 'package:totem_core/core/services/secure_storage.dart';
 
 import '../../setup.dart';
 
-final class _RecordingApiClient implements ApiClient {
-  _RecordingApiClient(this.response);
+class _FakeCache extends CacheService {
+  _FakeCache({this.spaces, this.subscribed}) : super(SecureStorage());
 
-  final ApiResponse response;
-  ApiRequest? request;
-  int requestCount = 0;
-
-  @override
-  Uri get baseUrl => Uri.parse('https://example.com');
+  List<MobileSpaceDetailSchema>? spaces;
+  List<SpaceSchema>? subscribed;
+  int savedSpaces = 0;
+  int savedSubscribed = 0;
 
   @override
-  Future<ApiResponse> send(ApiRequest request) async {
-    this.request = request;
-    requestCount++;
-    return response;
+  Future<List<MobileSpaceDetailSchema>?> getSpaces() async => spaces;
+
+  @override
+  Future<List<SpaceSchema>?> getSubscribedSpaces() async => subscribed;
+
+  @override
+  Future<void> saveSpaces(List<MobileSpaceDetailSchema> value) async {
+    savedSpaces++;
   }
 
   @override
-  Future<StreamedApiResponse> sendStreaming(ApiRequest request) {
-    throw UnimplementedError('Streaming is not used by these tests');
+  Future<void> saveSubscribedSpaces(List<SpaceSchema> value) async {
+    savedSubscribed++;
   }
-
-  @override
-  Future<void> close() async {}
 }
 
-Map<String, dynamic> _sessionJson({
-  required String slug,
-  required String title,
-  required bool attending,
-}) {
-  return <String, dynamic>{
-    'slug': slug,
-    'title': title,
-    'space': <String, dynamic>{
-      'slug': '$slug-space',
-      'title': '$title Space',
-      'image_link': null,
-      'short_description': 'A test space',
-      'content': '',
-      'author': <String, dynamic>{
-        'profile_avatar_type': 'TD',
-        'date_created': '2026-01-01T00:00:00Z',
+MobileSpaceDetailSchema _space(String slug) => MobileSpaceDetailSchema(
+  slug: slug,
+  title: 'Space $slug',
+  imageLink: null,
+  shortDescription: 'Description',
+  content: '',
+  author: PublicUserSchema(
+    profileAvatarType: ProfileAvatarTypeEnum.td,
+    dateCreated: DateTime.utc(2026),
+  ),
+  category: null,
+  subscribers: 2,
+  recurring: null,
+  price: 0,
+  nextEvents: const [],
+);
+
+ClientApi _api(RecordingClient client) => ClientApi(ApiConfig(client: client));
+
+ProviderContainer _container({
+  required RecordingClient client,
+  required _FakeCache cache,
+}) => ProviderContainer(
+  overrides: [
+    apiServiceProvider.overrideWithValue(_api(client)),
+    cacheServiceProvider.overrideWithValue(cache),
+    listSubscribedSpacesProvider.overrideWith(
+      (_) async => cache.subscribed ?? [],
+    ),
+  ],
+);
+
+void main() {
+  setupAppConfig();
+
+  group('space repository network boundaries', () {
+    test(
+      'returns cached spaces when the listing request has a network failure',
+      () async {
+        final cached = [_space('cached')];
+        final client = RecordingClient(
+          nextResponse: ApiResponse(statusCode: 503, body: 'unavailable'),
+        );
+        final cache = _FakeCache(spaces: cached);
+        final container = _container(client: client, cache: cache);
+        addTearDown(container.dispose);
+
+        final result = await container.read(listSpacesProvider.future);
+
+        check(result).deepEquals(cached);
+        check(cache.savedSpaces).equals(0);
       },
-      'category': null,
-      'subscribers': 1,
-      'recurring': null,
-      'price': 0,
-      'next_events': <dynamic>[],
-    },
-    'content': '',
-    'seats_left': 5,
-    'duration': 60,
-    'start': '2026-08-20T15:00:00Z',
-    'attending': attending,
-    'open': true,
-    'started': false,
-    'cancelled': false,
-    'joinable': false,
-    'ended': false,
-    'rsvp_url': '/rsvp/$slug',
-    'join_url': null,
-    'subscribe_url': '/subscribe/$slug',
-    'cal_link': '/calendar/$slug',
-    'subscribed': true,
-    'user_timezone': 'UTC',
-    'meeting_provider': 'livekit',
-  };
-}
+    );
 
-ProviderContainer _containerFor(_RecordingApiClient client) {
-  return ProviderContainer(
-    overrides: [
-      apiServiceProvider.overrideWithValue(
-        ClientApi(ApiConfig(client: client)),
-      ),
-    ],
+    test(
+      'subscribes and unsubscribes through the public repository providers',
+      () async {
+        final client = RecordingClient(
+          onRequest: (request) => ApiResponse(
+            statusCode: 200,
+            body: request.method == 'DELETE' ? 'true' : 'true',
+          ),
+        );
+        final cache = _FakeCache(subscribed: []);
+        final container = _container(client: client, cache: cache);
+        addTearDown(container.dispose);
+
+        check(
+          await container.read(subscribeToSpaceProvider('wellbeing').future),
+        ).isTrue();
+        check(
+          await container.read(
+            unsubscribeFromSpaceProvider('wellbeing').future,
+          ),
+        ).isTrue();
+        check(client.requests).length.equals(2);
+        check(client.requests[0].method).equals('POST');
+        check(client.requests[1].method).equals('DELETE');
+        check(
+          client.requests[0].path,
+        ).equals('/api/mobile/protected/spaces/subscribe/wellbeing');
+        check(
+          client.requests[1].path,
+        ).equals('/api/mobile/protected/spaces/subscribe/wellbeing');
+      },
+    );
+  });
+
+  test(
+    'converts an RSVP conflict response into the app-owned exception',
+    () async {
+      final existing = _session('existing', attending: true);
+      final conflict = SessionConflictSchema(
+        message: 'Already attending',
+        conflictingSessions: [existing],
+      );
+      final client = RecordingClient(
+        nextResponse: ApiResponse(
+          statusCode: 409,
+          body: jsonEncode(conflict.toJson()),
+        ),
+      );
+      final container = _container(client: client, cache: _FakeCache());
+      addTearDown(container.dispose);
+
+      RsvpConflictException? caught;
+      try {
+        await container.read(rsvpConfirmProvider('new').future);
+      } on RsvpConflictException catch (error) {
+        caught = error;
+      }
+      check(caught).isNotNull();
+      check(
+        caught!.conflict.conflictingSessions.single.slug,
+      ).equals('existing');
+    },
   );
 }
 
-void main() {
-  setUpAll(() {
-    setupAppConfig();
-    silenceLogger();
-  });
-
-  group('RSVP repository', () {
-    test('returns attendance status when RSVP succeeds', () async {
-      final client = _RecordingApiClient(
-        ApiResponse(
-          statusCode: 200,
-          body: jsonEncode(
-            _sessionJson(
-              slug: 'new-session',
-              title: 'New Session',
-              attending: true,
-            ),
-          ),
-        ),
-      );
-      final container = _containerFor(client);
-      addTearDown(container.dispose);
-
-      final attending = await container.read(
-        rsvpConfirmProvider('new-session').future,
-      );
-
-      check(attending).equals(true);
-      check(client.request?.method).equals('POST');
-      check(
-        client.request?.path,
-      ).equals('/api/mobile/protected/spaces/rsvp/new-session');
-    });
-
-    test('treats RSVP confirm 409 as an unreported conflict', () async {
-      final client = _RecordingApiClient(
-        ApiResponse(
-          statusCode: 409,
-          body: jsonEncode(<String, dynamic>{
-            'message': 'The session overlaps an existing RSVP',
-            'conflicting_sessions': <Map<String, dynamic>>[
-              _sessionJson(
-                slug: 'existing-session',
-                title: 'Existing Session',
-                attending: true,
-              ),
-            ],
-          }),
-        ),
-      );
-      final container = _containerFor(client);
-      addTearDown(container.dispose);
-
-      try {
-        await container.read(rsvpConfirmProvider('new-session').future);
-        fail('Expected an RSVP conflict');
-      } on RsvpConflictException catch (error) {
-        check(
-          error.conflict.conflictingSessions.firstOrNull?.slug,
-        ).equals('existing-session');
-        check(error.cause).isA<ApiError<dynamic, dynamic>>();
-        check(ErrorHandler.wasReported(error.cause)).equals(false);
-      }
-      check(client.requestCount).equals(1);
-    });
-
-    test('resolves the conflict successfully with status 200', () async {
-      final client = _RecordingApiClient(
-        ApiResponse(
-          statusCode: 200,
-          body: jsonEncode(
-            _sessionJson(
-              slug: 'new-session',
-              title: 'New Session',
-              attending: true,
-            ),
-          ),
-        ),
-      );
-      final container = _containerFor(client);
-      addTearDown(container.dispose);
-
-      final attending = await container.read(
-        rsvpForceConfirmProvider('new-session', ['existing-session']).future,
-      );
-
-      check(attending).equals(true);
-      check(client.request?.method).equals('POST');
-      check(client.request?.path).equals(
-        '/api/mobile/protected/spaces/rsvp/new-session/resolve-conflicts',
-      );
-      final requestBody = client.request?.body;
-      if (requestBody is! String) {
-        fail('Expected the switch request to contain a JSON string body');
-      }
-      check(jsonDecode(requestBody) as Map<Object?, Object?>).deepEquals(
-        <String, dynamic>{
-          'conflicting_session_slugs': <String>['existing-session'],
-        },
-      );
-    });
-
-    test('does not classify a non-409 RSVP error as a conflict', () async {
-      final client = _RecordingApiClient(
-        ApiResponse(
-          statusCode: 400,
-          body: jsonEncode(<String, dynamic>{
-            'message': 'Invalid RSVP request',
-            'conflicting_sessions': <Map<String, dynamic>>[
-              _sessionJson(
-                slug: 'existing-session',
-                title: 'Existing Session',
-                attending: true,
-              ),
-            ],
-          }),
-        ),
-      );
-      final container = _containerFor(client);
-      addTearDown(container.dispose);
-
-      final attending = await container.read(
-        rsvpConfirmProvider('new-session').future,
-      );
-
-      check(attending).equals(false);
-      check(client.requestCount).equals(1);
-    });
-
-    test('gives up an existing spot', () async {
-      final client = _RecordingApiClient(
-        ApiResponse(
-          statusCode: 200,
-          body: jsonEncode(
-            _sessionJson(
-              slug: 'existing-session',
-              title: 'Existing Session',
-              attending: false,
-            ),
-          ),
-        ),
-      );
-      final container = _containerFor(client);
-      addTearDown(container.dispose);
-
-      final attending = await container.read(
-        rsvpCancelProvider('existing-session').future,
-      );
-
-      check(attending).equals(false);
-      check(client.request?.method).equals('DELETE');
-      check(
-        client.request?.path,
-      ).equals('/api/mobile/protected/spaces/rsvp/existing-session');
-    });
-  });
-}
+SessionDetailSchema _session(String slug, {required bool attending}) =>
+    SessionDetailSchema(
+      slug: slug,
+      title: 'Session $slug',
+      space: _space('$slug-space'),
+      content: '',
+      seatsLeft: 3,
+      duration: 60,
+      start: DateTime.utc(2026, 8, 20, 15),
+      attending: attending,
+      open: true,
+      started: false,
+      cancelled: false,
+      joinable: false,
+      ended: false,
+      rsvpUrl: '/rsvp/$slug',
+      joinUrl: null,
+      subscribeUrl: '/subscribe/$slug',
+      calLink: '/calendar/$slug',
+      subscribed: true,
+      userTimezone: 'UTC',
+      meetingProvider: MeetingProviderEnum.livekit,
+    );

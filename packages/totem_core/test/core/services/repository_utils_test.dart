@@ -64,7 +64,12 @@ void main() {
           },
           operationName: 'request PIN',
         ),
-      ).throws();
+      ).throws<AppAuthException>((error) {
+        error.has((it) => it.code, 'code').equals('UNAUTHENTICATED');
+        error
+            .has((it) => it.message, 'message')
+            .equals('User is not authenticated');
+      });
     });
 
     test('converts DioException 403 into forbidden exception', () async {
@@ -83,7 +88,10 @@ void main() {
           },
           operationName: 'request PIN',
         ),
-      ).throws();
+      ).throws<AppAuthException>((error) {
+        error.has((it) => it.code, 'code').equals('FORBIDDEN');
+        error.has((it) => it.message, 'message').equals('Access denied');
+      });
     });
 
     test('converts DioException 400 into data exception', () async {
@@ -102,7 +110,12 @@ void main() {
           },
           operationName: 'request PIN',
         ),
-      ).throws();
+      ).throws<AppDataException>((error) {
+        error.has((it) => it.code, 'code').equals('HTTP_ERROR_400');
+        error
+            .has((it) => it.message, 'message')
+            .equals('Failed to request PIN');
+      });
     });
 
     test('converts DioException socket failures into no connection', () async {
@@ -117,7 +130,12 @@ void main() {
           },
           operationName: 'request PIN',
         ),
-      ).throws();
+      ).throws<AppNetworkException>((error) {
+        error.has((it) => it.code, 'code').equals('NO_CONNECTION');
+        error
+            .has((it) => it.message, 'message')
+            .equals('No internet connection available');
+      });
     });
 
     test('reports a non-retried failure exactly once', () async {

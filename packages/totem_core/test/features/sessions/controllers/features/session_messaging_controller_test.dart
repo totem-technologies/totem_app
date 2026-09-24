@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 
@@ -15,75 +17,63 @@ import '../core/session_controller_mock.dart';
 
 void main() {
   group('SessionMessagingController', () {
-    group('Static Configuration', () {
-      test('SessionCommunicationTopics enum has four topics', () {
-        check(SessionCommunicationTopics.values).length.equals(3);
-      });
+    test('publishes the stable topic names used by session peers', () {
+      final topicNames = <SessionCommunicationTopics, String>{
+        SessionCommunicationTopics.emoji: 'lk-emoji-topic',
+        SessionCommunicationTopics.chat: 'lk-chat-topic',
+        SessionCommunicationTopics.participantRemoved:
+            'lk-participant-removed-topic',
+        SessionCommunicationTopics.shareTimeReminder:
+            'lk-share-time-reminder-topic',
+      };
 
-      test('SessionCommunicationTopics.emoji has correct topic value', () {
-        check(SessionCommunicationTopics.emoji.topic).equals('lk-emoji-topic');
-      });
-
-      test('SessionCommunicationTopics.chat has correct topic value', () {
-        check(SessionCommunicationTopics.chat.topic).equals('lk-chat-topic');
-      });
-
-      test(
-        'SessionCommunicationTopics.participantRemoved has correct topic value',
-        () {
-          check(
-            SessionCommunicationTopics.participantRemoved.topic,
-          ).equals('lk-participant-removed-topic');
-        },
-      );
-
-      test('All topic values are unique', () {
-        final topics = SessionCommunicationTopics.values.map((t) => t.topic);
-        check(
-          because: 'All topic values should be unique',
-          topics,
-        ).length.equals(topics.toSet().length);
-      });
+      check(SessionCommunicationTopics.values).length.equals(topicNames.length);
+      check(
+        SessionCommunicationTopics.values.every(
+          (topic) => topic.topic == topicNames[topic],
+        ),
+      ).isTrue();
+      check(topicNames.values.toSet()).length.equals(topicNames.length);
     });
 
-    group('Data Reception - Emoji Events', () {
-      test('handleDataReceived returns true for emoji topic', () async {
-        final mockSession = FakeSessionController();
-        final container = ProviderContainer();
-        final controller = container.read(
-          sessionMessagingControllerProvider(mockSession).notifier,
-        );
+    test('receives an emoji only when its sender is known', () {
+      final mockSession = FakeSessionController();
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final controller = container.read(
+        sessionMessagingControllerProvider(mockSession).notifier,
+      );
+      final provider = emojiReactionsProvider;
 
-        final emojiEvent = DataReceivedEvent(
+      controller.handleDataReceived(
+        DataReceivedEvent(
           data: utf8.encode('👍'),
+          participant: MockRemoteParticipant('participant-1', 'Participant'),
+          topic: SessionCommunicationTopics.emoji.topic,
+        ),
+      );
+
+      final reactions = container.read(provider);
+      check(reactions).length.equals(1);
+      check(reactions.single.userIdentity).equals('participant-1');
+      check(reactions.single.emoji).equals('👍');
+
+      controller.handleDataReceived(
+        DataReceivedEvent(
+          data: utf8.encode('👎'),
           participant: null,
           topic: SessionCommunicationTopics.emoji.topic,
-        );
+        ),
+      );
 
-        controller.handleDataReceived(emojiEvent);
-      });
-
-      test('handleDataReceived ignores emoji without participant', () async {
-        final mockSession = FakeSessionController();
-        final container = ProviderContainer();
-        final controller = container.read(
-          sessionMessagingControllerProvider(mockSession).notifier,
-        );
-
-        final emojiEvent2 = DataReceivedEvent(
-          data: utf8.encode('👍'),
-          participant: null,
-          topic: SessionCommunicationTopics.emoji.topic,
-        );
-
-        controller.handleDataReceived(emojiEvent2);
-      });
+      check(container.read(provider)).length.equals(1);
     });
 
     group('Data Reception - Chat Events', () {
       test('handleDataReceived adds chat message for chat topic', () async {
         final mockSession = FakeSessionController();
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionMessagingControllerProvider(mockSession).notifier,
         );
@@ -114,8 +104,10 @@ void main() {
         () async {
           final mockSession = FakeSessionController();
           mockSession.isCurrentUserKeeperValue = true;
+          mockSession.mockRoom = FakeRoom(MockLocalParticipant('user-1'));
 
           final container = ProviderContainer();
+          addTearDown(container.dispose);
           final controller = container.read(
             sessionMessagingControllerProvider(mockSession).notifier,
           );
@@ -129,6 +121,8 @@ void main() {
           );
 
           controller.handleDataReceived(removedEvent);
+
+          check(mockSession.disconnectFromRoomCalled).equals(true);
         },
       );
 
@@ -138,6 +132,7 @@ void main() {
           final mockSession = FakeSessionController();
 
           final container = ProviderContainer();
+          addTearDown(container.dispose);
           final controller = container.read(
             sessionMessagingControllerProvider(mockSession).notifier,
           );
@@ -157,21 +152,72 @@ void main() {
       );
     });
 
-    group('Data Reception - Unknown Topics', () {
-      test('handleDataReceived returns false for unknown topic', () async {
+    group('Data Reception - Share Time Reminder Events', () {
+      test(
+        'accepts a reminder from the keeper while the local user speaks',
+        () {
+          final mockSession = FakeSessionController();
+          mockSession.mockRoom = FakeRoom(MockLocalParticipant('user-1'));
+          mockSession.mockState = SessionRoomState(
+            connection: mockSession.mockState.connection,
+            participants: mockSession.mockState.participants,
+            chat: mockSession.mockState.chat,
+            turn: SessionTurnState(
+              roomState: mockSession.mockState.roomState.copyWith(
+                status: RoomStatus.active,
+                turnState: TurnState.idle,
+              ),
+            ),
+          );
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final provider = sessionMessagingControllerProvider(mockSession);
+          final controller = container.read(provider.notifier);
+
+          controller.handleDataReceived(
+            DataReceivedEvent(
+              data: utf8.encode(jsonEncode({'elapsedMilliseconds': 120000})),
+              participant: MockRemoteParticipant('keeper-1', 'Keeper'),
+              topic: SessionCommunicationTopics.shareTimeReminder.topic,
+            ),
+          );
+
+          final reminderStart = container.read(provider);
+          check(reminderStart).isNotNull();
+          check(
+            DateTime.timestamp().difference(reminderStart!).inMilliseconds,
+          ).isCloseTo(120000, 1000);
+        },
+      );
+
+      test('ignores a reminder not sent by the keeper', () {
         final mockSession = FakeSessionController();
+        mockSession.mockRoom = FakeRoom(MockLocalParticipant('user-1'));
+        mockSession.mockState = SessionRoomState(
+          connection: mockSession.mockState.connection,
+          participants: mockSession.mockState.participants,
+          chat: mockSession.mockState.chat,
+          turn: SessionTurnState(
+            roomState: mockSession.mockState.roomState.copyWith(
+              status: RoomStatus.active,
+              turnState: TurnState.speaking,
+            ),
+          ),
+        );
         final container = ProviderContainer();
-        final controller = container.read(
-          sessionMessagingControllerProvider(mockSession).notifier,
+        addTearDown(container.dispose);
+        final provider = sessionMessagingControllerProvider(mockSession);
+        final controller = container.read(provider.notifier);
+
+        controller.handleDataReceived(
+          DataReceivedEvent(
+            data: utf8.encode('share-time'),
+            participant: MockRemoteParticipant('user-2', 'Participant'),
+            topic: SessionCommunicationTopics.shareTimeReminder.topic,
+          ),
         );
 
-        final unknownEvent = DataReceivedEvent(
-          data: utf8.encode('data'),
-          participant: null,
-          topic: 'unknown-topic',
-        );
-
-        controller.handleDataReceived(unknownEvent);
+        check(container.read(provider)).isNull();
       });
     });
 
@@ -197,6 +243,58 @@ void main() {
           check(after.first.emoji).equals('👍');
         },
       );
+    });
+
+    group('Send Share Time Reminder', () {
+      test('sends reliable data only to the current speaker', () async {
+        final keeper = MockLocalParticipant('keeper-1');
+        when(
+          () => keeper.publishData(
+            any(),
+            reliable: true,
+            destinationIdentities: const ['user-1'],
+            topic: SessionCommunicationTopics.shareTimeReminder.topic,
+          ),
+        ).thenAnswer((_) async {});
+        final mockSession = FakeSessionController()
+          ..isCurrentUserKeeperValue = true
+          ..mockRoom = FakeRoom(keeper);
+        final turnStartedAt = DateTime.timestamp().subtract(
+          const Duration(minutes: 2),
+        );
+        mockSession.mockState = SessionRoomState(
+          connection: mockSession.mockState.connection,
+          participants: mockSession.mockState.participants,
+          chat: mockSession.mockState.chat,
+          turn: SessionTurnState(
+            roomState: mockSession.mockState.roomState.copyWith(
+              status: RoomStatus.active,
+              turnState: TurnState.idle,
+            ),
+          ),
+          turnStartedAt: turnStartedAt,
+        );
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionMessagingControllerProvider(mockSession).notifier,
+        );
+
+        await controller.sendShareTimeReminder('user-1');
+
+        final data =
+            verify(
+                  () => keeper.publishData(
+                    captureAny(),
+                    reliable: true,
+                    destinationIdentities: const ['user-1'],
+                    topic: SessionCommunicationTopics.shareTimeReminder.topic,
+                  ),
+                ).captured.single
+                as List<int>;
+        final payload = jsonDecode(utf8.decode(data)) as Map<String, dynamic>;
+        check(payload['elapsedMilliseconds'] as num).isCloseTo(120000, 1000);
+      });
     });
 
     group('Send Message', () {
