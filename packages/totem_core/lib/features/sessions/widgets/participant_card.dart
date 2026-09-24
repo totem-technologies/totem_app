@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart' hide logger;
@@ -8,7 +6,6 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/loading_video_placeholder.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
@@ -170,25 +167,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
                                   children: [
                                     if (isCurrentUserKeeper &&
                                         roomStatus == RoomStatus.active)
-                                      SessionElapsedTimer(
-                                        onTap: () {
-                                          final session = ref.read(
-                                            currentSessionProvider,
-                                          );
-                                          if (session == null) return;
-                                          unawaited(
-                                            ref
-                                                .read(
-                                                  sessionMessagingControllerProvider(
-                                                    session,
-                                                  ).notifier,
-                                                )
-                                                .sendShareTimeReminder(
-                                                  activeSpeaker.identity,
-                                                ),
-                                          );
-                                        },
-                                      ),
+                                      const SessionElapsedTimer(),
                                     SpeakingIndicatorOrEmoji(
                                       participant: activeSpeaker,
                                       metrics: overlay,
@@ -290,37 +269,9 @@ class ParticipantCard extends ConsumerWidget {
                       PositionedDirectional(
                         top: overlayPadding,
                         start: overlayPadding,
-                        child: Row(
-                          spacing: 8,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SpeakingIndicatorOrEmoji(
-                              participant: participant,
-                              metrics: overlay,
-                            ),
-                            if (isCurrentUserKeeper &&
-                                presentation.isSpeaking &&
-                                presentation.roomStatus == RoomStatus.active)
-                              SessionElapsedTimer(
-                                onTap: () {
-                                  final session = ref.read(
-                                    currentSessionProvider,
-                                  );
-                                  if (session == null) return;
-                                  unawaited(
-                                    ref
-                                        .read(
-                                          sessionMessagingControllerProvider(
-                                            session,
-                                          ).notifier,
-                                        )
-                                        .sendShareTimeReminder(
-                                          participant.identity,
-                                        ),
-                                  );
-                                },
-                              ),
-                          ],
+                        child: SpeakingIndicatorOrEmoji(
+                          participant: participant,
+                          metrics: overlay,
                         ),
                       ),
                       if (presentation.hasSession &&
