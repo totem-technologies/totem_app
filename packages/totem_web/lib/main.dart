@@ -7,6 +7,7 @@ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/services/api_service.dart';
+import 'package:totem_core/core/utils/first_frame.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
@@ -38,7 +39,10 @@ Future<void> main() async {
   );
 
   // Keep the splash until the renderer finishes its first frame.
-  await WidgetsBinding.instance.waitUntilFirstFrameRasterized;
+  await waitForFirstRasterizedFrame(
+    rasterized: WidgetsBinding.instance.waitUntilFirstFrameRasterized,
+    scheduleFrame: WidgetsBinding.instance.scheduleForcedFrame,
+  );
   _removeSplashFromWeb();
 }
 

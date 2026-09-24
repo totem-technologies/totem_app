@@ -83,6 +83,7 @@ dev_dependencies:
     sdk: flutter
   mockito: ^5.5.0
   mocktail: ^1.0.4
+  fake_async: any
 
   # Linting
   flutter_lints: ^6.0.0

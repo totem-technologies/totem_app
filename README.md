@@ -39,6 +39,10 @@ The [Makefile](Makefile) lists additional commands. Code is split between the
 [mobile app](packages/totem_app), [web client](packages/totem_web), and
 [shared library](packages/totem_core).
 
+For repeatable room performance experiments without a call connection, see the
+[local rendering benchmark](scripts/benchmark/README.md). It uses looping video
+and the shared room widgets, with automated Chrome and Firefox captures.
+
 To test a session deep link with the app running:
 
 ```sh
