@@ -9,10 +9,10 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-import 'package:totem_core/auth/models/auth_state.dart';
+
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
@@ -25,9 +25,8 @@ import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
-
-class MockSessionMessagingController extends Mock
-    implements SessionMessagingController {}
+import '../session_test_fixtures.dart';
+import '../session_test_mocks.dart';
 
 /// A minimal [SessionDetailSchema] for testing.
 SessionDetailSchema _createTestSession() {
@@ -220,16 +219,7 @@ void main() {
         overrides: [
           authControllerProvider.overrideWith(
             () => FakeAuthController(
-              AuthState.authenticated(
-                user: UserSchema(
-                  email: 'test@test.com',
-                  name: 'Test User',
-                  slug: currentUserSlug,
-                  profileAvatarType: ProfileAvatarTypeEnum.td,
-                  circleCount: 0,
-                  dateCreated: DateTime.now(),
-                ),
-              ),
+              testAuthenticatedState(slug: currentUserSlug),
             ),
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),

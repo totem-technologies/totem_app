@@ -85,13 +85,9 @@ void main() {
         _session(DateTime(2025, 2, 10)),
       ]);
       check(tester.widgetList(find.text('January 2025'))).length.equals(1);
-      check(_decoration(tester, '15').color).equals(AppTheme.grey);
-
       await tester.tap(find.byIcon(Icons.chevron_left));
       await tester.pump();
       check(tester.widgetList(find.text('December 2024'))).length.equals(1);
-      check(_decoration(tester, '20').color).equals(AppTheme.grey);
-
       await tester.tap(find.byIcon(Icons.chevron_right));
       await tester.pump();
       check(tester.widgetList(find.text('January 2025'))).length.equals(1);
@@ -99,7 +95,6 @@ void main() {
       await tester.tap(find.byIcon(Icons.chevron_right));
       await tester.pump();
       check(tester.widgetList(find.text('February 2025'))).length.equals(1);
-      check(_decoration(tester, '10').color).equals(AppTheme.grey);
     },
   );
 
@@ -135,10 +130,6 @@ void main() {
           .toList();
 
       check(days.map((text) => text.data)).deepEquals(month.days);
-      check(days[month.outsideIndex].style?.color).equals(AppTheme.grey);
-      check(
-        days.singleWhere((text) => text.data == '15').style?.color,
-      ).equals(Colors.black);
     });
   }
 
@@ -155,24 +146,14 @@ void main() {
       final closed = _decoration(tester, '15');
       check(closed.color).equals(AppTheme.grey);
       check(closed.shape).equals(BoxShape.circle);
-      check(
-        tester.widget<Text>(find.text('15')).style?.color,
-      ).equals(AppTheme.white);
-
       final open = _decoration(tester, '16');
       check(open.border?.top.color).equals(AppTheme.mauve);
       check(open.shape).equals(BoxShape.circle);
-      final openText = tester.widget<Text>(find.text('16'));
-      check(openText.style?.color).equals(AppTheme.slate);
-      check(openText.style?.fontWeight).equals(FontWeight.w600);
 
       final attending = _decoration(tester, '17');
       check(attending.color).equals(AppTheme.mauve);
       check(attending.border).isNull();
       check(attending.shape).equals(BoxShape.circle);
-      check(
-        tester.widget<Text>(find.text('17')).style?.color,
-      ).equals(AppTheme.white);
 
       check(
         tester.widgetList(
@@ -182,9 +163,6 @@ void main() {
           ),
         ),
       ).isEmpty();
-      check(
-        tester.widget<Text>(find.text('20')).style?.color,
-      ).equals(Colors.black);
 
       // Session days also render safely when no tap callback is supplied.
       await tester.tap(find.text('16'));

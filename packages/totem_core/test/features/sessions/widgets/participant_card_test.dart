@@ -621,31 +621,10 @@ void main() {
 
   group('ParticipantControlButton', () {
     testWidgets('closes menu when unmounted', (tester) async {
-      // Use a StatefulWidget wrapper to toggle button visibility.
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authControllerProvider.overrideWith(
-              () => FakeAuthController(AuthState.unauthenticated()),
-            ),
-            userProfileProvider.overrideWith(
-              (ref, slug) => Future.value(
-                PublicUserSchema(
-                  slug: slug,
-                  name: 'Mocked User $slug',
-                  profileAvatarType: ProfileAvatarTypeEnum.td,
-                  circleCount: 0,
-                  dateCreated: DateTime.now(),
-                ),
-              ),
-            ),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: _MenuCloseTestWrapper(participant: remoteParticipant),
-            ),
-          ),
-        ),
+      await pumpWidget(
+        tester,
+        authState: AuthState.unauthenticated(),
+        child: _MenuCloseTestWrapper(participant: remoteParticipant),
       );
 
       // Tap the control button to open the menu.

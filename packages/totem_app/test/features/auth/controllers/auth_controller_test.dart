@@ -10,32 +10,18 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
 import 'package:totem_core/auth/repositories/user_profile_repository.dart';
+
 import 'package:totem_core/core/api/api_client/api_client.dart';
+
 import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
-import 'package:totem_core/core/services/cache_service.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
+
+import 'package:totem_core/core/services/cache_service.dart';
+
 import 'package:totem_core/core/services/secure_storage.dart';
 
-UserSchema _buildUserSchema({
-  String? slug,
-  String? name,
-  String? profileAvatarSeed,
-  String? email,
-}) {
-  return UserSchema(
-    slug: slug,
-    name: name,
-    profileAvatarType: ProfileAvatarTypeEnum.td,
-    circleCount: 0,
-    isStaff: false,
-    apiKey: null,
-    profileAvatarSeed: profileAvatarSeed,
-    profileImage: null,
-    email: email ?? '',
-    dateCreated: DateTime.now(),
-  );
-}
+import 'auth_test_support.dart';
 
 // --- Firebase Mock Configuration ---
 void setupFirebaseMocks() {
@@ -79,15 +65,9 @@ void setupFirebaseMocks() {
 // --- Mocks ---
 class MockAuthRepository extends Mock implements AuthRepository {}
 
-class MockUserRepository extends Mock implements UserRepository {}
-
 class MockSecureStorage extends Mock implements SecureStorage {}
 
-class MockAnalyticsService extends Mock implements AnalyticsService {}
-
 class MockNotificationsService extends Mock implements NotificationsService {}
-
-class MockLocalStorageService extends Mock implements LocalStorageService {}
 
 class MockCacheService extends Mock implements CacheService {}
 
@@ -103,7 +83,7 @@ void main() {
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    registerFallbackValue(_buildUserSchema());
+    registerFallbackValue(testUserSchema());
 
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
@@ -156,6 +136,48 @@ void main() {
 
   AuthState getState() => container.read(authControllerProvider);
 
+  Future<void> stubAuthenticatedUser({
+    required UserSchema user,
+    String email = 'test@example.com',
+    String accessToken = 'access',
+    String refreshToken = 'refresh',
+    String? fcmToken,
+  }) async {
+    when(
+      () => mockAuthRepository.requestPin(email, false),
+    ).thenAnswer((_) async => MessageResponse(message: 'OK'));
+    when(() => mockAuthRepository.verifyPin(email, '123456')).thenAnswer(
+      (_) async => TokenResponse(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        expiresIn: 3600,
+      ),
+    );
+    when(
+      () => mockSecureStorage.write(
+        key: any(named: 'key'),
+        value: any(named: 'value'),
+      ),
+    ).thenAnswer((_) async {});
+    when(() => mockUserRepository.currentUser).thenAnswer((_) async => user);
+    when(() => mockAnalyticsService.setUserId(any())).thenAnswer((_) async {});
+    when(
+      () => mockAnalyticsService.logLogin(method: any(named: 'method')),
+    ).thenReturn(null);
+    when(
+      () => mockAnalyticsService.logEvent(
+        any(),
+        parameters: any(named: 'parameters'),
+      ),
+    ).thenReturn(null);
+    when(
+      () => mockNotificationsService.fcmToken,
+    ).thenAnswer((_) async => fcmToken);
+
+    await getController().requestPin(email);
+    await getController().verifyPin('123456');
+  }
+
   group('MobileAuthController - requestPin', () {
     test('successfully requests PIN and updates state', () async {
       final email = 'test@example.com';
@@ -194,11 +216,7 @@ void main() {
       () async {
         final email = 'test@example.com';
         final pin = '123456';
-        final mockUser = _buildUserSchema(
-          slug: '1',
-          name: 'John',
-          email: email,
-        );
+        final mockUser = testUserSchema(slug: '1', name: 'John', email: email);
         final mockTokenResponse = TokenResponse(
           accessToken: 'access',
           refreshToken: 'refresh',
@@ -266,47 +284,9 @@ void main() {
   });
 
   group('MobileAuthController - logout & deleteAccount', () {
-    // Helper to setup an authenticated state before testing logout/delete
-    Future<void> authenticateUser() async {
-      final email = 'test@example.com';
-      when(
-        () => mockAuthRepository.requestPin(email, false),
-      ).thenAnswer((_) async => MessageResponse(message: 'OK'));
-      when(() => mockAuthRepository.verifyPin(email, '123456')).thenAnswer(
-        (_) async => TokenResponse(
-          accessToken: 'access',
-          refreshToken: 'refresh',
-          expiresIn: 3600,
-        ),
-      );
-      when(
-        () => mockSecureStorage.write(
-          key: any(named: 'key'),
-          value: any(named: 'value'),
-        ),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockUserRepository.currentUser,
-      ).thenAnswer((_) async => _buildUserSchema(slug: '1', name: 'John'));
-      when(
-        () => mockAnalyticsService.setUserId(any()),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockAnalyticsService.logLogin(method: any(named: 'method')),
-      ).thenReturn(null);
-      when(
-        () => mockAnalyticsService.logEvent(
-          any(),
-          parameters: any(named: 'parameters'),
-        ),
-      ).thenReturn(null);
-      when(
-        () => mockNotificationsService.fcmToken,
-      ).thenAnswer((_) async => null);
-
-      await getController().requestPin(email);
-      await getController().verifyPin('123456');
-    }
+    Future<void> authenticateUser() => stubAuthenticatedUser(
+      user: testUserSchema(slug: '1', name: 'John'),
+    );
 
     test('logout successfully clears tokens and resets state', () async {
       await authenticateUser();
@@ -362,44 +342,14 @@ void main() {
 
   group('MobileAuthController - syncUser', () {
     test('syncUser updates user object if authenticated', () async {
-      final email = 'test@example.com';
-      final initialUser = _buildUserSchema(slug: '1', name: 'John');
-      final updatedUser = _buildUserSchema(slug: '1', name: 'John Doe');
+      final initialUser = testUserSchema(slug: '1', name: 'John');
+      final updatedUser = testUserSchema(slug: '1', name: 'John Doe');
 
-      when(
-        () => mockAuthRepository.requestPin(email, false),
-      ).thenAnswer((_) async => MessageResponse(message: 'OK'));
-      when(() => mockAuthRepository.verifyPin(email, '123456')).thenAnswer(
-        (_) async =>
-            TokenResponse(accessToken: 'a', refreshToken: 'r', expiresIn: 3600),
+      await stubAuthenticatedUser(
+        user: initialUser,
+        accessToken: 'a',
+        refreshToken: 'r',
       );
-      when(
-        () => mockSecureStorage.write(
-          key: any(named: 'key'),
-          value: any(named: 'value'),
-        ),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockUserRepository.currentUser,
-      ).thenAnswer((_) async => initialUser);
-      when(
-        () => mockAnalyticsService.setUserId(any()),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockAnalyticsService.logLogin(method: any(named: 'method')),
-      ).thenReturn(null);
-      when(
-        () => mockAnalyticsService.logEvent(
-          any(),
-          parameters: any(named: 'parameters'),
-        ),
-      ).thenReturn(null);
-      when(
-        () => mockNotificationsService.fcmToken,
-      ).thenAnswer((_) async => null);
-
-      await getController().requestPin(email);
-      await getController().verifyPin('123456');
 
       check(getState().user?.name).equals('John');
 
@@ -410,7 +360,7 @@ void main() {
     });
 
     test('syncUser does nothing if not authenticated', () {
-      final updatedUser = _buildUserSchema(slug: '1', name: 'John Doe');
+      final updatedUser = testUserSchema(slug: '1', name: 'John Doe');
 
       getController().syncUser(updatedUser);
 

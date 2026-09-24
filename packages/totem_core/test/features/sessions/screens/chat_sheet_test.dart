@@ -15,7 +15,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
@@ -27,9 +27,7 @@ import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
-
-class MockSessionMessagingController extends Mock
-    implements SessionMessagingController {}
+import '../session_test_mocks.dart';
 
 class _TestMessagesNotifier extends Notifier<List<SessionChatMessage>> {
   _TestMessagesNotifier(this._initial);

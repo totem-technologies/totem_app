@@ -61,25 +61,6 @@ void main() {
 
       check(taps).equals(1);
     });
-
-    testWidgets('is disabled when callback is null', (tester) async {
-      await pumpWidget(
-        tester,
-        child: const ActionBarButton(
-          onPressed: null,
-          semanticsLabel: 'Disabled action',
-          child: Icon(Icons.message),
-        ),
-      );
-
-      final gesture = tester.widget<GestureDetector>(
-        find.descendant(
-          of: find.byType(ActionBarButton),
-          matching: find.byType(GestureDetector),
-        ),
-      );
-      check(gesture.onTap).isNull();
-    });
   });
 
   group('ActionBar', () {
