@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/shared/network.dart';
 
 class UserAvatar extends ConsumerWidget {
@@ -17,94 +18,123 @@ class UserAvatar extends ConsumerWidget {
     this.onTap,
     this.borderWidth = 1.5,
     this.borderRadius = const BorderRadius.all(Radius.circular(100)),
-  });
+  }) : user = null,
+       slug = null,
+       loading = null,
+       error = null,
+       _usesCurrentUser = false;
 
-  static Widget fromUserSchema(
-    PublicUserSchema? author, {
-    double radius = 30,
-    bool showImage = true,
-    VoidCallback? onTap,
-    double borderWidth = 1.5,
-    BorderRadiusGeometry borderRadius = const BorderRadius.all(
-      Radius.circular(100),
-    ),
-  }) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final userSlug = ref.watch(
-          authControllerProvider.select((auth) => auth.user?.slug),
-        );
-        if (author?.slug == userSlug) {
-          return UserAvatar.currentUser(
-            radius: radius,
-            showImage: showImage,
-            onTap: onTap,
-            borderWidth: borderWidth,
-            borderRadius: borderRadius,
-          );
-        }
+  const UserAvatar.fromUserSchema(
+    this.user, {
+    super.key,
+    this.radius = 30,
+    this.showImage = true,
+    this.onTap,
+    this.borderWidth = 1.5,
+    this.borderRadius = const BorderRadius.all(Radius.circular(100)),
+  }) : image = null,
+       seed = null,
+       slug = null,
+       loading = null,
+       error = null,
+       _usesCurrentUser = true;
 
-        return child!;
-      },
-      child: UserAvatar.custom(
-        image:
-            author?.profileImage != null &&
-                author?.profileAvatarType == ProfileAvatarTypeEnum.im
-            ? CachedNetworkImageProvider(getFullUrl(author!.profileImage!))
-            : null,
-        seed: author?.profileAvatarSeed,
+  const UserAvatar.currentUser({
+    super.key,
+    this.radius = 30,
+    this.showImage = true,
+    this.onTap,
+    this.borderWidth = 1.5,
+    this.borderRadius = const BorderRadius.all(Radius.circular(100)),
+  }) : user = null,
+       image = null,
+       seed = null,
+       slug = null,
+       loading = null,
+       error = null,
+       _usesCurrentUser = true;
+
+  const UserAvatar.slug(
+    this.slug, {
+    super.key,
+    this.radius = 30,
+    this.showImage = true,
+    this.onTap,
+    this.borderWidth = 1.5,
+    this.borderRadius = const BorderRadius.all(Radius.circular(100)),
+    this.loading,
+    this.error,
+  }) : user = null,
+       image = null,
+       seed = null,
+       _usesCurrentUser = false;
+
+  final double radius;
+  final ImageProvider? image;
+  final String? seed;
+  final PublicUserSchema? user;
+  final String? slug;
+  final Widget? loading;
+  final Widget? error;
+  final bool _usesCurrentUser;
+  final bool showImage;
+  final VoidCallback? onTap;
+  final double borderWidth;
+  final BorderRadiusGeometry borderRadius;
+
+  static ImageProvider? _imageForUser({required String? profileImage}) {
+    if (profileImage == null || profileImage.isEmpty) return null;
+
+    return CachedNetworkImageProvider(getFullUrl(profileImage));
+  }
+
+  Widget _buildSlugAvatar(WidgetRef ref) {
+    final profile = ref.watch(userProfileProvider(slug!));
+    final fallback = UserAvatar.custom(
+      seed: slug,
+      radius: radius,
+      showImage: showImage,
+      onTap: onTap,
+      borderWidth: borderWidth,
+      borderRadius: borderRadius,
+    );
+    return profile.when(
+      data: (user) => UserAvatar.custom(
+        image: _imageForUser(profileImage: user.profileImage),
+        seed: user.profileAvatarSeed,
         radius: radius,
         showImage: showImage,
         onTap: onTap,
         borderWidth: borderWidth,
         borderRadius: borderRadius,
       ),
+      loading: () => loading ?? fallback,
+      error: (error, stackTrace) => this.error ?? fallback,
     );
   }
-
-  static Widget currentUser({
-    double radius = 30,
-    bool showImage = true,
-    VoidCallback? onTap,
-    double borderWidth = 1.5,
-    BorderRadiusGeometry borderRadius = const BorderRadius.all(
-      Radius.circular(100),
-    ),
-  }) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final user = ref.watch(
-          authControllerProvider.select((auth) => auth.user),
-        );
-
-        return UserAvatar.custom(
-          image:
-              user?.profileImage != null &&
-                  user?.profileAvatarType == ProfileAvatarTypeEnum.im
-              ? CachedNetworkImageProvider(getFullUrl(user!.profileImage!))
-              : null,
-          seed: user?.profileAvatarSeed,
-          radius: radius,
-          showImage: showImage,
-          borderWidth: borderWidth,
-          onTap: onTap,
-          borderRadius: borderRadius,
-        );
-      },
-    );
-  }
-
-  final double radius;
-  final ImageProvider? image;
-  final String? seed;
-  final bool showImage;
-  final VoidCallback? onTap;
-  final double borderWidth;
-  final BorderRadiusGeometry borderRadius;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final heroTag = 'avatar-${seed ?? image.hashCode}';
+    if (slug != null) return _buildSlugAvatar(ref);
+
+    final currentUser = _usesCurrentUser
+        ? ref.watch(authControllerProvider.select((auth) => auth.user))
+        : null;
+    final useCurrentUser =
+        _usesCurrentUser && (user == null || user?.slug == currentUser?.slug);
+    final avatarImage = _usesCurrentUser
+        ? _imageForUser(
+            profileImage: useCurrentUser
+                ? currentUser?.profileImage
+                : user?.profileImage,
+          )
+        : image;
+    final avatarSeed = _usesCurrentUser
+        ? (useCurrentUser
+              ? currentUser?.profileAvatarSeed
+              : user?.profileAvatarSeed)
+        : seed;
+    final heroTag = 'avatar-${avatarSeed ?? avatarImage.hashCode}';
 
     final child = Container(
       decoration: BoxDecoration(
@@ -114,17 +144,17 @@ class UserAvatar extends ConsumerWidget {
           style: borderWidth == 0 ? BorderStyle.none : BorderStyle.solid,
         ),
         borderRadius: borderRadius,
-        image: showImage && image != null
-            ? DecorationImage(image: image!, fit: BoxFit.cover)
+        image: showImage && avatarImage != null
+            ? DecorationImage(image: avatarImage, fit: BoxFit.cover)
             : null,
       ),
       height: radius * 2,
       width: radius * 2,
-      child: showImage && image == null
+      child: showImage && avatarImage == null
           ? ClipRRect(
               borderRadius: borderRadius,
               child: AnimatedBoringAvatar(
-                name: seed ?? 'default',
+                name: avatarSeed ?? 'default',
                 type: BoringAvatarType.marble,
                 duration: const Duration(milliseconds: 300),
               ),
@@ -132,7 +162,7 @@ class UserAvatar extends ConsumerWidget {
           : null,
     );
 
-    if (onTap == null && image == null) return child;
+    if (onTap == null && avatarImage == null) return child;
 
     return GestureDetector(
       onTap:
@@ -146,7 +176,10 @@ class UserAvatar extends ConsumerWidget {
               ).modalBarrierDismissLabel,
               barrierColor: Colors.black.withValues(alpha: 0.8),
               pageBuilder: (context, animation, secondaryAnimation) {
-                return _FullScreenImageViewer(image: image!, heroTag: heroTag);
+                return _FullScreenImageViewer(
+                  image: avatarImage!,
+                  heroTag: heroTag,
+                );
               },
             );
           },

@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/core/repositories/user_repository.dart';
+
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/loading_video_placeholder.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
@@ -364,7 +364,7 @@ class LocalParticipantCard extends ConsumerWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Positioned.fill(
+            const Positioned.fill(
               child: IgnorePointer(
                 child: UserAvatar.currentUser(
                   radius: 0,
@@ -495,7 +495,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     final currentUser = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
-    final user = ref.watch(userProfileProvider(widget.participant.identity));
     final trackPublication = videoTrack;
 
     /// The user avatar is always rendered behind the video.
@@ -508,31 +507,23 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       children: [
         Positioned.fill(
           child: IgnorePointer(
-            child: widget.participant.identity == currentUser?.slug
-                ? UserAvatar.currentUser(
-                    radius: 0,
-                    borderRadius: BorderRadius.zero,
-                    borderWidth: 0,
-                  )
-                : user.when(
-                    data: (user) => UserAvatar.fromUserSchema(
-                      user,
-                      borderRadius: BorderRadius.zero,
-                      borderWidth: 0,
-                    ),
-                    error: (error, stackTrace) => const ColoredBox(
-                      color: AppTheme.mauve,
-                      child: Center(
-                        child: TotemIcon(
-                          TotemIcons.person,
-                          size: 24,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    loading: () =>
-                        const LoadingVideoPlaceholder(borderRadius: 0),
+            child: UserAvatar.slug(
+              widget.participant.identity,
+              radius: 0,
+              borderRadius: BorderRadius.zero,
+              borderWidth: 0,
+              loading: const LoadingVideoPlaceholder(borderRadius: 0),
+              error: const ColoredBox(
+                color: AppTheme.mauve,
+                child: Center(
+                  child: TotemIcon(
+                    TotemIcons.person,
+                    size: 24,
+                    color: Colors.white,
                   ),
+                ),
+              ),
+            ),
           ),
         ),
         if (trackPublication != null &&

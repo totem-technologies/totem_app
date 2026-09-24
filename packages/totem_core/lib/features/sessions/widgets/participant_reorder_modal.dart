@@ -478,13 +478,12 @@ class _ParticipantReorderItem extends ConsumerWidget {
             height: 32,
             child: AnimatedSwitcher(
               duration: kThemeChangeDuration,
-              child: user.when(
-                data: (userData) => UserAvatar.fromUserSchema(
-                  userData,
-                  borderRadius: BorderRadius.circular(20),
-                  borderWidth: 0,
-                ),
-                error: (error, stackTrace) => const CircleAvatar(
+              child: UserAvatar.slug(
+                participantIdentity,
+                borderRadius: BorderRadius.circular(20),
+                borderWidth: 0,
+                loading: const SizedBox.shrink(),
+                error: const CircleAvatar(
                   backgroundColor: Colors.grey,
                   child: TotemIcon(
                     TotemIcons.person,
@@ -492,7 +491,6 @@ class _ParticipantReorderItem extends ConsumerWidget {
                     color: Colors.white,
                   ),
                 ),
-                loading: () => const SizedBox.shrink(),
               ),
             ),
           ),
