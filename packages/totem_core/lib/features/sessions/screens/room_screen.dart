@@ -64,6 +64,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   bool? _lastIsOffline;
   bool? _lastKeeperDisconnectedState;
   RoomStatus? _lastKeeperDisconnectedRoomStatus;
+  bool _hasDismissedChatForDisconnect = false;
 
   @override
   void initState() {
@@ -429,6 +430,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         _onLivekitError(next);
       })
       ..listen(resolveCurrentScreenProvider, (previous, next) {
+        if (next != RoomScreen.disconnected) {
+          _hasDismissedChatForDisconnect = false;
+        }
         if (previous != RoomScreen.receiving && next == RoomScreen.receiving) {
           cuesService.playTotemReceivedCue();
         }
@@ -437,7 +441,14 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
           _clearTimeRemainingWarningTimer();
           _dismissOfflineNotification(immediately: true);
         }
+        if (next == RoomScreen.disconnected) _dismissSessionChat();
       })
+      ..listen(
+        currentSessionEventProvider.select((event) => event?.ended ?? false),
+        (previous, next) {
+          if (next) _dismissSessionChat();
+        },
+      )
       ..listen(roomStatusProvider, (previous, next) {
         final isRoomOpeningTransition =
             previous == RoomStatus.waitingRoom && next == RoomStatus.active;
@@ -566,6 +577,14 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         ),
       ),
     );
+  }
+
+  void _dismissSessionChat() {
+    if (_hasDismissedChatForDisconnect) return;
+    _hasDismissedChatForDisconnect = true;
+    ref.read(sessionChatOpenProvider.notifier).open = false;
+    final navigator = _roomNavigatorKey.currentState;
+    if (navigator?.canPop() ?? false) navigator!.pop();
   }
 
   Future<void> _handleBackNavigation(
