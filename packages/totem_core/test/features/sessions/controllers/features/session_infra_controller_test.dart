@@ -184,14 +184,7 @@ void main() {
 
   test('pending activation stops before it can start after disposal', () async {
     final permissionRequest = Completer<NotificationPermission>();
-    final platform = _FakeSessionInfraPlatform();
-    final originalRequest = platform.requestedNotificationPermission;
-    // Keep the platform fake deterministic while delaying the permission edge.
-    final delayedPlatform = _DelayedPermissionPlatform(
-      platform,
-      permissionRequest,
-      originalRequest,
-    );
+    final delayedPlatform = _DelayedPermissionPlatform(permissionRequest);
     final container = createContainer(delayedPlatform);
     final controller = container.read(sessionInfraControllerProvider.notifier);
 
@@ -206,55 +199,14 @@ void main() {
 }
 
 class _DelayedPermissionPlatform extends _FakeSessionInfraPlatform {
-  _DelayedPermissionPlatform(
-    this.delegate,
-    this.completer,
-    NotificationPermission requested,
-  ) : super(requestedNotificationPermission: requested);
+  _DelayedPermissionPlatform(this.completer);
 
-  final _FakeSessionInfraPlatform delegate;
   final Completer<NotificationPermission> completer;
 
   @override
-  bool get canUseForegroundTask => delegate.canUseForegroundTask;
-
-  @override
-  bool get isAndroid => delegate.isAndroid;
-
-  @override
-  Future<NotificationPermission> checkNotificationPermission() =>
-      delegate.checkNotificationPermission();
-
-  @override
   Future<NotificationPermission> requestNotificationPermission() async {
+    requestNotificationPermissionCalls++;
     final permission = await completer.future;
-    delegate.notificationPermission = permission;
-    return permission;
+    return notificationPermission = permission;
   }
-
-  @override
-  Future<bool> get isIgnoringBatteryOptimizations =>
-      delegate.isIgnoringBatteryOptimizations;
-
-  @override
-  Future<bool> requestIgnoreBatteryOptimization() =>
-      delegate.requestIgnoreBatteryOptimization();
-
-  @override
-  Future<bool> get isRunningService => delegate.isRunningService;
-
-  @override
-  void initialize() => delegate.initialize();
-
-  @override
-  Future<void> startService() => delegate.startService();
-
-  @override
-  Future<void> stopService() => delegate.stopService();
-
-  @override
-  int get initializeCalls => delegate.initializeCalls;
-
-  @override
-  int get startServiceCalls => delegate.startServiceCalls;
 }

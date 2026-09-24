@@ -43,7 +43,7 @@ class AuthTokenInterceptor extends dio.Interceptor {
   });
 
   final SecureStorage secureStorage;
-  final AuthRepository authRepository;
+  final AuthRepository Function() authRepository;
 
   @override
   Future<void> onRequest(
@@ -62,6 +62,7 @@ class AuthTokenInterceptor extends dio.Interceptor {
       return;
     }
 
+    final authRepository = this.authRepository();
     if (authRepository.isAccessTokenExpired(accessToken)) {
       logger.d('🔑 Access token expired, refreshing...');
       final refreshToken = await secureStorage.read(
@@ -165,7 +166,7 @@ Dio _initDio(Ref ref) {
   _dio.interceptors.add(
     AuthTokenInterceptor(
       secureStorage: ref.read(secureStorageProvider),
-      authRepository: ref.read(authRepositoryProvider),
+      authRepository: () => ref.read(authRepositoryProvider),
     ),
   );
 

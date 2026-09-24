@@ -42,23 +42,25 @@ class CacheService {
     if (dataJson == null) return null;
 
     try {
-      final data = jsonDecode(dataJson) as Map<String, dynamic>;
-      final timeStamp = data['timestamp'] as String?;
-      if (timeStamp == null) {
-        await _secureStorage.delete(key: key);
-        return null;
-      }
-
-      final expiration = data['expirationDate'] != null
-          ? DateTime.parse(data['expirationDate'] as String)
-          : DateTime.parse(timeStamp).add(const Duration(hours: 24));
-      if (DateTime.now().isBefore(expiration)) {
-        return data['value'] as Map<String, dynamic>?;
+      final data = jsonDecode(dataJson);
+      if (data is Map<String, dynamic>) {
+        final timeStamp = data['timestamp'];
+        final expirationValue = data['expirationDate'];
+        if (timeStamp is String &&
+            (expirationValue == null || expirationValue is String)) {
+          final expiration = expirationValue is String
+              ? DateTime.parse(expirationValue)
+              : DateTime.parse(timeStamp).add(const Duration(hours: 24));
+          if (DateTime.now().isBefore(expiration)) {
+            final value = data['value'];
+            if (value == null || value is Map<String, dynamic>) {
+              return value as Map<String, dynamic>?;
+            }
+          }
+        }
       }
     } on FormatException {
       // Treat malformed persisted data as a cache miss.
-    } catch (_) {
-      // Treat a value with an unexpected persisted shape as a cache miss.
     }
 
     await _secureStorage.delete(key: key);

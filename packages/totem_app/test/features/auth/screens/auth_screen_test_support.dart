@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' as mui;
 import 'package:go_router/go_router.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
 
@@ -97,7 +98,14 @@ class TestUserProfileController extends UserProfileController {
 }
 
 void configureAuthScreenTests() {
-  AppConfig.instance = AppConfig(
+  AppConfig? previousConfig;
+  try {
+    previousConfig = AppConfig.instance;
+  } on StateError {
+    // The first test in this library has no application config to restore.
+  }
+
+  final testConfig = AppConfig(
     environment: Environment.development,
     apiUrl: 'https://test.example.com/',
     liveKitUrl: 'wss://test.livekit.cloud',
@@ -111,13 +119,17 @@ void configureAuthScreenTests() {
     termsOfServiceUrl: Uri.parse('https://example.com/tos'),
     communityGuidelinesUrl: Uri.parse('https://example.com/guidelines'),
   );
+  AppConfig.instance = testConfig;
+  addTearDown(() {
+    AppConfig.instance = previousConfig ?? testConfig;
+  });
 }
 
 Future<GoRouter> pumpAuthScreen(
   WidgetTester tester, {
   required Widget screen,
   required String initialPath,
-  required List<dynamic> overrides,
+  required List<Override> overrides,
   List<GoRoute> additionalRoutes = const [],
 }) async {
   final destinationRoutes = <GoRoute>[
@@ -152,7 +164,7 @@ Future<GoRouter> pumpAuthScreen(
 
   await tester.pumpWidget(
     ProviderScope(
-      overrides: overrides.cast(),
+      overrides: overrides,
       child: mui.MaterialApp.router(
         routerConfig: router,
         builder: (context, child) => mui.ScaffoldMessenger(

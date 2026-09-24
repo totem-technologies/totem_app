@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:checks/checks.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
@@ -54,7 +55,7 @@ void main() {
       ..interceptors.add(
         AuthTokenInterceptor(
           secureStorage: secureStorage,
-          authRepository: authRepository,
+          authRepository: () => authRepository,
         ),
       );
 
@@ -68,6 +69,16 @@ void main() {
       () => secureStorage.delete(key: any(named: 'key')),
     ).thenAnswer((_) async {});
   });
+
+  test(
+    'builds the mobile API provider without resolving its auth repository',
+    () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      check(container.read(apiServiceProvider)).isNotNull();
+    },
+  );
 
   test('refreshes expired credentials and persists rotated tokens', () async {
     when(
