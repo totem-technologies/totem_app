@@ -1,4 +1,4 @@
-# Totem Client
+# Totem Client.
 
 The open-source Flutter client for [Totem](https://totem.org), a platform for
 guided group introspection. Supports iOS, Android, and web.
