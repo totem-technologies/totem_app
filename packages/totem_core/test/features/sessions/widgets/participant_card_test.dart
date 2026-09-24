@@ -441,6 +441,46 @@ void main() {
   });
 
   group('ParticipantControlButton', () {
+    testWidgets('updates mute action when participant audio changes', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        authState: AuthState.unauthenticated(),
+        child: _MenuCloseTestWrapper(participant: remoteParticipant),
+      );
+
+      await tester.tap(find.byType(ParticipantControlButton));
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('Mute'))).length.equals(1);
+
+      remoteParticipant.audioMuted = true;
+      remoteParticipant.listener.emitMuted(MockTrackMutedEvent());
+      await tester.pump();
+
+      check(tester.widgetList(find.text('Muted'))).length.equals(1);
+      final mutedButton = tester.widget<MenuItemButton>(
+        find.ancestor(
+          of: find.text('Muted'),
+          matching: find.byType(MenuItemButton),
+        ),
+      );
+      check(mutedButton.onPressed).isNull();
+
+      remoteParticipant.audioMuted = false;
+      remoteParticipant.listener.emitUnmuted(MockTrackUnmutedEvent());
+      await tester.pump();
+
+      check(tester.widgetList(find.text('Mute'))).length.equals(1);
+      final unmutedButton = tester.widget<MenuItemButton>(
+        find.ancestor(
+          of: find.text('Mute'),
+          matching: find.byType(MenuItemButton),
+        ),
+      );
+      check(unmutedButton.onPressed).isNotNull();
+    });
+
     testWidgets('closes menu when unmounted', (tester) async {
       await pumpWidget(
         tester,
