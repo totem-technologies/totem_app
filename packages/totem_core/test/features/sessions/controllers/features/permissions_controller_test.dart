@@ -19,12 +19,27 @@ void main() {
   const foregroundTaskChannel = MethodChannel(
     'flutter_foreground_task/methods',
   );
+  late Map<int, int> permissionStatuses;
+  late Map<int, int> requestedPermissionStatuses;
+  var openAppSettingsCalls = 0;
 
   setUp(() {
+    permissionStatuses = {
+      Permission.camera.value: 1,
+      Permission.microphone.value: 1,
+      Permission.notification.value: 1,
+    };
+    requestedPermissionStatuses = Map.of(permissionStatuses);
+    openAppSettingsCalls = 0;
+
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (methodCall) async {
           if (methodCall.method == 'checkPermissionStatus') {
-            return 1;
+            return permissionStatuses[methodCall.arguments as int] ?? 0;
+          }
+
+          if (methodCall.method == 'requestPermissions') {
+            return requestedPermissionStatuses;
           }
 
           if (methodCall.method == 'shouldShowRequestPermissionRationale') {
@@ -32,7 +47,8 @@ void main() {
           }
 
           if (methodCall.method == 'openAppSettings') {
-            return false;
+            openAppSettingsCalls++;
+            return true;
           }
 
           return null;
@@ -109,6 +125,43 @@ void main() {
     check(permissions.asData?.value)
         .has((state) => state!.notificationStatus, 'notificationStatus')
         .equals(PermissionStatus.granted);
+  });
+
+  test('refreshStatuses preserves a denied required permission', () async {
+    permissionStatuses[Permission.camera.value] = 0;
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container.read(permissionsControllerProvider.future);
+    await container
+        .read(permissionsControllerProvider.notifier)
+        .refreshStatuses();
+
+    final permissions = container
+        .read(permissionsControllerProvider)
+        .asData!
+        .value;
+    check(permissions.cameraStatus).equals(PermissionStatus.denied);
+    check(permissions.microphoneStatus).equals(PermissionStatus.granted);
+    check(permissions.requiredPermissionsGranted).isFalse();
+  });
+
+  test('permanently denied camera permission opens system settings', () async {
+    requestedPermissionStatuses[Permission.camera.value] = 4;
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container.read(permissionsControllerProvider.future);
+    await container
+        .read(permissionsControllerProvider.notifier)
+        .requestCamera();
+
+    final permissions = container
+        .read(permissionsControllerProvider)
+        .asData!
+        .value;
+    check(permissions.cameraStatus).equals(PermissionStatus.permanentlyDenied);
+    check(openAppSettingsCalls).equals(1);
   });
 
   test(

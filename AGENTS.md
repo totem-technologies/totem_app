@@ -12,6 +12,21 @@ Always prefer generated providers using `@riverpod` than manually written provid
 - Keep setup lightweight. Use `setUpAll` only for immutable, process-wide setup such as fallback-value registration. Do not share mutable state between tests.
 - Tests must not depend on local `.env` files, developer credentials, or files generated outside the test.
 
+## Behavioral test quality
+
+- Optimize for confidence per test, not test count or raw coverage percentage.
+- Every test should protect a meaningful user-facing behavior, business rule, state transition, error/recovery path, navigation outcome, permission rule, or application-owned contract. Before keeping an assertion, ask: “If this fails, is something meaningful broken?”
+- Prefer Given/When/Then scenarios that exercise a complete interaction or workflow over isolated implementation checks.
+- Test observable outcomes rather than private fields, internal callbacks, concrete widget classes, widget existence, or implementation structure when the user-visible behavior can be exercised directly.
+- Do not add tests whose primary purpose is asserting hardcoded copy, colors, themes, padding, fonts, dimensions, icons, constants, trivial getters/setters, static configuration, or framework behavior. Assert exact copy or styling only when it is an explicit product, accessibility, or compatibility requirement.
+- Remove or merge tests when they protect the same behavior, differ only by boilerplate, or duplicate a higher-level workflow. Do not preserve tests merely to maintain test counts.
+- Parameterize genuinely distinct input/state variants when the setup and behavior are the same, but keep separate tests when the user-visible outcome or regression risk differs.
+- Keep test names aligned with their assertions. A test named for recovery, navigation, or a specific error must verify that outcome rather than only checking that a generic widget is present.
+- Keep UI tests useful: prefer tapping, dragging, entering text, submitting, retrying, navigating, and verifying resulting state over inspecting widget properties. Use stable semantics, keys, or domain-level state only when they represent a real contract.
+- Avoid duplicated mocks, repeated `when` clauses, large fixture graphs, and test-to-test imports. Centralize shared harnesses only when they describe a stable package-level boundary; keep scenario-specific fakes local.
+- Mock external boundaries, not application logic. Prefer real application providers/controllers and small fakes where practical.
+- Do not heavily test generated code. Generated API clients, endpoint methods, schemas, DTO mappings, and provider implementations are not application-owned behavior; test only app-owned wrappers, error translation, caching, fallback, or integration contracts at their boundary.
+
 ## Widget lifecycle and resource ownership
 
 - Every owned resource must be released by its owner: `StreamSubscription`, `Timer`, `AnimationController`, `CurvedAnimation`, `FocusNode`, `TextEditingController`, `OverlayEntry`, and platform/listener objects.
@@ -54,3 +69,5 @@ Run the focused test file first after a lifecycle or timing fix, then run the af
 - Prefer unit tests over widget tests when logic can be tested without a widget tree.
 - Do not reduce coverage solely to make tests faster. Instead remove real waits, avoid unnecessary full-screen mounts, use representative layout boundaries, and replace expensive setup with minimal fakes.
 - For layout breakpoints, test transition boundaries and representative variants rather than every equivalent size/count.
+- When auditing or refactoring tests, first identify the behavior each existing test protects. Keep meaningful tests, rewrite brittle ones, merge overlapping scenarios, and remove tests with no meaningful protection; do not replace a weak assertion with another weak assertion.
+- After test cleanup, report meaningful gaps separately instead of adding low-value tests solely to improve apparent coverage.

@@ -10,14 +10,13 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/banned_participants_modal.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
-import '../screens/receive_totem_screen_test.dart';
-import 'participant_reorder_modal_test.dart'
-    hide MockSessionController, MockSessionKeeperController;
+import '../session_test_mocks.dart';
 
 void main() {
   setUpAll(TestWidgetsFlutterBinding.ensureInitialized);

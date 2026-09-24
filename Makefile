@@ -105,7 +105,7 @@ test-app:
 
 test-web:
 	@echo "Running web tests..."
-	cd $(WEB_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
+	cd $(WEB_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS) --platform=chrome
 
 test-core:
 	@echo "Running core tests..."

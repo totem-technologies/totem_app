@@ -31,19 +31,6 @@ void main() {
       );
     }
 
-    testWidgets('renders all default emojis', (tester) async {
-      await tester.pumpWidget(
-        buildOverlay(onEmojiSelected: (_) {}, onDismissed: () {}),
-      );
-
-      // Complete initial layout and fade-in animation.
-      await tester.pumpAndSettle();
-
-      for (final emoji in EmojiBar.defaultEmojis) {
-        check(tester.widgetList(find.text(emoji))).length.equals(1);
-      }
-    });
-
     testWidgets('does not auto-dismiss after a few seconds', (tester) async {
       var dismissed = false;
       await tester.pumpWidget(

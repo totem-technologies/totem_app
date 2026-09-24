@@ -15,7 +15,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
-import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
+
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
@@ -245,57 +245,22 @@ void main() {
       }
     });
 
-    autoSizeTest('shows expected controls on not-my-turn screen', (
-      tester,
-    ) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.listening);
-      await tester.pump();
+    autoSizeTest('offers reactions only while listening', (tester) async {
+      for (final scenario in [
+        (screen: RoomScreen.listening, showsReactions: true),
+        (screen: RoomScreen.speaking, showsReactions: false),
+        (screen: RoomScreen.passing, showsReactions: false),
+        (screen: RoomScreen.receiving, showsReactions: false),
+      ]) {
+        await pumpSessionActionBar(tester, screen: scenario.screen);
+        await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(ActionBar))).length.equals(1);
-      check(tester.widgetList(find.byType(ActionBarButton))).length.equals(5);
-      check(
-        tester.widgetList(find.byType(SessionActionBarCameraButton)),
-      ).length.equals(1);
-    });
-
-    autoSizeTest('shows expected controls on my-turn screen', (tester) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.speaking);
-      await tester.pump();
-
-      check(tester.widgetList(find.byType(ActionBar))).length.equals(1);
-      check(tester.widgetList(find.byType(ActionBarButton))).length.equals(4);
-    });
-
-    autoSizeTest('shows emoji button on listening screen', (tester) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.listening);
-      await tester.pumpAndSettle();
-      check(
-        tester.widgetList(find.byType(ActionBarEmojiButton)),
-      ).length.equals(1);
-    });
-
-    autoSizeTest('hides emoji button on speaking screen', (tester) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.speaking);
-      await tester.pumpAndSettle();
-      check(
-        tester.widgetList(find.byType(ActionBarEmojiButton)),
-      ).length.equals(0);
-    });
-
-    autoSizeTest('hides emoji button on passing screen', (tester) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.passing);
-      await tester.pumpAndSettle();
-      check(
-        tester.widgetList(find.byType(ActionBarEmojiButton)),
-      ).length.equals(0);
-    });
-
-    autoSizeTest('hides emoji button on receiving screen', (tester) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.receiving);
-      await tester.pumpAndSettle();
-      check(
-        tester.widgetList(find.byType(ActionBarEmojiButton)),
-      ).length.equals(0);
+        check(
+          tester.widgetList(find.byType(ActionBarEmojiButton)),
+        ).length.equals(scenario.showsReactions ? 1 : 0);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      }
     });
 
     autoSizeTest('returns empty widget when session is null', (tester) async {
@@ -360,10 +325,10 @@ void main() {
         matching: find.byType(ActionBarButton),
       );
       check(tester.widgetList(moreButton)).length.equals(1);
-      final gesture = tester.widget<GestureDetector>(
-        find.descendant(of: moreButton, matching: find.byType(GestureDetector)),
-      );
-      check(gesture.onTap).isNull();
+      await tester.tap(moreButton);
+      await tester.pumpAndSettle();
+
+      check(tester.widgetList(find.byType(MoreOptions))).isEmpty();
     });
 
     autoSizeTest('opens options sheet when tapping more button', (

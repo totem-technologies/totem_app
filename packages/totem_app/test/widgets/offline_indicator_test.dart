@@ -13,12 +13,17 @@ void main() {
     Stream<bool> connectivity, {
     Widget child = const Scaffold(body: SizedBox.expand()),
   }) {
-    return tester.pumpWidget(
+    final result = tester.pumpWidget(
       ProviderScope(
         overrides: [isOfflineProvider.overrideWith((ref) => connectivity)],
         child: MaterialApp(home: OfflineIndicatorPage(child: child)),
       ),
     );
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+    return result;
   }
 
   testWidgets('does not show a banner when initially online', (tester) async {

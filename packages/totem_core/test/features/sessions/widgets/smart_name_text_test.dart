@@ -10,7 +10,6 @@ void main() {
     double width = 300,
     double threshold = 10,
     TextStyle? style = const TextStyle(fontFamily: 'Ahem', fontSize: 16),
-    TextAlign alignment = TextAlign.center,
   }) => tester.pumpWidget(
     Directionality(
       textDirection: TextDirection.ltr,
@@ -21,7 +20,6 @@ void main() {
             name: name,
             style: style,
             abbreviationThreshold: threshold,
-            textAlign: alignment,
           ),
         ),
       ),
@@ -31,27 +29,11 @@ void main() {
   String renderedName(WidgetTester tester) =>
       tester.widget<Text>(find.byType(Text)).data!;
 
-  testWidgets('trims a full Unicode name and forwards text presentation', (
-    tester,
-  ) async {
-    const style = TextStyle(
-      fontSize: 20,
-      fontWeight: FontWeight.bold,
-      color: Colors.blue,
-    );
-    await pumpName(
-      tester,
-      '  José 🚀 García  ',
-      style: style,
-      alignment: TextAlign.left,
-    );
+  testWidgets('trims a full Unicode name', (tester) async {
+    await pumpName(tester, '  José 🚀 García  ');
 
     final text = tester.widget<Text>(find.byType(Text));
     check(text.data).equals('José 🚀 García');
-    check(text.style).equals(style);
-    check(text.textAlign).equals(TextAlign.left);
-    check(text.maxLines).equals(1);
-    check(text.overflow).equals(TextOverflow.ellipsis);
   });
 
   testWidgets(

@@ -90,6 +90,25 @@ SessionDetailSchema _createSessionEvent({
   );
 }
 
+final _fallbackNow = DateTime(2024, 1, 1, 12);
+
+DateTime _testNow(WidgetTester tester) => tester.binding.clock.now();
+
+SessionDetailSchema _createSessionEventWithElapsed(
+  DateTime now, {
+  Duration elapsed = const Duration(minutes: 5),
+  int duration = 10,
+  String slug = 'test-session',
+  bool ended = false,
+}) {
+  return _createSessionEvent(
+    start: now.subtract(elapsed),
+    duration: duration,
+    slug: slug,
+    ended: ended,
+  );
+}
+
 Future<void> _pumpRoomScreen(
   WidgetTester tester, {
   required SessionDetailSchema event,
@@ -109,10 +128,11 @@ Future<void> _pumpRoomScreen(
         roomStatusProvider.overrideWith((ref) => roomStatus),
         disconnectionReasonProvider.overrideWith((ref) => null),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         home: VideoSessionScreen(
           sessionSlug: 'test-session',
-          loadingScreen: SizedBox.shrink(),
+          loadingScreen: const SizedBox.shrink(),
+          now: tester.binding.clock.now,
         ),
       ),
     ),
@@ -196,13 +216,14 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         disconnectionReasonProvider.overrideWith((ref) => disconnectReason),
         ...extraOverrides.cast(),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         home: SizedBox(
           height: 1920,
           width: 1080,
           child: VideoSessionScreen(
             sessionSlug: 'test-session',
-            loadingScreen: SizedBox(key: ValueKey('loading-screen')),
+            loadingScreen: const SizedBox(key: ValueKey('loading-screen')),
+            now: tester.binding.clock.now,
           ),
         ),
       ),
@@ -416,10 +437,11 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
     disconnectionReasonProvider.overrideWith((ref) => null),
     ...extraOverrides,
   ];
-  const child = MaterialApp(
+  final child = MaterialApp(
     home: VideoSessionScreen(
       sessionSlug: 'test-session',
-      loadingScreen: SizedBox.shrink(),
+      loadingScreen: const SizedBox.shrink(),
+      now: tester.binding.clock.now,
     ),
   );
 
@@ -482,6 +504,9 @@ void main() {
         () => localParticipant.setCameraEnabled(false),
       ).thenAnswer((_) async => null);
       when(
+        () => localParticipant.setCameraEnabled(false),
+      ).thenAnswer((_) async => null);
+      when(
         () => localParticipant.setMicrophoneEnabled(false),
       ).thenAnswer((_) async => null);
       when(() => session.devices).thenReturn(devices);
@@ -500,7 +525,7 @@ void main() {
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
       when(() => session.session).thenReturn(
         _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 5)),
+          start: _fallbackNow.subtract(const Duration(minutes: 5)),
           duration: 10,
         ),
       );
@@ -509,9 +534,9 @@ void main() {
     testWidgets('renders loading screen for RoomScreen.loading', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
       );
 
       await _pumpRoomScreenForResolvedScreen(
@@ -529,9 +554,9 @@ void main() {
     testWidgets(
       'keeps loading screen visible while recovering from join failure',
       (tester) async {
-        final event = _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 5)),
-          duration: 10,
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
         );
 
         await _pumpRoomScreenForResolvedScreen(
@@ -554,9 +579,9 @@ void main() {
     );
 
     testWidgets('renders error screen for RoomScreen.error', (tester) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
       );
 
       await _pumpRoomScreenForResolvedScreen(
@@ -574,9 +599,9 @@ void main() {
     testWidgets('renders offline error screen for a network disconnection', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
       );
 
       await _pumpRoomScreenForResolvedScreen(
@@ -608,9 +633,9 @@ void main() {
     testWidgets(
       'does not infer internet loss from a generic disconnected reason',
       (tester) async {
-        final event = _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 5)),
-          duration: 10,
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
         );
 
         await _pumpRoomScreenForResolvedScreen(
@@ -645,9 +670,9 @@ void main() {
       testWidgets('preserves $reason messaging while device is offline', (
         tester,
       ) async {
-        final event = _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 5)),
-          duration: 10,
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
         );
 
         await _pumpRoomScreenForResolvedScreen(
@@ -675,9 +700,9 @@ void main() {
     testWidgets('renders receive totem screen for RoomScreen.receiving', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
       );
 
       await _pumpRoomScreenForResolvedScreen(
@@ -694,9 +719,9 @@ void main() {
     });
 
     testWidgets('renders my turn screen for RoomScreen.myTurn', (tester) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
       );
 
       await _pumpRoomScreenForResolvedScreen(
@@ -715,9 +740,9 @@ void main() {
     testWidgets('renders my turn screen for RoomScreen.passing', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
       );
 
       await _pumpRoomScreenForResolvedScreen(
@@ -736,9 +761,9 @@ void main() {
     testWidgets('clears leftover chat UI state when a room is entered', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
       );
 
       // State left behind by a previous circle: a docked sidebar and a
@@ -767,9 +792,9 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
       );
 
       await _pumpRoomScreenForResolvedScreen(
@@ -795,9 +820,9 @@ void main() {
     testWidgets('renders not my turn screen for RoomScreen.listening', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
       );
 
       await _pumpRoomScreenForResolvedScreen(
@@ -823,9 +848,9 @@ void main() {
             enableMicrophoneCallCount += 1;
           });
 
-          final event = _createSessionEvent(
-            start: DateTime.now().subtract(const Duration(minutes: 5)),
-            duration: 10,
+          final event = _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 5),
           );
 
           await _pumpRoomScreenForResolvedScreen(
@@ -868,7 +893,7 @@ void main() {
     testWidgets('shows the warning notification when 5 minutes remain', (
       tester,
     ) async {
-      final now = DateTime.now();
+      final now = _testNow(tester);
       final event = _createSessionEvent(
         start: now.subtract(const Duration(minutes: 5)),
         duration: 10,
@@ -896,7 +921,7 @@ void main() {
     testWidgets('does not show the warning when room is not active', (
       tester,
     ) async {
-      final now = DateTime.now();
+      final now = _testNow(tester);
       final event = _createSessionEvent(
         start: now.subtract(const Duration(minutes: 5)),
         duration: 10,
@@ -924,7 +949,7 @@ void main() {
     testWidgets('shows the warning only once for the same session', (
       tester,
     ) async {
-      final now = DateTime.now();
+      final now = _testNow(tester);
       final event = _createSessionEvent(
         start: now.subtract(const Duration(minutes: 5)),
         duration: 10,
@@ -957,7 +982,7 @@ void main() {
     testWidgets(
       'does not re-show warning after room rebuilds for same session slug',
       (tester) async {
-        final now = DateTime.now();
+        final now = _testNow(tester);
         final event = _createSessionEvent(
           slug: 'stable-session',
           start: now.subtract(const Duration(minutes: 9)),
@@ -1000,7 +1025,7 @@ void main() {
     testWidgets('schedules warning and shows it only after threshold', (
       tester,
     ) async {
-      final now = DateTime.now();
+      final now = _testNow(tester);
       final event = _createSessionEvent(
         start: now.subtract(const Duration(minutes: 2)),
         duration: 10,
@@ -1027,7 +1052,7 @@ void main() {
     testWidgets('shows warning immediately when threshold already passed', (
       tester,
     ) async {
-      final now = DateTime.now();
+      final now = _testNow(tester);
       final event = _createSessionEvent(
         start: now.subtract(const Duration(minutes: 9)),
         duration: 10,
@@ -1047,7 +1072,7 @@ void main() {
     });
 
     testWidgets('does not show warning when event has ended', (tester) async {
-      final now = DateTime.now();
+      final now = _testNow(tester);
       final event = _createSessionEvent(
         start: now.subtract(const Duration(minutes: 9)),
         duration: 10,
@@ -1070,7 +1095,7 @@ void main() {
     testWidgets('cancels scheduled warning when connection disconnects', (
       tester,
     ) async {
-      final now = DateTime.now();
+      final now = _testNow(tester);
       final event = _createSessionEvent(
         start: now.subtract(const Duration(minutes: 4)),
         duration: 10,
@@ -1102,7 +1127,7 @@ void main() {
     testWidgets('cancels scheduled warning when room ends before threshold', (
       tester,
     ) async {
-      final now = DateTime.now();
+      final now = _testNow(tester);
       final event = _createSessionEvent(
         start: now.subtract(const Duration(minutes: 4)),
         duration: 10,
@@ -1134,7 +1159,7 @@ void main() {
     testWidgets('resets one-shot guard when session slug changes', (
       tester,
     ) async {
-      final now = DateTime.now();
+      final now = _testNow(tester);
       final eventA = _createSessionEvent(
         slug: 'session-a',
         start: now.subtract(const Duration(minutes: 9)),
@@ -1161,7 +1186,7 @@ void main() {
 
       final eventB = _createSessionEvent(
         slug: 'session-b',
-        start: DateTime.now().subtract(const Duration(minutes: 9)),
+        start: _testNow(tester).subtract(const Duration(minutes: 9)),
         duration: 10,
       );
 
@@ -1177,7 +1202,7 @@ void main() {
     testWidgets(
       'clears 5 minute warning notification when leaving room screen',
       (tester) async {
-        final now = DateTime.now();
+        final now = _testNow(tester);
         final event = _createSessionEvent(
           start: now.subtract(const Duration(minutes: 9)),
           duration: 10,
@@ -1239,16 +1264,16 @@ void main() {
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
       when(() => session.session).thenReturn(
         _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 5)),
+          start: _fallbackNow.subtract(const Duration(minutes: 5)),
           duration: 10,
         ),
       );
     });
 
     testWidgets('shows notification when audio route changes', (tester) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
       );
 
       await _pumpRoomScreenForResolvedScreen(
@@ -1295,9 +1320,9 @@ void main() {
     testWidgets('does not show notification while disconnected', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 5)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
       );
 
       await _pumpRoomScreenForResolvedScreen(
@@ -1343,9 +1368,9 @@ void main() {
 
         await _pumpRoomScreenWithMutableState(
           tester,
-          event: _createSessionEvent(
-            start: DateTime.now().subtract(const Duration(minutes: 1)),
-            duration: 10,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 1),
           ),
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
@@ -1386,9 +1411,9 @@ void main() {
 
         await _pumpRoomScreenWithMutableState(
           tester,
-          event: _createSessionEvent(
-            start: DateTime.now().subtract(const Duration(minutes: 1)),
-            duration: 10,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 1),
           ),
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
@@ -1453,9 +1478,9 @@ void main() {
 
       await _pumpRoomScreenWithMutableState(
         tester,
-        event: _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 1)),
-          duration: 10,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 1),
         ),
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
@@ -1488,9 +1513,9 @@ void main() {
 
         await _pumpRoomScreenWithMutableState(
           tester,
-          event: _createSessionEvent(
-            start: DateTime.now().subtract(const Duration(minutes: 1)),
-            duration: 10,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 1),
           ),
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
@@ -1523,9 +1548,9 @@ void main() {
 
       final harness = await _pumpRoomScreenWithMutableState(
         tester,
-        event: _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 1)),
-          duration: 10,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 1),
         ),
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
@@ -1557,9 +1582,9 @@ void main() {
     testWidgets('shows keeper paused notification when starting disconnected', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 1)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 1),
       );
 
       await _pumpRoomScreenWithMutableState(
@@ -1584,9 +1609,9 @@ void main() {
     testWidgets(
       'shows keeper paused notification when keeper disconnects in active',
       (tester) async {
-        final event = _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 1)),
-          duration: 10,
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 1),
         );
 
         final harness = await _pumpRoomScreenWithMutableState(
@@ -1616,9 +1641,9 @@ void main() {
     testWidgets('hides keeper paused notification when keeper reconnects', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 1)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 1),
       );
 
       final harness = await _pumpRoomScreenWithMutableState(
@@ -1649,9 +1674,9 @@ void main() {
     testWidgets('clears keeper paused notification when room ends', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 1)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 1),
       );
 
       final harness = await _pumpRoomScreenWithMutableState(
@@ -1682,9 +1707,9 @@ void main() {
     testWidgets(
       'clears keeper paused notification when connection disconnects',
       (tester) async {
-        final event = _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 1)),
-          duration: 10,
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 1),
         );
 
         final harness = await _pumpRoomScreenWithMutableState(
@@ -1716,9 +1741,9 @@ void main() {
     testWidgets(
       'clears keeper paused notification when entering disconnected sub screen',
       (tester) async {
-        final event = _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 1)),
-          duration: 10,
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 1),
         );
 
         final harness = await _pumpRoomScreenWithMutableState(
@@ -1751,9 +1776,9 @@ void main() {
     testWidgets(
       'clears keeper paused notification when entering error sub screen',
       (tester) async {
-        final event = _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 1)),
-          duration: 10,
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 1),
         );
 
         final harness = await _pumpRoomScreenWithMutableState(
@@ -1786,9 +1811,9 @@ void main() {
     testWidgets('clears keeper paused notification when leaving room screen', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 1)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 1),
       );
 
       final harness = await _pumpRoomScreenWithMutableState(
@@ -1820,9 +1845,9 @@ void main() {
     testWidgets('blocks keeper paused notification on disconnected screen', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 1)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 1),
       );
 
       final harness = await _pumpRoomScreenWithMutableState(
@@ -1870,9 +1895,9 @@ void main() {
     testWidgets('blocks keeper paused notification on error screen', (
       tester,
     ) async {
-      final event = _createSessionEvent(
-        start: DateTime.now().subtract(const Duration(minutes: 1)),
-        duration: 10,
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 1),
       );
 
       final harness = await _pumpRoomScreenWithMutableState(
@@ -1917,7 +1942,7 @@ void main() {
     testWidgets('blocks 5 minute warning on disconnected screen', (
       tester,
     ) async {
-      final now = DateTime.now();
+      final now = _testNow(tester);
       final event = _createSessionEvent(
         start: now.subtract(const Duration(minutes: 5)),
         duration: 10,
@@ -1938,7 +1963,7 @@ void main() {
     });
 
     testWidgets('blocks 5 minute warning on error screen', (tester) async {
-      final now = DateTime.now();
+      final now = _testNow(tester);
       final event = _createSessionEvent(
         start: now.subtract(const Duration(minutes: 5)),
         duration: 10,
@@ -1962,7 +1987,7 @@ void main() {
       'blocks keeper paused notification when event ended but screen active',
       (tester) async {
         final event = _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 1)),
+          start: _testNow(tester).subtract(const Duration(minutes: 1)),
           duration: 10,
           ended: true,
         );
@@ -1995,9 +2020,9 @@ void main() {
 
       final harness = await _pumpRoomScreenWithMutableState(
         tester,
-        event: _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 2)),
-          duration: 10,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 2),
         ),
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.waitingRoom,
@@ -2028,9 +2053,9 @@ void main() {
 
       final harness = await _pumpRoomScreenWithMutableState(
         tester,
-        event: _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 2)),
-          duration: 10,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 2),
         ),
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
@@ -2054,9 +2079,9 @@ void main() {
 
       final harness = await _pumpRoomScreenWithMutableState(
         tester,
-        event: _createSessionEvent(
-          start: DateTime.now().subtract(const Duration(minutes: 2)),
-          duration: 10,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 2),
         ),
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,

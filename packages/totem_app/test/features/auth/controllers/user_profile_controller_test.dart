@@ -12,36 +12,12 @@ import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
 
+import 'auth_test_support.dart';
+
 // --- Mocks ---
-class MockUserRepository extends Mock implements UserRepository {}
-
-class MockAnalyticsService extends Mock implements AnalyticsService {}
-
 class MockMobileAuthController extends Mock implements MobileAuthController {}
 
-class MockLocalStorageService extends Mock implements LocalStorageService {}
-
 class MockFile extends Mock implements File {}
-
-UserSchema _buildUserSchema(
-  String slug,
-  String name, {
-  String? profileAvatarSeed,
-  String? email,
-}) {
-  return UserSchema(
-    slug: slug,
-    name: name,
-    profileAvatarType: ProfileAvatarTypeEnum.td,
-    circleCount: 0,
-    isStaff: false,
-    apiKey: null,
-    profileAvatarSeed: profileAvatarSeed,
-    profileImage: null,
-    email: email ?? '',
-    dateCreated: DateTime.now(),
-  );
-}
 
 void main() {
   late MockUserRepository mockUserRepository;
@@ -129,8 +105,8 @@ void main() {
     });
 
     test('successfully completes onboarding and syncs user', () async {
-      final mockUser = _buildUserSchema('1', 'John');
-      final mockUpdatedUser = _buildUserSchema('1', 'John Doe');
+      final mockUser = testUserSchema(slug: '1', name: 'John');
+      final mockUpdatedUser = testUserSchema(slug: '1', name: 'John Doe');
 
       when(() => mockAuthController.isAuthenticated).thenReturn(true);
       when(() => mockAuthController.user).thenReturn(mockUser);
@@ -187,10 +163,10 @@ void main() {
     });
 
     test('updates image successfully and fetches refreshed user', () async {
-      final mockUser = _buildUserSchema('1', 'John');
-      final mockRefreshedUser = _buildUserSchema(
-        '1',
-        'John',
+      final mockUser = testUserSchema(slug: '1', name: 'John');
+      final mockRefreshedUser = testUserSchema(
+        slug: '1',
+        name: 'John',
         profileAvatarSeed: 'new_seed',
       );
       final mockFile = MockFile();
@@ -221,10 +197,10 @@ void main() {
     test(
       'updates meta profile data successfully and syncs user directly',
       () async {
-        final mockUser = _buildUserSchema('1', 'John');
-        final mockUpdatedUser = _buildUserSchema(
-          '1',
-          'John Doe',
+        final mockUser = testUserSchema(slug: '1', name: 'John');
+        final mockUpdatedUser = testUserSchema(
+          slug: '1',
+          name: 'John Doe',
           email: 'john@doe.com',
         );
 

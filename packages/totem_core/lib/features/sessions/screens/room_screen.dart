@@ -36,11 +36,13 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
   const VideoSessionScreen({
     required this.sessionSlug,
     required this.loadingScreen,
+    this.now = DateTime.now,
     super.key,
   });
 
   final String sessionSlug;
   final Widget loadingScreen;
+  final DateTime Function() now;
 
   @override
   ConsumerState<VideoSessionScreen> createState() => _VideoSessionScreenState();
@@ -219,7 +221,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       Duration(minutes: sessionEvent.duration),
     );
     final warningTime = endTime.subtract(const Duration(minutes: 5));
-    final delay = warningTime.difference(DateTime.now());
+    final delay = warningTime.difference(widget.now());
 
     _timeRemainingWarningTimer = Timer(
       delay.isNegative ? Duration.zero : delay,

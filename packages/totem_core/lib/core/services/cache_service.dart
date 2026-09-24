@@ -39,23 +39,31 @@ class CacheService {
   Future<Map<String, dynamic>?> read(String key) async {
     logger.d('Reading cache for key: $key');
     final dataJson = await _secureStorage.read(key: key);
-    if (dataJson != null) {
-      final data = jsonDecode(dataJson) as Map<String, dynamic>;
-      final timeStamp = data['timestamp'] as String?;
-      if (timeStamp == null) {
-        await _secureStorage.delete(key: key);
-        return null;
-      }
+    if (dataJson == null) return null;
 
-      final expiration = data['expirationDate'] != null
-          ? DateTime.parse(data['expirationDate'] as String)
-          : DateTime.parse(timeStamp).add(const Duration(hours: 24));
-      if (DateTime.now().isBefore(expiration)) {
-        return data['value'] as Map<String, dynamic>?;
-      } else {
-        await _secureStorage.delete(key: key);
+    try {
+      final data = jsonDecode(dataJson);
+      if (data is Map<String, dynamic>) {
+        final timeStamp = data['timestamp'];
+        final expirationValue = data['expirationDate'];
+        if (timeStamp is String &&
+            (expirationValue == null || expirationValue is String)) {
+          final expiration = expirationValue is String
+              ? DateTime.parse(expirationValue)
+              : DateTime.parse(timeStamp).add(const Duration(hours: 24));
+          if (DateTime.now().isBefore(expiration)) {
+            final value = data['value'];
+            if (value == null || value is Map<String, dynamic>) {
+              return value as Map<String, dynamic>?;
+            }
+          }
+        }
       }
+    } on FormatException {
+      // Treat malformed persisted data as a cache miss.
     }
+
+    await _secureStorage.delete(key: key);
     return null;
   }
 

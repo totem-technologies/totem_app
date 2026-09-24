@@ -9,13 +9,13 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-import 'package:totem_core/auth/models/auth_state.dart';
+
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
-import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
@@ -25,9 +25,8 @@ import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
-
-class MockSessionMessagingController extends Mock
-    implements SessionMessagingController {}
+import '../session_test_fixtures.dart';
+import '../session_test_mocks.dart';
 
 /// A minimal [SessionDetailSchema] for testing.
 SessionDetailSchema _createTestSession() {
@@ -220,16 +219,7 @@ void main() {
         overrides: [
           authControllerProvider.overrideWith(
             () => FakeAuthController(
-              AuthState.authenticated(
-                user: UserSchema(
-                  email: 'test@test.com',
-                  name: 'Test User',
-                  slug: currentUserSlug,
-                  profileAvatarType: ProfileAvatarTypeEnum.td,
-                  circleCount: 0,
-                  dateCreated: DateTime.now(),
-                ),
-              ),
+              testAuthenticatedState(slug: currentUserSlug),
             ),
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
@@ -387,9 +377,7 @@ void main() {
     });
 
     group('waitingRoom status without keeper', () {
-      testWidgets('shows "Waiting for the Keeper to join" text', (
-        tester,
-      ) async {
+      testWidgets('shows the waiting state for a non-keeper', (tester) async {
         final state = _buildState(
           status: RoomStatus.waitingRoom,
           keeper: 'keeper-1',
@@ -404,19 +392,6 @@ void main() {
         check(
           tester.widgetList(find.text('Waiting for the Keeper to join')),
         ).length.equals(1);
-      });
-
-      testWidgets('shows GroundingMarquee for non-keeper', (tester) async {
-        final state = _buildState(
-          status: RoomStatus.waitingRoom,
-          participants: [
-            _mockRemote('user-1', 'User One'),
-            _mockRemote('user-2', 'User Two'),
-          ],
-        );
-
-        await pumpListeningTurn(tester, sessionState: state);
-
         check(
           tester.widgetList(find.byType(GroundingMarquee)),
         ).length.equals(1);
@@ -424,63 +399,19 @@ void main() {
     });
 
     group('waitingRoom status with keeper', () {
-      testWidgets('shows "Your session is about to start" text', (
-        tester,
-      ) async {
+      testWidgets('shows the keeper waiting state', (tester) async {
         final state = _buildState(status: RoomStatus.waitingRoom);
 
-        await pumpListeningTurn(tester, sessionState: state);
+        await pumpListeningTurn(tester, sessionState: state, isKeeper: true);
 
         check(
           tester.widgetList(find.text('Your session is about to start')),
         ).length.equals(1);
-      });
-
-      testWidgets('shows the "STARTING SOON" eyebrow label', (tester) async {
-        final state = _buildState(status: RoomStatus.waitingRoom);
-
-        await pumpListeningTurn(tester, sessionState: state);
-
         check(tester.widgetList(find.text('STARTING SOON'))).length.equals(1);
-      });
-
-      testWidgets('non-keeper sees GroundingMarquee instead of start button', (
-        tester,
-      ) async {
-        final state = _buildState(status: RoomStatus.waitingRoom);
-
-        await pumpListeningTurn(tester, sessionState: state, isKeeper: false);
-
-        // Non-keeper should see the marquee, not the start button.
-        check(
-          tester.widgetList(find.byType(GroundingMarquee)),
-        ).length.equals(1);
-      });
-    });
-
-    group('active status', () {
-      testWidgets('does NOT show marquee or transition card', (tester) async {
-        final state = _buildState(status: RoomStatus.active);
-
-        await pumpListeningTurn(tester, sessionState: state);
-
-        check(
-          tester.widgetList(find.byType(GroundingMarquee)),
-        ).length.equals(0);
       });
     });
 
     group('session action bar', () {
-      testWidgets('renders SessionActionBar', (tester) async {
-        final state = _buildState(status: RoomStatus.active);
-
-        await pumpListeningTurn(tester, sessionState: state);
-
-        check(
-          tester.widgetList(find.byType(SessionActionBar)),
-        ).length.equals(1);
-      });
-
       testWidgets('shows reaction control and toggles mic/camera', (
         tester,
       ) async {

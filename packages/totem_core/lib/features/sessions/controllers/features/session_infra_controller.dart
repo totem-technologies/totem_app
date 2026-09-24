@@ -9,15 +9,78 @@ import 'package:totem_core/core/errors/error_handler.dart';
 
 part 'session_infra_controller.g.dart';
 
+class SessionInfraPlatform {
+  const SessionInfraPlatform();
+
+  bool get canUseForegroundTask =>
+      !kIsWeb && !kIsWasm && (Platform.isAndroid || Platform.isIOS);
+
+  bool get isAndroid => !kIsWeb && !kIsWasm && Platform.isAndroid;
+
+  Future<NotificationPermission> checkNotificationPermission() =>
+      FlutterForegroundTask.checkNotificationPermission();
+
+  Future<NotificationPermission> requestNotificationPermission() =>
+      FlutterForegroundTask.requestNotificationPermission();
+
+  Future<bool> get isIgnoringBatteryOptimizations =>
+      FlutterForegroundTask.isIgnoringBatteryOptimizations;
+
+  Future<bool> requestIgnoreBatteryOptimization() =>
+      FlutterForegroundTask.requestIgnoreBatteryOptimization();
+
+  Future<bool> get isRunningService => FlutterForegroundTask.isRunningService;
+
+  void initialize() {
+    FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'totem_session',
+        channelName: 'Totem Session',
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: false,
+        playSound: false,
+      ),
+      foregroundTaskOptions: ForegroundTaskOptions(
+        eventAction: ForegroundTaskEventAction.nothing(),
+        allowWakeLock: true,
+        allowWifiLock: true,
+      ),
+    );
+  }
+
+  Future<void> startService() => FlutterForegroundTask.startService(
+    notificationTitle: 'Totem Session',
+    notificationText: 'Connecting...',
+    serviceTypes: [
+      ForegroundServiceTypes.microphone,
+      ForegroundServiceTypes.mediaPlayback,
+    ],
+  );
+
+  Future<void> stopService() => FlutterForegroundTask.stopService();
+
+  Future<void> updateNotification({
+    required String title,
+    required String text,
+  }) => FlutterForegroundTask.updateService(
+    notificationTitle: title,
+    notificationText: text,
+  );
+}
+
 @riverpod
 class SessionInfraController extends _$SessionInfraController {
+  SessionInfraController({SessionInfraPlatform? platform})
+    : _platform = platform ?? const SessionInfraPlatform();
+
+  final SessionInfraPlatform _platform;
+
   @override
   void build() {
     ref.onDispose(dispose);
-  }
-
-  static bool get canUseForegroundTask {
-    return !kIsWeb && !kIsWasm && (Platform.isAndroid || Platform.isIOS);
   }
 
   Timer? _notificationTimer;
@@ -40,27 +103,10 @@ class SessionInfraController extends _$SessionInfraController {
   Future<void> _setupBackgroundMode(SessionDetailSchema? event) async {
     if (_disposed) return;
     try {
-      await requestPermissions();
-      if (_disposed) return;
+      if (!await requestPermissions() || _disposed) return;
 
-      if (canUseForegroundTask) {
-        FlutterForegroundTask.init(
-          androidNotificationOptions: AndroidNotificationOptions(
-            channelId: 'totem_session',
-            channelName: 'Totem Session',
-            channelImportance: NotificationChannelImportance.LOW,
-            priority: NotificationPriority.LOW,
-          ),
-          iosNotificationOptions: const IOSNotificationOptions(
-            showNotification: false,
-            playSound: false,
-          ),
-          foregroundTaskOptions: ForegroundTaskOptions(
-            eventAction: ForegroundTaskEventAction.nothing(),
-            allowWakeLock: true,
-            allowWifiLock: true,
-          ),
-        );
+      if (_platform.canUseForegroundTask) {
+        _platform.initialize();
         await _startBackgroundService(event);
         if (_disposed) await _endBackgroundMode();
       }
@@ -74,16 +120,9 @@ class SessionInfraController extends _$SessionInfraController {
   }
 
   Future<void> _startBackgroundService(SessionDetailSchema? event) async {
-    if (!canUseForegroundTask) return;
-    if (!await FlutterForegroundTask.isRunningService) {
-      await FlutterForegroundTask.startService(
-        notificationTitle: 'Totem Session',
-        notificationText: 'Connecting...',
-        serviceTypes: [
-          ForegroundServiceTypes.microphone,
-          ForegroundServiceTypes.mediaPlayback,
-        ],
-      );
+    if (!_platform.canUseForegroundTask) return;
+    if (!await _platform.isRunningService) {
+      await _platform.startService();
     }
 
     _notificationTimer?.cancel();
@@ -99,9 +138,9 @@ class SessionInfraController extends _$SessionInfraController {
       final endTime = event.start.add(Duration(minutes: event.duration));
       final minutesLeft = endTime.difference(DateTime.now()).inMinutes;
 
-      await FlutterForegroundTask.updateService(
-        notificationTitle: event.title,
-        notificationText: minutesLeft.isNegative
+      await _platform.updateNotification(
+        title: event.title,
+        text: minutesLeft.isNegative
             ? 'at ${event.space.title}'
             : '$minutesLeft minutes left',
       );
@@ -115,15 +154,13 @@ class SessionInfraController extends _$SessionInfraController {
   }
 
   Future<void> _endBackgroundMode() async {
-    try {
-      _notificationTimer?.cancel();
-      _notificationTimer = null;
-    } catch (_) {}
+    _notificationTimer?.cancel();
+    _notificationTimer = null;
 
-    if (canUseForegroundTask) {
+    if (_platform.canUseForegroundTask) {
       try {
-        if (await FlutterForegroundTask.isRunningService) {
-          await FlutterForegroundTask.stopService();
+        if (await _platform.isRunningService) {
+          await _platform.stopService();
         }
       } catch (error, stackTrace) {
         ErrorHandler.logError(
@@ -135,38 +172,36 @@ class SessionInfraController extends _$SessionInfraController {
     }
   }
 
-  static Future<bool> requestPermissions() async {
-    if (!canUseForegroundTask) {
+  Future<bool> requestPermissions() async {
+    if (!_platform.canUseForegroundTask) {
       // Infra permissions aren't relevant on web, so we can skip requesting them.
       return true;
     }
     try {
-      if (Platform.isAndroid || Platform.isIOS) {
-        var notificationPermission =
-            await FlutterForegroundTask.checkNotificationPermission();
-        if (notificationPermission != NotificationPermission.granted) {
-          notificationPermission =
-              await FlutterForegroundTask.requestNotificationPermission();
-        }
-
-        if (notificationPermission != NotificationPermission.granted) {
-          return false;
-        }
-
-        if (Platform.isAndroid &&
-            !await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
-          return await FlutterForegroundTask.requestIgnoreBatteryOptimization();
-        }
+      var notificationPermission = await _platform
+          .checkNotificationPermission();
+      if (notificationPermission != NotificationPermission.granted) {
+        notificationPermission = await _platform
+            .requestNotificationPermission();
       }
+
+      if (notificationPermission != NotificationPermission.granted) {
+        return false;
+      }
+
+      if (_platform.isAndroid &&
+          !await _platform.isIgnoringBatteryOptimizations) {
+        return await _platform.requestIgnoreBatteryOptimization();
+      }
+      return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Error requesting notification permission',
       );
+      return false;
     }
-
-    return false;
   }
 
   void dispose() {

@@ -10,7 +10,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
+
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -20,9 +20,7 @@ import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
-
-class MockSessionKeeperController extends Mock
-    implements SessionKeeperController {}
+import '../session_test_mocks.dart';
 
 class _TestSessionDeviceController extends SessionDeviceController {
   static const _defaultState = SessionDeviceState(

@@ -10,6 +10,38 @@ import 'package:totem_core/core/services/connectivity_service.dart';
 
 class _MockConnectivity extends Mock implements Connectivity {}
 
+class _ConnectivityHarness {
+  _ConnectivityHarness({
+    required Future<List<ConnectivityResult>> Function() checkConnectivity,
+  }) {
+    when(connectivity.checkConnectivity).thenAnswer((_) => checkConnectivity());
+    when(
+      () => connectivity.onConnectivityChanged,
+    ).thenAnswer((_) => changes.stream);
+
+    container = ProviderContainer(
+      overrides: [connectivityProvider.overrideWithValue(connectivity)],
+    );
+    subscription = container.listen(
+      isOfflineProvider,
+      (_, next) => next.whenData(values.add),
+      fireImmediately: true,
+    );
+  }
+
+  final connectivity = _MockConnectivity();
+  final changes = StreamController<List<ConnectivityResult>>();
+  final values = <bool>[];
+  late final ProviderContainer container;
+  late final ProviderSubscription<AsyncValue<bool>> subscription;
+
+  Future<void> dispose() async {
+    subscription.close();
+    container.dispose();
+    await changes.close();
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -43,30 +75,17 @@ void main() {
 
   group('isOfflineProvider', () {
     testWidgets('filters a transient initial offline result', (tester) async {
-      final connectivity = _MockConnectivity();
-      final changes = StreamController<List<ConnectivityResult>>();
       final initialCheck = Completer<List<ConnectivityResult>>();
       var checks = 0;
-      addTearDown(changes.close);
-      when(connectivity.checkConnectivity).thenAnswer((_) {
-        if (checks++ == 0) return initialCheck.future;
-        return Future.value(const [ConnectivityResult.wifi]);
-      });
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
-
-      final container = ProviderContainer(
-        overrides: [connectivityProvider.overrideWithValue(connectivity)],
+      final harness = _ConnectivityHarness(
+        checkConnectivity: () {
+          if (checks++ == 0) return initialCheck.future;
+          return Future.value(const [ConnectivityResult.wifi]);
+        },
       );
-      addTearDown(container.dispose);
-      final values = <bool>[];
-      final subscription = container.listen(
-        isOfflineProvider,
-        (_, next) => next.whenData(values.add),
-        fireImmediately: true,
-      );
-      addTearDown(subscription.close);
+      addTearDown(harness.dispose);
+      final changes = harness.changes;
+      final values = harness.values;
 
       changes.add(const [ConnectivityResult.none]);
       await tester.pump();
@@ -82,27 +101,11 @@ void main() {
     });
 
     testWidgets('publishes a confirmed initial offline result', (tester) async {
-      final connectivity = _MockConnectivity();
-      final changes = StreamController<List<ConnectivityResult>>();
-      addTearDown(changes.close);
-      when(
-        connectivity.checkConnectivity,
-      ).thenAnswer((_) async => const [ConnectivityResult.none]);
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
-
-      final container = ProviderContainer(
-        overrides: [connectivityProvider.overrideWithValue(connectivity)],
+      final harness = _ConnectivityHarness(
+        checkConnectivity: () async => const [ConnectivityResult.none],
       );
-      addTearDown(container.dispose);
-      final values = <bool>[];
-      final subscription = container.listen(
-        isOfflineProvider,
-        (_, next) => next.whenData(values.add),
-        fireImmediately: true,
-      );
-      addTearDown(subscription.close);
+      addTearDown(harness.dispose);
+      final values = harness.values;
 
       await tester.pump();
       check(values).isEmpty();
@@ -116,30 +119,15 @@ void main() {
     testWidgets('combines confirmed, distinct connectivity changes', (
       tester,
     ) async {
-      final connectivity = _MockConnectivity();
-      final changes = StreamController<List<ConnectivityResult>>();
       var currentConnectivity = const [ConnectivityResult.wifi];
-      addTearDown(changes.close);
-      when(
-        connectivity.checkConnectivity,
-      ).thenAnswer((_) async => currentConnectivity);
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
-
-      final container = ProviderContainer(
-        overrides: [connectivityProvider.overrideWithValue(connectivity)],
+      final harness = _ConnectivityHarness(
+        checkConnectivity: () async => currentConnectivity,
       );
-      addTearDown(container.dispose);
-      final values = <bool>[];
-      final subscription = container.listen(
-        isOfflineProvider,
-        (_, next) => next.whenData(values.add),
-        fireImmediately: true,
-      );
-      addTearDown(subscription.close);
+      addTearDown(harness.dispose);
+      final changes = harness.changes;
+      final values = harness.values;
 
-      await container.read(isOfflineProvider.future);
+      await harness.container.read(isOfflineProvider.future);
       currentConnectivity = const [ConnectivityResult.none];
       changes.add(const [ConnectivityResult.none]);
       await tester.pump();
@@ -160,29 +148,16 @@ void main() {
     testWidgets('filters a transient offline result after initialization', (
       tester,
     ) async {
-      final connectivity = _MockConnectivity();
-      final changes = StreamController<List<ConnectivityResult>>();
-      addTearDown(changes.close);
-      when(
-        connectivity.checkConnectivity,
-      ).thenAnswer((_) async => const [ConnectivityResult.wifi]);
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
-
-      final container = ProviderContainer(
-        overrides: [connectivityProvider.overrideWithValue(connectivity)],
+      final harness = _ConnectivityHarness(
+        checkConnectivity: () async => const [ConnectivityResult.wifi],
       );
-      addTearDown(container.dispose);
-      final values = <bool>[];
-      final subscription = container.listen(
-        isOfflineProvider,
-        (_, next) => next.whenData(values.add),
-        fireImmediately: true,
-      );
-      addTearDown(subscription.close);
+      addTearDown(harness.dispose);
+      final changes = harness.changes;
+      final values = harness.values;
 
-      check(await container.read(isOfflineProvider.future)).equals(false);
+      check(
+        await harness.container.read(isOfflineProvider.future),
+      ).equals(false);
 
       changes.add(const [ConnectivityResult.none]);
       await tester.pump();
@@ -195,34 +170,23 @@ void main() {
     testWidgets('ignores a stale offline confirmation after reconnecting', (
       tester,
     ) async {
-      final connectivity = _MockConnectivity();
-      final changes = StreamController<List<ConnectivityResult>>();
       final confirmation = Completer<List<ConnectivityResult>>();
       var checks = 0;
-      addTearDown(changes.close);
-      when(connectivity.checkConnectivity).thenAnswer((_) {
-        if (checks++ == 0) {
-          return Future.value(const [ConnectivityResult.wifi]);
-        }
-        return confirmation.future;
-      });
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
-
-      final container = ProviderContainer(
-        overrides: [connectivityProvider.overrideWithValue(connectivity)],
+      final harness = _ConnectivityHarness(
+        checkConnectivity: () {
+          if (checks++ == 0) {
+            return Future.value(const [ConnectivityResult.wifi]);
+          }
+          return confirmation.future;
+        },
       );
-      addTearDown(container.dispose);
-      final values = <bool>[];
-      final subscription = container.listen(
-        isOfflineProvider,
-        (_, next) => next.whenData(values.add),
-        fireImmediately: true,
-      );
-      addTearDown(subscription.close);
+      addTearDown(harness.dispose);
+      final changes = harness.changes;
+      final values = harness.values;
 
-      check(await container.read(isOfflineProvider.future)).equals(false);
+      check(
+        await harness.container.read(isOfflineProvider.future),
+      ).equals(false);
 
       changes.add(const [ConnectivityResult.none]);
       await tester.pump(const Duration(milliseconds: 500));
@@ -235,27 +199,13 @@ void main() {
     });
 
     test('ignores a stale check after a newer stream update', () async {
-      final connectivity = _MockConnectivity();
-      final changes = StreamController<List<ConnectivityResult>>();
       final currentCheck = Completer<List<ConnectivityResult>>();
-      addTearDown(changes.close);
-      when(
-        connectivity.checkConnectivity,
-      ).thenAnswer((_) => currentCheck.future);
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
-
-      final container = ProviderContainer(
-        overrides: [connectivityProvider.overrideWithValue(connectivity)],
+      final harness = _ConnectivityHarness(
+        checkConnectivity: () => currentCheck.future,
       );
-      addTearDown(container.dispose);
-      final subscription = container.listen(
-        isOfflineProvider,
-        (_, _) {},
-        fireImmediately: true,
-      );
-      addTearDown(subscription.close);
+      addTearDown(harness.dispose);
+      final changes = harness.changes;
+      final container = harness.container;
 
       changes.add(const [ConnectivityResult.wifi]);
       await pumpEventQueue();
@@ -269,29 +219,14 @@ void main() {
     testWidgets('refreshes the current status when the app resumes', (
       tester,
     ) async {
-      final connectivity = _MockConnectivity();
-      final changes = StreamController<List<ConnectivityResult>>();
       var checks = 0;
-      addTearDown(changes.close);
-      when(connectivity.checkConnectivity).thenAnswer((_) async {
-        return checks++ == 0
+      final harness = _ConnectivityHarness(
+        checkConnectivity: () async => checks++ == 0
             ? const [ConnectivityResult.wifi]
-            : const [ConnectivityResult.none];
-      });
-      when(
-        () => connectivity.onConnectivityChanged,
-      ).thenAnswer((_) => changes.stream);
-
-      final container = ProviderContainer(
-        overrides: [connectivityProvider.overrideWithValue(connectivity)],
+            : const [ConnectivityResult.none],
       );
-      addTearDown(container.dispose);
-      final subscription = container.listen(
-        isOfflineProvider,
-        (_, _) {},
-        fireImmediately: true,
-      );
-      addTearDown(subscription.close);
+      addTearDown(harness.dispose);
+      final container = harness.container;
 
       check(await container.read(isOfflineProvider.future)).equals(false);
 
@@ -317,32 +252,20 @@ void main() {
     testWidgets(
       'publishes an online resume check after a stale offline event',
       (tester) async {
-        final connectivity = _MockConnectivity();
-        final changes = StreamController<List<ConnectivityResult>>();
         final resumedCheck = Completer<List<ConnectivityResult>>();
         var checks = 0;
-        addTearDown(changes.close);
-        when(connectivity.checkConnectivity).thenAnswer((_) {
-          checks++;
-          if (checks < 3) {
-            return Future.value(const [ConnectivityResult.none]);
-          }
-          return resumedCheck.future;
-        });
-        when(
-          () => connectivity.onConnectivityChanged,
-        ).thenAnswer((_) => changes.stream);
-
-        final container = ProviderContainer(
-          overrides: [connectivityProvider.overrideWithValue(connectivity)],
+        final harness = _ConnectivityHarness(
+          checkConnectivity: () {
+            checks++;
+            if (checks < 3) {
+              return Future.value(const [ConnectivityResult.none]);
+            }
+            return resumedCheck.future;
+          },
         );
-        addTearDown(container.dispose);
-        final subscription = container.listen(
-          isOfflineProvider,
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(subscription.close);
+        addTearDown(harness.dispose);
+        final changes = harness.changes;
+        final container = harness.container;
 
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
