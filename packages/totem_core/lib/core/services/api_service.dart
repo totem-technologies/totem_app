@@ -1,9 +1,12 @@
 import 'package:degenerate_dio/degenerate_dio.dart';
-import 'package:dio/dio.dart';
+import 'package:dio/dio.dart' hide Interceptor, RequestOptions;
+import 'package:dio/dio.dart'
+    as dio
+    show Interceptor, RequestInterceptorHandler, RequestOptions;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_dio/sentry_dio.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
-import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart' as api;
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
@@ -20,10 +23,10 @@ final secureStorageProvider = Provider<SecureStorage>((ref) {
 ///
 /// Mobile uses the default bearer-token + refresh-token flow. Web can override
 /// this provider at the app boundary with a cookie-based client.
-final apiServiceProvider = Provider<ClientApi>((ref) {
+final apiServiceProvider = Provider<api.ClientApi>((ref) {
   final dio = _initDio(ref);
-  return ClientApi(
-    ApiConfig(
+  return api.ClientApi(
+    api.ApiConfig(
       client: DioApiClient(
         baseUrl: Uri.parse(AppConfig.instance.apiUrl),
         inner: dio,
@@ -32,6 +35,90 @@ final apiServiceProvider = Provider<ClientApi>((ref) {
     ),
   );
 }, name: 'Totem API Service Provider');
+
+class AuthTokenInterceptor extends dio.Interceptor {
+  const AuthTokenInterceptor({
+    required this.secureStorage,
+    required this.authRepository,
+  });
+
+  final SecureStorage secureStorage;
+  final AuthRepository authRepository;
+
+  @override
+  Future<void> onRequest(
+    dio.RequestOptions options,
+    dio.RequestInterceptorHandler handler,
+  ) async {
+    String? accessToken = await secureStorage.read(
+      key: AppConsts.accessTokenKey,
+    );
+
+    // Refresh endpoints must be callable without a valid access token.
+    if (options.path.endsWith('/auth/refresh') ||
+        options.path.endsWith('/auth/request-pin')) {
+      logger.d('🔑 Skipping token refresh for ${options.path}');
+      handler.next(options);
+      return;
+    }
+
+    if (authRepository.isAccessTokenExpired(accessToken)) {
+      logger.d('🔑 Access token expired, refreshing...');
+      final refreshToken = await secureStorage.read(
+        key: AppConsts.refreshTokenKey,
+      );
+
+      if (refreshToken != null) {
+        try {
+          final response = await authRepository.refreshAccessToken(
+            refreshToken,
+          );
+          accessToken = response.accessToken;
+
+          logger.d('🔑 Access Token refreshed successfully');
+          await secureStorage.write(
+            key: AppConsts.accessTokenKey,
+            value: response.accessToken,
+          );
+          await secureStorage.write(
+            key: AppConsts.refreshTokenKey,
+            value: response.refreshToken,
+          );
+        } on Exception catch (error, stackTrace) {
+          // Network failures should not log the user out.
+          if (error is DioException &&
+              error.type != DioExceptionType.badResponse) {
+            handler.next(options);
+            return;
+          }
+
+          await secureStorage.delete(key: AppConsts.accessTokenKey);
+          await secureStorage.delete(key: AppConsts.refreshTokenKey);
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: '🔑 Error refreshing access token',
+          );
+
+          handler.reject(
+            DioException(
+              requestOptions: options,
+              error: AppAuthException.unauthenticated(),
+            ),
+          );
+          return;
+        }
+      } else {
+        logger.d('🔑 Refresh token not found, user needs to log in.');
+      }
+    }
+
+    if (accessToken != null && !options.headers.containsKey('Authorization')) {
+      options.headers['Authorization'] = 'Bearer $accessToken';
+    }
+    handler.next(options);
+  }
+}
 
 final _dio = Dio(BaseOptions(responseType: ResponseType.json));
 
@@ -76,88 +163,9 @@ Dio _initDio(Ref ref) {
   );
 
   _dio.interceptors.add(
-    InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final secureStorage = ref.read(secureStorageProvider);
-        String? accessToken = await secureStorage.read(
-          key: AppConsts.accessTokenKey,
-        );
-
-        // Don't try to refresh the token for the refresh token endpoint itself
-        if (options.path.endsWith('/auth/refresh') ||
-            options.path.endsWith('/auth/request-pin')) {
-          logger.d('🔑 Skipping token refresh for ${options.path}');
-          return handler.next(options);
-        }
-
-        final authRepository = ref.read(authRepositoryProvider);
-
-        // Refresh if expired
-        if (authRepository.isAccessTokenExpired(accessToken)) {
-          logger.d('🔑 Access token expired, refreshing...');
-          final refreshToken = await secureStorage.read(
-            key: AppConsts.refreshTokenKey,
-          );
-
-          if (refreshToken != null) {
-            try {
-              final response = await authRepository.refreshAccessToken(
-                refreshToken,
-              );
-              accessToken = response.accessToken;
-
-              logger.d('🔑 Access Token refreshed successfully');
-
-              await secureStorage.write(
-                key: AppConsts.accessTokenKey,
-                value: response.accessToken,
-              );
-              await secureStorage.write(
-                key: AppConsts.refreshTokenKey,
-                value: response.refreshToken,
-              );
-            } on Exception catch (error, stackTrace) {
-              // This is the critical part: if token refresh fails due to
-              // network, we don't want to log the user out.
-              if (error is DioException &&
-                  error.type != DioExceptionType.badResponse) {
-                // It's a network error, not an auth error.
-                // Let the original request fail with a network error.
-                return handler.next(options);
-              }
-
-              // If it's a bad response (like 401, REAUTH_REQUIRED), or a
-              // non-Dio exception (e.g. ApiError from degenerate_runtime),
-              // then it's a real auth issue. Clear tokens.
-              await secureStorage.delete(key: AppConsts.accessTokenKey);
-              await secureStorage.delete(key: AppConsts.refreshTokenKey);
-
-              ErrorHandler.logError(
-                error,
-                stackTrace: stackTrace,
-                message: '🔑 Error refreshing access token',
-              );
-
-              return handler.reject(
-                DioException(
-                  requestOptions: options,
-                  error: AppAuthException.unauthenticated(),
-                ),
-              );
-            }
-          } else {
-            logger.d('🔑 Refresh token not found, user needs to log in.');
-          }
-        }
-
-        // Add Authorization header if not already present
-        if (accessToken != null &&
-            !options.headers.containsKey('Authorization')) {
-          options.headers['Authorization'] = 'Bearer $accessToken';
-        }
-
-        return handler.next(options);
-      },
+    AuthTokenInterceptor(
+      secureStorage: ref.read(secureStorageProvider),
+      authRepository: ref.read(authRepositoryProvider),
     ),
   );
 

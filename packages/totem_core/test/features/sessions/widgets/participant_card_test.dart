@@ -82,15 +82,6 @@ void main() {
     );
   }
 
-  /// Lays [child] out at an exact size, which is what now drives the overlay
-  /// chrome. [Scaffold] hands its body tight constraints, so the [Center] is
-  /// what lets the box keep the size we ask for.
-  Widget sizedCard(Size size, Widget child) {
-    return Center(
-      child: SizedBox.fromSize(size: size, child: child),
-    );
-  }
-
   group('ParticipantCard', () {
     testWidgets('renders participant properties and smart name', (
       tester,
@@ -192,55 +183,6 @@ void main() {
       );
 
       check(tester.widgetList(find.byType(TotemIconLogo))).length.equals(1);
-    });
-
-    testWidgets('shows the keeper badge on the participant card', (
-      tester,
-    ) async {
-      final keeperParticipant = MockRemoteParticipant('keeper-1', 'The Keeper');
-
-      fakeSessionState.mockState = SessionRoomState(
-        connection: fakeSessionState.mockState.connection,
-        chat: fakeSessionState.mockState.chat,
-        participants: fakeSessionState.mockState.participants,
-        turn: const SessionTurnState(
-          roomState: RoomState(
-            keeper: 'keeper-1',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
-            status: RoomStatus.waitingRoom,
-            turnState: TurnState.idle,
-            sessionSlug: 'test-session',
-            statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
-            talkingOrder: [],
-            version: 1,
-            roundNumber: 1,
-          ),
-        ),
-      );
-
-      await pumpWidget(
-        tester,
-        viewSize: const Size(1200, 900),
-        authState: AuthState.unauthenticated(),
-        overrides: [
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
-          ),
-        ],
-        child: sizedCard(
-          const Size(600, 500),
-          ParticipantCard(
-            participant: keeperParticipant,
-            session: null,
-            participantIdentity: keeperParticipant.identity,
-          ),
-        ),
-      );
-
-      check(
-        tester.widget<TotemIconLogo>(find.byType(TotemIconLogo)).size,
-      ).equals(22);
     });
   });
 

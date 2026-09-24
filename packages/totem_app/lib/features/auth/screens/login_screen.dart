@@ -24,10 +24,29 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
   var _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _termsRecognizer = TapGestureRecognizer()
+      ..onTap = () => launchUrl(
+        AppConfig.instance.termsOfServiceUrl,
+        mode: LaunchMode.externalApplication,
+      );
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () => launchUrl(
+        AppConfig.instance.privacyPolicyUrl,
+        mode: LaunchMode.externalApplication,
+      );
+  }
+
+  @override
   void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
     _emailController.dispose();
     super.dispose();
   }
@@ -149,11 +168,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: TextDecoration.underline,
                   color: theme.colorScheme.primary,
                 ),
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () => launchUrl(
-                    AppConfig.instance.termsOfServiceUrl,
-                    mode: LaunchMode.externalApplication,
-                  ),
+                recognizer: _termsRecognizer,
               ),
               const TextSpan(text: ' and '),
               TextSpan(
@@ -163,11 +178,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: TextDecoration.underline,
                   color: theme.colorScheme.primary,
                 ),
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () => launchUrl(
-                    AppConfig.instance.privacyPolicyUrl,
-                    mode: LaunchMode.externalApplication,
-                  ),
+                recognizer: _privacyRecognizer,
               ),
             ],
           ),

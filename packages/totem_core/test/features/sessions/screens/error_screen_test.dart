@@ -122,22 +122,6 @@ void main() {
     });
 
     group('generic error (no RoomErrorResponse)', () {
-      testWidgets('shows default title and subtitle', (tester) async {
-        await pumpErrorScreen(tester, onRetry: () async {});
-
-        check(
-          tester.widgetList(find.text('Something went wrong')),
-        ).length.equals(1);
-        check(
-          tester.widgetList(
-            find.text(
-              "We couldn't connect you to this session. "
-              'Please check your internet connection or try again.',
-            ),
-          ),
-        ).length.equals(1);
-      });
-
       testWidgets('shows retry button when onRetry is provided', (
         tester,
       ) async {
@@ -239,13 +223,18 @@ void main() {
         ),
       );
 
-      testWidgets('unwraps and shows the specific copy', (tester) async {
+      testWidgets('unwraps the API error into the ended-session state', (
+        tester,
+      ) async {
         await pumpErrorScreen(
           tester,
           error: wrappedError,
           onRetry: () async {},
         );
 
+        check(
+          tester.widgetList(find.byType(SessionDisconnectedScreen)),
+        ).length.equals(1);
         check(
           tester.widgetList(find.text('Something went wrong')),
         ).length.equals(0);

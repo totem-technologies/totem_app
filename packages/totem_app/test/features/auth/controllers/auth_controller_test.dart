@@ -13,6 +13,7 @@ import 'package:totem_core/auth/repositories/user_profile_repository.dart';
 
 import 'package:totem_core/core/api/api_client/api_client.dart';
 
+import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
@@ -83,6 +84,20 @@ void main() {
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
+    AppConfig.instance = AppConfig(
+      environment: Environment.development,
+      apiUrl: 'https://test.example.com/',
+      liveKitUrl: 'wss://test.livekit.cloud',
+      maxPinAttempts: 5,
+      vapidKey: null,
+      analyticsEnabled: false,
+      sentryDsn: null,
+      posthogApiKey: null,
+      posthogHost: 'https://us.i.posthog.com',
+      privacyPolicyUrl: Uri.parse('https://example.com/privacy'),
+      termsOfServiceUrl: Uri.parse('https://example.com/tos'),
+      communityGuidelinesUrl: Uri.parse('https://example.com/guidelines'),
+    );
     registerFallbackValue(testUserSchema());
 
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -106,6 +121,11 @@ void main() {
     mockLocalStorageService = MockLocalStorageService();
     mockCacheService = MockCacheService();
 
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('dev.fluttercommunity.plus/connectivity'),
+          (MethodCall methodCall) async => ['wifi'],
+        );
     when(
       () => mockSecureStorage.read(key: AppConsts.accessTokenKey),
     ).thenAnswer((_) async => null);
@@ -135,6 +155,14 @@ void main() {
       container.read(mobileAuthControllerProvider);
 
   AuthState getState() => container.read(authControllerProvider);
+
+  void setConnectivity(List<String> results) {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('dev.fluttercommunity.plus/connectivity'),
+          (MethodCall methodCall) async => results,
+        );
+  }
 
   Future<void> stubAuthenticatedUser({
     required UserSchema user,
@@ -177,6 +205,100 @@ void main() {
     await getController().requestPin(email);
     await getController().verifyPin('123456');
   }
+
+  group('MobileAuthController - existing authentication', () {
+    test('restores and revalidates an online cached session', () async {
+      final cachedUser = testUserSchema(
+        slug: 'cached-user',
+        name: 'Cached User',
+        email: 'cached@example.com',
+      );
+      final refreshedUser = testUserSchema(
+        slug: 'cached-user',
+        name: 'Refreshed User',
+        email: 'cached@example.com',
+      );
+
+      when(
+        () => mockSecureStorage.read(key: AppConsts.accessTokenKey),
+      ).thenAnswer((_) async => 'valid-access-token');
+      when(
+        () => mockLocalStorageService.getUser(),
+      ).thenAnswer((_) async => cachedUser);
+      when(
+        () => mockUserRepository.currentUser,
+      ).thenAnswer((_) async => refreshedUser);
+      when(
+        () => mockLocalStorageService.saveUser(refreshedUser),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockAnalyticsService.setUserId(refreshedUser),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockNotificationsService.fcmToken,
+      ).thenAnswer((_) async => null);
+
+      await getController().checkExistingAuth();
+
+      check(getState().status).equals(AuthStatus.authenticated);
+      check(getState().user).equals(refreshedUser);
+      verify(() => mockLocalStorageService.saveUser(refreshedUser)).called(1);
+      verify(() => mockUserRepository.currentUser).called(1);
+    });
+
+    test('keeps a cached session available while offline', () async {
+      final cachedUser = testUserSchema(
+        slug: 'offline-user',
+        name: 'Offline User',
+      );
+      setConnectivity(['none']);
+      when(
+        () => mockSecureStorage.read(key: AppConsts.accessTokenKey),
+      ).thenAnswer((_) async => 'cached-access-token');
+      when(
+        () => mockLocalStorageService.getUser(),
+      ).thenAnswer((_) async => cachedUser);
+
+      await getController().checkExistingAuth();
+
+      check(getState().status).equals(AuthStatus.authenticated);
+      check(getState().user).equals(cachedUser);
+      verifyNever(() => mockUserRepository.currentUser);
+    });
+
+    test('clears local authentication when online validation fails', () async {
+      setConnectivity(['wifi']);
+      when(
+        () => mockSecureStorage.read(key: AppConsts.accessTokenKey),
+      ).thenAnswer((_) async => 'invalid-access-token');
+      when(
+        () => mockLocalStorageService.getUser(),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockUserRepository.currentUser,
+      ).thenThrow(Exception('unauthorized'));
+      when(
+        () => mockSecureStorage.delete(key: any(named: 'key')),
+      ).thenAnswer((_) async {});
+      when(() => mockLocalStorageService.clearUser()).thenAnswer((_) async {});
+      when(() => mockCacheService.clearCache()).thenAnswer((_) async {});
+      when(
+        () => mockNotificationsService.fcmToken,
+      ).thenAnswer((_) async => null);
+
+      await getController().checkExistingAuth();
+
+      check(getState().status).equals(AuthStatus.unauthenticated);
+      verify(
+        () => mockSecureStorage.delete(key: AppConsts.accessTokenKey),
+      ).called(1);
+      verify(
+        () => mockSecureStorage.delete(key: AppConsts.refreshTokenKey),
+      ).called(1);
+      verify(() => mockLocalStorageService.clearUser()).called(1);
+      verify(() => mockCacheService.clearCache()).called(1);
+    });
+  });
 
   group('MobileAuthController - requestPin', () {
     test('successfully requests PIN and updates state', () async {

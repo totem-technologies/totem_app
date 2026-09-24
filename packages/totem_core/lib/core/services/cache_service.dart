@@ -39,7 +39,9 @@ class CacheService {
   Future<Map<String, dynamic>?> read(String key) async {
     logger.d('Reading cache for key: $key');
     final dataJson = await _secureStorage.read(key: key);
-    if (dataJson != null) {
+    if (dataJson == null) return null;
+
+    try {
       final data = jsonDecode(dataJson) as Map<String, dynamic>;
       final timeStamp = data['timestamp'] as String?;
       if (timeStamp == null) {
@@ -52,10 +54,14 @@ class CacheService {
           : DateTime.parse(timeStamp).add(const Duration(hours: 24));
       if (DateTime.now().isBefore(expiration)) {
         return data['value'] as Map<String, dynamic>?;
-      } else {
-        await _secureStorage.delete(key: key);
       }
+    } on FormatException {
+      // Treat malformed persisted data as a cache miss.
+    } catch (_) {
+      // Treat a value with an unexpected persisted shape as a cache miss.
     }
+
+    await _secureStorage.delete(key: key);
     return null;
   }
 

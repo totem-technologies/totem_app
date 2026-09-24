@@ -157,10 +157,35 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 }
 
 /// First tab: Community Guidelines acknowledgement.
-class _GuidelinesTab extends StatelessWidget {
+class _GuidelinesTab extends StatefulWidget {
   const _GuidelinesTab({required this.onContinue});
 
   final VoidCallback onContinue;
+
+  @override
+  State<_GuidelinesTab> createState() => _GuidelinesTabState();
+}
+
+class _GuidelinesTabState extends State<_GuidelinesTab> {
+  late final TapGestureRecognizer _communityGuidelinesRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _communityGuidelinesRecognizer = TapGestureRecognizer()
+      ..onTap = () async {
+        final url = AppConfig.instance.communityGuidelinesUrl;
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        }
+      };
+  }
+
+  @override
+  void dispose() {
+    _communityGuidelinesRecognizer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -235,16 +260,7 @@ class _GuidelinesTab extends StatelessWidget {
                   decoration: TextDecoration.underline,
                 ),
                 mouseCursor: SystemMouseCursors.click,
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () async {
-                    final url = AppConfig.instance.communityGuidelinesUrl;
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(
-                        url,
-                        mode: LaunchMode.externalApplication,
-                      );
-                    }
-                  },
+                recognizer: _communityGuidelinesRecognizer,
               ),
               const TextSpan(text: '.'),
             ],
@@ -254,7 +270,7 @@ class _GuidelinesTab extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: onContinue,
+            onPressed: widget.onContinue,
             child: const Text('Agree and Continue'),
           ),
         ),

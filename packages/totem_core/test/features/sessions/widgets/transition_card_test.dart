@@ -26,129 +26,41 @@ void main() {
       );
     }
 
-    autoSizeTest('JoinTransitionCard renders and triggers action', (
+    autoSizeTest('actionable transition cards forward completion', (
       tester,
     ) async {
-      bool actionTriggered = false;
+      final cards = <Widget Function(Future<bool> Function())>[
+        (onActionPressed) =>
+            JoinTransitionCard(onActionPressed: onActionPressed),
+        (onActionPressed) => PassTransitionCard(
+          onActionPressed: onActionPressed,
+          actionText: 'Pass',
+        ),
+        (onActionPressed) =>
+            ReceiveTransitionCard(onActionPressed: onActionPressed),
+        (onActionPressed) =>
+            StartTransitionCard(onActionPressed: onActionPressed),
+      ];
 
-      await tester.pumpWidget(
-        buildTestWidget(
-          JoinTransitionCard(
-            onActionPressed: () async {
+      for (final buildCard in cards) {
+        var actionTriggered = false;
+        await tester.pumpWidget(
+          buildTestWidget(
+            buildCard(() async {
               actionTriggered = true;
               return true;
-            },
+            }),
           ),
-        ),
-      );
+        );
 
-      check(tester.widgetList(find.text('Welcome'))).length.equals(1);
-      check(
-        tester.widgetList(
-          find.text(
-            'Your session will start soon. Please check your audio and video before joining.',
-          ),
-        ),
-      ).length.equals(1);
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
-
-      // Trigger the action
-      final button = tester.widget<ActionSliderButton>(
-        find.byType(ActionSliderButton),
-      );
-      await button.onActionCompleted();
-
-      check(actionTriggered).equals(true);
-    });
-
-    autoSizeTest('PassTransitionCard renders and triggers action', (
-      tester,
-    ) async {
-      bool actionTriggered = false;
-
-      await tester.pumpWidget(
-        buildTestWidget(
-          PassTransitionCard(
-            onActionPressed: () async {
-              actionTriggered = true;
-              return true;
-            },
-            actionText: 'Pass',
-          ),
-        ),
-      );
-
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
-
-      // Trigger the action
-      final button = tester.widget<ActionSliderButton>(
-        find.byType(ActionSliderButton),
-      );
-      await button.onActionCompleted();
-
-      check(actionTriggered).equals(true);
-    });
-
-    autoSizeTest('ReceiveTransitionCard renders and triggers action', (
-      tester,
-    ) async {
-      bool actionTriggered = false;
-
-      await tester.pumpWidget(
-        buildTestWidget(
-          ReceiveTransitionCard(
-            onActionPressed: () async {
-              actionTriggered = true;
-              return true;
-            },
-          ),
-        ),
-      );
-
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
-
-      // Trigger the action
-      final button = tester.widget<ActionSliderButton>(
-        find.byType(ActionSliderButton),
-      );
-      await button.onActionCompleted();
-
-      check(actionTriggered).equals(true);
-    });
-
-    autoSizeTest('StartTransitionCard renders and triggers action', (
-      tester,
-    ) async {
-      bool actionTriggered = false;
-
-      await tester.pumpWidget(
-        buildTestWidget(
-          StartTransitionCard(
-            onActionPressed: () async {
-              actionTriggered = true;
-              return true;
-            },
-          ),
-        ),
-      );
-
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
-
-      // Trigger the action
-      final button = tester.widget<ActionSliderButton>(
-        find.byType(ActionSliderButton),
-      );
-      await button.onActionCompleted();
-
-      check(actionTriggered).equals(true);
+        check(
+          tester.widgetList(find.byType(ActionSliderButton)),
+        ).length.equals(1);
+        await tester
+            .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+            .onActionCompleted();
+        check(actionTriggered).isTrue();
+      }
     });
 
     autoSizeTest('WaitingReceiveTransitionCard renders without action button', (

@@ -25,12 +25,20 @@ class PinEntryScreen extends ConsumerStatefulWidget {
 class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _pinController = TextEditingController();
+  late final TapGestureRecognizer _requestNewPinRecognizer;
   var _isLoading = false;
   var _attempts = 0;
   final int _maxAttempts = AppConfig.instance.maxPinAttempts;
 
   @override
+  void initState() {
+    super.initState();
+    _requestNewPinRecognizer = TapGestureRecognizer()..onTap = _requestNewPin;
+  }
+
+  @override
   void dispose() {
+    _requestNewPinRecognizer.dispose();
     _pinController.dispose();
     super.dispose();
   }
@@ -210,7 +218,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
-                recognizer: TapGestureRecognizer()..onTap = _requestNewPin,
+                recognizer: _requestNewPinRecognizer,
               ),
             ],
           ),
