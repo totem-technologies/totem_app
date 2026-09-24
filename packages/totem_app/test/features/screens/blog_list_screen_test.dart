@@ -21,7 +21,6 @@ void main() {
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
-        await tester.pump(const Duration(seconds: 1));
         await const AssetImage(
           TotemImageAssets.genericBackground,
           package: 'totem_core',
@@ -33,7 +32,7 @@ void main() {
       final blog1 = BlogPostListSchema(
         title: 'Featured Blog Post',
         slug: 'featured-post',
-        datePublished: DateTime.now(),
+        datePublished: DateTime(2025, 1, 1),
         readTime: 5,
         publish: true,
       );
@@ -41,7 +40,7 @@ void main() {
       final blog2 = BlogPostListSchema(
         title: 'Second Blog Post',
         slug: 'second-post',
-        datePublished: DateTime.now(),
+        datePublished: DateTime(2025, 1, 2),
         readTime: 3,
         publish: true,
       );

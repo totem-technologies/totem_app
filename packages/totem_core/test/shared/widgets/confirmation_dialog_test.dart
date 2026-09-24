@@ -23,6 +23,11 @@ void main() {
     );
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      router.dispose();
+    });
 
     showDialog<void>(context: hostKey.currentContext!, builder: (_) => dialog);
 
