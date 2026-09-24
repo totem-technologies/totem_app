@@ -1,6 +1,7 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/features/blog/repositories/blog_repository.dart';
@@ -8,6 +9,7 @@ import 'package:totem_app/features/blog/screens/blog_list_screen.dart';
 import 'package:totem_app/features/blog/screens/blog_screen.dart';
 import 'package:totem_app/features/blog/widgets/featured_blog_post.dart';
 import 'package:totem_core/shared/widgets/empty_indicator.dart';
+import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
@@ -81,9 +83,24 @@ BlogPostSchema _detail(String slug) => BlogPostSchema(
 );
 
 void main() {
+  void cleanUpImages(WidgetTester tester) {
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await const AssetImage(
+        TotemImageAssets.genericBackground,
+        package: 'totem_core',
+      ).evict();
+      tester.binding.imageCache.clearLiveImages();
+      tester.binding.imageCache.clear();
+    });
+  }
+
   testWidgets('blog list exposes its empty state and retries successfully', (
     tester,
   ) async {
+    cleanUpImages(tester);
     var loads = 0;
     final posts = PagedBlogPostListSchema(
       items: [_post('recovered', 'Recovered post')],
@@ -119,6 +136,7 @@ void main() {
   testWidgets('blog list shows an error and recovers through retry', (
     tester,
   ) async {
+    cleanUpImages(tester);
     var loads = 0;
     await tester.pumpWidget(
       ProviderScope(
@@ -148,54 +166,59 @@ void main() {
     check(tester.widgetList(find.byType(FeaturedBlogPost))).length.equals(1);
   });
 
-  testWidgets('blog navigation opens detail and back returns to the list', (
-    tester,
-  ) async {
-    TotemRouter.instance = _TestRouter();
-    final router = GoRouter(
-      initialLocation: '/blog',
-      routes: [
-        GoRoute(
-          path: '/blog',
-          builder: (_, _) => const Scaffold(body: BlogListScreen()),
-        ),
-        GoRoute(
-          path: '/blog/:slug',
-          builder: (_, state) =>
-              BlogScreen(slug: state.pathParameters['slug']!),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(_FakeAuthController.new),
-          listBlogPostsProvider.overrideWith(
-            (_) async => PagedBlogPostListSchema(
-              items: [_post('post-slug', 'A blog post')],
-              count: 1,
-            ),
+  testWidgets(
+    'blog navigation opens detail and back returns to the list',
+    (tester) async {
+      cleanUpImages(tester);
+      TotemRouter.instance = _TestRouter();
+      final router = GoRouter(
+        initialLocation: '/blog',
+        routes: [
+          GoRoute(
+            path: '/blog',
+            builder: (_, _) => const Scaffold(body: BlogListScreen()),
           ),
-          blogPostProvider(
-            'post-slug',
-          ).overrideWith((_) async => _detail('post-slug')),
+          GoRoute(
+            path: '/blog/:slug',
+            builder: (_, state) =>
+                BlogScreen(slug: state.pathParameters['slug']!),
+          ),
         ],
-        child: MaterialApp.router(
-          theme: AppTheme.lightTheme,
-          routerConfig: router,
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(_FakeAuthController.new),
+            listBlogPostsProvider.overrideWith(
+              (_) async => PagedBlogPostListSchema(
+                items: [_post('post-slug', 'A blog post')],
+                count: 1,
+              ),
+            ),
+            blogPostProvider(
+              'post-slug',
+            ).overrideWith((_) async => _detail('post-slug')),
+          ],
+          child: MaterialApp.router(
+            theme: AppTheme.lightTheme,
+            routerConfig: router,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(ElevatedButton));
-    await tester.pumpAndSettle();
-    check(tester.widgetList(find.text('A detailed post'))).length.equals(1);
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('A detailed post'))).length.equals(1);
 
-    await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
-    check(tester.widgetList(find.byType(FeaturedBlogPost))).length.equals(1);
-  });
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(FeaturedBlogPost))).length.equals(1);
+    },
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['ImageStreamCompleterHandle'],
+    ),
+  );
 }
