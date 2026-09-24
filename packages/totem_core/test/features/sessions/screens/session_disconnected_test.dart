@@ -40,8 +40,8 @@ SessionRoomState _createEndedState({
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',
-        nextSpeaker: '',
-        currentSpeaker: '',
+        nextSpeaker: const Omittable(''),
+        currentSpeaker: const Omittable(''),
         status: status,
         turnState: TurnState.idle,
         sessionSlug: 'test-session',

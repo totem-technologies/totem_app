@@ -139,9 +139,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                             image: _state == ProfileAvatarTypeEnum.im
                                 ? _pickedImageBytes != null
                                       ? MemoryImage(_pickedImageBytes!)
-                                      : user?.profileImage != null
+                                      : user?.profileImage.value != null
                                       ? CachedNetworkImageProvider(
-                                          getFullUrl(user!.profileImage!),
+                                          getFullUrl(user!.profileImage.value!),
                                         )
                                       : null
                                 : null,

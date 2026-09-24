@@ -1,4 +1,5 @@
 import 'package:checks/checks.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
@@ -71,13 +72,17 @@ final class _TestRouter extends TotemRouter {
   void setTabCloseConfirmationEnabled(bool enabled) {}
 }
 
-BlogPostListSchema _post(String slug, String title) =>
-    BlogPostListSchema(slug: slug, title: title, publish: true, readTime: 3);
+BlogPostListSchema _post(String slug, String title) => BlogPostListSchema(
+  slug: Omittable(slug),
+  title: title,
+  publish: true,
+  readTime: 3,
+);
 
 BlogPostSchema _detail(String slug) => BlogPostSchema(
-  slug: slug,
+  slug: Omittable(slug),
   title: 'A detailed post',
-  contentHtml: '<p>Useful content</p>',
+  contentHtml: Omittable('<p>Useful content</p>'),
   publish: true,
   readTime: 4,
 );

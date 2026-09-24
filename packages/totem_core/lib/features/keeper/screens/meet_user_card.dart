@@ -42,10 +42,10 @@ class MeetKeeperCard extends StatelessWidget {
             children: [
               UserAvatar.fromUserSchema(
                 user,
-                onTap: user.slug != null
+                onTap: user.slug.value != null
                     ? () => TotemRouter.instance.toKeeperProfile(
                         context,
-                        user.slug!,
+                        user.slug.value!,
                       )
                     : null,
               ),
@@ -53,7 +53,7 @@ class MeetKeeperCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user.name ?? 'Keeper',
+                    user.name.value ?? 'Keeper',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       fontSize: 20,

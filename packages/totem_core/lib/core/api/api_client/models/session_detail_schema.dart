@@ -1,7 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:degenerate_runtime/degenerate_runtime.dart';
-
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'meeting_provider_enum.dart';
 import 'mobile_space_detail_schema.dart';
 
@@ -115,11 +114,11 @@ final class SessionDetailSchema {
       'joinable': joinable,
       'ended': ended,
       'rsvp_url': rsvpUrl,
-      'join_url': ?joinUrl,
+      'join_url': joinUrl,
       'subscribe_url': subscribeUrl,
       'cal_link': calLink,
-      'subscribed': ?subscribed,
-      'user_timezone': ?userTimezone,
+      'subscribed': subscribed,
+      'user_timezone': userTimezone,
       'meeting_provider': meetingProvider.toJson(),
     };
   }
@@ -153,15 +152,15 @@ final class SessionDetailSchema {
         json.containsKey('rsvp_url') &&
         json['rsvp_url'] is String &&
         json.containsKey('join_url') &&
-        json['join_url'] is String &&
+        (json['join_url'] == null || json['join_url'] is String) &&
         json.containsKey('subscribe_url') &&
         json['subscribe_url'] is String &&
         json.containsKey('cal_link') &&
         json['cal_link'] is String &&
         json.containsKey('subscribed') &&
-        json['subscribed'] is bool &&
+        (json['subscribed'] == null || json['subscribed'] is bool) &&
         json.containsKey('user_timezone') &&
-        json['user_timezone'] is String &&
+        (json['user_timezone'] == null || json['user_timezone'] is String) &&
         json.containsKey('meeting_provider');
   }
 

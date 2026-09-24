@@ -12,11 +12,9 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
@@ -69,8 +67,8 @@ SessionRoomState _buildState({
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',
-        nextSpeaker: 'user-1',
-        currentSpeaker: 'user-2',
+        nextSpeaker: const Omittable('user-1'),
+        currentSpeaker: const Omittable('user-2'),
         status: status,
         turnState: turnState,
         sessionSlug: 'test-session',
@@ -141,6 +139,7 @@ void main() {
     SessionRoomState? state,
     String? roundMessage,
     bool isCameraOn = false,
+    bool isStaff = false,
     SessionCuesService? feedbackService,
   }) async {
     final testCuesService = feedbackService ?? _TestSessionCuesService();
@@ -157,7 +156,7 @@ void main() {
       ProviderScope(
         overrides: [
           authControllerProvider.overrideWith(
-            () => FakeAuthController(testAuthenticatedState()),
+            () => FakeAuthController(testAuthenticatedState(isStaff: isStaff)),
           ),
           currentSessionProvider.overrideWith((ref) => session),
           currentSessionStateProvider.overrideWithValue(state ?? _buildState()),
@@ -171,10 +170,10 @@ void main() {
           userProfileProvider.overrideWith(
             (ref, slug) => Future.value(
               PublicUserSchema(
-                slug: slug,
-                name: 'Mocked User $slug',
+                slug: Omittable(slug),
+                name: Omittable('Mocked User $slug'),
                 profileAvatarType: ProfileAvatarTypeEnum.td,
-                circleCount: 0,
+                circleCount: const Omittable(0),
                 dateCreated: DateTime.now(),
               ),
             ),
@@ -191,7 +190,7 @@ void main() {
   }
 
   group('ReceiveTotemScreen action bar', () {
-    Future<void> runOnDesktop(Future<void> Function() body) async {
+    Future<void> runOnDesktop(AsyncCallback body) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       try {
         await body();
@@ -203,7 +202,11 @@ void main() {
     testWidgets('shows receiving controls without emoji action', (
       tester,
     ) async {
-      await pumpReceiveTotem(tester, roundMessage: 'Take your time');
+      await pumpReceiveTotem(
+        tester,
+        roundMessage: 'Take your time',
+        isStaff: true,
+      );
 
       check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
       check(
@@ -236,10 +239,13 @@ void main() {
     });
 
     testWidgets('toggles mic and camera from action bar', (tester) async {
-      await pumpReceiveTotem(tester);
+      await pumpReceiveTotem(tester, isStaff: true);
 
       await tester.tap(find.bySemanticsLabel('Microphone off'));
-      await tester.pump();
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('Unmute Anyway'))).length.equals(1);
+      await tester.tap(find.text('Unmute Anyway'));
+      await tester.pumpAndSettle();
       verify(() => devices.enableMicrophone()).called(1);
 
       await tester.tap(find.bySemanticsLabel('Camera off'));

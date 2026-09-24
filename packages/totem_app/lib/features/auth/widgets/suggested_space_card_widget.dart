@@ -22,7 +22,7 @@ class SuggestedSpaceCard extends StatelessWidget {
     final title = session.title.isNotEmpty
         ? session.title
         : session.space.title;
-    final keeperName = session.space.author.name ?? 'Keeper';
+    final keeperName = session.space.author.name.value ?? 'Keeper';
 
     return Container(
       height: 120,
@@ -149,7 +149,7 @@ class SuggestedSpaceCard extends StatelessWidget {
                           ),
                           child: ClipOval(
                             child: TotemImage(
-                              imageUrl: session.space.author.profileImage,
+                              imageUrl: session.space.author.profileImage.value,
                               loadingPlaceholder: const Icon(
                                 Icons.person,
                                 color: Colors.white,

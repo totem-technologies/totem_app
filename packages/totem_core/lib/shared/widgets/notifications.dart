@@ -9,7 +9,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/utils.dart';
 
 const _defaultNotificationAnimationDuration = Duration(milliseconds: 600);
-const _defaultNotificationDuration = Duration(milliseconds: 2800);
+const _defaultNotificationDuration = Duration(seconds: 8);
 
 class AnimatedNotification extends StatefulWidget {
   const AnimatedNotification({

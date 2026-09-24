@@ -203,7 +203,7 @@ class _SessionFacilitator extends StatelessWidget {
         ),
         Expanded(
           child: Text(
-            author.name ?? '',
+            author.name.value ?? '',
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,

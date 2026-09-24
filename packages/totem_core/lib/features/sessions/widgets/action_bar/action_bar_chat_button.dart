@@ -51,7 +51,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
         ?.localParticipant
         ?.identity;
     if (roomIdentity != null && roomIdentity.isNotEmpty) return roomIdentity;
-    return user?.slug ?? user?.email;
+    return user?.slug.value ?? user?.email;
   }
 
   @override

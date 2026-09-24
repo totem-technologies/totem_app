@@ -8,7 +8,7 @@ import 'package:uuid/uuid.dart';
 
 part 'emoji_reactions_provider.g.dart';
 
-final emojiReactionClockProvider = Provider<DateTime Function()>(
+final emojiReactionClockProvider = Provider<ValueGetter<DateTime>>(
   (ref) => DateTime.timestamp,
 );
 

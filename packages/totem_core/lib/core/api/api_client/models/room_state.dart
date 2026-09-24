@@ -1,7 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:degenerate_runtime/degenerate_runtime.dart';
-
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'room_state_status_detail.dart';
 
 @immutable
@@ -119,10 +118,10 @@ final class RoomState {
     required this.talkingOrder,
     required this.keeper,
     required this.roundNumber,
-    this.currentSpeaker,
-    this.nextSpeaker,
-    this.bannedParticipants = const [],
-    this.roundMessage,
+    this.currentSpeaker = const Omittable.absent(),
+    this.nextSpeaker = const Omittable.absent(),
+    this.bannedParticipants,
+    this.roundMessage = const Omittable.absent(),
   });
 
   factory RoomState.fromJson(Map<String, dynamic> json) {
@@ -134,19 +133,23 @@ final class RoomState {
       statusDetail: RoomStateStatusDetail.fromJson(
         json['status_detail'] as Map<String, dynamic>,
       ),
-      currentSpeaker: json['current_speaker'] as String?,
-      nextSpeaker: json['next_speaker'] as String?,
+      currentSpeaker: json.containsKey('current_speaker')
+          ? Omittable(json['current_speaker'] as String?)
+          : const Omittable.absent(),
+      nextSpeaker: json.containsKey('next_speaker')
+          ? Omittable(json['next_speaker'] as String?)
+          : const Omittable.absent(),
       talkingOrder: (json['talking_order'] as List<dynamic>)
           .map((e) => e as String)
           .toList(),
       keeper: json['keeper'] as String,
-      bannedParticipants: json.containsKey('banned_participants')
-          ? (json['banned_participants'] as List<dynamic>)
-                .map((e) => e as String)
-                .toList()
-          : const [],
+      bannedParticipants: (json['banned_participants'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       roundNumber: (json['round_number'] as num).toInt(),
-      roundMessage: json['round_message'] as String?,
+      roundMessage: json.containsKey('round_message')
+          ? Omittable(json['round_message'] as String?)
+          : const Omittable.absent(),
     );
   }
 
@@ -160,19 +163,24 @@ final class RoomState {
 
   final RoomStateStatusDetail statusDetail;
 
-  final String? currentSpeaker;
+  final Omittable<String?> currentSpeaker;
 
-  final String? nextSpeaker;
+  final Omittable<String?> nextSpeaker;
 
   final List<String> talkingOrder;
 
   final String keeper;
 
-  final List<String> bannedParticipants;
+  final List<String>? bannedParticipants;
 
   final int roundNumber;
 
-  final String? roundMessage;
+  final Omittable<String?> roundMessage;
+
+  /// The value with the schema default applied when absent.
+  List<String> get bannedParticipantsOrDefault {
+    return bannedParticipants ?? const [];
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -181,13 +189,13 @@ final class RoomState {
       'status': status.toJson(),
       'turn_state': turnState.toJson(),
       'status_detail': statusDetail.toJson(),
-      'current_speaker': ?currentSpeaker,
-      'next_speaker': ?nextSpeaker,
+      if (currentSpeaker.isPresent) 'current_speaker': currentSpeaker.value,
+      if (nextSpeaker.isPresent) 'next_speaker': nextSpeaker.value,
       'talking_order': talkingOrder,
       'keeper': keeper,
-      'banned_participants': bannedParticipants,
+      'banned_participants': ?bannedParticipants,
       'round_number': roundNumber,
-      'round_message': ?roundMessage,
+      if (roundMessage.isPresent) 'round_message': roundMessage.value,
     };
   }
 
@@ -212,13 +220,13 @@ final class RoomState {
     RoomStatus? status,
     TurnState? turnState,
     RoomStateStatusDetail? statusDetail,
-    String? Function()? currentSpeaker,
-    String? Function()? nextSpeaker,
+    Omittable<String?>? currentSpeaker,
+    Omittable<String?>? nextSpeaker,
     List<String>? talkingOrder,
     String? keeper,
-    List<String> Function()? bannedParticipants,
+    List<String>? Function()? bannedParticipants,
     int? roundNumber,
-    String? Function()? roundMessage,
+    Omittable<String?>? roundMessage,
   }) {
     return RoomState(
       sessionSlug: sessionSlug ?? this.sessionSlug,
@@ -226,17 +234,15 @@ final class RoomState {
       status: status ?? this.status,
       turnState: turnState ?? this.turnState,
       statusDetail: statusDetail ?? this.statusDetail,
-      currentSpeaker: currentSpeaker != null
-          ? currentSpeaker()
-          : this.currentSpeaker,
-      nextSpeaker: nextSpeaker != null ? nextSpeaker() : this.nextSpeaker,
+      currentSpeaker: currentSpeaker ?? this.currentSpeaker,
+      nextSpeaker: nextSpeaker ?? this.nextSpeaker,
       talkingOrder: talkingOrder ?? this.talkingOrder,
       keeper: keeper ?? this.keeper,
       bannedParticipants: bannedParticipants != null
           ? bannedParticipants()
           : this.bannedParticipants,
       roundNumber: roundNumber ?? this.roundNumber,
-      roundMessage: roundMessage != null ? roundMessage() : this.roundMessage,
+      roundMessage: roundMessage ?? this.roundMessage,
     );
   }
 
@@ -270,7 +276,7 @@ final class RoomState {
       nextSpeaker,
       Object.hashAll(talkingOrder),
       keeper,
-      Object.hashAll(bannedParticipants),
+      Object.hashAll(bannedParticipants ?? const []),
       roundNumber,
       roundMessage,
     );

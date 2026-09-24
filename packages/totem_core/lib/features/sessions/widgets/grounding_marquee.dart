@@ -99,6 +99,7 @@ class _Tip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
+        margin: const EdgeInsetsDirectional.symmetric(horizontal: 20),
         padding: const EdgeInsetsDirectional.symmetric(
           horizontal: 16,
           vertical: 10,
@@ -117,7 +118,7 @@ class _Tip extends StatelessWidget {
         ),
         child: Text(
           text,
-          maxLines: 1,
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: const TextStyle(

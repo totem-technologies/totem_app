@@ -47,6 +47,7 @@ class _ParticipantControlButtonState
     extends ConsumerState<ParticipantControlButton>
     with WidgetsBindingObserver {
   final _menuController = MenuController();
+  EventsListener<ParticipantEvent>? _participantListener;
 
   static final ButtonStyle _menuItemStyle = MenuItemButton.styleFrom(
     backgroundColor: Colors.transparent,
@@ -60,13 +61,36 @@ class _ParticipantControlButtonState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _bindParticipantListener();
+  }
+
+  @override
+  void didUpdateWidget(covariant ParticipantControlButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.participant, widget.participant)) {
+      _bindParticipantListener();
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _participantListener?.dispose();
     _menuController.close();
     super.dispose();
+  }
+
+  void _bindParticipantListener() {
+    _participantListener?.dispose();
+    _participantListener = widget.participant.createListener()
+      ..on<TrackPublishedEvent>((_) => _onParticipantMediaChanged())
+      ..on<TrackUnpublishedEvent>((_) => _onParticipantMediaChanged())
+      ..on<TrackMutedEvent>((_) => _onParticipantMediaChanged())
+      ..on<TrackUnmutedEvent>((_) => _onParticipantMediaChanged());
+  }
+
+  void _onParticipantMediaChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -148,9 +172,12 @@ class _ParticipantControlButtonState
         ),
       if (widget.participant.hasVideo)
         () {
+          final publication =
+              widget.participant.videoTrackPublications.firstOrNull;
+          final track = publication?.track;
           final isVideoOn =
-              !(widget.participant.videoTrackPublications.firstOrNull?.muted ??
-                  false);
+              (track?.isActive ?? true) &&
+              !(track?.muted ?? publication?.muted ?? false);
           return MenuItemButton(
             style: _menuItemStyle,
             onPressed: isVideoOn

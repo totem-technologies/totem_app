@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -214,7 +215,7 @@ class SessionJoinMedia {
   final LocalAudioTrack? microphoneTrack;
 
   /// Detaches preview renderers before a failed transfer is stopped.
-  final void Function()? onBeforeDispose;
+  final VoidCallback? onBeforeDispose;
 
   bool get isEmpty => cameraTrack == null && microphoneTrack == null;
 }
@@ -259,21 +260,22 @@ class SessionRoomState {
   }
 
   bool amSpeaking(Room room) {
-    return turn.roomState.currentSpeaker != null &&
-        turn.roomState.currentSpeaker == room.localParticipant?.identity;
+    return turn.roomState.currentSpeaker.value != null &&
+        turn.roomState.currentSpeaker.value == room.localParticipant?.identity;
   }
 
   bool amNext(Room room) {
-    return turn.roomState.nextSpeaker != null &&
-        turn.roomState.nextSpeaker == room.localParticipant?.identity;
+    return turn.roomState.nextSpeaker.value != null &&
+        turn.roomState.nextSpeaker.value == room.localParticipant?.identity;
   }
 
   /// The effective speaker identity for [roomState], using keeper as fallback.
   static String speakerOf(RoomState roomState) {
-    if (roomState.currentSpeaker == null || roomState.currentSpeaker!.isEmpty) {
+    final currentSpeaker = roomState.currentSpeaker.value;
+    if (currentSpeaker == null || currentSpeaker.isEmpty) {
       return roomState.keeper;
     }
-    return roomState.currentSpeaker!;
+    return currentSpeaker;
   }
 
   String get speakingNow => speakerOf(turn.roomState);
@@ -299,9 +301,10 @@ class SessionRoomState {
   }
 
   Participant? speakingNextParticipant() {
-    if (turn.roomState.nextSpeaker == null) return null;
+    final nextSpeaker = turn.roomState.nextSpeaker.value;
+    if (nextSpeaker == null) return null;
     return participants.participants.firstWhereOrNull((participant) {
-      return participant.identity == turn.roomState.nextSpeaker;
+      return participant.identity == nextSpeaker;
     });
   }
 

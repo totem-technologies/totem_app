@@ -1,32 +1,37 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:degenerate_runtime/degenerate_runtime.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 
 /// Keeper sets or replaces the active round prompt during a live session.
 @immutable
 final class SetPromptEvent {
-  const SetPromptEvent({required this.prompt, this.type = 'set_prompt'});
+  const SetPromptEvent({required this.prompt, this.type});
 
   factory SetPromptEvent.fromJson(Map<String, dynamic> json) {
     return SetPromptEvent(
-      type: json.containsKey('type') ? json['type'] as String : 'set_prompt',
+      type: json['type'] as String?,
       prompt: json['prompt'] as String,
     );
   }
 
-  final String type;
+  final String? type;
 
   final String prompt;
 
+  /// The value with the schema default applied when absent.
+  String get typeOrDefault {
+    return type ?? 'set_prompt';
+  }
+
   Map<String, dynamic> toJson() {
-    return {'type': type, 'prompt': prompt};
+    return {'type': ?type, 'prompt': prompt};
   }
 
   static bool canParse(Map<String, dynamic> json) {
     return json.containsKey('prompt') && json['prompt'] is String;
   }
 
-  SetPromptEvent copyWith({String Function()? type, String? prompt}) {
+  SetPromptEvent copyWith({String? Function()? type, String? prompt}) {
     return SetPromptEvent(
       type: type != null ? type() : this.type,
       prompt: prompt ?? this.prompt,

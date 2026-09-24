@@ -1,7 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:degenerate_runtime/degenerate_runtime.dart';
-
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'profile_avatar_type_enum.dart';
 
 @immutable
@@ -9,12 +8,12 @@ final class PublicUserSchema {
   const PublicUserSchema({
     required this.profileAvatarType,
     required this.dateCreated,
-    this.circleCount,
-    this.name,
-    this.slug,
-    this.isStaff = false,
+    this.circleCount = const Omittable.absent(),
+    this.name = const Omittable.absent(),
+    this.slug = const Omittable.absent(),
+    this.isStaff,
     this.profileAvatarSeed,
-    this.profileImage,
+    this.profileImage = const Omittable.absent(),
   });
 
   factory PublicUserSchema.fromJson(Map<String, dynamic> json) {
@@ -22,45 +21,60 @@ final class PublicUserSchema {
       profileAvatarType: ProfileAvatarTypeEnum.fromJson(
         json['profile_avatar_type'] as String,
       ),
-      circleCount: json['circle_count'] != null
-          ? (json['circle_count'] as num).toInt()
-          : null,
-      name: json['name'] as String?,
-      slug: json['slug'] as String?,
-      isStaff: json.containsKey('is_staff') ? json['is_staff'] as bool : false,
+      circleCount: json.containsKey('circle_count')
+          ? Omittable(
+              json['circle_count'] != null
+                  ? (json['circle_count'] as num).toInt()
+                  : null,
+            )
+          : const Omittable.absent(),
+      name: json.containsKey('name')
+          ? Omittable(json['name'] as String?)
+          : const Omittable.absent(),
+      slug: json.containsKey('slug')
+          ? Omittable(json['slug'] as String?)
+          : const Omittable.absent(),
+      isStaff: json['is_staff'] as bool?,
       profileAvatarSeed: json['profile_avatar_seed'] as String?,
-      profileImage: json['profile_image'] as String?,
+      profileImage: json.containsKey('profile_image')
+          ? Omittable(json['profile_image'] as String?)
+          : const Omittable.absent(),
       dateCreated: DateTime.parse(json['date_created'] as String),
     );
   }
 
   final ProfileAvatarTypeEnum profileAvatarType;
 
-  final int? circleCount;
+  final Omittable<int?> circleCount;
 
-  final String? name;
+  final Omittable<String?> name;
 
-  final String? slug;
+  final Omittable<String?> slug;
 
   /// Designates whether the user can log into this admin site.
-  final bool isStaff;
+  final bool? isStaff;
 
   final String? profileAvatarSeed;
 
   /// Profile image, must be under 5mb. Will be cropped to a square.
-  final String? profileImage;
+  final Omittable<String?> profileImage;
 
   final DateTime dateCreated;
+
+  /// The value with the schema default applied when absent.
+  bool get isStaffOrDefault {
+    return isStaff ?? false;
+  }
 
   Map<String, dynamic> toJson() {
     return {
       'profile_avatar_type': profileAvatarType.toJson(),
-      'circle_count': ?circleCount,
-      'name': ?name,
-      'slug': ?slug,
-      'is_staff': isStaff,
+      if (circleCount.isPresent) 'circle_count': circleCount.value,
+      if (name.isPresent) 'name': name.value,
+      if (slug.isPresent) 'slug': slug.value,
+      'is_staff': ?isStaff,
       'profile_avatar_seed': ?profileAvatarSeed,
-      'profile_image': ?profileImage,
+      if (profileImage.isPresent) 'profile_image': profileImage.value,
       'date_created': dateCreated.toIso8601String(),
     };
   }
@@ -73,24 +87,24 @@ final class PublicUserSchema {
 
   PublicUserSchema copyWith({
     ProfileAvatarTypeEnum? profileAvatarType,
-    int? Function()? circleCount,
-    String? Function()? name,
-    String? Function()? slug,
-    bool Function()? isStaff,
-    String Function()? profileAvatarSeed,
-    String? Function()? profileImage,
+    Omittable<int?>? circleCount,
+    Omittable<String?>? name,
+    Omittable<String?>? slug,
+    bool? Function()? isStaff,
+    String? Function()? profileAvatarSeed,
+    Omittable<String?>? profileImage,
     DateTime? dateCreated,
   }) {
     return PublicUserSchema(
       profileAvatarType: profileAvatarType ?? this.profileAvatarType,
-      circleCount: circleCount != null ? circleCount() : this.circleCount,
-      name: name != null ? name() : this.name,
-      slug: slug != null ? slug() : this.slug,
+      circleCount: circleCount ?? this.circleCount,
+      name: name ?? this.name,
+      slug: slug ?? this.slug,
       isStaff: isStaff != null ? isStaff() : this.isStaff,
       profileAvatarSeed: profileAvatarSeed != null
           ? profileAvatarSeed()
           : this.profileAvatarSeed,
-      profileImage: profileImage != null ? profileImage() : this.profileImage,
+      profileImage: profileImage ?? this.profileImage,
       dateCreated: dateCreated ?? this.dateCreated,
     );
   }

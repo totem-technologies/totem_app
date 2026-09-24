@@ -1,4 +1,5 @@
 import 'package:checks/checks.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -47,7 +48,7 @@ MobileSpaceDetailSchema _space(String slug, String title, {String? category}) =>
       content: '',
       author: PublicUserSchema(
         profileAvatarType: ProfileAvatarTypeEnum.td,
-        name: 'Keeper',
+        name: const Omittable('Keeper'),
         dateCreated: DateTime.utc(2026),
       ),
       category: category,

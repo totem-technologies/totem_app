@@ -60,7 +60,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               onTap: () =>
                                   context.pushNamed(RouteNames.profileDetail),
                               child: AutoSizeText(
-                                user.name ?? 'You',
+                                user.name.value ?? 'You',
                                 style: theme.textTheme.headlineMedium,
                                 maxLines: 1,
                               ),

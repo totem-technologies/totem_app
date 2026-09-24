@@ -10,7 +10,6 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
-
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -72,10 +71,10 @@ Future<void> _pumpMoreOptions(
         userProfileProvider.overrideWith(
           (ref, slug) => Future.value(
             PublicUserSchema(
-              slug: slug,
-              name: 'User $slug',
+              slug: Omittable(slug),
+              name: Omittable('User $slug'),
               profileAvatarType: ProfileAvatarTypeEnum.td,
-              circleCount: 0,
+              circleCount: const Omittable(0),
               dateCreated: DateTime(2024),
             ),
           ),
@@ -166,8 +165,8 @@ void main() {
       final state = _sessionState(
         roomState: const RoomState(
           keeper: 'keeper-1',
-          nextSpeaker: 'user-2',
-          currentSpeaker: 'user-1',
+          nextSpeaker: Omittable('user-2'),
+          currentSpeaker: Omittable('user-1'),
           status: RoomStatus.active,
           turnState: TurnState.idle,
           sessionSlug: 'test-session',
@@ -204,8 +203,8 @@ void main() {
       final state = _sessionState(
         roomState: const RoomState(
           keeper: 'keeper-1',
-          nextSpeaker: 'user-2',
-          currentSpeaker: 'user-1',
+          nextSpeaker: Omittable('user-2'),
+          currentSpeaker: Omittable('user-1'),
           status: RoomStatus.active,
           turnState: TurnState.speaking,
           sessionSlug: 'test-session',
@@ -232,8 +231,8 @@ void main() {
       final state = _sessionState(
         roomState: const RoomState(
           keeper: 'keeper-1',
-          nextSpeaker: 'user-2',
-          currentSpeaker: 'user-1',
+          nextSpeaker: Omittable('user-2'),
+          currentSpeaker: Omittable('user-1'),
           status: RoomStatus.waitingRoom,
           turnState: TurnState.speaking,
           sessionSlug: 'test-session',
@@ -267,8 +266,8 @@ void main() {
         final state = _sessionState(
           roomState: const RoomState(
             keeper: 'keeper-1',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
+            nextSpeaker: Omittable('user-2'),
+            currentSpeaker: Omittable('user-1'),
             status: RoomStatus.active,
             turnState: TurnState.speaking,
             sessionSlug: 'test-session',
@@ -307,8 +306,8 @@ void main() {
       final state = _sessionState(
         roomState: const RoomState(
           keeper: 'keeper-1',
-          nextSpeaker: 'user-2',
-          currentSpeaker: 'user-1',
+          nextSpeaker: Omittable('user-2'),
+          currentSpeaker: Omittable('user-1'),
           status: RoomStatus.active,
           turnState: TurnState.speaking,
           sessionSlug: 'test-session',
@@ -352,8 +351,8 @@ void main() {
       final state = _sessionState(
         roomState: const RoomState(
           keeper: 'keeper-1',
-          nextSpeaker: null,
-          currentSpeaker: null,
+          nextSpeaker: Omittable(null),
+          currentSpeaker: Omittable(null),
           status: RoomStatus.active,
           turnState: TurnState.speaking,
           sessionSlug: 'test-session',

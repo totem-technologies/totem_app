@@ -1,7 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:degenerate_runtime/degenerate_runtime.dart';
-
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import '../apis/blog_api.dart';
 import '../apis/default_api.dart';
 import '../apis/rooms_api.dart';

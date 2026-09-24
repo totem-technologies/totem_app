@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 
@@ -16,37 +15,17 @@ class SessionTitle extends ConsumerWidget {
     final title = session?.session?.title ?? session?.room?.name;
     if (title == null) return const SizedBox.shrink();
 
-    final shareTimeStartedAt = session == null
-        ? null
-        : ref.watch(sessionMessagingControllerProvider(session));
-
     return Align(
       alignment: AlignmentDirectional.centerStart,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 2,
         children: [
-          RichText(
-            text: TextSpan(
-              children: [
-                const TextSpan(text: 'SESSION'),
-                if (shareTimeStartedAt != null) ...[
-                  const TextSpan(text: ' · '),
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.baseline,
-                    child: SessionElapsedTimer(
-                      startTime: shareTimeStartedAt,
-                      style: SessionElapsedTimerStyle.sessionTitle,
-                    ),
-                    baseline: TextBaseline.alphabetic,
-                  ),
-                ],
-              ],
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: const Color(0xFF787D7E),
-              ),
+          Text(
+            'SESSION',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF787D7E),
             ),
-            textScaler: MediaQuery.textScalerOf(context),
           ),
           Text(
             title,
@@ -63,20 +42,8 @@ class SessionTitle extends ConsumerWidget {
   }
 }
 
-enum SessionElapsedTimerStyle { featuredCard, sessionTitle }
-
 class SessionElapsedTimer extends ConsumerStatefulWidget {
-  const SessionElapsedTimer({
-    this.startTime,
-    this.onTap,
-    this.style = SessionElapsedTimerStyle.featuredCard,
-    super.key,
-  });
-
-  final DateTime? startTime;
-  final VoidCallback? onTap;
-
-  final SessionElapsedTimerStyle style;
+  const SessionElapsedTimer({super.key});
 
   @override
   ConsumerState<SessionElapsedTimer> createState() =>
@@ -90,21 +57,18 @@ class _SessionElapsedTimerState extends ConsumerState<SessionElapsedTimer> {
   @override
   void initState() {
     super.initState();
-    _start = widget.startTime ?? ref.read(featuredTurnStartTimeProvider);
+    _start = ref.read(featuredTurnStartTimeProvider);
     _syncTimer();
-    if (widget.startTime == null) {
-      ref.listenManual(featuredTurnStartTimeProvider, (_, next) {
-        setState(() => _start = next);
-        _syncTimer();
-      });
-    }
+    ref.listenManual(featuredTurnStartTimeProvider, (_, next) {
+      setState(() => _start = next);
+      _syncTimer();
+    });
   }
 
   @override
   void didUpdateWidget(SessionElapsedTimer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.startTime == oldWidget.startTime) return;
-    _start = widget.startTime ?? ref.read(featuredTurnStartTimeProvider);
+    _start = ref.read(featuredTurnStartTimeProvider);
     _syncTimer();
   }
 
@@ -137,39 +101,23 @@ class _SessionElapsedTimerState extends ConsumerState<SessionElapsedTimer> {
     final theme = Theme.of(context);
 
     final text = _format(DateTime.now().difference(_start!));
-    final timer = switch (widget.style) {
-      SessionElapsedTimerStyle.featuredCard => Container(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: 10,
-          vertical: 4,
-        ),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(42),
-          color: Colors.black54,
-        ),
-        child: Text(
-          text,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: Colors.white70,
-            fontWeight: FontWeight.w600,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 10,
+        vertical: 4,
       ),
-      SessionElapsedTimerStyle.sessionTitle => Text(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(42),
+        color: Colors.black54,
+      ),
+      child: Text(
         text,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: const Color(0xFF787D7E),
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: Colors.white70,
+          fontWeight: FontWeight.w600,
+          fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),
-    };
-
-    if (widget.onTap == null) return timer;
-
-    return Semantics(
-      button: true,
-      label: 'Send a private share time reminder',
-      child: GestureDetector(onTap: widget.onTap, child: timer),
     );
   }
 }

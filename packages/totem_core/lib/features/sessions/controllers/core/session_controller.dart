@@ -152,7 +152,7 @@ class SessionController extends _$SessionController {
 
   bool isCurrentUserKeeper() {
     final currentUserSlug = ref.read(
-      authControllerProvider.select((auth) => auth.user?.slug),
+      authControllerProvider.select((auth) => auth.user?.slug.value),
     );
     if (currentUserSlug == null) return false;
     return state.isKeeper(currentUserSlug);
@@ -193,9 +193,9 @@ class SessionController extends _$SessionController {
     ref.onDispose(() => unawaited(_cleanUp()));
 
     final initialRoomState = RoomState(
-      keeper: session?.space.author.slug ?? '',
-      nextSpeaker: '',
-      currentSpeaker: '',
+      keeper: session?.space.author.slug.value ?? '',
+      nextSpeaker: const Omittable(''),
+      currentSpeaker: const Omittable(''),
       status: RoomStatus.waitingRoom,
       turnState: TurnState.idle,
       sessionSlug: options.sessionSlug,
@@ -322,14 +322,6 @@ class SessionController extends _$SessionController {
         _disableLocalMediaTracks();
       }
 
-      final previousRoomState = this.state.roomState;
-      if ((previousRoomState.status == RoomStatus.active &&
-              state.status != RoomStatus.active) ||
-          (previousRoomState.turnState != TurnState.passing &&
-              state.turnState == TurnState.passing) ||
-          state.currentSpeaker != previousRoomState.currentSpeaker) {
-        messaging.clearShareTimeReminder();
-      }
       _dispatch(RoomStateChanged(state));
     }
 
@@ -882,7 +874,7 @@ class SessionController extends _$SessionController {
       originalParticipants: participants,
       talkingOrder: state.roomState.talkingOrder,
       speakingNow: state.speakingNow,
-      nextSpeaker: state.roomState.nextSpeaker,
+      nextSpeaker: state.roomState.nextSpeaker.value,
       showSpeakingNow: true,
     );
   }

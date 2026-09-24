@@ -43,12 +43,20 @@ class UserRepository {
     return RepositoryUtils.handleApiCall<UserSchema>(
       apiCall: () => apiService.users.totemUsersMobileApiUpdateCurrentUser(
         body: UserUpdateSchema(
-          name: name,
-          email: email,
-          timezone: timezone,
-          newsletterConsent: newsletterConsent,
-          profileAvatarType: profileAvatarType,
-          profileAvatarSeed: avatarSeed,
+          name: name == null ? const Omittable.absent() : Omittable(name),
+          email: email == null ? const Omittable.absent() : Omittable(email),
+          timezone: timezone == null
+              ? const Omittable.absent()
+              : Omittable(timezone),
+          newsletterConsent: newsletterConsent == null
+              ? const Omittable.absent()
+              : Omittable(newsletterConsent),
+          profileAvatarType: profileAvatarType == null
+              ? const Omittable.absent()
+              : Omittable(profileAvatarType),
+          profileAvatarSeed: avatarSeed == null
+              ? const Omittable.absent()
+              : Omittable(avatarSeed),
         ),
       ),
       operationName: 'update current user profile',
@@ -72,9 +80,11 @@ class UserRepository {
       apiCall: () => apiService.$default.totemOnboardMobileApiOnboardPost(
         body: OnboardSchema(
           referralSource: referralSource ?? ReferralChoices.$default,
-          referralOther: referralOther ?? '',
-          hopes: interestTopics.join(', '),
-          yearBorn: yearBorn,
+          referralOther: Omittable(referralOther ?? ''),
+          hopes: Omittable(interestTopics.join(', ')),
+          yearBorn: yearBorn == null
+              ? const Omittable.absent()
+              : Omittable(yearBorn),
         ),
       ),
       operationName: 'complete onboarding',

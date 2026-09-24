@@ -15,7 +15,6 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
-
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
@@ -52,8 +51,8 @@ SessionRoomState _createSessionState() {
     turn: const SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',
-        nextSpeaker: 'user-2',
-        currentSpeaker: 'user-1',
+        nextSpeaker: Omittable('user-2'),
+        currentSpeaker: Omittable('user-1'),
         status: RoomStatus.active,
         turnState: TurnState.idle,
         sessionSlug: 'test-session',
@@ -198,13 +197,25 @@ void main() {
     Future<void> pumpSessionActionBar(
       WidgetTester tester, {
       required RoomScreen screen,
+      bool isStaff = false,
     }) async {
+      final authState = isStaff
+          ? AuthState.authenticated(
+              user: UserSchema(
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                circleCount: 0,
+                email: 'staff@example.com',
+                dateCreated: DateTime(2024),
+                isStaff: true,
+              ),
+            )
+          : AuthState.unauthenticated();
       await pumpWidget(
         tester,
         child: const SessionActionBar(),
         overrides: [
           authControllerProvider.overrideWith(
-            () => FakeAuthController(AuthState.unauthenticated()),
+            () => FakeAuthController(authState),
           ),
           currentSessionProvider.overrideWith((ref) => session),
           lastSessionMessageProvider.overrideWith(
@@ -244,6 +255,47 @@ void main() {
         check(tester.widgetList(find.byType(ActionBar))).length.equals(0);
       }
     });
+
+    autoSizeTest(
+      'confirms before unmuting when another participant has the Totem',
+      (tester) async {
+        when(
+          () => deviceController.disableMicrophone(),
+        ).thenAnswer((_) async {});
+        await pumpSessionActionBar(tester, screen: RoomScreen.listening);
+
+        await tester.tap(find.byType(ActionBarButton).first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(ActionBarButton).first);
+        await tester.pumpAndSettle();
+
+        check(tester.widgetList(find.text('Stay Muted'))).length.equals(1);
+
+        await tester.tap(find.text('Stay Muted'));
+        await tester.pumpAndSettle();
+        verifyNever(() => deviceController.enableMicrophone());
+      },
+    );
+
+    autoSizeTest(
+      'shows the microphone on the receiving screen only for staff',
+      (tester) async {
+        for (final isStaff in [false, true]) {
+          await pumpSessionActionBar(
+            tester,
+            screen: RoomScreen.receiving,
+            isStaff: isStaff,
+          );
+
+          check(
+            tester.widgetList(find.bySemanticsLabel('Microphone on')),
+          ).length.equals(isStaff ? 1 : 0);
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      },
+    );
 
     autoSizeTest('offers reactions only while listening', (tester) async {
       for (final scenario in [

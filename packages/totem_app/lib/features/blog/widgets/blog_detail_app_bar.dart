@@ -29,7 +29,7 @@ class BlogDetailAppBar extends StatelessWidget {
                 bottom: Radius.circular(25),
               ),
               child: TotemImage(
-                imageUrl: post.headerImageUrl,
+                imageUrl: post.headerImageUrl.value,
                 color: Colors.black38,
                 colorBlendMode: BlendMode.darken,
               ),
@@ -63,7 +63,9 @@ class BlogDetailAppBar extends StatelessWidget {
                             children: <TextSpan>[
                               const TextSpan(text: 'by '),
                               TextSpan(
-                                text: post.author?.name ?? 'Unknown Author',
+                                text:
+                                    post.author.value?.name.value ??
+                                    'Unknown Author',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -75,10 +77,12 @@ class BlogDetailAppBar extends StatelessWidget {
                     ),
                   ),
                   UserAvatar.fromUserSchema(
-                    post.author,
-                    onTap: post.author?.slug != null
+                    post.author.value,
+                    onTap: post.author.value?.slug.value != null
                         ? () => context.push(
-                            RouteNames.keeperProfile(post.author!.slug!),
+                            RouteNames.keeperProfile(
+                              post.author.value!.slug.value!,
+                            ),
                           )
                         : null,
                   ),

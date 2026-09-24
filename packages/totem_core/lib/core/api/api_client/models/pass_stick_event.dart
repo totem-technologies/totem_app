@@ -1,24 +1,31 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:degenerate_runtime/degenerate_runtime.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 
 @immutable
 final class PassStickEvent {
-  const PassStickEvent({this.type = 'pass_stick', this.prompt});
+  const PassStickEvent({this.type, this.prompt = const Omittable.absent()});
 
   factory PassStickEvent.fromJson(Map<String, dynamic> json) {
     return PassStickEvent(
-      type: json.containsKey('type') ? json['type'] as String : 'pass_stick',
-      prompt: json['prompt'] as String?,
+      type: json['type'] as String?,
+      prompt: json.containsKey('prompt')
+          ? Omittable(json['prompt'] as String?)
+          : const Omittable.absent(),
     );
   }
 
-  final String type;
+  final String? type;
 
-  final String? prompt;
+  final Omittable<String?> prompt;
+
+  /// The value with the schema default applied when absent.
+  String get typeOrDefault {
+    return type ?? 'pass_stick';
+  }
 
   Map<String, dynamic> toJson() {
-    return {'type': type, 'prompt': ?prompt};
+    return {'type': ?type, if (prompt.isPresent) 'prompt': prompt.value};
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -26,12 +33,12 @@ final class PassStickEvent {
   }
 
   PassStickEvent copyWith({
-    String Function()? type,
-    String? Function()? prompt,
+    String? Function()? type,
+    Omittable<String?>? prompt,
   }) {
     return PassStickEvent(
       type: type != null ? type() : this.type,
-      prompt: prompt != null ? prompt() : this.prompt,
+      prompt: prompt ?? this.prompt,
     );
   }
 

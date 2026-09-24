@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:degenerate_runtime/degenerate_runtime.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 
 /// Token for connecting to a LiveKit room.
 @immutable

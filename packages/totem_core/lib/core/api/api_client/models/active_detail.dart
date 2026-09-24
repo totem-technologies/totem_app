@@ -1,28 +1,31 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:degenerate_runtime/degenerate_runtime.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 
 @immutable
 final class ActiveDetail {
-  const ActiveDetail({this.type = 'active'});
+  const ActiveDetail({this.type});
 
   factory ActiveDetail.fromJson(Map<String, dynamic> json) {
-    return ActiveDetail(
-      type: json.containsKey('type') ? json['type'] as String : 'active',
-    );
+    return ActiveDetail(type: json['type'] as String?);
   }
 
-  final String type;
+  final String? type;
+
+  /// The value with the schema default applied when absent.
+  String get typeOrDefault {
+    return type ?? 'active';
+  }
 
   Map<String, dynamic> toJson() {
-    return {'type': type};
+    return {'type': ?type};
   }
 
   static bool canParse(Map<String, dynamic> json) {
     return json.keys.any((key) => const {'type'}.contains(key));
   }
 
-  ActiveDetail copyWith({String Function()? type}) {
+  ActiveDetail copyWith({String? Function()? type}) {
     return ActiveDetail(type: type != null ? type() : this.type);
   }
 

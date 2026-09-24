@@ -20,8 +20,8 @@ SessionDetailSchema _mockSession() => SessionDetailSchema(
     author: PublicUserSchema(
       profileAvatarType: ProfileAvatarTypeEnum.td,
       dateCreated: DateTime(2024),
-      name: 'Keeper',
-      slug: 'keeper-slug',
+      name: Omittable('Keeper'),
+      slug: Omittable('keeper-slug'),
       profileAvatarSeed: 'seed',
     ),
     subscribers: 0,

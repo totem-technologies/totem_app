@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -94,7 +95,7 @@ Future<PreJoinMediaState> _waitUntilInitialized(
 
 ProviderContainer _createContainer(
   PreJoinPreviewTrackFactory factory, {
-  PreJoinMediaController Function()? controller,
+  ValueGetter<PreJoinMediaController>? controller,
 }) {
   return ProviderContainer(
     overrides: [

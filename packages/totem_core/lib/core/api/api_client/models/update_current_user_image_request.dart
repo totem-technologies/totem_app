@@ -2,8 +2,7 @@
 
 import 'dart:convert';
 import 'dart:typed_data';
-
-import 'package:degenerate_runtime/degenerate_runtime.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 
 @immutable
 final class UpdateCurrentUserImageRequest {
@@ -35,12 +34,12 @@ final class UpdateCurrentUserImageRequest {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is UpdateCurrentUserImageRequest &&
-            profileImage == other.profileImage;
+            listEquals(profileImage, other.profileImage);
   }
 
   @override
   int get hashCode {
-    return profileImage.hashCode;
+    return Object.hashAll(profileImage).hashCode;
   }
 
   @override

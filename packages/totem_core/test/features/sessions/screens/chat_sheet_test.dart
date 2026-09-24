@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
-
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,7 +14,6 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
@@ -67,8 +65,8 @@ SessionDetailSchema _createSessionEvent() {
       author: PublicUserSchema(
         profileAvatarType: ProfileAvatarTypeEnum.td,
         dateCreated: DateTime(2024),
-        slug: 'keeper-1',
-        name: 'Heather',
+        slug: const Omittable('keeper-1'),
+        name: const Omittable('Heather'),
       ),
       category: null,
       subscribers: 0,
@@ -117,8 +115,8 @@ SessionRoomState _createSessionState({
     turn: const SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',
-        nextSpeaker: '',
-        currentSpeaker: '',
+        nextSpeaker: Omittable(''),
+        currentSpeaker: Omittable(''),
         status: RoomStatus.active,
         turnState: TurnState.idle,
         sessionSlug: 'session-1',
@@ -151,8 +149,8 @@ List<Object?> _sharedOverrides({
     userProfileProvider.overrideWith(
       (ref, slug) => Future.value(
         PublicUserSchema(
-          slug: slug,
-          name: slug == 'keeper-1' ? 'Heather' : 'Mocked User $slug',
+          slug: Omittable(slug),
+          name: Omittable(slug == 'keeper-1' ? 'Heather' : 'Mocked User $slug'),
           profileAvatarType: ProfileAvatarTypeEnum.td,
           dateCreated: DateTime(2024),
         ),
@@ -269,7 +267,7 @@ void main() {
       when(() => devices.isCameraEnabled).thenReturn(false);
     });
 
-    Future<void> runOnDesktop(Future<void> Function() body) async {
+    Future<void> runOnDesktop(AsyncCallback body) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       try {
         await body();
@@ -388,7 +386,7 @@ void main() {
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'me@example.com',
-            name: 'Me',
+            name: const Omittable('Me'),
             profileAvatarType: ProfileAvatarTypeEnum.td,
             circleCount: 0,
             dateCreated: DateTime(2024),
@@ -429,8 +427,8 @@ void main() {
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'keeper@example.com',
-            slug: 'keeper-1',
-            name: 'Heather',
+            slug: const Omittable('keeper-1'),
+            name: const Omittable('Heather'),
             profileAvatarType: ProfileAvatarTypeEnum.td,
             circleCount: 0,
             dateCreated: DateTime(2024),
@@ -453,8 +451,8 @@ void main() {
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'lucas@example.com',
-            slug: 'lucas',
-            name: 'Lucas',
+            slug: const Omittable('lucas'),
+            name: const Omittable('Lucas'),
             profileAvatarType: ProfileAvatarTypeEnum.td,
             circleCount: 0,
             dateCreated: DateTime(2024),
@@ -480,8 +478,8 @@ void main() {
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'lucas@example.com',
-            slug: 'lucas',
-            name: 'Lucas',
+            slug: const Omittable('lucas'),
+            name: const Omittable('Lucas'),
             profileAvatarType: ProfileAvatarTypeEnum.td,
             circleCount: 0,
             dateCreated: DateTime(2024),
@@ -645,8 +643,8 @@ void main() {
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'lucas@example.com',
-            slug: 'lucas',
-            name: 'Lucas',
+            slug: const Omittable('lucas'),
+            name: const Omittable('Lucas'),
             profileAvatarType: ProfileAvatarTypeEnum.td,
             circleCount: 0,
             dateCreated: DateTime(2024),
@@ -756,8 +754,8 @@ void main() {
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'keeper@example.com',
-            slug: 'keeper-1',
-            name: 'Heather',
+            slug: const Omittable('keeper-1'),
+            name: const Omittable('Heather'),
             profileAvatarType: ProfileAvatarTypeEnum.td,
             circleCount: 0,
             dateCreated: DateTime(2024),
@@ -826,8 +824,8 @@ void main() {
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'keeper@example.com',
-            slug: 'keeper-1',
-            name: 'Heather',
+            slug: const Omittable('keeper-1'),
+            name: const Omittable('Heather'),
             profileAvatarType: ProfileAvatarTypeEnum.td,
             circleCount: 0,
             dateCreated: DateTime(2024),

@@ -6,6 +6,7 @@ Future<T?> showResponsiveModal<T>({
   required WidgetBuilder bottomSheetBuilder,
   required WidgetBuilder largeScreenBuilder,
   bool useRootNavigator = false,
+  RouteSettings? routeSettings,
   bool showDragHandle = false,
   bool isScrollControlled = true,
   bool useSafeArea = true,
@@ -30,6 +31,7 @@ Future<T?> showResponsiveModal<T>({
         useSafeArea: useSafeArea,
         backgroundColor: bottomSheetBackgroundColor,
         useRootNavigator: useRootNavigator,
+        routeSettings: routeSettings,
         clipBehavior: Clip.hardEdge,
         builder: bottomSheetBuilder,
       );
@@ -38,6 +40,7 @@ Future<T?> showResponsiveModal<T>({
       return showDialog<T>(
         context: context,
         useRootNavigator: useRootNavigator,
+        routeSettings: routeSettings,
         barrierColor: dialogBarrierColor,
         fullscreenDialog: true,
         useSafeArea: useSafeArea,

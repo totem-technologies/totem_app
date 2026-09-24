@@ -13,8 +13,8 @@ UserSchema _user({required bool isStaff}) => UserSchema(
   circleCount: 0,
   email: 'user@test.com',
   dateCreated: DateTime(2024),
-  name: 'Test User',
-  slug: 'test-user',
+  name: const Omittable('Test User'),
+  slug: const Omittable('test-user'),
   isStaff: isStaff,
 );
 

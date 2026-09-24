@@ -145,6 +145,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   required MockSessionController session,
   required SessionDetailSchema event,
   required RoomScreen screen,
+  NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>? roomScreenProvider,
   RoomConnectionState connectionState = RoomConnectionState.connected,
   RoomStatus roomStatus = RoomStatus.active,
   DisconnectReason? disconnectReason,
@@ -164,8 +165,8 @@ Future<void> _pumpRoomScreenForResolvedScreen(
     turn: const SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',
-        nextSpeaker: 'user-2',
-        currentSpeaker: 'user-1',
+        nextSpeaker: Omittable('user-2'),
+        currentSpeaker: Omittable('user-1'),
         status: RoomStatus.active,
         turnState: TurnState.idle,
         sessionSlug: 'test-session',
@@ -186,7 +187,11 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         currentSessionProvider.overrideWith((ref) => session),
         currentSessionStateProvider.overrideWithValue(sessionState),
         currentSessionEventProvider.overrideWith((ref) => event),
-        resolveCurrentScreenProvider.overrideWith((ref) => screen),
+        resolveCurrentScreenProvider.overrideWith(
+          (ref) => roomScreenProvider == null
+              ? screen
+              : ref.watch(roomScreenProvider),
+        ),
         connectionStateProvider.overrideWith((ref) => connectionState),
         roomStatusProvider.overrideWith((ref) => roomStatus),
         isCurrentUserKeeperProvider.overrideWith((ref) => false),
@@ -411,8 +416,8 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
             profileAvatarType: ProfileAvatarTypeEnum.im,
             circleCount: 0,
             email: 'test@totem.org',
-            name: 'Test User',
-            slug: 'user-1',
+            name: const Omittable('Test User'),
+            slug: const Omittable('user-1'),
             dateCreated: DateTime(2024),
           ),
         ),
@@ -594,6 +599,59 @@ void main() {
       check(
         tester.widgetList(find.byType(SessionErrorScreen)),
       ).length.equals(1);
+    });
+
+    testWidgets('closes only the chat sheet when the user is disconnected', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
+      );
+      final screenProvider =
+          NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+            () => _RoomScreenOverrideNotifier(RoomScreen.listening),
+          );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+        roomScreenProvider: screenProvider,
+      );
+
+      final chatContext = tester.element(find.byType(ListeningTurnScreen));
+      unawaited(showSessionChat(chatContext));
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
+
+      showModalBottomSheet<void>(
+        context: chatContext,
+        useRootNavigator: false,
+        builder: (_) => const Text('Keeper profile'),
+      );
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('Keeper profile'))).length.equals(1);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container.read(screenProvider.notifier).set(RoomScreen.disconnected);
+      await tester.pumpAndSettle();
+
+      check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+      check(tester.widgetList(find.text('Keeper profile'))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(SessionDisconnectedScreen)),
+      ).length.equals(1);
+      await tester.pump(const Duration(milliseconds: 2750));
     });
 
     testWidgets('renders offline error screen for a network disconnection', (

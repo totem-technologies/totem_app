@@ -42,8 +42,10 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
       body: SafeArea(
         child: blogRef.when(
           data: (blog) {
+            final author = blog.author.value;
+            final authorSlug = author?.slug.value;
             final authorSpacesText =
-                'Spaces by ${blog.author?.name ?? 'this Author'}';
+                'Spaces by ${author?.name.value ?? 'this Author'}';
             final screenWidth = MediaQuery.widthOf(context);
             final pixelRatio = MediaQuery.devicePixelRatioOf(context);
 
@@ -129,7 +131,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                                 radius: 17,
                                 backgroundColor: Colors.white,
                                 child: UserAvatar.fromUserSchema(
-                                  blog.author,
+                                  blog.author.value,
                                   radius: 15,
                                 ),
                               ),
@@ -139,7 +141,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      blog.author?.name ?? 'Unknown Author',
+                                      author?.name.value ?? 'Unknown Author',
                                       style: theme.textTheme.bodyLarge
                                           ?.copyWith(
                                             fontWeight: FontWeight.bold,
@@ -163,19 +165,19 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        if (blog.headerImageUrl != null)
+                        if (blog.headerImageUrl.value != null)
                           SelectionContainer.disabled(
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(16),
                               child: TotemImage(
-                                imageUrl: blog.headerImageUrl!,
+                                imageUrl: blog.headerImageUrl.value,
                                 memCacheWidth: ((screenWidth - 40) * pixelRatio)
                                     .round(),
                               ),
                             ),
                           ),
                         Html(
-                          data: blog.contentHtml,
+                          data: blog.contentHtml.value,
                           onLinkTap: (url, _, _) async {
                             RoutingUtils.handleLinkTap(context, url);
                           },
@@ -185,7 +187,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                           style: AppTheme.htmlStyle,
                           extensions: [TotemImageHtmlExtension()],
                         ),
-                        if (blog.author?.slug != null)
+                        if (author != null && authorSlug != null)
                           SelectionContainer.disabled(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,13 +204,13 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                                   ),
                                 ),
                                 MeetKeeperCard(
-                                  user: blog.author!,
+                                  user: author,
                                   margin: EdgeInsetsDirectional.zero,
                                 ),
                                 const SizedBox(height: 20),
                                 KeeperSpaces(
                                   title: authorSpacesText,
-                                  keeperSlug: blog.author!.slug!,
+                                  keeperSlug: authorSlug,
                                   horizontalPadding: EdgeInsetsDirectional.zero,
                                 ),
                                 const SizedBox(height: 14),

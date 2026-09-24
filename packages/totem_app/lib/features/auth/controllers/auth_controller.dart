@@ -58,7 +58,8 @@ class MobileAuthController extends AuthController {
 
   bool get isOnboardingCompleted =>
       isAuthenticated &&
-      (state.user?.name != null && state.user!.name!.isNotEmpty);
+      (state.user?.name.value != null &&
+          state.user!.name.requireValue!.isNotEmpty);
 
   @override
   UserSchema? get user => state.user;

@@ -23,8 +23,8 @@ RoomState _roomState({
 }) {
   return RoomState(
     keeper: keeper,
-    nextSpeaker: nextSpeaker ?? '',
-    currentSpeaker: currentSpeaker ?? '',
+    nextSpeaker: Omittable(nextSpeaker ?? ''),
+    currentSpeaker: Omittable(currentSpeaker ?? ''),
     status: status,
     turnState: turnState,
     sessionSlug: 'session-1',
@@ -32,7 +32,9 @@ RoomState _roomState({
     talkingOrder: const [],
     version: 1,
     roundNumber: 1,
-    roundMessage: roundMessage,
+    roundMessage: roundMessage == null
+        ? const Omittable.absent()
+        : Omittable(roundMessage),
   );
 }
 

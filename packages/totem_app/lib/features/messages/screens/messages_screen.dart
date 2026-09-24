@@ -211,7 +211,7 @@ class _ConversationList extends StatelessWidget {
             : lastMsg.text;
 
         return ChatCard(
-          name: conv.peer.name ?? 'Unknown',
+          name: conv.peer.name.value ?? 'Unknown',
           lastMessage: preview,
           timestamp: conv.updatedAt,
           avatarSeed: conv.peer.profileAvatarSeed,

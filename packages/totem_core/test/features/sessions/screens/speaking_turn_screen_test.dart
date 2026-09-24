@@ -6,19 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
-
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
-
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
@@ -142,8 +138,8 @@ SessionRoomState _buildState({
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: keeper,
-        nextSpeaker: nextSpeaker ?? '',
-        currentSpeaker: currentSpeaker,
+        nextSpeaker: Omittable(nextSpeaker ?? ''),
+        currentSpeaker: Omittable(currentSpeaker),
         status: status,
         turnState: turnState,
         sessionSlug: 'test-session',
@@ -214,7 +210,6 @@ void main() {
     required SessionRoomState sessionState,
     required bool isKeeper,
     SessionCuesService? cuesService,
-    DateTime? shareTimeReminder,
   }) async {
     when(() => session.isCurrentUserKeeper()).thenReturn(isKeeper);
     final testCuesService = cuesService ?? _TestSessionCuesService();
@@ -227,14 +222,11 @@ void main() {
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
           currentSessionProvider.overrideWith((ref) => session),
-          sessionMessagingControllerProvider(
-            session,
-          ).overrideWithValue(shareTimeReminder),
           sessionCuesServiceProvider.overrideWithValue(testCuesService),
           userProfileProvider.overrideWith((ref, slug) async {
             return PublicUserSchema(
-              slug: slug,
-              name: 'User $slug',
+              slug: Omittable(slug),
+              name: Omittable('User $slug'),
               profileAvatarType: ProfileAvatarTypeEnum.td,
               dateCreated: DateTime(2024),
             );
@@ -255,7 +247,7 @@ void main() {
   }
 
   group('SpeakingTurn', () {
-    Future<void> runOnDesktop(Future<void> Function() body) async {
+    Future<void> runOnDesktop(AsyncCallback body) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       try {
         await body();
@@ -409,39 +401,6 @@ void main() {
 
       verify(() => keeper.passTotem(roundMessage: 'A round message')).called(1);
       check(cuesService.swipePulseCount).equals(1);
-    });
-
-    testWidgets('shows elapsed time only after a keeper reminder', (
-      tester,
-    ) async {
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-      tester.view
-        ..physicalSize = const Size(1280, 1000)
-        ..devicePixelRatio = 1;
-      when(() => session.session).thenReturn(_createTestSession());
-
-      final state = _buildState(
-        keeper: 'keeper-1',
-        currentSpeaker: 'user-1',
-        turnStartedAt: DateTime.now(),
-      );
-      final elapsedTimer = find.textContaining(RegExp(r'^02:\d{2}$'));
-
-      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: false);
-      check(tester.widgetList(elapsedTimer)).length.equals(0);
-
-      await pumpSpeakingTurn(
-        tester,
-        sessionState: state,
-        isKeeper: false,
-        shareTimeReminder: DateTime.now().subtract(
-          const Duration(minutes: 2, seconds: 5),
-        ),
-      );
-      check(tester.widgetList(elapsedTimer)).length.equals(1);
     });
 
     testWidgets('shows the standard pass card when the user is not keeper', (

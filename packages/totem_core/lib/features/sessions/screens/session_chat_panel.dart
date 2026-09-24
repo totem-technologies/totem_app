@@ -12,7 +12,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/core/repositories/user_repository.dart';
+
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
@@ -134,7 +134,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     final user = ref.read(authControllerProvider).user;
     return _resolveLocalIdentity(
       ref.read(currentSessionProvider)?.room?.localParticipant?.identity,
-      user?.slug ?? user?.email,
+      user?.slug.value ?? user?.email,
     );
   }
 
@@ -183,13 +183,13 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     final roomIdentity = ref.watch(localParticipantIdentityProvider);
     final localIdentity = _resolveLocalIdentity(
       roomIdentity,
-      user?.slug ?? user?.email,
+      user?.slug.value ?? user?.email,
     );
     final keeperIdentity = _resolveKeeperIdentity(
       roomKeeper: ref.watch(keeperIdentityProvider),
       spaceAuthor: ref.watch(
         currentSessionEventProvider.select(
-          (session) => session?.space.author.slug,
+          (session) => session?.space.author.slug.value,
         ),
       ),
     );
@@ -586,15 +586,7 @@ class _ParticipantAvatar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(userProfileProvider(identity));
-    return profile.when(
-      data: (user) =>
-          UserAvatar.fromUserSchema(user, radius: radius, borderWidth: 0),
-      loading: () =>
-          UserAvatar.custom(seed: identity, radius: radius, borderWidth: 0),
-      error: (_, _) =>
-          UserAvatar.custom(seed: identity, radius: radius, borderWidth: 0),
-    );
+    return UserAvatar.slug(identity, radius: radius, borderWidth: 0);
   }
 }
 

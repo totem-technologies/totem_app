@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -41,7 +42,7 @@ class TestMobileAuthController extends MobileAuthController {
 
   @override
   bool get isOnboardingCompleted =>
-      isAuthenticated && (_initialState.user?.name?.isNotEmpty ?? false);
+      isAuthenticated && (_initialState.user?.name.value?.isNotEmpty ?? false);
 
   @override
   UserSchema? get user => _initialState.user;
@@ -71,8 +72,8 @@ class TestMobileAuthController extends MobileAuthController {
 class TestUserProfileController extends UserProfileController {
   int markWelcomeCalls = 0;
   int completeOnboardingCalls = 0;
-  Future<void> Function()? onMarkWelcome;
-  Future<void> Function()? onCompleteOnboarding;
+  AsyncCallback? onMarkWelcome;
+  AsyncCallback? onCompleteOnboarding;
 
   @override
   FutureOr<void> build() {}

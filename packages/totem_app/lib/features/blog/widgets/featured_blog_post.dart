@@ -32,15 +32,15 @@ class FeaturedBlogPost extends StatelessWidget {
     this.isLarge = false,
     super.key,
   }) : title = schema.title,
-       subtitle = schema.subtitle ?? '',
-       authorName = schema.author?.name ?? 'Keeper',
-       authorImageUrl = schema.author?.profileImage,
-       authorImageSeed = schema.author?.profileAvatarSeed ?? '',
+       subtitle = schema.subtitle.value ?? '',
+       authorName = schema.author.value?.name.value ?? 'Keeper',
+       authorImageUrl = schema.author.value?.profileImage.value,
+       authorImageSeed = schema.author.value?.profileAvatarSeed ?? '',
        publishedDate = schema.datePublished,
-       slug = schema.slug!,
-       image = schema.headerImageUrl,
-       readTime = schema.readTime,
-       isPublished = schema.publish;
+       slug = schema.slug.value ?? '',
+       image = schema.headerImageUrl.value,
+       readTime = schema.readTimeOrDefault,
+       isPublished = schema.publishOrDefault;
   final String title;
   final String subtitle;
   final String authorName;
@@ -55,6 +55,8 @@ class FeaturedBlogPost extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (slug.isEmpty) return const SizedBox.shrink();
+
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.widthOf(context);
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);

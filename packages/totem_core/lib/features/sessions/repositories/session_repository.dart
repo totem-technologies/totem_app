@@ -230,7 +230,13 @@ Future<RoomState> passTotem(
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
-    event: EventRequestEventPassStick(PassStickEvent(prompt: roundMessage)),
+    event: EventRequestEventPassStick(
+      PassStickEvent(
+        prompt: roundMessage == null
+            ? const Omittable.absent()
+            : Omittable(roundMessage),
+      ),
+    ),
     lastSeenVersion: lastSeenVersion,
     operationName: 'pass totem',
     timeout: _timeoutDuration,
@@ -302,7 +308,11 @@ Future<RoomState> startSession(
   return _postEvent(
     apiService: apiService,
     sessionSlug: sessionSlug,
-    event: EventRequestEventStartRoom(StartRoomEvent(prompt: prompt)),
+    event: EventRequestEventStartRoom(
+      StartRoomEvent(
+        prompt: prompt == null ? const Omittable.absent() : Omittable(prompt),
+      ),
+    ),
     lastSeenVersion: lastSeenVersion,
     operationName: 'start session',
   );
@@ -388,7 +398,12 @@ Future<void> sessionFeedback(
   return RepositoryUtils.handleApiCall<void>(
     apiCall: () => apiService.spaces.totemSpacesMobileApiPostSessionFeedback(
       eventSlug: sessionSlug,
-      body: SessionFeedbackSchema(feedback: feedback, message: message),
+      body: SessionFeedbackSchema(
+        feedback: feedback,
+        message: message == null
+            ? const Omittable.absent()
+            : Omittable(message),
+      ),
     ),
     operationName: 'end session',
     retryOnNetworkError: true,

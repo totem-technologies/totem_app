@@ -18,8 +18,8 @@ import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/router.dart';
 
 UserSchema _testUser({String? slug, String? name}) => UserSchema(
-  slug: slug,
-  name: name,
+  slug: slug == null ? const Omittable.absent() : Omittable(slug),
+  name: name == null ? const Omittable.absent() : Omittable(name),
   profileAvatarType: ProfileAvatarTypeEnum.td,
   circleCount: 0,
   isStaff: false,
@@ -47,7 +47,7 @@ class _FakeMobileAuthController extends MobileAuthController {
 
   @override
   bool get isOnboardingCompleted =>
-      isAuthenticated && (_currentState.user?.name?.isNotEmpty ?? false);
+      isAuthenticated && (_currentState.user?.name.value?.isNotEmpty ?? false);
 
   @override
   UserSchema? get user => _currentState.user;

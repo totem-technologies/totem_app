@@ -22,8 +22,8 @@ class MockSessionController extends Mock implements SessionController {}
 RoomState _createRoomState({RoomStatus status = RoomStatus.waitingRoom}) {
   return RoomState(
     keeper: 'keeper-1',
-    nextSpeaker: 'user-2',
-    currentSpeaker: 'user-1',
+    nextSpeaker: const Omittable('user-2'),
+    currentSpeaker: const Omittable('user-1'),
     status: status,
     turnState: TurnState.idle,
     sessionSlug: 'test-session',

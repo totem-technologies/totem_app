@@ -11,7 +11,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 
 import '../../../../setup.dart';
 import '../../livekit_mocks.dart';
@@ -637,8 +636,8 @@ void main() {
             ..applyRoomState(
               const RoomState(
                 keeper: 'keeper',
-                nextSpeaker: '',
-                currentSpeaker: 'another-participant',
+                nextSpeaker: Omittable(''),
+                currentSpeaker: Omittable('another-participant'),
                 status: RoomStatus.active,
                 turnState: TurnState.idle,
                 sessionSlug: eventSlug,
@@ -1356,12 +1355,14 @@ void main() {
 
         const expected = RoomState(
           keeper: 'keeper-1',
-          nextSpeaker: 'next-speaker',
-          currentSpeaker: 'current-speaker',
+          nextSpeaker: Omittable('next-speaker'),
+          currentSpeaker: Omittable('current-speaker'),
           status: RoomStatus.waitingRoom,
           turnState: TurnState.idle,
           sessionSlug: eventSlug,
-          statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+          statusDetail: RoomStateStatusDetailWaitingRoom(
+            WaitingRoomDetail(type: 'waiting_room'),
+          ),
           talkingOrder: ['current-speaker', 'next-speaker'],
           version: 7,
           roundNumber: 3,
@@ -1447,8 +1448,8 @@ void main() {
 
         const newRoomState = RoomState(
           keeper: 'keeper-2',
-          nextSpeaker: 'next',
-          currentSpeaker: 'current',
+          nextSpeaker: Omittable('next'),
+          currentSpeaker: Omittable('current'),
           status: RoomStatus.waitingRoom,
           turnState: TurnState.idle,
           sessionSlug: eventSlug,
@@ -1462,64 +1463,6 @@ void main() {
 
         final state = container.read(sessionControllerProvider(options));
         check(state.roomState).equals(newRoomState);
-      });
-
-      test('applyRoomState clears a share time reminder when passing', () {
-        final container = _createContainerWithEventOverride(eventSlug);
-        addTearDown(container.dispose);
-        final sub = container.listen(
-          sessionControllerProvider(options),
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(sub.close);
-        final controller =
-            container.read(sessionControllerProvider(options).notifier)
-              ..applyRoomState(
-                const RoomState(
-                  keeper: 'keeper-1',
-                  nextSpeaker: 'user-2',
-                  currentSpeaker: 'user-1',
-                  status: RoomStatus.active,
-                  turnState: TurnState.idle,
-                  sessionSlug: eventSlug,
-                  statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
-                  talkingOrder: ['user-1', 'user-2'],
-                  version: 1,
-                  roundNumber: 1,
-                ),
-              )
-              ..room = FakeRoom(MockLocalParticipant('user-1'));
-        final reminderProvider = sessionMessagingControllerProvider(controller);
-        container
-            .read(reminderProvider.notifier)
-            .handleDataReceived(
-              DataReceivedEvent(
-                data: utf8.encode(jsonEncode({'elapsedMilliseconds': 120000})),
-                participant: MockRemoteParticipant('keeper-1', 'Keeper'),
-                topic: SessionCommunicationTopics.shareTimeReminder.topic,
-              ),
-            );
-        check(container.read(reminderProvider)).isNotNull();
-
-        final _ = container.read(sessionControllerProvider(options).notifier)
-          ..room = null
-          ..applyRoomState(
-            const RoomState(
-              keeper: 'keeper-1',
-              nextSpeaker: 'user-2',
-              currentSpeaker: 'user-1',
-              status: RoomStatus.active,
-              turnState: TurnState.passing,
-              sessionSlug: eventSlug,
-              statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
-              talkingOrder: ['user-1', 'user-2'],
-              version: 2,
-              roundNumber: 1,
-            ),
-          );
-
-        check(container.read(reminderProvider)).isNull();
       });
 
       test(

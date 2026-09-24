@@ -119,8 +119,8 @@ SessionRoomState _buildState({
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: keeper,
-        nextSpeaker: nextSpeaker ?? '',
-        currentSpeaker: currentSpeaker,
+        nextSpeaker: Omittable(nextSpeaker ?? ''),
+        currentSpeaker: Omittable(currentSpeaker),
         status: status,
         turnState: turnState,
         sessionSlug: 'test-session',
@@ -228,7 +228,7 @@ void main() {
           amNextSpeakerProvider.overrideWith((ref) {
             final state = ref.watch(currentSessionStateProvider);
             if (state == null) return false;
-            return state.roomState.nextSpeaker == currentUserSlug;
+            return state.roomState.nextSpeaker.value == currentUserSlug;
           }),
           roomStatusProvider.overrideWith((ref) {
             final state = ref.watch(currentSessionStateProvider);
@@ -265,7 +265,7 @@ void main() {
   }
 
   group('ListeningTurn', () {
-    Future<void> runOnDesktop(Future<void> Function() body) async {
+    Future<void> runOnDesktop(AsyncCallback body) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       try {
         await body();
@@ -433,7 +433,10 @@ void main() {
         ).length.equals(1);
 
         await tester.tap(find.bySemanticsLabel('Microphone off'));
-        await tester.pump();
+        await tester.pumpAndSettle();
+        check(tester.widgetList(find.text('Unmute Anyway'))).length.equals(1);
+        await tester.tap(find.text('Unmute Anyway'));
+        await tester.pumpAndSettle();
         verify(() => devices.enableMicrophone()).called(1);
 
         await tester.tap(find.bySemanticsLabel('Camera off'));

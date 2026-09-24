@@ -48,7 +48,10 @@ class _BannedParticipantsState extends ConsumerState<BannedParticipants> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bannedParticipants = widget.state.roomState.bannedParticipants
+    final bannedParticipants = widget
+        .state
+        .roomState
+        .bannedParticipantsOrDefault
         .where((slug) => !_unbannedSlugs.contains(slug))
         .toList();
 
@@ -207,13 +210,12 @@ class _BannedParticipantItemState
           height: 32,
           child: AnimatedSwitcher(
             duration: kThemeChangeDuration,
-            child: user.when(
-              data: (userData) => UserAvatar.fromUserSchema(
-                userData,
-                borderRadius: BorderRadius.circular(20),
-                borderWidth: 0,
-              ),
-              error: (error, stackTrace) => const CircleAvatar(
+            child: UserAvatar.slug(
+              widget.participantSlug,
+              borderRadius: BorderRadius.circular(20),
+              borderWidth: 0,
+              loading: const SizedBox.shrink(),
+              error: const CircleAvatar(
                 backgroundColor: Colors.grey,
                 child: TotemIcon(
                   TotemIcons.person,
@@ -221,13 +223,12 @@ class _BannedParticipantItemState
                   color: Colors.white,
                 ),
               ),
-              loading: () => const SizedBox.shrink(),
             ),
           ),
         ),
         title: user.when(
           data: (userData) => Text(
-            userData.name ?? widget.participantSlug,
+            userData.name.value ?? widget.participantSlug,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onPrimary,
@@ -268,7 +269,7 @@ class _BannedParticipantItemState
                       ),
                     ),
                     onPressed: () {
-                      final name = user.value?.name;
+                      final name = user.value?.name.value;
                       _onUnban(name);
                     },
                     child: const Text(

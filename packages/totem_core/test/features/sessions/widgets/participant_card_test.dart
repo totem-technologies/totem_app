@@ -11,7 +11,6 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
@@ -65,10 +64,10 @@ void main() {
           userProfileProvider.overrideWith(
             (ref, slug) => Future.value(
               PublicUserSchema(
-                slug: slug,
-                name: 'Mocked User $slug',
+                slug: Omittable(slug),
+                name: Omittable('Mocked User $slug'),
                 profileAvatarType: ProfileAvatarTypeEnum.td,
-                circleCount: 0,
+                circleCount: const Omittable(0),
                 dateCreated: DateTime.now(),
               ),
             ),
@@ -113,7 +112,7 @@ void main() {
         final authState = AuthState.authenticated(
           user: UserSchema(
             email: 'user@example.com',
-            name: 'Normal User',
+            name: const Omittable('Normal User'),
             profileAvatarType: ProfileAvatarTypeEnum.td,
             circleCount: 0,
             dateCreated: DateTime.now(),
@@ -154,8 +153,8 @@ void main() {
         turn: const SessionTurnState(
           roomState: RoomState(
             keeper: 'keeper-1',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
+            nextSpeaker: Omittable('user-2'),
+            currentSpeaker: Omittable('user-1'),
             status: RoomStatus.waitingRoom,
             turnState: TurnState.idle,
             sessionSlug: 'test-session',
@@ -199,8 +198,8 @@ void main() {
         turn: const SessionTurnState(
           roomState: RoomState(
             keeper: '',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
+            nextSpeaker: Omittable('user-2'),
+            currentSpeaker: Omittable('user-1'),
             status: RoomStatus.waitingRoom,
             turnState: TurnState.idle,
             sessionSlug: 'test-session',
@@ -246,8 +245,8 @@ void main() {
         turn: const SessionTurnState(
           roomState: RoomState(
             keeper: 'keeper-1',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
+            nextSpeaker: Omittable('user-2'),
+            currentSpeaker: Omittable('user-1'),
             status: RoomStatus.active,
             turnState: TurnState.idle,
             sessionSlug: 'test-session',
@@ -288,126 +287,6 @@ void main() {
       ).deepEquals(kElevationToShadow[6]!);
     });
 
-    testWidgets('uses keeper timers to send a private reminder', (
-      tester,
-    ) async {
-      final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
-      when(
-        () => speaker.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(null);
-      when(
-        () => speaker.getTrackPublicationBySource(TrackSource.microphone),
-      ).thenReturn(null);
-      final keeper = MockLocalParticipant('keeper-1');
-      when(
-        () => keeper.publishData(
-          any(),
-          reliable: true,
-          destinationIdentities: const ['user-1'],
-          topic: SessionCommunicationTopics.shareTimeReminder.topic,
-        ),
-      ).thenAnswer((_) async {});
-      final semantics = tester.ensureSemantics();
-      fakeSessionState
-        ..isCurrentUserKeeperValue = true
-        ..mockRoom = FakeRoom(keeper)
-        ..mockState = SessionRoomState(
-          connection: fakeSessionState.mockState.connection,
-          chat: fakeSessionState.mockState.chat,
-          participants: ParticipantsState(participants: [speaker]),
-          turn: const SessionTurnState(
-            roomState: RoomState(
-              keeper: 'keeper-1',
-              nextSpeaker: 'user-2',
-              currentSpeaker: 'user-1',
-              status: RoomStatus.active,
-              turnState: TurnState.idle,
-              sessionSlug: 'test-session',
-              statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
-              talkingOrder: ['user-1', 'user-2'],
-              version: 1,
-              roundNumber: 1,
-            ),
-          ),
-          turnStartedAt: DateTime.now(),
-        );
-
-      await pumpWidget(
-        tester,
-        authState: AuthState.authenticated(
-          user: UserSchema(
-            email: 'keeper@example.com',
-            name: 'Keeper',
-            slug: 'keeper-1',
-            profileAvatarType: ProfileAvatarTypeEnum.td,
-            circleCount: 0,
-            dateCreated: DateTime.now(),
-          ),
-        ),
-        overrides: [
-          currentSessionProvider.overrideWithValue(fakeSessionState),
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
-          ),
-        ],
-        child: const FeaturedParticipantCard(),
-      );
-
-      await tester.tap(
-        find.bySemanticsLabel(RegExp('Send a private share time reminder')),
-      );
-      await tester.pump();
-
-      verify(
-        () => keeper.publishData(
-          any(),
-          reliable: true,
-          destinationIdentities: const ['user-1'],
-          topic: SessionCommunicationTopics.shareTimeReminder.topic,
-        ),
-      ).called(1);
-
-      await pumpWidget(
-        tester,
-        authState: AuthState.authenticated(
-          user: UserSchema(
-            email: 'keeper@example.com',
-            name: 'Keeper',
-            slug: 'keeper-1',
-            profileAvatarType: ProfileAvatarTypeEnum.td,
-            circleCount: 0,
-            dateCreated: DateTime.now(),
-          ),
-        ),
-        overrides: [
-          currentSessionProvider.overrideWithValue(fakeSessionState),
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
-          ),
-        ],
-        child: ParticipantCard(
-          participant: speaker,
-          session: null,
-          participantIdentity: speaker.identity,
-        ),
-      );
-
-      await tester.tap(
-        find.bySemanticsLabel(RegExp('Send a private share time reminder')),
-      );
-      await tester.pump();
-
-      verify(
-        () => keeper.publishData(
-          any(),
-          reliable: true,
-          destinationIdentities: const ['user-1'],
-          topic: SessionCommunicationTopics.shareTimeReminder.topic,
-        ),
-      ).called(1);
-      semantics.dispose();
-    });
-
     testWidgets('caps overlay badges on desktop-class windows', (tester) async {
       final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
       when(
@@ -423,8 +302,8 @@ void main() {
         turn: const SessionTurnState(
           roomState: RoomState(
             keeper: 'keeper-1',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
+            nextSpeaker: Omittable('user-2'),
+            currentSpeaker: Omittable('user-1'),
             status: RoomStatus.active,
             turnState: TurnState.idle,
             sessionSlug: 'test-session',
@@ -562,6 +441,46 @@ void main() {
   });
 
   group('ParticipantControlButton', () {
+    testWidgets('updates mute action when participant audio changes', (
+      tester,
+    ) async {
+      await pumpWidget(
+        tester,
+        authState: AuthState.unauthenticated(),
+        child: _MenuCloseTestWrapper(participant: remoteParticipant),
+      );
+
+      await tester.tap(find.byType(ParticipantControlButton));
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('Mute'))).length.equals(1);
+
+      remoteParticipant.audioMuted = true;
+      remoteParticipant.listener.emitMuted(MockTrackMutedEvent());
+      await tester.pump();
+
+      check(tester.widgetList(find.text('Muted'))).length.equals(1);
+      final mutedButton = tester.widget<MenuItemButton>(
+        find.ancestor(
+          of: find.text('Muted'),
+          matching: find.byType(MenuItemButton),
+        ),
+      );
+      check(mutedButton.onPressed).isNull();
+
+      remoteParticipant.audioMuted = false;
+      remoteParticipant.listener.emitUnmuted(MockTrackUnmutedEvent());
+      await tester.pump();
+
+      check(tester.widgetList(find.text('Mute'))).length.equals(1);
+      final unmutedButton = tester.widget<MenuItemButton>(
+        find.ancestor(
+          of: find.text('Mute'),
+          matching: find.byType(MenuItemButton),
+        ),
+      );
+      check(unmutedButton.onPressed).isNotNull();
+    });
+
     testWidgets('closes menu when unmounted', (tester) async {
       await pumpWidget(
         tester,

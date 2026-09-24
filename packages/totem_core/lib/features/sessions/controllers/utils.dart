@@ -84,14 +84,15 @@ extension SessionStateExtension on RoomState {
   String? nextParticipantForcePassIdentity({
     required Iterable<Participant> participants,
   }) {
-    if (nextSpeaker == null) return null;
+    final speaker = nextSpeaker.value;
+    if (speaker == null) return null;
     switch (turnState) {
       case TurnState.idle:
         return null;
       case TurnState.speaking:
-        return nextSpeaker;
+        return speaker;
       case TurnState.passing:
-        return nextInOrder(after: nextSpeaker!, participants: participants);
+        return nextInOrder(after: speaker, participants: participants);
     }
     return null;
   }

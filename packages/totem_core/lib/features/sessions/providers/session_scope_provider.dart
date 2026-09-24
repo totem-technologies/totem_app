@@ -43,7 +43,7 @@ SessionParticipantLayout sessionParticipantLayout(SessionRoomState? session) {
     participants: session?.participants.participants ?? const <Participant>[],
     talkingOrder: session?.roomState.talkingOrder ?? const <String>[],
     speakingNow: session?.speakingNow ?? '',
-    nextSpeaker: session?.roomState.nextSpeaker,
+    nextSpeaker: session?.roomState.nextSpeaker.value,
   );
 }
 
@@ -149,7 +149,7 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
               roomStatus: state.roomState.status,
               turnState: state.roomState.turnState,
               speakingNow: state.speakingNow,
-              nextSpeaker: state.roomState.nextSpeaker,
+              nextSpeaker: state.roomState.nextSpeaker.value,
             ),
     ),
   );
@@ -325,7 +325,7 @@ SessionChatMessage? lastSessionMessage(Ref ref) {
 @Riverpod(dependencies: [currentSessionState])
 String? roundMessage(Ref ref) {
   return ref.watch(
-    currentSessionStateProvider.select((s) => s?.roomState.roundMessage),
+    currentSessionStateProvider.select((s) => s?.roomState.roundMessage.value),
   );
 }
 
@@ -345,7 +345,7 @@ String speakingNowIdentity(Ref ref) {
 @Riverpod(dependencies: [currentSessionState])
 String? nextSpeakerIdentity(Ref ref) {
   return ref.watch(
-    currentSessionStateProvider.select((s) => s?.roomState.nextSpeaker),
+    currentSessionStateProvider.select((s) => s?.roomState.nextSpeaker.value),
   );
 }
 

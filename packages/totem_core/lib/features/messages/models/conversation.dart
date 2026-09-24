@@ -22,7 +22,7 @@ class Conversation {
   Conversation copyWith({
     String? id,
     PublicUserSchema? peer,
-    Message? Function()? lastMessage,
+    ValueGetter<Message?>? lastMessage,
     int? unreadCount,
     DateTime? updatedAt,
   }) {

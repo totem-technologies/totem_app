@@ -112,7 +112,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
         : null;
 
     final currentUserSlug = ref.watch(
-      authControllerProvider.select((auth) => auth.user?.slug),
+      authControllerProvider.select((auth) => auth.user?.slug.value),
     );
 
     return spaceAsync.when(
@@ -276,10 +276,10 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                     UserAvatar.fromUserSchema(
                                       space.author,
                                       radius: 19,
-                                      onTap: space.author.slug != null
+                                      onTap: space.author.slug.value != null
                                           ? () => context.push(
                                               RouteNames.keeperProfile(
-                                                space.author.slug!,
+                                                space.author.slug.value!,
                                               ),
                                             )
                                           : null,
@@ -289,7 +289,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                       style: theme.textTheme.bodyLarge,
                                     ),
                                     Text(
-                                      space.author.name ?? '',
+                                      space.author.name.value ?? '',
                                       style: theme.textTheme.bodyLarge
                                           ?.copyWith(
                                             fontWeight: FontWeight.w600,
@@ -320,7 +320,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                           if (AppConfig.instance.environment ==
                                   Environment.staging &&
                               currentUserSlug != null &&
-                              space.author.slug == currentUserSlug)
+                              space.author.slug.value == currentUserSlug)
                             if (sessionAsync?.value
                                 case final SessionDetailSchema event) ...[
                               const SizedBox(height: 24),
@@ -426,11 +426,11 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                             ),
                                       ),
                                     ),
-                                    if (space.author.slug != null)
+                                    if (space.author.slug.value != null)
                                       GestureDetector(
                                         onTap: () => context.push(
                                           RouteNames.keeperProfile(
-                                            space.author.slug!,
+                                            space.author.slug.value!,
                                           ),
                                         ),
                                         child: Row(
@@ -1134,7 +1134,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                           ),
                           Expanded(
                             child: Text(
-                              space.author.name ?? '',
+                              space.author.name.value ?? '',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,

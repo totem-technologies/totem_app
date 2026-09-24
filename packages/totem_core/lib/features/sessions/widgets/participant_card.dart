@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:livekit_client/livekit_client.dart' hide logger;
@@ -7,8 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/core/repositories/user_repository.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/loading_video_placeholder.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
@@ -26,7 +23,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUserSlug = ref.watch(
-      authControllerProvider.select((auth) => auth.user?.slug),
+      authControllerProvider.select((auth) => auth.user?.slug.value),
     );
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final hasSession = ref.watch(
@@ -170,25 +167,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
                                   children: [
                                     if (isCurrentUserKeeper &&
                                         roomStatus == RoomStatus.active)
-                                      SessionElapsedTimer(
-                                        onTap: () {
-                                          final session = ref.read(
-                                            currentSessionProvider,
-                                          );
-                                          if (session == null) return;
-                                          unawaited(
-                                            ref
-                                                .read(
-                                                  sessionMessagingControllerProvider(
-                                                    session,
-                                                  ).notifier,
-                                                )
-                                                .sendShareTimeReminder(
-                                                  activeSpeaker.identity,
-                                                ),
-                                          );
-                                        },
-                                      ),
+                                      const SessionElapsedTimer(),
                                     SpeakingIndicatorOrEmoji(
                                       participant: activeSpeaker,
                                       metrics: overlay,
@@ -248,7 +227,7 @@ class ParticipantCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUserSlug = ref.watch(
-      authControllerProvider.select((auth) => auth.user?.slug),
+      authControllerProvider.select((auth) => auth.user?.slug.value),
     );
     final presentation = ref.watch(
       currentSessionStateProvider.select(
@@ -290,37 +269,9 @@ class ParticipantCard extends ConsumerWidget {
                       PositionedDirectional(
                         top: overlayPadding,
                         start: overlayPadding,
-                        child: Row(
-                          spacing: 8,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SpeakingIndicatorOrEmoji(
-                              participant: participant,
-                              metrics: overlay,
-                            ),
-                            if (isCurrentUserKeeper &&
-                                presentation.isSpeaking &&
-                                presentation.roomStatus == RoomStatus.active)
-                              SessionElapsedTimer(
-                                onTap: () {
-                                  final session = ref.read(
-                                    currentSessionProvider,
-                                  );
-                                  if (session == null) return;
-                                  unawaited(
-                                    ref
-                                        .read(
-                                          sessionMessagingControllerProvider(
-                                            session,
-                                          ).notifier,
-                                        )
-                                        .sendShareTimeReminder(
-                                          participant.identity,
-                                        ),
-                                  );
-                                },
-                              ),
-                          ],
+                        child: SpeakingIndicatorOrEmoji(
+                          participant: participant,
+                          metrics: overlay,
                         ),
                       ),
                       if (presentation.hasSession &&
@@ -413,7 +364,7 @@ class LocalParticipantCard extends ConsumerWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Positioned.fill(
+            const Positioned.fill(
               child: IgnorePointer(
                 child: UserAvatar.currentUser(
                   radius: 0,
@@ -440,7 +391,7 @@ class LocalParticipantCard extends ConsumerWidget {
               start: 14,
               end: 14,
               child: SmartNameText(
-                name: user?.name ?? 'You',
+                name: user?.name.value ?? 'You',
                 style: theme.textTheme.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -544,7 +495,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     final currentUser = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
-    final user = ref.watch(userProfileProvider(widget.participant.identity));
     final trackPublication = videoTrack;
 
     /// The user avatar is always rendered behind the video.
@@ -557,31 +507,23 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       children: [
         Positioned.fill(
           child: IgnorePointer(
-            child: widget.participant.identity == currentUser?.slug
-                ? UserAvatar.currentUser(
-                    radius: 0,
-                    borderRadius: BorderRadius.zero,
-                    borderWidth: 0,
-                  )
-                : user.when(
-                    data: (user) => UserAvatar.fromUserSchema(
-                      user,
-                      borderRadius: BorderRadius.zero,
-                      borderWidth: 0,
-                    ),
-                    error: (error, stackTrace) => const ColoredBox(
-                      color: AppTheme.mauve,
-                      child: Center(
-                        child: TotemIcon(
-                          TotemIcons.person,
-                          size: 24,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    loading: () =>
-                        const LoadingVideoPlaceholder(borderRadius: 0),
+            child: UserAvatar.slug(
+              widget.participant.identity,
+              radius: 0,
+              borderRadius: BorderRadius.zero,
+              borderWidth: 0,
+              loading: const LoadingVideoPlaceholder(borderRadius: 0),
+              error: const ColoredBox(
+                color: AppTheme.mauve,
+                child: Center(
+                  child: TotemIcon(
+                    TotemIcons.person,
+                    size: 24,
+                    color: Colors.white,
                   ),
+                ),
+              ),
+            ),
           ),
         ),
         if (trackPublication != null &&

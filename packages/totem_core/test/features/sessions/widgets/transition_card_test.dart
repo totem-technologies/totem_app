@@ -1,4 +1,5 @@
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:material_ui/material_ui.dart';
@@ -29,7 +30,7 @@ void main() {
     autoSizeTest('actionable transition cards forward completion', (
       tester,
     ) async {
-      final cards = <Widget Function(Future<bool> Function())>[
+      final cards = <Widget Function(AsyncValueGetter<bool>)>[
         (onActionPressed) =>
             JoinTransitionCard(onActionPressed: onActionPressed),
         (onActionPressed) => PassTransitionCard(
