@@ -94,7 +94,7 @@ class SubscribedSpacesScreen extends ConsumerWidget {
                         itemBuilder: (context, index) {
                           final space = spaces[index];
                           return _SubscribedSpaceTile(
-                            key: ValueKey(space.slug!),
+                            key: ValueKey(space.slug.value!),
                             space: space,
                           );
                         },
@@ -132,7 +132,7 @@ class _SubscribedSpaceTileState extends ConsumerState<_SubscribedSpaceTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () => context.push(RouteNames.space(widget.space.slug!)),
+      onTap: () => context.push(RouteNames.space(widget.space.slug.value!)),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -149,7 +149,7 @@ class _SubscribedSpaceTileState extends ConsumerState<_SubscribedSpaceTile> {
             Expanded(child: Text(widget.space.title)),
             GestureDetector(
               onTap: () async {
-                if (_loading || widget.space.slug == null) return;
+                if (_loading || widget.space.slug.value == null) return;
 
                 setState(() {
                   _loading = true;
@@ -157,7 +157,9 @@ class _SubscribedSpaceTileState extends ConsumerState<_SubscribedSpaceTile> {
 
                 try {
                   await ref.read(
-                    unsubscribeFromSpaceProvider(widget.space.slug!).future,
+                    unsubscribeFromSpaceProvider(
+                      widget.space.slug.value!,
+                    ).future,
                   );
                 } catch (error) {
                   // This is handled internally

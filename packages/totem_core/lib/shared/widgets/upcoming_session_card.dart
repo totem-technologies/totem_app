@@ -85,7 +85,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
       formattedDate,
       '$formattedTime $formattedTimePeriod',
       '${widget.data.seatsLeft} seats left',
-      'with ${widget.data.author.name ?? ''}',
+      'with ${widget.data.author.name.value ?? ''}',
       if (_isAttending) 'Attending' else 'Not attending',
     ].join(', ');
 
@@ -235,7 +235,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
         ),
         Expanded(
           child: Text(
-            widget.data.author.name ?? '',
+            widget.data.author.name.value ?? '',
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,

@@ -129,9 +129,9 @@ class WebTotemRouter extends TotemRouter {
     final profile = await container.read(
       keeperProfileProvider(userSlug).future,
     );
-    if (profile.username != null) {
+    if (profile.username.value case final username?) {
       launchUrlString(
-        baseUri.resolve('keeper/${profile.username!}/').toString(),
+        baseUri.resolve('keeper/$username/').toString(),
         webOnlyWindowName: '_self',
       );
     }

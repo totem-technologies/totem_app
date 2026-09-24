@@ -2,9 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-
-import 'package:degenerate_runtime/degenerate_runtime.dart';
-
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import '../models/mobile_space_detail_schema.dart';
 import '../models/paged_mobile_space_detail_schema.dart';
 import '../models/resolve_conflicts_schema.dart';
@@ -41,10 +39,11 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return jsonDecode(response.body) as bool;
+        final json = jsonDecode(response.body);
+        return json as bool;
       },
     );
   }
@@ -66,10 +65,11 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return jsonDecode(response.body) as bool;
+        final json = jsonDecode(response.body);
+        return json as bool;
       },
     );
   }
@@ -88,11 +88,11 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        final json = jsonDecode(response.body) as List<dynamic>;
-        return json
+        final json = jsonDecode(response.body);
+        return (json as List<dynamic>)
             .map((e) => SpaceSchema.fromJson(e as Map<String, dynamic>))
             .toList();
       },
@@ -130,11 +130,12 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
+        final json = jsonDecode(response.body);
         return PagedMobileSpaceDetailSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
+          json as Map<String, dynamic>,
         );
       },
     );
@@ -158,12 +159,11 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return MobileSpaceDetailSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return MobileSpaceDetailSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
@@ -185,11 +185,11 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        final json = jsonDecode(response.body) as List<dynamic>;
-        return json
+        final json = jsonDecode(response.body);
+        return (json as List<dynamic>)
             .map(
               (e) =>
                   MobileSpaceDetailSchema.fromJson(e as Map<String, dynamic>),
@@ -217,12 +217,11 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return SessionDetailSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return SessionDetailSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
@@ -247,7 +246,7 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(request, onSuccess: (_) {});
+    return await execute(request, onSuccess: (_) {});
   }
 
   /// Get Sessions History
@@ -264,11 +263,11 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        final json = jsonDecode(response.body) as List<dynamic>;
-        return json
+        final json = jsonDecode(response.body);
+        return (json as List<dynamic>)
             .map((e) => SessionDetailSchema.fromJson(e as Map<String, dynamic>))
             .toList();
       },
@@ -310,11 +309,11 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        final json = jsonDecode(response.body) as List<dynamic>;
-        return json
+        final json = jsonDecode(response.body);
+        return (json as List<dynamic>)
             .map((e) => SessionDetailSchema.fromJson(e as Map<String, dynamic>))
             .toList();
       },
@@ -335,12 +334,11 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return SummarySpacesSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return SummarySpacesSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
@@ -363,17 +361,20 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return SessionDetailSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return SessionDetailSchema.fromJson(json as Map<String, dynamic>);
       },
       onError: (response) {
-        return SessionConflictSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        switch (response.statusCode) {
+          case 409:
+            final json = jsonDecode(response.body);
+            return SessionConflictSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
       },
     );
   }
@@ -395,12 +396,11 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return SessionDetailSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return SessionDetailSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
@@ -426,17 +426,20 @@ final class SpacesApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return SessionDetailSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return SessionDetailSchema.fromJson(json as Map<String, dynamic>);
       },
       onError: (response) {
-        return SessionConflictSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        switch (response.statusCode) {
+          case 409:
+            final json = jsonDecode(response.body);
+            return SessionConflictSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
       },
     );
   }

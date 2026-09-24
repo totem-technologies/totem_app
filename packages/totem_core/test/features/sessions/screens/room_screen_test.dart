@@ -164,8 +164,8 @@ Future<void> _pumpRoomScreenForResolvedScreen(
     turn: const SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',
-        nextSpeaker: 'user-2',
-        currentSpeaker: 'user-1',
+        nextSpeaker: Omittable('user-2'),
+        currentSpeaker: Omittable('user-1'),
         status: RoomStatus.active,
         turnState: TurnState.idle,
         sessionSlug: 'test-session',
@@ -411,8 +411,8 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
             profileAvatarType: ProfileAvatarTypeEnum.im,
             circleCount: 0,
             email: 'test@totem.org',
-            name: 'Test User',
-            slug: 'user-1',
+            name: const Omittable('Test User'),
+            slug: const Omittable('user-1'),
             dateCreated: DateTime(2024),
           ),
         ),

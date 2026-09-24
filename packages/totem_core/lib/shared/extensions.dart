@@ -20,7 +20,8 @@ extension SessionDetailSchemaExtension on SessionDetailSchema {
   bool canJoinNow([UserSchema? user]) {
     if (ended) return false;
     var joinBeforeTime = const Duration(minutes: 10);
-    if (user != null && (user.isStaff || user.slug == space.author.slug)) {
+    if (user != null &&
+        (user.isStaffOrDefault || user.slug.value == space.author.slug.value)) {
       joinBeforeTime = const Duration(hours: 1);
     }
 

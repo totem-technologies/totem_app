@@ -390,7 +390,7 @@ class _ParticipantInfo extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    user.name ?? user.slug ?? 'Participant',
+                    user.name.value ?? user.slug.value ?? 'Participant',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: Colors.black,
@@ -496,7 +496,7 @@ class _ParticipantReorderItem extends ConsumerWidget {
           ),
           title: user.when(
             data: (userData) => Text(
-              userData.name ?? participantIdentity,
+              userData.name.value ?? participantIdentity,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: foregroundColor,

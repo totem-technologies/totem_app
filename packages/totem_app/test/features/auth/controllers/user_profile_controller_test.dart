@@ -125,7 +125,7 @@ void main() {
           referralOther: any(named: 'referralOther'),
           yearBorn: any(named: 'yearBorn'),
         ),
-      ).thenAnswer((_) async => OnboardSchema(hopes: 'Sports'));
+      ).thenAnswer((_) async => OnboardSchema(hopes: Omittable('Sports')));
 
       when(
         () => mockAnalyticsService.logEvent(

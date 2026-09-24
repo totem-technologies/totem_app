@@ -23,7 +23,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUserSlug = ref.watch(
-      authControllerProvider.select((auth) => auth.user?.slug),
+      authControllerProvider.select((auth) => auth.user?.slug.value),
     );
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final hasSession = ref.watch(
@@ -227,7 +227,7 @@ class ParticipantCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUserSlug = ref.watch(
-      authControllerProvider.select((auth) => auth.user?.slug),
+      authControllerProvider.select((auth) => auth.user?.slug.value),
     );
     final presentation = ref.watch(
       currentSessionStateProvider.select(
@@ -391,7 +391,7 @@ class LocalParticipantCard extends ConsumerWidget {
               start: 14,
               end: 14,
               child: SmartNameText(
-                name: user?.name ?? 'You',
+                name: user?.name.value ?? 'You',
                 style: theme.textTheme.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

@@ -152,8 +152,8 @@ Conversation conversationFromMockPerson(MockPerson person) => Conversation(
   peer: PublicUserSchema(
     profileAvatarType: ProfileAvatarTypeEnum.td,
     dateCreated: DateTime.now(),
-    name: person.name,
-    slug: person.id,
+    name: Omittable(person.name),
+    slug: Omittable(person.id),
     profileAvatarSeed: person.seed,
   ),
   updatedAt: DateTime.now(),
@@ -166,8 +166,8 @@ Conversation conversationFromMockParticipant(MockParticipant participant) =>
       peer: PublicUserSchema(
         profileAvatarType: ProfileAvatarTypeEnum.td,
         dateCreated: DateTime.now(),
-        name: participant.name,
-        slug: participant.id,
+        name: Omittable(participant.name),
+        slug: Omittable(participant.id),
         profileAvatarSeed: '${participant.id}-seed',
       ),
       updatedAt: DateTime.now(),

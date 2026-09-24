@@ -87,7 +87,7 @@ class SpaceDetailAppBar extends StatelessWidget {
                             children: <TextSpan>[
                               const TextSpan(text: 'with '),
                               TextSpan(
-                                text: space.author.name,
+                                text: space.author.name.value,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -100,9 +100,9 @@ class SpaceDetailAppBar extends StatelessWidget {
                   ),
                   UserAvatar.fromUserSchema(
                     space.author,
-                    onTap: space.author.slug != null
+                    onTap: space.author.slug.value != null
                         ? () => context.push(
-                            RouteNames.keeperProfile(space.author.slug!),
+                            RouteNames.keeperProfile(space.author.slug.value!),
                           )
                         : null,
                   ),

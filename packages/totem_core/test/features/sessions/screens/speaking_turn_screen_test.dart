@@ -11,12 +11,10 @@ import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
@@ -140,8 +138,8 @@ SessionRoomState _buildState({
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: keeper,
-        nextSpeaker: nextSpeaker ?? '',
-        currentSpeaker: currentSpeaker,
+        nextSpeaker: Omittable(nextSpeaker ?? ''),
+        currentSpeaker: Omittable(currentSpeaker),
         status: status,
         turnState: turnState,
         sessionSlug: 'test-session',
@@ -227,8 +225,8 @@ void main() {
           sessionCuesServiceProvider.overrideWithValue(testCuesService),
           userProfileProvider.overrideWith((ref, slug) async {
             return PublicUserSchema(
-              slug: slug,
-              name: 'User $slug',
+              slug: Omittable(slug),
+              name: Omittable('User $slug'),
               profileAvatarType: ProfileAvatarTypeEnum.td,
               dateCreated: DateTime(2024),
             );

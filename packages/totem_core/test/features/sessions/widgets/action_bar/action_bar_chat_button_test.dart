@@ -362,8 +362,8 @@ void main() {
             AuthState.authenticated(
               user: UserSchema(
                 email: 'keeper@example.com',
-                slug: 'keeper-1',
-                name: 'Bruno Keeper',
+                slug: const Omittable('keeper-1'),
+                name: const Omittable('Bruno Keeper'),
                 profileAvatarType: ProfileAvatarTypeEnum.td,
                 circleCount: 0,
                 dateCreated: DateTime(2024),
@@ -419,8 +419,8 @@ void main() {
             AuthState.authenticated(
               user: UserSchema(
                 email: 'lucas@example.com',
-                slug: 'lucas',
-                name: 'Lucas',
+                slug: const Omittable('lucas'),
+                name: const Omittable('Lucas'),
                 profileAvatarType: ProfileAvatarTypeEnum.td,
                 circleCount: 0,
                 dateCreated: DateTime(2024),

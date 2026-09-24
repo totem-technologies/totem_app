@@ -80,27 +80,31 @@ class AnalyticsService {
       userId: user.email,
       userProperties: {
         'email': user.email,
-        if (user.name != null && user.name!.isNotEmpty) 'name': user.name!,
+        if (user.name.value != null && user.name.value!.isNotEmpty)
+          'name': user.name.value!,
       },
     );
 
     await Sentry.configureScope((scope) async {
       await scope.setUser(
         SentryUser(
-          id: user.slug,
-          name: user.name,
-          username: user.slug,
+          id: user.slug.value,
+          name: user.name.value,
+          username: user.slug.value,
           data: {'is_staff': user.isStaff},
         ),
       );
 
-      await scope.setTag('user_type', user.isStaff ? 'staff' : 'user');
+      await scope.setTag('user_type', user.isStaff == true ? 'staff' : 'user');
       await scope.addBreadcrumb(
         Breadcrumb(
           message: 'User identified: ${user.email}',
           level: SentryLevel.info,
           category: 'user',
-          data: {'user_id': user.slug, 'is_staff': user.isStaff.toString()},
+          data: {
+            'user_id': user.slug.value,
+            'is_staff': user.isStaff.toString(),
+          },
         ),
       );
     });

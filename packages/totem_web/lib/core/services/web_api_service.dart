@@ -31,7 +31,7 @@ const _unsafeMethods = {'POST', 'PUT', 'PATCH', 'DELETE'};
 
 class _CsrfInterceptor implements Interceptor {
   @override
-  Future<ApiResponse> intercept(ApiRequest req, Handler next) async {
+  Future<StreamedApiResponse> intercept(ApiRequest req, Handler next) async {
     if (!_unsafeMethods.contains(req.method.toUpperCase())) return next(req);
     final token = WebAuthController.readCookieValue('csrftoken');
     if (token == null) return next(req);

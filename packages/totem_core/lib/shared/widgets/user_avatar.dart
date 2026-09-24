@@ -100,7 +100,7 @@ class UserAvatar extends ConsumerWidget {
     );
     return profile.when(
       data: (user) => UserAvatar.custom(
-        image: _imageForUser(profileImage: user.profileImage),
+        image: _imageForUser(profileImage: user.profileImage.value),
         seed: user.profileAvatarSeed,
         radius: radius,
         showImage: showImage,
@@ -121,12 +121,13 @@ class UserAvatar extends ConsumerWidget {
         ? ref.watch(authControllerProvider.select((auth) => auth.user))
         : null;
     final useCurrentUser =
-        _usesCurrentUser && (user == null || user?.slug == currentUser?.slug);
+        _usesCurrentUser &&
+        (user == null || user?.slug.value == currentUser?.slug.value);
     final avatarImage = _usesCurrentUser
         ? _imageForUser(
             profileImage: useCurrentUser
-                ? currentUser?.profileImage
-                : user?.profileImage,
+                ? currentUser?.profileImage.value
+                : user?.profileImage.value,
           )
         : image;
     final avatarSeed = _usesCurrentUser

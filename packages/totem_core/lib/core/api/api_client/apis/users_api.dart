@@ -2,9 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-
-import 'package:degenerate_runtime/degenerate_runtime.dart';
-
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import '../models/feedback_schema.dart';
 import '../models/keeper_profile_schema.dart';
 import '../models/public_user_schema.dart';
@@ -37,12 +35,11 @@ final class UsersApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return UserSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return UserSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
@@ -64,12 +61,11 @@ final class UsersApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return PublicUserSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return PublicUserSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
@@ -92,12 +88,11 @@ final class UsersApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return UserSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return UserSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
@@ -120,10 +115,11 @@ final class UsersApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return jsonDecode(response.body) as bool;
+        final json = jsonDecode(response.body);
+        return json as bool;
       },
     );
   }
@@ -143,10 +139,11 @@ final class UsersApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return jsonDecode(response.body) as bool;
+        final json = jsonDecode(response.body);
+        return json as bool;
       },
     );
   }
@@ -167,12 +164,11 @@ final class UsersApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return KeeperProfileSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return KeeperProfileSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
@@ -195,10 +191,11 @@ final class UsersApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return jsonDecode(response.body) as bool;
+        final json = jsonDecode(response.body);
+        return json as bool;
       },
     );
   }

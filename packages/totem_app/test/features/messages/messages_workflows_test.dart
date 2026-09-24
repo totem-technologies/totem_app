@@ -1,12 +1,10 @@
 import 'package:checks/checks.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_app/features/messages/screens/messages_screen.dart';
 
-import 'package:totem_core/core/api/api_client/models/profile_avatar_type_enum.dart';
-
-import 'package:totem_core/core/api/api_client/models/public_user_schema.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/messages/models/message.dart';
 import 'package:totem_core/features/messages/providers/conversations_provider.dart';
@@ -22,8 +20,8 @@ class _FakeMessagesRepository implements MessagesRepository {
   final peer = PublicUserSchema(
     profileAvatarType: ProfileAvatarTypeEnum.td,
     dateCreated: DateTime(2024),
-    name: 'Keeper',
-    slug: 'keeper',
+    name: Omittable('Keeper'),
+    slug: Omittable('keeper'),
     profileAvatarSeed: 'keeper-seed',
   );
 

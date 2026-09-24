@@ -175,7 +175,7 @@ class MoreOptions extends ConsumerWidget {
               MoreOptionsTile<void>(
                 title:
                     'Banned Participants'
-                    '${state.roomState.bannedParticipants.isNotEmpty ? ' (${state.roomState.bannedParticipants.length})' : ''}',
+                    '${state.roomState.bannedParticipantsOrDefault.isNotEmpty ? ' (${state.roomState.bannedParticipantsOrDefault.length})' : ''}',
                 icon: TotemIcons.removePerson,
                 onTap: () {
                   Navigator.of(context).pop();
@@ -198,7 +198,7 @@ class MoreOptions extends ConsumerWidget {
                     _onSetPrompt(
                       context,
                       currentSession,
-                      state.roomState.roundMessage,
+                      state.roomState.roundMessage.value,
                     );
                   },
                 ),
@@ -294,12 +294,11 @@ class MoreOptions extends ConsumerWidget {
               ),
               Builder(
                 builder: (context) {
-                  final String? userName =
-                      state.roomState.currentSpeaker != null
+                  final currentSpeaker = state.roomState.currentSpeaker.value;
+                  final String? userName = currentSpeaker != null
                       ? state.participants
                             .firstWhereOrNull(
-                              (p) =>
-                                  p.identity == state.roomState.currentSpeaker,
+                              (p) => p.identity == currentSpeaker,
                             )
                             ?.name
                       : null;
@@ -448,7 +447,7 @@ class MoreOptions extends ConsumerWidget {
     SessionController session,
     SessionRoomState state,
   ) async {
-    if (state.roomState.nextSpeaker == null) return;
+    if (state.roomState.nextSpeaker.value == null) return;
 
     await showDialog<void>(
       context: context,
@@ -462,7 +461,7 @@ class MoreOptions extends ConsumerWidget {
               title: 'Are you sure?',
               confirmButtonText: 'Force pass',
               content:
-                  'This will end ${state.roomState.currentSpeaker != null ? "the current speaker's turn" : 'the current turn'} '
+                  'This will end ${"the current speaker's turn"} '
                   'and give the totem to ${nextParticipantName ?? 'the next participant'}.',
               contentStyle: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurface,

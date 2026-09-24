@@ -134,7 +134,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     final user = ref.read(authControllerProvider).user;
     return _resolveLocalIdentity(
       ref.read(currentSessionProvider)?.room?.localParticipant?.identity,
-      user?.slug ?? user?.email,
+      user?.slug.value ?? user?.email,
     );
   }
 
@@ -183,13 +183,13 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     final roomIdentity = ref.watch(localParticipantIdentityProvider);
     final localIdentity = _resolveLocalIdentity(
       roomIdentity,
-      user?.slug ?? user?.email,
+      user?.slug.value ?? user?.email,
     );
     final keeperIdentity = _resolveKeeperIdentity(
       roomKeeper: ref.watch(keeperIdentityProvider),
       spaceAuthor: ref.watch(
         currentSessionEventProvider.select(
-          (session) => session?.space.author.slug,
+          (session) => session?.space.author.slug.value,
         ),
       ),
     );

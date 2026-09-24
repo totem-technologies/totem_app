@@ -636,8 +636,8 @@ void main() {
             ..applyRoomState(
               const RoomState(
                 keeper: 'keeper',
-                nextSpeaker: '',
-                currentSpeaker: 'another-participant',
+                nextSpeaker: Omittable(''),
+                currentSpeaker: Omittable('another-participant'),
                 status: RoomStatus.active,
                 turnState: TurnState.idle,
                 sessionSlug: eventSlug,
@@ -1355,12 +1355,14 @@ void main() {
 
         const expected = RoomState(
           keeper: 'keeper-1',
-          nextSpeaker: 'next-speaker',
-          currentSpeaker: 'current-speaker',
+          nextSpeaker: Omittable('next-speaker'),
+          currentSpeaker: Omittable('current-speaker'),
           status: RoomStatus.waitingRoom,
           turnState: TurnState.idle,
           sessionSlug: eventSlug,
-          statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+          statusDetail: RoomStateStatusDetailWaitingRoom(
+            WaitingRoomDetail(type: 'waiting_room'),
+          ),
           talkingOrder: ['current-speaker', 'next-speaker'],
           version: 7,
           roundNumber: 3,
@@ -1446,8 +1448,8 @@ void main() {
 
         const newRoomState = RoomState(
           keeper: 'keeper-2',
-          nextSpeaker: 'next',
-          currentSpeaker: 'current',
+          nextSpeaker: Omittable('next'),
+          currentSpeaker: Omittable('current'),
           status: RoomStatus.waitingRoom,
           turnState: TurnState.idle,
           sessionSlug: eventSlug,

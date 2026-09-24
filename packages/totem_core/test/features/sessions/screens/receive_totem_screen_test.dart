@@ -12,11 +12,9 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
@@ -69,8 +67,8 @@ SessionRoomState _buildState({
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',
-        nextSpeaker: 'user-1',
-        currentSpeaker: 'user-2',
+        nextSpeaker: const Omittable('user-1'),
+        currentSpeaker: const Omittable('user-2'),
         status: status,
         turnState: turnState,
         sessionSlug: 'test-session',
@@ -171,10 +169,10 @@ void main() {
           userProfileProvider.overrideWith(
             (ref, slug) => Future.value(
               PublicUserSchema(
-                slug: slug,
-                name: 'Mocked User $slug',
+                slug: Omittable(slug),
+                name: Omittable('Mocked User $slug'),
                 profileAvatarType: ProfileAvatarTypeEnum.td,
-                circleCount: 0,
+                circleCount: const Omittable(0),
                 dateCreated: DateTime.now(),
               ),
             ),

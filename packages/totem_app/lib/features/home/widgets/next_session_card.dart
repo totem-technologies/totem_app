@@ -30,7 +30,7 @@ class NextSessionCard extends StatelessWidget {
       formattedDate,
       '$formattedTime $formattedTimePeriod',
       if (session.attending) 'Attending' else '${session.seatsLeft} seats left',
-      'with ${session.space.author.name ?? ''}',
+      'with ${session.space.author.name.value ?? ''}',
     ].join(', ');
 
     return Semantics(
@@ -194,7 +194,7 @@ class NextSessionCard extends StatelessWidget {
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            session.space.author.name ?? '',
+            session.space.author.name.value ?? '',
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,

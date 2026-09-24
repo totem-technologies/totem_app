@@ -75,8 +75,8 @@ const _sessionState = SessionRoomState(
   turn: SessionTurnState(
     roomState: RoomState(
       keeper: 'keeper',
-      nextSpeaker: '',
-      currentSpeaker: '',
+      nextSpeaker: Omittable(''),
+      currentSpeaker: Omittable(''),
       status: RoomStatus.waitingRoom,
       turnState: TurnState.idle,
       sessionSlug: _slug,

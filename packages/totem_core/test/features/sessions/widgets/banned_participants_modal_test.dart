@@ -10,7 +10,6 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/banned_participants_modal.dart';
 
@@ -63,11 +62,11 @@ void main() {
           userProfileProvider.overrideWith(
             (ref, slug) => Future.value(
               PublicUserSchema(
-                slug: slug,
-                name: 'User $slug',
+                slug: Omittable(slug),
+                name: Omittable('User $slug'),
                 profileAvatarType: ProfileAvatarTypeEnum.td,
                 dateCreated: DateTime(2024),
-                circleCount: 0,
+                circleCount: const Omittable(0),
               ),
             ),
           ),

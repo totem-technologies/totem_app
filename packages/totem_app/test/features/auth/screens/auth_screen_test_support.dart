@@ -41,7 +41,7 @@ class TestMobileAuthController extends MobileAuthController {
 
   @override
   bool get isOnboardingCompleted =>
-      isAuthenticated && (_initialState.user?.name?.isNotEmpty ?? false);
+      isAuthenticated && (_initialState.user?.name.value?.isNotEmpty ?? false);
 
   @override
   UserSchema? get user => _initialState.user;

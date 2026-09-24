@@ -29,7 +29,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   void initState() {
     super.initState();
     final user = ref.read(authControllerProvider).user;
-    _nameController.text = user?.name ?? '';
+    _nameController.text = user?.name.value ?? '';
     _emailController.text = user?.email ?? '';
   }
 

@@ -118,7 +118,7 @@ class _ThreadHeader extends StatelessWidget {
               const SizedBox(width: 15),
               Expanded(
                 child: Text(
-                  peer.name ?? 'Unknown',
+                  peer.name.value ?? 'Unknown',
                   style: const TextStyle(
                     color: AppTheme.textHeading,
                     fontSize: 17,

@@ -473,12 +473,12 @@ void main() {
         refreshToken: 'r',
       );
 
-      check(getState().user?.name).equals('John');
+      check(getState().user?.name.value).equals('John');
 
       getController().syncUser(updatedUser);
 
       check(getState().status).equals(AuthStatus.authenticated);
-      check(getState().user?.name).equals('John Doe');
+      check(getState().user?.name.value).equals('John Doe');
     });
 
     test('syncUser does nothing if not authenticated', () {

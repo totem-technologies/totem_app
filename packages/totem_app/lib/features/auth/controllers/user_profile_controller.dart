@@ -137,7 +137,7 @@ class UserProfileController extends _$UserProfileController {
     }
 
     var shouldUpdateMetaProfile = false;
-    final newName = (name != null && _authController.user?.name != name)
+    final newName = (name != null && _authController.user?.name.value != name)
         ? name
         : null;
     final newEmail = (email != null && _authController.user?.email != email)

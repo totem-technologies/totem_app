@@ -119,8 +119,8 @@ SessionRoomState _buildState({
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: keeper,
-        nextSpeaker: nextSpeaker ?? '',
-        currentSpeaker: currentSpeaker,
+        nextSpeaker: Omittable(nextSpeaker ?? ''),
+        currentSpeaker: Omittable(currentSpeaker),
         status: status,
         turnState: turnState,
         sessionSlug: 'test-session',
@@ -228,7 +228,7 @@ void main() {
           amNextSpeakerProvider.overrideWith((ref) {
             final state = ref.watch(currentSessionStateProvider);
             if (state == null) return false;
-            return state.roomState.nextSpeaker == currentUserSlug;
+            return state.roomState.nextSpeaker.value == currentUserSlug;
           }),
           roomStatusProvider.overrideWith((ref) {
             final state = ref.watch(currentSessionStateProvider);

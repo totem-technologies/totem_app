@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,7 +11,6 @@ import 'package:totem_app/features/auth/controllers/user_profile_controller.dart
 import 'package:totem_app/features/profile/screens/profile_details_screen.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
-import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
@@ -62,7 +62,7 @@ final class _FakeUserProfileController extends UserProfileController {
 
 void main() {
   final user = UserSchema(
-    name: 'Original name',
+    name: Omittable('Original name'),
     profileAvatarType: ProfileAvatarTypeEnum.td,
     circleCount: 0,
     email: 'original@example.com',

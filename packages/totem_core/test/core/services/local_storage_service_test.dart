@@ -25,8 +25,8 @@ void main() {
       circleCount: 3,
       email: 'keeper@example.com',
       dateCreated: DateTime.utc(2024, 1, 2),
-      name: 'Keeper',
-      slug: 'keeper',
+      name: const Omittable('Keeper'),
+      slug: const Omittable('keeper'),
     );
     String? persisted;
     when(

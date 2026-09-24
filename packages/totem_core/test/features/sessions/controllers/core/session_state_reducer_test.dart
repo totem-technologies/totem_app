@@ -13,8 +13,8 @@ class _Participant extends Mock implements Participant {}
 RoomState _roomState({RoomStatus status = RoomStatus.waitingRoom}) {
   return RoomState(
     keeper: 'keeper',
-    nextSpeaker: '',
-    currentSpeaker: '',
+    nextSpeaker: const Omittable(''),
+    currentSpeaker: const Omittable(''),
     status: status,
     turnState: TurnState.idle,
     sessionSlug: 'session-1',
@@ -177,7 +177,7 @@ void main() {
             // Room goes active — speakerOf falls back to keeper.
             final active = _roomState(
               status: RoomStatus.active,
-            ).copyWith(currentSpeaker: () => '');
+            ).copyWith(currentSpeaker: const Omittable(''));
 
             final next = reducer.reduceState(current, RoomStateChanged(active));
 
@@ -189,7 +189,7 @@ void main() {
 
             final withSpeaker = _roomState(
               status: RoomStatus.active,
-            ).copyWith(currentSpeaker: () => 'user-1');
+            ).copyWith(currentSpeaker: const Omittable('user-1'));
 
             final next = reducer.reduceState(
               current,
@@ -204,7 +204,7 @@ void main() {
 
             final active = _roomState(
               status: RoomStatus.active,
-            ).copyWith(currentSpeaker: () => 'user-1');
+            ).copyWith(currentSpeaker: const Omittable('user-1'));
 
             final first = reducer.reduceState(
               current,
@@ -224,7 +224,7 @@ void main() {
 
             final active = _roomState(
               status: RoomStatus.active,
-            ).copyWith(currentSpeaker: () => 'user-1');
+            ).copyWith(currentSpeaker: const Omittable('user-1'));
 
             final afterRoom = reducer.reduceState(
               current,

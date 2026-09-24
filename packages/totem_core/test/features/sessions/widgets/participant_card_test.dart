@@ -64,10 +64,10 @@ void main() {
           userProfileProvider.overrideWith(
             (ref, slug) => Future.value(
               PublicUserSchema(
-                slug: slug,
-                name: 'Mocked User $slug',
+                slug: Omittable(slug),
+                name: Omittable('Mocked User $slug'),
                 profileAvatarType: ProfileAvatarTypeEnum.td,
-                circleCount: 0,
+                circleCount: const Omittable(0),
                 dateCreated: DateTime.now(),
               ),
             ),
@@ -112,7 +112,7 @@ void main() {
         final authState = AuthState.authenticated(
           user: UserSchema(
             email: 'user@example.com',
-            name: 'Normal User',
+            name: const Omittable('Normal User'),
             profileAvatarType: ProfileAvatarTypeEnum.td,
             circleCount: 0,
             dateCreated: DateTime.now(),
@@ -153,8 +153,8 @@ void main() {
         turn: const SessionTurnState(
           roomState: RoomState(
             keeper: 'keeper-1',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
+            nextSpeaker: Omittable('user-2'),
+            currentSpeaker: Omittable('user-1'),
             status: RoomStatus.waitingRoom,
             turnState: TurnState.idle,
             sessionSlug: 'test-session',
@@ -198,8 +198,8 @@ void main() {
         turn: const SessionTurnState(
           roomState: RoomState(
             keeper: '',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
+            nextSpeaker: Omittable('user-2'),
+            currentSpeaker: Omittable('user-1'),
             status: RoomStatus.waitingRoom,
             turnState: TurnState.idle,
             sessionSlug: 'test-session',
@@ -245,8 +245,8 @@ void main() {
         turn: const SessionTurnState(
           roomState: RoomState(
             keeper: 'keeper-1',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
+            nextSpeaker: Omittable('user-2'),
+            currentSpeaker: Omittable('user-1'),
             status: RoomStatus.active,
             turnState: TurnState.idle,
             sessionSlug: 'test-session',
@@ -302,8 +302,8 @@ void main() {
         turn: const SessionTurnState(
           roomState: RoomState(
             keeper: 'keeper-1',
-            nextSpeaker: 'user-2',
-            currentSpeaker: 'user-1',
+            nextSpeaker: Omittable('user-2'),
+            currentSpeaker: Omittable('user-1'),
             status: RoomStatus.active,
             turnState: TurnState.idle,
             sessionSlug: 'test-session',

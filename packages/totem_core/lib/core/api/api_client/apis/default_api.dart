@@ -2,9 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-
-import 'package:degenerate_runtime/degenerate_runtime.dart';
-
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import '../models/error_response.dart';
 import '../models/fcm_token_register_schema.dart';
 import '../models/fcm_token_response_schema.dart';
@@ -46,12 +44,11 @@ final class DefaultApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return FcmTokenResponseSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return FcmTokenResponseSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
@@ -75,7 +72,7 @@ final class DefaultApi with ApiExecutor {
       options: options,
     );
 
-    return execute(request, onSuccess: (_) {});
+    return await execute(request, onSuccess: (_) {});
   }
 
   /// Onboard Get
@@ -93,12 +90,11 @@ final class DefaultApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return OnboardSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return OnboardSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
@@ -121,12 +117,11 @@ final class DefaultApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return OnboardSchema.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return OnboardSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
@@ -152,17 +147,20 @@ final class DefaultApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return MessageResponse.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return MessageResponse.fromJson(json as Map<String, dynamic>);
       },
       onError: (response) {
-        return ErrorResponse.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        switch (response.statusCode) {
+          case 401:
+            final json = jsonDecode(response.body);
+            return ErrorResponse.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
       },
     );
   }
@@ -190,17 +188,20 @@ final class DefaultApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return TokenResponse.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return TokenResponse.fromJson(json as Map<String, dynamic>);
       },
       onError: (response) {
-        return ErrorResponse.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        switch (response.statusCode) {
+          case 401:
+            final json = jsonDecode(response.body);
+            return ErrorResponse.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
       },
     );
   }
@@ -225,17 +226,20 @@ final class DefaultApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return TokenResponse.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return TokenResponse.fromJson(json as Map<String, dynamic>);
       },
       onError: (response) {
-        return ErrorResponse.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        switch (response.statusCode) {
+          case 401:
+            final json = jsonDecode(response.body);
+            return ErrorResponse.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
       },
     );
   }
@@ -260,12 +264,11 @@ final class DefaultApi with ApiExecutor {
       options: options,
     );
 
-    return execute(
+    return await execute(
       request,
       onSuccess: (response) {
-        return MessageResponse.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
+        final json = jsonDecode(response.body);
+        return MessageResponse.fromJson(json as Map<String, dynamic>);
       },
     );
   }

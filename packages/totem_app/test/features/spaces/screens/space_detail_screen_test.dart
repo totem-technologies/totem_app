@@ -51,7 +51,7 @@ MobileSpaceDetailSchema _space(
     content: '',
     author: PublicUserSchema(
       profileAvatarType: ProfileAvatarTypeEnum.td,
-      name: 'Test Keeper',
+      name: Omittable('Test Keeper'),
       dateCreated: DateTime.utc(2026),
     ),
     category: null,

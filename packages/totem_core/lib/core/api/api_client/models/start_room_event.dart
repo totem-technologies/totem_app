@@ -1,24 +1,31 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:degenerate_runtime/degenerate_runtime.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 
 @immutable
 final class StartRoomEvent {
-  const StartRoomEvent({this.type = 'start_room', this.prompt});
+  const StartRoomEvent({this.type, this.prompt = const Omittable.absent()});
 
   factory StartRoomEvent.fromJson(Map<String, dynamic> json) {
     return StartRoomEvent(
-      type: json.containsKey('type') ? json['type'] as String : 'start_room',
-      prompt: json['prompt'] as String?,
+      type: json['type'] as String?,
+      prompt: json.containsKey('prompt')
+          ? Omittable(json['prompt'] as String?)
+          : const Omittable.absent(),
     );
   }
 
-  final String type;
+  final String? type;
 
-  final String? prompt;
+  final Omittable<String?> prompt;
+
+  /// The value with the schema default applied when absent.
+  String get typeOrDefault {
+    return type ?? 'start_room';
+  }
 
   Map<String, dynamic> toJson() {
-    return {'type': type, 'prompt': ?prompt};
+    return {'type': ?type, if (prompt.isPresent) 'prompt': prompt.value};
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -26,12 +33,12 @@ final class StartRoomEvent {
   }
 
   StartRoomEvent copyWith({
-    String Function()? type,
-    String? Function()? prompt,
+    String? Function()? type,
+    Omittable<String?>? prompt,
   }) {
     return StartRoomEvent(
       type: type != null ? type() : this.type,
-      prompt: prompt != null ? prompt() : this.prompt,
+      prompt: prompt ?? this.prompt,
     );
   }
 

@@ -239,7 +239,7 @@ class SpaceCard extends StatelessWidget {
                                     children: [
                                       const TextSpan(text: 'with '),
                                       TextSpan(
-                                        text: space.author.name,
+                                        text: space.author.name.value,
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                         ),

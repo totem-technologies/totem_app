@@ -1,6 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_core/core/api/api_client/models/profile_avatar_type_enum.dart';
-import 'package:totem_core/core/api/api_client/models/public_user_schema.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/messages/models/message.dart';
 import 'package:uuid/uuid.dart';
@@ -28,36 +27,36 @@ class _StubMessagesRepository implements MessagesRepository {
     'conv_1': PublicUserSchema(
       profileAvatarType: ProfileAvatarTypeEnum.td,
       dateCreated: _now,
-      name: 'Vanessa',
-      slug: 'vanessa',
+      name: const Omittable('Vanessa'),
+      slug: const Omittable('vanessa'),
       profileAvatarSeed: 'vanessa-seed',
     ),
     'conv_2': PublicUserSchema(
       profileAvatarType: ProfileAvatarTypeEnum.td,
       dateCreated: _now,
-      name: 'Marcus',
-      slug: 'marcus',
+      name: const Omittable('Marcus'),
+      slug: const Omittable('marcus'),
       profileAvatarSeed: 'marcus-seed',
     ),
     'conv_3': PublicUserSchema(
       profileAvatarType: ProfileAvatarTypeEnum.td,
       dateCreated: _now,
-      name: 'Sarah',
-      slug: 'sarah',
+      name: const Omittable('Sarah'),
+      slug: const Omittable('sarah'),
       profileAvatarSeed: 'sarah-seed',
     ),
     'conv_4': PublicUserSchema(
       profileAvatarType: ProfileAvatarTypeEnum.td,
       dateCreated: _now,
-      name: 'Jordan',
-      slug: 'jordan',
+      name: const Omittable('Jordan'),
+      slug: const Omittable('jordan'),
       profileAvatarSeed: 'jordan-seed',
     ),
     'conv_5': PublicUserSchema(
       profileAvatarType: ProfileAvatarTypeEnum.td,
       dateCreated: _now,
-      name: 'Alex',
-      slug: 'alex',
+      name: const Omittable('Alex'),
+      slug: const Omittable('alex'),
       profileAvatarSeed: 'alex-seed',
     ),
   };

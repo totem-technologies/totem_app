@@ -15,7 +15,6 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
-
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
@@ -52,8 +51,8 @@ SessionRoomState _createSessionState() {
     turn: const SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',
-        nextSpeaker: 'user-2',
-        currentSpeaker: 'user-1',
+        nextSpeaker: Omittable('user-2'),
+        currentSpeaker: Omittable('user-1'),
         status: RoomStatus.active,
         turnState: TurnState.idle,
         sessionSlug: 'test-session',

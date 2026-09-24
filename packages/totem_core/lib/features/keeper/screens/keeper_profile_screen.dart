@@ -76,20 +76,20 @@ class KeeperProfileScreen extends ConsumerWidget {
                                 radius: 52,
                               ),
                               Text(
-                                keeper.user.name ?? 'Keeper',
+                                keeper.user.name.value ?? 'Keeper',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              Text(keeper.location),
+                              Text(keeper.location ?? ''),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (keeper.website != null &&
-                                      keeper.website!.isNotEmpty)
+                                  if (keeper.website.value case final website?
+                                      when website.isNotEmpty)
                                     Link(
-                                      uri: Uri.parse(keeper.website!),
+                                      uri: Uri.parse(website),
                                       builder: (context, followLink) {
                                         return IconButton(
                                           icon: const TotemIcon(
@@ -101,11 +101,12 @@ class KeeperProfileScreen extends ConsumerWidget {
                                         );
                                       },
                                     ),
-                                  if (keeper.instagramUsername != null &&
-                                      keeper.instagramUsername!.isNotEmpty)
+                                  if (keeper.instagramUsername.value
+                                      case final instagramUsername?
+                                      when instagramUsername.isNotEmpty)
                                     Link(
                                       uri: Uri.parse(
-                                        'https://instagram.com/${keeper.instagramUsername!}',
+                                        'https://instagram.com/$instagramUsername',
                                       ),
                                       builder: (context, followLink) {
                                         return IconButton(
@@ -138,7 +139,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                               const Text('Hosted Spaces'),
                               const Spacer(),
                               Text(
-                                keeper.languages,
+                                keeper.languages ?? '',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
@@ -179,7 +180,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                     horizontal: 20,
                   ),
                   child: Html(
-                    data: keeper.bioHtml ?? keeper.bio,
+                    data: keeper.bioHtml.value ?? keeper.bio.value,
                     style: AppTheme.compactHtmlStyle,
                     onLinkTap: (url, _, _) async {
                       RoutingUtils.handleLinkTap(context, url);
@@ -192,7 +193,7 @@ class KeeperProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 20),
                 KeeperSpaces(
-                  keeperSlug: keeper.user.slug!,
+                  keeperSlug: keeper.user.slug.value!,
                   horizontalPadding: const EdgeInsetsDirectional.symmetric(
                     horizontal: 20,
                   ),

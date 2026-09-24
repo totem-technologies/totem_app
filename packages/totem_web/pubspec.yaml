@@ -15,7 +15,7 @@ dependencies:
   totem_core:
     path: ../totem_core
   dio: ^5.9.2
-  degenerate_dio: ^0.4.1
+  degenerate_dio: ^0.5.0
   http: ^1.6.0
   web: ^1.1.1
 

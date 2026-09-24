@@ -20,7 +20,7 @@ class HomeBlogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final slug = data.slug;
+    final slug = data.slug.value;
     if (slug == null || slug.isEmpty) return const SizedBox.shrink();
 
     return Semantics(
@@ -49,8 +49,8 @@ class HomeBlogCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _BlogImage(
-                  imageUrl: data.headerImageUrl,
-                  readTime: data.readTime,
+                  imageUrl: data.headerImageUrl.value,
+                  readTime: data.readTimeOrDefault,
                   height: 200,
                 ),
                 Padding(
@@ -69,10 +69,10 @@ class HomeBlogCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if ((data.subtitle ?? '').isNotEmpty) ...[
+                      if ((data.subtitle.value ?? '').isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Text(
-                          data.subtitle!,
+                          data.subtitle.value!,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w400,
@@ -89,8 +89,9 @@ class HomeBlogCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: _AuthorRow(
-                              authorName: data.author?.name ?? 'Keeper',
-                              author: data.author,
+                              authorName:
+                                  data.author.value?.name.value ?? 'Keeper',
+                              author: data.author.value,
                               publishedDate: data.datePublished,
                             ),
                           ),

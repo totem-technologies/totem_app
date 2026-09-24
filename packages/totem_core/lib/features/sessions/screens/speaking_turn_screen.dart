@@ -457,7 +457,7 @@ class _SelfViewState extends ConsumerState<SelfView>
     final theme = Theme.of(context);
 
     final currentUserSlug = ref.watch(
-      authControllerProvider.select((auth) => auth.user?.slug),
+      authControllerProvider.select((auth) => auth.user?.slug.value),
     );
     final participants = ref.watch(sessionParticipantsProvider);
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
