@@ -61,7 +61,7 @@ class PreJoinMediaOperationQueue {
 
   Future<void>? get pending => _tail;
 
-  Future<T> schedule<T>(Future<T> Function() operation) {
+  Future<T> schedule<T>(AsyncValueGetter<T> operation) {
     final previous = _tail;
     final result = () async {
       try {
@@ -100,7 +100,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     return const PreJoinMediaState();
   }
 
-  Future<void> _guardInitialization(Future<void> Function() operation) async {
+  Future<void> _guardInitialization(AsyncCallback operation) async {
     try {
       await operation();
     } catch (error, stackTrace) {

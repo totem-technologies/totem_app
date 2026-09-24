@@ -97,7 +97,7 @@ class SessionInfraController extends _$SessionInfraController {
     return _enqueue(_endBackgroundMode);
   }
 
-  Future<void> _enqueue(Future<void> Function() operation) =>
+  Future<void> _enqueue(AsyncCallback operation) =>
       _operation = _operation.catchError((_) {}).then((_) => operation());
 
   Future<void> _setupBackgroundMode(SessionDetailSchema? event) async {

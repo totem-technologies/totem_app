@@ -42,7 +42,7 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
 
   final String sessionSlug;
   final Widget loadingScreen;
-  final DateTime Function() now;
+  final ValueGetter<DateTime> now;
 
   @override
   ConsumerState<VideoSessionScreen> createState() => _VideoSessionScreenState();

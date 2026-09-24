@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
@@ -156,7 +157,7 @@ class _RetryableSessionController extends SessionController {
 ProviderContainer _container({
   required PreJoinPreviewTrackFactory factory,
   required JoinResponse response,
-  required SessionController Function() sessionController,
+  required ValueGetter<SessionController> sessionController,
   bool requireUsableMedia = false,
 }) {
   return ProviderContainer(

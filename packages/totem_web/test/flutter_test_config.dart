@@ -1,8 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 
-Future<void> testExecutable(FutureOr<void> Function() testMain) async {
+Future<void> testExecutable(AsyncCallback testMain) async {
   LeakTesting.enable();
   LeakTesting.settings = LeakTesting.settings
       .withIgnored(createdByTestHelpers: true)

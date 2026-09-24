@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:checks/checks.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart' show ApiError;
 import 'package:totem_core/core/errors/app_exceptions.dart';
@@ -291,7 +292,7 @@ void main() {
     });
 
     test('reports separate factory exception occurrences independently', () {
-      final factories = <String, Object Function()>{
+      final factories = <String, ValueGetter<Object>>{
         'network timeout': AppNetworkException.timeout,
         'no connection': AppNetworkException.noConnection,
         'unauthenticated': AppAuthException.unauthenticated,

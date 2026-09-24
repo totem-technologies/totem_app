@@ -267,7 +267,7 @@ void main() {
       when(() => devices.isCameraEnabled).thenReturn(false);
     });
 
-    Future<void> runOnDesktop(Future<void> Function() body) async {
+    Future<void> runOnDesktop(AsyncCallback body) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       try {
         await body();

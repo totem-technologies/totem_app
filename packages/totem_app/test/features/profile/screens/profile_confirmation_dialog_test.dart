@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' as flutter;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,8 +20,8 @@ final class _FakeAuthController extends MobileAuthController {
   @override
   final UserSchema? user;
 
-  final Future<void> Function()? onLogout;
-  final Future<void> Function()? onDeleteAccount;
+  final AsyncCallback? onLogout;
+  final AsyncCallback? onDeleteAccount;
 
   @override
   AuthState build() => AuthState.authenticated(user: user!);
@@ -169,6 +170,6 @@ void main() {
 }
 
 extension on Future<void> {
-  Future<void> Function() get asVoidCallback =>
+  AsyncCallback get asVoidCallback =>
       () => this;
 }

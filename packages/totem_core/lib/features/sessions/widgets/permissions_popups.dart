@@ -98,7 +98,7 @@ class BackgroundActivityDialog extends StatelessWidget {
 /// user chose to go back without granting.
 Future<bool> showWebPermissionsDeniedDialog(
   BuildContext context, {
-  Future<bool> Function()? retryPermissions,
+  AsyncValueGetter<bool>? retryPermissions,
 }) async {
   final container = ProviderScope.containerOf(context, listen: false);
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:checks/checks.dart';
@@ -74,7 +75,7 @@ void main() {
 
   Future<void> showConflict(
     WidgetTester tester, {
-    required Future<bool> Function() onSwitch,
+    required AsyncValueGetter<bool> onSwitch,
     ValueChanged<bool?>? onResult,
     List<SessionDetailSchema>? conflictingSessions,
     TextDirection textDirection = TextDirection.ltr,

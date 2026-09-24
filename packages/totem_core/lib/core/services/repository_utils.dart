@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -37,7 +38,7 @@ class RepositoryUtils {
   /// Throws [AppNetworkException] for network errors.
   /// Throws [AppDataException] for data/validation errors.
   static Future<T> handleApiCall<T>({
-    required Future<ApiResult<T, dynamic>> Function() apiCall,
+    required AsyncValueGetter<ApiResult<T, dynamic>> apiCall,
     required String operationName,
     bool retryOnNetworkError = false,
     int maxRetries = 1,

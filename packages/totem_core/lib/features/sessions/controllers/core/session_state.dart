@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -214,7 +215,7 @@ class SessionJoinMedia {
   final LocalAudioTrack? microphoneTrack;
 
   /// Detaches preview renderers before a failed transfer is stopped.
-  final void Function()? onBeforeDispose;
+  final VoidCallback? onBeforeDispose;
 
   bool get isEmpty => cameraTrack == null && microphoneTrack == null;
 }
