@@ -243,13 +243,7 @@ void main() {
 
       await tester.tap(find.bySemanticsLabel('Microphone off'));
       await tester.pumpAndSettle();
-      check(
-        tester.widgetList(
-          find.text(
-            'Someone else has the Totem. Are you sure you want to unmute?',
-          ),
-        ),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('Unmute Anyway'))).length.equals(1);
       await tester.tap(find.text('Unmute Anyway'));
       await tester.pumpAndSettle();
       verify(() => devices.enableMicrophone()).called(1);

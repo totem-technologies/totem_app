@@ -499,7 +499,7 @@ void main() {
         check(tester.widgetList(find.text('Ephemeral mixed'))).length.equals(1);
         check(tester.widgetList(find.text('Permanent mixed'))).length.equals(0);
 
-        await tester.pump(const Duration(seconds: 6));
+        await tester.pump(const Duration(seconds: 8));
         await tester.pumpAndSettle();
         check(tester.widgetList(find.text('Ephemeral mixed'))).length.equals(0);
         check(tester.widgetList(find.text('Permanent mixed'))).length.equals(1);

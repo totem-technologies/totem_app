@@ -433,7 +433,10 @@ void main() {
         ).length.equals(1);
 
         await tester.tap(find.bySemanticsLabel('Microphone off'));
-        await tester.pump();
+        await tester.pumpAndSettle();
+        check(tester.widgetList(find.text('Unmute Anyway'))).length.equals(1);
+        await tester.tap(find.text('Unmute Anyway'));
+        await tester.pumpAndSettle();
         verify(() => devices.enableMicrophone()).called(1);
 
         await tester.tap(find.bySemanticsLabel('Camera off'));

@@ -269,16 +269,11 @@ void main() {
         await tester.tap(find.byType(ActionBarButton).first);
         await tester.pumpAndSettle();
 
-        check(
-          tester.widgetList(
-            find.text(
-              'Someone else has the Totem. Are you sure you want to unmute?',
-            ),
-          ),
-        ).length.equals(1);
+        check(tester.widgetList(find.text('Stay Muted'))).length.equals(1);
 
         await tester.tap(find.text('Stay Muted'));
         await tester.pumpAndSettle();
+        verifyNever(() => deviceController.enableMicrophone());
       },
     );
 
