@@ -50,10 +50,30 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
 
 // Use shared helper to determine transient join disconnect reasons.
 
+class _SessionChatRouteObserver extends NavigatorObserver {
+  final List<Route<dynamic>> chatRoutes = [];
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route.settings.name == sessionChatRouteName) chatRoutes.add(route);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    chatRoutes.remove(route);
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    chatRoutes.remove(route);
+  }
+}
+
 class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   static var _didWarmEmojiGlyphs = false;
 
   final _roomNavigatorKey = GlobalKey<NavigatorState>();
+  final _roomNavigatorObserver = _SessionChatRouteObserver();
   final _notificationController = NotificationController();
 
   NotificationRequest? _closeKeeperLeftNotification;
@@ -535,6 +555,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
             Expanded(
               child: Navigator(
                 key: _roomNavigatorKey,
+                observers: [_roomNavigatorObserver],
                 clipBehavior: Clip.none,
                 onDidRemovePage: (page) => {},
                 pages: [
@@ -584,7 +605,16 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _hasDismissedChatForDisconnect = true;
     ref.read(sessionChatOpenProvider.notifier).open = false;
     final navigator = _roomNavigatorKey.currentState;
-    if (navigator?.canPop() ?? false) navigator!.pop();
+    if (navigator == null) return;
+
+    for (final route in _roomNavigatorObserver.chatRoutes.reversed.toList()) {
+      if (!route.isActive) continue;
+      if (route.isCurrent) {
+        navigator.pop();
+      } else {
+        navigator.removeRoute(route);
+      }
+    }
   }
 
   Future<void> _handleBackNavigation(

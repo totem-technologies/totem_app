@@ -55,6 +55,8 @@ class FeaturedBlogPost extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (slug.isEmpty) return const SizedBox.shrink();
+
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.widthOf(context);
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);

@@ -43,9 +43,7 @@ class SessionTitle extends ConsumerWidget {
 }
 
 class SessionElapsedTimer extends ConsumerStatefulWidget {
-  const SessionElapsedTimer({this.startTime, super.key});
-
-  final DateTime? startTime;
+  const SessionElapsedTimer({super.key});
 
   @override
   ConsumerState<SessionElapsedTimer> createState() =>
@@ -59,21 +57,18 @@ class _SessionElapsedTimerState extends ConsumerState<SessionElapsedTimer> {
   @override
   void initState() {
     super.initState();
-    _start = widget.startTime ?? ref.read(featuredTurnStartTimeProvider);
+    _start = ref.read(featuredTurnStartTimeProvider);
     _syncTimer();
-    if (widget.startTime == null) {
-      ref.listenManual(featuredTurnStartTimeProvider, (_, next) {
-        setState(() => _start = next);
-        _syncTimer();
-      });
-    }
+    ref.listenManual(featuredTurnStartTimeProvider, (_, next) {
+      setState(() => _start = next);
+      _syncTimer();
+    });
   }
 
   @override
   void didUpdateWidget(SessionElapsedTimer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.startTime == oldWidget.startTime) return;
-    _start = widget.startTime ?? ref.read(featuredTurnStartTimeProvider);
+    _start = ref.read(featuredTurnStartTimeProvider);
     _syncTimer();
   }
 

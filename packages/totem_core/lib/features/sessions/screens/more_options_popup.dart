@@ -461,8 +461,7 @@ class MoreOptions extends ConsumerWidget {
               title: 'Are you sure?',
               confirmButtonText: 'Force pass',
               content:
-                  'This will end ${"the current speaker's turn"} '
-                  'and give the totem to ${nextParticipantName ?? 'the next participant'}.',
+                  "This will end the current speaker's turn and give the totem to ${nextParticipantName ?? 'the next participant'}.",
               contentStyle: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurface,
               ),

@@ -91,7 +91,7 @@ class AnalyticsService {
           id: user.slug.value,
           name: user.name.value,
           username: user.slug.value,
-          data: {'is_staff': user.isStaff},
+          data: {'is_staff': user.isStaffOrDefault},
         ),
       );
 
@@ -103,7 +103,7 @@ class AnalyticsService {
           category: 'user',
           data: {
             'user_id': user.slug.value,
-            'is_staff': user.isStaff.toString(),
+            'is_staff': user.isStaffOrDefault.toString(),
           },
         ),
       );

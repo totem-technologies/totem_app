@@ -22,7 +22,8 @@ class UserAvatar extends ConsumerWidget {
        slug = null,
        loading = null,
        error = null,
-       _usesCurrentUser = false;
+       _usesCurrentUser = false,
+       _alwaysUseCurrentUser = false;
 
   const UserAvatar.fromUserSchema(
     this.user, {
@@ -37,7 +38,8 @@ class UserAvatar extends ConsumerWidget {
        slug = null,
        loading = null,
        error = null,
-       _usesCurrentUser = true;
+       _usesCurrentUser = true,
+       _alwaysUseCurrentUser = false;
 
   const UserAvatar.currentUser({
     super.key,
@@ -52,7 +54,8 @@ class UserAvatar extends ConsumerWidget {
        slug = null,
        loading = null,
        error = null,
-       _usesCurrentUser = true;
+       _usesCurrentUser = true,
+       _alwaysUseCurrentUser = true;
 
   const UserAvatar.slug(
     this.slug, {
@@ -67,7 +70,8 @@ class UserAvatar extends ConsumerWidget {
   }) : user = null,
        image = null,
        seed = null,
-       _usesCurrentUser = false;
+       _usesCurrentUser = false,
+       _alwaysUseCurrentUser = false;
 
   final double radius;
   final ImageProvider? image;
@@ -77,13 +81,21 @@ class UserAvatar extends ConsumerWidget {
   final Widget? loading;
   final Widget? error;
   final bool _usesCurrentUser;
+  final bool _alwaysUseCurrentUser;
   final bool showImage;
   final VoidCallback? onTap;
   final double borderWidth;
   final BorderRadiusGeometry borderRadius;
 
-  static ImageProvider? _imageForUser({required String? profileImage}) {
-    if (profileImage == null || profileImage.isEmpty) return null;
+  static ImageProvider? _imageForUser({
+    required String? profileImage,
+    required ProfileAvatarTypeEnum profileAvatarType,
+  }) {
+    if (profileImage == null ||
+        profileImage.isEmpty ||
+        profileAvatarType != ProfileAvatarTypeEnum.im) {
+      return null;
+    }
 
     return CachedNetworkImageProvider(getFullUrl(profileImage));
   }
@@ -100,7 +112,10 @@ class UserAvatar extends ConsumerWidget {
     );
     return profile.when(
       data: (user) => UserAvatar.custom(
-        image: _imageForUser(profileImage: user.profileImage.value),
+        image: _imageForUser(
+          profileImage: user.profileImage.value,
+          profileAvatarType: user.profileAvatarType,
+        ),
         seed: user.profileAvatarSeed,
         radius: radius,
         showImage: showImage,
@@ -122,12 +137,16 @@ class UserAvatar extends ConsumerWidget {
         : null;
     final useCurrentUser =
         _usesCurrentUser &&
-        (user == null || user?.slug.value == currentUser?.slug.value);
+        (_alwaysUseCurrentUser ||
+            (user != null && user!.slug.value == currentUser?.slug.value));
     final avatarImage = _usesCurrentUser
         ? _imageForUser(
             profileImage: useCurrentUser
                 ? currentUser?.profileImage.value
                 : user?.profileImage.value,
+            profileAvatarType: useCurrentUser
+                ? currentUser?.profileAvatarType ?? ProfileAvatarTypeEnum.td
+                : user?.profileAvatarType ?? ProfileAvatarTypeEnum.td,
           )
         : image;
     final avatarSeed = _usesCurrentUser

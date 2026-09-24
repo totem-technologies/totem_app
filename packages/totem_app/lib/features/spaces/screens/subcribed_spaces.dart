@@ -22,7 +22,10 @@ class SubscribedSpacesScreen extends ConsumerWidget {
       body: SafeArea(
         child: data.when(
           data: (spaces) {
-            if (spaces.isEmpty) {
+            final spacesWithSlug = spaces
+                .where((space) => space.slug.value != null)
+                .toList();
+            if (spacesWithSlug.isEmpty) {
               return Padding(
                 padding: const EdgeInsetsDirectional.all(20),
                 child: Column(
@@ -92,13 +95,13 @@ class SubscribedSpacesScreen extends ConsumerWidget {
                       ),
                       sliver: SliverList.separated(
                         itemBuilder: (context, index) {
-                          final space = spaces[index];
+                          final space = spacesWithSlug[index];
                           return _SubscribedSpaceTile(
                             key: ValueKey(space.slug.value!),
                             space: space,
                           );
                         },
-                        itemCount: spaces.length,
+                        itemCount: spacesWithSlug.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 10),
                       ),
                     ),
@@ -132,7 +135,10 @@ class _SubscribedSpaceTileState extends ConsumerState<_SubscribedSpaceTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () => context.push(RouteNames.space(widget.space.slug.value!)),
+      onTap: () {
+        final slug = widget.space.slug.value;
+        if (slug != null) context.push(RouteNames.space(slug));
+      },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,

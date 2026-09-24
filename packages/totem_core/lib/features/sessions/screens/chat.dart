@@ -9,6 +9,8 @@ import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 export 'keeper_profile_sheet.dart';
 export 'session_chat_panel.dart' show SessionChatPanel;
 
+const String sessionChatRouteName = 'session-chat';
+
 /// Width of the Figma desktop chat column.
 const double sessionChatPanelWidth = 412;
 
@@ -41,6 +43,7 @@ Future<void> showSessionChat(BuildContext context) {
       return showResponsiveModal<void>(
         context: context,
         useRootNavigator: false,
+        routeSettings: const RouteSettings(name: sessionChatRouteName),
         showDragHandle: false,
         useSafeArea: false,
         bottomSheetBackgroundColor: AppTheme.cream,
@@ -70,6 +73,7 @@ Future<void> showSessionChat(BuildContext context) {
           barrierLabel: MaterialLocalizations.of(
             context,
           ).modalBarrierDismissLabel,
+          settings: const RouteSettings(name: sessionChatRouteName),
         ),
       );
   }
@@ -81,15 +85,18 @@ Future<void> showSessionChat(BuildContext context) {
 /// The route's default fade is stripped — a drawer should materialize by
 /// moving, not by dissolving. The barrier still fades with [animation].
 class _SessionChatDrawerRoute extends RawDialogRoute<void> {
-  _SessionChatDrawerRoute({required String barrierLabel})
-    : super(
-        barrierLabel: barrierLabel,
-        barrierDismissible: true,
-        barrierColor: Colors.black26,
-        transitionDuration: sessionChatDrawerDuration,
-        transitionBuilder: _holdChild,
-        pageBuilder: _buildPage,
-      );
+  _SessionChatDrawerRoute({
+    required String barrierLabel,
+    required RouteSettings settings,
+  }) : super(
+         settings: settings,
+         barrierLabel: barrierLabel,
+         barrierDismissible: true,
+         barrierColor: Colors.black26,
+         transitionDuration: sessionChatDrawerDuration,
+         transitionBuilder: _holdChild,
+         pageBuilder: _buildPage,
+       );
 
   /// Identity transition so [RawDialogRoute] doesn't fade the page on top
   /// of the slide we apply in [_buildPage].

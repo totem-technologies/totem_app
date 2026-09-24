@@ -601,7 +601,7 @@ void main() {
       ).length.equals(1);
     });
 
-    testWidgets('closes the chat sheet when the user is disconnected', (
+    testWidgets('closes only the chat sheet when the user is disconnected', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(390, 844);
@@ -631,6 +631,14 @@ void main() {
       await tester.pumpAndSettle();
       check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
 
+      showModalBottomSheet<void>(
+        context: chatContext,
+        useRootNavigator: false,
+        builder: (_) => const Text('Keeper profile'),
+      );
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('Keeper profile'))).length.equals(1);
+
       final container = ProviderScope.containerOf(
         tester.element(find.byType(VideoSessionScreen)),
         listen: false,
@@ -639,6 +647,7 @@ void main() {
       await tester.pumpAndSettle();
 
       check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+      check(tester.widgetList(find.text('Keeper profile'))).length.equals(1);
       check(
         tester.widgetList(find.byType(SessionDisconnectedScreen)),
       ).length.equals(1);
