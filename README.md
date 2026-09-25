@@ -1,4 +1,4 @@
-# Totem Client
+# Totem Client.
 
 The open-source Flutter client for [Totem](https://totem.org), a platform for
 guided group introspection. Supports iOS, Android, and web.
@@ -38,6 +38,10 @@ make test
 The [Makefile](Makefile) lists additional commands. Code is split between the
 [mobile app](packages/totem_app), [web client](packages/totem_web), and
 [shared library](packages/totem_core).
+
+For repeatable room performance experiments without a call connection, see the
+[local rendering benchmark](scripts/benchmark/README.md). It uses looping video
+and the shared room widgets, with automated Chrome and Firefox captures.
 
 To test a session deep link with the app running:
 
@@ -109,6 +113,14 @@ Django serves the client at `/room/`, while Cloudflare Workers serves its assets
 This lets the web client share the backend's login session and origin. Hosting
 configuration lives in [wrangler.toml](packages/totem_web/wrangler.toml), and
 deployment is managed by the [Web workflow](.github/workflows/web.yml).
+
+Web run and build commands enable HTML video with
+`--dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true`. The browser displays the
+video elements directly through `HtmlElementView`.
+Pass the same flag when invoking `flutter run` or `flutter build web` directly.
+The Flutter UI still uses CanvasKit or skwasm; COOP/COEP headers independently
+enable skwasm's rendering worker. When testing a build, check video clipping,
+mirroring, camera toggles, and controls and menus over the video.
 
 Cloudflare deployment requires these repository secrets:
 

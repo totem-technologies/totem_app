@@ -10,6 +10,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/widgets/loading_video_placeholder.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
+import 'package:totem_core/features/sessions/widgets/participant_tile_surface.dart';
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/smart_name_text.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
@@ -238,99 +239,89 @@ class ParticipantCard extends ConsumerWidget {
     final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
     final participantKeys = ref.watch(sessionParticipantKeysProvider);
 
-    const borderRadius = 20.0;
-
-    return RepaintBoundary(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: ParticipantVideo(
-                key: participantKeys.getKey(participant.sid),
-                participant: participant,
-              ),
-            ),
-            // Only the overlays depend on the tile size, so the video stays
-            // outside the builder and skips the constraint-driven rebuilds.
-            Positioned.fill(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // Chrome scales with the tile, so a dense grid keeps compact
-                  // badges while a sparse one grows them.
-                  final overlay = ParticipantOverlayMetrics.forCard(
-                    constraints.biggest,
-                  );
-                  final overlayPadding = overlay.cornerInset;
-
-                  return Stack(
-                    children: [
-                      PositionedDirectional(
-                        top: overlayPadding,
-                        start: overlayPadding,
-                        child: SpeakingIndicatorOrEmoji(
-                          participant: participant,
-                          metrics: overlay,
-                        ),
-                      ),
-                      if (presentation.hasSession &&
-                          isCurrentUserKeeper &&
-                          currentUserSlug != participant.identity)
-                        PositionedDirectional(
-                          end: overlayPadding,
-                          top: overlayPadding,
-                          child: ParticipantControlButton(
-                            participant: participant,
-                            menuVerticalOffset: overlayPadding,
-                            metrics: overlay,
-                          ),
-                        )
-                      else if (presentation.isKeeper)
-                        PositionedDirectional(
-                          top: overlayPadding,
-                          end: overlayPadding,
-                          child: Container(
-                            width: overlay.badgeSize,
-                            height: overlay.badgeSize,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.black54,
-                              boxShadow: kElevationToShadow[6],
-                            ),
-                            padding: EdgeInsetsDirectional.all(
-                              overlay.badgePadding,
-                            ),
-                            child: TotemIconLogo(
-                              color: AppTheme.white,
-                              size: overlay.iconSize,
-                            ),
-                          ),
-                        ),
-                      PositionedDirectional(
-                        bottom: 8,
-                        start: 8,
-                        end: 8,
-                        child: SmartNameText(
-                          name: participant.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            shadows: [
-                              Shadow(offset: Offset(0, 1), blurRadius: 4),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ],
+    return ParticipantTileSurface(
+      children: [
+        Positioned.fill(
+          child: ParticipantVideo(
+            key: participantKeys.getKey(participant.sid),
+            participant: participant,
+          ),
         ),
-      ),
+        // Only the overlays depend on the tile size, so the video stays
+        // outside the builder and skips the constraint-driven rebuilds.
+        Positioned.fill(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Chrome scales with the tile, so a dense grid keeps compact
+              // badges while a sparse one grows them.
+              final overlay = ParticipantOverlayMetrics.forCard(
+                constraints.biggest,
+              );
+              final overlayPadding = overlay.cornerInset;
+
+              return Stack(
+                children: [
+                  PositionedDirectional(
+                    top: overlayPadding,
+                    start: overlayPadding,
+                    child: SpeakingIndicatorOrEmoji(
+                      participant: participant,
+                      metrics: overlay,
+                    ),
+                  ),
+                  if (presentation.hasSession &&
+                      isCurrentUserKeeper &&
+                      currentUserSlug != participant.identity)
+                    PositionedDirectional(
+                      end: overlayPadding,
+                      top: overlayPadding,
+                      child: ParticipantControlButton(
+                        participant: participant,
+                        menuVerticalOffset: overlayPadding,
+                        metrics: overlay,
+                      ),
+                    )
+                  else if (presentation.isKeeper)
+                    PositionedDirectional(
+                      top: overlayPadding,
+                      end: overlayPadding,
+                      child: Container(
+                        width: overlay.badgeSize,
+                        height: overlay.badgeSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.black54,
+                          boxShadow: kElevationToShadow[6],
+                        ),
+                        padding: EdgeInsetsDirectional.all(
+                          overlay.badgePadding,
+                        ),
+                        child: TotemIconLogo(
+                          color: AppTheme.white,
+                          size: overlay.iconSize,
+                        ),
+                      ),
+                    ),
+                  PositionedDirectional(
+                    bottom: 8,
+                    start: 8,
+                    end: 8,
+                    child: SmartNameText(
+                      name: participant.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        shadows: [Shadow(offset: Offset(0, 1), blurRadius: 4)],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

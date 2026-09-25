@@ -1,0 +1,21 @@
+name: totem_benchmark
+description: Local, deterministic room rendering benchmark.
+publish_to: none
+resolution: workspace
+environment:
+  sdk: ^3.11.3
+dependencies:
+  flutter:
+    sdk: flutter
+  material_ui: any
+  totem_core:
+    path: ../totem_core
+  web: ^1.1.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  checks: ^0.3.2
+  leak_tracker_flutter_testing: any
+flutter:
+  uses-material-design: true

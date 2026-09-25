@@ -1,77 +1,19 @@
 // file copied from livekit_components package and modified
 
 import 'dart:async';
-import 'dart:math' show max, min;
+import 'dart:math' show min;
 
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' as sdk;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/utils/frame_paced_ticker.dart';
+
+import 'package:totem_core/features/sessions/widgets/audio_visualizer_bars.dart';
+
+export 'audio_visualizer_bars.dart';
 
 enum VisualizerState { thinking, listening, active }
-
-@immutable
-class AudioVisualizerWidgetOptions {
-  const AudioVisualizerWidgetOptions({
-    this.barCount = 7,
-    this.centeredBands = true,
-    this.width = 12,
-    this.minHeight = 12,
-    this.maxHeight = 100,
-    this.durationInMilliseconds = 500,
-    this.color,
-    this.spacing = 5,
-    this.cornerRadius = 9999,
-    this.barMinOpacity = 0.2,
-  });
-  final int barCount;
-  final bool centeredBands;
-  final double width;
-  final double minHeight;
-  final double maxHeight;
-  final int durationInMilliseconds;
-  final Color? color;
-  final double spacing;
-  final double cornerRadius;
-  final double barMinOpacity;
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is AudioVisualizerWidgetOptions &&
-        other.barCount == barCount &&
-        other.centeredBands == centeredBands &&
-        other.width == width &&
-        other.minHeight == minHeight &&
-        other.maxHeight == maxHeight &&
-        other.durationInMilliseconds == durationInMilliseconds &&
-        other.color == color &&
-        other.spacing == spacing &&
-        other.cornerRadius == cornerRadius &&
-        other.barMinOpacity == barMinOpacity;
-  }
-
-  @override
-  int get hashCode {
-    return Object.hash(
-      barCount,
-      centeredBands,
-      width,
-      minHeight,
-      maxHeight,
-      durationInMilliseconds,
-      color,
-      spacing,
-      cornerRadius,
-      barMinOpacity,
-    );
-  }
-}
-
-extension _ComputeExt on AudioVisualizerWidgetOptions {
-  Color computeColor(BuildContext ctx) =>
-      color ?? Theme.of(ctx).colorScheme.primary;
-}
 
 class SoundWaveformWidget extends StatefulWidget {
   const SoundWaveformWidget({
@@ -103,7 +45,7 @@ bool audioVisualizerSamplesChanged(List<double> current, List<double> next) {
 }
 
 class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
-    with SingleTickerProviderStateMixin {
+    with FramePacedTickerProviderStateMixin {
   static const Duration _watchdogInterval = Duration(seconds: 2);
   static const Duration _baseRestartCooldown = Duration(seconds: 3);
   static const Duration _maxRestartCooldown = Duration(seconds: 30);
@@ -566,55 +508,4 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
       },
     );
   }
-}
-
-class BarsViewItem {
-  const BarsViewItem({required this.value, required this.color});
-
-  final double value;
-  final Color color;
-}
-
-class BarsView extends StatelessWidget {
-  const BarsView({required this.options, required this.elements, super.key});
-  final AudioVisualizerWidgetOptions options;
-  final List<BarsViewItem> elements;
-
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final delta = (constraints.maxWidth / elements.length) - options.spacing;
-
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: options.spacing,
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          for (int i = 0; i < elements.length; i++)
-            Center(
-              child: AnimatedContainer(
-                width: 1,
-                duration: Duration(
-                  milliseconds:
-                      options.durationInMilliseconds ~/ options.barCount,
-                ),
-                decoration: BoxDecoration(
-                  color: elements[i].color,
-                  borderRadius: BorderRadius.circular(options.cornerRadius),
-                ),
-                height: clampDouble(
-                  max(
-                    delta,
-                    (elements[i].value * (constraints.maxHeight - delta)) +
-                        delta,
-                  ),
-                  0,
-                  options.maxHeight,
-                ),
-              ),
-            ),
-        ],
-      );
-    },
-  );
 }

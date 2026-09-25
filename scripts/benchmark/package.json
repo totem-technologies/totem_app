@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "type": "module",
+  "dependencies": {"puppeteer-core": "25.11.0"},
+  "scripts": {"test": "node --test metrics.test.mjs"}
+}

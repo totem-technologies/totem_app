@@ -3,11 +3,11 @@ import 'package:totem_core/core/config/theme.dart';
 
 /// A prominent, two-line status notice used while the room is waiting.
 ///
-/// Renders a pulsing dot with a small uppercase [label] above a larger,
+/// Renders a steady dot with a small uppercase [label] above a larger,
 /// semi-bold [message] so the status is easy to notice at a glance. The
 /// treatment mirrors the session title so it reads the same on mobile and
 /// desktop.
-class SessionStatusNotice extends StatefulWidget {
+class SessionStatusNotice extends StatelessWidget {
   const SessionStatusNotice({
     required this.label,
     required this.message,
@@ -19,31 +19,6 @@ class SessionStatusNotice extends StatefulWidget {
 
   /// The status message itself.
   final String message;
-
-  @override
-  State<SessionStatusNotice> createState() => _SessionStatusNoticeState();
-}
-
-class _SessionStatusNoticeState extends State<SessionStatusNotice>
-    with SingleTickerProviderStateMixin {
-  static const _pulseDuration = Duration(milliseconds: 1200);
-
-  late final AnimationController _pulseController = AnimationController(
-    vsync: this,
-    duration: _pulseDuration,
-    animationBehavior: AnimationBehavior.preserve,
-  )..repeat(reverse: true);
-
-  late final Animation<double> _pulse = Tween<double>(
-    begin: 0.35,
-    end: 1,
-  ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,19 +33,16 @@ class _SessionStatusNoticeState extends State<SessionStatusNotice>
           mainAxisSize: MainAxisSize.min,
           spacing: 6,
           children: [
-            FadeTransition(
-              opacity: _pulse,
-              child: Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: AppTheme.mauve,
-                  shape: BoxShape.circle,
-                ),
+            Container(
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: AppTheme.mauve,
+                shape: BoxShape.circle,
               ),
             ),
             Text(
-              widget.label.toUpperCase(),
+              label.toUpperCase(),
               style: theme.textTheme.labelSmall?.copyWith(
                 color: AppTheme.messageChipText,
                 fontSize: 12,
@@ -81,7 +53,7 @@ class _SessionStatusNoticeState extends State<SessionStatusNotice>
           ],
         ),
         Text(
-          widget.message,
+          message,
           style: theme.textTheme.titleLarge?.copyWith(
             fontSize: 18,
             fontWeight: FontWeight.w600,

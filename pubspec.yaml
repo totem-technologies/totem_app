@@ -6,6 +6,7 @@ workspace:
   - packages/totem_core
   - packages/totem_app
   - packages/totem_web
+  - packages/totem_benchmark
 dev_dependencies:
   meta: any
   flutter_test:

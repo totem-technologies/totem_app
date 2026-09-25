@@ -31,10 +31,10 @@
 
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
 
-    
-    
-    
-  
+
+
+
+
   <!-- Splash assets are prefixed with {{ASSET_BASE}} (a --web-define Flutter
        substitutes into this HTML at build time) so they load from the CDN. The
        page is served by Django under /room/, so a relative "splash/img/..." URL
@@ -155,14 +155,14 @@
       <source srcset="{{ASSET_BASE}}splash/img/dark-1x.png 1x, {{ASSET_BASE}}splash/img/dark-2x.png 2x, {{ASSET_BASE}}splash/img/dark-3x.png 3x, {{ASSET_BASE}}splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
       <img class="center" aria-hidden="true" src="{{ASSET_BASE}}splash/img/light-1x.png" alt="">
   </picture>
-  
-    
-    
+
+
+
 
     <!-- Inline the bootstrap (incl. our custom flutter_bootstrap.js with
          ASSET_BASE) so no separate /room/flutter_bootstrap.js request is needed:
          Django serves only this HTML doc, the CDN serves everything else. -->
     <script>{{flutter_bootstrap_js}}</script>
-  
+
 
 </body></html>
