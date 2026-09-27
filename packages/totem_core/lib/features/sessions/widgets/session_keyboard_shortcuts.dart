@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 
 class SessionKeyboardShortcuts extends ConsumerStatefulWidget {
@@ -84,16 +85,15 @@ class _SessionKeyboardShortcutsState
       return true;
     }
 
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.keyZ:
-        unawaited(_toggleMicrophone(session));
-        return true;
-      case LogicalKeyboardKey.keyX:
-        unawaited(_toggleCamera(session));
-        return true;
-      default:
-        return false;
+    if (event.logicalKey == ActionBarShortcut.microphoneKey) {
+      unawaited(_toggleMicrophone(session));
+      return true;
     }
+    if (event.logicalKey == ActionBarShortcut.cameraKey) {
+      unawaited(_toggleCamera(session));
+      return true;
+    }
+    return false;
   }
 
   bool _supportsShortcutsForScreen(RoomScreen screen) {
@@ -163,12 +163,7 @@ class _SessionKeyboardShortcutsState
 
   Emoji? _reactionForKey(LogicalKeyboardKey logicalKey) {
     if (!widget.enableEmojiReactions) return null;
-    return switch (logicalKey) {
-      LogicalKeyboardKey.keyA => EmojiBar.defaultEmojis[0],
-      LogicalKeyboardKey.keyS => EmojiBar.defaultEmojis[1],
-      LogicalKeyboardKey.keyD => EmojiBar.defaultEmojis[2],
-      LogicalKeyboardKey.keyF => EmojiBar.defaultEmojis[3],
-      _ => null,
-    };
+    final reactionIndex = ActionBarShortcut.reactionKeys.indexOf(logicalKey);
+    return reactionIndex < 0 ? null : EmojiBar.defaultEmojis[reactionIndex];
   }
 }
