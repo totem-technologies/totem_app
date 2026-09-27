@@ -15,6 +15,8 @@ import 'package:totem_core/features/sessions/widgets/session_status_notice.dart'
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
+// TODO(totem): Refactor this screen declaration
+//              A lot of the code is redundant and a lot of this could be suggared
 class ListeningTurnScreen extends ConsumerWidget {
   const ListeningTurnScreen({required this.session, super.key});
 
@@ -182,7 +184,11 @@ class ListeningTurnScreen extends ConsumerWidget {
                     child: Center(
                       child: _ListeningTurnGrid(
                         session: session,
-                        speakingNow: activeSpeaker?.identity,
+                        // Do not display a bigger participant in the waiting room.
+                        speakingNow: switch (roomStatus) {
+                          RoomStatus.waitingRoom => null,
+                          _ => activeSpeaker?.identity,
+                        },
                         showSpeakingNowParticipant: true,
                         gap: 20,
                       ),
