@@ -27,8 +27,8 @@ class RoomBackground extends StatefulWidget {
   /// Called when the room background changes so platform-specific
   /// code (e.g. web) can sync the native chrome to avoid white flashes.
   ///
-  /// The [Color] passed is the background color the room is rendering.
-  static ValueChanged<Color>? onBackgroundChanged;
+  /// The [BoxDecoration] passed is the background decoration the room is rendering.
+  static ValueChanged<BoxDecoration>? onBackgroundChanged;
 
   @override
   State<RoomBackground> createState() => _RoomBackgroundState();
@@ -42,16 +42,23 @@ class _RoomBackgroundState extends State<RoomBackground> {
     AppTheme.waitingRoomMauve,
   ];
 
+  static const waitingDecoration = BoxDecoration(
+    gradient: LinearGradient(
+      colors: gradientColors,
+      begin: AlignmentDirectional.topCenter,
+      end: AlignmentDirectional.bottomCenter,
+      stops: [0.5, 1],
+    ),
+  );
+
   @override
   void didUpdateWidget(covariant RoomBackground oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.status != oldWidget.status) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         RoomBackground.onBackgroundChanged?.call(switch (widget.status) {
-          RoomStatus.waitingRoom => gradientColors.reduce(
-            (a, b) => Color.lerp(a, b, 0.5)!,
-          ),
-          _ => roomDecoration.color!,
+          RoomStatus.waitingRoom => waitingDecoration,
+          _ => roomDecoration,
         });
       });
     }
@@ -63,15 +70,6 @@ class _RoomBackgroundState extends State<RoomBackground> {
       value: widget.overlayStyle,
       child: ViewportResolver(
         builder: (context, viewportKind) {
-          const waitingDecoration = BoxDecoration(
-            gradient: LinearGradient(
-              colors: gradientColors,
-              begin: AlignmentDirectional.topCenter,
-              end: AlignmentDirectional.bottomCenter,
-              stops: [0.5, 1],
-            ),
-          );
-
           final foregroundColor = switch (widget.status) {
             RoomStatus.waitingRoom => Colors.black,
             _ => Colors.white,
