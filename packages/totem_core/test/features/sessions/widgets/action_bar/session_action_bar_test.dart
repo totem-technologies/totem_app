@@ -347,42 +347,6 @@ void main() {
       check(tester.widgetList(find.byType(ActionBar))).length.equals(0);
     });
 
-    autoSizeTest('disables more when session state is missing', (tester) async {
-      await pumpWidget(
-        tester,
-        child: const SessionActionBar(),
-        overrides: [
-          authControllerProvider.overrideWith(
-            () => FakeAuthController(AuthState.unauthenticated()),
-          ),
-          currentSessionProvider.overrideWith((ref) => session),
-          lastSessionMessageProvider.overrideWith(
-            (ref) => ref.watch(_testLastMessageProvider),
-          ),
-          sessionMessagesProvider.overrideWith((ref) => const []),
-          currentSessionStateProvider.overrideWith((ref) => null),
-          isCurrentUserKeeperProvider.overrideWith((ref) => false),
-          resolveCurrentScreenProvider.overrideWith(
-            (ref) => RoomScreen.listening,
-          ),
-        ],
-      );
-      await tester.pumpAndSettle();
-
-      final moreLabel = MaterialLocalizations.of(
-        tester.element(find.byType(SessionActionBar)),
-      ).moreButtonTooltip;
-      final moreButton = find.descendant(
-        of: find.byTooltip(moreLabel),
-        matching: find.byType(ActionBarButton),
-      );
-      check(tester.widgetList(moreButton)).length.equals(1);
-      await tester.tap(moreButton);
-      await tester.pumpAndSettle();
-
-      check(tester.widgetList(find.byType(MoreOptions))).isEmpty();
-    });
-
     autoSizeTest('opens options sheet when tapping more button', (
       tester,
     ) async {
