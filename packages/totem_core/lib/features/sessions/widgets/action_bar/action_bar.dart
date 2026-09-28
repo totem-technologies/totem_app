@@ -281,17 +281,17 @@ class ActionBarShortcut {
   String get keyLabels => logicalKeys.map((key) => key.keyLabel).join(', ');
 }
 
-class ActionBarShortcutTooltip extends StatelessWidget {
-  const ActionBarShortcutTooltip({
-    required this.shortcut,
+class ActionBarTooltip extends StatelessWidget {
+  const ActionBarTooltip({
+    required this.message,
     required this.child,
     super.key,
   });
 
-  final ActionBarShortcut shortcut;
+  final String message;
   final Widget child;
 
-  static bool get _isDesktopWeb =>
+  static bool get isDesktopWeb =>
       kIsWeb &&
       switch (defaultTargetPlatform) {
         TargetPlatform.macOS ||
@@ -304,12 +304,31 @@ class ActionBarShortcutTooltip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isDesktopWeb) return child;
+    if (!isDesktopWeb) return child;
 
     return Tooltip(
-      message: '${shortcut.label} (${shortcut.keyLabels})',
+      message: message,
       excludeFromSemantics: true,
       preferBelow: false,
+      child: child,
+    );
+  }
+}
+
+class ActionBarShortcutTooltip extends StatelessWidget {
+  const ActionBarShortcutTooltip({
+    required this.shortcut,
+    required this.child,
+    super.key,
+  });
+
+  final ActionBarShortcut shortcut;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionBarTooltip(
+      message: '${shortcut.label} (${shortcut.keyLabels})',
       child: child,
     );
   }
@@ -630,7 +649,7 @@ class _ActionBarMoreButtonState extends ConsumerState<_ActionBarMoreButton> {
     final tooltip = MaterialLocalizations.of(context).moreButtonTooltip;
 
     return ExcludeFocus(
-      child: Tooltip(
+      child: ActionBarTooltip(
         message: tooltip,
         child: ActionBarButton(
           semanticsLabel: tooltip,

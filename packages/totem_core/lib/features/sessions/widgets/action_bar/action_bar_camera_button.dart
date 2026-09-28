@@ -214,6 +214,7 @@ class _CameraDeviceClusterState extends State<_CameraDeviceCluster> {
                     child: Tooltip(
                       message: caretLabel,
                       excludeFromSemantics: true,
+                      preferBelow: false,
                       child: SizedBox(
                         width: 30,
                         child: Center(

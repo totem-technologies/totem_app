@@ -347,6 +347,7 @@ class LocalParticipantCard extends ConsumerWidget {
     final showVideo = isCameraOn && _hasRenderer && !videoTrack!.muted;
 
     return ClipRRect(
+      clipBehavior: Clip.antiAliasWithSaveLayer,
       borderRadius: BorderRadius.circular(30),
       child: AspectRatio(
         aspectRatio: 16 / 21,
