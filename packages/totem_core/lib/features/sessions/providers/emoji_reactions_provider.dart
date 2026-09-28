@@ -61,7 +61,7 @@ class EmojiReactions extends _$EmojiReactions {
   @override
   List<SessionEmojiReaction> build() => <SessionEmojiReaction>[];
 
-  Future<void> emitIncomingReaction(String userIdentity, String emoji) async {
+  Future<bool> emitIncomingReaction(String userIdentity, String emoji) async {
     final now = ref.read(emojiReactionClockProvider)();
     final lastTime = state
         .lastWhereOrNull((r) => r.userIdentity == userIdentity)
@@ -70,7 +70,7 @@ class EmojiReactions extends _$EmojiReactions {
     // THROTTLE: If less than 0.3s has passed since this user's last emoji, ignore it.
     if (lastTime != null &&
         now.difference(lastTime) < const Duration(milliseconds: 300)) {
-      return;
+      return false;
     }
 
     final entry = SessionEmojiReaction(
@@ -86,6 +86,7 @@ class EmojiReactions extends _$EmojiReactions {
       newState.removeAt(0);
     }
     state = newState;
+    return true;
   }
 
   Future<void> displayReaction(

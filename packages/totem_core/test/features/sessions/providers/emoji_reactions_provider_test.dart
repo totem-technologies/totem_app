@@ -28,7 +28,7 @@ void main() {
     test('emitIncomingReaction adds a reaction', () async {
       final notifier = container.read(emojiReactionsProvider.notifier);
 
-      await notifier.emitIncomingReaction('user1', '👍');
+      check(await notifier.emitIncomingReaction('user1', '👍')).isTrue();
 
       final state = container.read(emojiReactionsProvider);
       check(state).length.equals(1);
@@ -42,8 +42,8 @@ void main() {
       () async {
         final notifier = container.read(emojiReactionsProvider.notifier);
 
-        await notifier.emitIncomingReaction('user1', '👍');
-        await notifier.emitIncomingReaction('user1', '❤️');
+        check(await notifier.emitIncomingReaction('user1', '👍')).isTrue();
+        check(await notifier.emitIncomingReaction('user1', '❤️')).isFalse();
 
         final state = container.read(emojiReactionsProvider);
         check(state).length.equals(1);
