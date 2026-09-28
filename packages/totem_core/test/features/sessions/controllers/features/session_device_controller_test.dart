@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -120,6 +122,155 @@ void main() {
           verify(() => mockLocalParticipant.setCameraEnabled(false)).called(1);
         },
       );
+
+      test(
+        'coalesces rapid camera requests to the latest enabled state',
+        () async {
+          var cameraEnabled = true;
+          var activeMutations = 0;
+          var maximumActiveMutations = 0;
+          final calls = <bool>[];
+          final mutations = <Completer<void>>[];
+          final secondMutationStarted = Completer<void>();
+
+          when(
+            () => mockLocalParticipant.isCameraEnabled(),
+          ).thenAnswer((_) => cameraEnabled);
+          when(() => mockLocalParticipant.setCameraEnabled(false)).thenAnswer((
+            _,
+          ) {
+            calls.add(false);
+            activeMutations++;
+            if (activeMutations > maximumActiveMutations) {
+              maximumActiveMutations = activeMutations;
+            }
+            final mutation = Completer<void>();
+            mutations.add(mutation);
+            return mutation.future.then<LocalTrackPublication<LocalTrack>?>((
+              _,
+            ) {
+              cameraEnabled = false;
+              activeMutations--;
+              return null;
+            });
+          });
+          when(
+            () => mockLocalParticipant.setCameraEnabled(
+              true,
+              cameraCaptureOptions: any(named: 'cameraCaptureOptions'),
+            ),
+          ).thenAnswer((_) {
+            calls.add(true);
+            activeMutations++;
+            if (activeMutations > maximumActiveMutations) {
+              maximumActiveMutations = activeMutations;
+            }
+            secondMutationStarted.complete();
+            final mutation = Completer<void>();
+            mutations.add(mutation);
+            return mutation.future.then<LocalTrackPublication<LocalTrack>?>((
+              _,
+            ) {
+              cameraEnabled = true;
+              activeMutations--;
+              return null;
+            });
+          });
+
+          final controller = container.read(
+            sessionDeviceControllerProvider(mockSession).notifier,
+          );
+          final request = controller.disableCamera();
+          unawaited(controller.enableCamera());
+          unawaited(controller.disableCamera());
+          unawaited(controller.enableCamera());
+
+          check(calls).deepEquals([false]);
+          check(maximumActiveMutations).equals(1);
+
+          mutations.single.complete();
+          await secondMutationStarted.future;
+
+          check(calls).deepEquals([false, true]);
+          check(maximumActiveMutations).equals(1);
+
+          mutations.last.complete();
+          await request;
+
+          check(cameraEnabled).isTrue();
+        },
+      );
+
+      test(
+        'drops stale camera requests when the latest state is disabled',
+        () async {
+          var cameraEnabled = true;
+          final calls = <bool>[];
+          final mutation = Completer<void>();
+
+          when(
+            () => mockLocalParticipant.isCameraEnabled(),
+          ).thenAnswer((_) => cameraEnabled);
+          when(() => mockLocalParticipant.setCameraEnabled(false)).thenAnswer((
+            _,
+          ) {
+            calls.add(false);
+            return mutation.future.then<LocalTrackPublication<LocalTrack>?>((
+              _,
+            ) {
+              cameraEnabled = false;
+              return null;
+            });
+          });
+
+          final controller = container.read(
+            sessionDeviceControllerProvider(mockSession).notifier,
+          );
+          final request = controller.disableCamera();
+          unawaited(controller.enableCamera());
+          unawaited(controller.disableCamera());
+
+          check(calls).deepEquals([false]);
+          mutation.complete();
+          await request;
+
+          check(calls).deepEquals([false]);
+          check(cameraEnabled).isFalse();
+        },
+      );
+
+      test('recovers after a camera mutation fails', () async {
+        var cameraEnabled = true;
+        var shouldFail = true;
+        final calls = <bool>[];
+
+        when(
+          () => mockLocalParticipant.isCameraEnabled(),
+        ).thenAnswer((_) => cameraEnabled);
+        when(() => mockLocalParticipant.setCameraEnabled(false)).thenAnswer((
+          _,
+        ) {
+          calls.add(false);
+          if (shouldFail) {
+            shouldFail = false;
+            return Future<LocalTrackPublication<LocalTrack>?>.error(
+              StateError('camera unavailable'),
+            );
+          }
+          cameraEnabled = false;
+          return Future<LocalTrackPublication<LocalTrack>?>.value();
+        });
+
+        final controller = container.read(
+          sessionDeviceControllerProvider(mockSession).notifier,
+        );
+
+        await controller.disableCamera();
+        await controller.disableCamera();
+
+        check(calls).deepEquals([false, false]);
+        check(cameraEnabled).isFalse();
+      });
 
       test('resetSpeakerRoutingDefaults resets preferences', () {
         final controller = container.read(

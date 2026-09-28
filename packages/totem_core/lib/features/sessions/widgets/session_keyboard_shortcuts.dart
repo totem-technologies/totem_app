@@ -135,11 +135,7 @@ class _SessionKeyboardShortcutsState
     if (_isTogglingCamera) return;
     _isTogglingCamera = true;
     try {
-      if (session.devices.isCameraEnabled) {
-        await session.devices.disableCamera();
-      } else {
-        await session.devices.enableCamera();
-      }
+      await session.devices.toggleCamera();
     } finally {
       _isTogglingCamera = false;
     }

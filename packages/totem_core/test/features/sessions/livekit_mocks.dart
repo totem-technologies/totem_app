@@ -98,6 +98,11 @@ class FakeRoom extends Fake implements Room {
   @override
   LocalParticipant get localParticipant => participant;
 
+  @override
+  RoomOptions get roomOptions => const RoomOptions(
+    defaultCameraCaptureOptions: CameraCaptureOptions(deviceId: 'camera-1'),
+  );
+
   bool _speakerOn = false;
 
   @override

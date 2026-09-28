@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -673,22 +674,31 @@ class _SessionActionBarCameraButtonState
   }
 
   Future<void> _toggleCamera() async {
+    if (_busy) return;
+
     final session = widget.session;
     final shouldEnable = !_cameraIsEnabled;
-
     setState(() => _busy = true);
 
-    if (shouldEnable) {
-      await session.devices.enableCamera();
-    } else {
-      await session.devices.disableCamera();
-    }
-
-    if (mounted) {
-      setState(() {
-        _busy = false;
-        _cameraIsEnabled = shouldEnable;
-      });
+    try {
+      if (shouldEnable) {
+        await session.devices.enableCamera();
+      } else {
+        await session.devices.disableCamera();
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to change camera state from action bar',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _cameraIsEnabled = session.devices.isCameraEnabled;
+        });
+      }
     }
   }
 
@@ -710,15 +720,7 @@ class _SessionActionBarCameraButtonState
 
     return ActionBarCameraSwitcherButton(
       isCameraOn: _cameraIsEnabled,
-      onToggle: () async {
-        final shouldEnable = !_cameraIsEnabled;
-        if (shouldEnable) {
-          await session.devices.enableCamera();
-        } else {
-          await session.devices.disableCamera();
-        }
-        if (mounted) setState(() => _cameraIsEnabled = shouldEnable);
-      },
+      onToggle: _busy ? null : _toggleCamera,
       cameraPosition: CameraPosition.front,
       availableCameraDevices: _availableCameraDevices,
       selectedCameraDeviceId:

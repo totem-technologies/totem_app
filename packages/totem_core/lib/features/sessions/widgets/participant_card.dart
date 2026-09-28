@@ -338,15 +338,13 @@ class LocalParticipantCard extends ConsumerWidget {
   final AudioTrack? audioTrack;
   final VideoTrack? videoTrack;
 
-  bool get _isVideoTrackVisible =>
-      videoTrack != null && videoTrack!.isActive && !videoTrack!.muted;
+  bool get _hasRenderer => videoTrack != null && videoTrack!.isActive;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
-
-    final showVideo = isCameraOn && _isVideoTrackVisible;
+    final showVideo = isCameraOn && _hasRenderer && !videoTrack!.muted;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
@@ -364,19 +362,25 @@ class LocalParticipantCard extends ConsumerWidget {
                 ),
               ),
             ),
-            AnimatedSwitcher(
-              duration: kThemeAnimationDuration,
-              child: showVideo
-                  ? IgnorePointer(
-                      child: VideoTrackRenderer(
-                        videoTrack!,
-                        key: ValueKey(videoTrack!.sid),
-                        fit: VideoViewFit.cover,
-                        renderMode: VideoRenderMode.platformView,
-                      ),
-                    )
-                  : const SizedBox(),
-            ),
+            if (_hasRenderer)
+              IgnorePointer(
+                child: VideoTrackRenderer(
+                  videoTrack!,
+                  key: ValueKey(videoTrack!.sid),
+                  fit: VideoViewFit.cover,
+                  renderMode: VideoRenderMode.platformView,
+                ),
+              ),
+            if (!showVideo)
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: UserAvatar.currentUser(
+                    radius: 0,
+                    borderRadius: BorderRadius.zero,
+                    borderWidth: 0,
+                  ),
+                ),
+              ),
             PositionedDirectional(
               bottom: 14,
               start: 14,
@@ -398,6 +402,32 @@ class LocalParticipantCard extends ConsumerWidget {
   }
 }
 
+@immutable
+class _ParticipantVideoRenderState {
+  const _ParticipantVideoRenderState({
+    required this.publication,
+    required this.track,
+    required this.showVideo,
+  });
+
+  final TrackPublication<Track>? publication;
+  final VideoTrack? track;
+  final bool showVideo;
+
+  bool get hasRenderer => publication?.subscribed == true && track != null;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _ParticipantVideoRenderState &&
+        identical(other.publication, publication) &&
+        identical(other.track, track) &&
+        other.showVideo == showVideo;
+  }
+
+  @override
+  int get hashCode => Object.hash(publication, track, showVideo);
+}
+
 class ParticipantVideo extends ConsumerStatefulWidget {
   const ParticipantVideo({required this.participant, super.key});
 
@@ -408,7 +438,7 @@ class ParticipantVideo extends ConsumerStatefulWidget {
 }
 
 class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
-  final GlobalKey videoKey = GlobalKey();
+  late _ParticipantVideoRenderState _renderState = _readRenderState();
 
   EventsListener<ParticipantEvent>? _listener;
   void _setupListeners() {
@@ -426,13 +456,22 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       ..on<TrackUnsubscribedEvent>(
         (event) => _onCameraPublicationChanged(event.publication),
       )
+      ..on<LocalTrackPublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
+      ..on<LocalTrackUnpublishedEvent>(
+        (event) => _onCameraPublicationChanged(event.publication),
+      )
       ..on<TrackMutedEvent>(_onTrackMuted)
       ..on<TrackUnmutedEvent>(_onTrackUnmuted);
   }
 
   void _onCameraPublicationChanged(TrackPublication<Track> publication) {
     if (!mounted || publication.source != TrackSource.camera) return;
-    setState(() {});
+
+    final nextState = _readRenderState();
+    if (nextState == _renderState) return;
+    setState(() => _renderState = nextState);
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
@@ -454,6 +493,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.participant.sid != widget.participant.sid) {
       _setupListeners();
+      _renderState = _readRenderState();
     }
   }
 
@@ -470,15 +510,47 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
       return (widget.participant as LocalParticipant)
               .getTrackPublicationBySource(TrackSource.camera) ??
           widget.participant.videoTrackPublications
-              .where(
-                (t) => t.track != null && t.track!.isActive && !t.track!.muted,
-              )
+              .where((t) => t.track != null)
               .firstOrNull;
     } else {
       return widget.participant.videoTrackPublications
-          .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
+          .where((t) => t.track != null)
           .firstOrNull;
     }
+  }
+
+  _ParticipantVideoRenderState _readRenderState() {
+    final publication = videoTrack;
+    final track = publication?.track;
+    final rendererTrack = track is VideoTrack ? track : null;
+    final hasRenderer =
+        publication?.subscribed == true && rendererTrack != null;
+    final showVideo =
+        hasRenderer &&
+        !publication!.muted &&
+        rendererTrack.isActive &&
+        !rendererTrack.muted;
+    return _ParticipantVideoRenderState(
+      publication: publication,
+      track: rendererTrack,
+      showVideo: showVideo,
+    );
+  }
+
+  Widget _avatar() {
+    return UserAvatar.slug(
+      widget.participant.identity,
+      radius: 0,
+      borderRadius: BorderRadius.zero,
+      borderWidth: 0,
+      loading: const LoadingVideoPlaceholder(borderRadius: 0),
+      error: const ColoredBox(
+        color: AppTheme.mauve,
+        child: Center(
+          child: TotemIcon(TotemIcons.person, size: 24, color: Colors.white),
+        ),
+      ),
+    );
   }
 
   @override
@@ -486,49 +558,23 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     final currentUser = ref.watch(
       authControllerProvider.select((auth) => auth.user),
     );
-    final trackPublication = videoTrack;
+    final renderState = _renderState;
+    final trackPublication = renderState.publication;
 
-    /// The user avatar is always rendered behind the video.
-    ///
-    ///  1. If the user swipes the app away or close the browser tab and stops emitting data,
-    ///     the video turns transparent and the user avatar remains visible.
-    ///  2. If the user disabled their camera (muted track), the user avatar remains visible.
-    ///  3. In all other cases, the video is displayed normally.
     final content = Stack(
       children: [
-        Positioned.fill(
-          child: IgnorePointer(
-            child: UserAvatar.slug(
-              widget.participant.identity,
-              radius: 0,
-              borderRadius: BorderRadius.zero,
-              borderWidth: 0,
-              loading: const LoadingVideoPlaceholder(borderRadius: 0),
-              error: const ColoredBox(
-                color: AppTheme.mauve,
-                child: Center(
-                  child: TotemIcon(
-                    TotemIcons.person,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (trackPublication != null &&
-            trackPublication.track != null &&
-            trackPublication.subscribed &&
-            !trackPublication.muted)
+        Positioned.fill(child: IgnorePointer(child: _avatar())),
+        if (renderState.hasRenderer)
           IgnorePointer(
             child: VideoTrackRenderer(
-              key: videoKey,
-              trackPublication.track! as VideoTrack,
+              key: ValueKey((trackPublication!.sid, renderState.track!.sid)),
+              renderState.track!,
               fit: VideoViewFit.cover,
               renderMode: VideoRenderMode.platformView,
             ),
           ),
+        if (!renderState.showVideo)
+          Positioned.fill(child: IgnorePointer(child: _avatar())),
       ],
     );
 

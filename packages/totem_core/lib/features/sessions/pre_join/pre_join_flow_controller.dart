@@ -49,6 +49,14 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         return PreJoinJoinOutcome.permissionsDenied;
       }
 
+      final joinMedia = await mediaController.takeForJoin(
+        requireUsableMedia: requireUsableMedia,
+      );
+      mediaTransferred = true;
+
+      // Capture preferences after media initialization has settled. A failed or
+      // revoked pre-join capture clears its preference, so an earlier snapshot
+      // would incorrectly create a new camera after joining.
       final preferences = ref
           .read(preJoinMediaControllerProvider(sessionSlug))
           .preferences;
@@ -71,10 +79,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       );
       session = currentSession;
       currentSession.preventAutoDispose();
-      final joinMedia = await mediaController.takeForJoin(
-        requireUsableMedia: requireUsableMedia,
-      );
-      mediaTransferred = true;
 
       final result = await currentSession.join(joinMedia: joinMedia);
       if (result == SessionJoinResult.retryableFailure) {
