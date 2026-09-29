@@ -1,8 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
+import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
 const _maxPromptLength = 1000;
 
@@ -13,6 +18,7 @@ Future<void> showSessionPromptsModal(
   return showResponsiveModal<void>(
     context: context,
     useRootNavigator: false,
+    showDragHandle: false,
     bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
     dialogBackgroundColor: const Color(0xFFF3F1E9),
     bottomSheetBuilder: (_) => SessionPromptsModal(sessionSlug: sessionSlug),
@@ -59,8 +65,6 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
       );
       _adopt(result);
     } catch (_) {
-      // A prompt may have become displayed while this modal was open. Reload
-      // the server's canonical list rather than retaining a stale draft.
       try {
         _adopt(
           await ref.refresh(sessionPromptsProvider(widget.sessionSlug).future),
@@ -116,80 +120,129 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
       );
     }
 
+    final currentRound = ref.watch(
+      currentSessionStateProvider.select(
+        (state) => state?.roomState.roundNumber,
+      ),
+    );
     final displayed = _displayed;
     final future = _future;
+    final theme = Theme.of(context);
+
     return PopScope(
       canPop: !_saving,
       child: Material(
         type: MaterialType.transparency,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsetsDirectional.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Discussion Prompts',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 8),
-                const Text('Drag future prompts to set the discussion order.'),
-                const SizedBox(height: 16),
-                if (displayed.isNotEmpty) ...[
-                  const Text('Already discussed'),
-                  for (final prompt in displayed)
-                    _PromptTile(
-                      key: ValueKey('displayed-${prompt.id.value}'),
-                      prompt: prompt,
-                      locked: true,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SheetDragHandle(),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(
+                start: 20,
+                end: 20,
+                bottom: 6,
+              ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Text(
+                      'Discussion Prompts',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
                     ),
-                  const SizedBox(height: 12),
+                  ),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const TotemIcon(
+                        TotemIcons.x,
+                        size: 16,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
                 ],
-                const Text('Future prompts'),
-                Flexible(
-                  child: ReorderableListView(
-                    shrinkWrap: true,
-                    buildDefaultDragHandles: false,
-                    onReorderItem: _saving
-                        ? (_, _) {}
-                        : (oldIndex, newIndex) async {
-                            final reordered = [...future];
-                            final item = reordered.removeAt(oldIndex);
-                            reordered.insert(newIndex, item);
-                            await _save(reordered);
-                          },
-                    children: [
-                      for (var index = 0; index < future.length; index++)
-                        _PromptTile(
-                          key: ValueKey(
-                            'future-${future[index].id.value ?? index}',
-                          ),
-                          prompt: future[index],
-                          locked: false,
-                          index: index,
-                          saving: _saving,
-                          onEdit: () => _addOrEdit(future[index]),
-                          onDelete: () async {
-                            final updated = [...future]..removeAt(index);
-                            await _save(updated);
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: FilledButton.icon(
-                    onPressed: _saving ? null : _addOrEdit,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add prompt'),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(
+                start: 20,
+                end: 20,
+                bottom: 20,
+              ),
+              child: Text(
+                'Drag future prompts to set the discussion order.',
+                style: theme.textTheme.bodySmall?.copyWith(color: Colors.black),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Flexible(
+              child: CustomScrollView(
+                shrinkWrap: true,
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 20,
+                    ),
+                    sliver: SliverList.builder(
+                      itemCount: displayed.length,
+                      itemBuilder: (context, index) {
+                        final prompt = displayed[index];
+                        return _PromptTile(
+                          key: ValueKey('displayed-${prompt.id.value}'),
+                          prompt: prompt,
+                          locked: true,
+                          current: prompt.roundNumber.value == currentRound,
+                        );
+                      },
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 20,
+                    ),
+                    sliver: SliverReorderableList(
+                      itemCount: future.length,
+                      onReorderItem: _saving
+                          ? (_, _) {}
+                          : (oldIndex, newIndex) async {
+                              final reordered = [...future];
+                              final item = reordered.removeAt(oldIndex);
+                              reordered.insert(newIndex, item);
+                              await _save(reordered);
+                            },
+                      itemBuilder: (context, index) => _PromptTile(
+                        key: ValueKey(
+                          'future-${future[index].id.value ?? index}',
+                        ),
+                        prompt: future[index],
+                        locked: false,
+                        index: index,
+                        saving: _saving,
+                        onEdit: () => _addOrEdit(future[index]),
+                        onDelete: () async {
+                          final updated = [...future]..removeAt(index);
+                          await _save(updated);
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(40, 20, 40, 12),
+              child: ElevatedButton(
+                onPressed: _saving ? null : _addOrEdit,
+                child: const Text('Add prompt'),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -201,6 +254,7 @@ class _PromptTile extends StatelessWidget {
     required this.prompt,
     required this.locked,
     super.key,
+    this.current = false,
     this.index,
     this.saving = false,
     this.onEdit,
@@ -209,6 +263,7 @@ class _PromptTile extends StatelessWidget {
 
   final SessionPromptSchema prompt;
   final bool locked;
+  final bool current;
   final int? index;
   final bool saving;
   final VoidCallback? onEdit;
@@ -216,37 +271,91 @@ class _PromptTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: locked
-            ? const Icon(Icons.lock_outline, semanticLabel: 'Displayed prompt')
-            : ReorderableDragStartListener(
-                index: index!,
-                enabled: !saving,
-                child: const Icon(
-                  Icons.drag_handle,
-                  semanticLabel: 'Drag prompt',
+    final theme = Theme.of(context);
+    const foreground = Colors.black;
+    return Container(
+      margin: const EdgeInsetsDirectional.only(bottom: 8),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 12,
+        vertical: 10,
+      ),
+      decoration: BoxDecoration(
+        color: current ? AppTheme.mauve.withValues(alpha: 0.16) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: current ? Border.all(color: AppTheme.mauve) : null,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsetsDirectional.only(top: 2, end: 10),
+            child: locked
+                ? const TotemIcon(
+                    TotemIcons.lock,
+                    size: 18,
+                    color: Colors.black,
+                  )
+                : ReorderableDragStartListener(
+                    index: index!,
+                    enabled: !saving,
+                    child: const TotemIcon(
+                      TotemIcons.reorderParticipants,
+                      size: 18,
+                      color: Colors.black,
+                    ),
+                  ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (current)
+                  Text(
+                    'Current prompt',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppTheme.mauve,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                Text(
+                  prompt.prompt,
+                  style: theme.textTheme.bodyLarge?.copyWith(color: foreground),
                 ),
-              ),
-        title: Text(prompt.prompt),
-        subtitle: locked ? Text('Round ${prompt.roundNumber.value}') : null,
-        trailing: locked
-            ? null
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    tooltip: 'Edit prompt',
-                    onPressed: saving ? null : onEdit,
-                    icon: const Icon(Icons.edit_outlined),
+                if (locked && !current)
+                  Text(
+                    'Round ${prompt.roundNumber.value}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: foreground.withValues(alpha: 0.65),
+                    ),
                   ),
-                  IconButton(
-                    tooltip: 'Delete prompt',
-                    onPressed: saving ? null : onDelete,
-                    icon: const Icon(Icons.delete_outline),
+              ],
+            ),
+          ),
+          if (!locked)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Edit prompt',
+                  onPressed: saving ? null : onEdit,
+                  icon: const TotemIcon(
+                    TotemIcons.edit,
+                    size: 18,
+                    color: Colors.black,
                   ),
-                ],
-              ),
+                ),
+                IconButton(
+                  tooltip: 'Delete prompt',
+                  onPressed: saving ? null : onDelete,
+                  icon: const TotemIcon(
+                    TotemIcons.delete,
+                    size: 18,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
@@ -254,33 +363,39 @@ class _PromptTile extends StatelessWidget {
 
 Future<String?> _promptText(BuildContext context, {String? initialText}) async {
   final controller = TextEditingController(text: initialText);
+  final formKey = GlobalKey<FormState>();
   try {
     return await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(initialText == null ? 'Add prompt' : 'Edit prompt'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: _maxPromptLength,
-          minLines: 2,
-          maxLines: 5,
-          decoration: const InputDecoration(hintText: 'Discussion prompt'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final text = controller.text.trim();
-              if (text.isEmpty || text.length > _maxPromptLength) return;
-              Navigator.of(context).pop(text);
+      builder: (context) => ConfirmationDialog(
+        title: initialText == null ? 'Add prompt' : 'Edit prompt',
+        content: 'Enter a discussion prompt for this Session.',
+        confirmButtonText: 'Save',
+        type: ConfirmationDialogType.standard,
+        contentWidget: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            autofocus: true,
+            maxLength: _maxPromptLength,
+            minLines: 3,
+            maxLines: 5,
+            decoration: const InputDecoration(hintText: 'Discussion prompt'),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Enter a prompt';
+              }
+              if (value.trim().length > _maxPromptLength) {
+                return 'Prompts can be at most $_maxPromptLength characters';
+              }
+              return null;
             },
-            child: const Text('Save'),
           ),
-        ],
+        ),
+        onConfirm: () async {
+          if (!formKey.currentState!.validate()) return;
+          Navigator.of(context).pop(controller.text.trim());
+        },
       ),
     );
   } finally {
