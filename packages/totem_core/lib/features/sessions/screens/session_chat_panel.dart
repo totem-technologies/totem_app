@@ -386,11 +386,6 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                   _ => true,
                 },
                 onSend: send,
-              )
-            else
-              const MessageInputBar(
-                hintText: 'Message everyone',
-                enabled: false,
               ),
           ],
         ),

@@ -121,6 +121,24 @@ class _UnavailableTrackFactory extends PreJoinPreviewTrackFactory {
       throw Exception('Audio engine returned error code: -9001');
 }
 
+class _DelayedUnavailableTrackFactory extends PreJoinPreviewTrackFactory {
+  final cameraStarted = Completer<void>();
+  final cameraGate = Completer<void>();
+
+  @override
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  ) async {
+    cameraStarted.complete();
+    await cameraGate.future;
+    throw Exception('NotFoundError: no camera is available');
+  }
+
+  @override
+  Future<LocalAudioTrack?> createAudioTrack() async =>
+      MockPreJoinLocalAudioTrack();
+}
+
 class _SuccessfulSessionController extends SessionController {
   static SessionJoinMedia? receivedMedia;
 
@@ -159,6 +177,7 @@ ProviderContainer _container({
   required JoinResponse response,
   required ValueGetter<SessionController> sessionController,
   bool requireUsableMedia = false,
+  bool Function()? shouldFailPrecache,
 }) {
   return ProviderContainer(
       overrides: [
@@ -167,7 +186,12 @@ ProviderContainer _container({
           requireUsableMedia,
         ),
         sessionTokenProvider(_slug).overrideWith((_) async => response),
-        sessionProvider(_slug).overrideWith((_) async => _event()),
+        sessionProvider(_slug).overrideWith((_) async {
+          if (shouldFailPrecache?.call() ?? false) {
+            throw StateError('Precache failed');
+          }
+          return _event();
+        }),
         sessionControllerProvider(_options).overrideWith(sessionController),
       ],
     )
@@ -292,6 +316,64 @@ void main() {
     check(outcome).equals(PreJoinJoinOutcome.joined);
     check(_SuccessfulSessionController.receivedMedia?.cameraTrack).isNull();
     check(_SuccessfulSessionController.receivedMedia?.microphoneTrack).isNull();
+  });
+
+  test(
+    'joining uses the settled camera preference when initial capture fails',
+    () async {
+      final factory = _DelayedUnavailableTrackFactory();
+      _SuccessfulSessionController.receivedMedia = null;
+      final container = _container(
+        factory: factory,
+        response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+        sessionController: _SuccessfulSessionController.new,
+      );
+      addTearDown(container.dispose);
+
+      final join = container
+          .read(preJoinFlowControllerProvider(_slug).notifier)
+          .requestJoin();
+      await factory.cameraStarted.future;
+
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).sessionOptions,
+      ).isNull();
+
+      factory.cameraGate.complete();
+      check(await join).equals(PreJoinJoinOutcome.joined);
+      check(
+        container
+            .read(preJoinFlowControllerProvider(_slug))
+            .sessionOptions
+            ?.cameraEnabled,
+      ).equals(false);
+      check(_SuccessfulSessionController.receivedMedia?.cameraTrack).isNull();
+    },
+  );
+
+  test('failed precache leaves preview media available for a retry', () async {
+    var failPrecache = true;
+    final factory = _TrackFactory();
+    _SuccessfulSessionController.receivedMedia = null;
+    final container = _container(
+      factory: factory,
+      response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+      sessionController: _SuccessfulSessionController.new,
+      shouldFailPrecache: () => failPrecache,
+    );
+    addTearDown(container.dispose);
+    await _waitForMedia(container);
+
+    final flow = container.read(preJoinFlowControllerProvider(_slug).notifier);
+    check(await flow.requestJoin()).equals(PreJoinJoinOutcome.retryableFailure);
+    check(
+      container.read(preJoinMediaControllerProvider(_slug)).transferred,
+    ).equals(false);
+
+    failPrecache = false;
+    container.invalidate(sessionProvider(_slug));
+    check(await flow.requestJoin()).equals(PreJoinJoinOutcome.joined);
+    check(_SuccessfulSessionController.receivedMedia?.cameraTrack).isNotNull();
   });
 
   test(

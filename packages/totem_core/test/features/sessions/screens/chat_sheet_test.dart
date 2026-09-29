@@ -300,8 +300,7 @@ void main() {
       ).isNotNull();
 
       check(tester.widgetList(find.text('Message Keeper'))).length.equals(1);
-      check(tester.widgetList(find.text('Message everyone'))).length.equals(1);
-      check(tester.widgetList(find.byType(MessageInputBar))).length.equals(1);
+      check(tester.widgetList(find.byType(MessageInputBar))).length.equals(0);
       check(
         tester
             .widget<Material>(

@@ -242,12 +242,13 @@ class SessionMessagingController extends _$SessionMessagingController {
     }
 
     final room = _room;
-    ref
+    final shouldPublish = await ref
         .read(emojiReactionsProvider.notifier)
         .emitIncomingReaction(
           room?.localParticipant?.identity ?? 'unknown',
           emoji,
         );
+    if (!shouldPublish) return;
 
     try {
       await room?.localParticipant

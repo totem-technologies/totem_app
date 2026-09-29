@@ -121,34 +121,37 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       );
       ref.read(sessionChatUnreadThreadsProvider.notifier).markUnread(thread);
     });
-    return ActionBarButton(
-      semanticsLabel: 'Chat',
-      role: ActionBarButtonRole.sheet(open: isChatOpen),
-      onPressed: () {
-        final latestUnread = ref
-            .read(sessionChatUnreadThreadsProvider.notifier)
-            .latestUnreadThread;
-        unawaited(
-          _openChat(
-            thread: latestUnread?.thread,
-            fromUnread: latestUnread != null,
-          ),
-        );
-      },
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          const TotemIcon(TotemIcons.chat),
-          if (hasUnreadThreads)
-            Container(
-              height: 4,
-              width: 4,
-              decoration: const BoxDecoration(
-                color: AppTheme.green,
-                shape: BoxShape.circle,
-              ),
+    return ActionBarTooltip(
+      message: 'Chat',
+      child: ActionBarButton(
+        semanticsLabel: 'Chat',
+        role: ActionBarButtonRole.sheet(open: isChatOpen),
+        onPressed: () {
+          final latestUnread = ref
+              .read(sessionChatUnreadThreadsProvider.notifier)
+              .latestUnreadThread;
+          unawaited(
+            _openChat(
+              thread: latestUnread?.thread,
+              fromUnread: latestUnread != null,
             ),
-        ],
+          );
+        },
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const TotemIcon(TotemIcons.chat),
+            if (hasUnreadThreads)
+              Container(
+                height: 4,
+                width: 4,
+                decoration: const BoxDecoration(
+                  color: AppTheme.green,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

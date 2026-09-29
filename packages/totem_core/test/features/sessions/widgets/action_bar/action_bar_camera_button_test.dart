@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -467,5 +469,47 @@ void main() {
 
       check(devices.disableCameraCalled).equals(true);
     });
+
+    testWidgets('web camera action ignores overlapping presses and recovers', (
+      tester,
+    ) async {
+      final pendingEnable = Completer<void>();
+      final webDevices = MockSessionDeviceController();
+      sessionController.mockDevices = webDevices;
+      when(() => webDevices.isCameraEnabled).thenReturn(false);
+      when(webDevices.enableCamera).thenAnswer((_) => pendingEnable.future);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SessionActionBarCameraButton(
+              session: sessionController,
+              participant: participant,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      check(
+        tester.widgetList(find.byType(ActionBarCameraSwitcherButton)),
+      ).length.equals(1);
+
+      await tester.tap(find.byType(ActionBarButton));
+      await tester.pump();
+      await tester.tap(find.byType(ActionBarButton), warnIfMissed: false);
+      await tester.pump();
+
+      verify(webDevices.enableCamera).called(1);
+
+      pendingEnable.complete();
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.byType(ActionBarButton));
+      await tester.pump();
+
+      verify(webDevices.enableCamera).called(2);
+    }, skip: !kIsWeb);
   });
 }

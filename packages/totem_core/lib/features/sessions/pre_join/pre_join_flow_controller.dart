@@ -49,6 +49,18 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         return PreJoinJoinOutcome.permissionsDenied;
       }
 
+      // Precache event data before transferring preview tracks so a failed
+      // request leaves them owned by the pre-join controller and retryable.
+      await ref.read(sessionProvider(sessionSlug).future);
+
+      final joinMedia = await mediaController.takeForJoin(
+        requireUsableMedia: requireUsableMedia,
+      );
+      mediaTransferred = true;
+
+      // Capture preferences after media initialization has settled. A failed or
+      // revoked pre-join capture clears its preference, so an earlier snapshot
+      // would incorrectly create a new camera after joining.
       final preferences = ref
           .read(preJoinMediaControllerProvider(sessionSlug))
           .preferences;
@@ -62,19 +74,13 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       );
       state = state.copyWith(sessionOptions: options);
 
-      // Precache event data before connection so the session screen can render
-      // without adding another loading transition.
-      await ref.read(sessionProvider(sessionSlug).future);
-
+      // The session is now ready, so the join screen can render without adding
+      // another loading transition.
       final currentSession = ref.read(
         sessionControllerProvider(options).notifier,
       );
       session = currentSession;
       currentSession.preventAutoDispose();
-      final joinMedia = await mediaController.takeForJoin(
-        requireUsableMedia: requireUsableMedia,
-      );
-      mediaTransferred = true;
 
       final result = await currentSession.join(joinMedia: joinMedia);
       if (result == SessionJoinResult.retryableFailure) {

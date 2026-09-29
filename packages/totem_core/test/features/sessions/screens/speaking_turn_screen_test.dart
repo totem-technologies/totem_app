@@ -193,6 +193,7 @@ void main() {
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
     when(() => devices.enableCamera()).thenAnswer((_) async {});
     when(() => devices.disableCamera()).thenAnswer((_) async {});
+    when(() => devices.toggleCamera()).thenAnswer((_) async {});
     when(() => messaging.sendReaction(any())).thenAnswer((_) async {});
 
     when(
@@ -364,6 +365,7 @@ void main() {
         await tester.pump();
 
         verifyNever(() => devices.enableCamera());
+        verifyNever(() => devices.toggleCamera());
         verifyNever(() => messaging.sendReaction(any()));
       });
     });

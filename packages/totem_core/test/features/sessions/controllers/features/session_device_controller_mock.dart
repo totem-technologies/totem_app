@@ -10,6 +10,7 @@ class FakeSessionDeviceController implements SessionDeviceController {
 
   bool enableCameraCalled = false;
   bool disableCameraCalled = false;
+  bool _cameraEnabled = false;
 
   @override
   Future<void> disableMicrophone() async {
@@ -28,13 +29,23 @@ class FakeSessionDeviceController implements SessionDeviceController {
   String get selectedCameraDeviceId => 'camera-1';
 
   @override
+  bool get isCameraEnabled => _cameraEnabled;
+
+  @override
   Future<void> enableCamera() async {
     enableCameraCalled = true;
+    _cameraEnabled = true;
   }
 
   @override
   Future<void> disableCamera() async {
     disableCameraCalled = true;
+    _cameraEnabled = false;
+  }
+
+  @override
+  Future<void> toggleCamera() {
+    return _cameraEnabled ? disableCamera() : enableCamera();
   }
 
   @override

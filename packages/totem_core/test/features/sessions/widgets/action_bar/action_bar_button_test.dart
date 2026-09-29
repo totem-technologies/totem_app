@@ -1,5 +1,6 @@
 import 'package:checks/checks.dart';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -43,6 +44,48 @@ void main() {
         ActionBarButton(onPressed: () {}, child: Text('$i')),
     ];
   }
+
+  group('ActionBarShortcutTooltip', () {
+    testWidgets('shows the shortcut only on a desktop web target', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await pumpWidget(
+          tester,
+          child: const ActionBarShortcutTooltip(
+            shortcut: ActionBarShortcut.microphone,
+            child: Icon(Icons.mic),
+          ),
+        );
+
+        check(
+          tester.widgetList(find.byType(Tooltip)),
+        ).length.equals(kIsWeb ? 1 : 0);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('does not show the shortcut on a mobile web target', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        await pumpWidget(
+          tester,
+          child: const ActionBarShortcutTooltip(
+            shortcut: ActionBarShortcut.microphone,
+            child: Icon(Icons.mic),
+          ),
+        );
+
+        check(tester.widgetList(find.byType(Tooltip))).isEmpty();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+  });
 
   group('ActionBarButton', () {
     testWidgets('invokes callback on tap', (tester) async {

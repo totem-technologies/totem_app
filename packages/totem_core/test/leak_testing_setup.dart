@@ -18,6 +18,7 @@ void configureTotemLeakTesting() {
           'TrackPublication',
           'LocalTrackPublication',
           'RemoteTrackPublication',
+          'RTCVideoRenderer',
           'Room',
         ],
       );

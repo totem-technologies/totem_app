@@ -20,10 +20,39 @@ import 'package:web/web.dart' as web;
 external void _removeSplashFromWeb();
 
 Future<void> main() async {
-  RoomBackground.onBackgroundChanged = (color) {
-    final hex =
+  RoomBackground.onBackgroundChanged = (decoration) {
+    final style = web.document.body?.style;
+    if (style == null) return;
+
+    String toHex(Color color) =>
         '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
-    web.document.body?.style.setProperty('background-color', hex);
+
+    final gradient = decoration.gradient;
+    if (gradient is LinearGradient) {
+      final colors = gradient.colors;
+      final stops =
+          gradient.stops ??
+          List<double>.generate(
+            colors.length,
+            (index) => index / (colors.length - 1),
+          );
+      final value = StringBuffer('linear-gradient(to bottom');
+      for (var index = 0; index < colors.length; index++) {
+        value
+          ..write(', ')
+          ..write(toHex(colors[index]))
+          ..write(' ')
+          ..write('${stops[index] * 100}%');
+      }
+      value.write(')');
+      style
+        ..setProperty('background-color', 'transparent')
+        ..setProperty('background-image', value.toString());
+    } else if (decoration.color != null) {
+      style
+        ..setProperty('background-image', 'none')
+        ..setProperty('background-color', toHex(decoration.color!));
+    }
   };
 
   await sharedMain(

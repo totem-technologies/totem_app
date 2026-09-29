@@ -122,6 +122,7 @@ void main() {
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
     when(() => devices.enableCamera()).thenAnswer((_) async {});
     when(() => devices.disableCamera()).thenAnswer((_) async {});
+    when(() => devices.toggleCamera()).thenAnswer((_) async {});
     when(() => keeper.acceptTotem()).thenAnswer((_) async {});
 
     when(
@@ -265,7 +266,7 @@ void main() {
 
         await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
         await tester.pump();
-        verify(() => devices.enableCamera()).called(1);
+        verify(() => devices.toggleCamera()).called(1);
       });
     });
 

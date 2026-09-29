@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
@@ -249,6 +250,90 @@ class _ActionBarButtonState extends State<ActionBarButton> {
   }
 }
 
+class ActionBarShortcut {
+  const ActionBarShortcut({required this.label, required this.logicalKeys});
+
+  static const LogicalKeyboardKey microphoneKey = LogicalKeyboardKey.keyZ;
+  static const LogicalKeyboardKey cameraKey = LogicalKeyboardKey.keyX;
+  static const List<LogicalKeyboardKey> reactionKeys = [
+    LogicalKeyboardKey.keyA,
+    LogicalKeyboardKey.keyS,
+    LogicalKeyboardKey.keyD,
+    LogicalKeyboardKey.keyF,
+  ];
+
+  static const microphone = ActionBarShortcut(
+    label: 'Toggle microphone',
+    logicalKeys: [microphoneKey],
+  );
+  static const camera = ActionBarShortcut(
+    label: 'Toggle camera',
+    logicalKeys: [cameraKey],
+  );
+  static const reactions = ActionBarShortcut(
+    label: 'Send reaction',
+    logicalKeys: reactionKeys,
+  );
+
+  final String label;
+  final List<LogicalKeyboardKey> logicalKeys;
+
+  String get keyLabels => logicalKeys.map((key) => key.keyLabel).join(', ');
+}
+
+class ActionBarTooltip extends StatelessWidget {
+  const ActionBarTooltip({
+    required this.message,
+    required this.child,
+    super.key,
+  });
+
+  final String message;
+  final Widget child;
+
+  static bool get isDesktopWeb =>
+      kIsWeb &&
+      switch (defaultTargetPlatform) {
+        TargetPlatform.macOS ||
+        TargetPlatform.windows ||
+        TargetPlatform.linux => true,
+        TargetPlatform.android ||
+        TargetPlatform.iOS ||
+        TargetPlatform.fuchsia => false,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isDesktopWeb) return child;
+
+    return Tooltip(
+      message: message,
+      excludeFromSemantics: true,
+      preferBelow: false,
+      child: child,
+    );
+  }
+}
+
+class ActionBarShortcutTooltip extends StatelessWidget {
+  const ActionBarShortcutTooltip({
+    required this.shortcut,
+    required this.child,
+    super.key,
+  });
+
+  final ActionBarShortcut shortcut;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionBarTooltip(
+      message: '${shortcut.label} (${shortcut.keyLabels})',
+      child: child,
+    );
+  }
+}
+
 class ActionBar extends StatelessWidget {
   const ActionBar({required this.children, super.key});
 
@@ -472,30 +557,36 @@ class SessionActionBar extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final microphoneButton = ActionBarMicButton(
-      participant: user,
-      initiallyEnabled: session.options.microphoneEnabled,
-      requiresUnmuteConfirmation:
-          totemState?.status == RoomStatus.active &&
-          totemState?.speaker != user.identity,
-      onToggle: (shouldEnable) async {
-        if (shouldEnable) {
-          await session.devices.enableMicrophone();
-        } else {
-          await session.devices.disableMicrophone();
-        }
-      },
+    final microphoneButton = ActionBarShortcutTooltip(
+      shortcut: ActionBarShortcut.microphone,
+      child: ActionBarMicButton(
+        participant: user,
+        initiallyEnabled: session.options.microphoneEnabled,
+        requiresUnmuteConfirmation:
+            totemState?.status == RoomStatus.active &&
+            totemState?.speaker != user.identity,
+        onToggle: (shouldEnable) async {
+          if (shouldEnable) {
+            await session.devices.enableMicrophone();
+          } else {
+            await session.devices.disableMicrophone();
+          }
+        },
+      ),
     );
 
-    final cameraButton = SessionActionBarCameraButton(
-      session: session,
-      participant: user,
+    final cameraButton = ActionBarShortcutTooltip(
+      shortcut: ActionBarShortcut.camera,
+      child: SessionActionBarCameraButton(session: session, participant: user),
     );
 
-    final emojiBarButton = ActionBarEmojiButton(
-      onEmojiSelected: (emoji) {
-        session.messaging.sendReaction(emoji);
-      },
+    final emojiBarButton = ActionBarShortcutTooltip(
+      shortcut: ActionBarShortcut.reactions,
+      child: ActionBarEmojiButton(
+        onEmojiSelected: (emoji) {
+          session.messaging.sendReaction(emoji);
+        },
+      ),
     );
 
     const chatButton = ActionBarChatButton();
@@ -558,7 +649,7 @@ class _ActionBarMoreButtonState extends ConsumerState<_ActionBarMoreButton> {
     final tooltip = MaterialLocalizations.of(context).moreButtonTooltip;
 
     return ExcludeFocus(
-      child: Tooltip(
+      child: ActionBarTooltip(
         message: tooltip,
         child: ActionBarButton(
           semanticsLabel: tooltip,

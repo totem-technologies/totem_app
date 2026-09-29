@@ -109,6 +109,8 @@ class SessionDeviceController extends _$SessionDeviceController {
   Future<void>? _deviceListenerSetup;
   int _deviceListenerGeneration = 0;
   bool _disposed = false;
+  Future<void>? _cameraTransition;
+  bool? _desiredCameraEnabled;
   bool _userSpeakerPreference = true;
   bool _hasExternalOutput = false;
   bool _audioRouteNotificationsEnabled = false;
@@ -436,18 +438,80 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   bool get isCameraEnabled => _isCameraEnabled;
 
-  Future<void> enableCamera() async {
-    final room = _room;
-    if (room?.localParticipant?.isCameraEnabled() ?? false) {
-      return;
-    }
-    await room?.localParticipant?.setCameraEnabled(
-      true,
-      cameraCaptureOptions: SessionController.defaultCameraCaptureOptions
-          .copyWith(deviceId: room.selectedVideoInputDeviceId),
-    );
+  Future<void> enableCamera() => _requestCameraState(true);
 
-    _emitState();
+  Future<void> disableCamera() => _requestCameraState(false);
+
+  Future<void> toggleCamera() {
+    return _requestCameraState(!(_desiredCameraEnabled ?? isCameraEnabled));
+  }
+
+  Future<void> _requestCameraState(bool enabled) {
+    if (_disposed) return Future.value();
+
+    _desiredCameraEnabled = enabled;
+    return _cameraTransition ??= _drainCameraState();
+  }
+
+  Future<void> _drainCameraState() async {
+    try {
+      while (!_disposed) {
+        final desiredState = _desiredCameraEnabled;
+        final room = _room;
+        final participant = room?.localParticipant;
+        if (desiredState == null ||
+            room == null ||
+            participant == null ||
+            session.state.connection.state != RoomConnectionState.connected) {
+          _desiredCameraEnabled = null;
+          return;
+        }
+
+        if (participant.isCameraEnabled() == desiredState) {
+          _desiredCameraEnabled = null;
+          _emitState();
+          return;
+        }
+
+        try {
+          if (desiredState) {
+            await participant.setCameraEnabled(
+              true,
+              cameraCaptureOptions: SessionController
+                  .defaultCameraCaptureOptions
+                  .copyWith(deviceId: room.selectedVideoInputDeviceId),
+            );
+          } else {
+            await participant.setCameraEnabled(false);
+          }
+        } catch (error, stackTrace) {
+          logger.e(
+            'Failed to change camera state',
+            error: error,
+            stackTrace: stackTrace,
+          );
+          if (_desiredCameraEnabled == desiredState) {
+            _desiredCameraEnabled = null;
+            return;
+          }
+        }
+
+        if (_disposed ||
+            session.state.connection.state != RoomConnectionState.connected) {
+          _desiredCameraEnabled = null;
+          return;
+        }
+        if (_desiredCameraEnabled == desiredState) {
+          _desiredCameraEnabled = null;
+          _emitState();
+          return;
+        }
+        _emitState();
+      }
+    } finally {
+      _cameraTransition = null;
+      if (_disposed) _desiredCameraEnabled = null;
+    }
   }
 
   Future<void> selectCameraDevice(MediaDevice device) async {
@@ -455,16 +519,6 @@ class SessionDeviceController extends _$SessionDeviceController {
     if (room == null) return;
 
     await room.setVideoInputDevice(device);
-    _emitState();
-  }
-
-  Future<void> disableCamera() async {
-    final room = _room;
-    if (!(room?.localParticipant?.isCameraEnabled() ?? false)) {
-      return;
-    }
-    await room?.localParticipant?.setCameraEnabled(false);
-
     _emitState();
   }
 
@@ -483,6 +537,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _desiredCameraEnabled = null;
     await stopDeviceChangeListener();
   }
 }
