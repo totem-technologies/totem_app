@@ -516,6 +516,9 @@ void main() {
       await tester.pumpAndSettle();
 
       check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     });
 
     testWidgets(
