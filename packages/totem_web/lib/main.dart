@@ -46,11 +46,11 @@ Future<void> main() async {
       }
       value.write(')');
       style
-        ..setProperty('background-color', '')
+        ..setProperty('background-color', 'transparent')
         ..setProperty('background-image', value.toString());
     } else if (decoration.color != null) {
       style
-        ..setProperty('background-image', '')
+        ..setProperty('background-image', 'none')
         ..setProperty('background-color', toHex(decoration.color!));
     }
   };

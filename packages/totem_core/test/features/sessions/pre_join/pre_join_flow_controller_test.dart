@@ -177,6 +177,7 @@ ProviderContainer _container({
   required JoinResponse response,
   required ValueGetter<SessionController> sessionController,
   bool requireUsableMedia = false,
+  bool Function()? shouldFailPrecache,
 }) {
   return ProviderContainer(
       overrides: [
@@ -185,7 +186,12 @@ ProviderContainer _container({
           requireUsableMedia,
         ),
         sessionTokenProvider(_slug).overrideWith((_) async => response),
-        sessionProvider(_slug).overrideWith((_) async => _event()),
+        sessionProvider(_slug).overrideWith((_) async {
+          if (shouldFailPrecache?.call() ?? false) {
+            throw StateError('Precache failed');
+          }
+          return _event();
+        }),
         sessionControllerProvider(_options).overrideWith(sessionController),
       ],
     )
@@ -344,6 +350,31 @@ void main() {
       check(_SuccessfulSessionController.receivedMedia?.cameraTrack).isNull();
     },
   );
+
+  test('failed precache leaves preview media available for a retry', () async {
+    var failPrecache = true;
+    final factory = _TrackFactory();
+    _SuccessfulSessionController.receivedMedia = null;
+    final container = _container(
+      factory: factory,
+      response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+      sessionController: _SuccessfulSessionController.new,
+      shouldFailPrecache: () => failPrecache,
+    );
+    addTearDown(container.dispose);
+    await _waitForMedia(container);
+
+    final flow = container.read(preJoinFlowControllerProvider(_slug).notifier);
+    check(await flow.requestJoin()).equals(PreJoinJoinOutcome.retryableFailure);
+    check(
+      container.read(preJoinMediaControllerProvider(_slug)).transferred,
+    ).equals(false);
+
+    failPrecache = false;
+    container.invalidate(sessionProvider(_slug));
+    check(await flow.requestJoin()).equals(PreJoinJoinOutcome.joined);
+    check(_SuccessfulSessionController.receivedMedia?.cameraTrack).isNotNull();
+  });
 
   test(
     'retryable failure tears down first and opens fresh preview media',

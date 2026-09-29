@@ -49,6 +49,10 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         return PreJoinJoinOutcome.permissionsDenied;
       }
 
+      // Precache event data before transferring preview tracks so a failed
+      // request leaves them owned by the pre-join controller and retryable.
+      await ref.read(sessionProvider(sessionSlug).future);
+
       final joinMedia = await mediaController.takeForJoin(
         requireUsableMedia: requireUsableMedia,
       );
@@ -70,10 +74,8 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       );
       state = state.copyWith(sessionOptions: options);
 
-      // Precache event data before connection so the session screen can render
-      // without adding another loading transition.
-      await ref.read(sessionProvider(sessionSlug).future);
-
+      // The session is now ready, so the join screen can render without adding
+      // another loading transition.
       final currentSession = ref.read(
         sessionControllerProvider(options).notifier,
       );
