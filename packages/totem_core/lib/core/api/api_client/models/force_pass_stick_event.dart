@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:degenerate_runtime/degenerate_runtime.dart';
 
 /// Keeper forces the current speaker to pass the stick.
 /// The next speaker won't have a chance to accept — the stick will be passed immediately.

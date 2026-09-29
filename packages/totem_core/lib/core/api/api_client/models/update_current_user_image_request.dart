@@ -2,7 +2,7 @@
 
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:degenerate_runtime/degenerate_runtime.dart';
 
 @immutable
 final class UpdateCurrentUserImageRequest {

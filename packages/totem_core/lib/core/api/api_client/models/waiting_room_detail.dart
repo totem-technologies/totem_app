@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:degenerate_runtime/degenerate_runtime.dart';
 
 @immutable
 final class WaitingRoomDetail {

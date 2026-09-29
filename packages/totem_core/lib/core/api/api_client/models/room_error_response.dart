@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:degenerate_runtime/degenerate_runtime.dart';
 
 /// Machine-readable error codes. Clients switch on these, not on messages.
 /// Add new codes here as needed — the OpenAPI spec will update automatically.

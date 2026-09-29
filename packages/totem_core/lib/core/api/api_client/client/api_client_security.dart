@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:degenerate_runtime/degenerate_runtime.dart';
 
 final class ClientSecurity {
   const ClientSecurity._();
@@ -104,6 +104,16 @@ final class ClientSecurity {
         const ApiSecurityRequirement({'SessionAuth': []}),
       ];
   static final totemSpacesMobileApiGetSessionDetailRequirements =
+      <ApiSecurityRequirement>[
+        const ApiSecurityRequirement({'JWTAuth': []}),
+        const ApiSecurityRequirement({'SessionAuth': []}),
+      ];
+  static final totemSpacesMobileApiGetSessionPromptsRequirements =
+      <ApiSecurityRequirement>[
+        const ApiSecurityRequirement({'JWTAuth': []}),
+        const ApiSecurityRequirement({'SessionAuth': []}),
+      ];
+  static final totemSpacesMobileApiUpdateSessionPromptsRequirements =
       <ApiSecurityRequirement>[
         const ApiSecurityRequirement({'JWTAuth': []}),
         const ApiSecurityRequirement({'SessionAuth': []}),
