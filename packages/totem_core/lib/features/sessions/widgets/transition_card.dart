@@ -399,7 +399,7 @@ class PromptTransitionCard extends StatefulWidget {
 }
 
 class _PromptTransitionCardState extends State<PromptTransitionCard> {
-  final roundMessageController = TextEditingController();
+  final customPromptController = TextEditingController();
 
   final textFieldFocusNode = FocusNode();
   final buttonFocusNode = FocusNode();
@@ -418,7 +418,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
 
   @override
   void dispose() {
-    roundMessageController.dispose();
+    customPromptController.dispose();
     textFieldFocusNode.dispose();
     buttonFocusNode.dispose();
     super.dispose();
@@ -435,7 +435,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
           children: [
             Flexible(
               child: TextField(
-                controller: roundMessageController,
+                controller: customPromptController,
                 decoration: const InputDecoration(
                   hintText: 'Your prompt for this round',
                 ),
@@ -456,7 +456,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
                   text: widget.actionText,
                   onActionCompleted: () {
                     return widget.onActionPressed(
-                      roundMessageController.text.trim(),
+                      customPromptController.text.trim(),
                     );
                   },
                   keepLoadingOnSuccess: widget.keepActionLoadingOnSuccess,

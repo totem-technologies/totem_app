@@ -261,6 +261,40 @@ Future<RoomState> acceptTotem(
 }
 
 @riverpod
+Future<SessionPromptsSchema> sessionPrompts(Ref ref, String sessionSlug) {
+  final apiService = ref.read(apiServiceProvider);
+  return RepositoryUtils.handleApiCall<SessionPromptsSchema>(
+    apiCall: () => apiService.spaces.totemSpacesMobileApiGetSessionPrompts(
+      eventSlug: sessionSlug,
+    ),
+    operationName: 'get session prompts',
+    diagnostics: {'session_slug': sessionSlug},
+  );
+}
+
+@riverpod
+Future<SessionPromptsSchema> updateSessionPrompts(
+  Ref ref,
+  String sessionSlug,
+  List<SessionPromptSchema> prompts,
+) {
+  final apiService = ref.read(apiServiceProvider);
+  return RepositoryUtils.handleApiCall<SessionPromptsSchema>(
+    apiCall: () => apiService.spaces.totemSpacesMobileApiUpdateSessionPrompts(
+      eventSlug: sessionSlug,
+      body: SessionPromptsUpdateSchema(
+        prompts: [
+          for (final prompt in prompts)
+            SessionPromptUpdateSchema(id: prompt.id, prompt: prompt.prompt),
+        ],
+      ),
+    ),
+    operationName: 'update session prompts',
+    diagnostics: {'session_slug': sessionSlug, 'prompt_count': prompts.length},
+  );
+}
+
+@riverpod
 Future<RoomState> forcePassTotem(
   Ref ref,
   String sessionSlug,
@@ -367,23 +401,6 @@ Future<RoomState> unbanParticipant(
     ),
     lastSeenVersion: lastSeenVersion,
     operationName: 'unban participant',
-  );
-}
-
-@riverpod
-Future<RoomState> setPrompt(
-  Ref ref,
-  String sessionSlug,
-  int lastSeenVersion,
-  String prompt,
-) {
-  final apiService = ref.read(apiServiceProvider);
-  return _postEvent(
-    apiService: apiService,
-    sessionSlug: sessionSlug,
-    event: EventRequestEventSetPrompt(SetPromptEvent(prompt: prompt)),
-    lastSeenVersion: lastSeenVersion,
-    operationName: 'set prompt',
   );
 }
 

@@ -162,7 +162,7 @@ void main() {
           currentSessionProvider.overrideWith((ref) => session),
           currentSessionStateProvider.overrideWithValue(state ?? _buildState()),
           roomStatusProvider.overrideWith((ref) => RoomStatus.active),
-          roundMessageProvider.overrideWith((ref) => roundMessage),
+          currentSessionPromptProvider.overrideWith((ref) => roundMessage),
           isCameraOnProvider.overrideWith((ref) => isCameraOn),
           resolveCurrentScreenProvider.overrideWith(
             (ref) => RoomScreen.receiving,

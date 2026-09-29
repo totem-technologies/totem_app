@@ -33,19 +33,19 @@ class SpeakingTurnScreen extends ConsumerStatefulWidget {
 class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
   Future<bool> _onPassTotem({
     required String nextText,
-    String? roundMessage,
+    String? customPrompt,
   }) async {
     final session = ref.read(currentSessionProvider);
     final isKeeper = ref.read(isCurrentUserKeeperProvider);
     final shouldPass =
         !isKeeper ||
-        (!(roundMessage != null) ||
+        (!(customPrompt != null) ||
             (await showDialog<bool>(
                   context: context,
                   builder: (context) => ConfirmationDialog(
                     title: 'Pass Totem',
                     content:
-                        'Are you sure you want to pass the totem? \n\nThe round message is:\n"$roundMessage"',
+                        'Are you sure you want to pass the totem? \n\nThe custom prompt is:\n"$customPrompt"',
                     type: ConfirmationDialogType.standard,
                     confirmButtonText: nextText,
                     onConfirm: () async {
@@ -58,7 +58,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     if (shouldPass) {
       try {
         ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
-        await session?.keeper.passTotem(roundMessage: roundMessage);
+        await session?.keeper.passTotem(customPrompt: customPrompt);
         return true;
       } catch (error) {
         if (!mounted) return false;
@@ -78,7 +78,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     final selfViewEnabled = ref.watch(
       selfViewSettingsProvider.select((s) => s.enabled),
     );
-    final roundPrompt = ref.watch(roundMessageProvider);
+    final roundPrompt = ref.watch(currentSessionPromptProvider);
 
     final body = ViewportResolver(
       builder: (context, viewportKind) {
@@ -106,7 +106,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
           passCard = PromptTransitionCard(
             onActionPressed: (message) {
               return _onPassTotem(
-                roundMessage: message.isEmpty ? null : message,
+                customPrompt: message.isEmpty ? null : message,
                 nextText: nextText,
               );
             },

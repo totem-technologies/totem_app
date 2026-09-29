@@ -559,7 +559,7 @@ final class PassTotemProvider
   }
 }
 
-String _$passTotemHash() => r'ad90e365d9c9833a0e012eba7b5e25d945c8eb53';
+String _$passTotemHash() => r'873d78036eac0019db140a03004146b588e390fb';
 
 final class PassTotemFamily extends $Family
     with
@@ -664,6 +664,170 @@ final class AcceptTotemFamily extends $Family
 
   @override
   String toString() => r'acceptTotemProvider';
+}
+
+@ProviderFor(sessionPrompts)
+final sessionPromptsProvider = SessionPromptsFamily._();
+
+final class SessionPromptsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SessionPromptsSchema>,
+          SessionPromptsSchema,
+          FutureOr<SessionPromptsSchema>
+        >
+    with
+        $FutureModifier<SessionPromptsSchema>,
+        $FutureProvider<SessionPromptsSchema> {
+  SessionPromptsProvider._({
+    required SessionPromptsFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'sessionPromptsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionPromptsHash();
+
+  @override
+  String toString() {
+    return r'sessionPromptsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<SessionPromptsSchema> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<SessionPromptsSchema> create(Ref ref) {
+    final argument = this.argument as String;
+    return sessionPrompts(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SessionPromptsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$sessionPromptsHash() => r'86ef2408ba9a275e1644e60524bd3c445b29d3b4';
+
+final class SessionPromptsFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<SessionPromptsSchema>, String> {
+  SessionPromptsFamily._()
+    : super(
+        retry: null,
+        name: r'sessionPromptsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  SessionPromptsProvider call(String sessionSlug) =>
+      SessionPromptsProvider._(argument: sessionSlug, from: this);
+
+  @override
+  String toString() => r'sessionPromptsProvider';
+}
+
+@ProviderFor(updateSessionPrompts)
+final updateSessionPromptsProvider = UpdateSessionPromptsFamily._();
+
+final class UpdateSessionPromptsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SessionPromptsSchema>,
+          SessionPromptsSchema,
+          FutureOr<SessionPromptsSchema>
+        >
+    with
+        $FutureModifier<SessionPromptsSchema>,
+        $FutureProvider<SessionPromptsSchema> {
+  UpdateSessionPromptsProvider._({
+    required UpdateSessionPromptsFamily super.from,
+    required (String, List<SessionPromptSchema>) super.argument,
+  }) : super(
+         retry: null,
+         name: r'updateSessionPromptsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$updateSessionPromptsHash();
+
+  @override
+  String toString() {
+    return r'updateSessionPromptsProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<SessionPromptsSchema> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<SessionPromptsSchema> create(Ref ref) {
+    final argument = this.argument as (String, List<SessionPromptSchema>);
+    return updateSessionPrompts(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is UpdateSessionPromptsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$updateSessionPromptsHash() =>
+    r'ddcdaaff2b23b1cec1f97d69a896e2c7b81f4710';
+
+final class UpdateSessionPromptsFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<SessionPromptsSchema>,
+          (String, List<SessionPromptSchema>)
+        > {
+  UpdateSessionPromptsFamily._()
+    : super(
+        retry: null,
+        name: r'updateSessionPromptsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  UpdateSessionPromptsProvider call(
+    String sessionSlug,
+    List<SessionPromptSchema> prompts,
+  ) => UpdateSessionPromptsProvider._(
+    argument: (sessionSlug, prompts),
+    from: this,
+  );
+
+  @override
+  String toString() => r'updateSessionPromptsProvider';
 }
 
 @ProviderFor(forcePassTotem)
@@ -882,7 +1046,7 @@ final class StartSessionProvider
   }
 }
 
-String _$startSessionHash() => r'41cf746d576c36437b5a04c970c5dbbeedee9e9a';
+String _$startSessionHash() => r'd73f9e908a62193fd988629ead6d61f279dc9968';
 
 final class StartSessionFamily extends $Family
     with
@@ -1149,86 +1313,6 @@ final class UnbanParticipantFamily extends $Family
   String toString() => r'unbanParticipantProvider';
 }
 
-@ProviderFor(setPrompt)
-final setPromptProvider = SetPromptFamily._();
-
-final class SetPromptProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<RoomState>,
-          RoomState,
-          FutureOr<RoomState>
-        >
-    with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
-  SetPromptProvider._({
-    required SetPromptFamily super.from,
-    required (String, int, String) super.argument,
-  }) : super(
-         retry: null,
-         name: r'setPromptProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$setPromptHash();
-
-  @override
-  String toString() {
-    return r'setPromptProvider'
-        ''
-        '$argument';
-  }
-
-  @$internal
-  @override
-  $FutureProviderElement<RoomState> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<RoomState> create(Ref ref) {
-    final argument = this.argument as (String, int, String);
-    return setPrompt(ref, argument.$1, argument.$2, argument.$3);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is SetPromptProvider && other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
-}
-
-String _$setPromptHash() => r'e317814882c42a63d9decc6e8d25a2279b19c508';
-
-final class SetPromptFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<RoomState>, (String, int, String)> {
-  SetPromptFamily._()
-    : super(
-        retry: null,
-        name: r'setPromptProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  SetPromptProvider call(
-    String sessionSlug,
-    int lastSeenVersion,
-    String prompt,
-  ) => SetPromptProvider._(
-    argument: (sessionSlug, lastSeenVersion, prompt),
-    from: this,
-  );
-
-  @override
-  String toString() => r'setPromptProvider';
-}
-
 @ProviderFor(sessionFeedback)
 final sessionFeedbackProvider = SessionFeedbackFamily._();
 
@@ -1278,7 +1362,7 @@ final class SessionFeedbackProvider
   }
 }
 
-String _$sessionFeedbackHash() => r'796b36796876ef3d8f2a71f0d723c05ee71b3fe1';
+String _$sessionFeedbackHash() => r'7cf7908dfbd52a763e99a82e85a407fbe26fb2aa';
 
 final class SessionFeedbackFamily extends $Family
     with

@@ -381,7 +381,7 @@ void main() {
       final cuesService = _TestSessionCuesService();
 
       when(
-        () => keeper.passTotem(roundMessage: 'A round message'),
+        () => keeper.passTotem(customPrompt: 'A round message'),
       ).thenAnswer((_) async {});
 
       await pumpSpeakingTurn(
@@ -401,7 +401,7 @@ void main() {
       await tester.tap(find.widgetWithText(ElevatedButton, 'Pass to User Two'));
       await tester.pumpAndSettle();
 
-      verify(() => keeper.passTotem(roundMessage: 'A round message')).called(1);
+      verify(() => keeper.passTotem(customPrompt: 'A round message')).called(1);
       check(cuesService.swipePulseCount).equals(1);
     });
 
