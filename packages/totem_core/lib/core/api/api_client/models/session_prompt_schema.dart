@@ -8,7 +8,7 @@ final class SessionPromptSchema {
     required this.id,
     required this.prompt,
     required this.position,
-    required this.consumedRoundNumber,
+    required this.consumedRoundNumbers,
   });
 
   factory SessionPromptSchema.fromJson(Map<String, dynamic> json) {
@@ -18,9 +18,9 @@ final class SessionPromptSchema {
       position: json['position'] != null
           ? (json['position'] as num).toInt()
           : null,
-      consumedRoundNumber: json['consumed_round_number'] != null
-          ? (json['consumed_round_number'] as num).toInt()
-          : null,
+      consumedRoundNumbers: (json['consumed_round_numbers'] as List<dynamic>)
+          .map((e) => (e as num).toInt())
+          .toList(),
     );
   }
 
@@ -30,14 +30,14 @@ final class SessionPromptSchema {
 
   final int? position;
 
-  final int? consumedRoundNumber;
+  final List<int> consumedRoundNumbers;
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'prompt': prompt,
       'position': position,
-      'consumed_round_number': consumedRoundNumber,
+      'consumed_round_numbers': consumedRoundNumbers,
     };
   }
 
@@ -48,24 +48,20 @@ final class SessionPromptSchema {
         json['prompt'] is String &&
         json.containsKey('position') &&
         (json['position'] == null || json['position'] is num) &&
-        json.containsKey('consumed_round_number') &&
-        (json['consumed_round_number'] == null ||
-            json['consumed_round_number'] is num);
+        json.containsKey('consumed_round_numbers');
   }
 
   SessionPromptSchema copyWith({
     int? id,
     String? prompt,
     int? Function()? position,
-    int? Function()? consumedRoundNumber,
+    List<int>? consumedRoundNumbers,
   }) {
     return SessionPromptSchema(
       id: id ?? this.id,
       prompt: prompt ?? this.prompt,
       position: position != null ? position() : this.position,
-      consumedRoundNumber: consumedRoundNumber != null
-          ? consumedRoundNumber()
-          : this.consumedRoundNumber,
+      consumedRoundNumbers: consumedRoundNumbers ?? this.consumedRoundNumbers,
     );
   }
 
@@ -76,16 +72,21 @@ final class SessionPromptSchema {
             id == other.id &&
             prompt == other.prompt &&
             position == other.position &&
-            consumedRoundNumber == other.consumedRoundNumber;
+            listEquals(consumedRoundNumbers, other.consumedRoundNumbers);
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, prompt, position, consumedRoundNumber);
+    return Object.hash(
+      id,
+      prompt,
+      position,
+      Object.hashAll(consumedRoundNumbers),
+    );
   }
 
   @override
   String toString() {
-    return 'SessionPromptSchema(id: $id, prompt: $prompt, position: $position, consumedRoundNumber: $consumedRoundNumber)';
+    return 'SessionPromptSchema(id: $id, prompt: $prompt, position: $position, consumedRoundNumbers: $consumedRoundNumbers)';
   }
 }

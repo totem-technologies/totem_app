@@ -98,7 +98,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
           id: _nextDraftId--,
           prompt: text,
           position: null,
-          consumedRoundNumber: null,
+          consumedRoundNumbers: const [],
         ),
       );
     } else {
@@ -168,7 +168,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
     );
     final currentRoundPrompt = ref.watch(currentSessionPromptProvider);
     final hasCurrentPreparedPrompt = localPrompts.any(
-      (prompt) => prompt.consumedRoundNumber == currentRound,
+      (prompt) => prompt.consumedRoundNumbers.contains(currentRound),
     );
     final showCustomCurrentPrompt =
         currentRoundPrompt != null && !hasCurrentPreparedPrompt;
@@ -262,7 +262,9 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                               id: 0,
                               prompt: currentRoundPrompt,
                               position: null,
-                              consumedRoundNumber: currentRound,
+                              consumedRoundNumbers: currentRound == null
+                                  ? const []
+                                  : [currentRound],
                             ),
                             current: true,
                             onEdit: () async {
@@ -293,8 +295,9 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                               },
                         itemBuilder: (context, index) {
                           final prompt = localPrompts[index];
-                          final current =
-                              prompt.consumedRoundNumber == currentRound;
+                          final current = prompt.consumedRoundNumbers.contains(
+                            currentRound,
+                          );
                           return _PromptTile(
                             key: ValueKey('prompt-${prompt.id}'),
                             prompt: prompt,
@@ -444,9 +447,9 @@ class _PromptTile extends StatelessWidget {
                 ),
                 if (!current)
                   Text(
-                    prompt.consumedRoundNumber == null
+                    prompt.consumedRoundNumbers.isEmpty
                         ? 'Not used yet'
-                        : 'Used in round ${prompt.consumedRoundNumber}',
+                        : 'Used in rounds ${prompt.consumedRoundNumbers.join(', ')}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: foreground.withValues(alpha: 0.65),
                     ),

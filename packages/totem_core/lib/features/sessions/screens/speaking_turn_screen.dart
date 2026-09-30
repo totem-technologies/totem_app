@@ -94,7 +94,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
       sessionPromptsProvider(widget.session.slug),
     )) {
       AsyncData(value: final prompts) => prompts.prompts.firstWhereOrNull(
-        (prompt) => prompt.consumedRoundNumber == currentRound,
+        (prompt) => prompt.consumedRoundNumbers.contains(currentRound),
       ),
       _ => null,
     };
