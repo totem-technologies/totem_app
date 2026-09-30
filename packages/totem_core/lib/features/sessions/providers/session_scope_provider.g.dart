@@ -1087,6 +1087,65 @@ abstract class _$SessionChatOpen extends $Notifier<bool> {
   }
 }
 
+/// Docked discussion-prompt panel visibility for the active session.
+
+@ProviderFor(SessionPromptsOpen)
+final sessionPromptsOpenProvider = SessionPromptsOpenProvider._();
+
+/// Docked discussion-prompt panel visibility for the active session.
+final class SessionPromptsOpenProvider
+    extends $NotifierProvider<SessionPromptsOpen, bool> {
+  /// Docked discussion-prompt panel visibility for the active session.
+  SessionPromptsOpenProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionPromptsOpenProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionPromptsOpenHash();
+
+  @$internal
+  @override
+  SessionPromptsOpen create() => SessionPromptsOpen();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$sessionPromptsOpenHash() =>
+    r'f04b92273b4aec1a9114872b1efc5b4336ab871a';
+
+/// Docked discussion-prompt panel visibility for the active session.
+
+abstract class _$SessionPromptsOpen extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// Current in-call thread. Null is the Everyone group thread.
 ///
 /// Reset alongside [SessionChatOpen]; a thread target from a previous circle

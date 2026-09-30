@@ -81,7 +81,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     }
   }
 
-  Future<void> passTotem({String? customPrompt}) async {
+  Future<void> passTotem({String? customPrompt, int? sessionPromptId}) async {
     final room = session.room;
     if (room == null || !_state.amSpeaking(room)) {
       throw StateError("Not the user's turn to pass the totem");
@@ -89,7 +89,13 @@ class SessionKeeperController extends _$SessionKeeperController {
     if (!_state.hasKeeper) {
       throw StateError('No keeper in the session to pass the totem');
     }
-    if (customPrompt != null && !session.isCurrentUserKeeper()) {
+    if (customPrompt != null && sessionPromptId != null) {
+      throw ArgumentError(
+        'Choose either a custom prompt or a prepared prompt ID.',
+      );
+    }
+    if ((customPrompt != null || sessionPromptId != null) &&
+        !session.isCurrentUserKeeper()) {
       throw StateError(
         'Only the keeper can include a round message when passing the totem',
       );
@@ -102,6 +108,7 @@ class SessionKeeperController extends _$SessionKeeperController {
           _sessionSlug,
           _roomVersion,
           roundMessage: customPrompt,
+          sessionPromptId: sessionPromptId,
         ).future,
       ),
       errorMessage: 'Error passing totem',

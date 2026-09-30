@@ -71,11 +71,13 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     // Wide desktop docks the panel beside the video; everything else
     // still opens the existing sheet / dialog.
     if (shouldDockSessionChat(context)) {
-      if (fromUnread) {
-        ref.read(sessionChatOpenProvider.notifier).open = true;
-        return;
+      final chat = ref.read(sessionChatOpenProvider.notifier);
+      if (fromUnread || !chat.open) {
+        chat.open = true;
+        ref.read(sessionPromptsOpenProvider.notifier).open = false;
+      } else {
+        chat.open = false;
       }
-      ref.read(sessionChatOpenProvider.notifier).toggle();
       return;
     }
 

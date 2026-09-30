@@ -12,10 +12,12 @@ import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
 
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -34,6 +36,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
   Future<bool> _onPassTotem({
     required String nextText,
     String? customPrompt,
+    int? sessionPromptId,
   }) async {
     final session = ref.read(currentSessionProvider);
     final isKeeper = ref.read(isCurrentUserKeeperProvider);
@@ -58,7 +61,10 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     if (shouldPass) {
       try {
         ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
-        await session?.keeper.passTotem(customPrompt: customPrompt);
+        await session?.keeper.passTotem(
+          customPrompt: customPrompt,
+          sessionPromptId: sessionPromptId,
+        );
         return true;
       } catch (error) {
         if (!mounted) return false;
@@ -79,6 +85,19 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
       selfViewSettingsProvider.select((s) => s.enabled),
     );
     final roundPrompt = ref.watch(currentSessionPromptProvider);
+    final currentRound = ref.watch(
+      currentSessionStateProvider.select(
+        (state) => state?.roomState.roundNumber,
+      ),
+    );
+    final preparedPrompt = switch (ref.watch(
+      sessionPromptsProvider(widget.session.slug),
+    )) {
+      AsyncData(value: final prompts) => prompts.prompts.firstWhereOrNull(
+        (prompt) => prompt.consumedRoundNumber == currentRound,
+      ),
+      _ => null,
+    };
 
     final body = ViewportResolver(
       builder: (context, viewportKind) {
@@ -104,9 +123,16 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
           passCard = normalPassCard;
         } else if (isKeeper) {
           passCard = PromptTransitionCard(
-            onActionPressed: (message) {
+            initialPrompt: roundPrompt,
+            initialSessionPromptId: preparedPrompt?.id,
+            onManagePrompts: () => showSessionPromptsModal(
+              context,
+              sessionSlug: widget.session.slug,
+            ),
+            onActionPressed: ({customPrompt, sessionPromptId}) {
               return _onPassTotem(
-                customPrompt: message.isEmpty ? null : message,
+                customPrompt: customPrompt,
+                sessionPromptId: sessionPromptId,
                 nextText: nextText,
               );
             },

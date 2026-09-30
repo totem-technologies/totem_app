@@ -225,6 +225,7 @@ Future<RoomState> passTotem(
   String sessionSlug,
   int lastSeenVersion, {
   String? roundMessage,
+  int? sessionPromptId,
 }) {
   final apiService = ref.read(apiServiceProvider);
   return _postEvent(
@@ -235,6 +236,9 @@ Future<RoomState> passTotem(
         prompt: roundMessage == null
             ? const Omittable.absent()
             : Omittable(roundMessage),
+        sessionPromptId: sessionPromptId == null
+            ? const Omittable.absent()
+            : Omittable(sessionPromptId),
       ),
     ),
     lastSeenVersion: lastSeenVersion,

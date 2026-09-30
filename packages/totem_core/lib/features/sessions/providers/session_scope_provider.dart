@@ -276,6 +276,17 @@ class SessionChatOpen extends _$SessionChatOpen {
   void toggle() => state = !state;
 }
 
+/// Docked discussion-prompt panel visibility for the active session.
+@Riverpod(keepAlive: true)
+class SessionPromptsOpen extends _$SessionPromptsOpen {
+  @override
+  bool build() => false;
+
+  bool get open => state;
+
+  set open(bool value) => state = value;
+}
+
 /// Current in-call thread. Null is the Everyone group thread.
 ///
 /// Reset alongside [SessionChatOpen]; a thread target from a previous circle

@@ -90,9 +90,9 @@ void main() {
       await tester.pumpWidget(
         buildTestWidget(
           PromptTransitionCard(
-            onActionPressed: (roundMessage) async {
+            onActionPressed: ({customPrompt, sessionPromptId}) async {
               actionTriggered = true;
-              message = roundMessage;
+              message = customPrompt;
               return true;
             },
           ),
@@ -115,5 +115,35 @@ void main() {
       check(actionTriggered).equals(true);
       check(message).equals('Test prompt');
     });
+
+    autoSizeTest(
+      'PromptTransitionCard passes an unchanged prepared prompt by ID',
+      (tester) async {
+        String? capturedCustomPrompt;
+        int? capturedSessionPromptId;
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            PromptTransitionCard(
+              initialPrompt: 'Prepared prompt',
+              initialSessionPromptId: 42,
+              onActionPressed: ({customPrompt, sessionPromptId}) async {
+                capturedCustomPrompt = customPrompt;
+                capturedSessionPromptId = sessionPromptId;
+                return true;
+              },
+            ),
+          ),
+        );
+
+        final button = tester.widget<ActionSliderButton>(
+          find.byType(ActionSliderButton),
+        );
+        await button.onActionCompleted();
+
+        check(capturedCustomPrompt).isNull();
+        check(capturedSessionPromptId).equals(42);
+      },
+    );
   });
 }

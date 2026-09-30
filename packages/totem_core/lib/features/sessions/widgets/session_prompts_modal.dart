@@ -4,6 +4,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
+import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
@@ -15,12 +16,20 @@ Future<void> showSessionPromptsModal(
   BuildContext context, {
   required String sessionSlug,
 }) {
+  final container = ProviderScope.containerOf(context, listen: false);
+  if (shouldDockSessionSidePanel(context) &&
+      container.read(currentSessionProvider) != null) {
+    container.read(sessionPromptsOpenProvider.notifier).open = true;
+    container.read(sessionChatOpenProvider.notifier).open = false;
+    return Future.value();
+  }
+
   return showResponsiveModal<void>(
     context: context,
     useRootNavigator: false,
     showDragHandle: false,
-    bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
-    dialogBackgroundColor: const Color(0xFFF3F1E9),
+    bottomSheetBackgroundColor: AppTheme.cream,
+    dialogBackgroundColor: AppTheme.cream,
     bottomSheetBuilder: (_) => SessionPromptsModal(sessionSlug: sessionSlug),
     largeScreenBuilder: (_) => SizedBox(
       width: 600,
@@ -30,9 +39,14 @@ Future<void> showSessionPromptsModal(
 }
 
 class SessionPromptsModal extends ConsumerStatefulWidget {
-  const SessionPromptsModal({required this.sessionSlug, super.key});
+  const SessionPromptsModal({
+    required this.sessionSlug,
+    this.embedded = false,
+    super.key,
+  });
 
   final String sessionSlug;
+  final bool embedded;
 
   @override
   ConsumerState<SessionPromptsModal> createState() =>
@@ -44,25 +58,16 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
   var _saving = false;
   var _nextDraftId = -1;
 
-  List<SessionPromptSchema> get _displayed =>
-      _prompts!.where((prompt) => prompt.consumedRoundNumber != null).toList();
-
-  List<SessionPromptSchema> get _future =>
-      _prompts!.where((prompt) => prompt.consumedRoundNumber == null).toList();
-
   void _adopt(SessionPromptsSchema prompts) {
     if (mounted) setState(() => _prompts = prompts.prompts);
   }
 
-  Future<void> _save(List<SessionPromptSchema> future) async {
+  Future<void> _save(List<SessionPromptSchema> prompts) async {
     if (_prompts == null || _saving) return;
     setState(() => _saving = true);
     try {
       final result = await ref.read(
-        updateSessionPromptsProvider(widget.sessionSlug, [
-          ..._displayed,
-          ...future,
-        ]).future,
+        updateSessionPromptsProvider(widget.sessionSlug, prompts).future,
       );
       _adopt(result);
     } catch (_) {
@@ -86,9 +91,9 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
   Future<void> _addOrEdit([SessionPromptSchema? prompt]) async {
     final text = await _promptText(context, initialText: prompt?.prompt);
     if (text == null || _prompts == null) return;
-    final future = _future;
+    final prompts = [..._prompts!];
     if (prompt == null) {
-      future.add(
+      prompts.add(
         SessionPromptSchema(
           id: _nextDraftId--,
           prompt: text,
@@ -97,11 +102,19 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
         ),
       );
     } else {
-      final index = future.indexOf(prompt);
+      final index = prompts.indexOf(prompt);
       if (index < 0) return;
-      future[index] = prompt.copyWith(prompt: text);
+      prompts[index] = prompt.copyWith(prompt: text);
     }
-    await _save(future);
+    await _save(prompts);
+  }
+
+  void _closePanel() {
+    if (widget.embedded) {
+      ref.read(sessionPromptsOpenProvider.notifier).open = false;
+      return;
+    }
+    Navigator.of(context).maybePop();
   }
 
   Future<void> _setCurrentPrompt({
@@ -154,97 +167,96 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
       ),
     );
     final currentRoundPrompt = ref.watch(currentSessionPromptProvider);
-    final displayed = _displayed;
-    final hasCurrentPreparedPrompt = displayed.any(
+    final hasCurrentPreparedPrompt = localPrompts.any(
       (prompt) => prompt.consumedRoundNumber == currentRound,
     );
     final showCustomCurrentPrompt =
         currentRoundPrompt != null && !hasCurrentPreparedPrompt;
-    final future = _future;
     final theme = Theme.of(context);
+    final horizontalPadding = widget.embedded ? 16.0 : 20.0;
 
     return PopScope(
       canPop: !_saving,
       child: Material(
         type: MaterialType.transparency,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SheetDragHandle(),
-            Padding(
-              padding: const EdgeInsetsDirectional.only(
-                start: 20,
-                end: 20,
-                bottom: 6,
-              ),
-              child: Stack(
-                children: [
-                  Center(
-                    child: Text(
-                      'Discussion Prompts',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!widget.embedded) const SheetDragHandle(),
+              Padding(
+                padding: EdgeInsetsDirectional.only(
+                  start: horizontalPadding,
+                  end: horizontalPadding,
+                  top: widget.embedded ? 12 : 0,
+                  bottom: 6,
+                ),
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Text(
+                        'Discussion Prompts',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
                       ),
                     ),
-                  ),
-                  if (_saving || prompts.isLoading)
-                    const Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: SizedBox.square(
-                        dimension: 48,
-                        child: Center(
-                          child: SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator.adaptive(
-                              strokeWidth: 2,
+                    if (_saving || prompts.isLoading)
+                      const Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: SizedBox.square(
+                          dimension: 48,
+                          child: Center(
+                            child: SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator.adaptive(
+                                strokeWidth: 2,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const TotemIcon(
-                        TotemIcons.x,
-                        size: 16,
-                        color: Colors.black,
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: IconButton(
+                        tooltip: 'Close',
+                        onPressed: _saving ? null : _closePanel,
+                        icon: const TotemIcon(
+                          TotemIcons.x,
+                          size: 16,
+                          color: Colors.black,
+                        ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsetsDirectional.only(
+                  start: horizontalPadding,
+                  end: horizontalPadding,
+                  bottom: 16,
+                ),
+                child: Text(
+                  'Drag prompts to set the discussion order.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.black,
                   ),
-                ],
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsetsDirectional.only(
-                start: 20,
-                end: 20,
-                bottom: 20,
-              ),
-              child: Text(
-                'Drag future prompts to set the discussion order.',
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.black),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            Flexible(
-              child: CustomScrollView(
-                shrinkWrap: true,
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 20,
-                    ),
-                    sliver: SliverList.builder(
-                      itemCount:
-                          displayed.length + (showCustomCurrentPrompt ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (showCustomCurrentPrompt &&
-                            index == displayed.length) {
-                          return _PromptTile(
+              Flexible(
+                child: CustomScrollView(
+                  shrinkWrap: true,
+                  slivers: [
+                    if (showCustomCurrentPrompt)
+                      SliverPadding(
+                        padding: EdgeInsetsDirectional.symmetric(
+                          horizontal: horizontalPadding,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: _PromptTile(
                             key: ValueKey('custom-current-$currentRound'),
                             prompt: SessionPromptSchema(
                               id: 0,
@@ -252,7 +264,6 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                               position: null,
                               consumedRoundNumber: currentRound,
                             ),
-                            locked: true,
                             current: true,
                             onEdit: () async {
                               final text = await _promptText(
@@ -263,85 +274,88 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                                 await _setCurrentPrompt(customPrompt: text);
                               }
                             },
-                          );
-                        }
-
-                        final prompt = displayed[index];
-                        return _PromptTile(
-                          key: ValueKey('displayed-${prompt.id}'),
-                          prompt: prompt,
-                          locked: true,
-                          current: prompt.consumedRoundNumber == currentRound,
-                          onEdit: prompt.consumedRoundNumber == currentRound
-                              ? () async {
-                                  final text = await _promptText(
-                                    context,
-                                    initialText: prompt.prompt,
-                                  );
-                                  if (text != null) {
-                                    await _setCurrentPrompt(customPrompt: text);
+                          ),
+                        ),
+                      ),
+                    SliverPadding(
+                      padding: EdgeInsetsDirectional.symmetric(
+                        horizontal: horizontalPadding,
+                      ),
+                      sliver: SliverReorderableList(
+                        itemCount: localPrompts.length,
+                        onReorderItem: _saving
+                            ? (_, _) {}
+                            : (oldIndex, newIndex) async {
+                                final reordered = [...localPrompts];
+                                final item = reordered.removeAt(oldIndex);
+                                reordered.insert(newIndex, item);
+                                await _save(reordered);
+                              },
+                        itemBuilder: (context, index) {
+                          final prompt = localPrompts[index];
+                          final current =
+                              prompt.consumedRoundNumber == currentRound;
+                          return _PromptTile(
+                            key: ValueKey('prompt-${prompt.id}'),
+                            prompt: prompt,
+                            current: current,
+                            index: index,
+                            saving: _saving,
+                            onEdit: current
+                                ? () async {
+                                    final text = await _promptText(
+                                      context,
+                                      initialText: prompt.prompt,
+                                    );
+                                    if (text != null) {
+                                      await _setCurrentPrompt(
+                                        customPrompt: text,
+                                      );
+                                    }
                                   }
-                                }
-                              : null,
-                        );
-                      },
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 20,
-                    ),
-                    sliver: SliverReorderableList(
-                      itemCount: future.length,
-                      onReorderItem: _saving
-                          ? (_, _) {}
-                          : (oldIndex, newIndex) async {
-                              final reordered = [...future];
-                              final item = reordered.removeAt(oldIndex);
-                              reordered.insert(newIndex, item);
-                              await _save(reordered);
+                                : () => _addOrEdit(prompt),
+                            onSelect: currentRound == null || current
+                                ? null
+                                : () => _setCurrentPrompt(
+                                    sessionPromptId: prompt.id,
+                                  ),
+                            onDelete: () async {
+                              final shouldDelete = await _confirmPromptDeletion(
+                                context,
+                              );
+                              if (shouldDelete != true) return;
+                              final updated = [...localPrompts]
+                                ..removeAt(index);
+                              await _save(updated);
                             },
-                      itemBuilder: (context, index) => _PromptTile(
-                        key: ValueKey('future-${future[index].id}'),
-                        prompt: future[index],
-                        locked: false,
-                        index: index,
-                        saving: _saving,
-                        onEdit: () => _addOrEdit(future[index]),
-                        onSelect: currentRound == null
-                            ? null
-                            : () => _setCurrentPrompt(
-                                sessionPromptId: future[index].id,
-                              ),
-                        onDelete: () async {
-                          final shouldDelete = await _confirmPromptDeletion(
-                            context,
                           );
-                          if (shouldDelete != true) return;
-                          final updated = [...future]..removeAt(index);
-                          await _save(updated);
                         },
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(40, 20, 40, 12),
-              child: SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: ElevatedButton(
-                  onPressed: _saving ? null : _addOrEdit,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(44),
-                  ),
-                  child: const Text('Add Prompt'),
+                  ],
                 ),
               ),
-            ),
-          ],
+              Padding(
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  widget.embedded ? 20 : 40,
+                  16,
+                  widget.embedded ? 20 : 40,
+                  16,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: _saving ? null : _addOrEdit,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(44),
+                    ),
+                    child: const Text('Add Prompt'),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -351,7 +365,6 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
 class _PromptTile extends StatelessWidget {
   const _PromptTile({
     required this.prompt,
-    required this.locked,
     super.key,
     this.current = false,
     this.index,
@@ -362,7 +375,6 @@ class _PromptTile extends StatelessWidget {
   });
 
   final SessionPromptSchema prompt;
-  final bool locked;
   final bool current;
   final int? index;
   final bool saving;
@@ -392,9 +404,9 @@ class _PromptTile extends StatelessWidget {
             width: 40,
             height: 40,
             child: Center(
-              child: locked
+              child: index == null
                   ? const TotemIcon(
-                      TotemIcons.lock,
+                      TotemIcons.history,
                       size: 18,
                       color: Colors.black,
                     )
@@ -430,9 +442,11 @@ class _PromptTile extends StatelessWidget {
                   prompt.prompt,
                   style: theme.textTheme.bodyLarge?.copyWith(color: foreground),
                 ),
-                if (locked && !current)
+                if (!current)
                   Text(
-                    'Round ${prompt.consumedRoundNumber}',
+                    prompt.consumedRoundNumber == null
+                        ? 'Not used yet'
+                        : 'Used in round ${prompt.consumedRoundNumber}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: foreground.withValues(alpha: 0.65),
                     ),
@@ -440,46 +454,44 @@ class _PromptTile extends StatelessWidget {
               ],
             ),
           ),
-          if (!locked || onEdit != null)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 4,
-              children: [
-                if (onSelect != null)
-                  ElevatedButton(
-                    onPressed: saving ? null : onSelect,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(0, 36),
-                      padding: const EdgeInsetsDirectional.symmetric(
-                        horizontal: 10,
-                      ),
-                      textStyle: theme.textTheme.labelSmall,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 4,
+            children: [
+              if (onSelect != null)
+                ElevatedButton(
+                  onPressed: saving ? null : onSelect,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 36),
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 10,
                     ),
-                    child: const Text('Use now'),
+                    textStyle: theme.textTheme.labelSmall,
                   ),
-
-                if (onEdit != null)
-                  IconButton(
-                    tooltip: current ? 'Edit current prompt' : 'Edit prompt',
-                    onPressed: saving ? null : onEdit,
-                    icon: const TotemIcon(
-                      TotemIcons.edit,
-                      size: 18,
-                      color: Colors.black,
-                    ),
+                  child: const Text('Use now'),
+                ),
+              if (onEdit != null)
+                IconButton(
+                  tooltip: current ? 'Edit current prompt' : 'Edit prompt',
+                  onPressed: saving ? null : onEdit,
+                  icon: const TotemIcon(
+                    TotemIcons.edit,
+                    size: 18,
+                    color: Colors.black,
                   ),
-                if (!locked)
-                  IconButton(
-                    tooltip: 'Delete prompt',
-                    onPressed: saving ? null : onDelete,
-                    icon: const TotemIcon(
-                      TotemIcons.delete,
-                      size: 18,
-                      color: Colors.black,
-                    ),
+                ),
+              if (onDelete != null)
+                IconButton(
+                  tooltip: 'Delete prompt',
+                  onPressed: saving ? null : onDelete,
+                  icon: const TotemIcon(
+                    TotemIcons.delete,
+                    size: 18,
+                    color: Colors.black,
                   ),
-              ],
-            ),
+                ),
+            ],
+          ),
         ],
       ),
     );
