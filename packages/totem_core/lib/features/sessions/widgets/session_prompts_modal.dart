@@ -55,6 +55,7 @@ class SessionPromptsModal extends ConsumerStatefulWidget {
 
 class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
   List<SessionPromptSchema>? _prompts;
+  final Map<int, GlobalKey> _promptKeys = {};
   var _saving = false;
   var _nextDraftId = -1;
 
@@ -62,14 +63,35 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
     if (mounted) setState(() => _prompts = prompts.prompts);
   }
 
-  Future<void> _save(List<SessionPromptSchema> prompts) async {
+  Future<void> _save(
+    List<SessionPromptSchema> prompts, {
+    int? revealIndex,
+  }) async {
     if (_prompts == null || _saving) return;
-    setState(() => _saving = true);
+    setState(() {
+      _prompts = prompts;
+      _saving = true;
+    });
     try {
       final result = await ref.read(
         updateSessionPromptsProvider(widget.sessionSlug, prompts).future,
       );
       _adopt(result);
+      if (revealIndex case final index?) {
+        await WidgetsBinding.instance.endOfFrame;
+        if (mounted && index < result.prompts.length) {
+          final prompt = result.prompts[index];
+          final targetContext = _promptKey(prompt.id).currentContext;
+          if (targetContext != null && targetContext.mounted) {
+            await Scrollable.ensureVisible(
+              targetContext,
+              alignment: 0.5,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+          }
+        }
+      }
     } catch (_) {
       try {
         _adopt(
@@ -92,6 +114,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
     final text = await _promptText(context, initialText: prompt?.prompt);
     if (text == null || _prompts == null) return;
     final prompts = [..._prompts!];
+    final revealIndex = prompt == null ? prompts.length : null;
     if (prompt == null) {
       prompts.add(
         SessionPromptSchema(
@@ -106,8 +129,10 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
       if (index < 0) return;
       prompts[index] = prompt.copyWith(prompt: text);
     }
-    await _save(prompts);
+    await _save(prompts, revealIndex: revealIndex);
   }
+
+  GlobalKey _promptKey(int id) => _promptKeys.putIfAbsent(id, GlobalKey.new);
 
   void _closePanel() {
     if (widget.embedded) {
@@ -181,46 +206,60 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
         type: MaterialType.transparency,
         child: SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: MainAxisSize.max,
             children: [
               if (!widget.embedded) const SheetDragHandle(),
               Padding(
-                padding: EdgeInsetsDirectional.only(
-                  start: horizontalPadding,
-                  end: horizontalPadding,
-                  top: widget.embedded ? 12 : 0,
-                  bottom: 6,
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  horizontalPadding,
+                  widget.embedded ? 12 : 0,
+                  horizontalPadding,
+                  12,
                 ),
-                child: Stack(
+                child: Row(
                   children: [
-                    Center(
-                      child: Text(
-                        'Discussion Prompts',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
+                    SizedBox.square(
+                      dimension: 40,
+                      child: Center(
+                        child: _saving || prompts.isLoading
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator.adaptive(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
                       ),
                     ),
-                    if (_saving || prompts.isLoading)
-                      const Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: SizedBox.square(
-                          dimension: 48,
-                          child: Center(
-                            child: SizedBox.square(
-                              dimension: 20,
-                              child: CircularProgressIndicator.adaptive(
-                                strokeWidth: 2,
-                              ),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Discussion Prompts',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
+                            textAlign: TextAlign.center,
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Drag prompts to set the discussion order.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.black,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
-                    Align(
-                      alignment: AlignmentDirectional.centerEnd,
+                    ),
+                    SizedBox(
+                      width: 40,
+                      height: 40,
                       child: IconButton(
                         tooltip: 'Close',
+                        padding: EdgeInsets.zero,
                         onPressed: _saving ? null : _closePanel,
                         icon: const TotemIcon(
                           TotemIcons.x,
@@ -232,23 +271,8 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                   ],
                 ),
               ),
-              Padding(
-                padding: EdgeInsetsDirectional.only(
-                  start: horizontalPadding,
-                  end: horizontalPadding,
-                  bottom: 16,
-                ),
-                child: Text(
-                  'Drag prompts to set the discussion order.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.black,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
               Flexible(
                 child: CustomScrollView(
-                  shrinkWrap: true,
                   slivers: [
                     if (showCustomCurrentPrompt)
                       SliverPadding(
@@ -267,6 +291,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                                   : [currentRound],
                             ),
                             current: true,
+                            panelLayout: widget.embedded,
                             onEdit: () async {
                               final text = await _promptText(
                                 context,
@@ -299,9 +324,10 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                             currentRound,
                           );
                           return _PromptTile(
-                            key: ValueKey('prompt-${prompt.id}'),
+                            key: _promptKey(prompt.id),
                             prompt: prompt,
                             current: current,
+                            panelLayout: widget.embedded,
                             index: index,
                             saving: _saving,
                             onEdit: current
@@ -370,6 +396,7 @@ class _PromptTile extends StatelessWidget {
     required this.prompt,
     super.key,
     this.current = false,
+    this.panelLayout = false,
     this.index,
     this.saving = false,
     this.onEdit,
@@ -379,6 +406,7 @@ class _PromptTile extends StatelessWidget {
 
   final SessionPromptSchema prompt;
   final bool current;
+  final bool panelLayout;
   final int? index;
   final bool saving;
   final VoidCallback? onEdit;
@@ -389,6 +417,102 @@ class _PromptTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     const foreground = Colors.black;
+    final dragHandle = SizedBox(
+      width: 40,
+      height: 40,
+      child: Center(
+        child: index == null
+            ? const TotemIcon(TotemIcons.history, size: 18, color: Colors.black)
+            : Tooltip(
+                message: 'Drag to reorder prompts',
+                child: ReorderableDragStartListener(
+                  index: index!,
+                  enabled: !saving,
+                  child: const SizedBox.square(
+                    dimension: 40,
+                    child: Center(
+                      child: TotemIcon(
+                        TotemIcons.reorderParticipants,
+                        size: 18,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+      ),
+    );
+    final promptText = Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (current)
+            Text(
+              'Current prompt',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppTheme.mauve,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          SelectableText(
+            prompt.prompt,
+            style: theme.textTheme.bodyLarge?.copyWith(color: foreground),
+          ),
+          if (!current && prompt.consumedRoundNumbers.isNotEmpty)
+            Text(
+              'Used in rounds ${prompt.consumedRoundNumbers.join(', ')}',
+              style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.mauve),
+            ),
+        ],
+      ),
+    );
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 4,
+      children: [
+        if (onSelect != null)
+          if (prompt.consumedRoundNumbers.isNotEmpty)
+            OutlinedButton(
+              onPressed: saving ? null : onSelect,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 36),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 10),
+                textStyle: theme.textTheme.labelSmall,
+              ),
+              child: const Text('Use now'),
+            )
+          else
+            ElevatedButton(
+              onPressed: saving ? null : onSelect,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(0, 36),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 10),
+                textStyle: theme.textTheme.labelSmall,
+              ),
+              child: const Text('Use now'),
+            ),
+        if (onEdit != null)
+          IconButton(
+            tooltip: current ? 'Edit current prompt' : 'Edit prompt',
+            onPressed: saving ? null : onEdit,
+            icon: const TotemIcon(
+              TotemIcons.edit,
+              size: 18,
+              color: Colors.black,
+            ),
+          ),
+        if (onDelete != null)
+          IconButton(
+            tooltip: 'Delete prompt',
+            onPressed: saving ? null : onDelete,
+            icon: const TotemIcon(
+              TotemIcons.delete,
+              size: 18,
+              color: Colors.black,
+            ),
+          ),
+      ],
+    );
     return Container(
       margin: const EdgeInsetsDirectional.only(bottom: 8),
       padding: const EdgeInsetsDirectional.symmetric(
@@ -396,107 +520,33 @@ class _PromptTile extends StatelessWidget {
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: current ? AppTheme.mauve.withValues(alpha: 0.16) : Colors.white,
+        color: current
+            ? AppTheme.mauve.withValues(alpha: 0.16)
+            : prompt.consumedRoundNumbers.isNotEmpty
+            ? AppTheme.mauve.withValues(alpha: 0.05)
+            : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: current ? Border.all(color: AppTheme.mauve) : null,
+        border: current
+            ? Border.all(color: AppTheme.mauve)
+            : prompt.consumedRoundNumbers.isNotEmpty
+            ? Border.all(color: AppTheme.mauve.withValues(alpha: 0.12))
+            : null,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: Center(
-              child: index == null
-                  ? const TotemIcon(
-                      TotemIcons.history,
-                      size: 18,
-                      color: Colors.black,
-                    )
-                  : ReorderableDragStartListener(
-                      index: index!,
-                      enabled: !saving,
-                      child: const SizedBox.square(
-                        dimension: 40,
-                        child: Center(
-                          child: TotemIcon(
-                            TotemIcons.reorderParticipants,
-                            size: 18,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ),
-            ),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: panelLayout
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (current)
-                  Text(
-                    'Current prompt',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppTheme.mauve,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                SelectableText(
-                  prompt.prompt,
-                  style: theme.textTheme.bodyLarge?.copyWith(color: foreground),
+                Row(children: [dragHandle, promptText]),
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: actions,
                 ),
-                if (!current)
-                  Text(
-                    prompt.consumedRoundNumbers.isEmpty
-                        ? 'Not used yet'
-                        : 'Used in rounds ${prompt.consumedRoundNumbers.join(', ')}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: foreground.withValues(alpha: 0.65),
-                    ),
-                  ),
               ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [dragHandle, promptText, actions],
             ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 4,
-            children: [
-              if (onSelect != null)
-                ElevatedButton(
-                  onPressed: saving ? null : onSelect,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 36),
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: 10,
-                    ),
-                    textStyle: theme.textTheme.labelSmall,
-                  ),
-                  child: const Text('Use now'),
-                ),
-              if (onEdit != null)
-                IconButton(
-                  tooltip: current ? 'Edit current prompt' : 'Edit prompt',
-                  onPressed: saving ? null : onEdit,
-                  icon: const TotemIcon(
-                    TotemIcons.edit,
-                    size: 18,
-                    color: Colors.black,
-                  ),
-                ),
-              if (onDelete != null)
-                IconButton(
-                  tooltip: 'Delete prompt',
-                  onPressed: saving ? null : onDelete,
-                  icon: const TotemIcon(
-                    TotemIcons.delete,
-                    size: 18,
-                    color: Colors.black,
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }
@@ -516,66 +566,77 @@ Future<bool?> _confirmPromptDeletion(BuildContext context) {
 
 Future<String?> _promptText(BuildContext context, {String? initialText}) async {
   final controller = TextEditingController(text: initialText);
+  final focusNode = FocusNode();
   final formKey = GlobalKey<FormState>();
+  var focusScheduled = false;
   try {
     return await showDialog<String>(
       context: context,
-      builder: (context) => ConfirmationDialog(
-        title: initialText == null ? 'Add prompt' : 'Edit prompt',
-        content: 'Enter a discussion prompt for this Session.',
-        confirmButtonText: 'Save',
-        type: ConfirmationDialogType.standard,
-        contentWidget: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: controller,
-            autofocus: true,
-            maxLength: _maxPromptLength,
-            minLines: 3,
-            maxLines: 5,
-            style: const TextStyle(color: AppTheme.slate),
-            cursorColor: AppTheme.mauve,
-            decoration: InputDecoration(
-              hintText: 'Discussion prompt',
-              hintStyle: const TextStyle(color: AppTheme.gray),
-              filled: true,
-              fillColor: Colors.white,
-              counterStyle: const TextStyle(color: AppTheme.gray),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.gray),
+      builder: (context) {
+        if (!focusScheduled) {
+          focusScheduled = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (focusNode.canRequestFocus) focusNode.requestFocus();
+          });
+        }
+        return ConfirmationDialog(
+          title: initialText == null ? 'Add prompt' : 'Edit prompt',
+          content: 'Enter a discussion prompt for this Session.',
+          confirmButtonText: 'Save',
+          type: ConfirmationDialogType.standard,
+          contentWidget: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              focusNode: focusNode,
+              maxLength: _maxPromptLength,
+              minLines: 3,
+              maxLines: 5,
+              style: const TextStyle(color: AppTheme.slate),
+              cursorColor: AppTheme.mauve,
+              decoration: InputDecoration(
+                hintText: 'Discussion prompt',
+                hintStyle: const TextStyle(color: AppTheme.gray),
+                filled: true,
+                fillColor: Colors.white,
+                counterStyle: const TextStyle(color: AppTheme.gray),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.gray),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.mauve),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.errorColor),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.errorColor),
+                ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.mauve),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.errorColor),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.errorColor),
-              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Enter a prompt';
+                }
+                if (value.trim().length > _maxPromptLength) {
+                  return 'Prompts can be at most $_maxPromptLength characters';
+                }
+                return null;
+              },
             ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Enter a prompt';
-              }
-              if (value.trim().length > _maxPromptLength) {
-                return 'Prompts can be at most $_maxPromptLength characters';
-              }
-              return null;
-            },
           ),
-        ),
-        onConfirm: () async {
-          if (!formKey.currentState!.validate()) return;
-          Navigator.of(context).pop(controller.text.trim());
-        },
-      ),
+          onConfirm: () async {
+            if (!formKey.currentState!.validate()) return;
+            Navigator.of(context).pop(controller.text.trim());
+          },
+        );
+      },
     );
   } finally {
+    focusNode.dispose();
     controller.dispose();
   }
 }
