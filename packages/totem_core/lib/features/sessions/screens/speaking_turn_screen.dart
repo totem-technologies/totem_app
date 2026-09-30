@@ -90,14 +90,15 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
         (state) => state?.roomState.roundNumber,
       ),
     );
-    final preparedPrompt = switch (ref.watch(
-      sessionPromptsProvider(widget.session.slug),
-    )) {
-      AsyncData(value: final prompts) => prompts.prompts.firstWhereOrNull(
-        (prompt) => prompt.consumedRoundNumbers.contains(currentRound),
-      ),
-      _ => null,
-    };
+    final isWaitingReceive = turnState == TurnState.passing;
+    final preparedPrompt = isKeeper && !isWaitingReceive
+        ? switch (ref.watch(sessionPromptsProvider(widget.session.slug))) {
+            AsyncData(value: final prompts) => prompts.prompts.firstWhereOrNull(
+              (prompt) => prompt.consumedRoundNumbers.contains(currentRound),
+            ),
+            _ => null,
+          }
+        : null;
 
     final body = ViewportResolver(
       builder: (context, viewportKind) {
@@ -105,8 +106,6 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
           session: widget.session,
           viewportKind: viewportKind,
         );
-
-        final isWaitingReceive = turnState == TurnState.passing;
 
         final nextText = 'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
             .trim();
