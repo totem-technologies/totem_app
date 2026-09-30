@@ -281,9 +281,9 @@ Future<SessionPromptsSchema> updateSessionPrompts(
   Ref ref,
   String sessionSlug,
   List<SessionPromptSchema> prompts,
-) {
+) async {
   final apiService = ref.read(apiServiceProvider);
-  return RepositoryUtils.handleApiCall<SessionPromptsSchema>(
+  final result = await RepositoryUtils.handleApiCall<SessionPromptsSchema>(
     apiCall: () => apiService.spaces.totemSpacesMobileApiUpdateSessionPrompts(
       eventSlug: sessionSlug,
       body: SessionPromptsUpdateSchema(
@@ -301,6 +301,8 @@ Future<SessionPromptsSchema> updateSessionPrompts(
     operationName: 'update session prompts',
     diagnostics: {'session_slug': sessionSlug, 'prompt_count': prompts.length},
   );
+  ref.invalidate(sessionPromptsProvider(sessionSlug));
+  return result;
 }
 
 @riverpod
