@@ -110,6 +110,27 @@ class SessionKeeperController extends _$SessionKeeperController {
     logger.i('Passed totem successfully');
   }
 
+  Future<void> setPrompt({String? customPrompt, int? sessionPromptId}) async {
+    if (!session.isCurrentUserKeeper()) return;
+    if ((customPrompt == null) == (sessionPromptId == null)) {
+      throw ArgumentError(
+        'Choose either a custom prompt or a prepared prompt ID.',
+      );
+    }
+    final roomState = await _run(
+      action: () => ref.read(
+        setSessionPromptProvider(
+          _sessionSlug,
+          _roomVersion,
+          customPrompt: customPrompt,
+          sessionPromptId: sessionPromptId,
+        ).future,
+      ),
+      errorMessage: 'Error setting session prompt',
+    );
+    session.applyRoomState(roomState);
+  }
+
   /// Accepts the totem and enables the microphone.
   ///
   /// Throws a [StateError] if the user is not the next participant or there is no keeper.

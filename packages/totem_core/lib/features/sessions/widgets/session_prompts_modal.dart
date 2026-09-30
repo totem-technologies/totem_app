@@ -42,12 +42,13 @@ class SessionPromptsModal extends ConsumerStatefulWidget {
 class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
   List<SessionPromptSchema>? _prompts;
   var _saving = false;
+  var _nextDraftId = -1;
 
   List<SessionPromptSchema> get _displayed =>
-      _prompts!.where((prompt) => prompt.roundNumber.value != null).toList();
+      _prompts!.where((prompt) => prompt.consumedRoundNumber != null).toList();
 
   List<SessionPromptSchema> get _future =>
-      _prompts!.where((prompt) => prompt.roundNumber.value == null).toList();
+      _prompts!.where((prompt) => prompt.consumedRoundNumber == null).toList();
 
   void _adopt(SessionPromptsSchema prompts) {
     if (mounted) setState(() => _prompts = prompts.prompts);
@@ -87,13 +88,40 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
     if (text == null || _prompts == null) return;
     final future = _future;
     if (prompt == null) {
-      future.add(SessionPromptSchema(prompt: text));
+      future.add(
+        SessionPromptSchema(
+          id: _nextDraftId--,
+          prompt: text,
+          position: null,
+          consumedRoundNumber: null,
+        ),
+      );
     } else {
       final index = future.indexOf(prompt);
       if (index < 0) return;
       future[index] = prompt.copyWith(prompt: text);
     }
     await _save(future);
+  }
+
+  Future<void> _setCurrentPrompt({
+    String? customPrompt,
+    int? sessionPromptId,
+  }) async {
+    final session = ref.read(currentSessionProvider);
+    if (session == null || _saving) return;
+    setState(() => _saving = true);
+    try {
+      await session.keeper.setPrompt(
+        customPrompt: customPrompt,
+        sessionPromptId: sessionPromptId,
+      );
+      _adopt(
+        await ref.refresh(sessionPromptsProvider(widget.sessionSlug).future),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -125,7 +153,13 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
         (state) => state?.roomState.roundNumber,
       ),
     );
+    final currentRoundPrompt = ref.watch(currentSessionPromptProvider);
     final displayed = _displayed;
+    final hasCurrentPreparedPrompt = displayed.any(
+      (prompt) => prompt.consumedRoundNumber == currentRound,
+    );
+    final showCustomCurrentPrompt =
+        currentRoundPrompt != null && !hasCurrentPreparedPrompt;
     final future = _future;
     final theme = Theme.of(context);
 
@@ -154,6 +188,21 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                       ),
                     ),
                   ),
+                  if (_saving || prompts.isLoading)
+                    const Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: SizedBox.square(
+                        dimension: 48,
+                        child: Center(
+                          child: SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator.adaptive(
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   Align(
                     alignment: AlignmentDirectional.centerEnd,
                     child: IconButton(
@@ -190,14 +239,50 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                       horizontal: 20,
                     ),
                     sliver: SliverList.builder(
-                      itemCount: displayed.length,
+                      itemCount:
+                          displayed.length + (showCustomCurrentPrompt ? 1 : 0),
                       itemBuilder: (context, index) {
+                        if (showCustomCurrentPrompt &&
+                            index == displayed.length) {
+                          return _PromptTile(
+                            key: ValueKey('custom-current-$currentRound'),
+                            prompt: SessionPromptSchema(
+                              id: 0,
+                              prompt: currentRoundPrompt,
+                              position: null,
+                              consumedRoundNumber: currentRound,
+                            ),
+                            locked: true,
+                            current: true,
+                            onEdit: () async {
+                              final text = await _promptText(
+                                context,
+                                initialText: currentRoundPrompt,
+                              );
+                              if (text != null) {
+                                await _setCurrentPrompt(customPrompt: text);
+                              }
+                            },
+                          );
+                        }
+
                         final prompt = displayed[index];
                         return _PromptTile(
-                          key: ValueKey('displayed-${prompt.id.value}'),
+                          key: ValueKey('displayed-${prompt.id}'),
                           prompt: prompt,
                           locked: true,
-                          current: prompt.roundNumber.value == currentRound,
+                          current: prompt.consumedRoundNumber == currentRound,
+                          onEdit: prompt.consumedRoundNumber == currentRound
+                              ? () async {
+                                  final text = await _promptText(
+                                    context,
+                                    initialText: prompt.prompt,
+                                  );
+                                  if (text != null) {
+                                    await _setCurrentPrompt(customPrompt: text);
+                                  }
+                                }
+                              : null,
                         );
                       },
                     ),
@@ -217,15 +302,22 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                               await _save(reordered);
                             },
                       itemBuilder: (context, index) => _PromptTile(
-                        key: ValueKey(
-                          'future-${future[index].id.value ?? index}',
-                        ),
+                        key: ValueKey('future-${future[index].id}'),
                         prompt: future[index],
                         locked: false,
                         index: index,
                         saving: _saving,
                         onEdit: () => _addOrEdit(future[index]),
+                        onSelect: currentRound == null
+                            ? null
+                            : () => _setCurrentPrompt(
+                                sessionPromptId: future[index].id,
+                              ),
                         onDelete: () async {
+                          final shouldDelete = await _confirmPromptDeletion(
+                            context,
+                          );
+                          if (shouldDelete != true) return;
                           final updated = [...future]..removeAt(index);
                           await _save(updated);
                         },
@@ -237,9 +329,16 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
             ),
             Padding(
               padding: const EdgeInsetsDirectional.fromSTEB(40, 20, 40, 12),
-              child: ElevatedButton(
-                onPressed: _saving ? null : _addOrEdit,
-                child: const Text('Add prompt'),
+              child: SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _addOrEdit,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  child: const Text('Add Prompt'),
+                ),
               ),
             ),
           ],
@@ -259,6 +358,7 @@ class _PromptTile extends StatelessWidget {
     this.saving = false,
     this.onEdit,
     this.onDelete,
+    this.onSelect,
   });
 
   final SessionPromptSchema prompt;
@@ -268,6 +368,7 @@ class _PromptTile extends StatelessWidget {
   final bool saving;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -276,8 +377,8 @@ class _PromptTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsetsDirectional.only(bottom: 8),
       padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 12,
-        vertical: 10,
+        horizontal: 10,
+        vertical: 6,
       ),
       decoration: BoxDecoration(
         color: current ? AppTheme.mauve.withValues(alpha: 0.16) : Colors.white,
@@ -285,25 +386,33 @@ class _PromptTile extends StatelessWidget {
         border: current ? Border.all(color: AppTheme.mauve) : null,
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.only(top: 2, end: 10),
-            child: locked
-                ? const TotemIcon(
-                    TotemIcons.lock,
-                    size: 18,
-                    color: Colors.black,
-                  )
-                : ReorderableDragStartListener(
-                    index: index!,
-                    enabled: !saving,
-                    child: const TotemIcon(
-                      TotemIcons.reorderParticipants,
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: Center(
+              child: locked
+                  ? const TotemIcon(
+                      TotemIcons.lock,
                       size: 18,
                       color: Colors.black,
+                    )
+                  : ReorderableDragStartListener(
+                      index: index!,
+                      enabled: !saving,
+                      child: const SizedBox.square(
+                        dimension: 40,
+                        child: Center(
+                          child: TotemIcon(
+                            TotemIcons.reorderParticipants,
+                            size: 18,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+            ),
           ),
           Expanded(
             child: Column(
@@ -317,13 +426,13 @@ class _PromptTile extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                Text(
+                SelectableText(
                   prompt.prompt,
                   style: theme.textTheme.bodyLarge?.copyWith(color: foreground),
                 ),
                 if (locked && !current)
                   Text(
-                    'Round ${prompt.roundNumber.value}',
+                    'Round ${prompt.consumedRoundNumber}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: foreground.withValues(alpha: 0.65),
                     ),
@@ -331,34 +440,63 @@ class _PromptTile extends StatelessWidget {
               ],
             ),
           ),
-          if (!locked)
+          if (!locked || onEdit != null)
             Row(
               mainAxisSize: MainAxisSize.min,
+              spacing: 4,
               children: [
-                IconButton(
-                  tooltip: 'Edit prompt',
-                  onPressed: saving ? null : onEdit,
-                  icon: const TotemIcon(
-                    TotemIcons.edit,
-                    size: 18,
-                    color: Colors.black,
+                if (onSelect != null)
+                  ElevatedButton(
+                    onPressed: saving ? null : onSelect,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: 10,
+                      ),
+                      textStyle: theme.textTheme.labelSmall,
+                    ),
+                    child: const Text('Use now'),
                   ),
-                ),
-                IconButton(
-                  tooltip: 'Delete prompt',
-                  onPressed: saving ? null : onDelete,
-                  icon: const TotemIcon(
-                    TotemIcons.delete,
-                    size: 18,
-                    color: Colors.black,
+
+                if (onEdit != null)
+                  IconButton(
+                    tooltip: current ? 'Edit current prompt' : 'Edit prompt',
+                    onPressed: saving ? null : onEdit,
+                    icon: const TotemIcon(
+                      TotemIcons.edit,
+                      size: 18,
+                      color: Colors.black,
+                    ),
                   ),
-                ),
+                if (!locked)
+                  IconButton(
+                    tooltip: 'Delete prompt',
+                    onPressed: saving ? null : onDelete,
+                    icon: const TotemIcon(
+                      TotemIcons.delete,
+                      size: 18,
+                      color: Colors.black,
+                    ),
+                  ),
               ],
             ),
         ],
       ),
     );
   }
+}
+
+Future<bool?> _confirmPromptDeletion(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (context) => ConfirmationDialog(
+      title: 'Delete Prompt?',
+      content: 'Are you sure you want to delete this prompt?',
+      confirmButtonText: 'Delete',
+      type: ConfirmationDialogType.destructive,
+      onConfirm: () async => Navigator.of(context).pop(true),
+    ),
+  );
 }
 
 Future<String?> _promptText(BuildContext context, {String? initialText}) async {
@@ -380,7 +518,31 @@ Future<String?> _promptText(BuildContext context, {String? initialText}) async {
             maxLength: _maxPromptLength,
             minLines: 3,
             maxLines: 5,
-            decoration: const InputDecoration(hintText: 'Discussion prompt'),
+            style: const TextStyle(color: AppTheme.slate),
+            cursorColor: AppTheme.mauve,
+            decoration: InputDecoration(
+              hintText: 'Discussion prompt',
+              hintStyle: const TextStyle(color: AppTheme.gray),
+              filled: true,
+              fillColor: Colors.white,
+              counterStyle: const TextStyle(color: AppTheme.gray),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.gray),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.mauve),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.errorColor),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.errorColor),
+              ),
+            ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Enter a prompt';

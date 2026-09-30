@@ -5,67 +5,67 @@ import 'package:degenerate_runtime/degenerate_runtime.dart';
 @immutable
 final class SessionPromptSchema {
   const SessionPromptSchema({
+    required this.id,
     required this.prompt,
-    this.id = const Omittable.absent(),
-    this.position = const Omittable.absent(),
-    this.roundNumber = const Omittable.absent(),
+    required this.position,
+    required this.consumedRoundNumber,
   });
 
   factory SessionPromptSchema.fromJson(Map<String, dynamic> json) {
     return SessionPromptSchema(
-      id: json.containsKey('id')
-          ? Omittable(json['id'] != null ? (json['id'] as num).toInt() : null)
-          : const Omittable.absent(),
+      id: (json['id'] as num).toInt(),
       prompt: json['prompt'] as String,
-      position: json.containsKey('position')
-          ? Omittable(
-              json['position'] != null
-                  ? (json['position'] as num).toInt()
-                  : null,
-            )
-          : const Omittable.absent(),
-      roundNumber: json.containsKey('round_number')
-          ? Omittable(
-              json['round_number'] != null
-                  ? (json['round_number'] as num).toInt()
-                  : null,
-            )
-          : const Omittable.absent(),
+      position: json['position'] != null
+          ? (json['position'] as num).toInt()
+          : null,
+      consumedRoundNumber: json['consumed_round_number'] != null
+          ? (json['consumed_round_number'] as num).toInt()
+          : null,
     );
   }
 
-  final Omittable<int?> id;
+  final int id;
 
   final String prompt;
 
-  final Omittable<int?> position;
+  final int? position;
 
-  final Omittable<int?> roundNumber;
+  final int? consumedRoundNumber;
 
   Map<String, dynamic> toJson() {
     return {
-      if (id.isPresent) 'id': id.value,
+      'id': id,
       'prompt': prompt,
-      if (position.isPresent) 'position': position.value,
-      if (roundNumber.isPresent) 'round_number': roundNumber.value,
+      'position': position,
+      'consumed_round_number': consumedRoundNumber,
     };
   }
 
   static bool canParse(Map<String, dynamic> json) {
-    return json.containsKey('prompt') && json['prompt'] is String;
+    return json.containsKey('id') &&
+        json['id'] is num &&
+        json.containsKey('prompt') &&
+        json['prompt'] is String &&
+        json.containsKey('position') &&
+        (json['position'] == null || json['position'] is num) &&
+        json.containsKey('consumed_round_number') &&
+        (json['consumed_round_number'] == null ||
+            json['consumed_round_number'] is num);
   }
 
   SessionPromptSchema copyWith({
-    Omittable<int?>? id,
+    int? id,
     String? prompt,
-    Omittable<int?>? position,
-    Omittable<int?>? roundNumber,
+    int? Function()? position,
+    int? Function()? consumedRoundNumber,
   }) {
     return SessionPromptSchema(
       id: id ?? this.id,
       prompt: prompt ?? this.prompt,
-      position: position ?? this.position,
-      roundNumber: roundNumber ?? this.roundNumber,
+      position: position != null ? position() : this.position,
+      consumedRoundNumber: consumedRoundNumber != null
+          ? consumedRoundNumber()
+          : this.consumedRoundNumber,
     );
   }
 
@@ -76,16 +76,16 @@ final class SessionPromptSchema {
             id == other.id &&
             prompt == other.prompt &&
             position == other.position &&
-            roundNumber == other.roundNumber;
+            consumedRoundNumber == other.consumedRoundNumber;
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, prompt, position, roundNumber);
+    return Object.hash(id, prompt, position, consumedRoundNumber);
   }
 
   @override
   String toString() {
-    return 'SessionPromptSchema(id: $id, prompt: $prompt, position: $position, roundNumber: $roundNumber)';
+    return 'SessionPromptSchema(id: $id, prompt: $prompt, position: $position, consumedRoundNumber: $consumedRoundNumber)';
   }
 }

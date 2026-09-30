@@ -285,12 +285,48 @@ Future<SessionPromptsSchema> updateSessionPrompts(
       body: SessionPromptsUpdateSchema(
         prompts: [
           for (final prompt in prompts)
-            SessionPromptUpdateSchema(id: prompt.id, prompt: prompt.prompt),
+            SessionPromptUpdateSchema(
+              id: prompt.id > 0
+                  ? Omittable(prompt.id)
+                  : const Omittable.absent(),
+              prompt: prompt.prompt,
+            ),
         ],
       ),
     ),
     operationName: 'update session prompts',
     diagnostics: {'session_slug': sessionSlug, 'prompt_count': prompts.length},
+  );
+}
+
+@riverpod
+Future<RoomState> setSessionPrompt(
+  Ref ref,
+  String sessionSlug,
+  int lastSeenVersion, {
+  String? customPrompt,
+  int? sessionPromptId,
+}) {
+  assert(
+    (customPrompt == null) != (sessionPromptId == null),
+    'Choose either a custom prompt or a prepared prompt ID.',
+  );
+  final apiService = ref.read(apiServiceProvider);
+  return _postEvent(
+    apiService: apiService,
+    sessionSlug: sessionSlug,
+    event: EventRequestEventSetPrompt(
+      SetPromptEvent(
+        prompt: customPrompt == null
+            ? const Omittable.absent()
+            : Omittable(customPrompt),
+        sessionPromptId: sessionPromptId == null
+            ? const Omittable.absent()
+            : Omittable(sessionPromptId),
+      ),
+    ),
+    lastSeenVersion: lastSeenVersion,
+    operationName: 'set session prompt',
   );
 }
 
