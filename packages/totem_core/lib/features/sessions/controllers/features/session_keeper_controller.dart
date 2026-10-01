@@ -117,12 +117,19 @@ class SessionKeeperController extends _$SessionKeeperController {
     logger.i('Passed totem successfully');
   }
 
-  Future<void> setPrompt({String? customPrompt, int? sessionPromptId}) async {
+  Future<void> setPrompt({
+    String? customPrompt,
+    int? sessionPromptId,
+    bool clearPrompt = false,
+  }) async {
     if (!session.isCurrentUserKeeper()) return;
-    if ((customPrompt == null) == (sessionPromptId == null)) {
-      throw ArgumentError(
-        'Choose either a custom prompt or a prepared prompt ID.',
-      );
+    if ([
+          customPrompt != null,
+          sessionPromptId != null,
+          clearPrompt,
+        ].where((value) => value).length !=
+        1) {
+      throw ArgumentError('Choose one prompt action.');
     }
     final roomState = await _run(
       action: () => ref.read(
@@ -131,6 +138,7 @@ class SessionKeeperController extends _$SessionKeeperController {
           _roomVersion,
           customPrompt: customPrompt,
           sessionPromptId: sessionPromptId,
+          clearPrompt: clearPrompt,
         ).future,
       ),
       errorMessage: 'Error setting session prompt',

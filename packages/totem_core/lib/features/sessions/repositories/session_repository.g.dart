@@ -689,7 +689,13 @@ final class SetSessionPromptProvider
     with $FutureModifier<RoomState>, $FutureProvider<RoomState> {
   SetSessionPromptProvider._({
     required SetSessionPromptFamily super.from,
-    required (String, int, {String? customPrompt, int? sessionPromptId})
+    required (
+      String,
+      int, {
+      String? customPrompt,
+      int? sessionPromptId,
+      bool clearPrompt,
+    })
     super.argument,
   }) : super(
          retry: null,
@@ -718,13 +724,20 @@ final class SetSessionPromptProvider
   FutureOr<RoomState> create(Ref ref) {
     final argument =
         this.argument
-            as (String, int, {String? customPrompt, int? sessionPromptId});
+            as (
+              String,
+              int, {
+              String? customPrompt,
+              int? sessionPromptId,
+              bool clearPrompt,
+            });
     return setSessionPrompt(
       ref,
       argument.$1,
       argument.$2,
       customPrompt: argument.customPrompt,
       sessionPromptId: argument.sessionPromptId,
+      clearPrompt: argument.clearPrompt,
     );
   }
 
@@ -739,13 +752,19 @@ final class SetSessionPromptProvider
   }
 }
 
-String _$setSessionPromptHash() => r'60d253e651c7ff1f49d216f07191e796fc05c62b';
+String _$setSessionPromptHash() => r'4de5e2dbb0390228f735730a65f28b31519988b5';
 
 final class SetSessionPromptFamily extends $Family
     with
         $FunctionalFamilyOverride<
           FutureOr<RoomState>,
-          (String, int, {String? customPrompt, int? sessionPromptId})
+          (
+            String,
+            int, {
+            String? customPrompt,
+            int? sessionPromptId,
+            bool clearPrompt,
+          })
         > {
   SetSessionPromptFamily._()
     : super(
@@ -761,12 +780,14 @@ final class SetSessionPromptFamily extends $Family
     int lastSeenVersion, {
     String? customPrompt,
     int? sessionPromptId,
+    bool clearPrompt = false,
   }) => SetSessionPromptProvider._(
     argument: (
       sessionSlug,
       lastSeenVersion,
       customPrompt: customPrompt,
       sessionPromptId: sessionPromptId,
+      clearPrompt: clearPrompt,
     ),
     from: this,
   );

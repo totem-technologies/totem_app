@@ -271,10 +271,16 @@ Future<RoomState> setSessionPrompt(
   int lastSeenVersion, {
   String? customPrompt,
   int? sessionPromptId,
+  bool clearPrompt = false,
 }) {
   assert(
-    (customPrompt == null) != (sessionPromptId == null),
-    'Choose either a custom prompt or a prepared prompt ID.',
+    [
+          customPrompt != null,
+          sessionPromptId != null,
+          clearPrompt,
+        ].where((value) => value).length ==
+        1,
+    'Choose one prompt action.',
   );
   final apiService = ref.read(apiServiceProvider);
   return _postEvent(

@@ -90,11 +90,12 @@ void main() {
       await tester.pumpWidget(
         buildTestWidget(
           PromptTransitionCard(
-            onActionPressed: ({customPrompt, sessionPromptId}) async {
-              actionTriggered = true;
-              message = customPrompt;
-              return true;
-            },
+            onActionPressed:
+                ({customPrompt, sessionPromptId, clearPrompt = false}) async {
+                  actionTriggered = true;
+                  message = customPrompt;
+                  return true;
+                },
           ),
         ),
       );
@@ -127,11 +128,12 @@ void main() {
             PromptTransitionCard(
               initialPrompt: 'Prepared prompt',
               initialSessionPromptId: 42,
-              onActionPressed: ({customPrompt, sessionPromptId}) async {
-                capturedCustomPrompt = customPrompt;
-                capturedSessionPromptId = sessionPromptId;
-                return true;
-              },
+              onActionPressed:
+                  ({customPrompt, sessionPromptId, clearPrompt = false}) async {
+                    capturedCustomPrompt = customPrompt;
+                    capturedSessionPromptId = sessionPromptId;
+                    return true;
+                  },
             ),
           ),
         );
@@ -145,5 +147,29 @@ void main() {
         check(capturedSessionPromptId).isNull();
       },
     );
+
+    autoSizeTest('PromptTransitionCard explicitly clears a removed prompt', (
+      tester,
+    ) async {
+      var clearRequested = false;
+      await tester.pumpWidget(
+        buildTestWidget(
+          PromptTransitionCard(
+            initialPrompt: 'Prepared prompt',
+            onActionPressed:
+                ({customPrompt, sessionPromptId, clearPrompt = false}) async {
+                  clearRequested = clearPrompt;
+                  return true;
+                },
+          ),
+        ),
+      );
+      await tester.enterText(find.byType(TextField), '');
+      await tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted();
+
+      check(clearRequested).isTrue();
+    });
   });
 }

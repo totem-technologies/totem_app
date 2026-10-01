@@ -393,7 +393,11 @@ class PromptTransitionCard extends StatefulWidget {
     super.key,
   });
 
-  final Future<bool> Function({String? customPrompt, int? sessionPromptId})
+  final Future<bool> Function({
+    String? customPrompt,
+    int? sessionPromptId,
+    bool clearPrompt,
+  })
   onActionPressed;
   final String? initialPrompt;
   final int? initialSessionPromptId;
@@ -498,6 +502,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
                     }
                     return widget.onActionPressed(
                       customPrompt: prompt.isEmpty ? null : prompt,
+                      clearPrompt: prompt.isEmpty,
                     );
                   },
                   keepLoadingOnSuccess: widget.keepActionLoadingOnSuccess,

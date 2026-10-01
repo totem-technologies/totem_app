@@ -37,6 +37,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     required String nextText,
     String? customPrompt,
     int? sessionPromptId,
+    bool clearPrompt = false,
   }) async {
     final session = ref.read(currentSessionProvider);
     final isKeeper = ref.read(isCurrentUserKeeperProvider);
@@ -61,6 +62,9 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     if (shouldPass) {
       try {
         ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
+        if (clearPrompt) {
+          await session?.keeper.setPrompt(clearPrompt: true);
+        }
         await session?.keeper.passTotem(
           customPrompt: customPrompt,
           sessionPromptId: sessionPromptId,
@@ -127,13 +131,15 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
               context,
               sessionSlug: widget.session.slug,
             ),
-            onActionPressed: ({customPrompt, sessionPromptId}) {
-              return _onPassTotem(
-                customPrompt: customPrompt,
-                sessionPromptId: sessionPromptId,
-                nextText: nextText,
-              );
-            },
+            onActionPressed:
+                ({customPrompt, sessionPromptId, clearPrompt = false}) {
+                  return _onPassTotem(
+                    customPrompt: customPrompt,
+                    sessionPromptId: sessionPromptId,
+                    clearPrompt: clearPrompt,
+                    nextText: nextText,
+                  );
+                },
             actionText: nextText,
           );
         } else {
