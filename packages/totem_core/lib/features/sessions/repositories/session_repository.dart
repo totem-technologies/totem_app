@@ -265,47 +265,6 @@ Future<RoomState> acceptTotem(
 }
 
 @riverpod
-Future<SessionPromptsSchema> sessionPrompts(Ref ref, String sessionSlug) {
-  final apiService = ref.read(apiServiceProvider);
-  return RepositoryUtils.handleApiCall<SessionPromptsSchema>(
-    apiCall: () => apiService.spaces.totemSpacesMobileApiGetSessionPrompts(
-      eventSlug: sessionSlug,
-    ),
-    operationName: 'get session prompts',
-    diagnostics: {'session_slug': sessionSlug},
-  );
-}
-
-@riverpod
-Future<SessionPromptsSchema> updateSessionPrompts(
-  Ref ref,
-  String sessionSlug,
-  List<SessionPromptSchema> prompts,
-) async {
-  final apiService = ref.read(apiServiceProvider);
-  final result = await RepositoryUtils.handleApiCall<SessionPromptsSchema>(
-    apiCall: () => apiService.spaces.totemSpacesMobileApiUpdateSessionPrompts(
-      eventSlug: sessionSlug,
-      body: SessionPromptsUpdateSchema(
-        prompts: [
-          for (final prompt in prompts)
-            SessionPromptUpdateSchema(
-              id: prompt.id > 0
-                  ? Omittable(prompt.id)
-                  : const Omittable.absent(),
-              prompt: prompt.prompt,
-            ),
-        ],
-      ),
-    ),
-    operationName: 'update session prompts',
-    diagnostics: {'session_slug': sessionSlug, 'prompt_count': prompts.length},
-  );
-  ref.invalidate(sessionPromptsProvider(sessionSlug));
-  return result;
-}
-
-@riverpod
 Future<RoomState> setSessionPrompt(
   Ref ref,
   String sessionSlug,

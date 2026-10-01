@@ -5,10 +5,14 @@ import 'session_prompt_update_schema.dart';
 
 @immutable
 final class SessionPromptsUpdateSchema {
-  const SessionPromptsUpdateSchema({required this.prompts});
+  const SessionPromptsUpdateSchema({
+    required this.expectedRevision,
+    required this.prompts,
+  });
 
   factory SessionPromptsUpdateSchema.fromJson(Map<String, dynamic> json) {
     return SessionPromptsUpdateSchema(
+      expectedRevision: (json['expected_revision'] as num).toInt(),
       prompts: (json['prompts'] as List<dynamic>)
           .map(
             (e) =>
@@ -18,36 +22,48 @@ final class SessionPromptsUpdateSchema {
     );
   }
 
+  final int expectedRevision;
+
   final List<SessionPromptUpdateSchema> prompts;
 
   Map<String, dynamic> toJson() {
-    return {'prompts': prompts.map((e) => e.toJson()).toList()};
+    return {
+      'expected_revision': expectedRevision,
+      'prompts': prompts.map((e) => e.toJson()).toList(),
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {
-    return json.containsKey('prompts');
+    return json.containsKey('expected_revision') &&
+        json['expected_revision'] is num &&
+        json.containsKey('prompts');
   }
 
   SessionPromptsUpdateSchema copyWith({
+    int? expectedRevision,
     List<SessionPromptUpdateSchema>? prompts,
   }) {
-    return SessionPromptsUpdateSchema(prompts: prompts ?? this.prompts);
+    return SessionPromptsUpdateSchema(
+      expectedRevision: expectedRevision ?? this.expectedRevision,
+      prompts: prompts ?? this.prompts,
+    );
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is SessionPromptsUpdateSchema &&
+            expectedRevision == other.expectedRevision &&
             listEquals(prompts, other.prompts);
   }
 
   @override
   int get hashCode {
-    return Object.hashAll(prompts).hashCode;
+    return Object.hash(expectedRevision, Object.hashAll(prompts));
   }
 
   @override
   String toString() {
-    return 'SessionPromptsUpdateSchema(prompts: $prompts)';
+    return 'SessionPromptsUpdateSchema(expectedRevision: $expectedRevision, prompts: $prompts)';
   }
 }

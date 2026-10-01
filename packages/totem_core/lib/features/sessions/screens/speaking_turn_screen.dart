@@ -10,9 +10,9 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_prompts_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
 
@@ -85,19 +85,18 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
       selfViewSettingsProvider.select((s) => s.enabled),
     );
     final roundPrompt = ref.watch(currentSessionPromptProvider);
-    final currentRound = ref.watch(
+    final activePreparedPromptId = ref.watch(
       currentSessionStateProvider.select(
-        (state) => state?.roomState.roundNumber,
+        (state) => state?.roomState.roundPromptId.value,
       ),
     );
     final isWaitingReceive = turnState == TurnState.passing;
     final preparedPrompt = isKeeper && !isWaitingReceive
-        ? switch (ref.watch(sessionPromptsProvider(widget.session.slug))) {
-            AsyncData(value: final prompts) => prompts.prompts.firstWhereOrNull(
-              (prompt) => prompt.consumedRoundNumbers.contains(currentRound),
-            ),
-            _ => null,
-          }
+        ? ref
+              .watch(sessionPromptsControllerProvider(widget.session.slug))
+              .prompts
+              .where((prompt) => prompt.id == activePreparedPromptId)
+              .firstOrNull
         : null;
 
     final body = ViewportResolver(

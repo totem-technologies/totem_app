@@ -51,6 +51,7 @@ export 'models/session_feedback_schema.dart';
 export 'models/session_prompt_schema.dart';
 export 'models/session_prompt_update_schema.dart';
 export 'models/session_prompts_schema.dart';
+export 'models/session_prompts_stale_revision_schema.dart';
 export 'models/session_prompts_update_schema.dart';
 export 'models/set_prompt_event.dart';
 export 'models/space_schema.dart';

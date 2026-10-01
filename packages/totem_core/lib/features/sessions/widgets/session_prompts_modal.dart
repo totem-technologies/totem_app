@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_prompts_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -54,82 +54,33 @@ class SessionPromptsModal extends ConsumerStatefulWidget {
 }
 
 class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
-  List<SessionPromptSchema>? _prompts;
   final Map<int, GlobalKey> _promptKeys = {};
-  var _saving = false;
-  var _nextDraftId = -1;
 
-  void _adopt(SessionPromptsSchema prompts) {
-    if (mounted) setState(() => _prompts = prompts.prompts);
-  }
-
-  Future<void> _save(
-    List<SessionPromptSchema> prompts, {
-    int? revealIndex,
-  }) async {
-    if (_prompts == null || _saving) return;
-    setState(() {
-      _prompts = prompts;
-      _saving = true;
-    });
-    try {
-      final result = await ref.read(
-        updateSessionPromptsProvider(widget.sessionSlug, prompts).future,
-      );
-      _adopt(result);
-      if (revealIndex case final index?) {
-        await WidgetsBinding.instance.endOfFrame;
-        if (mounted && index < result.prompts.length) {
-          final prompt = result.prompts[index];
-          final targetContext = _promptKey(prompt.id).currentContext;
-          if (targetContext != null && targetContext.mounted) {
-            await Scrollable.ensureVisible(
-              targetContext,
-              alignment: 0.5,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-            );
-          }
-        }
-      }
-    } catch (_) {
-      try {
-        _adopt(
-          await ref.refresh(sessionPromptsProvider(widget.sessionSlug).future),
-        );
-      } catch (_) {}
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Prompts were refreshed because they changed.'),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  Future<void> _addOrEdit([SessionPromptSchema? prompt]) async {
+  Future<void> _addOrEdit([int? promptId]) async {
+    final prompts = ref.read(
+      sessionPromptsControllerProvider(widget.sessionSlug),
+    );
+    final prompt = promptId == null
+        ? null
+        : prompts.prompts.where((prompt) => prompt.id == promptId).firstOrNull;
+    if (promptId != null && prompt == null) return;
     final text = await _promptText(context, initialText: prompt?.prompt);
-    if (text == null || _prompts == null) return;
-    final prompts = [..._prompts!];
-    final revealIndex = prompt == null ? prompts.length : null;
+    if (text == null) return;
+    final controller = ref.read(
+      sessionPromptsControllerProvider(widget.sessionSlug).notifier,
+    );
     if (prompt == null) {
-      prompts.add(
-        SessionPromptSchema(
-          id: _nextDraftId--,
-          prompt: text,
-          position: null,
-          consumedRoundNumbers: const [],
-        ),
-      );
+      await controller.addPrompt(text);
     } else {
-      final index = prompts.indexOf(prompt);
-      if (index < 0) return;
-      prompts[index] = prompt.copyWith(prompt: text);
+      await controller.editPrompt(prompt.id, text);
     }
-    await _save(prompts, revealIndex: revealIndex);
+  }
+
+  Future<void> _deletePrompt(int id) async {
+    if (await _confirmPromptDeletion(context) != true) return;
+    await ref
+        .read(sessionPromptsControllerProvider(widget.sessionSlug).notifier)
+        .deletePrompt(id);
   }
 
   GlobalKey _promptKey(int id) => _promptKeys.putIfAbsent(id, GlobalKey.new);
@@ -147,61 +98,78 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
     int? sessionPromptId,
   }) async {
     final session = ref.read(currentSessionProvider);
-    if (session == null || _saving) return;
-    setState(() => _saving = true);
-    try {
-      await session.keeper.setPrompt(
-        customPrompt: customPrompt,
-        sessionPromptId: sessionPromptId,
-      );
-      _adopt(
-        await ref.refresh(sessionPromptsProvider(widget.sessionSlug).future),
-      );
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+    final prompts = ref.read(
+      sessionPromptsControllerProvider(widget.sessionSlug),
+    );
+    if (session == null || prompts.mutating) return;
+    await session.keeper.setPrompt(
+      customPrompt: customPrompt,
+      sessionPromptId: sessionPromptId,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final prompts = ref.watch(sessionPromptsProvider(widget.sessionSlug))
-      ..whenData((value) {
-        if (_prompts == null && !_saving) _prompts = value.prompts;
-      });
-    final localPrompts = _prompts;
-    if (localPrompts == null) {
-      return prompts.when(
-        loading: () => const SizedBox(
-          height: 220,
-          child: Center(child: CircularProgressIndicator()),
-        ),
-        error: (_, _) => Center(
-          child: TextButton(
-            onPressed: () =>
-                ref.invalidate(sessionPromptsProvider(widget.sessionSlug)),
-            child: const Text('Retry loading prompts'),
-          ),
-        ),
-        data: (_) => const SizedBox.shrink(),
+    final prompts = ref.watch(
+      sessionPromptsControllerProvider(widget.sessionSlug),
+    );
+    final localPrompts = prompts.prompts;
+    final saving = prompts.mutating;
+    if (prompts.snapshot == null) {
+      return Center(
+        child: prompts.loading
+            ? const CircularProgressIndicator()
+            : TextButton(
+                onPressed: () => ref
+                    .read(
+                      sessionPromptsControllerProvider(
+                        widget.sessionSlug,
+                      ).notifier,
+                    )
+                    .refresh(),
+                child: const Text('Retry loading prompts'),
+              ),
       );
     }
+    ref.listen<SessionPromptsState>(
+      sessionPromptsControllerProvider(widget.sessionSlug),
+      (previous, next) {
+        if (next.message != null && next.message != previous?.message) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(next.message!)));
+        }
+      },
+    );
 
-    final currentRound = ref.watch(
+    final roomState = ref.watch(
+      currentSessionStateProvider.select((state) => state?.roomState),
+    );
+    final currentRound = roomState?.roundNumber;
+    ref.listen<int?>(
       currentSessionStateProvider.select(
-        (state) => state?.roomState.roundNumber,
+        (state) => state?.roomState.roundPromptId.value,
       ),
+      (previous, next) {
+        if (previous != next) {
+          ref
+              .read(
+                sessionPromptsControllerProvider(widget.sessionSlug).notifier,
+              )
+              .refresh();
+        }
+      },
     );
     final currentRoundPrompt = ref.watch(currentSessionPromptProvider);
-    final hasCurrentPreparedPrompt = localPrompts.any(
-      (prompt) => prompt.consumedRoundNumbers.contains(currentRound),
-    );
+    final currentPromptId = roomState?.roundPromptId.value;
+    final hasCurrentPreparedPrompt = currentPromptId != null;
     final showCustomCurrentPrompt =
         currentRoundPrompt != null && !hasCurrentPreparedPrompt;
     final theme = Theme.of(context);
     final horizontalPadding = widget.embedded ? 16.0 : 20.0;
 
     return PopScope(
-      canPop: !_saving,
+      canPop: !saving,
       child: Material(
         type: MaterialType.transparency,
         child: SafeArea(
@@ -221,7 +189,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                     SizedBox.square(
                       dimension: 40,
                       child: Center(
-                        child: _saving || prompts.isLoading
+                        child: saving || prompts.loading
                             ? const SizedBox.square(
                                 dimension: 20,
                                 child: CircularProgressIndicator.adaptive(
@@ -260,7 +228,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                       child: IconButton(
                         tooltip: 'Close',
                         padding: EdgeInsets.zero,
-                        onPressed: _saving ? null : _closePanel,
+                        onPressed: saving ? null : _closePanel,
                         icon: const TotemIcon(
                           TotemIcons.x,
                           size: 16,
@@ -285,7 +253,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                             prompt: SessionPromptSchema(
                               id: 0,
                               prompt: currentRoundPrompt,
-                              position: null,
+                              position: 0,
                               consumedRoundNumbers: currentRound == null
                                   ? const []
                                   : [currentRound],
@@ -310,53 +278,35 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                       ),
                       sliver: SliverReorderableList(
                         itemCount: localPrompts.length,
-                        onReorderItem: _saving
+                        onReorderItem: saving
                             ? (_, _) {}
                             : (oldIndex, newIndex) async {
-                                final reordered = [...localPrompts];
-                                final item = reordered.removeAt(oldIndex);
-                                reordered.insert(newIndex, item);
-                                await _save(reordered);
+                                final id = localPrompts[oldIndex].id;
+                                await ref
+                                    .read(
+                                      sessionPromptsControllerProvider(
+                                        widget.sessionSlug,
+                                      ).notifier,
+                                    )
+                                    .reorderPrompt(id, newIndex);
                               },
                         itemBuilder: (context, index) {
                           final prompt = localPrompts[index];
-                          final current = prompt.consumedRoundNumbers.contains(
-                            currentRound,
-                          );
+                          final current = prompt.id == currentPromptId;
                           return _PromptTile(
                             key: _promptKey(prompt.id),
                             prompt: prompt,
                             current: current,
                             panelLayout: widget.embedded,
                             index: index,
-                            saving: _saving,
-                            onEdit: current
-                                ? () async {
-                                    final text = await _promptText(
-                                      context,
-                                      initialText: prompt.prompt,
-                                    );
-                                    if (text != null) {
-                                      await _setCurrentPrompt(
-                                        customPrompt: text,
-                                      );
-                                    }
-                                  }
-                                : () => _addOrEdit(prompt),
+                            saving: saving,
+                            onEdit: () => _addOrEdit(prompt.id),
                             onSelect: currentRound == null || current
                                 ? null
                                 : () => _setCurrentPrompt(
                                     sessionPromptId: prompt.id,
                                   ),
-                            onDelete: () async {
-                              final shouldDelete = await _confirmPromptDeletion(
-                                context,
-                              );
-                              if (shouldDelete != true) return;
-                              final updated = [...localPrompts]
-                                ..removeAt(index);
-                              await _save(updated);
-                            },
+                            onDelete: () => _deletePrompt(prompt.id),
                           );
                         },
                       ),
@@ -375,7 +325,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                   width: double.infinity,
                   height: 44,
                   child: ElevatedButton(
-                    onPressed: _saving ? null : _addOrEdit,
+                    onPressed: saving ? null : _addOrEdit,
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size.fromHeight(44),
                     ),

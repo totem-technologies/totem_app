@@ -117,7 +117,7 @@ void main() {
     });
 
     autoSizeTest(
-      'PromptTransitionCard passes an unchanged prepared prompt by ID',
+      'PromptTransitionCard passes unchanged text without replacing the prompt',
       (tester) async {
         String? capturedCustomPrompt;
         int? capturedSessionPromptId;
@@ -142,7 +142,7 @@ void main() {
         await button.onActionCompleted();
 
         check(capturedCustomPrompt).isNull();
-        check(capturedSessionPromptId).equals(42);
+        check(capturedSessionPromptId).isNull();
       },
     );
   });

@@ -10,6 +10,7 @@ import '../models/session_conflict_schema.dart';
 import '../models/session_detail_schema.dart';
 import '../models/session_feedback_schema.dart';
 import '../models/session_prompts_schema.dart';
+import '../models/session_prompts_stale_revision_schema.dart';
 import '../models/session_prompts_update_schema.dart';
 import '../models/space_schema.dart';
 import '../models/summary_spaces_schema.dart';
@@ -258,7 +259,7 @@ final class SpacesApi with ApiExecutor {
   /// Update Session Prompts
   ///
   /// `PUT /api/mobile/protected/spaces/session/{event_slug}/prompts`
-  Future<ApiResult<SessionPromptsSchema, Never>>
+  Future<ApiResult<SessionPromptsSchema, SessionPromptsStaleRevisionSchema>>
   totemSpacesMobileApiUpdateSessionPrompts({
     required String eventSlug,
     required SessionPromptsUpdateSchema body,
@@ -281,6 +282,17 @@ final class SpacesApi with ApiExecutor {
       onSuccess: (response) {
         final json = jsonDecode(response.body);
         return SessionPromptsSchema.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 409:
+            final json = jsonDecode(response.body);
+            return SessionPromptsStaleRevisionSchema.fromJson(
+              json as Map<String, dynamic>,
+            );
+          default:
+            return null;
+        }
       },
     );
   }

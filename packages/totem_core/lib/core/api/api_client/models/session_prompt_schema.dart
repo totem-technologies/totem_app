@@ -15,9 +15,7 @@ final class SessionPromptSchema {
     return SessionPromptSchema(
       id: (json['id'] as num).toInt(),
       prompt: json['prompt'] as String,
-      position: json['position'] != null
-          ? (json['position'] as num).toInt()
-          : null,
+      position: (json['position'] as num).toInt(),
       consumedRoundNumbers: (json['consumed_round_numbers'] as List<dynamic>)
           .map((e) => (e as num).toInt())
           .toList(),
@@ -28,7 +26,7 @@ final class SessionPromptSchema {
 
   final String prompt;
 
-  final int? position;
+  final int position;
 
   final List<int> consumedRoundNumbers;
 
@@ -47,20 +45,20 @@ final class SessionPromptSchema {
         json.containsKey('prompt') &&
         json['prompt'] is String &&
         json.containsKey('position') &&
-        (json['position'] == null || json['position'] is num) &&
+        json['position'] is num &&
         json.containsKey('consumed_round_numbers');
   }
 
   SessionPromptSchema copyWith({
     int? id,
     String? prompt,
-    int? Function()? position,
+    int? position,
     List<int>? consumedRoundNumbers,
   }) {
     return SessionPromptSchema(
       id: id ?? this.id,
       prompt: prompt ?? this.prompt,
-      position: position != null ? position() : this.position,
+      position: position ?? this.position,
       consumedRoundNumbers: consumedRoundNumbers ?? this.consumedRoundNumbers,
     );
   }

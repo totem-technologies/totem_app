@@ -492,11 +492,9 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
                   text: widget.actionText,
                   onActionCompleted: () {
                     final prompt = customPromptController.text.trim();
-                    if (prompt == _lastInitialPrompt.trim() &&
-                        widget.initialSessionPromptId != null) {
-                      return widget.onActionPressed(
-                        sessionPromptId: widget.initialSessionPromptId,
-                      );
+                    if (prompt == _lastInitialPrompt.trim()) {
+                      // Passing does not re-select the current prepared prompt.
+                      return widget.onActionPressed();
                     }
                     return widget.onActionPressed(
                       customPrompt: prompt.isEmpty ? null : prompt,
