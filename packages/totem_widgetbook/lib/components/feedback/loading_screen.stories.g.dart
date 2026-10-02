@@ -18,8 +18,9 @@ typedef _Story = LoadingScreenStory;
 typedef _Args = LoadingScreenArgs;
 final LoadingScreenComponent =
     Component<LoadingScreen, StoryArgs<LoadingScreen>>(
-      name: 'LoadingScreen',
-      path: 'shared/widgets',
+      name: component.name ?? 'LoadingScreen',
+      path: component.path ?? 'components/feedback',
+      docsBuilder: component.docsBuilder,
       docComment: null,
       stories: [$Default..$generatedName = 'Default'],
     );

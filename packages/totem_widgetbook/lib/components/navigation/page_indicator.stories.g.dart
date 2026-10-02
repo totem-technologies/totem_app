@@ -18,8 +18,9 @@ typedef _Story = PageIndicatorStory;
 typedef _Args = PageIndicatorArgs;
 final PageIndicatorComponent =
     Component<PageIndicator, StoryArgs<PageIndicator>>(
-      name: 'PageIndicator',
-      path: 'shared/widgets',
+      name: component.name ?? 'PageIndicator',
+      path: component.path ?? 'components/navigation',
+      docsBuilder: component.docsBuilder,
       docComment: null,
       stories: [
         $Default..$generatedName = 'Default',

@@ -18,8 +18,9 @@ typedef _Story = EmptyIndicatorStory;
 typedef _Args = EmptyIndicatorArgs;
 final EmptyIndicatorComponent =
     Component<EmptyIndicator, StoryArgs<EmptyIndicator>>(
-      name: 'EmptyIndicator',
-      path: 'shared/widgets',
+      name: component.name ?? 'EmptyIndicator',
+      path: component.path ?? 'components/feedback',
+      docsBuilder: component.docsBuilder,
       docComment: null,
       stories: [
         $Default..$generatedName = 'Default',

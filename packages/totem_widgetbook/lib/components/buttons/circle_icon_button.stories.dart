@@ -8,6 +8,8 @@ part 'circle_icon_button.stories.g.dart';
 
 const meta = Meta(CircleIconButton.new);
 
+const component = ComponentMeta(path: 'Components/Buttons');
+
 final $Default = _Story(
   args: _Args(
     icon: iconArg(TotemIcons.share),

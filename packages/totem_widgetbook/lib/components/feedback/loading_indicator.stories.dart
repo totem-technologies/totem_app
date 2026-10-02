@@ -6,6 +6,8 @@ part 'loading_indicator.stories.g.dart';
 
 const meta = Meta(LoadingIndicator.new);
 
+const component = ComponentMeta(path: 'Components/Feedback');
+
 final $Default = _Story(
   args: _Args(
     size: DoubleArg(

@@ -8,6 +8,8 @@ part 'confirmation_dialog.stories.g.dart';
 
 const meta = Meta(ConfirmationDialog.new);
 
+const component = ComponentMeta(path: 'Components/Dialogs');
+
 final $Destructive = _Story(
   args: _Args(
     content: NullableStringArg(

@@ -6,6 +6,8 @@ part 'info_text.stories.g.dart';
 
 const meta = Meta(InfoText.new);
 
+const component = ComponentMeta(path: 'Components/Feedback');
+
 final $Default = _Story(
   args: _Args(
     text: StringArg(

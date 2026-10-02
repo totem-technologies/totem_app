@@ -6,4 +6,6 @@ part 'loading_screen.stories.g.dart';
 
 const meta = Meta(LoadingScreen.new);
 
+const component = ComponentMeta(path: 'Components/Feedback');
+
 final $Default = _Story();

@@ -17,8 +17,9 @@ typedef _Defaults = ErrorScreenDefaults;
 typedef _Story = ErrorScreenStory;
 typedef _Args = ErrorScreenArgs;
 final ErrorScreenComponent = Component<ErrorScreen, StoryArgs<ErrorScreen>>(
-  name: 'ErrorScreen',
-  path: 'shared/widgets',
+  name: component.name ?? 'ErrorScreen',
+  path: component.path ?? 'components/feedback',
+  docsBuilder: component.docsBuilder,
   docComment: null,
   stories: [$WithRetry..$generatedName = 'WithRetry'],
 );

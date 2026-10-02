@@ -18,8 +18,9 @@ typedef _Story = SheetDragHandleStory;
 typedef _Args = SheetDragHandleArgs;
 final SheetDragHandleComponent =
     Component<SheetDragHandle, StoryArgs<SheetDragHandle>>(
-      name: 'SheetDragHandle',
-      path: 'shared/widgets',
+      name: component.name ?? 'SheetDragHandle',
+      path: component.path ?? 'components/navigation',
+      docsBuilder: component.docsBuilder,
       docComment: null,
       stories: [$Default..$generatedName = 'Default'],
     );

@@ -6,4 +6,6 @@ part 'totem_logo.stories.g.dart';
 
 const meta = Meta(TotemLogo.new);
 
+const component = ComponentMeta(path: 'Components/Brand');
+
 final $Default = _Story(args: _Args(size: NullableDoubleArg(32)));

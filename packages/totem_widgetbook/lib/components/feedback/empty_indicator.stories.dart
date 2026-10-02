@@ -8,6 +8,8 @@ part 'empty_indicator.stories.g.dart';
 
 const meta = Meta(EmptyIndicator.new);
 
+const component = ComponentMeta(path: 'Components/Feedback');
+
 final $Default = _Story(
   args: _Args(
     text: NullableStringArg('Nothing available yet'),

@@ -17,8 +17,9 @@ typedef _Defaults = InfoTextDefaults;
 typedef _Story = InfoTextStory;
 typedef _Args = InfoTextArgs;
 final InfoTextComponent = Component<InfoText, StoryArgs<InfoText>>(
-  name: 'InfoText',
-  path: 'shared/widgets',
+  name: component.name ?? 'InfoText',
+  path: component.path ?? 'components/feedback',
+  docsBuilder: component.docsBuilder,
   docComment: null,
   stories: [$Default..$generatedName = 'Default'],
 );

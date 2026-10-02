@@ -8,6 +8,8 @@ part 'error_screen.stories.g.dart';
 
 const meta = Meta(ErrorScreen.new);
 
+const component = ComponentMeta(path: 'Components/Feedback');
+
 final $WithRetry = _Story(
   args: _Args(
     title: NullableStringArg('Something went wrong'),

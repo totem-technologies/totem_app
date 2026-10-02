@@ -17,8 +17,9 @@ typedef _Defaults = ErrorDialogDefaults;
 typedef _Story = ErrorDialogStory;
 typedef _Args = ErrorDialogArgs;
 final ErrorDialogComponent = Component<ErrorDialog, StoryArgs<ErrorDialog>>(
-  name: 'ErrorDialog',
-  path: 'shared/widgets',
+  name: component.name ?? 'ErrorDialog',
+  path: component.path ?? 'components/dialogs',
+  docsBuilder: component.docsBuilder,
   docComment: null,
   stories: [$Default..$generatedName = 'Default'],
 );

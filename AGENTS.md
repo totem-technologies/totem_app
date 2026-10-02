@@ -71,3 +71,15 @@ Run the focused test file first after a lifecycle or timing fix, then run the af
 - For layout breakpoints, test transition boundaries and representative variants rather than every equivalent size/count.
 - When auditing or refactoring tests, first identify the behavior each existing test protects. Keep meaningful tests, rewrite brittle ones, merge overlapping scenarios, and remove tests with no meaningful protection; do not replace a weak assertion with another weak assertion.
 - After test cleanup, report meaningful gaps separately instead of adding low-value tests solely to improve apparent coverage.
+
+# Widgetbook
+
+`packages/totem_widgetbook` is the design catalog. Read its `README.md` before adding or changing stories.
+
+- Use the Widgetbook 4.0 beta API only (`Meta`, `ComponentMeta`, `_Story`, `_Args`, typed `*Arg`s). Do not write 3.x patterns (`@UseCase`, `WidgetbookUseCase`, knobs).
+- Every stories file declares `const component = ComponentMeta(path: ...)` under `Components/<Category>` or `Screens/<route path>`, and lives in the matching `lib/` folder.
+- Variants (compact, type enums, loading/empty/error, etc.) are stories or args of one component, never separate components or catalog-only widget classes.
+- Screen stories mirror `RouteNames` paths, expose route params as args, and render a pure view that receives its data through constructor params (no providers).
+- The package depends only on `totem_core` and `material_ui`; never import `totem_app` or `totem_web`.
+- Do not add light/dark duplicate stories.
+- After editing `*.stories.dart`, run `make widgetbook-gen` and commit the generated files.

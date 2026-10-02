@@ -6,6 +6,8 @@ part 'error_dialog.stories.g.dart';
 
 const meta = Meta(ErrorDialog.new);
 
+const component = ComponentMeta(path: 'Components/Dialogs');
+
 final $Default = _Story(
   args: _Args(
     message: NullableStringArg('Check your connection and try again.'),

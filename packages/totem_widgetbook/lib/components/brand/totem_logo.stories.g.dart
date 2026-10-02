@@ -17,8 +17,9 @@ typedef _Defaults = TotemLogoDefaults;
 typedef _Story = TotemLogoStory;
 typedef _Args = TotemLogoArgs;
 final TotemLogoComponent = Component<TotemLogo, StoryArgs<TotemLogo>>(
-  name: 'TotemLogo',
-  path: 'shared/widgets',
+  name: component.name ?? 'TotemLogo',
+  path: component.path ?? 'components/brand',
+  docsBuilder: component.docsBuilder,
   docComment: null,
   stories: [$Default..$generatedName = 'Default'],
 );

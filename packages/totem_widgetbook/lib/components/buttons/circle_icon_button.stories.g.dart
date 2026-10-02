@@ -18,8 +18,9 @@ typedef _Story = CircleIconButtonStory;
 typedef _Args = CircleIconButtonArgs;
 final CircleIconButtonComponent =
     Component<CircleIconButton, StoryArgs<CircleIconButton>>(
-      name: 'CircleIconButton',
-      path: 'shared/widgets',
+      name: component.name ?? 'CircleIconButton',
+      path: component.path ?? 'components/buttons',
+      docsBuilder: component.docsBuilder,
       docComment: null,
       stories: [$Default..$generatedName = 'Default'],
     );

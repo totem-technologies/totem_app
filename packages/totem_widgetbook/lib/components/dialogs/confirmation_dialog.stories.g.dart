@@ -19,8 +19,9 @@ typedef _Story = ConfirmationDialogStory;
 typedef _Args = ConfirmationDialogArgs;
 final ConfirmationDialogComponent =
     Component<ConfirmationDialog, StoryArgs<ConfirmationDialog>>(
-      name: 'ConfirmationDialog',
-      path: 'shared/widgets',
+      name: component.name ?? 'ConfirmationDialog',
+      path: component.path ?? 'components/dialogs',
+      docsBuilder: component.docsBuilder,
       docComment: null,
       stories: [
         $Destructive..$generatedName = 'Destructive',

@@ -6,4 +6,6 @@ part 'sheet_drag_handle.stories.g.dart';
 
 const meta = Meta(SheetDragHandle.new);
 
+const component = ComponentMeta(path: 'Components/Navigation');
+
 final $Default = _Story();

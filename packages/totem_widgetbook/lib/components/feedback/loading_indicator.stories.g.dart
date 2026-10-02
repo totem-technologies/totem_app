@@ -18,8 +18,9 @@ typedef _Story = LoadingIndicatorStory;
 typedef _Args = LoadingIndicatorArgs;
 final LoadingIndicatorComponent =
     Component<LoadingIndicator, StoryArgs<LoadingIndicator>>(
-      name: 'LoadingIndicator',
-      path: 'shared/widgets',
+      name: component.name ?? 'LoadingIndicator',
+      path: component.path ?? 'components/feedback',
+      docsBuilder: component.docsBuilder,
       docComment: null,
       stories: [$Default..$generatedName = 'Default'],
     );
