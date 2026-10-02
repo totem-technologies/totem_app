@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:degenerate_runtime/degenerate_runtime.dart';
 import 'room_state_status_detail.dart';
 
 @immutable
@@ -122,6 +122,7 @@ final class RoomState {
     this.nextSpeaker = const Omittable.absent(),
     this.bannedParticipants,
     this.roundMessage = const Omittable.absent(),
+    this.roundPromptId = const Omittable.absent(),
   });
 
   factory RoomState.fromJson(Map<String, dynamic> json) {
@@ -150,6 +151,13 @@ final class RoomState {
       roundMessage: json.containsKey('round_message')
           ? Omittable(json['round_message'] as String?)
           : const Omittable.absent(),
+      roundPromptId: json.containsKey('round_prompt_id')
+          ? Omittable(
+              json['round_prompt_id'] != null
+                  ? (json['round_prompt_id'] as num).toInt()
+                  : null,
+            )
+          : const Omittable.absent(),
     );
   }
 
@@ -177,6 +185,8 @@ final class RoomState {
 
   final Omittable<String?> roundMessage;
 
+  final Omittable<int?> roundPromptId;
+
   /// The value with the schema default applied when absent.
   List<String> get bannedParticipantsOrDefault {
     return bannedParticipants ?? const [];
@@ -196,6 +206,7 @@ final class RoomState {
       'banned_participants': ?bannedParticipants,
       'round_number': roundNumber,
       if (roundMessage.isPresent) 'round_message': roundMessage.value,
+      if (roundPromptId.isPresent) 'round_prompt_id': roundPromptId.value,
     };
   }
 
@@ -227,6 +238,7 @@ final class RoomState {
     List<String>? Function()? bannedParticipants,
     int? roundNumber,
     Omittable<String?>? roundMessage,
+    Omittable<int?>? roundPromptId,
   }) {
     return RoomState(
       sessionSlug: sessionSlug ?? this.sessionSlug,
@@ -243,6 +255,7 @@ final class RoomState {
           : this.bannedParticipants,
       roundNumber: roundNumber ?? this.roundNumber,
       roundMessage: roundMessage ?? this.roundMessage,
+      roundPromptId: roundPromptId ?? this.roundPromptId,
     );
   }
 
@@ -261,7 +274,8 @@ final class RoomState {
             keeper == other.keeper &&
             listEquals(bannedParticipants, other.bannedParticipants) &&
             roundNumber == other.roundNumber &&
-            roundMessage == other.roundMessage;
+            roundMessage == other.roundMessage &&
+            roundPromptId == other.roundPromptId;
   }
 
   @override
@@ -279,11 +293,12 @@ final class RoomState {
       Object.hashAll(bannedParticipants ?? const []),
       roundNumber,
       roundMessage,
+      roundPromptId,
     );
   }
 
   @override
   String toString() {
-    return 'RoomState(sessionSlug: $sessionSlug, version: $version, status: $status, turnState: $turnState, statusDetail: $statusDetail, currentSpeaker: $currentSpeaker, nextSpeaker: $nextSpeaker, talkingOrder: $talkingOrder, keeper: $keeper, bannedParticipants: $bannedParticipants, roundNumber: $roundNumber, roundMessage: $roundMessage)';
+    return 'RoomState(sessionSlug: $sessionSlug, version: $version, status: $status, turnState: $turnState, statusDetail: $statusDetail, currentSpeaker: $currentSpeaker, nextSpeaker: $nextSpeaker, talkingOrder: $talkingOrder, keeper: $keeper, bannedParticipants: $bannedParticipants, roundNumber: $roundNumber, roundMessage: $roundMessage, roundPromptId: $roundPromptId)';
   }
 }

@@ -291,7 +291,7 @@ void main() {
       check(container.read(hasKeeperDisconnectedProvider)).equals(true);
       check(container.read(sessionMessagesProvider)).length.equals(1);
       check(container.read(lastSessionMessageProvider)?.id).equals('m1');
-      check(container.read(roundMessageProvider)).equals('focus');
+      check(container.read(currentSessionPromptProvider)).equals('focus');
       check(container.read(hasKeeperProvider)).equals(false);
       check(container.read(featuredParticipantProvider)).isNull();
       check(container.read(speakingNextParticipantProvider)).isNull();

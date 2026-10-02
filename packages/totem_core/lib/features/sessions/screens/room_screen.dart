@@ -10,6 +10,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/core/services/screen_protection_service.dart';
@@ -28,6 +29,8 @@ import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
+import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
+import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -69,6 +72,34 @@ class _SessionChatRouteObserver extends NavigatorObserver {
   }
 }
 
+class _DockedSessionPanelsRail extends ConsumerWidget {
+  const _DockedSessionPanelsRail({required this.sessionSlug});
+
+  final String sessionSlug;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chatOpen = ref.watch(sessionChatOpenProvider);
+    final promptsOpen = ref.watch(sessionPromptsOpenProvider);
+    final open = chatOpen || promptsOpen;
+
+    return DockedSessionSidePanel(
+      open: open,
+      child: chatOpen
+          ? const SessionChatPanel(embedded: true)
+          : Material(
+              color: AppTheme.cream,
+              elevation: 6,
+              shadowColor: const Color.fromRGBO(0, 0, 0, 0.16),
+              child: SessionPromptsModal(
+                sessionSlug: sessionSlug,
+                embedded: true,
+              ),
+            ),
+    );
+  }
+}
+
 class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   static var _didWarmEmojiGlyphs = false;
 
@@ -96,6 +127,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     // keeper, from carrying into this one.
     ref
       ..invalidate(sessionChatOpenProvider)
+      ..invalidate(sessionPromptsOpenProvider)
       ..invalidate(sessionChatThreadTargetProvider)
       ..invalidate(sessionChatUnreadThreadsProvider);
 
@@ -593,7 +625,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
                 ],
               ),
             ),
-            if (dockChatSlot) const DockedSessionChatRail(),
+            if (dockChatSlot)
+              _DockedSessionPanelsRail(sessionSlug: widget.sessionSlug),
           ],
         ),
       ),

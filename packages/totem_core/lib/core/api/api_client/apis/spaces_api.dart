@@ -2,13 +2,16 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:degenerate_runtime/degenerate_runtime.dart';
 import '../models/mobile_space_detail_schema.dart';
 import '../models/paged_mobile_space_detail_schema.dart';
 import '../models/resolve_conflicts_schema.dart';
 import '../models/session_conflict_schema.dart';
 import '../models/session_detail_schema.dart';
 import '../models/session_feedback_schema.dart';
+import '../models/session_prompts_schema.dart';
+import '../models/session_prompts_stale_revision_schema.dart';
+import '../models/session_prompts_update_schema.dart';
 import '../models/space_schema.dart';
 import '../models/summary_spaces_schema.dart';
 
@@ -222,6 +225,74 @@ final class SpacesApi with ApiExecutor {
       onSuccess: (response) {
         final json = jsonDecode(response.body);
         return SessionDetailSchema.fromJson(json as Map<String, dynamic>);
+      },
+    );
+  }
+
+  /// Get Session Prompts
+  ///
+  /// `GET /api/mobile/protected/spaces/session/{event_slug}/prompts`
+  Future<ApiResult<SessionPromptsSchema, Never>>
+  totemSpacesMobileApiGetSessionPrompts({
+    required String eventSlug,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+
+    final request = ApiRequest(
+      method: 'GET',
+      path:
+          '/api/mobile/protected/spaces/session/${Uri.encodeComponent(eventSlug)}/prompts',
+      headers: headers,
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return SessionPromptsSchema.fromJson(json as Map<String, dynamic>);
+      },
+    );
+  }
+
+  /// Update Session Prompts
+  ///
+  /// `PUT /api/mobile/protected/spaces/session/{event_slug}/prompts`
+  Future<ApiResult<SessionPromptsSchema, SessionPromptsStaleRevisionSchema>>
+  totemSpacesMobileApiUpdateSessionPrompts({
+    required String eventSlug,
+    required SessionPromptsUpdateSchema body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'PUT',
+      path:
+          '/api/mobile/protected/spaces/session/${Uri.encodeComponent(eventSlug)}/prompts',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return SessionPromptsSchema.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 409:
+            final json = jsonDecode(response.body);
+            return SessionPromptsStaleRevisionSchema.fromJson(
+              json as Map<String, dynamic>,
+            );
+          default:
+            return null;
+        }
       },
     );
   }

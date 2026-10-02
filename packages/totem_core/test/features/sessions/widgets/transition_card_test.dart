@@ -90,11 +90,12 @@ void main() {
       await tester.pumpWidget(
         buildTestWidget(
           PromptTransitionCard(
-            onActionPressed: (roundMessage) async {
-              actionTriggered = true;
-              message = roundMessage;
-              return true;
-            },
+            onActionPressed:
+                ({customPrompt, sessionPromptId, clearPrompt = false}) async {
+                  actionTriggered = true;
+                  message = customPrompt;
+                  return true;
+                },
           ),
         ),
       );
@@ -114,6 +115,61 @@ void main() {
 
       check(actionTriggered).equals(true);
       check(message).equals('Test prompt');
+    });
+
+    autoSizeTest(
+      'PromptTransitionCard passes unchanged text without replacing the prompt',
+      (tester) async {
+        String? capturedCustomPrompt;
+        int? capturedSessionPromptId;
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            PromptTransitionCard(
+              initialPrompt: 'Prepared prompt',
+              initialSessionPromptId: 42,
+              onActionPressed:
+                  ({customPrompt, sessionPromptId, clearPrompt = false}) async {
+                    capturedCustomPrompt = customPrompt;
+                    capturedSessionPromptId = sessionPromptId;
+                    return true;
+                  },
+            ),
+          ),
+        );
+
+        final button = tester.widget<ActionSliderButton>(
+          find.byType(ActionSliderButton),
+        );
+        await button.onActionCompleted();
+
+        check(capturedCustomPrompt).isNull();
+        check(capturedSessionPromptId).isNull();
+      },
+    );
+
+    autoSizeTest('PromptTransitionCard explicitly clears a removed prompt', (
+      tester,
+    ) async {
+      var clearRequested = false;
+      await tester.pumpWidget(
+        buildTestWidget(
+          PromptTransitionCard(
+            initialPrompt: 'Prepared prompt',
+            onActionPressed:
+                ({customPrompt, sessionPromptId, clearPrompt = false}) async {
+                  clearRequested = clearPrompt;
+                  return true;
+                },
+          ),
+        ),
+      );
+      await tester.enterText(find.byType(TextField), '');
+      await tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted();
+
+      check(clearRequested).isTrue();
     });
   });
 }

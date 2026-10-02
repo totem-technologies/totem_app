@@ -42,7 +42,7 @@ final class SessionInfraControllerProvider
 }
 
 String _$sessionInfraControllerHash() =>
-    r'c32da0ef23c8fd5cfe4ec9fa10ddef9bd9d15d9a';
+    r'bf2e8d3209c6c628aee193a0d4e66d2ef50b4df7';
 
 abstract class _$SessionInfraController extends $Notifier<void> {
   void build();

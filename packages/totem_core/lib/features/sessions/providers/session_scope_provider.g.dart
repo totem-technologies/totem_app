@@ -606,7 +606,7 @@ final class ResolveCurrentScreenProvider
 }
 
 String _$resolveCurrentScreenHash() =>
-    r'41780837d65b728589b9dc61ea2e1080c400887e';
+    r'19618a6f7fc74e6783f0e95d937321d23edc37c0';
 
 /// The list of participants in the session.
 
@@ -1087,6 +1087,65 @@ abstract class _$SessionChatOpen extends $Notifier<bool> {
   }
 }
 
+/// Docked discussion-prompt panel visibility for the active session.
+
+@ProviderFor(SessionPromptsOpen)
+final sessionPromptsOpenProvider = SessionPromptsOpenProvider._();
+
+/// Docked discussion-prompt panel visibility for the active session.
+final class SessionPromptsOpenProvider
+    extends $NotifierProvider<SessionPromptsOpen, bool> {
+  /// Docked discussion-prompt panel visibility for the active session.
+  SessionPromptsOpenProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionPromptsOpenProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionPromptsOpenHash();
+
+  @$internal
+  @override
+  SessionPromptsOpen create() => SessionPromptsOpen();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$sessionPromptsOpenHash() =>
+    r'f04b92273b4aec1a9114872b1efc5b4336ab871a';
+
+/// Docked discussion-prompt panel visibility for the active session.
+
+abstract class _$SessionPromptsOpen extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// Current in-call thread. Null is the Everyone group thread.
 ///
 /// Reset alongside [SessionChatOpen]; a thread target from a previous circle
@@ -1280,28 +1339,28 @@ final class LastSessionMessageProvider
 String _$lastSessionMessageHash() =>
     r'31e78e019b591d4e379a8409bf15ddab37c1cb28';
 
-/// Optional round message sent by the keeper for the active round.
+/// Current round prompt projected by the server from its SessionPrompt record.
 
-@ProviderFor(roundMessage)
-final roundMessageProvider = RoundMessageProvider._();
+@ProviderFor(currentSessionPrompt)
+final currentSessionPromptProvider = CurrentSessionPromptProvider._();
 
-/// Optional round message sent by the keeper for the active round.
+/// Current round prompt projected by the server from its SessionPrompt record.
 
-final class RoundMessageProvider
+final class CurrentSessionPromptProvider
     extends $FunctionalProvider<String?, String?, String?>
     with $Provider<String?> {
-  /// Optional round message sent by the keeper for the active round.
-  RoundMessageProvider._()
+  /// Current round prompt projected by the server from its SessionPrompt record.
+  CurrentSessionPromptProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'roundMessageProvider',
+        name: r'currentSessionPromptProvider',
         isAutoDispose: true,
         dependencies: <ProviderOrFamily>[currentSessionStateProvider],
         $allTransitiveDependencies: <ProviderOrFamily>[
-          RoundMessageProvider.$allTransitiveDependencies0,
-          RoundMessageProvider.$allTransitiveDependencies1,
+          CurrentSessionPromptProvider.$allTransitiveDependencies0,
+          CurrentSessionPromptProvider.$allTransitiveDependencies1,
         ],
       );
 
@@ -1310,7 +1369,7 @@ final class RoundMessageProvider
       CurrentSessionStateProvider.$allTransitiveDependencies0;
 
   @override
-  String debugGetCreateSourceHash() => _$roundMessageHash();
+  String debugGetCreateSourceHash() => _$currentSessionPromptHash();
 
   @$internal
   @override
@@ -1319,7 +1378,7 @@ final class RoundMessageProvider
 
   @override
   String? create(Ref ref) {
-    return roundMessage(ref);
+    return currentSessionPrompt(ref);
   }
 
   /// {@macro riverpod.override_with_value}
@@ -1331,7 +1390,8 @@ final class RoundMessageProvider
   }
 }
 
-String _$roundMessageHash() => r'abde7123ab37cc267d1221fbdc1a713e8142aa57';
+String _$currentSessionPromptHash() =>
+    r'4bb4ac53550d23b575ea617feadc20cdbb781a8a';
 
 @ProviderFor(keeperIdentity)
 final keeperIdentityProvider = KeeperIdentityProvider._();
@@ -1477,7 +1537,7 @@ final class NextSpeakerIdentityProvider
 }
 
 String _$nextSpeakerIdentityHash() =>
-    r'3e8ce1ec72b54fcadc0764ff8bfb45c11412a873';
+    r'd2956948af0482cc526b6edbcf8b58206510efff';
 
 /// Whether the keeper participant is currently present in the room.
 

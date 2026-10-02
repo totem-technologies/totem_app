@@ -15,6 +15,7 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/features/keeper/screens/meet_user_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/html.dart';
@@ -314,6 +315,33 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                               sessionAsync: sessionAsync,
                             ),
                           ),
+
+                          if (currentUserSlug != null &&
+                              space.author.slug.value == currentUserSlug)
+                            if (sessionAsync?.value
+                                case final SessionDetailSchema event)
+                              if (!event.started && !event.ended) ...[
+                                const SizedBox(height: 16),
+                                Padding(
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                        horizontal: 20,
+                                      ),
+                                  child: Align(
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => showSessionPromptsModal(
+                                        context,
+                                        sessionSlug: event.slug,
+                                      ),
+                                      icon: const Icon(
+                                        Icons.format_list_numbered,
+                                      ),
+                                      label: const Text('Discussion Prompts'),
+                                    ),
+                                  ),
+                                ),
+                              ],
 
                           // ── Message Participants (keeper only) ─────────
                           // Staging-only until the messaging backend ships.

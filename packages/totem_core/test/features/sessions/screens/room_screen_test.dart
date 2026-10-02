@@ -196,7 +196,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         roomStatusProvider.overrideWith((ref) => roomStatus),
         isCurrentUserKeeperProvider.overrideWith((ref) => false),
         isCameraOnProvider.overrideWith((ref) => false),
-        roundMessageProvider.overrideWith((ref) => null),
+        currentSessionPromptProvider.overrideWith((ref) => null),
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
         userProfileProvider('user-1').overrideWith(

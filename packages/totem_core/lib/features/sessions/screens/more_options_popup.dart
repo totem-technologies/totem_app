@@ -15,6 +15,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/banned_participants_modal.dart';
 import 'package:totem_core/features/sessions/widgets/participant_reorder_modal.dart';
+import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -189,17 +190,13 @@ class MoreOptions extends ConsumerWidget {
                   }
                 },
               ),
-              if (state.roomState.status == mobile_api.RoomStatus.active)
+              if (state.roomState.status != mobile_api.RoomStatus.ended)
                 MoreOptionsTile<void>(
-                  title: 'Set Prompt',
+                  title: 'Manage Prompts',
                   icon: TotemIcons.edit,
                   onTap: () {
                     Navigator.of(context).pop();
-                    _onSetPrompt(
-                      context,
-                      currentSession,
-                      state.roomState.roundMessage.value,
-                    );
+                    showSessionPromptsModal(context, sessionSlug: session.slug);
                   },
                 ),
               MoreOptionsTile<void>(
@@ -388,57 +385,6 @@ class MoreOptions extends ConsumerWidget {
 
   Future<void> _onMuteEveryone(SessionController session) =>
       session.keeper.muteEveryone();
-
-  Future<void> _onSetPrompt(
-    BuildContext context,
-    SessionController session,
-    String? currentPrompt,
-  ) async {
-    final controller = TextEditingController(text: currentPrompt);
-    final formKey = GlobalKey<FormState>();
-    String? result;
-    try {
-      result = await showDialog<String>(
-        context: context,
-        useRootNavigator: false,
-        builder: (context) => ConfirmationDialog(
-          title: 'Update Round Prompt',
-          content: 'Enter a prompt for this round',
-          confirmButtonText: 'Update',
-          type: ConfirmationDialogType.standard,
-          contentWidget: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: controller,
-              autofocus: true,
-              maxLines: 3,
-              minLines: 1,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a prompt';
-                }
-                return null;
-              },
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-            ),
-          ),
-          onConfirm: () async {
-            if (!formKey.currentState!.validate()) return;
-            final message = controller.text.trim();
-            await session.keeper.setPrompt(message);
-            if (context.mounted) Navigator.of(context).pop(message);
-          },
-        ),
-      );
-    } finally {
-      controller.dispose();
-    }
-    if (result != null && result.isNotEmpty && context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Prompt set successfully')));
-    }
-  }
 
   @visibleForTesting
   Future<void> onForcePass(

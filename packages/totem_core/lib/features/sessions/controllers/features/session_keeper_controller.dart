@@ -81,7 +81,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     }
   }
 
-  Future<void> passTotem({String? roundMessage}) async {
+  Future<void> passTotem({String? customPrompt, int? sessionPromptId}) async {
     final room = session.room;
     if (room == null || !_state.amSpeaking(room)) {
       throw StateError("Not the user's turn to pass the totem");
@@ -89,7 +89,13 @@ class SessionKeeperController extends _$SessionKeeperController {
     if (!_state.hasKeeper) {
       throw StateError('No keeper in the session to pass the totem');
     }
-    if (roundMessage != null && !session.isCurrentUserKeeper()) {
+    if (customPrompt != null && sessionPromptId != null) {
+      throw ArgumentError(
+        'Choose either a custom prompt or a prepared prompt ID.',
+      );
+    }
+    if ((customPrompt != null || sessionPromptId != null) &&
+        !session.isCurrentUserKeeper()) {
       throw StateError(
         'Only the keeper can include a round message when passing the totem',
       );
@@ -101,13 +107,43 @@ class SessionKeeperController extends _$SessionKeeperController {
         passTotemProvider(
           _sessionSlug,
           _roomVersion,
-          roundMessage: roundMessage,
+          roundMessage: customPrompt,
+          sessionPromptId: sessionPromptId,
         ).future,
       ),
       errorMessage: 'Error passing totem',
     );
     session.applyRoomState(roomState);
     logger.i('Passed totem successfully');
+  }
+
+  Future<void> setPrompt({
+    String? customPrompt,
+    int? sessionPromptId,
+    bool clearPrompt = false,
+  }) async {
+    if (!session.isCurrentUserKeeper()) return;
+    if ([
+          customPrompt != null,
+          sessionPromptId != null,
+          clearPrompt,
+        ].where((value) => value).length !=
+        1) {
+      throw ArgumentError('Choose one prompt action.');
+    }
+    final roomState = await _run(
+      action: () => ref.read(
+        setSessionPromptProvider(
+          _sessionSlug,
+          _roomVersion,
+          customPrompt: customPrompt,
+          sessionPromptId: sessionPromptId,
+          clearPrompt: clearPrompt,
+        ).future,
+      ),
+      errorMessage: 'Error setting session prompt',
+    );
+    session.applyRoomState(roomState);
   }
 
   /// Accepts the totem and enables the microphone.
@@ -286,17 +322,5 @@ class SessionKeeperController extends _$SessionKeeperController {
       errorMessage: 'Error muting everyone',
       timeout: const Duration(seconds: 20),
     );
-  }
-
-  Future<void> setPrompt(String prompt) async {
-    if (!session.isCurrentUserKeeper()) return;
-    final roomState = await _run(
-      action: () => ref.read(
-        setPromptProvider(_sessionSlug, _roomVersion, prompt).future,
-      ),
-      errorMessage: 'Error setting prompt',
-    );
-    session.applyRoomState(roomState);
-    logger.i('Set prompt successfully');
   }
 }

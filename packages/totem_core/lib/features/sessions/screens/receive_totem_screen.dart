@@ -32,7 +32,7 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(currentSessionProvider);
-    final roundPrompt = ref.watch(roundMessageProvider);
+    final roundPrompt = ref.watch(currentSessionPromptProvider);
 
     Future<bool> onAccept() async {
       try {

@@ -225,6 +225,7 @@ Future<RoomState> passTotem(
   String sessionSlug,
   int lastSeenVersion, {
   String? roundMessage,
+  int? sessionPromptId,
 }) {
   final apiService = ref.read(apiServiceProvider);
   return _postEvent(
@@ -235,6 +236,9 @@ Future<RoomState> passTotem(
         prompt: roundMessage == null
             ? const Omittable.absent()
             : Omittable(roundMessage),
+        sessionPromptId: sessionPromptId == null
+            ? const Omittable.absent()
+            : Omittable(sessionPromptId),
       ),
     ),
     lastSeenVersion: lastSeenVersion,
@@ -257,6 +261,43 @@ Future<RoomState> acceptTotem(
     lastSeenVersion: lastSeenVersion,
     operationName: 'accept totem',
     timeout: _timeoutDuration,
+  );
+}
+
+@riverpod
+Future<RoomState> setSessionPrompt(
+  Ref ref,
+  String sessionSlug,
+  int lastSeenVersion, {
+  String? customPrompt,
+  int? sessionPromptId,
+  bool clearPrompt = false,
+}) {
+  assert(
+    [
+          customPrompt != null,
+          sessionPromptId != null,
+          clearPrompt,
+        ].where((value) => value).length ==
+        1,
+    'Choose one prompt action.',
+  );
+  final apiService = ref.read(apiServiceProvider);
+  return _postEvent(
+    apiService: apiService,
+    sessionSlug: sessionSlug,
+    event: EventRequestEventSetPrompt(
+      SetPromptEvent(
+        prompt: customPrompt == null
+            ? const Omittable.absent()
+            : Omittable(customPrompt),
+        sessionPromptId: sessionPromptId == null
+            ? const Omittable.absent()
+            : Omittable(sessionPromptId),
+      ),
+    ),
+    lastSeenVersion: lastSeenVersion,
+    operationName: 'set session prompt',
   );
 }
 
@@ -367,23 +408,6 @@ Future<RoomState> unbanParticipant(
     ),
     lastSeenVersion: lastSeenVersion,
     operationName: 'unban participant',
-  );
-}
-
-@riverpod
-Future<RoomState> setPrompt(
-  Ref ref,
-  String sessionSlug,
-  int lastSeenVersion,
-  String prompt,
-) {
-  final apiService = ref.read(apiServiceProvider);
-  return _postEvent(
-    apiService: apiService,
-    sessionSlug: sessionSlug,
-    event: EventRequestEventSetPrompt(SetPromptEvent(prompt: prompt)),
-    lastSeenVersion: lastSeenVersion,
-    operationName: 'set prompt',
   );
 }
 

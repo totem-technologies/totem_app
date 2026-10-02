@@ -10,12 +10,14 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_prompts_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
 
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -33,19 +35,21 @@ class SpeakingTurnScreen extends ConsumerStatefulWidget {
 class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
   Future<bool> _onPassTotem({
     required String nextText,
-    String? roundMessage,
+    String? customPrompt,
+    int? sessionPromptId,
+    bool clearPrompt = false,
   }) async {
     final session = ref.read(currentSessionProvider);
     final isKeeper = ref.read(isCurrentUserKeeperProvider);
     final shouldPass =
         !isKeeper ||
-        (!(roundMessage != null) ||
+        (!(customPrompt != null) ||
             (await showDialog<bool>(
                   context: context,
                   builder: (context) => ConfirmationDialog(
                     title: 'Pass Totem',
                     content:
-                        'Are you sure you want to pass the totem? \n\nThe round message is:\n"$roundMessage"',
+                        'Are you sure you want to pass the totem? \n\nThe custom prompt is:\n"$customPrompt"',
                     type: ConfirmationDialogType.standard,
                     confirmButtonText: nextText,
                     onConfirm: () async {
@@ -58,7 +62,13 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     if (shouldPass) {
       try {
         ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
-        await session?.keeper.passTotem(roundMessage: roundMessage);
+        if (clearPrompt) {
+          await session?.keeper.setPrompt(clearPrompt: true);
+        }
+        await session?.keeper.passTotem(
+          customPrompt: customPrompt,
+          sessionPromptId: sessionPromptId,
+        );
         return true;
       } catch (error) {
         if (!mounted) return false;
@@ -78,7 +88,20 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     final selfViewEnabled = ref.watch(
       selfViewSettingsProvider.select((s) => s.enabled),
     );
-    final roundPrompt = ref.watch(roundMessageProvider);
+    final roundPrompt = ref.watch(currentSessionPromptProvider);
+    final activePreparedPromptId = ref.watch(
+      currentSessionStateProvider.select(
+        (state) => state?.roomState.roundPromptId.value,
+      ),
+    );
+    final isWaitingReceive = turnState == TurnState.passing;
+    final preparedPrompt = isKeeper && !isWaitingReceive
+        ? ref
+              .watch(sessionPromptsControllerProvider(widget.session.slug))
+              .prompts
+              .where((prompt) => prompt.id == activePreparedPromptId)
+              .firstOrNull
+        : null;
 
     final body = ViewportResolver(
       builder: (context, viewportKind) {
@@ -86,8 +109,6 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
           session: widget.session,
           viewportKind: viewportKind,
         );
-
-        final isWaitingReceive = turnState == TurnState.passing;
 
         final nextText = 'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
             .trim();
@@ -104,12 +125,21 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
           passCard = normalPassCard;
         } else if (isKeeper) {
           passCard = PromptTransitionCard(
-            onActionPressed: (message) {
-              return _onPassTotem(
-                roundMessage: message.isEmpty ? null : message,
-                nextText: nextText,
-              );
-            },
+            initialPrompt: roundPrompt,
+            initialSessionPromptId: preparedPrompt?.id,
+            onManagePrompts: () => showSessionPromptsModal(
+              context,
+              sessionSlug: widget.session.slug,
+            ),
+            onActionPressed:
+                ({customPrompt, sessionPromptId, clearPrompt = false}) {
+                  return _onPassTotem(
+                    customPrompt: customPrompt,
+                    sessionPromptId: sessionPromptId,
+                    clearPrompt: clearPrompt,
+                    nextText: nextText,
+                  );
+                },
             actionText: nextText,
           );
         } else {

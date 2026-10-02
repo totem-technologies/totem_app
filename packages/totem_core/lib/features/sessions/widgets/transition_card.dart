@@ -2,6 +2,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class _TransitionCardContainer extends StatelessWidget {
@@ -383,13 +384,24 @@ class WaitingReceiveTransitionCard extends StatelessWidget {
 class PromptTransitionCard extends StatefulWidget {
   const PromptTransitionCard({
     required this.onActionPressed,
+    this.initialPrompt,
+    this.initialSessionPromptId,
+    this.onManagePrompts,
     this.actionText = 'Pass',
     this.keepActionLoadingOnSuccess = true,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
     super.key,
   });
 
-  final Future<bool> Function(String message) onActionPressed;
+  final Future<bool> Function({
+    String? customPrompt,
+    int? sessionPromptId,
+    bool clearPrompt,
+  })
+  onActionPressed;
+  final String? initialPrompt;
+  final int? initialSessionPromptId;
+  final VoidCallback? onManagePrompts;
   final String actionText;
   final bool keepActionLoadingOnSuccess;
   final EdgeInsetsGeometry margin;
@@ -399,7 +411,9 @@ class PromptTransitionCard extends StatefulWidget {
 }
 
 class _PromptTransitionCardState extends State<PromptTransitionCard> {
-  final roundMessageController = TextEditingController();
+  late final TextEditingController customPromptController =
+      TextEditingController(text: widget.initialPrompt ?? '');
+  String _lastInitialPrompt = '';
 
   final textFieldFocusNode = FocusNode();
   final buttonFocusNode = FocusNode();
@@ -407,7 +421,22 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
   @override
   void initState() {
     super.initState();
+    _lastInitialPrompt = widget.initialPrompt ?? '';
     textFieldFocusNode.addListener(_textFieldFocusNodeListener);
+  }
+
+  @override
+  void didUpdateWidget(covariant PromptTransitionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextInitialPrompt = widget.initialPrompt ?? '';
+    if (nextInitialPrompt != _lastInitialPrompt &&
+        customPromptController.text == _lastInitialPrompt) {
+      customPromptController.value = TextEditingValue(
+        text: nextInitialPrompt,
+        selection: TextSelection.collapsed(offset: nextInitialPrompt.length),
+      );
+    }
+    _lastInitialPrompt = nextInitialPrompt;
   }
 
   void _textFieldFocusNodeListener() {
@@ -418,7 +447,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
 
   @override
   void dispose() {
-    roundMessageController.dispose();
+    customPromptController.dispose();
     textFieldFocusNode.dispose();
     buttonFocusNode.dispose();
     super.dispose();
@@ -435,9 +464,20 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
           children: [
             Flexible(
               child: TextField(
-                controller: roundMessageController,
-                decoration: const InputDecoration(
+                controller: customPromptController,
+                decoration: InputDecoration(
                   hintText: 'Your prompt for this round',
+                  suffixIcon: widget.onManagePrompts == null
+                      ? null
+                      : IconButton(
+                          tooltip: 'Manage discussion prompts',
+                          onPressed: widget.onManagePrompts,
+                          icon: const TotemIcon(
+                            TotemIcons.edit,
+                            size: 18,
+                            color: Colors.black,
+                          ),
+                        ),
                 ),
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.onSurface,
@@ -455,8 +495,14 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
                 child: ActionSliderButton(
                   text: widget.actionText,
                   onActionCompleted: () {
+                    final prompt = customPromptController.text.trim();
+                    if (prompt == _lastInitialPrompt.trim()) {
+                      // Passing does not re-select the current prepared prompt.
+                      return widget.onActionPressed();
+                    }
                     return widget.onActionPressed(
-                      roundMessageController.text.trim(),
+                      customPrompt: prompt.isEmpty ? null : prompt,
+                      clearPrompt: prompt.isEmpty,
                     );
                   },
                   keepLoadingOnSuccess: widget.keepActionLoadingOnSuccess,

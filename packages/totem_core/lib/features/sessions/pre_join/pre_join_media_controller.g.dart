@@ -60,7 +60,7 @@ final class PreJoinMediaControllerProvider
 }
 
 String _$preJoinMediaControllerHash() =>
-    r'141c32083126417ddbf49389ac31feff723c08b0';
+    r'dca3ce934426ba7d9bc15ddd7bbb71d645255c68';
 
 final class PreJoinMediaControllerFamily extends $Family
     with
