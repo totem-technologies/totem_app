@@ -9,9 +9,9 @@ class PageIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tabView = DefaultTabController.of(context);
-    final length = this.length ?? tabView.length;
-    final currentIndex = this.currentIndex ?? tabView.index;
+    final length = this.length ?? DefaultTabController.of(context).length;
+    final currentIndex =
+        this.currentIndex ?? DefaultTabController.of(context).index;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,

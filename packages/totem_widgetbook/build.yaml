@@ -1,0 +1,7 @@
+targets:
+  $default:
+    builders:
+      # Opt out of usage reporting (sends the git remote owner and root commit
+      # to Mixpanel on every local build).
+      widgetbook:telemetry:
+        enabled: false
