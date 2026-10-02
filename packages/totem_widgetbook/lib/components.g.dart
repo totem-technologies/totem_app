@@ -1,0 +1,38 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+// dart format off
+// coverage:ignore-file
+// ignore_for_file: type=lint
+// ignore_for_file: unused_import, prefer_relative_imports, directives_ordering, unused_element, strict_raw_type
+// ignore_for_file: no_leading_underscores_for_library_prefixes
+
+import 'package:widgetbook/widgetbook.dart' as _widgetbook;
+import 'package:totem_widgetbook/shared/widgets/circle_icon_button.stories.dart' as _totem_widgetbook_shared_widgets_circle_icon_button_stories;
+import 'package:totem_widgetbook/shared/widgets/confirmation_dialog.stories.dart' as _totem_widgetbook_shared_widgets_confirmation_dialog_stories;
+import 'package:totem_widgetbook/shared/widgets/empty_indicator.stories.dart' as _totem_widgetbook_shared_widgets_empty_indicator_stories;
+import 'package:totem_widgetbook/shared/widgets/error_dialog.stories.dart' as _totem_widgetbook_shared_widgets_error_dialog_stories;
+import 'package:totem_widgetbook/shared/widgets/error_screen.stories.dart' as _totem_widgetbook_shared_widgets_error_screen_stories;
+import 'package:totem_widgetbook/shared/widgets/info_text.stories.dart' as _totem_widgetbook_shared_widgets_info_text_stories;
+import 'package:totem_widgetbook/shared/widgets/loading_indicator.stories.dart' as _totem_widgetbook_shared_widgets_loading_indicator_stories;
+import 'package:totem_widgetbook/shared/widgets/loading_screen.stories.dart' as _totem_widgetbook_shared_widgets_loading_screen_stories;
+import 'package:totem_widgetbook/shared/widgets/page_indicator.stories.dart' as _totem_widgetbook_shared_widgets_page_indicator_stories;
+import 'package:totem_widgetbook/shared/widgets/sheet_drag_handle.stories.dart' as _totem_widgetbook_shared_widgets_sheet_drag_handle_stories;
+import 'package:totem_widgetbook/shared/widgets/totem_icon.stories.dart' as _totem_widgetbook_shared_widgets_totem_icon_stories;
+import 'package:totem_widgetbook/shared/widgets/totem_icon_logo.stories.dart' as _totem_widgetbook_shared_widgets_totem_icon_logo_stories;
+import 'package:totem_widgetbook/shared/widgets/totem_logo.stories.dart' as _totem_widgetbook_shared_widgets_totem_logo_stories;
+
+final components = <_widgetbook.Component>[
+  _totem_widgetbook_shared_widgets_circle_icon_button_stories.CircleIconButtonComponent,
+  _totem_widgetbook_shared_widgets_confirmation_dialog_stories.ConfirmationDialogComponent,
+  _totem_widgetbook_shared_widgets_empty_indicator_stories.EmptyIndicatorComponent,
+  _totem_widgetbook_shared_widgets_error_dialog_stories.ErrorDialogComponent,
+  _totem_widgetbook_shared_widgets_error_screen_stories.ErrorScreenComponent,
+  _totem_widgetbook_shared_widgets_info_text_stories.InfoTextComponent,
+  _totem_widgetbook_shared_widgets_loading_indicator_stories.LoadingIndicatorComponent,
+  _totem_widgetbook_shared_widgets_loading_screen_stories.LoadingScreenComponent,
+  _totem_widgetbook_shared_widgets_page_indicator_stories.PageIndicatorComponent,
+  _totem_widgetbook_shared_widgets_sheet_drag_handle_stories.SheetDragHandleComponent,
+  _totem_widgetbook_shared_widgets_totem_icon_stories.TotemIconComponent,
+  _totem_widgetbook_shared_widgets_totem_icon_logo_stories.TotemIconLogoComponent,
+  _totem_widgetbook_shared_widgets_totem_logo_stories.TotemLogoComponent,
+];
