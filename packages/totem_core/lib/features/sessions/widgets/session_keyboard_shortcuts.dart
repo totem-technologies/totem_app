@@ -93,6 +93,10 @@ class _SessionKeyboardShortcutsState
       unawaited(_toggleCamera(session));
       return true;
     }
+    if (event.logicalKey == ActionBarShortcut.chatKey) {
+      ref.read(sessionChatOpenProvider.notifier).open = true;
+      return true;
+    }
     return false;
   }
 

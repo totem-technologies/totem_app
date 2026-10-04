@@ -255,6 +255,7 @@ class ActionBarShortcut {
 
   static const LogicalKeyboardKey microphoneKey = LogicalKeyboardKey.keyZ;
   static const LogicalKeyboardKey cameraKey = LogicalKeyboardKey.keyX;
+  static const LogicalKeyboardKey chatKey = LogicalKeyboardKey.keyC;
   static const List<LogicalKeyboardKey> reactionKeys = [
     LogicalKeyboardKey.keyA,
     LogicalKeyboardKey.keyS,
@@ -269,6 +270,10 @@ class ActionBarShortcut {
   static const camera = ActionBarShortcut(
     label: 'Toggle camera',
     logicalKeys: [cameraKey],
+  );
+  static const chat = ActionBarShortcut(
+    label: 'Open chat',
+    logicalKeys: [chatKey],
   );
   static const reactions = ActionBarShortcut(
     label: 'Send reaction',
@@ -589,7 +594,10 @@ class SessionActionBar extends ConsumerWidget {
       ),
     );
 
-    const chatButton = ActionBarChatButton();
+    const chatButton = ActionBarShortcutTooltip(
+      shortcut: ActionBarShortcut.chat,
+      child: ActionBarChatButton(),
+    );
     const moreButton = _ActionBarMoreButton();
 
     switch (currentScreen) {

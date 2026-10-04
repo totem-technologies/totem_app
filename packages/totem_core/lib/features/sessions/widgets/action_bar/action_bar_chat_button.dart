@@ -104,6 +104,11 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       sessionChatUnreadThreadsProvider.select((threads) => threads.isNotEmpty),
     );
 
+    ref.listen(sessionChatOpenProvider, (previous, next) {
+      if (!next || shouldDockSessionChat(context)) return;
+      unawaited(_openChat(fromUnread: false));
+    });
+
     ref.listen(lastSessionMessageProvider, (previous, next) {
       if (next == null || identical(previous, next)) return;
       if (!mounted || next.sender) return;
@@ -123,37 +128,34 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       );
       ref.read(sessionChatUnreadThreadsProvider.notifier).markUnread(thread);
     });
-    return ActionBarTooltip(
-      message: 'Chat',
-      child: ActionBarButton(
-        semanticsLabel: 'Chat',
-        role: ActionBarButtonRole.sheet(open: isChatOpen),
-        onPressed: () {
-          final latestUnread = ref
-              .read(sessionChatUnreadThreadsProvider.notifier)
-              .latestUnreadThread;
-          unawaited(
-            _openChat(
-              thread: latestUnread?.thread,
-              fromUnread: latestUnread != null,
-            ),
-          );
-        },
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            const TotemIcon(TotemIcons.chat),
-            if (hasUnreadThreads)
-              Container(
-                height: 4,
-                width: 4,
-                decoration: const BoxDecoration(
-                  color: AppTheme.green,
-                  shape: BoxShape.circle,
-                ),
+    return ActionBarButton(
+      semanticsLabel: 'Chat',
+      role: ActionBarButtonRole.sheet(open: isChatOpen),
+      onPressed: () {
+        final latestUnread = ref
+            .read(sessionChatUnreadThreadsProvider.notifier)
+            .latestUnreadThread;
+        unawaited(
+          _openChat(
+            thread: latestUnread?.thread,
+            fromUnread: latestUnread != null,
+          ),
+        );
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const TotemIcon(TotemIcons.chat),
+          if (hasUnreadThreads)
+            Container(
+              height: 4,
+              width: 4,
+              decoration: const BoxDecoration(
+                color: AppTheme.green,
+                shape: BoxShape.circle,
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
