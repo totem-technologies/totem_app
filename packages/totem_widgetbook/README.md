@@ -35,18 +35,25 @@ This package depends on `totem_core` (and `material_ui`) only, never on
 `totem_app` or `totem_web`. Anything shown here must live in `totem_core`.
 Designing here therefore pushes shared UI into core.
 
+**Catalog-only exception.** Figma session UI that is not in `totem_core` yet
+lives under `lib/design/`. Those copies are for review in this catalog. Do
+not import them from `totem_core`, `totem_app`, or `totem_web`. Promote a
+widget into core when it is ready to ship.
+
 ## Tree structure
 
 The catalog has exactly two roots:
 
 ```
 Components/
-  Buttons/     CircleIconButton
+  Buttons/     CircleIconButton, Button
   Dialogs/     ConfirmationDialog, ErrorDialog
   Feedback/    EmptyIndicator, ErrorScreen, InfoText, LoadingIndicator, LoadingScreen
   Navigation/  PageIndicator, SheetDragHandle
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
-Screens/       one entry per GoRouter route (see below)
+  Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard
+Screens/
+  session/:slug   SessionEntry (12 states)
 ```
 
 ### Rules

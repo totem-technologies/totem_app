@@ -5,9 +5,14 @@ analyzer:
     - "**/*.g.dart"
     - build/**
     - web/**
+    # Catalog-only Figma copies. Keep them close to the design repo;
+    # do not rewrite them to very_good_analysis.
+    - lib/design/**
 
 linter:
   rules:
     public_member_api_docs: false
     lines_longer_than_80_chars: false
     require_trailing_commas: true
+    # Stories use generated `_Story` / `_Defaults` typedefs.
+    specify_nonobvious_property_types: false

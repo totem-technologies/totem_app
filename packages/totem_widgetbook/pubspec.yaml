@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_svg: ^2.2.4
   material_ui: any
   totem_core:
     path: ../totem_core
@@ -22,3 +23,27 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Catalog-only Figma copies. Not used by totem_core.
+  # Keep these under assets/ (not lib/) so Flutter web does not look
+  # them up as packages/totem_widgetbook/lib/....
+  assets:
+    - assets/design/participant_card/
+    - assets/design/session_card/
+    - assets/design/session_controls/
+    - assets/design/session_entry/
+
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Montserrat-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Montserrat-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700

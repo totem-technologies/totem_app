@@ -10,6 +10,7 @@ import 'package:widgetbook/widgetbook.dart' as _widgetbook;
 import 'package:totem_widgetbook/components/brand/totem_icon.stories.dart' as _totem_widgetbook_components_brand_totem_icon_stories;
 import 'package:totem_widgetbook/components/brand/totem_icon_logo.stories.dart' as _totem_widgetbook_components_brand_totem_icon_logo_stories;
 import 'package:totem_widgetbook/components/brand/totem_logo.stories.dart' as _totem_widgetbook_components_brand_totem_logo_stories;
+import 'package:totem_widgetbook/components/buttons/button.stories.dart' as _totem_widgetbook_components_buttons_button_stories;
 import 'package:totem_widgetbook/components/buttons/circle_icon_button.stories.dart' as _totem_widgetbook_components_buttons_circle_icon_button_stories;
 import 'package:totem_widgetbook/components/dialogs/confirmation_dialog.stories.dart' as _totem_widgetbook_components_dialogs_confirmation_dialog_stories;
 import 'package:totem_widgetbook/components/dialogs/error_dialog.stories.dart' as _totem_widgetbook_components_dialogs_error_dialog_stories;
@@ -20,11 +21,17 @@ import 'package:totem_widgetbook/components/feedback/loading_indicator.stories.d
 import 'package:totem_widgetbook/components/feedback/loading_screen.stories.dart' as _totem_widgetbook_components_feedback_loading_screen_stories;
 import 'package:totem_widgetbook/components/navigation/page_indicator.stories.dart' as _totem_widgetbook_components_navigation_page_indicator_stories;
 import 'package:totem_widgetbook/components/navigation/sheet_drag_handle.stories.dart' as _totem_widgetbook_components_navigation_sheet_drag_handle_stories;
+import 'package:totem_widgetbook/components/sessions/participant_card.stories.dart' as _totem_widgetbook_components_sessions_participant_card_stories;
+import 'package:totem_widgetbook/components/sessions/session_card.stories.dart' as _totem_widgetbook_components_sessions_session_card_stories;
+import 'package:totem_widgetbook/components/sessions/session_controls.stories.dart' as _totem_widgetbook_components_sessions_session_controls_stories;
+import 'package:totem_widgetbook/components/sessions/waiting_card.stories.dart' as _totem_widgetbook_components_sessions_waiting_card_stories;
+import 'package:totem_widgetbook/screens/session_entry.stories.dart' as _totem_widgetbook_screens_session_entry_stories;
 
 final components = <_widgetbook.Component>[
   _totem_widgetbook_components_brand_totem_icon_stories.TotemIconComponent,
   _totem_widgetbook_components_brand_totem_icon_logo_stories.TotemIconLogoComponent,
   _totem_widgetbook_components_brand_totem_logo_stories.TotemLogoComponent,
+  _totem_widgetbook_components_buttons_button_stories.ButtonComponent,
   _totem_widgetbook_components_buttons_circle_icon_button_stories.CircleIconButtonComponent,
   _totem_widgetbook_components_dialogs_confirmation_dialog_stories.ConfirmationDialogComponent,
   _totem_widgetbook_components_dialogs_error_dialog_stories.ErrorDialogComponent,
@@ -35,4 +42,9 @@ final components = <_widgetbook.Component>[
   _totem_widgetbook_components_feedback_loading_screen_stories.LoadingScreenComponent,
   _totem_widgetbook_components_navigation_page_indicator_stories.PageIndicatorComponent,
   _totem_widgetbook_components_navigation_sheet_drag_handle_stories.SheetDragHandleComponent,
+  _totem_widgetbook_components_sessions_participant_card_stories.ParticipantCardComponent,
+  _totem_widgetbook_components_sessions_session_card_stories.SessionCardComponent,
+  _totem_widgetbook_components_sessions_session_controls_stories.SessionControlsComponent,
+  _totem_widgetbook_components_sessions_waiting_card_stories.WaitingCardComponent,
+  _totem_widgetbook_screens_session_entry_stories.SessionEntryComponent,
 ];
