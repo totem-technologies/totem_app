@@ -1,18 +1,21 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
-class ActionBarEmojiButton extends StatefulWidget {
+class ActionBarEmojiButton extends ConsumerStatefulWidget {
   const ActionBarEmojiButton({required this.onEmojiSelected, super.key});
 
   final ValueChanged<String> onEmojiSelected;
 
   @override
-  State<ActionBarEmojiButton> createState() => _ActionBarEmojiButtonState();
+  ConsumerState<ActionBarEmojiButton> createState() =>
+      _ActionBarEmojiButtonState();
 }
 
-class _ActionBarEmojiButtonState extends State<ActionBarEmojiButton> {
+class _ActionBarEmojiButtonState extends ConsumerState<ActionBarEmojiButton> {
   final _portalController = OverlayPortalController();
   final GlobalKey _buttonKey = GlobalKey();
   var _isOpen = false;
@@ -30,6 +33,10 @@ class _ActionBarEmojiButtonState extends State<ActionBarEmojiButton> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(sessionChatOpenProvider, (previous, next) {
+      if (next && _isOpen) _dismiss();
+    });
+
     return OverlayPortal(
       controller: _portalController,
       overlayChildBuilder: (_) => EmojiBarOverlay(
