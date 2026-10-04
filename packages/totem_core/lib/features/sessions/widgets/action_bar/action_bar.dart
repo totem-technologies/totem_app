@@ -506,32 +506,41 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
 
   @override
   Widget build(BuildContext context) {
+    final microphoneButton = ActionBarShortcutTooltip(
+      shortcut: ActionBarShortcut.microphone,
+      child: ActionBarMicButton(
+        participant: null,
+        audioTrack: widget.previewAudioTrack,
+        isMicOn: widget.isMicOn,
+        onToggle: !widget.locked ? (v) => widget.onToggleMic() : null,
+      ),
+    );
+    final cameraButton = ActionBarShortcutTooltip(
+      shortcut: ActionBarShortcut.camera,
+      child: ActionBarCameraSwitcherButton(
+        isCameraOn: widget.isCameraOn,
+        onToggle: widget.locked ? null : widget.onToggleCamera,
+        cameraPosition: widget.cameraPosition,
+        availableCameraDevices: _availableCameraDevices,
+        selectedCameraDeviceId:
+            widget.selectedCameraDeviceId ??
+            _availableCameraDevices.firstOrNull?.deviceId,
+        onCameraPositionChanged: widget.onCameraPositionChanged,
+        onCameraDeviceSelected: widget.onCameraDeviceSelected,
+      ),
+    );
+
     return ActionBar(
       key: SessionActionBar.actionBarKey,
       children: [
-        ActionBarMicButton(
-          participant: null,
-          audioTrack: widget.previewAudioTrack,
-          isMicOn: widget.isMicOn,
-          onToggle: !widget.locked ? (v) => widget.onToggleMic() : null,
-        ),
+        microphoneButton,
         // ActionBarSpeakerButton(
         //   isSpeakerOn: widget.isSpeakerOn,
         //   onSpeakerToggled: widget.locked
         //       ? null
         //       : (v) => widget.onToggleSpeaker(),
         // ),
-        ActionBarCameraSwitcherButton(
-          isCameraOn: widget.isCameraOn,
-          onToggle: widget.locked ? null : widget.onToggleCamera,
-          cameraPosition: widget.cameraPosition,
-          availableCameraDevices: _availableCameraDevices,
-          selectedCameraDeviceId:
-              widget.selectedCameraDeviceId ??
-              _availableCameraDevices.firstOrNull?.deviceId,
-          onCameraPositionChanged: widget.onCameraPositionChanged,
-          onCameraDeviceSelected: widget.onCameraDeviceSelected,
-        ),
+        cameraButton,
       ],
     );
   }
