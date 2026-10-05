@@ -274,45 +274,57 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                           ),
                         ),
                       ),
-                    SliverPadding(
-                      padding: EdgeInsetsDirectional.symmetric(
-                        horizontal: horizontalPadding,
+                    if (localPrompts.isEmpty)
+                      const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Text(
+                            'No prompts yet',
+                            style: TextStyle(color: AppTheme.gray),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: EdgeInsetsDirectional.symmetric(
+                          horizontal: horizontalPadding,
+                        ),
+                        sliver: SliverReorderableList(
+                          itemCount: localPrompts.length,
+                          onReorderItem: saving
+                              ? (_, _) {}
+                              : (oldIndex, newIndex) async {
+                                  final id = localPrompts[oldIndex].id;
+                                  await ref
+                                      .read(
+                                        sessionPromptsControllerProvider(
+                                          widget.sessionSlug,
+                                        ).notifier,
+                                      )
+                                      .reorderPrompt(id, newIndex);
+                                },
+                          itemBuilder: (context, index) {
+                            final prompt = localPrompts[index];
+                            final current = prompt.id == currentPromptId;
+                            return _PromptTile(
+                              key: _promptKey(prompt.id),
+                              prompt: prompt,
+                              current: current,
+                              panelLayout: widget.embedded,
+                              index: index,
+                              saving: saving,
+                              onEdit: () => _addOrEdit(prompt.id),
+                              onSelect: currentRound == null || current
+                                  ? null
+                                  : () => _setCurrentPrompt(
+                                      sessionPromptId: prompt.id,
+                                    ),
+                              onDelete: () => _deletePrompt(prompt.id),
+                            );
+                          },
+                        ),
                       ),
-                      sliver: SliverReorderableList(
-                        itemCount: localPrompts.length,
-                        onReorderItem: saving
-                            ? (_, _) {}
-                            : (oldIndex, newIndex) async {
-                                final id = localPrompts[oldIndex].id;
-                                await ref
-                                    .read(
-                                      sessionPromptsControllerProvider(
-                                        widget.sessionSlug,
-                                      ).notifier,
-                                    )
-                                    .reorderPrompt(id, newIndex);
-                              },
-                        itemBuilder: (context, index) {
-                          final prompt = localPrompts[index];
-                          final current = prompt.id == currentPromptId;
-                          return _PromptTile(
-                            key: _promptKey(prompt.id),
-                            prompt: prompt,
-                            current: current,
-                            panelLayout: widget.embedded,
-                            index: index,
-                            saving: saving,
-                            onEdit: () => _addOrEdit(prompt.id),
-                            onSelect: currentRound == null || current
-                                ? null
-                                : () => _setCurrentPrompt(
-                                    sessionPromptId: prompt.id,
-                                  ),
-                            onDelete: () => _deletePrompt(prompt.id),
-                          );
-                        },
-                      ),
-                    ),
                   ],
                 ),
               ),
