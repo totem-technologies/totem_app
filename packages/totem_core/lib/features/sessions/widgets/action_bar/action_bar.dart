@@ -603,10 +603,7 @@ class SessionActionBar extends ConsumerWidget {
       ),
     );
 
-    const chatButton = ActionBarShortcutTooltip(
-      shortcut: ActionBarShortcut.chat,
-      child: ActionBarChatButton(),
-    );
+    const chatButton = ActionBarChatButton();
     const moreButton = _ActionBarMoreButton();
 
     switch (currentScreen) {

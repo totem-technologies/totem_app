@@ -68,10 +68,20 @@ class _SessionKeyboardShortcutsState
     if (event is! KeyDownEvent) {
       return false;
     }
-    if (_hasModifierPressed() ||
-        _hasEditableFocus() ||
-        _hasBlockingNavigatorRoute() ||
-        ref.read(sessionChatOpenProvider)) {
+    if (_hasModifierPressed() || _hasEditableFocus()) return false;
+
+    if (event.logicalKey == ActionBarShortcut.chatKey) {
+      final chat = ref.read(sessionChatOpenProvider.notifier);
+      if (chat.open) {
+        chat.open = false;
+        return true;
+      }
+      if (_hasBlockingNavigatorRoute()) return false;
+      chat.open = true;
+      return true;
+    }
+
+    if (_hasBlockingNavigatorRoute() || ref.read(sessionChatOpenProvider)) {
       return false;
     }
 
@@ -106,10 +116,6 @@ class _SessionKeyboardShortcutsState
     }
     if (event.logicalKey == ActionBarShortcut.cameraKey) {
       unawaited(_toggleCamera(session));
-      return true;
-    }
-    if (event.logicalKey == ActionBarShortcut.chatKey) {
-      ref.read(sessionChatOpenProvider.notifier).open = true;
       return true;
     }
     return false;

@@ -83,12 +83,13 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
 
     if (_chatSheetOpen) return;
 
-    ref.read(sessionChatOpenProvider.notifier).open = false;
     setState(() => _chatSheetOpen = true);
+    ref.read(sessionChatOpenProvider.notifier).open = true;
     try {
       await showSessionChat(context);
     } finally {
       if (mounted) setState(() => _chatSheetOpen = false);
+      ref.read(sessionChatOpenProvider.notifier).open = false;
     }
   }
 
@@ -105,7 +106,11 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     );
 
     ref.listen(sessionChatOpenProvider, (previous, next) {
-      if (!next || shouldDockSessionChat(context)) return;
+      if (!next) {
+        if (_chatSheetOpen) Navigator.of(context).maybePop();
+        return;
+      }
+      if (shouldDockSessionChat(context) || _chatSheetOpen) return;
       unawaited(_openChat(fromUnread: false));
     });
 
@@ -128,34 +133,37 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       );
       ref.read(sessionChatUnreadThreadsProvider.notifier).markUnread(thread);
     });
-    return ActionBarButton(
-      semanticsLabel: 'Chat',
-      role: ActionBarButtonRole.sheet(open: isChatOpen),
-      onPressed: () {
-        final latestUnread = ref
-            .read(sessionChatUnreadThreadsProvider.notifier)
-            .latestUnreadThread;
-        unawaited(
-          _openChat(
-            thread: latestUnread?.thread,
-            fromUnread: latestUnread != null,
-          ),
-        );
-      },
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          const TotemIcon(TotemIcons.chat),
-          if (hasUnreadThreads)
-            Container(
-              height: 4,
-              width: 4,
-              decoration: const BoxDecoration(
-                color: AppTheme.green,
-                shape: BoxShape.circle,
-              ),
+    return ActionBarTooltip(
+      message: '${isChatOpen ? 'Close' : 'Open'} chat (C)',
+      child: ActionBarButton(
+        semanticsLabel: 'Chat',
+        role: ActionBarButtonRole.sheet(open: isChatOpen),
+        onPressed: () {
+          final latestUnread = ref
+              .read(sessionChatUnreadThreadsProvider.notifier)
+              .latestUnreadThread;
+          unawaited(
+            _openChat(
+              thread: latestUnread?.thread,
+              fromUnread: latestUnread != null,
             ),
-        ],
+          );
+        },
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const TotemIcon(TotemIcons.chat),
+            if (hasUnreadThreads)
+              Container(
+                height: 4,
+                width: 4,
+                decoration: const BoxDecoration(
+                  color: AppTheme.green,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
