@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/errors/error_storm_detector.dart';
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/utils/first_frame.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
@@ -13,6 +14,7 @@ import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
 import 'package:totem_web/auth/controllers/auth_controller.dart';
 import 'package:totem_web/core/navigation/web_router.dart';
+import 'package:totem_web/core/reload_prompt.dart';
 import 'package:totem_web/core/services/web_api_service.dart';
 import 'package:web/web.dart' as web;
 
@@ -65,6 +67,7 @@ Future<void> main() async {
       authControllerProvider.overrideWith(() => WebAuthController()),
       apiServiceProvider.overrideWith((ref) => ref.read(webApiServiceProvider)),
     ],
+    onUnhandledError: ErrorStormDetector(onStorm: showReloadPrompt).record,
   );
 
   // Keep the splash until the renderer finishes its first frame.

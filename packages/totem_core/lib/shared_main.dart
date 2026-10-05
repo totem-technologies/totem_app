@@ -11,6 +11,7 @@ import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/errors/error_storm_detector.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/observer_service.dart';
 import 'package:totem_core/shared/router.dart';
@@ -20,6 +21,7 @@ Future<void> sharedMain(
   Widget app,
   AsyncCallback init, {
   List<Override> providerOverrides = const [],
+  VoidCallback? onUnhandledError,
 }) async {
   // Install Sentry's binding before anything else triggers binding init
   // (e.g. AppConfig.build via rootBundle). SentryWidgetsFlutterBinding is
@@ -44,7 +46,7 @@ Future<void> sharedMain(
     final dsn = AppConfig.instance.sentryDsn;
     if (dsn != null && dsn.isNotEmpty) {
       await SentryFlutter.init(
-        _configureSentry,
+        (options) => _configureSentry(options, onUnhandledError),
         appRunner: () => launch(SentryWidget(child: app)),
       );
     } else {
@@ -78,8 +80,19 @@ Duration? _retryPolicy(int retryCount, Object error) {
   return ProviderContainer.defaultRetry(retryCount, error);
 }
 
-void _configureSentry(SentryFlutterOptions options) {
+void _configureSentry(
+  SentryFlutterOptions options,
+  VoidCallback? onUnhandledError,
+) {
   final config = AppConfig.instance;
+  if (onUnhandledError != null) {
+    // Every uncaught error passes through here, including those the web
+    // engine throws while rendering, which no app code can catch.
+    options.beforeSend = (event, hint) {
+      if (isUnhandledSentryEvent(event)) onUnhandledError();
+      return event;
+    };
+  }
   options
     ..environment = config.environment.name
     ..dsn = config.sentryDsn

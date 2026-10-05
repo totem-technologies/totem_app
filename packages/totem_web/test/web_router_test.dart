@@ -22,8 +22,10 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_web/core/navigation/web_router.dart';
 import 'package:totem_web/core/navigation/browser_environment.dart';
+import 'package:totem_web/core/reload_prompt.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+import 'package:web/web.dart' as web;
 
 class _FakeBrowserEnvironment implements BrowserEnvironment {
   @override
@@ -227,10 +229,26 @@ void main() {
       );
 
       final routes = router.configuration.routes;
-      check(routes).length.equals(3);
+      check(routes).length.equals(4);
       check((routes[0] as GoRoute).path).equals('/');
       check((routes[1] as GoRoute).path).equals('/__version');
-      check((routes[2] as GoRoute).path).equals('/:slug');
+      check((routes[2] as GoRoute).path).equals('/__reload-prompt');
+      check((routes[3] as GoRoute).path).equals('/:slug');
+    });
+
+    testWidgets('/__reload-prompt shows the reload overlay', (tester) async {
+      addTearDown(
+        () => web.document.getElementById(reloadPromptElementId)?.remove(),
+      );
+      final router = await _pumpTestRouter(
+        tester,
+        authState: AuthState.initial(),
+      );
+
+      router.go('/__reload-prompt');
+      await tester.pump();
+
+      check(web.document.getElementById(reloadPromptElementId)).isNotNull();
     });
 
     testWidgets(

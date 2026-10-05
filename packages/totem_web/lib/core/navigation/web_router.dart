@@ -12,6 +12,7 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_web/core/navigation/browser_environment.dart';
+import 'package:totem_web/core/reload_prompt.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class WebTotemRouter extends TotemRouter {
@@ -50,6 +51,12 @@ class WebTotemRouter extends TotemRouter {
         GoRoute(
           path: '/__version',
           builder: (context, state) => const _VersionScreen(),
+        ),
+        // Previews the overlay shown when the web engine gets stuck failing
+        // every frame, which can't be triggered on demand.
+        GoRoute(
+          path: '/__reload-prompt',
+          builder: (context, state) => const _ReloadPromptScreen(),
         ),
         GoRoute(
           path: '/:slug',
@@ -194,6 +201,26 @@ class _VersionScreenState extends State<_VersionScreen> {
         child: SelectableText(_version, style: theme.textTheme.headlineMedium),
       ),
     );
+  }
+}
+
+class _ReloadPromptScreen extends StatefulWidget {
+  const _ReloadPromptScreen();
+
+  @override
+  State<_ReloadPromptScreen> createState() => _ReloadPromptScreenState();
+}
+
+class _ReloadPromptScreenState extends State<_ReloadPromptScreen> {
+  @override
+  void initState() {
+    super.initState();
+    showReloadPrompt();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold();
   }
 }
 
