@@ -77,6 +77,7 @@ class _SessionKeyboardShortcutsState
         return true;
       }
       if (_hasBlockingNavigatorRoute()) return false;
+      ref.read(sessionPromptsOpenProvider.notifier).open = false;
       chat.open = true;
       return true;
     }

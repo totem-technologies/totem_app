@@ -17,6 +17,8 @@ Future<void> showSessionPromptsModal(
   required String sessionSlug,
 }) {
   final container = ProviderScope.containerOf(context, listen: false);
+  if (!container.read(isCurrentUserKeeperProvider)) return Future.value();
+
   if (shouldDockSessionSidePanel(context) &&
       container.read(currentSessionProvider) != null) {
     container.read(sessionPromptsOpenProvider.notifier).open = true;

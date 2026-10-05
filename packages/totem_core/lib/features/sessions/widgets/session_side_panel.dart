@@ -107,7 +107,7 @@ class DockedSessionSidePanel extends StatefulWidget {
   });
 
   final bool open;
-  final Widget child;
+  final Widget? child;
 
   @override
   State<DockedSessionSidePanel> createState() => _DockedSessionSidePanelState();
@@ -115,6 +115,8 @@ class DockedSessionSidePanel extends StatefulWidget {
 
 class _DockedSessionSidePanelState extends State<DockedSessionSidePanel>
     with SingleTickerProviderStateMixin {
+  Widget? _activeChild;
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: sessionSidePanelDuration,
@@ -123,8 +125,18 @@ class _DockedSessionSidePanelState extends State<DockedSessionSidePanel>
   );
 
   @override
+  void initState() {
+    _activeChild = widget.child;
+    super.initState();
+  }
+
+  @override
   void didUpdateWidget(covariant DockedSessionSidePanel oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.child != null &&
+        (oldWidget.child != widget.child || !oldWidget.open)) {
+      _activeChild = widget.child;
+    }
     if (oldWidget.open == widget.open) return;
     if (MediaQuery.disableAnimationsOf(context)) {
       _controller.value = widget.open ? 1 : 0;
@@ -149,6 +161,8 @@ class _DockedSessionSidePanelState extends State<DockedSessionSidePanel>
         if (_controller.value == 0 && !_controller.isAnimating) {
           return const SizedBox.shrink();
         }
+        final child = _activeChild;
+        if (child == null) return const SizedBox.shrink();
         return ClipRect(
           child: Align(
             alignment: AlignmentDirectional.centerEnd,
@@ -156,7 +170,7 @@ class _DockedSessionSidePanelState extends State<DockedSessionSidePanel>
             child: SizedBox(
               width: sessionSidePanelWidth,
               height: MediaQuery.sizeOf(context).height,
-              child: widget.child,
+              child: child,
             ),
           ),
         );
