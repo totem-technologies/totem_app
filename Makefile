@@ -4,6 +4,7 @@ APP_DIR := packages/totem_app
 CORE_DIR := packages/totem_core
 WEB_DIR := packages/totem_web
 BENCHMARK_DIR := packages/totem_benchmark
+WIDGETBOOK_DIR := packages/totem_widgetbook
 WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
 
 # Each Flutter suite also runs test files concurrently. Bound package-level
@@ -99,7 +100,7 @@ install:
 
 test: install
 	@echo "Running tests..."
-	$(MAKE) --jobs=$(TEST_JOBS) test-core test-app test-web test-benchmark test-scripts TEST_PUB=--no-pub
+	$(MAKE) --jobs=$(TEST_JOBS) test-core test-app test-web test-benchmark test-widgetbook test-scripts TEST_PUB=--no-pub
 
 test-benchmark:
 	cd $(BENCHMARK_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
@@ -113,6 +114,20 @@ benchmark-serve:
 
 benchmark:
 	node scripts/benchmark/run.mjs run $(BENCHMARK_ARGS)
+
+# Widgetbook catalog of totem_core widgets. Run `make widgetbook-gen` after
+# adding or changing a *.stories.dart file to regenerate the story code.
+widgetbook:
+	cd $(WIDGETBOOK_DIR) && flutter run -d chrome --web-port=5174
+
+widgetbook-gen:
+	cd $(WIDGETBOOK_DIR) && dart run build_runner build
+
+widgetbook-build:
+	cd $(WIDGETBOOK_DIR) && flutter build web --release
+
+test-widgetbook:
+	cd $(WIDGETBOOK_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
 
 test-app:
 	@echo "Running app tests..."
@@ -135,6 +150,7 @@ lint:
 	cd $(CORE_DIR) && flutter analyze
 	cd $(WEB_DIR) && flutter analyze
 	cd $(BENCHMARK_DIR) && flutter analyze
+	cd $(WIDGETBOOK_DIR) && flutter analyze
 
 format:
 	@echo "Formatting code..."

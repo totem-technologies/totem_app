@@ -1,0 +1,49 @@
+name: totem_widgetbook
+description: Widgetbook catalog for Totem UI components.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_svg: ^2.2.4
+  material_ui: any
+  totem_core:
+    path: ../totem_core
+  widgetbook: 4.0.0-beta.14
+
+dev_dependencies:
+  build_runner: ^2.15.0
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^11.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Catalog-only Figma copies. Not used by totem_core.
+  # Keep these under assets/ (not lib/) so Flutter web does not look
+  # them up as packages/totem_widgetbook/lib/....
+  assets:
+    - assets/design/participant_card/
+    - assets/design/session_card/
+    - assets/design/session_controls/
+    - assets/design/session_entry/
+
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Montserrat-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Montserrat-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
