@@ -315,7 +315,7 @@ void main() {
   ) async {
     // Docked on a wide window, then resized below the dock threshold: the
     // stale flag must not make the first tap a no-op.
-    tester.view.physicalSize = const Size(600, 900);
+    tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -341,13 +341,16 @@ void main() {
     container.read(sessionChatOpenProvider.notifier).open = true;
     await tester.pumpAndSettle();
 
-    // Nothing is docked at this width.
-    expect(find.byType(SessionChatPanel), findsNothing);
+    tester.view.physicalSize = const Size(600, 900);
+    await tester.pump();
+
+    // The previously docked flag must not render a panel after narrowing.
+    check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
 
     await tester.tap(find.bySemanticsLabel('Chat'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SessionChatPanel), findsOneWidget);
+    check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
   });
 
   testWidgets('Chat opens the private thread that sent the notification', (
