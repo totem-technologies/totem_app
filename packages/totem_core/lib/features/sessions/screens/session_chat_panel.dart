@@ -14,7 +14,7 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
 
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
+
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
 import 'package:totem_core/shared/widgets/chat/message_input_bar.dart';
@@ -26,14 +26,6 @@ const _recipientRowHorizontalPadding = 16.0;
 
 const _messageChromeGap = 12.0;
 const _messageEdgeFadeExtent = 16.0;
-
-/// HTML video platform views must finish their panel transition before the
-/// editable DOM host is focused, otherwise the browser briefly exposes the
-/// Flutter avatar layer beneath the videos. This flag mirrors the web build
-/// define in the web run/build commands.
-const _usesHtmlVideoElementView = bool.fromEnvironment(
-  'WEBRTC_USE_HTML_ELEMENT_VIEW',
-);
 
 const _messageListPadding = EdgeInsetsDirectional.fromSTEB(
   20,
@@ -278,56 +270,54 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                       ),
                       Expanded(
                         child: _MessageScrollEdgeFade(
-                          child: SelectionArea(
-                            child: CustomScrollView(
-                              controller: scrollController,
-                              slivers: [
-                                if (threadMessages.isEmpty)
-                                  const SliverFillRemaining(
-                                    hasScrollBody: false,
-                                    child: Padding(
-                                      padding: _messageListPadding,
-                                      child: IgnorePointer(
-                                        child: Center(
-                                          child: Text(
-                                            'No messages yet',
-                                            style: TextStyle(
-                                              color: AppTheme.gray,
-                                            ),
-                                            textAlign: TextAlign.center,
+                          child: CustomScrollView(
+                            controller: scrollController,
+                            slivers: [
+                              if (threadMessages.isEmpty)
+                                const SliverFillRemaining(
+                                  hasScrollBody: false,
+                                  child: Padding(
+                                    padding: _messageListPadding,
+                                    child: IgnorePointer(
+                                      child: Center(
+                                        child: Text(
+                                          'No messages yet',
+                                          style: TextStyle(
+                                            color: AppTheme.gray,
                                           ),
+                                          textAlign: TextAlign.center,
                                         ),
                                       ),
                                     ),
-                                  )
-                                else
-                                  SliverPadding(
-                                    padding: _messageListPadding,
-                                    sliver: SliverList.separated(
-                                      itemCount: threadMessages.length,
-                                      separatorBuilder: (_, _) =>
-                                          const SizedBox(height: 14),
-                                      itemBuilder: (context, index) {
-                                        final message = threadMessages[index];
-                                        final isOwn =
-                                            message.sender ||
-                                            (localIdentity != null &&
-                                                message.participant?.identity ==
-                                                    localIdentity);
-                                        return MessageBubble(
-                                          text: message.message,
-                                          timestamp: timeFormat.format(
-                                            DateTime.fromMillisecondsSinceEpoch(
-                                              message.timestamp,
-                                            ).toLocal(),
-                                          ),
-                                          isOwn: isOwn,
-                                        );
-                                      },
-                                    ),
                                   ),
-                              ],
-                            ),
+                                )
+                              else
+                                SliverPadding(
+                                  padding: _messageListPadding,
+                                  sliver: SliverList.separated(
+                                    itemCount: threadMessages.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 14),
+                                    itemBuilder: (context, index) {
+                                      final message = threadMessages[index];
+                                      final isOwn =
+                                          message.sender ||
+                                          (localIdentity != null &&
+                                              message.participant?.identity ==
+                                                  localIdentity);
+                                      return MessageBubble(
+                                        text: message.message,
+                                        timestamp: timeFormat.format(
+                                          DateTime.fromMillisecondsSinceEpoch(
+                                            message.timestamp,
+                                          ).toLocal(),
+                                        ),
+                                        isOwn: isOwn,
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
@@ -395,12 +385,6 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                   keeperIdentity: keeperIdentity,
                 ),
                 autofocus: autofocus,
-                // Focus after the longest panel animation and its final frame;
-                // focusing during it makes HTML video platform views flicker.
-                autofocusDelay: _usesHtmlVideoElementView
-                    ? sessionSidePanelDuration +
-                          const Duration(milliseconds: 16)
-                    : null,
                 onSend: send,
               ),
           ],

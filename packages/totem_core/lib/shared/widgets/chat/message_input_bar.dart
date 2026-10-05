@@ -13,7 +13,6 @@ class MessageInputBar extends StatefulWidget {
     this.hintText = 'Type a message...',
     this.enabled = true,
     this.autofocus = false,
-    this.autofocusDelay,
   });
 
   /// Returns false when the message was rejected, in which case the composer
@@ -29,13 +28,6 @@ class MessageInputBar extends StatefulWidget {
 
   final bool autofocus;
 
-  /// Delays automatic focus until a surrounding transition has settled.
-  ///
-  /// This is useful when focusing the field creates or updates a browser DOM
-  /// editing host while another platform view is being animated. The timer is
-  /// cancelled when the input is updated or disposed.
-  final Duration? autofocusDelay;
-
   @override
   State<MessageInputBar> createState() => _MessageInputBarState();
 }
@@ -43,37 +35,10 @@ class MessageInputBar extends StatefulWidget {
 class _MessageInputBarState extends State<MessageInputBar> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
-  Timer? _autofocusTimer;
   var _isSubmitting = false;
 
   @override
-  void initState() {
-    super.initState();
-    _scheduleAutofocus();
-  }
-
-  @override
-  void didUpdateWidget(covariant MessageInputBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.autofocus == widget.autofocus &&
-        oldWidget.autofocusDelay == widget.autofocusDelay) {
-      return;
-    }
-    _autofocusTimer?.cancel();
-    _scheduleAutofocus();
-  }
-
-  void _scheduleAutofocus() {
-    final delay = widget.autofocusDelay;
-    if (!widget.autofocus || delay == null) return;
-    _autofocusTimer = Timer(delay, () {
-      if (mounted && widget.autofocus) _focusNode.requestFocus();
-    });
-  }
-
-  @override
   void dispose() {
-    _autofocusTimer?.cancel();
     _focusNode.dispose();
     _controller.dispose();
     super.dispose();
@@ -124,8 +89,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
                     controller: _controller,
                     focusNode: _focusNode,
                     enabled: widget.enabled,
-                    autofocus:
-                        widget.autofocus && widget.autofocusDelay == null,
+                    autofocus: widget.autofocus,
                     minLines: 1,
                     maxLines: 3,
                     textInputAction: TextInputAction.send,

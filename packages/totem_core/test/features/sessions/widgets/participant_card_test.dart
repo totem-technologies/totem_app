@@ -416,9 +416,6 @@ void main() {
       check(
         tester.widgetList(find.byType(VideoTrackRenderer)),
       ).length.equals(1);
-      final visibleAvatarCount = tester
-          .widgetList(find.byType(UserAvatar))
-          .length;
 
       for (final event in [
         mutedEvent,
