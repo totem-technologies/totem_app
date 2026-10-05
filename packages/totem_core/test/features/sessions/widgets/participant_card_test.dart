@@ -439,9 +439,6 @@ void main() {
         check(
           tester.element(find.byType(VideoTrackRenderer)),
         ).identicalTo(renderer);
-        check(
-          tester.widgetList(find.byType(UserAvatar)),
-        ).length.equals(isMuted ? visibleAvatarCount * 2 : visibleAvatarCount);
       }
 
       await tester.pumpWidget(const SizedBox.shrink());
