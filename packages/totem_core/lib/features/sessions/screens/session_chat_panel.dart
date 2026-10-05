@@ -14,6 +14,7 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
 
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
 import 'package:totem_core/shared/widgets/chat/message_input_bar.dart';
@@ -25,6 +26,14 @@ const _recipientRowHorizontalPadding = 16.0;
 
 const _messageChromeGap = 12.0;
 const _messageEdgeFadeExtent = 16.0;
+
+/// HTML video platform views must finish their panel transition before the
+/// editable DOM host is focused, otherwise the browser briefly exposes the
+/// Flutter avatar layer beneath the videos. This flag mirrors the web build
+/// define in the web run/build commands.
+const _usesHtmlVideoElementView = bool.fromEnvironment(
+  'WEBRTC_USE_HTML_ELEMENT_VIEW',
+);
 
 const _messageListPadding = EdgeInsetsDirectional.fromSTEB(
   20,
@@ -204,6 +213,12 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
 
     final isPrivateThread = threadTarget != null;
     final canCompose = isKeeper || isPrivateThread;
+    final autofocus = switch (defaultTargetPlatform) {
+      TargetPlatform.android ||
+      TargetPlatform.iOS ||
+      TargetPlatform.fuchsia => false,
+      _ => true,
+    };
     final keeperIsPresent =
         _participantFor(participants, keeperIdentity) != null;
     final recipientName = _participantFor(participants, threadTarget)?.name;
@@ -379,12 +394,13 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                   participants: participants,
                   keeperIdentity: keeperIdentity,
                 ),
-                autofocus: switch (defaultTargetPlatform) {
-                  TargetPlatform.android ||
-                  TargetPlatform.iOS ||
-                  TargetPlatform.fuchsia => false,
-                  _ => true,
-                },
+                autofocus: autofocus,
+                // Focus after the longest panel animation and its final frame;
+                // focusing during it makes HTML video platform views flicker.
+                autofocusDelay: _usesHtmlVideoElementView
+                    ? sessionSidePanelDuration +
+                          const Duration(milliseconds: 16)
+                    : null,
                 onSend: send,
               ),
           ],

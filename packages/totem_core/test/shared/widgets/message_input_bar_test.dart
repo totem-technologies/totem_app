@@ -41,6 +41,28 @@ void main() {
     check(sendCount).equals(2);
   });
 
+  testWidgets('delays autofocus until a surrounding transition settles', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: MessageInputBar(
+            autofocus: true,
+            autofocusDelay: Duration(milliseconds: 320),
+          ),
+        ),
+      ),
+    );
+
+    final editableText = tester.widget<EditableText>(find.byType(EditableText));
+    check(editableText.focusNode.hasFocus).isFalse();
+
+    await tester.pump(const Duration(milliseconds: 320));
+
+    check(editableText.focusNode.hasFocus).isTrue();
+  });
+
   testWidgets('grows from one line to at most three lines', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: Scaffold(body: MessageInputBar())),
