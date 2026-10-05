@@ -115,11 +115,13 @@ class _CountingRoom implements Room {
     this.participant, {
     this.prepareConnectionError,
     this.connectError,
+    this.emitConnectedOnConnect = false,
   });
 
   final MockLocalParticipant participant;
   final Error? prepareConnectionError;
   final LiveKitException? connectError;
+  final bool emitConnectedOnConnect;
   final _CountingRoomEventsListener listener = _CountingRoomEventsListener();
 
   int prepareConnectionCount = 0;
@@ -155,6 +157,9 @@ class _CountingRoom implements Room {
     connectCount++;
     lastFastConnectOptions = fastConnectOptions;
     if (connectError case final error?) throw error;
+    if (emitConnectedOnConnect) {
+      await listener.trigger(RoomConnectedEvent(room: this, metadata: null));
+    }
   }
 
   @override
@@ -924,7 +929,10 @@ void main() {
           () => localParticipant.publishAudioTrack(microphoneTrack),
         ).thenAnswer((_) => microphonePublication.future);
 
-        final room = _CountingRoom(localParticipant);
+        final room = _CountingRoom(
+          localParticipant,
+          emitConnectedOnConnect: true,
+        );
         controller.room = room;
 
         var joinCompleted = false;
@@ -942,6 +950,9 @@ void main() {
         await pumpEventQueue();
 
         check(joinCompleted).isFalse();
+        check(
+          container.read(sessionControllerProvider(options)).connection.state,
+        ).equals(RoomConnectionState.connecting);
         check(room.lastFastConnectOptions).isNull();
         verify(
           () => localParticipant.publishVideoTrack(
@@ -961,6 +972,9 @@ void main() {
 
         microphonePublication.complete(MockLocalAudioTrackPublication());
         check(await joinResult).equals(SessionJoinResult.success);
+        check(
+          container.read(sessionControllerProvider(options)).connection.state,
+        ).equals(RoomConnectionState.connected);
         verifyNever(cameraTrack.stop);
         verifyNever(cameraTrack.dispose);
         verifyNever(microphoneTrack.stop);

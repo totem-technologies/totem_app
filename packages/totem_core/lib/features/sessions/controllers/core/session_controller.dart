@@ -262,12 +262,21 @@ class SessionController extends _$SessionController {
     _updateRoomState();
 
     unawaited(_applyJoinMediaState());
-    _dispatch(
-      const ConnectionChanged(
-        RoomConnectionState.connected,
-        SessionPhase.connected,
-      ),
-    );
+    // A transferred pre-join track is already rendering in the loading screen.
+    // Keep that renderer mounted until LiveKit has accepted the track below;
+    // otherwise the room replaces it with an avatar-only tile before the
+    // publication becomes available.
+    final hasPendingPreJoinMedia =
+        _joinMediaOwner.track<LocalVideoTrack>() != null ||
+        _joinMediaOwner.track<LocalAudioTrack>() != null;
+    if (!hasPendingPreJoinMedia) {
+      _dispatch(
+        const ConnectionChanged(
+          RoomConnectionState.connected,
+          SessionPhase.connected,
+        ),
+      );
+    }
 
     // Fetch server state immediately on join so the client is never stuck with
     // stale local state when LiveKit metadata is empty (e.g. room was killed and
@@ -547,6 +556,19 @@ class SessionController extends _$SessionController {
         if (!ref.mounted) return SessionJoinResult.retryableFailure;
         await _applyJoinMediaState();
         if (!ref.mounted) return SessionJoinResult.retryableFailure;
+
+        // [_onConnected] intentionally leaves the room on its loading screen
+        // while transferred pre-join tracks are published. Reveal the room only
+        // once its local participant can render those tracks without a fallback.
+        if ((initialCameraTrack != null || initialMicrophoneTrack != null) &&
+            state.connectionState == RoomConnectionState.connecting) {
+          _dispatch(
+            const ConnectionChanged(
+              RoomConnectionState.connected,
+              SessionPhase.connected,
+            ),
+          );
+        }
       } catch (error, stackTrace) {
         ErrorHandler.logError(
           error,
