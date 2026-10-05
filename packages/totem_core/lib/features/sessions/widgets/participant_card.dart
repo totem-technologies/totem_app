@@ -442,6 +442,17 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   late _ParticipantVideoRenderState _renderState = _readRenderState();
 
   EventsListener<ParticipantEvent>? _listener;
+
+  void _debugLifecycle(String event) {
+    if (!kDebugMode) return;
+    final renderState = _renderState;
+    debugPrint(
+      '[ParticipantVideo] $event sid=${widget.participant.sid} '
+      'track=${renderState.track?.sid} hasRenderer=${renderState.hasRenderer} '
+      'showVideo=${renderState.showVideo} platformView=true',
+    );
+  }
+
   void _setupListeners() {
     _listener?.dispose();
     _listener = widget.participant.createListener()
@@ -473,6 +484,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
     final nextState = _readRenderState();
     if (nextState == _renderState) return;
     setState(() => _renderState = nextState);
+    _debugLifecycle('state-change');
   }
 
   void _onTrackMuted(TrackMutedEvent event) {
@@ -487,6 +499,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
   void initState() {
     super.initState();
     _setupListeners();
+    _debugLifecycle('init');
   }
 
   @override
@@ -500,6 +513,7 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
 
   @override
   void dispose() {
+    _debugLifecycle('dispose');
     _listener?.dispose();
     super.dispose();
   }

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
@@ -243,117 +241,35 @@ class _ListeningTurnGrid extends ConsumerWidget {
       showSpeakingNow: showSpeakingNowParticipant,
     );
 
-    // debug:
-    // sortedParticipants = [for (var i = 0; i < 3; i++) ...sortedParticipants];
-    return ViewportResolver(
-      builder: (context, viewportKind) {
-        switch (viewportKind) {
-          case ViewportKind.smallLandscape:
-          case ViewportKind.smallPortrait:
-            final itemCount = sortedParticipants.length;
-            if (itemCount == 0) return const SizedBox.shrink();
+    final speaker = showSpeakingNowParticipant
+        ? participants.firstWhereOrNull((p) => p.identity == speakingNow)
+        : null;
 
-            int minRowCount = 1;
-            late final int crossAxisCount;
-            switch (viewportKind) {
-              case ViewportKind.smallPortrait:
-                minRowCount = 2;
-                if (itemCount <= 6) {
-                  crossAxisCount = 3;
-                } else if (itemCount <= 12) {
-                  crossAxisCount = 4;
-                } else {
-                  crossAxisCount = 5;
-                }
-              case ViewportKind.smallLandscape:
-                if (itemCount <= 4) {
-                  crossAxisCount = 2;
-                } else if (itemCount <= 6) {
-                  crossAxisCount = 3;
-                } else {
-                  crossAxisCount = 4;
-                }
-              case ViewportKind.mediumSmall:
-              case ViewportKind.mediumPlus:
-                if (itemCount <= 2) {
-                  crossAxisCount = 1;
-                } else if (itemCount <= 4) {
-                  crossAxisCount = 2;
-                } else if (itemCount <= 6) {
-                  crossAxisCount = 3;
-                } else if (itemCount <= 12) {
-                  crossAxisCount = 4;
-                } else {
-                  crossAxisCount = math.sqrt(itemCount).ceil();
-                }
-            }
-            final rowCount = (itemCount / crossAxisCount).ceil().clamp(
-              minRowCount,
-              100,
-            );
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisAlignment: MainAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              spacing: gap,
-              children: List.generate(rowCount, (rowIndex) {
-                final startIndex = rowIndex * crossAxisCount;
-
-                return Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: gap,
-                    children: List<Widget>.generate(crossAxisCount, (colIndex) {
-                      final itemIndex = startIndex + colIndex;
-                      if (itemIndex < itemCount) {
-                        final participant = sortedParticipants[itemIndex];
-                        return Expanded(
-                          child: ParticipantCard(
-                            key: ValueKey(participant.sid),
-                            participant: participant,
-                            session: session,
-                            participantIdentity: participant.identity,
-                          ),
-                        );
-                      } else {
-                        return const Expanded(child: SizedBox.shrink());
-                      }
-                    }),
-                  ),
-                );
-              }),
-            );
-          case ViewportKind.mediumSmall:
-          case ViewportKind.mediumPlus:
-            final speaker = showSpeakingNowParticipant
-                ? participants.firstWhereOrNull(
-                    (p) => p.identity == speakingNow,
-                  )
-                : null;
-
-            return AdaptiveCallLayout(
-              speaker: speaker == null
-                  ? null
-                  : ParticipantCard(
-                      key: ValueKey(speaker.sid),
-                      participant: speaker,
-                      session: session,
-                      participantIdentity: speaker.identity,
-                    ),
-              participants: [
-                for (final participant in sortedParticipants.where(
-                  (participant) => participant.identity != speaker?.identity,
-                ))
-                  ParticipantCard(
-                    key: ValueKey(participant.sid),
-                    participant: participant,
-                    session: session,
-                    participantIdentity: participant.identity,
-                  ),
-              ],
-            );
-        }
-      },
+    // Keep the participant render subtree identical across viewport changes.
+    // AdaptiveCallLayout changes only child geometry in its render object.
+    return AdaptiveCallLayout(
+      key: GlobalObjectKey(('listening-participant-layout', session.slug)),
+      speaker: speaker == null
+          ? null
+          : ParticipantCard(
+              key: ValueKey(speaker.sid),
+              participant: speaker,
+              session: session,
+              participantIdentity: speaker.identity,
+            ),
+      participants: [
+        for (final participant in sortedParticipants.where(
+          (participant) => participant.identity != speaker?.identity,
+        ))
+          ParticipantCard(
+            key: ValueKey(participant.sid),
+            participant: participant,
+            session: session,
+            participantIdentity: participant.identity,
+          ),
+      ],
+      spacing: gap,
+      mobileBreakpoint: 601,
     );
   }
 }

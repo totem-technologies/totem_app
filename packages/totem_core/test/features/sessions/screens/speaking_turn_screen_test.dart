@@ -451,20 +451,48 @@ void main() {
       check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
     });
 
-    testWidgets('does not render SelfView when disabled by default', (
-      tester,
-    ) async {
-      final state = _buildState(
-        keeper: 'user-1',
-        currentSpeaker: 'user-1',
-        nextSpeaker: 'user-2',
-      );
+    testWidgets(
+      'keeps SelfView mounted while toggling presentation',
+      (tester) async {
+        final state = _buildState(
+          keeper: 'user-1',
+          currentSpeaker: 'user-1',
+          nextSpeaker: 'user-2',
+        );
 
-      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
-      await tester.pumpAndSettle();
+        await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+        await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(SelfView))).length.equals(0);
-    });
+        final selfView = tester.element(find.byType(SelfView));
+        final selfViewVideo = find.descendant(
+          of: find.byType(SelfView),
+          matching: find.byType(ParticipantVideo),
+        );
+        check(tester.widgetList(selfViewVideo)).length.equals(1);
+        final video = tester.element(selfViewVideo);
+        final container = tester.element(find.byType(SpeakingTurnScreen));
+        final ref = ProviderScope.containerOf(container);
+        final settings = ref.read(selfViewSettingsProvider.notifier);
+
+        for (var i = 0; i < 20; i++) {
+          settings.setEnabled(true);
+          await tester.pump();
+          check(tester.element(find.byType(SelfView))).identicalTo(selfView);
+          check(tester.element(selfViewVideo)).identicalTo(video);
+
+          settings.setEnabled(false);
+          await tester.pump();
+          check(tester.element(find.byType(SelfView))).identicalTo(selfView);
+          check(tester.element(selfViewVideo)).identicalTo(video);
+        }
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
 
     testWidgets(
       'SelfView Settings enables and persists',

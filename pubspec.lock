@@ -799,7 +799,7 @@ packages:
     description:
       path: "."
       ref: "fix/web-texture-renderer-and-video-view-lifecycle"
-      resolved-ref: c77b894eb4b2500fecba317d4103003fcc7fa86d
+      resolved-ref: f49a5ba3ebcc60d2710978171a846d445e9bcca9
       url: "https://github.com/totem-technologies/flutter-webrtc"
     source: git
     version: "1.6.2+hotfix.3"
@@ -1058,7 +1058,7 @@ packages:
     description:
       path: "."
       ref: "fix/combined-stats-and-renderer"
-      resolved-ref: "9d120360fe139446703ee80d93154d0e5fbe2c4b"
+      resolved-ref: "0cb2dba4b22625d621458898216e92ba6cc6c9a2"
       url: "https://github.com/totem-technologies/client-sdk-flutter"
     source: git
     version: "2.13.0"
@@ -1648,10 +1648,10 @@ packages:
     dependency: transitive
     description:
       name: sqflite_common
-      sha256: "077e38e82c099534146a2fb31b608c2a3a4489a0f21d9af6b2f5c87b566a1ea0"
+      sha256: da542ae39840132566b8652d6bfab108a972099a8e4377b3bcd98ae1595e6629
       url: "https://pub.dev"
     source: hosted
-    version: "2.5.13"
+    version: "2.5.13+1"
   sqflite_darwin:
     dependency: transitive
     description:

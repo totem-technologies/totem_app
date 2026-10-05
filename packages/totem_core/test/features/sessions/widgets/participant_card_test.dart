@@ -15,6 +15,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
+import 'package:totem_core/features/sessions/widgets/participant_tile_surface.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
@@ -25,6 +26,22 @@ import '../controllers/core/session_controller_mock.dart';
 import '../livekit_mocks.dart';
 
 void main() {
+  testWidgets('participant tile surfaces keep rounded Flutter clipping', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: ParticipantTileSurface(children: <Widget>[])),
+    );
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+
+    final clip = tester.widget<ClipRRect>(find.byType(ClipRRect));
+    check(clip.clipBehavior).equals(Clip.antiAlias);
+    check(clip.borderRadius).equals(BorderRadius.circular(20));
+  });
+
   late MockRemoteParticipant remoteParticipant;
   late FakeSessionController fakeSessionState;
 
@@ -436,6 +453,12 @@ void main() {
         check(
           tester.element(find.byType(VideoTrackRenderer)),
         ).identicalTo(renderer);
+        final avatarCount = tester.widgetList(find.byType(UserAvatar)).length;
+        if (isMuted) {
+          check(avatarCount).isGreaterThan(1);
+        } else {
+          check(avatarCount).equals(2);
+        }
       }
 
       await tester.pumpWidget(const SizedBox.shrink());
