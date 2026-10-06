@@ -139,18 +139,9 @@ async function mediaSnapshot(page) {
     rendererResources: performance.getEntriesByType('resource')
       .map(e => e.name).filter(n => /skwasm|canvaskit/.test(n)),
     videos: [...document.querySelectorAll('video')].map(v => {
-      globalThis.__roomBenchmarkVideoIds ??= new WeakMap();
-      globalThis.__roomBenchmarkNextVideoId ??= 0;
-      let elementId = globalThis.__roomBenchmarkVideoIds.get(v);
-      if (elementId === undefined) {
-        elementId = ++globalThis.__roomBenchmarkNextVideoId;
-        globalThis.__roomBenchmarkVideoIds.set(v, elementId);
-      }
       const quality = v.getVideoPlaybackQuality();
-      return {id: v.dataset.participant, elementId, connected: v.isConnected,
-        viewType: v.dataset.viewType ?? null, srcObjectAttached: v.srcObject != null,
-        time: v.currentTime, paused: v.paused, readyState: v.readyState,
-        width: v.videoWidth, height: v.videoHeight,
+      return {id: v.dataset.participant, time: v.currentTime, paused: v.paused,
+        readyState: v.readyState, width: v.videoWidth, height: v.videoHeight,
         frames: quality.totalVideoFrames, dropped: quality.droppedVideoFrames,
         error: v.error?.message ?? null};
     }),
@@ -167,7 +158,6 @@ async function readyMedia(page, count, mode = 'playing') {
 
 async function lifecycle(page) {
   const counts = [];
-  const resizeSnapshots = [];
   for (let i = 0; i < 3; i++) {
     for (const participants of [12, 2]) {
       await page.evaluate(n => roomBenchmarkConfigure(`participants=${n}&notice=false`), participants);
@@ -175,31 +165,15 @@ async function lifecycle(page) {
       counts.push((await mediaSnapshot(page)).videos.length);
     }
   }
-
-  await page.evaluate(() => roomBenchmarkConfigure('participants=2&notice=false'));
+  await page.setViewport({width: 390, height: 844, deviceScaleFactor: 1});
   await readyMedia(page, 2);
-  const resizeViewports = [
-    [390, 844], [700, 900], [1000, 800], [1400, 900], [390, 844],
-  ];
-  for (const [width, height] of resizeViewports) {
-    await page.setViewport({width, height, deviceScaleFactor: 1});
-    await readyMedia(page, 2);
-    resizeSnapshots.push(await mediaSnapshot(page));
-  }
-  const identities = resizeSnapshots.map(snapshot =>
-    snapshot.videos.map(video => [video.id, video.elementId]));
-  const identityStable = identities.every(snapshot =>
-    snapshot.every(([id, elementId]) => elementId === identities[0].find(
-      ([initialId]) => initialId === id)?.[1]));
-
   await page.evaluate(() => roomBenchmarkConfigure('participants=2&video=paused&notice=false'));
   await readyMedia(page, 2, 'paused');
   await page.evaluate(() => roomBenchmarkConfigure('participants=2&video=hidden&notice=false'));
   await page.waitForFunction(() => document.querySelectorAll('video').length === 0);
   await page.evaluate(() => roomBenchmarkConfigure('participants=2&notice=false'));
   await readyMedia(page, 2);
-  return {counts, resize: {viewports: resizeViewports, identityStable,
-    snapshots: resizeSnapshots}, final: await mediaSnapshot(page)};
+  return {counts, final: await mediaSnapshot(page)};
 }
 
 async function capture(browserName, scenario, repetition, output, url, buildMetadata) {

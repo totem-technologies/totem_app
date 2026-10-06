@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_benchmark/benchmark_config.dart';
 import 'package:totem_benchmark/benchmark_room.dart';
-import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer_bars.dart';
 import 'package:totem_core/features/sessions/widgets/participant_tile_surface.dart';
 
@@ -58,43 +57,6 @@ void main() {
     ).identicalTo(video);
     await pump(2);
     check(find.byType(ParticipantTileSurface).evaluate()).length.equals(2);
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-  });
-
-  testWidgets('video widgets survive breakpoint-sized resizes', (tester) async {
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-
-    Future<Element> pumpAt(Size size) async {
-      await tester.binding.setSurfaceSize(size);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: AdaptiveCallLayout(
-            participants: [
-              for (var id = 1; id < 4; id++)
-                ColoredBox(key: ValueKey('video-$id'), color: Colors.black),
-            ],
-            speaker: const ColoredBox(
-              key: ValueKey('video-0'),
-              color: Colors.black,
-            ),
-          ),
-        ),
-      );
-      return find.byKey(const ValueKey('video-0')).evaluate().first;
-    }
-
-    final initial = await pumpAt(const Size(390, 844));
-    for (final size in [
-      const Size(700, 900),
-      const Size(1000, 800),
-      const Size(1400, 900),
-      const Size(390, 844),
-    ]) {
-      check(await pumpAt(size)).identicalTo(initial);
-    }
-
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });

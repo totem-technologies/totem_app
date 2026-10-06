@@ -105,7 +105,10 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
 
     final body = ViewportResolver(
       builder: (context, viewportKind) {
-        final participantGrid = _SpeakingTurnGrid(session: widget.session);
+        final participantGrid = _SpeakingTurnGrid(
+          session: widget.session,
+          viewportKind: viewportKind,
+        );
 
         final nextText = 'Pass ${nextUp != null ? 'to ${nextUp.name}' : ''}'
             .trim();
@@ -238,16 +241,15 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
       },
     );
 
-    // Keep the platform-view parent stable while self-view is toggled. The
-    // self-view owns its visibility and input semantics without leaving this
-    // Stack, so the room video subtree is never reparented for this setting.
     return SafeArea(
-      child: Stack(
-        children: [
-          Positioned.fill(child: body),
-          SelfView(enabled: selfViewEnabled),
-        ],
-      ),
+      child: selfViewEnabled
+          ? Stack(
+              children: [
+                Positioned.fill(child: body),
+                const SelfView(),
+              ],
+            )
+          : body,
     );
   }
 }
@@ -258,10 +260,17 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
 ///
 /// When in a large screen, the grid is an adaptive layout.
 class _SpeakingTurnGrid extends ConsumerWidget {
-  const _SpeakingTurnGrid({required this.session, this.gap = 6});
+  const _SpeakingTurnGrid({
+    required this.session,
+    required this.viewportKind,
+    this.maxPerLineCount = 10,
+    this.gap = 6,
+  });
 
   final SessionDetailSchema session;
+  final int maxPerLineCount;
   final double gap;
+  final ViewportKind viewportKind;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -279,22 +288,92 @@ class _SpeakingTurnGrid extends ConsumerWidget {
     // debug:
     // sortedParticipants = [for (var i = 0; i < 13; i++) ...sortedParticipants];
 
-    // AdaptiveCallLayout owns one render object for every viewport size. Its
-    // keyed children therefore move by geometry, rather than being replaced by
-    // a mobile Row/Column tree at a breakpoint.
-    return AdaptiveCallLayout(
-      key: GlobalObjectKey(('speaking-participant-layout', session.slug)),
-      participants: [
-        for (final participant in sortedParticipants)
-          ParticipantCard(
-            key: ValueKey(participant.sid),
-            participant: participant,
-            session: session,
-            participantIdentity: participant.identity,
-          ),
-      ],
-      spacing: gap,
-      mobileBreakpoint: 601,
+    return ViewportResolver(
+      builder: (context, viewportKind) {
+        switch (viewportKind) {
+          case ViewportKind.smallPortrait:
+          case ViewportKind.smallLandscape:
+            final itemCount = sortedParticipants.length;
+            if (itemCount == 0) return const SizedBox.shrink();
+
+            late final int crossAxisCount;
+            switch (viewportKind) {
+              case ViewportKind.smallPortrait:
+                crossAxisCount = math
+                    .sqrt(itemCount)
+                    // Uses .round() to round to the nearest integer.
+                    // This distributes the cards alongside the available space better
+                    // than .ceil() when in portrait screens.
+                    .round()
+                    .clamp(1, maxPerLineCount);
+              case ViewportKind.smallLandscape:
+              case ViewportKind.mediumSmall:
+              case ViewportKind.mediumPlus:
+                if (itemCount <= 2) {
+                  crossAxisCount = 2;
+                } else if (itemCount <= 6) {
+                  crossAxisCount = 3;
+                } else if (itemCount <= 9) {
+                  crossAxisCount = 4;
+                } else {
+                  crossAxisCount = math
+                      .sqrt(itemCount)
+                      // Uses .ceil() to round up to the nearest integer.
+                      // This distributes the cards alongside the available space better
+                      // than .round() when in landscape screens.
+                      .ceil()
+                      .clamp(3, maxPerLineCount);
+                }
+            }
+
+            final rowCount = (itemCount / crossAxisCount).ceil();
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: gap,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: List.generate(rowCount, (rowIndex) {
+                final startIndex = rowIndex * crossAxisCount;
+
+                return Flexible(
+                  child: Row(
+                    spacing: gap,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: List.generate(crossAxisCount, (colIndex) {
+                      final itemIndex = startIndex + colIndex;
+                      if (itemIndex < itemCount) {
+                        final participant = sortedParticipants[itemIndex];
+                        return Expanded(
+                          child: ParticipantCard(
+                            key: ValueKey(participant.sid),
+                            participant: participant,
+                            session: session,
+                            participantIdentity: participant.identity,
+                          ),
+                        );
+                      } else {
+                        return const Expanded(child: SizedBox.shrink());
+                      }
+                    }),
+                  ),
+                );
+              }),
+            );
+          case ViewportKind.mediumSmall:
+          case ViewportKind.mediumPlus:
+            return AdaptiveCallLayout(
+              participants: [
+                for (final participant in sortedParticipants)
+                  ParticipantCard(
+                    key: ValueKey(participant.sid),
+                    participant: participant,
+                    session: session,
+                    participantIdentity: participant.identity,
+                  ),
+              ],
+            );
+        }
+      },
     );
   }
 }
@@ -304,9 +383,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
 /// This only works inside a Stack widget.
 @visibleForTesting
 class SelfView extends ConsumerStatefulWidget {
-  const SelfView({required this.enabled, super.key});
-
-  final bool enabled;
+  const SelfView({super.key});
 
   @override
   ConsumerState<SelfView> createState() => _SelfViewState();
@@ -413,6 +490,7 @@ class _SelfViewState extends ConsumerState<SelfView>
       authControllerProvider.select((auth) => auth.user?.slug.value),
     );
     final participants = ref.watch(sessionParticipantsProvider);
+    final participantKeys = ref.watch(sessionParticipantKeysProvider);
     final currentParticipant = participants.firstWhereOrNull(
       (p) => p.identity == currentUserSlug,
     );
@@ -422,112 +500,89 @@ class _SelfViewState extends ConsumerState<SelfView>
     final borderRadius = BorderRadius.circular(16);
 
     return Positioned.fill(
-      child: Opacity(
-        opacity: widget.enabled ? 1 : 0,
-        alwaysIncludeSemantics: false,
-        child: IgnorePointer(
-          ignoring: !widget.enabled,
-          child: ExcludeSemantics(
-            excluding: !widget.enabled,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                _containerSize = Size(
-                  constraints.maxWidth,
-                  constraints.maxHeight,
-                );
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          _containerSize = Size(constraints.maxWidth, constraints.maxHeight);
 
-                return AnimatedBuilder(
-                  animation: _animation,
-                  builder: (context, child) {
-                    final offset = _visualOffset * (1 - _animation.value);
-                    final target = _targetPosition;
-                    return Stack(
-                      children: [
-                        Positioned(
-                          top: target.dy + offset.dy,
-                          left: target.dx + offset.dx,
-                          child: child!,
-                        ),
-                      ],
-                    );
-                  },
-                  child: Semantics(
-                    label: 'Your self view, draggable',
-                    excludeSemantics: true,
-                    child: SizedBox(
-                      width: _cardWidth,
-                      height: _cardHeight,
-                      child: GestureDetector(
-                        onPanStart: _onPanStart,
-                        onPanUpdate: _onPanUpdate,
-                        onPanEnd: _onPanEnd,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            borderRadius: borderRadius,
-                            boxShadow: kElevationToShadow[6],
-                          ),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
+          return AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              final offset = _visualOffset * (1 - _animation.value);
+              final target = _targetPosition;
+              return Stack(
+                children: [
+                  Positioned(
+                    top: target.dy + offset.dy,
+                    left: target.dx + offset.dx,
+                    child: child!,
+                  ),
+                ],
+              );
+            },
+            child: Semantics(
+              label: 'Your self view, draggable',
+              excludeSemantics: true,
+              child: SizedBox(
+                width: _cardWidth,
+                height: _cardHeight,
+                child: GestureDetector(
+                  onPanStart: _onPanStart,
+                  onPanUpdate: _onPanUpdate,
+                  onPanEnd: _onPanEnd,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: borderRadius,
+                      boxShadow: kElevationToShadow[6],
+                    ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: borderRadius,
+                        border: Border.all(width: 1.5, color: AppTheme.blue),
+                      ),
+                      position: DecorationPosition.foreground,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: ClipRRect(
                               borderRadius: borderRadius,
-                              border: Border.all(
-                                width: 1.5,
-                                color: AppTheme.blue,
+                              child: ParticipantVideo(
+                                key: participantKeys.getKey(
+                                  currentParticipant.sid,
+                                ),
+                                participant: currentParticipant,
                               ),
                             ),
-                            position: DecorationPosition.foreground,
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: ClipRRect(
-                                    clipBehavior: Clip.antiAlias,
-                                    borderRadius: borderRadius,
-                                    child: ParticipantVideo(
-                                      // The grid and self-view are intentional
-                                      // simultaneous surfaces for the local participant.
-                                      // They must not share the room's GlobalKey.
-                                      key: ValueKey((
-                                        'self-view',
-                                        currentParticipant.sid,
-                                      )),
-                                      participant: currentParticipant,
-                                    ),
-                                  ),
+                          ),
+                          PositionedDirectional(
+                            top: 6,
+                            start: 6,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black45,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              padding: const EdgeInsetsDirectional.symmetric(
+                                horizontal: 4,
+                                vertical: 1,
+                              ),
+                              child: Text(
+                                'You',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 8,
+                                  color: Colors.white,
                                 ),
-                                PositionedDirectional(
-                                  top: 6,
-                                  start: 6,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.black45,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    padding:
-                                        const EdgeInsetsDirectional.symmetric(
-                                          horizontal: 4,
-                                          vertical: 1,
-                                        ),
-                                    child: Text(
-                                      'You',
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                            fontSize: 8,
-                                            color: Colors.white,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

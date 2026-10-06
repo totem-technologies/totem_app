@@ -154,32 +154,9 @@ Flutter frame timings describe engine work, not end-to-end presented frames;
 video playback counters are collected separately. Native profiling also has
 overhead, so compare captures with the same settings and browser version.
 
-The lifecycle probe verifies DOM video counts and resumed playback. It also records
-per-video `elementId`, `connected`, `viewType`, and `srcObjectAttached` values and
-checks element identity across repeated small/medium/large viewport changes. It
-does not prove that browser/native memory has returned to baseline. The synthetic
-`video=hidden` step intentionally tests teardown and is not the production
-self-view contract; production self-view hiding must keep its platform view alive.
-Widget leak tracking and pure metric tests run in `make test`.
-
-### Safari acceptance path
-
-The automated runner currently targets Chrome and Firefox. For Safari/WebKit,
-start the benchmark server and use a fresh Safari window:
-
-1. Run `make benchmark-build` and `make benchmark-serve`.
-2. Open `http://127.0.0.1:5180/?participants=6&notice=false`.
-3. Resize repeatedly through approximately 390, 700, 1000, and 1400 px widths,
-   then rotate between portrait and landscape. Confirm the same video surfaces
-   remain visible without black/avatar flashes.
-4. Repeatedly toggle self-view, chat, prompts, local mute/unmute, and speaker
-   promotion in the production app while watching the Develop menu's Web
-   Inspector. Confirm each participant's `<video>` remains connected with its
-   `srcObject` attached and does not get replaced.
-
-Record the Safari version, OS version, and whether any element was recreated;
-Chrome/Firefox lifecycle output is useful evidence but does not replace this
-WebKit check.
+The lifecycle probe verifies DOM video counts and resumed playback; it does not
+prove that browser/native memory has returned to baseline. Widget leak tracking
+and pure metric tests run in `make test`.
 
 References: [Puppeteer launch options](https://pptr.dev/api/puppeteer.launchoptions),
 [Firefox profiler API](https://github.com/mozilla-firefox/firefox/blob/main/devtools/shared/specs/perf.js),

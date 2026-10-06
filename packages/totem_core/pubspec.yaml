@@ -44,7 +44,7 @@ dependencies:
   livekit_client:
     git:
       url: https://github.com/livekit/client-sdk-flutter
-      ref: 2eefb704c4f9ccb3f433ffad58f756e85cde682a
+      ref: ac9d3906eefc8eea91338651b53f4f2d0d2a37cb
   # path: ../client-sdk-flutter
   # git:
   # url: https://github.com/livekit/client-sdk-flutter/
