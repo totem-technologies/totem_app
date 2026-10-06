@@ -574,6 +574,8 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
               renderMode: VideoRenderMode.platformView,
             ),
           ),
+        if (!renderState.showVideo)
+          Positioned.fill(child: IgnorePointer(child: _avatar())),
       ],
     );
 

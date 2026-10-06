@@ -14,6 +14,7 @@ class SessionKeyboardShortcuts extends ConsumerStatefulWidget {
     required this.child,
     this.navigatorKey,
     this.enableEmojiReactions = true,
+    this.enableChatShortcut = true,
     this.onToggleMicrophone,
     this.onToggleCamera,
     super.key,
@@ -22,6 +23,7 @@ class SessionKeyboardShortcuts extends ConsumerStatefulWidget {
   final Widget child;
   final GlobalKey<NavigatorState>? navigatorKey;
   final bool enableEmojiReactions;
+  final bool enableChatShortcut;
   final Future<void> Function()? onToggleMicrophone;
   final Future<void> Function()? onToggleCamera;
 
@@ -70,7 +72,8 @@ class _SessionKeyboardShortcutsState
     }
     if (_hasModifierPressed() || _hasEditableFocus()) return false;
 
-    if (event.logicalKey == ActionBarShortcut.chatKey) {
+    if (widget.enableChatShortcut &&
+        event.logicalKey == ActionBarShortcut.chatKey) {
       final chat = ref.read(sessionChatOpenProvider.notifier);
       if (chat.open) {
         chat.open = false;
@@ -82,7 +85,8 @@ class _SessionKeyboardShortcutsState
       return true;
     }
 
-    if (_hasBlockingNavigatorRoute() || ref.read(sessionChatOpenProvider)) {
+    if (_hasBlockingNavigatorRoute() ||
+        (widget.enableChatShortcut && ref.read(sessionChatOpenProvider))) {
       return false;
     }
 

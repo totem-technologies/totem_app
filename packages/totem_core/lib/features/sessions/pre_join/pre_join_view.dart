@@ -52,6 +52,7 @@ class PreJoinView extends StatelessWidget {
       ),
     );
     final actionBar = SessionKeyboardShortcuts(
+      enableChatShortcut: false,
       onToggleMicrophone: locked ? null : onToggleMicrophone,
       onToggleCamera: locked ? null : onToggleCamera,
       child: PrejoinActionBar(

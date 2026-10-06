@@ -156,6 +156,18 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(sessionChatOpenProvider, (previous, next) {
+      if (next || widget.embedded || !mounted) return;
+      final route = ModalRoute.of(context);
+      final navigator = Navigator.of(context);
+      if (route == null || !route.isActive) return;
+      if (route.isCurrent) {
+        navigator.pop();
+      } else {
+        navigator.removeRoute(route);
+      }
+    });
+
     // Scroll on arrival rather than on a length change during build: a thread
     // switch no longer counts as an arrival, and two threads of equal length
     // no longer mask one.

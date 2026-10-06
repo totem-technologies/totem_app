@@ -88,8 +88,10 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     try {
       await showSessionChat(context);
     } finally {
-      if (mounted) setState(() => _chatSheetOpen = false);
-      ref.read(sessionChatOpenProvider.notifier).open = false;
+      if (mounted) {
+        setState(() => _chatSheetOpen = false);
+        ref.read(sessionChatOpenProvider.notifier).open = false;
+      }
     }
   }
 
@@ -106,11 +108,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     );
 
     ref.listen(sessionChatOpenProvider, (previous, next) {
-      if (!next) {
-        if (_chatSheetOpen) Navigator.of(context).maybePop();
-        return;
-      }
-      if (shouldDockSessionChat(context) || _chatSheetOpen) return;
+      if (!next || shouldDockSessionChat(context) || _chatSheetOpen) return;
       unawaited(_openChat(fromUnread: false));
     });
 
