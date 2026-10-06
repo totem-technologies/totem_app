@@ -8,10 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 
 void main() {
-  void autoSizeTest(
-    String description,
-    Future<void> Function(WidgetTester) body,
-  ) {
+  void autoSizeTest(String description, AsyncValueSetter<WidgetTester> body) {
     testWidgets(
       description,
       body,

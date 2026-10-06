@@ -385,7 +385,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   bool hasKeeperDisconnected = false,
   RoomScreen roomScreen = RoomScreen.listening,
   List<Object?> extraOverrides = const [],
-  Future<void> Function(ProviderContainer container)? beforeMount,
+  AsyncValueSetter<ProviderContainer>? beforeMount,
 }) async {
   final eventStateProvider =
       NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>(

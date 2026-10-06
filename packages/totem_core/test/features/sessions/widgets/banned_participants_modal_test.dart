@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
@@ -22,7 +23,7 @@ void main() {
 
   MockSessionController createMockSession({
     required SessionRoomState state,
-    Future<void> Function(String)? unbanHandler,
+    AsyncValueSetter<String>? unbanHandler,
   }) {
     final session = MockSessionController();
     final keeper = MockSessionKeeperController();

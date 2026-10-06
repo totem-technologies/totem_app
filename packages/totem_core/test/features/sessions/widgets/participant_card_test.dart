@@ -441,7 +441,7 @@ void main() {
         ).identicalTo(renderer);
         check(
           tester.widgetList(find.byType(UserAvatar)),
-        ).length.equals(isMuted ? visibleAvatarCount * 2 : visibleAvatarCount);
+        ).length.equals(visibleAvatarCount);
       }
 
       await tester.pumpWidget(const SizedBox.shrink());

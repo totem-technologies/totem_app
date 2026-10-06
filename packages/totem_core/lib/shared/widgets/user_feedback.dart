@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -8,7 +9,7 @@ import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
-typedef OnFeedbackSubmitted = Future<void> Function(String feedback);
+typedef OnFeedbackSubmitted = AsyncValueSetter<String>;
 
 Future<void> showUserFeedbackPopup(
   BuildContext context, {

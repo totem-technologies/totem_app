@@ -24,8 +24,8 @@ class SessionKeyboardShortcuts extends ConsumerStatefulWidget {
   final GlobalKey<NavigatorState>? navigatorKey;
   final bool enableEmojiReactions;
   final bool enableChatShortcut;
-  final Future<void> Function()? onToggleMicrophone;
-  final Future<void> Function()? onToggleCamera;
+  final AsyncCallback? onToggleMicrophone;
+  final AsyncCallback? onToggleCamera;
 
   @override
   ConsumerState<SessionKeyboardShortcuts> createState() =>
