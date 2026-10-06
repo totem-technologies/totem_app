@@ -887,21 +887,21 @@ void main() {
         final container = _createContainerWithEventOverride(eventSlug);
         addTearDown(container.dispose);
 
-          const options = SessionOptions(
-            sessionSlug: eventSlug,
-            token: 'test-token',
-            cameraEnabled: true,
-            microphoneEnabled: true,
-            cameraOptions: SessionController.defaultCameraCaptureOptions,
-            speakerEnabled: true,
-          );
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: true,
+          microphoneEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
 
-          final sub = container.listen(
-            sessionControllerProvider(options),
-            (_, _) {},
-            fireImmediately: true,
-          );
-          addTearDown(sub.close);
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
 
         final controller = container.read(
           sessionControllerProvider(options).notifier,
@@ -935,19 +935,19 @@ void main() {
         );
         controller.room = room;
 
-          var joinCompleted = false;
-          final joinResult = controller
-              .join(
-                joinMedia: SessionJoinMedia(
-                  cameraTrack: cameraTrack,
-                  microphoneTrack: microphoneTrack,
-                ),
-              )
-              .then((result) {
-                joinCompleted = true;
-                return result;
-              });
-          await pumpEventQueue();
+        var joinCompleted = false;
+        final joinResult = controller
+            .join(
+              joinMedia: SessionJoinMedia(
+                cameraTrack: cameraTrack,
+                microphoneTrack: microphoneTrack,
+              ),
+            )
+            .then((result) {
+              joinCompleted = true;
+              return result;
+            });
+        await pumpEventQueue();
 
         check(joinCompleted).isFalse();
         check(
@@ -971,24 +971,23 @@ void main() {
         ).called(1);
 
         microphonePublication.complete(MockLocalAudioTrackPublication());
-          check(await joinResult).equals(SessionJoinResult.success);
-          check(
-            container.read(sessionControllerProvider(options)).connection.state,
-          ).equals(RoomConnectionState.connected);
-          verifyNever(cameraTrack.stop);
-          verifyNever(cameraTrack.dispose);
-          verifyNever(microphoneTrack.stop);
-          verifyNever(microphoneTrack.dispose);
+        check(await joinResult).equals(SessionJoinResult.success);
+        check(
+          container.read(sessionControllerProvider(options)).connection.state,
+        ).equals(RoomConnectionState.connected);
+        verifyNever(cameraTrack.stop);
+        verifyNever(cameraTrack.dispose);
+        verifyNever(microphoneTrack.stop);
+        verifyNever(microphoneTrack.dispose);
 
-          await controller.disposeConnection();
+        await controller.disposeConnection();
 
-          check(room.disposeCount).equals(1);
-          verifyNever(cameraTrack.stop);
-          verifyNever(cameraTrack.dispose);
-          verifyNever(microphoneTrack.stop);
-          verifyNever(microphoneTrack.dispose);
-        },
-      );
+        check(room.disposeCount).equals(1);
+        verifyNever(cameraTrack.stop);
+        verifyNever(cameraTrack.dispose);
+        verifyNever(microphoneTrack.stop);
+        verifyNever(microphoneTrack.dispose);
+      });
 
       test(
         'join stops publishing when disposed during video publication',
