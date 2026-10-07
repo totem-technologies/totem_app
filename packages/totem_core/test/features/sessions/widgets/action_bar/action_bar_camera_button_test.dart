@@ -218,6 +218,48 @@ void main() {
       ).isGreaterThan(tester.getCenter(camera).dx);
     });
 
+    testWidgets('mobile web shows front/back camera options', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() {
+        debugDefaultTargetPlatformOverride = null;
+      });
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ActionBarCameraSwitcherButton(
+              isCameraOn: true,
+              onToggle: () {},
+              cameraPosition: CameraPosition.front,
+              availableCameraDevices: const [
+                MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
+                MediaDevice('camera-2', 'Rear Camera', 'videoinput', null),
+              ],
+              selectedCameraDeviceId: 'camera-1',
+              onCameraPositionChanged: (_) {},
+              onCameraDeviceSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      check(
+        tester.widgetList(
+          find.byKey(ActionBarCameraSwitcherButton.deviceClusterKey),
+        ),
+      ).length.equals(1);
+      await tester.tap(find.bySemanticsLabel('Switch camera'));
+      await tester.pumpAndSettle();
+
+      check(tester.widgetList(find.text('Front'))).length.equals(1);
+      check(tester.widgetList(find.text('Back'))).length.equals(1);
+      check(tester.widgetList(find.text('Front Camera'))).length.equals(0);
+    });
+
     testWidgets('one-camera mode is platform-adaptive', (tester) async {
       var toggles = 0;
 
