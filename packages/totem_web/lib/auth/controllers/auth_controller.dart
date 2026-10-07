@@ -4,6 +4,7 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/auth/repositories/user_profile_repository.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:web/web.dart' as web;
 
 class WebAuthController extends AuthController {
@@ -42,6 +43,7 @@ class WebAuthController extends AuthController {
         _setState(AuthState.loading());
         final currentUser = await _userRepository.currentUser;
         _setState(AuthState.authenticated(user: currentUser));
+        unawaited(ref.read(analyticsProvider).setUserId(currentUser));
         _checkExistingAuthCompleter?.complete();
       } catch (_) {
         _setState(AuthState.unauthenticated());

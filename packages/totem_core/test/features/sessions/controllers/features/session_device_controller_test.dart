@@ -1,18 +1,22 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide TimeoutException;
 import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 
+import '../../../../setup.dart';
 import '../../livekit_mocks.dart';
 import '../core/session_controller_mock.dart';
 
 void main() {
   setUpAll(() {
     registerFallbackValue(FakeCameraCaptureOptions());
+    setupAppConfig();
   });
 
   group('SessionDeviceController', () {
@@ -66,6 +70,61 @@ void main() {
           ).called(1);
         },
       );
+
+      test('enableMicrophone reports whether the microphone is on', () async {
+        final controller = container.read(
+          sessionDeviceControllerProvider(mockSession).notifier,
+        );
+
+        check(await controller.enableMicrophone()).isTrue();
+      });
+
+      test(
+        'enableMicrophone reports false while the keeper is away mid-session',
+        () async {
+          mockSession.mockState = createTestSessionState(
+            roomStatus: RoomStatus.active,
+            keeperPresent: false,
+          );
+          final controller = container.read(
+            sessionDeviceControllerProvider(mockSession).notifier,
+          );
+
+          check(await controller.enableMicrophone()).isFalse();
+          verifyNever(() => mockLocalParticipant.setMicrophoneEnabled(any()));
+        },
+      );
+
+      test('enableMicrophone surfaces capture failures', () async {
+        when(
+          () => mockLocalParticipant.setMicrophoneEnabled(true),
+        ).thenThrow(Exception('Audio engine returned error code: -9001'));
+        final controller = container.read(
+          sessionDeviceControllerProvider(mockSession).notifier,
+        );
+
+        await check(controller.enableMicrophone()).throws<Exception>();
+      });
+
+      test('enableMicrophone gives up on a capture that never finishes', () {
+        fakeAsync((async) {
+          when(
+            () => mockLocalParticipant.setMicrophoneEnabled(true),
+          ).thenAnswer((_) => Completer<LocalTrackPublication?>().future);
+          final controller = container.read(
+            sessionDeviceControllerProvider(mockSession).notifier,
+          );
+
+          Object? error;
+          controller.enableMicrophone().catchError((Object e) {
+            error = e;
+            return false;
+          });
+          async.elapse(SessionDeviceController.microphoneEnableTimeout);
+
+          check(error).isA<TimeoutException>();
+        });
+      });
 
       test('enableMicrophone does nothing if already enabled', () async {
         when(() => mockLocalParticipant.isMicrophoneEnabled()).thenReturn(true);

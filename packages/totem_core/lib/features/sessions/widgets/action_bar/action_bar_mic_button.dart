@@ -158,7 +158,14 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
       }
 
       await widget.onToggle?.call(shouldEnable);
-      if (mounted) setState(() => _microphoneIsEnabled = shouldEnable);
+      if (!mounted) return;
+      // With a participant, its publication is the truth: a toggle can finish
+      // without changing the microphone, e.g. when unmuting is not allowed.
+      setState(
+        () => _microphoneIsEnabled = widget.participant == null
+            ? shouldEnable
+            : _microphoneEnabledFromMedia(),
+      );
     } finally {
       if (mounted) {
         setState(() => _busy = false);

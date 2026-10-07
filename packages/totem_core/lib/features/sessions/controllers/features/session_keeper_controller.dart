@@ -171,7 +171,7 @@ class SessionKeeperController extends _$SessionKeeperController {
       await micFuture;
       logger.i('Accepted totem successfully');
     } catch (e) {
-      await micFuture.catchError((_) {});
+      await micFuture.catchError((_) => false);
       if (!wasMicEnabled) {
         await session.devices.disableMicrophone();
       }

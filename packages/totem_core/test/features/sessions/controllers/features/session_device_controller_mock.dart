@@ -18,8 +18,9 @@ class FakeSessionDeviceController implements SessionDeviceController {
   }
 
   @override
-  Future<void> enableMicrophone() async {
+  Future<bool> enableMicrophone() async {
     enableMicrophoneCalled = true;
+    return true;
   }
 
   @override

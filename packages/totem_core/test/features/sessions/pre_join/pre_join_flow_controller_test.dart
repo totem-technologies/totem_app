@@ -121,6 +121,21 @@ class _UnavailableTrackFactory extends PreJoinPreviewTrackFactory {
       throw Exception('Audio engine returned error code: -9001');
 }
 
+/// A microphone whose first capture fails, as when the iOS audio engine
+/// errors at startup, and works when asked again.
+class _FlakyMicrophoneTrackFactory extends _TrackFactory {
+  int audioAttempts = 0;
+
+  @override
+  Future<LocalAudioTrack?> createAudioTrack() async {
+    audioAttempts++;
+    if (audioAttempts == 1) {
+      throw Exception('Audio engine returned error code: -9001');
+    }
+    return await super.createAudioTrack();
+  }
+}
+
 class _DelayedUnavailableTrackFactory extends PreJoinPreviewTrackFactory {
   final cameraStarted = Completer<void>();
   final cameraGate = Completer<void>();
@@ -316,6 +331,37 @@ void main() {
     check(outcome).equals(PreJoinJoinOutcome.joined);
     check(_SuccessfulSessionController.receivedMedia?.cameraTrack).isNull();
     check(_SuccessfulSessionController.receivedMedia?.microphoneTrack).isNull();
+  });
+
+  test('a microphone that failed in preview is retried on join', () async {
+    final factory = _FlakyMicrophoneTrackFactory();
+    _SuccessfulSessionController.receivedMedia = null;
+    final container = _container(
+      factory: factory,
+      response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+      sessionController: _SuccessfulSessionController.new,
+    );
+    addTearDown(container.dispose);
+    await _waitForMedia(container);
+    check(
+      container.read(preJoinMediaControllerProvider(_slug)).microphone.phase,
+    ).equals(PreJoinCapturePhase.unavailable);
+
+    final outcome = await container
+        .read(preJoinFlowControllerProvider(_slug).notifier)
+        .requestJoin();
+
+    check(outcome).equals(PreJoinJoinOutcome.joined);
+    check(factory.audioAttempts).equals(2);
+    check(
+      container
+          .read(preJoinFlowControllerProvider(_slug))
+          .sessionOptions
+          ?.microphoneEnabled,
+    ).equals(true);
+    check(
+      _SuccessfulSessionController.receivedMedia?.microphoneTrack,
+    ).identicalTo(factory.audioTracks.single);
   });
 
   test(

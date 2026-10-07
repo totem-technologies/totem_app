@@ -9,6 +9,8 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
+import '../../livekit_mocks.dart';
+
 void main() {
   testWidgets('ActionBarMicButton calls onToggle with enabled=true when off', (
     tester,
@@ -32,6 +34,28 @@ void main() {
     await tester.pump();
 
     check(requested).equals(true);
+  });
+
+  testWidgets('stays muted when unmuting did not turn the microphone on', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ActionBarMicButton(
+            participant: MockLocalParticipant(),
+            onToggle: (_) async {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(ActionBarButton));
+    await tester.pump();
+
+    check(
+      tester.widgetList(find.bySemanticsLabel('Microphone off')),
+    ).length.equals(1);
   });
 
   testWidgets('asks before unmuting when another participant has the Totem', (

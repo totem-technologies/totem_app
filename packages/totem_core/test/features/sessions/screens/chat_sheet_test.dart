@@ -259,7 +259,7 @@ void main() {
         ),
       ).thenAnswer((_) async => true);
       when(() => messaging.sendReaction(any())).thenAnswer((_) async {});
-      when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+      when(() => devices.enableMicrophone()).thenAnswer((_) async => true);
       when(() => devices.disableMicrophone()).thenAnswer((_) async {});
       when(() => devices.enableCamera()).thenAnswer((_) async {});
       when(() => devices.disableCamera()).thenAnswer((_) async {});

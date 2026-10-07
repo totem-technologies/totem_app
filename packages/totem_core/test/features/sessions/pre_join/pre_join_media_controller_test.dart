@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,6 +60,30 @@ class _DelayedMicrophoneFactory extends _PreviewTrackFactory {
     await gate.future;
     return await super.createAudioTrack();
   }
+}
+
+/// Capture requests that never answer, like a browser permission prompt the
+/// user hasn't acted on, until the test resolves them.
+class _HangingCaptureFactory extends _PreviewTrackFactory {
+  _HangingCaptureFactory({
+    this.hangCamera = false,
+    this.hangMicrophone = false,
+  });
+
+  final bool hangCamera;
+  final bool hangMicrophone;
+  final pendingCamera = Completer<LocalVideoTrack?>();
+  final pendingMicrophone = Completer<LocalAudioTrack?>();
+
+  @override
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  ) =>
+      hangCamera ? pendingCamera.future : super.createVideoTrack(cameraOptions);
+
+  @override
+  Future<LocalAudioTrack?> createAudioTrack() =>
+      hangMicrophone ? pendingMicrophone.future : super.createAudioTrack();
 }
 
 class _UnavailableCameraFactory extends _PreviewTrackFactory {
@@ -161,6 +186,53 @@ void main() {
         .takeForJoin();
     check(media.cameraTrack).isNull();
     check(media.microphoneTrack).identicalTo(factory.audioTracks.single);
+  });
+
+  test('a camera request that never answers stops blocking setup', () {
+    fakeAsync((async) {
+      final factory = _HangingCaptureFactory(hangCamera: true);
+      final container = _createContainer(factory);
+      addTearDown(container.dispose);
+
+      async
+        ..elapse(PreJoinMediaController.captureTimeout)
+        ..flushMicrotasks();
+
+      final state = container.read(
+        preJoinMediaControllerProvider(_sessionSlug),
+      );
+      check(state.camera.phase).equals(PreJoinCapturePhase.unavailable);
+      check(state.microphone.phase).equals(PreJoinCapturePhase.ready);
+      check(state.initializationComplete).isTrue();
+
+      // The browser can still answer after we gave up; that capture must not
+      // stay live in the background.
+      final lateTrack = MockPreJoinLocalVideoTrack();
+      factory.pendingCamera.complete(lateTrack);
+      async.flushMicrotasks();
+      verify(lateTrack.stop).called(1);
+      verify(lateTrack.dispose).called(1);
+    });
+  });
+
+  test('a microphone request that never answers stops blocking setup', () {
+    fakeAsync((async) {
+      final factory = _HangingCaptureFactory(hangMicrophone: true);
+      final container = _createContainer(factory);
+      addTearDown(container.dispose);
+
+      async
+        ..elapse(PreJoinMediaController.captureTimeout)
+        ..flushMicrotasks();
+
+      final state = container.read(
+        preJoinMediaControllerProvider(_sessionSlug),
+      );
+      check(state.camera.phase).equals(PreJoinCapturePhase.ready);
+      check(state.microphone.phase).equals(PreJoinCapturePhase.unavailable);
+      check(state.initializationComplete).isTrue();
+      check(state.canJoinOnWeb).isFalse();
+    });
   });
 
   test('explicit camera permission denial blocks a web join', () async {

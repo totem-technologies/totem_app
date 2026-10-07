@@ -72,19 +72,11 @@ class AnalyticsService {
     posthog?.capture(eventName: eventName, properties: parameters ?? {});
   }
 
+  /// Identifies [user] to Sentry and, when analytics is on, to PostHog.
+  ///
+  /// Sentry identification is part of error reporting, not analytics, so it
+  /// happens even when analytics is disabled or still initializing.
   Future<void> setUserId(UserSchema user) async {
-    if (!_shouldLog()) return;
-    logger.i('📊 Setting user ID: ${user.email}');
-
-    await posthog?.identify(
-      userId: user.email,
-      userProperties: {
-        'email': user.email,
-        if (user.name.value != null && user.name.value!.isNotEmpty)
-          'name': user.name.value!,
-      },
-    );
-
     await Sentry.configureScope((scope) async {
       await scope.setUser(
         SentryUser(
@@ -108,13 +100,25 @@ class AnalyticsService {
         ),
       );
     });
+
+    if (!_shouldLog()) return;
+    logger.i('📊 Setting user ID: ${user.email}');
+
+    await posthog?.identify(
+      userId: user.email,
+      userProperties: {
+        'email': user.email,
+        if (user.name.value != null && user.name.value!.isNotEmpty)
+          'name': user.name.value!,
+      },
+    );
   }
 
   Future<void> logLogout() async {
+    await Sentry.configureScope((scope) => scope.setUser(null));
     if (!_shouldLog()) return;
     logEvent('user_logged_out');
     await posthog?.reset();
-    await Sentry.configureScope((scope) => scope.setUser(null));
   }
 
   Future<void> logAccountDeleted() async {

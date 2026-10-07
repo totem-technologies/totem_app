@@ -40,6 +40,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       final mediaController = ref.read(
         preJoinMediaControllerProvider(sessionSlug).notifier,
       );
+      await mediaController.retryUnavailableMicrophone();
       final currentMedia = ref.read(
         preJoinMediaControllerProvider(sessionSlug),
       );

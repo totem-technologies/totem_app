@@ -389,18 +389,42 @@ class SessionDeviceController extends _$SessionDeviceController {
   bool get isMicrophoneEnabled =>
       _room?.localParticipant?.isMicrophoneEnabled() ?? false;
 
-  Future<void> enableMicrophone() async {
+  /// Longest wait for the microphone to start. Capture can hang on a device
+  /// whose audio engine has failed, which would otherwise leave the mic
+  /// button busy forever.
+  static const microphoneEnableTimeout = Duration(seconds: 20);
+
+  /// Turns the microphone on and returns whether it is on afterwards.
+  ///
+  /// Returns false without touching the microphone while the keeper is away
+  /// from an active session, since participants stay muted until they return.
+  /// Capture failures are logged and rethrown so callers can tell the user.
+  Future<bool> enableMicrophone() async {
     final room = _room;
-    if (room?.localParticipant?.isMicrophoneEnabled() ?? false) return;
+    if (room?.localParticipant?.isMicrophoneEnabled() ?? false) return true;
     if (session.state.roomState.status == RoomStatus.active &&
         !session.state.hasKeeper) {
-      return;
+      return false;
     }
 
-    if (room?.localParticipant != null) {
-      await room?.localParticipant?.setMicrophoneEnabled(true);
+    final localParticipant = room?.localParticipant;
+    if (localParticipant == null) return false;
+    try {
+      await localParticipant
+          .setMicrophoneEnabled(true)
+          .timeout(microphoneEnableTimeout);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to enable microphone',
+      );
+      rethrow;
+    } finally {
+      // The session can end while capture is still starting.
+      if (ref.mounted) _emitState();
     }
-    _emitState();
+    return true;
   }
 
   Future<void> disableMicrophone() async {

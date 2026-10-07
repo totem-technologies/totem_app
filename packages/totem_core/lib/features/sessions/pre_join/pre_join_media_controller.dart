@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' hide TimeoutException;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -80,6 +80,15 @@ class PreJoinMediaOperationQueue {
 
 @riverpod
 class PreJoinMediaController extends _$PreJoinMediaController {
+  /// Longest wait for a camera or microphone capture to start.
+  ///
+  /// A browser can leave capture pending indefinitely, for example while its
+  /// permission prompt sits unanswered or collapsed into the address bar.
+  /// Without a limit, setup never completes: joining stays disabled and no
+  /// permission help is shown. After this, the device is treated as
+  /// unavailable so the user is offered a retry.
+  static const captureTimeout = Duration(seconds: 20);
+
   final _captureOperations = PreJoinMediaOperationQueue();
 
   Future<void>? _initialization;
@@ -192,9 +201,12 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     );
     LocalVideoTrack? track;
     try {
-      track = await ref
-          .read(preJoinPreviewTrackFactoryProvider)
-          .createVideoTrack(state.preferences.cameraOptions);
+      track = await _limitCapture(
+        ref
+            .read(preJoinPreviewTrackFactoryProvider)
+            .createVideoTrack(state.preferences.cameraOptions),
+        'camera',
+      );
       if (!ref.mounted) {
         await _disposeTrack(track, 'camera');
         return;
@@ -259,9 +271,10 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     );
     LocalAudioTrack? track;
     try {
-      track = await ref
-          .read(preJoinPreviewTrackFactoryProvider)
-          .createAudioTrack();
+      track = await _limitCapture(
+        ref.read(preJoinPreviewTrackFactoryProvider).createAudioTrack(),
+        'microphone',
+      );
       if (!ref.mounted) {
         await _disposeTrack(track, 'microphone');
         return null;
@@ -438,6 +451,28 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     return state;
   }
 
+  /// Captures the microphone again if it failed for a reason other than a
+  /// permission denial, such as the iOS audio engine erroring at startup.
+  ///
+  /// Those failures are often transient, and joining without a microphone
+  /// leaves the user unable to unmute until they leave and rejoin.
+  Future<void> retryUnavailableMicrophone() async {
+    await _initialization;
+    if (!ref.mounted ||
+        state.transferred ||
+        state.microphone.phase != PreJoinCapturePhase.unavailable) {
+      return;
+    }
+
+    state = state.copyWith(
+      preferences: state.preferences.copyWith(isMicOn: true),
+    );
+    _initialization = _guardInitialization(
+      () => _captureOperations.schedule(_initializeMicrophone),
+    );
+    await _initialization;
+  }
+
   Future<PreJoinMediaState> resetAfterFailedJoin() async {
     detachTransferredTracks();
     await _initialization;
@@ -606,6 +641,26 @@ class PreJoinMediaController extends _$PreJoinMediaController {
       if (!identical(microphoneTrack, _transferredAudioTrack))
         _disposeTrack(microphoneTrack, 'microphone'),
     ]);
+  }
+
+  /// Applies [captureTimeout] to [capture]. A track that arrives after the
+  /// timeout is released, so an abandoned capture doesn't keep the device on.
+  Future<T?> _limitCapture<T extends LocalTrack>(
+    Future<T?> capture,
+    String kind,
+  ) {
+    return capture.timeout(
+      captureTimeout,
+      onTimeout: () {
+        unawaited(
+          capture.then(
+            (late) => _disposeTrack(late, kind),
+            onError: (Object _) {},
+          ),
+        );
+        throw TimeoutException('Timed out starting the $kind', captureTimeout);
+      },
+    );
   }
 
   Future<void> _disposeTrack(LocalTrack? track, String kind) async {

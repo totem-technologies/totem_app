@@ -120,6 +120,9 @@ Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) {
     apiCall: () =>
         apiService.rooms.totemRoomsApiJoinRoom(sessionSlug: sessionSlug),
     operationName: 'join session',
+    // Safe to repeat: the server only issues a token and records attendance,
+    // and "already present" reflects the LiveKit room, not earlier requests.
+    retryOnNetworkError: true,
     timeout: _shortTimeoutDuration,
     diagnostics: {'session_slug': sessionSlug},
   );

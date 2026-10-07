@@ -523,7 +523,7 @@ void main() {
       when(() => devices.selectedAudioDeviceId).thenReturn(null);
       when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
       when(() => devices.localVideoTrack).thenReturn(null);
-      when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+      when(() => devices.enableMicrophone()).thenAnswer((_) async => true);
       when(() => devices.disableMicrophone()).thenAnswer((_) async {});
       when(() => devices.enableCamera()).thenAnswer((_) async {});
       when(() => devices.disableCamera()).thenAnswer((_) async {});
@@ -904,6 +904,7 @@ void main() {
           var enableMicrophoneCallCount = 0;
           when(() => devices.enableMicrophone()).thenAnswer((_) async {
             enableMicrophoneCallCount += 1;
+            return true;
           });
 
           final event = _createSessionEventWithElapsed(

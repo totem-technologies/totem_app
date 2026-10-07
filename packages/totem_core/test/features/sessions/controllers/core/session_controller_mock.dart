@@ -36,6 +36,7 @@ RoomState _createRoomState({RoomStatus status = RoomStatus.waitingRoom}) {
 
 SessionRoomState _createSessionState({
   RoomStatus roomStatus = RoomStatus.waitingRoom,
+  bool keeperPresent = true,
 }) {
   return SessionRoomState(
     connection: const ConnectionState(
@@ -46,13 +47,20 @@ SessionRoomState _createSessionState({
       participants: [
         MockLocalParticipant('user-1'),
         MockLocalParticipant('user-2'),
-        MockLocalParticipant('keeper-1'),
+        if (keeperPresent) MockLocalParticipant('keeper-1'),
       ],
     ),
     chat: const ChatState(),
     turn: SessionTurnState(roomState: _createRoomState(status: roomStatus)),
   );
 }
+
+/// Session state for tests that need a specific room status or keeper
+/// presence.
+SessionRoomState createTestSessionState({
+  RoomStatus roomStatus = RoomStatus.waitingRoom,
+  bool keeperPresent = true,
+}) => _createSessionState(roomStatus: roomStatus, keeperPresent: keeperPresent);
 
 class FakeSessionController implements SessionController {
   SessionRoomState mockState = _createSessionState();

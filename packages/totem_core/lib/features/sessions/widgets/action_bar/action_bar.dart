@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
@@ -566,10 +567,23 @@ class SessionActionBar extends ConsumerWidget {
             totemState?.status == RoomStatus.active &&
             totemState?.speaker != user.identity,
         onToggle: (shouldEnable) async {
-          if (shouldEnable) {
-            await session.devices.enableMicrophone();
-          } else {
+          if (!shouldEnable) {
             await session.devices.disableMicrophone();
+            return;
+          }
+          String? problem;
+          try {
+            if (!await session.devices.enableMicrophone()) {
+              problem = "You'll be able to unmute once the Keeper is back.";
+            }
+          } catch (_) {
+            // enableMicrophone has already reported the failure.
+            problem =
+                "Couldn't turn on your microphone. "
+                'Try again, or leave and rejoin the session.';
+          }
+          if (problem != null && context.mounted) {
+            ErrorHandler.showErrorSnackBar(context, problem);
           }
         },
       ),
