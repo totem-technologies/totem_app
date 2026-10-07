@@ -424,7 +424,7 @@ class _PromptTile extends StatelessWidget {
           ),
           if (!current && prompt.consumedRoundNumbers.isNotEmpty)
             Text(
-              'Used in rounds ${prompt.consumedRoundNumbers.join(', ')}',
+              'Used in round${prompt.consumedRoundNumbers.length == 1 ? '' : 's'} ${prompt.consumedRoundNumbers.length < 3 ? prompt.consumedRoundNumbers.join(' and ') : '${prompt.consumedRoundNumbers.take(prompt.consumedRoundNumbers.length - 1).join(', ')}, and ${prompt.consumedRoundNumbers.last}'}',
               style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.mauve),
             ),
         ],
