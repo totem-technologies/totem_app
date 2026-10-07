@@ -1,4 +1,5 @@
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
@@ -111,10 +112,7 @@ final _testLastMessageProvider =
     );
 
 void main() {
-  void autoSizeTest(
-    String description,
-    Future<void> Function(WidgetTester) body,
-  ) {
+  void autoSizeTest(String description, AsyncValueSetter<WidgetTester> body) {
     testWidgets(
       description,
       body,

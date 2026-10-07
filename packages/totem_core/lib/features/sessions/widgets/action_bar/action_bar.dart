@@ -18,8 +18,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_b
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
-typedef ActionBarButtonToggleCallback =
-    Future<void> Function(bool shouldEnable);
+typedef ActionBarButtonToggleCallback = AsyncValueSetter<bool>;
 
 /// ghost = idle, muted = media off, emphasized = open sheet.
 /// Keep muted and emphasized distinct — camera-off is not "sheet open".
@@ -255,6 +254,7 @@ class ActionBarShortcut {
 
   static const LogicalKeyboardKey microphoneKey = LogicalKeyboardKey.keyZ;
   static const LogicalKeyboardKey cameraKey = LogicalKeyboardKey.keyX;
+  static const LogicalKeyboardKey chatKey = LogicalKeyboardKey.keyC;
   static const List<LogicalKeyboardKey> reactionKeys = [
     LogicalKeyboardKey.keyA,
     LogicalKeyboardKey.keyS,
@@ -269,6 +269,10 @@ class ActionBarShortcut {
   static const camera = ActionBarShortcut(
     label: 'Toggle camera',
     logicalKeys: [cameraKey],
+  );
+  static const chat = ActionBarShortcut(
+    label: 'Open chat',
+    logicalKeys: [chatKey],
   );
   static const reactions = ActionBarShortcut(
     label: 'Send reaction',
@@ -501,32 +505,41 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
 
   @override
   Widget build(BuildContext context) {
+    final microphoneButton = ActionBarShortcutTooltip(
+      shortcut: ActionBarShortcut.microphone,
+      child: ActionBarMicButton(
+        participant: null,
+        audioTrack: widget.previewAudioTrack,
+        isMicOn: widget.isMicOn,
+        onToggle: !widget.locked ? (v) => widget.onToggleMic() : null,
+      ),
+    );
+    final cameraButton = ActionBarShortcutTooltip(
+      shortcut: ActionBarShortcut.camera,
+      child: ActionBarCameraSwitcherButton(
+        isCameraOn: widget.isCameraOn,
+        onToggle: widget.locked ? null : widget.onToggleCamera,
+        cameraPosition: widget.cameraPosition,
+        availableCameraDevices: _availableCameraDevices,
+        selectedCameraDeviceId:
+            widget.selectedCameraDeviceId ??
+            _availableCameraDevices.firstOrNull?.deviceId,
+        onCameraPositionChanged: widget.onCameraPositionChanged,
+        onCameraDeviceSelected: widget.onCameraDeviceSelected,
+      ),
+    );
+
     return ActionBar(
       key: SessionActionBar.actionBarKey,
       children: [
-        ActionBarMicButton(
-          participant: null,
-          audioTrack: widget.previewAudioTrack,
-          isMicOn: widget.isMicOn,
-          onToggle: !widget.locked ? (v) => widget.onToggleMic() : null,
-        ),
+        microphoneButton,
         // ActionBarSpeakerButton(
         //   isSpeakerOn: widget.isSpeakerOn,
         //   onSpeakerToggled: widget.locked
         //       ? null
         //       : (v) => widget.onToggleSpeaker(),
         // ),
-        ActionBarCameraSwitcherButton(
-          isCameraOn: widget.isCameraOn,
-          onToggle: widget.locked ? null : widget.onToggleCamera,
-          cameraPosition: widget.cameraPosition,
-          availableCameraDevices: _availableCameraDevices,
-          selectedCameraDeviceId:
-              widget.selectedCameraDeviceId ??
-              _availableCameraDevices.firstOrNull?.deviceId,
-          onCameraPositionChanged: widget.onCameraPositionChanged,
-          onCameraDeviceSelected: widget.onCameraDeviceSelected,
-        ),
+        cameraButton,
       ],
     );
   }

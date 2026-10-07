@@ -80,23 +80,20 @@ class _DockedSessionPanelsRail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chatOpen = ref.watch(sessionChatOpenProvider);
-    final promptsOpen = ref.watch(sessionPromptsOpenProvider);
-    final open = chatOpen || promptsOpen;
+    final isKeeper = ref.watch(isCurrentUserKeeperProvider);
+    final promptsOpen = isKeeper && ref.watch(sessionPromptsOpenProvider);
+    final Widget? panel = switch ((chatOpen, promptsOpen)) {
+      (true, _) => const SessionChatPanel(embedded: true),
+      (false, true) => Material(
+        color: AppTheme.cream,
+        elevation: 6,
+        shadowColor: const Color.fromRGBO(0, 0, 0, 0.16),
+        child: SessionPromptsModal(sessionSlug: sessionSlug, embedded: true),
+      ),
+      (false, false) => null,
+    };
 
-    return DockedSessionSidePanel(
-      open: open,
-      child: chatOpen
-          ? const SessionChatPanel(embedded: true)
-          : Material(
-              color: AppTheme.cream,
-              elevation: 6,
-              shadowColor: const Color.fromRGBO(0, 0, 0, 0.16),
-              child: SessionPromptsModal(
-                sessionSlug: sessionSlug,
-                embedded: true,
-              ),
-            ),
-    );
+    return DockedSessionSidePanel(open: panel != null, child: panel);
   }
 }
 

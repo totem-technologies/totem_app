@@ -23,8 +23,8 @@ class TestMobileAuthController extends MobileAuthController {
 
   final AuthState _initialState;
   final _authChanges = StreamController<AuthState>.broadcast();
-  Future<void> Function(String email)? onRequestPin;
-  Future<void> Function(String pin)? onVerifyPin;
+  AsyncValueSetter<String>? onRequestPin;
+  AsyncValueSetter<String>? onVerifyPin;
   int requestPinCalls = 0;
   int verifyPinCalls = 0;
 

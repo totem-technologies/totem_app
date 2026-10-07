@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
@@ -40,7 +41,7 @@ _ReorderTestHarness _createHarness({
   required List<String> participantIds,
   required RoomState roomState,
   required String speakingNow,
-  Future<void> Function(List<String>)? reorderHandler,
+  AsyncValueSetter<List<String>>? reorderHandler,
 }) {
   final session = MockSessionController();
   final keeper = MockSessionKeeperController();

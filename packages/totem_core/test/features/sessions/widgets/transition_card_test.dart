@@ -7,10 +7,7 @@ import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 
 void main() {
-  void autoSizeTest(
-    String description,
-    Future<void> Function(WidgetTester) body,
-  ) {
+  void autoSizeTest(String description, AsyncValueSetter<WidgetTester> body) {
     testWidgets(
       description,
       body,

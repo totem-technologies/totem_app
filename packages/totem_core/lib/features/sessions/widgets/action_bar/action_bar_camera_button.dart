@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
@@ -433,34 +434,45 @@ class _ActionBarCameraSwitcherButtonOverlayState
         ? null
         : buttonGlobalOffset - overlayOrigin;
 
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: _dismissOverlay,
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
+          unawaited(_dismissOverlay());
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _dismissOverlay,
+            ),
           ),
-        ),
-        CustomSingleChildLayout(
-          delegate: _CameraOverlayPositionDelegate(
-            preferredOffset: buttonOffset ?? Offset.zero,
-            overlaySize: overlaySize,
-          ),
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(bottom: 8.0),
-              child: Material(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(
-                  widget.isDesktopPicker ? 20 : 100,
+          CustomSingleChildLayout(
+            delegate: _CameraOverlayPositionDelegate(
+              preferredOffset: buttonOffset ?? Offset.zero,
+              overlaySize: overlaySize,
+            ),
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(bottom: 8.0),
+                child: Material(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(
+                    widget.isDesktopPicker ? 20 : 100,
+                  ),
+                  child: menuContent,
                 ),
-                child: menuContent,
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

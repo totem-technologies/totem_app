@@ -14,6 +14,7 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
 
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
 import 'package:totem_core/shared/widgets/chat/message_input_bar.dart';
@@ -155,6 +156,18 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(sessionChatOpenProvider, (previous, next) {
+      if (next || widget.embedded || !mounted) return;
+      final route = ModalRoute.of(context);
+      final navigator = Navigator.of(context);
+      if (route == null || !route.isActive) return;
+      if (route.isCurrent) {
+        navigator.pop();
+      } else {
+        navigator.removeRoute(route);
+      }
+    });
+
     // Scroll on arrival rather than on a length change during build: a thread
     // switch no longer counts as an arrival, and two threads of equal length
     // no longer mask one.
@@ -204,6 +217,12 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
 
     final isPrivateThread = threadTarget != null;
     final canCompose = isKeeper || isPrivateThread;
+    final autofocus = switch (defaultTargetPlatform) {
+      TargetPlatform.android ||
+      TargetPlatform.iOS ||
+      TargetPlatform.fuchsia => false,
+      _ => true,
+    };
     final keeperIsPresent =
         _participantFor(participants, keeperIdentity) != null;
     final recipientName = _participantFor(participants, threadTarget)?.name;
@@ -263,56 +282,54 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                       ),
                       Expanded(
                         child: _MessageScrollEdgeFade(
-                          child: SelectionArea(
-                            child: CustomScrollView(
-                              controller: scrollController,
-                              slivers: [
-                                if (threadMessages.isEmpty)
-                                  const SliverFillRemaining(
-                                    hasScrollBody: false,
-                                    child: Padding(
-                                      padding: _messageListPadding,
-                                      child: IgnorePointer(
-                                        child: Center(
-                                          child: Text(
-                                            'No messages yet',
-                                            style: TextStyle(
-                                              color: AppTheme.gray,
-                                            ),
-                                            textAlign: TextAlign.center,
+                          child: CustomScrollView(
+                            controller: scrollController,
+                            slivers: [
+                              if (threadMessages.isEmpty)
+                                const SliverFillRemaining(
+                                  hasScrollBody: false,
+                                  child: Padding(
+                                    padding: _messageListPadding,
+                                    child: IgnorePointer(
+                                      child: Center(
+                                        child: Text(
+                                          'No messages yet',
+                                          style: TextStyle(
+                                            color: AppTheme.gray,
                                           ),
+                                          textAlign: TextAlign.center,
                                         ),
                                       ),
                                     ),
-                                  )
-                                else
-                                  SliverPadding(
-                                    padding: _messageListPadding,
-                                    sliver: SliverList.separated(
-                                      itemCount: threadMessages.length,
-                                      separatorBuilder: (_, _) =>
-                                          const SizedBox(height: 14),
-                                      itemBuilder: (context, index) {
-                                        final message = threadMessages[index];
-                                        final isOwn =
-                                            message.sender ||
-                                            (localIdentity != null &&
-                                                message.participant?.identity ==
-                                                    localIdentity);
-                                        return MessageBubble(
-                                          text: message.message,
-                                          timestamp: timeFormat.format(
-                                            DateTime.fromMillisecondsSinceEpoch(
-                                              message.timestamp,
-                                            ).toLocal(),
-                                          ),
-                                          isOwn: isOwn,
-                                        );
-                                      },
-                                    ),
                                   ),
-                              ],
-                            ),
+                                )
+                              else
+                                SliverPadding(
+                                  padding: _messageListPadding,
+                                  sliver: SliverList.separated(
+                                    itemCount: threadMessages.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 14),
+                                    itemBuilder: (context, index) {
+                                      final message = threadMessages[index];
+                                      final isOwn =
+                                          message.sender ||
+                                          (localIdentity != null &&
+                                              message.participant?.identity ==
+                                                  localIdentity);
+                                      return MessageBubble(
+                                        text: message.message,
+                                        timestamp: timeFormat.format(
+                                          DateTime.fromMillisecondsSinceEpoch(
+                                            message.timestamp,
+                                          ).toLocal(),
+                                        ),
+                                        isOwn: isOwn,
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
@@ -379,12 +396,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                   participants: participants,
                   keeperIdentity: keeperIdentity,
                 ),
-                autofocus: switch (defaultTargetPlatform) {
-                  TargetPlatform.android ||
-                  TargetPlatform.iOS ||
-                  TargetPlatform.fuchsia => false,
-                  _ => true,
-                },
+                autofocus: autofocus,
                 onSend: send,
               ),
           ],

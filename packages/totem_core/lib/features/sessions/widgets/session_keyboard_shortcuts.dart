@@ -14,12 +14,18 @@ class SessionKeyboardShortcuts extends ConsumerStatefulWidget {
     required this.child,
     this.navigatorKey,
     this.enableEmojiReactions = true,
+    this.enableChatShortcut = true,
+    this.onToggleMicrophone,
+    this.onToggleCamera,
     super.key,
   });
 
   final Widget child;
   final GlobalKey<NavigatorState>? navigatorKey;
   final bool enableEmojiReactions;
+  final bool enableChatShortcut;
+  final AsyncCallback? onToggleMicrophone;
+  final AsyncCallback? onToggleCamera;
 
   @override
   ConsumerState<SessionKeyboardShortcuts> createState() =>
@@ -64,11 +70,35 @@ class _SessionKeyboardShortcutsState
     if (event is! KeyDownEvent) {
       return false;
     }
-    if (_hasModifierPressed() ||
-        _hasEditableFocus() ||
-        _hasBlockingNavigatorRoute() ||
-        ref.read(sessionChatOpenProvider)) {
+    if (_hasModifierPressed() || _hasEditableFocus()) return false;
+
+    if (widget.enableChatShortcut &&
+        event.logicalKey == ActionBarShortcut.chatKey) {
+      final chat = ref.read(sessionChatOpenProvider.notifier);
+      if (chat.open) {
+        chat.open = false;
+        return true;
+      }
+      if (_hasBlockingNavigatorRoute()) return false;
+      ref.read(sessionPromptsOpenProvider.notifier).open = false;
+      chat.open = true;
+      return true;
+    }
+
+    if (_hasBlockingNavigatorRoute() ||
+        (widget.enableChatShortcut && ref.read(sessionChatOpenProvider))) {
       return false;
+    }
+
+    if (event.logicalKey == ActionBarShortcut.microphoneKey &&
+        widget.onToggleMicrophone != null) {
+      unawaited(widget.onToggleMicrophone!());
+      return true;
+    }
+    if (event.logicalKey == ActionBarShortcut.cameraKey &&
+        widget.onToggleCamera != null) {
+      unawaited(widget.onToggleCamera!());
+      return true;
     }
 
     final session = ref.read(currentSessionProvider);

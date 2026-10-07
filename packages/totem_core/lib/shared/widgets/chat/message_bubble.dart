@@ -203,7 +203,9 @@ class _MessageBubbleState extends State<MessageBubble> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text.rich(
+                      // Keep selection scoped to one bubble. A chat-wide
+                      // SelectionArea recomposites Safari HTML video views.
+                      SelectableText.rich(
                         TextSpan(children: _messageSpans()),
                         textWidthBasis: TextWidthBasis.longestLine,
                       ),

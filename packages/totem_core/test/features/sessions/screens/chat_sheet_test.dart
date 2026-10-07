@@ -394,7 +394,8 @@ void main() {
       );
 
       check(tester.widgetList(find.byType(MessageBubble))).length.equals(2);
-      check(tester.widgetList(find.byType(SelectionArea))).length.equals(1);
+      check(tester.widgetList(find.byType(SelectionArea))).isEmpty();
+      check(tester.widgetList(find.byType(SelectableText))).length.equals(2);
       check(tester.widgetList(find.text('My message'))).length.equals(1);
       check(tester.widgetList(find.text('Their message'))).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(0);

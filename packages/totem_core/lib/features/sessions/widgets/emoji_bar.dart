@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
@@ -65,30 +66,41 @@ class EmojiBarOverlayState extends State<EmojiBarOverlay>
       return buttonOffset.dy - 70;
     }();
 
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: _dismiss,
-            behavior: HitTestBehavior.translucent,
-            child: Container(color: Colors.transparent),
-          ),
-        ),
-        PositionedDirectional(
-          top: topPosition,
-          start: 0,
-          end: 0,
-          child: FadeTransition(
-            opacity: _animationController,
-            child: EmojiBar(
-              onEmojiSelected: (emoji) {
-                widget.onEmojiSelected(emoji);
-              },
-              emojis: EmojiBar.defaultEmojis,
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
+          unawaited(_dismiss());
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _dismiss,
+              behavior: HitTestBehavior.translucent,
+              child: Container(color: Colors.transparent),
             ),
           ),
-        ),
-      ],
+          PositionedDirectional(
+            top: topPosition,
+            start: 0,
+            end: 0,
+            child: FadeTransition(
+              opacity: _animationController,
+              child: EmojiBar(
+                onEmojiSelected: (emoji) {
+                  widget.onEmojiSelected(emoji);
+                },
+                emojis: EmojiBar.defaultEmojis,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

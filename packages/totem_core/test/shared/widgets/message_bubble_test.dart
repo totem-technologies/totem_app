@@ -60,9 +60,11 @@ void main() {
       ),
     );
 
-    final messageText = tester.widget<RichText>(find.byType(RichText).first);
+    final messageText = tester.widget<SelectableText>(
+      find.byType(SelectableText),
+    );
     final actionableSpans = _textSpans(
-      messageText.text,
+      messageText.textSpan!,
     ).where((span) => span.recognizer is TapGestureRecognizer).toList();
 
     check(

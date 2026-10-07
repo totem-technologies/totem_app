@@ -83,12 +83,15 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
 
     if (_chatSheetOpen) return;
 
-    ref.read(sessionChatOpenProvider.notifier).open = false;
     setState(() => _chatSheetOpen = true);
+    ref.read(sessionChatOpenProvider.notifier).open = true;
     try {
       await showSessionChat(context);
     } finally {
-      if (mounted) setState(() => _chatSheetOpen = false);
+      if (mounted) {
+        setState(() => _chatSheetOpen = false);
+        ref.read(sessionChatOpenProvider.notifier).open = false;
+      }
     }
   }
 
@@ -103,6 +106,11 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     final hasUnreadThreads = ref.watch(
       sessionChatUnreadThreadsProvider.select((threads) => threads.isNotEmpty),
     );
+
+    ref.listen(sessionChatOpenProvider, (previous, next) {
+      if (!next || shouldDockSessionChat(context) || _chatSheetOpen) return;
+      unawaited(_openChat(fromUnread: false));
+    });
 
     ref.listen(lastSessionMessageProvider, (previous, next) {
       if (next == null || identical(previous, next)) return;
@@ -124,7 +132,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       ref.read(sessionChatUnreadThreadsProvider.notifier).markUnread(thread);
     });
     return ActionBarTooltip(
-      message: 'Chat',
+      message: '${isChatOpen ? 'Close' : 'Open'} chat (C)',
       child: ActionBarButton(
         semanticsLabel: 'Chat',
         role: ActionBarButtonRole.sheet(open: isChatOpen),

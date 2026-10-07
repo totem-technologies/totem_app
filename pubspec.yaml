@@ -12,3 +12,13 @@ dev_dependencies:
   meta: any
   flutter_test:
     sdk: flutter
+
+dependency_overrides:
+  livekit_client:
+    git:
+      url: https://github.com/totem-technologies/client-sdk-flutter
+      ref: fix/combined-stats-and-renderer
+  flutter_webrtc:
+    git:
+      url: https://github.com/totem-technologies/flutter-webrtc
+      ref: fix/web-texture-renderer-and-video-view-lifecycle

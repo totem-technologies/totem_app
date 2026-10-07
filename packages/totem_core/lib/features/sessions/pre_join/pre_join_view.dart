@@ -6,6 +6,7 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
@@ -50,19 +51,24 @@ class PreJoinView extends StatelessWidget {
         ),
       ),
     );
-    final actionBar = PrejoinActionBar(
-      locked: locked,
-      previewAudioTrack: mediaState.microphone.track,
-      isMicOn: preferences.isMicOn,
-      onToggleMic: onToggleMicrophone,
-      isSpeakerOn: preferences.isSpeakerOn,
-      onToggleSpeaker: onToggleSpeaker,
-      isCameraOn: preferences.isCameraOn,
-      onToggleCamera: onToggleCamera,
-      cameraPosition: preferences.cameraOptions.cameraPosition,
-      selectedCameraDeviceId: preferences.cameraOptions.deviceId,
-      onCameraPositionChanged: onCameraPositionChanged,
-      onCameraDeviceSelected: onCameraDeviceSelected,
+    final actionBar = SessionKeyboardShortcuts(
+      enableChatShortcut: false,
+      onToggleMicrophone: locked ? null : onToggleMicrophone,
+      onToggleCamera: locked ? null : onToggleCamera,
+      child: PrejoinActionBar(
+        locked: locked,
+        previewAudioTrack: mediaState.microphone.track,
+        isMicOn: preferences.isMicOn,
+        onToggleMic: onToggleMicrophone,
+        isSpeakerOn: preferences.isSpeakerOn,
+        onToggleSpeaker: onToggleSpeaker,
+        isCameraOn: preferences.isCameraOn,
+        onToggleCamera: onToggleCamera,
+        cameraPosition: preferences.cameraOptions.cameraPosition,
+        selectedCameraDeviceId: preferences.cameraOptions.deviceId,
+        onCameraPositionChanged: onCameraPositionChanged,
+        onCameraDeviceSelected: onCameraDeviceSelected,
+      ),
     );
     return RoomBackground(
       overlayStyle: SystemUiOverlayStyle.dark,
