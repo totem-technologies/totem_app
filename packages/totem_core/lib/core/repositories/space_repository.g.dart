@@ -524,7 +524,7 @@ final class GetRecommendedSessionsProvider
         $FutureProvider<List<SessionDetailSchema>> {
   GetRecommendedSessionsProvider._({
     required GetRecommendedSessionsFamily super.from,
-    required Set<SpaceCategories>? super.argument,
+    required ({Set<SpaceCategories>? topics, int? limit}) super.argument,
   }) : super(
          retry: null,
          name: r'getRecommendedSessionsProvider',
@@ -540,7 +540,7 @@ final class GetRecommendedSessionsProvider
   String toString() {
     return r'getRecommendedSessionsProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -551,8 +551,13 @@ final class GetRecommendedSessionsProvider
 
   @override
   FutureOr<List<SessionDetailSchema>> create(Ref ref) {
-    final argument = this.argument as Set<SpaceCategories>?;
-    return getRecommendedSessions(ref, argument);
+    final argument =
+        this.argument as ({Set<SpaceCategories>? topics, int? limit});
+    return getRecommendedSessions(
+      ref,
+      topics: argument.topics,
+      limit: argument.limit,
+    );
   }
 
   @override
@@ -568,13 +573,13 @@ final class GetRecommendedSessionsProvider
 }
 
 String _$getRecommendedSessionsHash() =>
-    r'a87a738df5ab6a6c9d075c4d1d74fbef7d35d032';
+    r'a1a117c6280c8a9d01dae996ca1b29da4a07c26c';
 
 final class GetRecommendedSessionsFamily extends $Family
     with
         $FunctionalFamilyOverride<
           FutureOr<List<SessionDetailSchema>>,
-          Set<SpaceCategories>?
+          ({Set<SpaceCategories>? topics, int? limit})
         > {
   GetRecommendedSessionsFamily._()
     : super(
@@ -585,8 +590,13 @@ final class GetRecommendedSessionsFamily extends $Family
         isAutoDispose: true,
       );
 
-  GetRecommendedSessionsProvider call([Set<SpaceCategories>? topics]) =>
-      GetRecommendedSessionsProvider._(argument: topics, from: this);
+  GetRecommendedSessionsProvider call({
+    Set<SpaceCategories>? topics,
+    int? limit,
+  }) => GetRecommendedSessionsProvider._(
+    argument: (topics: topics, limit: limit),
+    from: this,
+  );
 
   @override
   String toString() => r'getRecommendedSessionsProvider';

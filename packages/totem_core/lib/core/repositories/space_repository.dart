@@ -186,9 +186,10 @@ enum SpaceCategories {
 
 @riverpod
 Future<List<SessionDetailSchema>> getRecommendedSessions(
-  Ref ref, [
+  Ref ref, {
   Set<SpaceCategories>? topics,
-]) {
+  int? limit,
+}) {
   final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<List<SessionDetailSchema>>(
     apiCall: () =>

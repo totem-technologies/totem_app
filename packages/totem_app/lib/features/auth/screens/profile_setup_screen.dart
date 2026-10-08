@@ -605,7 +605,7 @@ class _SuggestionsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final recommended = ref.watch(
-      getRecommendedSessionsProvider(selectedTopics),
+      getRecommendedSessionsProvider(topics: selectedTopics),
     );
 
     return CardScreen(
