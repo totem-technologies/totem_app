@@ -614,7 +614,7 @@ class _SuggestionsTab extends ConsumerWidget {
         Semantics(
           header: true,
           child: Text(
-            'Suggested Sessions',
+            'Suggested sessions',
             style: theme.textTheme.headlineSmall,
             textAlign: TextAlign.center,
           ),

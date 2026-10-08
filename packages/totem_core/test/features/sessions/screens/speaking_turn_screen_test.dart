@@ -55,7 +55,7 @@ class _TestSessionCuesService extends SessionCuesService {
 SessionDetailSchema _createTestSession() {
   return SessionDetailSchema(
     slug: 'test-session',
-    title: 'Test Session',
+    title: 'Test session',
     space: MobileSpaceDetailSchema(
       slug: 'test-space',
       title: 'Test Space',

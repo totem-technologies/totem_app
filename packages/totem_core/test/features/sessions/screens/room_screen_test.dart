@@ -53,7 +53,7 @@ SessionDetailSchema _createSessionEvent({
 }) {
   return SessionDetailSchema(
     slug: slug,
-    title: 'Test Session',
+    title: 'Test session',
     space: MobileSpaceDetailSchema(
       slug: 'test-space',
       title: 'Test Space',

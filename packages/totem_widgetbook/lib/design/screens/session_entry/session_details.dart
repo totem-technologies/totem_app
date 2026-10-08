@@ -243,7 +243,7 @@ class SessionDetails extends StatelessWidget {
         ),
       ),
       DetailsPhase.inProgress => (
-        'This Session is already in progress.',
+        'This session is already in progress.',
         const TextSpan(text: 'Join and your Keeper will bring you in.'),
       ),
     };
@@ -296,7 +296,7 @@ class SessionDetails extends StatelessWidget {
                     child: Button(
                       size: ButtonSize.compact,
                       onPressed: canJoin ? onJoin ?? () {} : null,
-                      child: const Text('Join Session'),
+                      child: const Text('Join session'),
                     ),
                   ),
                 ],
@@ -402,7 +402,7 @@ class SessionDetails extends StatelessWidget {
           Semantics(
             header: true,
             child: Text(
-              'About this Session',
+              'About this session',
               style: TotemText.raw(
                 size: 14,
                 weight: FontWeight.w600,

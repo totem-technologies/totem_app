@@ -26,7 +26,7 @@ final defaults = _Defaults(
 final $Primary = _Story(
   designLink: figma('3734:10292'),
   args: _Args(
-    child: Arg.fixed(const Text('Join the Next Session')),
+    child: Arg.fixed(const Text('Join the Next session')),
     onPressed: Arg.fixed(_noop),
     block: BoolArg(true),
   ),
@@ -63,7 +63,7 @@ final $Text = _Story(
 /// No `onPressed`: the join window hasn't opened yet.
 final $Disabled = _Story(
   args: _Args(
-    child: Arg.fixed(const Text('Join Session')),
+    child: Arg.fixed(const Text('Join session')),
     block: BoolArg(true),
   ),
 );

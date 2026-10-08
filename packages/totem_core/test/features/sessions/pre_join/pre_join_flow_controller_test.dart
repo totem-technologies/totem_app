@@ -21,7 +21,7 @@ const _slug = 'pre-join-flow-test';
 
 SessionDetailSchema _event() => SessionDetailSchema(
   slug: _slug,
-  title: 'Test Session',
+  title: 'Test session',
   space: MobileSpaceDetailSchema(
     slug: 'test-space',
     title: 'Test Space',

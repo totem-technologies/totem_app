@@ -145,7 +145,7 @@ class MoreOptions extends ConsumerWidget {
               },
             ),
             MoreOptionsTile<void>(
-              title: 'Leave Session',
+              title: 'Leave session',
               icon: TotemIcons.leaveCall,
               type: MoreOptionsTileType.destructive,
               onTap: () async {
@@ -247,7 +247,7 @@ class MoreOptions extends ConsumerWidget {
                 ),
               if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
                 MoreOptionsTile<void>(
-                  title: 'Start Session',
+                  title: 'Start session',
                   icon: TotemIcons.arrowForward,
                   type: MoreOptionsTileType.destructive,
                   onTap: () {
@@ -257,7 +257,7 @@ class MoreOptions extends ConsumerWidget {
                 )
               else if (state.roomState.status != mobile_api.RoomStatus.ended)
                 MoreOptionsTile<void>(
-                  title: 'End Session',
+                  title: 'End session',
                   icon: TotemIcons.cameraOff,
                   type: MoreOptionsTileType.destructive,
                   onTap: state.roomState.status == mobile_api.RoomStatus.active
@@ -355,7 +355,7 @@ class MoreOptions extends ConsumerWidget {
             );
             return ConfirmationDialog(
               content: 'Are you sure you want to leave the session?',
-              confirmButtonText: 'Leave Session',
+              confirmButtonText: 'Leave session',
               onConfirm: () async {
                 TotemRouter.instance.setTabCloseConfirmationEnabled(false);
                 Navigator.of(context).pop(true);
@@ -373,7 +373,7 @@ class MoreOptions extends ConsumerWidget {
                       if (context.mounted) Navigator.of(context).pop(true);
                     },
                     type: ConfirmationDialogType.destructive,
-                    child: const Text('End Session and Leave'),
+                    child: const Text('End session and Leave'),
                   ),
               ],
             );
@@ -443,9 +443,9 @@ class MoreOptions extends ConsumerWidget {
       context: context,
       useRootNavigator: false,
       builder: (context) => ConfirmationDialog(
-        title: 'Start Session',
+        title: 'Start session',
         content: 'Are you sure you want to start the session?',
-        confirmButtonText: 'Start Session',
+        confirmButtonText: 'Start session',
         type: ConfirmationDialogType.standard,
         onConfirm: () async {
           final success = await session.keeper.startSession();
@@ -464,9 +464,9 @@ class MoreOptions extends ConsumerWidget {
       useRootNavigator: false,
       builder: (context) {
         return ConfirmationDialog(
-          title: 'End Session',
+          title: 'End session',
           content: 'Are you sure you want to end the session?',
-          confirmButtonText: 'End Session',
+          confirmButtonText: 'End session',
           onConfirm: () async {
             await _endSession(context, session);
             if (context.mounted) Navigator.of(context).pop();

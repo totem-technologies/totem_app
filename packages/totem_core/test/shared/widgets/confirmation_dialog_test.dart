@@ -57,7 +57,7 @@ void main() {
       await pumpDialog(
         tester,
         dialog: ConfirmationDialog(
-          title: 'Start Session',
+          title: 'Start session',
           content: 'Ready to begin?',
           confirmButtonText: 'Start',
           onConfirm: () async {
@@ -69,7 +69,7 @@ void main() {
       await tester.tap(find.text('Start'));
       await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.text('Start Session'))).length.equals(1);
+      check(tester.widgetList(find.text('Start session'))).length.equals(1);
       check(callCount).equals(1);
     });
 

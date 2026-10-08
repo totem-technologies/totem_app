@@ -244,16 +244,16 @@ class _SessionEntryState extends State<SessionEntry> {
     final late = widget.phase == EntryPhase.inProgress;
     return switch (widget.status) {
       EntryStatus.browsing when early =>
-        "You're all set for $_sessionName. Join Session is available at $_joinTime.",
-      EntryStatus.browsing => 'Join Session is available.',
+        "You're all set for $_sessionName. Join session is available at $_joinTime.",
+      EntryStatus.browsing => 'Join session is available.',
       EntryStatus.lobby when late =>
-        "This Session is already in progress. You're waiting to be admitted.",
+        "This session is already in progress. You're waiting to be admitted.",
       EntryStatus.lobby =>
         "We're getting the room ready. You're waiting to be admitted.",
       EntryStatus.waitingRoom => "You're in the waiting room.",
-      EntryStatus.inSession => "You're in the Session.",
+      EntryStatus.inSession => "You're in the session.",
       EntryStatus.declined =>
-        'This Session is no longer available for admission.',
+        'This session is no longer available for admission.',
     };
   }
 
@@ -975,7 +975,7 @@ class _Room extends StatelessWidget {
 
     return Semantics(
       container: true,
-      label: 'Session',
+      label: 'session',
       child: ColoredBox(
         color: TotemColors.coreSlate,
         child: DefaultTextStyle.merge(
@@ -1223,12 +1223,12 @@ class _Orientation extends StatelessWidget {
       key: ValueKey(wide),
       open: open,
       kind: wide ? LayerKind.modal : LayerKind.sheet,
-      label: "You're joining a Session already in progress",
+      label: "You're joining a session already in progress",
       scrim: wide ? LayerScrim.dim : LayerScrim.soft,
       onDismiss: onDismiss,
       child: _Notice(
         kicker: 'Joining',
-        title: "You're joining a Session already in progress.",
+        title: "You're joining a session already in progress.",
         onDone: onDismiss,
         children: [
           Text(
@@ -1578,8 +1578,8 @@ class _DeclinedState extends State<_Declined> {
         _signedUp
             ? "You're signed up"
             : next
-            ? 'Join the Next Session'
-            : 'Sign up for this Session',
+            ? 'Join the next session'
+            : 'Sign up for this session',
       ),
     );
 
@@ -1607,7 +1607,7 @@ class _DeclinedState extends State<_Declined> {
                       Semantics(
                         header: true,
                         child: Text(
-                          "We're sorry, this Session is no longer available for admission, "
+                          "We're sorry, this session is no longer available for admission, "
                           "but we'd love to see you soon.",
                           style: _title(context),
                         ),

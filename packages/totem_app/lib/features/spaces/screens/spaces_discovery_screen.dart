@@ -280,7 +280,7 @@ class _SpacesDiscoveryScreenState extends ConsumerState<SpacesDiscoveryScreen> {
 
   Widget _buildEmptyFilterResult(String? category, bool isMySessionsSelected) {
     final filterName = isMySessionsSelected
-        ? 'My Sessions'
+        ? 'My sessions'
         : (category ?? 'All');
 
     final hintMessage = isMySessionsSelected

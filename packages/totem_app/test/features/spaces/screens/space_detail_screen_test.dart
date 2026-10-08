@@ -121,13 +121,13 @@ void main() {
     final existingSpace = _space('existing-space', 'Existing Space');
     final newSession = _session(
       slug: 'new-session',
-      title: 'New Session',
+      title: 'New session',
       space: newSpace,
       attending: false,
     );
     final existingSession = _session(
       slug: 'existing-session',
-      title: 'Existing Session',
+      title: 'Existing session',
       space: existingSpace,
       attending: true,
     );
@@ -167,9 +167,9 @@ void main() {
     check(
       tester.widgetList(find.text('You have a session at this time.')),
     ).length.equals(1);
-    check(tester.widgetList(find.text('Existing Session'))).length.equals(1);
+    check(tester.widgetList(find.text('Existing session'))).length.equals(1);
     check(
-      tester.widgetList(find.text('New Session')),
+      tester.widgetList(find.text('New session')),
     ).length.isGreaterOrEqual(1);
     check(tester.widgetList(find.text('Switch Sessions'))).length.equals(1);
   });
@@ -190,7 +190,7 @@ void main() {
     final space = _space('new-space', 'New Space');
     final session = _session(
       slug: 'new-session',
-      title: 'New Session',
+      title: 'New session',
       space: space,
       attending: false,
     );
@@ -262,7 +262,7 @@ void main() {
       slug: 'upcoming-session',
       start: DateTime.now().add(const Duration(days: 14)),
       link: '/sessions/upcoming-session',
-      title: 'Upcoming Session',
+      title: 'Upcoming session',
       seatsLeft: 4,
       duration: 60,
       meetingProvider: MeetingProviderEnum.livekit,
@@ -279,13 +279,13 @@ void main() {
     );
     final currentSession = _session(
       slug: 'current-session',
-      title: 'Current Session',
+      title: 'Current session',
       space: space,
       attending: true,
     );
     final refreshedCurrentSession = _session(
       slug: 'current-session',
-      title: 'Current Session',
+      title: 'Current session',
       space: space,
       attending: false,
     );
@@ -342,11 +342,11 @@ void main() {
     ).length.equals(1);
 
     await tester.scrollUntilVisible(
-      find.text('Upcoming Session'),
+      find.text('Upcoming session'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Upcoming Session'));
+    await tester.tap(find.text('Upcoming session'));
     await tester.pumpAndSettle();
     check(tester.widgetList(find.text('Other session'))).length.equals(1);
 

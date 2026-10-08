@@ -329,7 +329,7 @@ class ReceiveTransitionCard extends StatelessWidget {
 class StartTransitionCard extends StatelessWidget {
   const StartTransitionCard({
     required this.onActionPressed,
-    this.actionText = 'Start Session',
+    this.actionText = 'Start session',
     this.keepActionLoadingOnSuccess = false,
     this.isSliderLoading,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),

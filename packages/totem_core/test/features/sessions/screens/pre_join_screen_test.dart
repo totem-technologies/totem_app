@@ -122,7 +122,7 @@ class _PendingSessionController extends SessionController {
 
 SessionDetailSchema _event() => SessionDetailSchema(
   slug: _slug,
-  title: 'Test Session',
+  title: 'Test session',
   space: MobileSpaceDetailSchema(
     slug: 'space',
     title: 'Space',
@@ -367,7 +367,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     check(
-      tester.widgetList(find.text("You're Already in This Session")),
+      tester.widgetList(find.text("You're already in this session")),
     ).length.equals(0);
 
     final join = tester.widget<ActionSliderButton>(
@@ -378,7 +378,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     check(
-      tester.widgetList(find.text("You're Already in This Session")),
+      tester.widgetList(find.text("You're already in this session")),
     ).length.equals(1);
     check(tester.widgetList(find.text('Join Here'))).length.equals(1);
 
@@ -388,7 +388,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     check(
-      tester.widgetList(find.text("You're Already in This Session")),
+      tester.widgetList(find.text("You're already in this session")),
     ).length.equals(0);
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
   });
