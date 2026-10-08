@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:checks/checks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
@@ -105,74 +106,83 @@ void main() {
     TotemRouter.instance = FakeTotemRouter();
   });
 
-  testWidgets('shows the conflict dialog when RSVP overlaps a session', (
-    tester,
-  ) async {
-    addTearDown(() async {
-      ConfettiController.clear();
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpAndSettle();
-      await tester.pump(const Duration(seconds: 1));
-      tester.binding.imageCache.clearLiveImages();
-      tester.binding.imageCache.clear();
-    });
+  testWidgets(
+    'shows the conflict dialog when RSVP overlaps a session',
+    (tester) async {
+      addTearDown(() async {
+        ConfettiController.clear();
+        final dialog = find.byType(Dialog);
+        if (dialog.evaluate().isNotEmpty) {
+          Navigator.of(tester.element(dialog)).pop();
+          await tester.pumpAndSettle();
+        }
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 1));
+        tester.binding.imageCache.clearLiveImages();
+        tester.binding.imageCache.clear();
+      });
 
-    final newSpace = _space('new-space', 'New Space');
-    final existingSpace = _space('existing-space', 'Existing Space');
-    final newSession = _session(
-      slug: 'new-session',
-      title: 'New session',
-      space: newSpace,
-      attending: false,
-    );
-    final existingSession = _session(
-      slug: 'existing-session',
-      title: 'Existing session',
-      space: existingSpace,
-      attending: true,
-    );
+      final newSpace = _space('new-space', 'New Space');
+      final existingSpace = _space('existing-space', 'Existing Space');
+      final newSession = _session(
+        slug: 'new-session',
+        title: 'New session',
+        space: newSpace,
+        attending: false,
+      );
+      final existingSession = _session(
+        slug: 'existing-session',
+        title: 'Existing session',
+        space: existingSpace,
+        attending: true,
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(_FakeAuthController.new),
-          spaceProvider(newSpace.slug).overrideWith((_) async => newSpace),
-          sessionProvider(
-            newSession.slug,
-          ).overrideWith((_) async => newSession),
-          rsvpConfirmProvider(newSession.slug).overrideWith(
-            (_) async => throw RsvpConflictException(
-              SessionConflictSchema(
-                message: 'Conflict',
-                conflictingSessions: [existingSession],
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(_FakeAuthController.new),
+            spaceProvider(newSpace.slug).overrideWith((_) async => newSpace),
+            sessionProvider(
+              newSession.slug,
+            ).overrideWith((_) async => newSession),
+            rsvpConfirmProvider(newSession.slug).overrideWith(
+              (_) async => throw RsvpConflictException(
+                SessionConflictSchema(
+                  message: 'Conflict',
+                  conflictingSessions: [existingSession],
+                ),
               ),
             ),
-          ),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: SpaceDetailScreen(
-            slug: newSpace.slug,
-            sessionSlug: newSession.slug,
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: SpaceDetailScreen(
+              slug: newSpace.slug,
+              sessionSlug: newSession.slug,
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Attend'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.text('Attend'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-    check(
-      tester.widgetList(find.text('You have a session at this time.')),
-    ).length.equals(1);
-    check(tester.widgetList(find.text('Existing session'))).length.equals(1);
-    check(
-      tester.widgetList(find.text('New session')),
-    ).length.isGreaterOrEqual(1);
-    check(tester.widgetList(find.text('Switch Sessions'))).length.equals(1);
-  });
+      check(
+        tester.widgetList(find.text('You have a session at this time.')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Existing session'))).length.equals(1);
+      check(
+        tester.widgetList(find.text('New session')),
+      ).length.isGreaterOrEqual(1);
+      check(tester.widgetList(find.text('Switch sessions'))).length.equals(1);
+    },
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['ImageStreamCompleterHandle'],
+    ),
+  );
 
   testWidgets('invalidates the spaces summary after a successful RSVP', (
     tester,

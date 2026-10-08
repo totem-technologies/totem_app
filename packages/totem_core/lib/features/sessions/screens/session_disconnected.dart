@@ -128,6 +128,7 @@ class SessionDisconnectedScreen extends ConsumerStatefulWidget {
 class _SessionDisconnectedScreenState
     extends ConsumerState<SessionDisconnectedScreen> {
   Timer? _confettiTimer;
+  Timer? _spacesSummaryRefreshTimer;
 
   @override
   void initState() {
@@ -136,8 +137,8 @@ class _SessionDisconnectedScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (ref.context.mounted) ref.invalidate(spacesSummaryProvider);
     });
-    Future.delayed(const Duration(milliseconds: 2750), () {
-      if (ref.context.mounted) ref.invalidate(spacesSummaryProvider);
+    _spacesSummaryRefreshTimer = Timer(const Duration(milliseconds: 2750), () {
+      if (mounted) ref.invalidate(spacesSummaryProvider);
     });
   }
 
@@ -150,6 +151,7 @@ class _SessionDisconnectedScreenState
   @override
   void dispose() {
     _confettiTimer?.cancel();
+    _spacesSummaryRefreshTimer?.cancel();
     super.dispose();
   }
 

@@ -5,10 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
+import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/permissions_browser.dart'
     as browser;
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
 Future<void> showBackgroundActivityDialog(BuildContext context) async {
@@ -232,17 +232,10 @@ class _WebPermissionsDeniedDialog extends StatefulWidget {
 
 class _WebPermissionsDeniedDialogState
     extends State<_WebPermissionsDeniedDialog> {
-  bool _checking = false;
-
-  Future<void> _checkAgain() async {
-    setState(() => _checking = true);
-    try {
-      if (await widget.onCheckAgain() && mounted) {
-        Navigator.of(context).pop(true);
-      }
-    } finally {
-      if (mounted) setState(() => _checking = false);
-    }
+  Future<bool> _checkAgain() async {
+    final granted = await widget.onCheckAgain();
+    if (granted && mounted) Navigator.of(context).pop(true);
+    return granted;
   }
 
   @override
@@ -299,22 +292,9 @@ class _WebPermissionsDeniedDialogState
                 textAlign: TextAlign.center,
               ),
               Center(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 40,
-                      vertical: 10,
-                    ),
-                  ),
-                  onPressed: _checking ? null : _checkAgain,
-                  child: _checking
-                      ? const LoadingIndicator(size: 20)
-                      : const Text('Check again'),
+                child: ActionButton(
+                  onActionCompleted: _checkAgain,
+                  text: 'Check again',
                 ),
               ),
             ],

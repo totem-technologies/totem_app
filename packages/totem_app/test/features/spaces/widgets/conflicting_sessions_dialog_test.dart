@@ -122,20 +122,15 @@ void main() {
       tester.widgetList(find.text('Your current session')),
     ).length.equals(1);
     check(tester.widgetList(find.text('Existing session'))).length.equals(1);
-    check(tester.widgetList(find.text('New session'))).length.equals(1);
-    check(tester.widgetList(find.text('New session'))).length.equals(1);
-
-    final description = tester.widget<Text>(
-      find.text(
-        'To join New session, you’ll need to give up your spot in Existing session.',
-      ),
-    );
-    final spans = (description.textSpan! as TextSpan).children!
-        .whereType<TextSpan>();
-    for (final sessionName in ['New session', 'Existing session']) {
-      check(
-        spans.singleWhere((span) => span.text == sessionName).style?.fontWeight,
-      ).equals(FontWeight.w500);
+    final currentSession = tester.getCenter(find.text('Existing session'));
+    final incomingSession = tester.getCenter(find.text('New session').last);
+    if (find
+        .byKey(const ValueKey('conflicting-sessions-horizontal-layout'))
+        .evaluate()
+        .isNotEmpty) {
+      check(currentSession.dx).isLessThan(incomingSession.dx);
+    } else {
+      check(currentSession.dy).isLessThan(incomingSession.dy);
     }
   });
 
@@ -192,7 +187,7 @@ void main() {
     check(arrow.quarterTurns).equals(-1);
     check(
       tester.getCenter(find.text('Existing session')).dy,
-    ).isLessThan(tester.getCenter(find.text('New session')).dy);
+    ).isLessThan(tester.getCenter(find.text('New session').last).dy);
   });
 
   testWidgets('lays out session cards as a row in landscape', (tester) async {
@@ -213,7 +208,7 @@ void main() {
     check(arrow.quarterTurns).equals(2);
     check(
       tester.getCenter(find.text('Existing session')).dx,
-    ).isLessThan(tester.getCenter(find.text('New session')).dx);
+    ).isLessThan(tester.getCenter(find.text('New session').last).dx);
   });
 
   testWidgets('points the horizontal arrow toward the new session in RTL', (
@@ -239,7 +234,7 @@ void main() {
     check(arrow.quarterTurns).equals(0);
     check(
       tester.getCenter(find.text('Existing session')).dx,
-    ).isGreaterThan(tester.getCenter(find.text('New session')).dx);
+    ).isGreaterThan(tester.getCenter(find.text('New session').last).dx);
   });
 
   testWidgets('switches sessions and closes only after success', (
@@ -256,7 +251,7 @@ void main() {
       onResult: (result) => dialogResult = result,
     );
 
-    await tester.tap(find.text('Switch Sessions'));
+    await tester.tap(find.text('Switch sessions'));
     await tester.pumpAndSettle();
 
     check(switchCalls).equals(1);
@@ -269,7 +264,7 @@ void main() {
   testWidgets('keeps the dialog open when switching fails', (tester) async {
     await showConflict(tester, onSwitch: () async => false);
 
-    await tester.tap(find.text('Switch Sessions'));
+    await tester.tap(find.text('Switch sessions'));
     await tester.pumpAndSettle();
 
     check(

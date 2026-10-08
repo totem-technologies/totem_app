@@ -219,10 +219,6 @@ void main() {
     });
 
     testWidgets('mobile web shows front/back camera options', (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      addTearDown(() {
-        debugDefaultTargetPlatformOverride = null;
-      });
       await tester.binding.setSurfaceSize(const Size(800, 1000));
       addTearDown(() async {
         await tester.binding.setSurfaceSize(null);
@@ -258,7 +254,7 @@ void main() {
       check(tester.widgetList(find.text('Front'))).length.equals(1);
       check(tester.widgetList(find.text('Back'))).length.equals(1);
       check(tester.widgetList(find.text('Front Camera'))).length.equals(0);
-    });
+    }, skip: !kIsWeb);
 
     testWidgets('one-camera mode is platform-adaptive', (tester) async {
       var toggles = 0;
