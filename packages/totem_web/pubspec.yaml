@@ -1,7 +1,7 @@
 name: totem_web
 description: "Guided introspection groups."
 publish_to: "none"
-version: 0.0.86+86
+version: 0.0.87+87
 resolution: workspace
 
 environment:
