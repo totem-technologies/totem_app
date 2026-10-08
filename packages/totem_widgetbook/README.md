@@ -53,7 +53,8 @@ Components/
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
   Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard
 Screens/
-  session/:slug   SessionEntry (12 states)
+  session/:slug        SessionEntry (12 states)
+  session/landscape    SessionLandscape
 ```
 
 ### Rules
