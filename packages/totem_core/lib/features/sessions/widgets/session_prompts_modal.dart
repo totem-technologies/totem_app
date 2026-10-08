@@ -7,8 +7,14 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_core/shared/widgets/empty_indicator.dart';
+import 'package:totem_core/shared/widgets/error_screen.dart';
+import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
+
+// TODO(prompts): Improve overall error handling.
+//                Display feedback to users when an error occurs.
 
 const _maxPromptLength = 1000;
 
@@ -117,22 +123,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
     );
     final localPrompts = prompts.prompts;
     final saving = prompts.mutating;
-    if (prompts.snapshot == null) {
-      return Center(
-        child: prompts.loading
-            ? const CircularProgressIndicator()
-            : TextButton(
-                onPressed: () => ref
-                    .read(
-                      sessionPromptsControllerProvider(
-                        widget.sessionSlug,
-                      ).notifier,
-                    )
-                    .refresh(),
-                child: const Text('Retry loading prompts'),
-              ),
-      );
-    }
+
     ref.listen<SessionPromptsState>(
       sessionPromptsControllerProvider(widget.sessionSlug),
       (previous, next) {
@@ -206,7 +197,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Discussion Prompts',
+                            'Session Prompts',
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
@@ -215,7 +206,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Drag prompts to set the discussion order.',
+                            'Drag prompts to set the prompts order.',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: Colors.black,
                             ),
@@ -274,15 +265,33 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                           ),
                         ),
                       ),
-                    if (localPrompts.isEmpty)
+                    if (prompts.snapshot == null)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: prompts.loading
+                              ? const LoadingIndicator(
+                                  semanticsLabel: 'Loading prompts',
+                                )
+                              : ErrorScreen(
+                                  hideAppBar: true,
+                                  showHomeButton: false,
+                                  title: 'Failed to load the prompts',
+                                  onRetry: () => ref
+                                      .read(
+                                        sessionPromptsControllerProvider(
+                                          widget.sessionSlug,
+                                        ).notifier,
+                                      )
+                                      .refresh(),
+                                ),
+                        ),
+                      )
+                    else if (localPrompts.isEmpty)
                       const SliverFillRemaining(
                         hasScrollBody: false,
                         child: Center(
-                          child: Text(
-                            'No prompts yet',
-                            style: TextStyle(color: AppTheme.gray),
-                            textAlign: TextAlign.center,
-                          ),
+                          child: EmptyIndicator(text: 'No prompts yet'),
                         ),
                       )
                     else
@@ -396,7 +405,7 @@ class _PromptTile extends StatelessWidget {
                     dimension: 40,
                     child: Center(
                       child: TotemIcon(
-                        TotemIcons.reorderParticipants,
+                        TotemIcons.reorder,
                         size: 18,
                         color: Colors.black,
                       ),

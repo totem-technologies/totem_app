@@ -78,9 +78,12 @@ class _ErrorScreenState extends State<ErrorScreen> {
                 ),
               ),
               Text(
-                widget.error != null
-                    ? ErrorHandler.getUserFriendlyErrorMessage(widget.error!)
-                    : 'Oops! Something went wrong.',
+                widget.title ??
+                    (widget.error != null
+                        ? ErrorHandler.getUserFriendlyErrorMessage(
+                            widget.error!,
+                          )
+                        : 'Oops! Something went wrong.'),
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,

@@ -167,7 +167,7 @@ class MoreOptions extends ConsumerWidget {
               ),
               MoreOptionsTile<void>(
                 title: 'Reorder Participants',
-                icon: TotemIcons.reorderParticipants,
+                icon: TotemIcons.reorder,
                 onTap: () {
                   Navigator.of(context).pop();
                   showParticipantReorderModals(context);
