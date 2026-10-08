@@ -195,6 +195,7 @@ Future<List<SessionDetailSchema>> getRecommendedSessions(
     apiCall: () =>
         mobileApiService.spaces.totemSpacesMobileApiGetRecommendedSpaces(
           categories: topics?.map((topic) => topic.slug).toList(),
+          limit: limit,
         ),
     operationName: 'get recommended sessions',
     maxRetries: 0,

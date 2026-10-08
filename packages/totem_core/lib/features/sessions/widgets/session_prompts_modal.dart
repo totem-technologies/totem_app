@@ -206,7 +206,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Drag prompts to set the prompts order.',
+                            'Drag to reorder prompts.',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: Colors.black,
                             ),

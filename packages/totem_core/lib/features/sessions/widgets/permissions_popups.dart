@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/permissions_browser.dart'
@@ -151,7 +152,9 @@ _PermissionInstructions _permissionsInstructions() {
   final isIOS = platform == TargetPlatform.iOS;
 
   // Edge
-  if (userAgent.contains('Edg/') || userAgent.contains('EdgiOS/')) {
+  if (userAgent.contains('Edg/') ||
+      userAgent.contains('EdgA/') ||
+      userAgent.contains('EdgiOS/')) {
     return _PermissionInstructions(
       browser: 'Edge',
       steps: const [
@@ -185,11 +188,17 @@ _PermissionInstructions _permissionsInstructions() {
       !userAgent.contains('CriOS/')) {
     return _PermissionInstructions(
       browser: 'Safari',
-      steps: const [
-        'Open the Safari menu → Settings for This Website…',
-        'Set Microphone and Camera to Allow.',
-        "Reload the page, we'll bring you straight back here.",
-      ],
+      steps: isIOS
+          ? const [
+              'Tap the aA button in the address bar → Website Settings.',
+              'Set Microphone and Camera to Allow.',
+              "Reload the page, we'll bring you straight back here.",
+            ]
+          : const [
+              'Open the Safari menu → Settings for This Website…',
+              'Set Microphone and Camera to Allow.',
+              "Reload the page, we'll bring you straight back here.",
+            ],
       helper: isMac
           ? 'Still blocked? Open System Settings → Privacy & Security → Microphone (and Camera) and turn on Safari.'
           : isIOS
@@ -233,9 +242,18 @@ class _WebPermissionsDeniedDialog extends StatefulWidget {
 class _WebPermissionsDeniedDialogState
     extends State<_WebPermissionsDeniedDialog> {
   Future<bool> _checkAgain() async {
-    final granted = await widget.onCheckAgain();
-    if (granted && mounted) Navigator.of(context).pop(true);
-    return granted;
+    try {
+      final granted = await widget.onCheckAgain();
+      if (granted && mounted) Navigator.of(context).pop(true);
+      return granted;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to check permissions again',
+      );
+      return false;
+    }
   }
 
   @override

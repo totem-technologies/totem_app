@@ -65,7 +65,7 @@ class SpaceCard extends StatelessWidget {
     SessionDetailSchema session, {
     bool compact = false,
     VoidCallback? onTap,
-    double? aspectRatio,
+    double? aspectRatio = 1.38,
   }) {
     return SpaceCard(
       space: _spaceDetailFromSessionDetailSchema(session),
