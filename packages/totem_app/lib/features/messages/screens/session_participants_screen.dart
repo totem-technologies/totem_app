@@ -204,7 +204,7 @@ class _NavBar extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              'Session',
+              'session',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: AppTheme.textHeading,
                 fontSize: 18,

@@ -186,14 +186,16 @@ enum SpaceCategories {
 
 @riverpod
 Future<List<SessionDetailSchema>> getRecommendedSessions(
-  Ref ref, [
+  Ref ref, {
   Set<SpaceCategories>? topics,
-]) {
+  int? limit,
+}) {
   final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<List<SessionDetailSchema>>(
     apiCall: () =>
         mobileApiService.spaces.totemSpacesMobileApiGetRecommendedSpaces(
           categories: topics?.map((topic) => topic.slug).toList(),
+          limit: limit,
         ),
     operationName: 'get recommended sessions',
     maxRetries: 0,

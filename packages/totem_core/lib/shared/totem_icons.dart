@@ -512,7 +512,7 @@ class TotemIcons {
 </svg>
 ''';
 
-  static const reorderParticipants = '''
+  static const reorder = '''
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M16.6667 5H2.5" stroke="#262F37" stroke-width="1.75" stroke-linecap="round"/>
 <path d="M9.16667 9.16675H2.5" stroke="#262F37" stroke-width="1.75" stroke-linecap="round"/>

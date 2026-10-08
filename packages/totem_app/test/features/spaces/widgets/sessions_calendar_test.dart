@@ -9,7 +9,7 @@ NextSessionSchema _session(
   bool attending = false,
   bool open = false,
 }) => NextSessionSchema(
-  title: 'Session',
+  title: 'session',
   slug: 'session-${start.millisecondsSinceEpoch}',
   start: start,
   link: 'https://example.com/session',

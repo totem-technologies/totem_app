@@ -85,7 +85,7 @@ Future<void> _pumpMoreOptions(
           body: MoreOptions(
             session: SessionDetailSchema(
               slug: 'test-session',
-              title: 'Test Session',
+              title: 'Test session',
               space: MobileSpaceDetailSchema(
                 slug: 'test-space',
                 title: 'Test Space',

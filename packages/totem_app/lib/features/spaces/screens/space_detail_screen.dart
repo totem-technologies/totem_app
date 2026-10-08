@@ -375,7 +375,7 @@ class _SpaceDetailScreenState extends ConsumerState<SpaceDetailScreen> {
                                 spacing: 16,
                                 children: [
                                   Text(
-                                    'About this Session',
+                                    'About this session',
                                     style: theme.textTheme.titleMedium
                                         ?.copyWith(
                                           fontWeight: FontWeight.bold,

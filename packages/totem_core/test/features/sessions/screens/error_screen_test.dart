@@ -43,6 +43,10 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(seconds: 3));
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
   }
 
   group('RoomErrorScreen', () {
@@ -115,8 +119,13 @@ void main() {
         await tester.pumpAndSettle();
 
         check(scrollable.position.pixels).isGreaterThan(0);
+        await tester.scrollUntilVisible(
+          find.text('Go back to session details'),
+          100,
+          scrollable: find.byType(Scrollable),
+        );
         check(
-          tester.widgetList(find.text('Go back to Session Details')),
+          tester.widgetList(find.text('Go back to session details')),
         ).length.equals(1);
       });
     });

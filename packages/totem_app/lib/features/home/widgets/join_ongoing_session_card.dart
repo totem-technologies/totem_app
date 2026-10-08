@@ -78,7 +78,7 @@ class JoinOngoingSessionCard extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Ongoing Session',
+                        'Ongoing session',
                         style: theme.textTheme.titleSmall,
                       ),
                       AutoSizeText(

@@ -159,13 +159,13 @@ final $AdmittedLate = _state(
 );
 
 final $DeclinedNextSession = _state(
-  'Declined, next Session',
+  'Declined, next session',
   phase: DetailsPhase.inProgress,
   status: EntryStatus.declined,
 );
 
 final $DeclinedRelated = _state(
-  'Declined, related Session',
+  'Declined, related session',
   phase: DetailsPhase.inProgress,
   status: EntryStatus.declined,
   declineVariant: DeclineVariant.related,

@@ -81,7 +81,7 @@ class HomeScreen extends ConsumerWidget {
                             Semantics(
                               header: true,
                               child: Text(
-                                'Your Next Session',
+                                'Your next session',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),

@@ -58,17 +58,20 @@ class SpaceCard extends StatelessWidget {
     super.key,
     this.compact = false,
     this.onTap,
+    this.aspectRatio = 1.38,
   });
 
   factory SpaceCard.fromSessionDetailSchema(
     SessionDetailSchema session, {
     bool compact = false,
     VoidCallback? onTap,
+    double? aspectRatio = 1.38,
   }) {
     return SpaceCard(
       space: _spaceDetailFromSessionDetailSchema(session),
       compact: compact,
       onTap: onTap,
+      aspectRatio: aspectRatio,
     );
   }
 
@@ -91,6 +94,7 @@ class SpaceCard extends StatelessWidget {
   final MobileSpaceDetailSchema space;
   final bool compact;
   final VoidCallback? onTap;
+  final double? aspectRatio;
 
   @override
   Widget build(BuildContext context) {
@@ -110,178 +114,176 @@ class SpaceCard extends StatelessWidget {
     ];
     final semanticLabel = semanticParts.join(', ');
 
-    return AspectRatio(
-      aspectRatio: 1.38,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        margin: EdgeInsetsDirectional.zero,
-        child: MergeSemantics(
-          child: Semantics(
-            button: true,
-            label: semanticLabel,
-            excludeSemantics: true,
-            child: InkWell(
-              highlightColor: theme.colorScheme.secondary.withValues(
-                alpha: 0.1,
-              ),
-              onTap:
-                  onTap ??
-                  () async {
-                    TotemRouter.instance.toSpaceSession(
-                      context,
-                      space.slug,
-                      nextSession?.slug,
-                    );
-                  },
-              borderRadius: BorderRadius.circular(8),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: ImageGradientMask(
-                      child: TotemImage(
-                        imageUrl: space.imageLink,
-                        loadingPlaceholder: ColoredBox(
-                          color: Colors.black.withValues(alpha: 0.75),
-                        ),
+    final card = Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsetsDirectional.zero,
+      child: MergeSemantics(
+        child: Semantics(
+          button: true,
+          label: semanticLabel,
+          excludeSemantics: true,
+          child: InkWell(
+            highlightColor: theme.colorScheme.secondary.withValues(alpha: 0.1),
+            onTap:
+                onTap ??
+                () async {
+                  TotemRouter.instance.toSpaceSession(
+                    context,
+                    space.slug,
+                    nextSession?.slug,
+                  );
+                },
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ImageGradientMask(
+                    child: TotemImage(
+                      imageUrl: space.imageLink,
+                      loadingPlaceholder: ColoredBox(
+                        color: Colors.black.withValues(alpha: 0.75),
                       ),
                     ),
                   ),
-                  PositionedDirectional(
-                    top: compact ? 10.0 : 20.0,
-                    start: compact ? 10.0 : 20.0,
-                    end: compact ? 10.0 : 20.0,
-                    bottom: compact ? 10.0 : 26.0,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        // If the width is too small, only show the image.
-                        final isContentVisible = constraints.maxWidth > 66;
-                        if (!isContentVisible) {
-                          return const SizedBox.shrink();
-                        }
-                        final seatsLeft = nextSession != null
-                            ? DefaultTextStyle.merge(
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  shadows: _textShadows,
-                                ),
-                                child: SeatsLeftText(
-                                  seatsLeft: nextSession.seatsLeft,
-                                ),
-                              )
-                            : const SizedBox.shrink();
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (nextSession != null)
-                              Container(
-                                padding: const EdgeInsetsDirectional.all(8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0x99262F37),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  spacing: 4,
-                                  children: [
-                                    const TotemIcon(
-                                      TotemIcons.calendar,
-                                      size: 12,
-                                      color: Colors.white,
+                ),
+                PositionedDirectional(
+                  top: compact ? 10.0 : 20.0,
+                  start: compact ? 10.0 : 20.0,
+                  end: compact ? 10.0 : 20.0,
+                  bottom: compact ? 10.0 : 26.0,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // If the width is too small, only show the image.
+                      final isContentVisible = constraints.maxWidth > 66;
+                      if (!isContentVisible) {
+                        return const SizedBox.shrink();
+                      }
+                      final seatsLeft = nextSession != null
+                          ? DefaultTextStyle.merge(
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                shadows: _textShadows,
+                              ),
+                              child: SeatsLeftText(
+                                seatsLeft: nextSession.seatsLeft,
+                              ),
+                            )
+                          : const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (nextSession != null)
+                            Container(
+                              padding: const EdgeInsetsDirectional.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0x99262F37),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                spacing: 4,
+                                children: [
+                                  const TotemIcon(
+                                    TotemIcons.calendar,
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
+                                  Flexible(
+                                    child: Text(
+                                      buildTimeLabel(nextSession.start),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                        shadows: _textShadows,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.fade,
                                     ),
-                                    Flexible(
-                                      child: Text(
-                                        buildTimeLabel(nextSession.start),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.bold,
-                                          shadows: _textShadows,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.fade,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const Spacer(),
+                          if (compact) seatsLeft,
+                          AutoSizeText(
+                            space.title,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: compact ? 14 : 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.fade,
+                          ),
+                          if (nextSession?.title != null)
+                            AutoSizeText(
+                              'Next: ${nextSession!.title}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                shadows: _textShadows,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          const SizedBox(height: 6),
+                          RichText(
+                            maxLines: 1,
+                            overflow: TextOverflow.fade,
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  children: [
+                                    const TextSpan(text: 'with '),
+                                    TextSpan(
+                                      text: space.author.name.value,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ],
+                                  style: TextStyle(
+                                    fontSize: compact ? 10 : 16,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
-                            const Spacer(),
-                            if (compact) seatsLeft,
-                            AutoSizeText(
-                              space.title,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: compact ? 14 : 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.fade,
-                            ),
-                            if (nextSession?.title != null)
-                              AutoSizeText(
-                                'Next: ${nextSession!.title}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  shadows: _textShadows,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            const SizedBox(height: 6),
-                            RichText(
-                              maxLines: 1,
-                              overflow: TextOverflow.fade,
-                              text: TextSpan(
-                                children: [
-                                  TextSpan(
-                                    children: [
-                                      const TextSpan(text: 'with '),
-                                      TextSpan(
-                                        text: space.author.name.value,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                    style: TextStyle(
-                                      fontSize: compact ? 10 : 16,
-                                      color: Colors.white,
+                                const TextSpan(text: '  '),
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: IgnorePointer(
+                                    child: UserAvatar.fromUserSchema(
+                                      space.author,
+                                      radius: 25 / 2,
                                     ),
                                   ),
-                                  const TextSpan(text: '  '),
-                                  WidgetSpan(
-                                    alignment: PlaceholderAlignment.middle,
-                                    child: IgnorePointer(
-                                      child: UserAvatar.fromUserSchema(
-                                        space.author,
-                                        radius: 25 / 2,
-                                      ),
-                                    ),
-                                  ),
-                                ].reversedIf(compact),
-                              ),
-                            ),
-                            if (!compact)
-                              Padding(
-                                padding: const EdgeInsetsDirectional.only(
-                                  top: 4,
                                 ),
-                                child: seatsLeft,
-                              ),
-                          ],
-                        );
-                      },
-                    ),
+                              ].reversedIf(compact),
+                            ),
+                          ),
+                          if (!compact)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.only(top: 4),
+                              child: seatsLeft,
+                            ),
+                        ],
+                      );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
+
+    if (aspectRatio != null) {
+      return AspectRatio(aspectRatio: aspectRatio!, child: card);
+    }
+    return card;
   }
 }
 

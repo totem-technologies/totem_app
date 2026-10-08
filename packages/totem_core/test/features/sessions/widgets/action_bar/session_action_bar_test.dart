@@ -69,7 +69,7 @@ SessionRoomState _createSessionState() {
 SessionDetailSchema _createSessionEvent() {
   return SessionDetailSchema(
     slug: 'test-session',
-    title: 'Test Session',
+    title: 'Test session',
     space: MobileSpaceDetailSchema(
       slug: 'test-space',
       title: 'Test Space',

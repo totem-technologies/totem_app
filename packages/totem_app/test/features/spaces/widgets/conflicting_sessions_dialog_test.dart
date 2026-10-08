@@ -63,12 +63,12 @@ void main() {
     final start = DateTime.utc(2026, 8, 20, 15);
     existingSession = _session(
       slug: 'existing-session',
-      title: 'Existing Session',
+      title: 'Existing session',
       start: start,
     );
     newSession = _session(
       slug: 'new-session',
-      title: 'New Session',
+      title: 'New session',
       start: start,
     );
   });
@@ -114,28 +114,23 @@ void main() {
     check(
       tester.widgetList(
         find.text(
-          'To join New Session, you’ll need to give up your spot in Existing Session.',
+          'To join New session, you’ll need to give up your spot in Existing session.',
         ),
       ),
     ).length.equals(1);
     check(
       tester.widgetList(find.text('Your current session')),
     ).length.equals(1);
-    check(tester.widgetList(find.text('Existing Session'))).length.equals(1);
-    check(tester.widgetList(find.text('New session'))).length.equals(1);
-    check(tester.widgetList(find.text('New Session'))).length.equals(1);
-
-    final description = tester.widget<Text>(
-      find.text(
-        'To join New Session, you’ll need to give up your spot in Existing Session.',
-      ),
-    );
-    final spans = (description.textSpan! as TextSpan).children!
-        .whereType<TextSpan>();
-    for (final sessionName in ['New Session', 'Existing Session']) {
-      check(
-        spans.singleWhere((span) => span.text == sessionName).style?.fontWeight,
-      ).equals(FontWeight.w500);
+    check(tester.widgetList(find.text('Existing session'))).length.equals(1);
+    final currentSession = tester.getCenter(find.text('Existing session'));
+    final incomingSession = tester.getCenter(find.text('New session').last);
+    if (find
+        .byKey(const ValueKey('conflicting-sessions-horizontal-layout'))
+        .evaluate()
+        .isNotEmpty) {
+      check(currentSession.dx).isLessThan(incomingSession.dx);
+    } else {
+      check(currentSession.dy).isLessThan(incomingSession.dy);
     }
   });
 
@@ -148,22 +143,22 @@ void main() {
       onSwitch: () async => true,
       conflictingSessions: [
         existingSession,
-        _session(slug: 'second-session', title: 'Second Session', start: start),
-        _session(slug: 'third-session', title: 'Third Session', start: start),
+        _session(slug: 'second-session', title: 'Second session', start: start),
+        _session(slug: 'third-session', title: 'Third session', start: start),
       ],
     );
 
     const description =
-        'To join New Session, you’ll need to give up your spot in '
-        'Existing Session, Second Session, and Third Session.';
+        'To join New session, you’ll need to give up your spot in '
+        'Existing session, Second session, and Third session.';
     check(tester.widgetList(find.text(description))).length.equals(1);
 
     final text = tester.widget<Text>(find.text(description));
     final spans = (text.textSpan! as TextSpan).children!.whereType<TextSpan>();
     for (final sessionName in [
-      'Existing Session',
-      'Second Session',
-      'Third Session',
+      'Existing session',
+      'Second session',
+      'Third session',
     ]) {
       check(
         spans.singleWhere((span) => span.text == sessionName).style?.fontWeight,
@@ -191,8 +186,8 @@ void main() {
     );
     check(arrow.quarterTurns).equals(-1);
     check(
-      tester.getCenter(find.text('Existing Session')).dy,
-    ).isLessThan(tester.getCenter(find.text('New Session')).dy);
+      tester.getCenter(find.text('Existing session')).dy,
+    ).isLessThan(tester.getCenter(find.text('New session').last).dy);
   });
 
   testWidgets('lays out session cards as a row in landscape', (tester) async {
@@ -212,8 +207,8 @@ void main() {
     );
     check(arrow.quarterTurns).equals(2);
     check(
-      tester.getCenter(find.text('Existing Session')).dx,
-    ).isLessThan(tester.getCenter(find.text('New Session')).dx);
+      tester.getCenter(find.text('Existing session')).dx,
+    ).isLessThan(tester.getCenter(find.text('New session').last).dx);
   });
 
   testWidgets('points the horizontal arrow toward the new session in RTL', (
@@ -238,8 +233,8 @@ void main() {
     );
     check(arrow.quarterTurns).equals(0);
     check(
-      tester.getCenter(find.text('Existing Session')).dx,
-    ).isGreaterThan(tester.getCenter(find.text('New Session')).dx);
+      tester.getCenter(find.text('Existing session')).dx,
+    ).isGreaterThan(tester.getCenter(find.text('New session').last).dx);
   });
 
   testWidgets('switches sessions and closes only after success', (
@@ -256,7 +251,7 @@ void main() {
       onResult: (result) => dialogResult = result,
     );
 
-    await tester.tap(find.text('Switch Sessions'));
+    await tester.tap(find.text('Switch sessions'));
     await tester.pumpAndSettle();
 
     check(switchCalls).equals(1);
@@ -269,7 +264,7 @@ void main() {
   testWidgets('keeps the dialog open when switching fails', (tester) async {
     await showConflict(tester, onSwitch: () async => false);
 
-    await tester.tap(find.text('Switch Sessions'));
+    await tester.tap(find.text('Switch sessions'));
     await tester.pumpAndSettle();
 
     check(

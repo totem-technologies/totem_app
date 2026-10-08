@@ -605,7 +605,7 @@ class _SuggestionsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final recommended = ref.watch(
-      getRecommendedSessionsProvider(selectedTopics),
+      getRecommendedSessionsProvider(topics: selectedTopics, limit: 10),
     );
 
     return CardScreen(
@@ -614,7 +614,7 @@ class _SuggestionsTab extends ConsumerWidget {
         Semantics(
           header: true,
           child: Text(
-            'Suggested Sessions',
+            'Suggested sessions',
             style: theme.textTheme.headlineSmall,
             textAlign: TextAlign.center,
           ),

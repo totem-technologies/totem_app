@@ -53,7 +53,7 @@ SessionDetailSchema _createSessionEvent({
 }) {
   return SessionDetailSchema(
     slug: slug,
-    title: 'Test Session',
+    title: 'Test session',
     space: MobileSpaceDetailSchema(
       slug: 'test-space',
       title: 'Test Space',
@@ -140,6 +140,11 @@ Future<void> _pumpRoomScreen(
   await tester.pump();
 }
 
+Future<void> _unmountRoomScreen(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump();
+}
+
 Future<void> _pumpRoomScreenForResolvedScreen(
   WidgetTester tester, {
   required MockSessionController session,
@@ -217,7 +222,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
             dateCreated: DateTime(2024),
           ),
         ),
-        getRecommendedSessionsProvider().overrideWith((ref) => []),
+        getRecommendedSessionsProvider(limit: 1).overrideWith((ref) => []),
         disconnectionReasonProvider.overrideWith((ref) => disconnectReason),
         ...extraOverrides.cast(),
       ],
@@ -235,6 +240,10 @@ Future<void> _pumpRoomScreenForResolvedScreen(
     ),
   );
   await tester.pump();
+  addTearDown(() async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
 }
 
 class _MutableRoomScreenHarness {
@@ -652,6 +661,9 @@ void main() {
         tester.widgetList(find.byType(SessionDisconnectedScreen)),
       ).length.equals(1);
       await tester.pump(const Duration(milliseconds: 2750));
+      Navigator.of(tester.element(find.text('Keeper profile'))).pop();
+      await tester.pumpAndSettle();
+      await _unmountRoomScreen(tester);
     });
 
     testWidgets('renders offline error screen for a network disconnection', (
@@ -716,6 +728,7 @@ void main() {
         ).length.equals(0);
         check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
         await tester.pump(const Duration(seconds: 3));
+        await _unmountRoomScreen(tester);
       },
     );
 
@@ -752,6 +765,7 @@ void main() {
           tester.widgetList(find.byType(SessionErrorScreen)),
         ).length.equals(0);
         await tester.pump(const Duration(seconds: 3));
+        await _unmountRoomScreen(tester);
       });
     }
 

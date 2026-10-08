@@ -17,9 +17,9 @@ import 'package:totem_core/features/sessions/repositories/session_repository.dar
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 import 'package:totem_core/shared/widgets/confetti.dart';
 import 'package:totem_core/shared/widgets/space_card.dart';
-import 'package:totem_core/shared/widgets/totem_icon.dart';
 import 'package:totem_core/shared/widgets/user_feedback.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -127,6 +127,7 @@ class SessionDisconnectedScreen extends ConsumerStatefulWidget {
 class _SessionDisconnectedScreenState
     extends ConsumerState<SessionDisconnectedScreen> {
   Timer? _confettiTimer;
+  Timer? _spacesSummaryRefreshTimer;
 
   @override
   void initState() {
@@ -135,8 +136,8 @@ class _SessionDisconnectedScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (ref.context.mounted) ref.invalidate(spacesSummaryProvider);
     });
-    Future.delayed(const Duration(milliseconds: 2750), () {
-      if (ref.context.mounted) ref.invalidate(spacesSummaryProvider);
+    _spacesSummaryRefreshTimer = Timer(const Duration(milliseconds: 2750), () {
+      if (mounted) ref.invalidate(spacesSummaryProvider);
     });
   }
 
@@ -149,6 +150,7 @@ class _SessionDisconnectedScreenState
   @override
   void dispose() {
     _confettiTimer?.cancel();
+    _spacesSummaryRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -233,7 +235,7 @@ class _PortraitLayout extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsetsDirectional.symmetric(
           horizontal: 20,
-          vertical: 8,
+          vertical: 16,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -247,14 +249,16 @@ class _PortraitLayout extends StatelessWidget {
               _InteractiveFeedbackWidget(session: session!),
             if (!isBanned)
               Flexible(
-                child: _NextSessionsSection(
-                  session: session,
-                  isBanned: isBanned,
-                  direction: Axis.vertical,
-                  onRefreshHome: onRefreshHome,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 254),
+                  child: _NextSessionsSection(
+                    session: session,
+                    isBanned: isBanned,
+                    onRefreshHome: onRefreshHome,
+                  ),
                 ),
               ),
-            _ActionButtons(isBanned: isBanned, onRefreshHome: onRefreshHome),
+            _ActionButtons(onRefreshHome: onRefreshHome),
           ],
         ),
       ),
@@ -305,12 +309,11 @@ class _LandscapeLayout extends StatelessWidget {
                     child: _NextSessionsSection(
                       session: session,
                       isBanned: isBanned,
-                      direction: Axis.vertical,
                       onRefreshHome: onRefreshHome,
                     ),
                   ),
                 ),
-              _ActionButtons(isBanned: isBanned, onRefreshHome: onRefreshHome),
+              _ActionButtons(onRefreshHome: onRefreshHome),
             ],
           ),
         ],
@@ -326,6 +329,7 @@ class _MediumSmallLayout extends StatelessWidget {
     required this.isBanned,
     required this.onRefreshHome,
   });
+
   final SessionDetailSchema? session;
   final SessionDisconnectedReason reason;
   final bool isBanned;
@@ -337,62 +341,55 @@ class _MediumSmallLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      spacing: 10,
+    return Stack(
       children: [
-        const ListTile(
-          contentPadding: EdgeInsetsDirectional.symmetric(horizontal: 40),
-          leading: TotemLogo(color: Colors.white, size: 24),
-          shape: Border(bottom: BorderSide(color: Color(0x14FFFFFF))),
-        ),
-        Expanded(
+        Positioned.fill(
           child: Padding(
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: FractionallySizedBox(
-                    widthFactor: 0.75,
-                    child: Column(
-                      spacing: 30,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _wrapConstrained(_MediumStatusIcon(reason: reason)),
-                        _wrapConstrained(_SessionHeader(reason: reason)),
-                        _wrapConstrained(_SessionSubheader(reason: reason)),
-                        const Divider(color: Color(0x0FFFFFFF)),
-                        if (session != null &&
-                            reason == SessionDisconnectedReason.keeperEnded)
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 500),
-                            child: _InteractiveFeedbackWidget(
-                              session: session!,
-                            ),
-                          ),
-                        _ActionButtons(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 16.0,
+              vertical: 56,
+            ),
+            child: FractionallySizedBox(
+              widthFactor: 0.75,
+              child: Column(
+                spacing: 30,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _wrapConstrained(_MediumStatusIcon(reason: reason)),
+                  _wrapConstrained(_SessionHeader(reason: reason)),
+                  _wrapConstrained(_SessionSubheader(reason: reason)),
+                  const Divider(color: Color(0x0FFFFFFF)),
+                  ?switch (reason) {
+                    SessionDisconnectedReason.keeperEnded => _wrapConstrained(
+                      _InteractiveFeedbackWidget(session: session!),
+                    ),
+                    _ => null,
+                  },
+                  if (!isBanned)
+                    Flexible(
+                      child: _wrapConstrained(
+                        _NextSessionsSection(
+                          session: session,
                           isBanned: isBanned,
                           onRefreshHome: onRefreshHome,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-                if (!isBanned)
-                  Flexible(
-                    child: _NextSessionsSection(
-                      session: session,
-                      isBanned: isBanned,
-                      direction: Axis.vertical,
-                      onRefreshHome: onRefreshHome,
-                      count: 3,
-                    ),
-                  ),
-              ],
+                  _ActionButtons(onRefreshHome: onRefreshHome),
+                ],
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 40),
+        PositionedDirectional(
+          top: 48,
+          start: 48,
+          child: CircleIconButton(
+            icon: TotemIcons.close,
+            onPressed: onRefreshHome,
+            color: AppTheme.white.withValues(alpha: 0.8),
+          ),
+        ),
       ],
     );
   }
@@ -419,11 +416,6 @@ class _MediumPlusLayout extends StatelessWidget {
     return Column(
       spacing: 10,
       children: [
-        const ListTile(
-          contentPadding: EdgeInsetsDirectional.symmetric(horizontal: 40),
-          leading: TotemLogo(color: Colors.white, size: 24),
-          shape: Border(bottom: BorderSide(color: Color(0x14FFFFFF))),
-        ),
         Expanded(
           child: FractionallySizedBox(
             widthFactor: 0.75,
@@ -443,19 +435,19 @@ class _MediumPlusLayout extends StatelessWidget {
                   ),
                 if (!isBanned)
                   Flexible(
-                    child: _wrapConstrained(
-                      _NextSessionsSection(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: 500,
+                        maxHeight: 362,
+                      ),
+                      child: _NextSessionsSection(
                         session: session,
                         isBanned: isBanned,
-                        direction: Axis.horizontal,
                         onRefreshHome: onRefreshHome,
                       ),
                     ),
                   ),
-                _ActionButtons(
-                  isBanned: isBanned,
-                  onRefreshHome: onRefreshHome,
-                ),
+                _ActionButtons(onRefreshHome: onRefreshHome),
               ],
             ),
           ),
@@ -465,7 +457,6 @@ class _MediumPlusLayout extends StatelessWidget {
     );
   }
 }
-
 // -----------------------------------------------------------------------------
 // COMPONENTS
 // -----------------------------------------------------------------------------
@@ -638,15 +629,14 @@ class _NextSessionsSection extends ConsumerWidget {
   const _NextSessionsSection({
     required this.session,
     required this.isBanned,
-    required this.direction,
     required this.onRefreshHome,
-    this.count = 2,
   });
+
   final SessionDetailSchema? session;
   final bool isBanned;
-  final Axis direction;
-  final int count;
   final VoidCallback onRefreshHome;
+
+  static const int count = 1;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -660,131 +650,96 @@ class _NextSessionsSection extends ConsumerWidget {
             .toList() ??
         const [];
 
-    final recommended = ref.watch(getRecommendedSessionsProvider());
+    final recommendedSessions = ref.watch(
+      getRecommendedSessionsProvider(limit: count),
+    );
 
-    List<Widget> cards = [];
-    String? headerText;
+    String? titleText;
+    Widget? card;
 
     if (nextSessions.isNotEmpty && effectiveSession != null) {
-      headerText = nextSessions.length == 1
-          ? 'Join this upcoming session'
-          : 'Join these upcoming sessions';
-      final space = effectiveSession.space;
-      final spaceSlug = space.slug;
-      cards = nextSessions.map((nextSession) {
-        return ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.textScalerOf(context).scale(140),
+      titleText = 'Sign up for the next session';
+      card = nextSessions.take(1).map((nextSession) {
+        return SpaceCard(
+          space: MobileSpaceDetailSchemaExtension.copyWith(
+            effectiveSession.space,
+            nextEvents: [nextSession],
           ),
-          child: SmallSpaceCard(
-            space: MobileSpaceDetailSchemaExtension.copyWith(
-              space,
-              nextEvents: [nextSession],
-            ),
-            onTap: () {
-              onRefreshHome();
-              TotemRouter.instance.toSpaceSession(
-                context,
-                spaceSlug,
-                nextSession.slug,
-                true,
-              );
-            },
-          ),
+          aspectRatio: null,
+          onTap: () {
+            onRefreshHome();
+            TotemRouter.instance.toSpaceSession(
+              context,
+              effectiveSession.space.slug,
+              nextSession.slug,
+              true,
+            );
+          },
         );
-      }).toList();
-    } else if (recommended.hasValue && recommended.value!.isNotEmpty) {
-      headerText = 'You may enjoy these spaces';
-      cards = recommended.value!.take(count).map((recSession) {
-        return ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.textScalerOf(context).scale(140),
-          ),
-          child: SmallSpaceCard.fromSessionDetailSchema(
-            recSession,
-            onTap: () async {
-              onRefreshHome();
-              TotemRouter.instance.toSpaceSession(
-                context,
-                recSession.space.slug,
-                recSession.slug,
-                true,
-              );
-            },
-          ),
+      }).firstOrNull;
+    } else if (recommendedSessions.hasValue &&
+        recommendedSessions.value!.isNotEmpty) {
+      titleText = 'You may enjoy this space';
+      card = recommendedSessions.value!.take(count).map((recommendedSession) {
+        return SpaceCard.fromSessionDetailSchema(
+          recommendedSession,
+          aspectRatio: null,
+          onTap: () async {
+            onRefreshHome();
+            TotemRouter.instance.toSpaceSession(
+              context,
+              recommendedSession.space.slug,
+              recommendedSession.slug,
+              true,
+            );
+          },
         );
-      }).toList();
+      }).firstOrNull;
     }
 
-    if (cards.isEmpty || headerText == null) return const SizedBox.shrink();
+    if (card == null || titleText == null) return const SizedBox.shrink();
 
     final header = Text(
-      headerText,
+      titleText,
       style: Theme.of(context).textTheme.titleMedium,
       textAlign: TextAlign.start,
     );
 
-    if (direction == Axis.vertical) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 20,
-        children: [
-          header,
-          ...cards.map((c) => Flexible(child: c)),
-        ],
-      );
-    } else {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        spacing: 20,
-        children: [
-          header,
-          Flexible(
-            child: Row(
-              spacing: 20,
-              children: cards.map((c) => Expanded(child: c)).toList(),
-            ),
-          ),
-        ],
-      );
-    }
+    return Column(
+      spacing: 20,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        header,
+        Flexible(child: card),
+      ],
+    );
   }
 }
 
 class _ActionButtons extends StatelessWidget {
-  const _ActionButtons({required this.isBanned, required this.onRefreshHome});
-  final bool isBanned;
+  const _ActionButtons({required this.onRefreshHome});
+
   final VoidCallback onRefreshHome;
+
+  void onSeeAllSessions() {
+    onRefreshHome();
+    TotemRouter.instance.toHome();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // if (isBanned) {
-    //   return Link(
-    //     uri: Uri.parse('mailto:help@totem.org'),
-    //     builder: (context, followLink) => ElevatedButton(
-    //       style: ElevatedButton.styleFrom(
-    //         padding: const EdgeInsetsDirectional.symmetric(horizontal: 58),
-    //         shape: RoundedRectangleBorder(
-    //           borderRadius: BorderRadius.circular(26),
-    //         ),
-    //       ),
-    //       onPressed: followLink,
-    //       child: const Text('Contact us'),
-    //     ),
-    //   );
-    // }
-
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
+    return TextButton(
+      style: TextButton.styleFrom(
         padding: const EdgeInsetsDirectional.symmetric(horizontal: 58),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+        foregroundColor: Colors.white,
       ),
-      onPressed: () {
-        onRefreshHome();
-        TotemRouter.instance.toHome();
-      },
-      child: const Text('Explore More'),
+      onPressed: onSeeAllSessions,
+      child: const Text(
+        'See all upcoming sessions',
+        style: TextStyle(fontFeatures: []),
+      ),
     );
   }
 }
@@ -848,57 +803,52 @@ class _SessionFeedbackWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 20,
-        vertical: 10,
-      ),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(
-        spacing: 12,
-        children: [
-          Expanded(
-            child: AutoSizeText(
-              switch (state) {
-                ThumbState.none => 'How was your experience?',
-                _ => 'Thank you for your feedback!',
-              },
-              textAlign: TextAlign.start,
-              maxLines: 2,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurface,
-                fontWeight: FontWeight.w500,
+    return Material(
+      color: AppTheme.white.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(30),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 20,
+          vertical: 10,
+        ),
+        child: Row(
+          spacing: 12,
+          children: [
+            Expanded(
+              child: AutoSizeText(
+                switch (state) {
+                  ThumbState.none => 'How was your experience?',
+                  ThumbState.up => 'Thank you! Glad you enjoyed it.',
+                  ThumbState.down => 'Thank you for your feedback!',
+                },
+                textAlign: TextAlign.start,
+                maxLines: 2,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onInverseSurface,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 10,
-            children: [
-              _SessionFeedbackButton(
-                outlined: state == ThumbState.down,
-                icon: TotemIcon(
-                  state == ThumbState.up
-                      ? TotemIcons.thumbUpFilled
-                      : TotemIcons.thumbUp,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 10,
+              children: [
+                _SessionFeedbackButton(
+                  selected: state == ThumbState.up,
+                  icon: const TotemIcon(TotemIcons.thumbUp),
+                  onPressed: state == ThumbState.none ? onThumbUpPressed : null,
                 ),
-                onPressed: state == ThumbState.none ? onThumbUpPressed : null,
-              ),
-              _SessionFeedbackButton(
-                outlined: state == ThumbState.up,
-                icon: TotemIcon(
-                  state == ThumbState.down
-                      ? TotemIcons.thumbDownFilled
-                      : TotemIcons.thumbDown,
+                _SessionFeedbackButton(
+                  selected: state == ThumbState.down,
+                  icon: const TotemIcon(TotemIcons.thumbDown),
+                  onPressed: state == ThumbState.none
+                      ? onThumbDownPressed
+                      : null,
                 ),
-                onPressed: state == ThumbState.none ? onThumbDownPressed : null,
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -908,34 +858,32 @@ class _SessionFeedbackButton extends StatelessWidget {
   const _SessionFeedbackButton({
     required this.icon,
     required this.onPressed,
-    this.outlined = false,
+    this.selected = false,
   });
 
   final Widget icon;
   final VoidCallback? onPressed;
-  final bool outlined;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GestureDetector(
+    return InkWell(
       onTap: onPressed,
+      borderRadius: BorderRadius.circular(100),
       child: Container(
         width: 50,
         height: 50,
         padding: const EdgeInsetsDirectional.all(10),
         decoration: BoxDecoration(
-          color: outlined ? null : theme.colorScheme.primary,
-          border: outlined
-              ? Border.all(color: theme.colorScheme.primary)
-              : null,
+          color: selected ? theme.colorScheme.surface : null,
           shape: BoxShape.circle,
         ),
         child: IconTheme.merge(
           data: IconThemeData(
-            color: outlined
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onPrimary,
+            color: selected
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.onInverseSurface,
           ),
           child: icon,
         ),

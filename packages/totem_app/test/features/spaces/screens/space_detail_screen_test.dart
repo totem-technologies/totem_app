@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:checks/checks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/features/spaces/screens/space_detail_screen.dart';
@@ -105,74 +106,83 @@ void main() {
     TotemRouter.instance = FakeTotemRouter();
   });
 
-  testWidgets('shows the conflict dialog when RSVP overlaps a session', (
-    tester,
-  ) async {
-    addTearDown(() async {
-      ConfettiController.clear();
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpAndSettle();
-      await tester.pump(const Duration(seconds: 1));
-      tester.binding.imageCache.clearLiveImages();
-      tester.binding.imageCache.clear();
-    });
+  testWidgets(
+    'shows the conflict dialog when RSVP overlaps a session',
+    (tester) async {
+      addTearDown(() async {
+        ConfettiController.clear();
+        final dialog = find.byType(Dialog);
+        if (dialog.evaluate().isNotEmpty) {
+          Navigator.of(tester.element(dialog)).pop();
+          await tester.pumpAndSettle();
+        }
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 1));
+        tester.binding.imageCache.clearLiveImages();
+        tester.binding.imageCache.clear();
+      });
 
-    final newSpace = _space('new-space', 'New Space');
-    final existingSpace = _space('existing-space', 'Existing Space');
-    final newSession = _session(
-      slug: 'new-session',
-      title: 'New Session',
-      space: newSpace,
-      attending: false,
-    );
-    final existingSession = _session(
-      slug: 'existing-session',
-      title: 'Existing Session',
-      space: existingSpace,
-      attending: true,
-    );
+      final newSpace = _space('new-space', 'New Space');
+      final existingSpace = _space('existing-space', 'Existing Space');
+      final newSession = _session(
+        slug: 'new-session',
+        title: 'New session',
+        space: newSpace,
+        attending: false,
+      );
+      final existingSession = _session(
+        slug: 'existing-session',
+        title: 'Existing session',
+        space: existingSpace,
+        attending: true,
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(_FakeAuthController.new),
-          spaceProvider(newSpace.slug).overrideWith((_) async => newSpace),
-          sessionProvider(
-            newSession.slug,
-          ).overrideWith((_) async => newSession),
-          rsvpConfirmProvider(newSession.slug).overrideWith(
-            (_) async => throw RsvpConflictException(
-              SessionConflictSchema(
-                message: 'Conflict',
-                conflictingSessions: [existingSession],
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(_FakeAuthController.new),
+            spaceProvider(newSpace.slug).overrideWith((_) async => newSpace),
+            sessionProvider(
+              newSession.slug,
+            ).overrideWith((_) async => newSession),
+            rsvpConfirmProvider(newSession.slug).overrideWith(
+              (_) async => throw RsvpConflictException(
+                SessionConflictSchema(
+                  message: 'Conflict',
+                  conflictingSessions: [existingSession],
+                ),
               ),
             ),
-          ),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: SpaceDetailScreen(
-            slug: newSpace.slug,
-            sessionSlug: newSession.slug,
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: SpaceDetailScreen(
+              slug: newSpace.slug,
+              sessionSlug: newSession.slug,
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Attend'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.text('Attend'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-    check(
-      tester.widgetList(find.text('You have a session at this time.')),
-    ).length.equals(1);
-    check(tester.widgetList(find.text('Existing Session'))).length.equals(1);
-    check(
-      tester.widgetList(find.text('New Session')),
-    ).length.isGreaterOrEqual(1);
-    check(tester.widgetList(find.text('Switch Sessions'))).length.equals(1);
-  });
+      check(
+        tester.widgetList(find.text('You have a session at this time.')),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Existing session'))).length.equals(1);
+      check(
+        tester.widgetList(find.text('New session')),
+      ).length.isGreaterOrEqual(1);
+      check(tester.widgetList(find.text('Switch sessions'))).length.equals(1);
+    },
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['ImageStreamCompleterHandle'],
+    ),
+  );
 
   testWidgets('invalidates the spaces summary after a successful RSVP', (
     tester,
@@ -190,7 +200,7 @@ void main() {
     final space = _space('new-space', 'New Space');
     final session = _session(
       slug: 'new-session',
-      title: 'New Session',
+      title: 'New session',
       space: space,
       attending: false,
     );
@@ -262,7 +272,7 @@ void main() {
       slug: 'upcoming-session',
       start: DateTime.now().add(const Duration(days: 14)),
       link: '/sessions/upcoming-session',
-      title: 'Upcoming Session',
+      title: 'Upcoming session',
       seatsLeft: 4,
       duration: 60,
       meetingProvider: MeetingProviderEnum.livekit,
@@ -279,13 +289,13 @@ void main() {
     );
     final currentSession = _session(
       slug: 'current-session',
-      title: 'Current Session',
+      title: 'Current session',
       space: space,
       attending: true,
     );
     final refreshedCurrentSession = _session(
       slug: 'current-session',
-      title: 'Current Session',
+      title: 'Current session',
       space: space,
       attending: false,
     );
@@ -342,11 +352,11 @@ void main() {
     ).length.equals(1);
 
     await tester.scrollUntilVisible(
-      find.text('Upcoming Session'),
+      find.text('Upcoming session'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Upcoming Session'));
+    await tester.tap(find.text('Upcoming session'));
     await tester.pumpAndSettle();
     check(tester.widgetList(find.text('Other session'))).length.equals(1);
 

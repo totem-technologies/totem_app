@@ -76,7 +76,9 @@ class _ActionBarCameraSwitcherButtonState
 
   @override
   Widget build(BuildContext context) {
-    final isDesktopPicker = kIsWeb || lkPlatformIsDesktop();
+    final isDesktopPicker = kIsWeb
+        ? !lkPlatformIsWebMobile()
+        : lkPlatformIsDesktop();
     // If the user only has one camera, we show a simple
     // toggle button without the option to switch cameras
     final canChooseBetweenMultipleCameras =
@@ -718,7 +720,9 @@ class _SessionActionBarCameraButtonState
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
-    final isDesktopPicker = kIsWeb || lkPlatformIsDesktop();
+    final isDesktopPicker = kIsWeb
+        ? !lkPlatformIsWebMobile()
+        : lkPlatformIsDesktop();
 
     if (!isDesktopPicker) {
       return ActionBarButton(

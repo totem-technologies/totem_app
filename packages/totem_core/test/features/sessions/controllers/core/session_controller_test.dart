@@ -18,7 +18,7 @@ import '../../livekit_mocks.dart';
 SessionDetailSchema _createSessionEvent(String eventSlug) {
   return SessionDetailSchema(
     slug: eventSlug,
-    title: 'Test Session',
+    title: 'Test session',
     space: MobileSpaceDetailSchema(
       slug: 'test-space',
       title: 'Test Space',

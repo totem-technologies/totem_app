@@ -35,7 +35,7 @@ class SessionInfraPlatform {
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'totem_session',
-        channelName: 'Totem Session',
+        channelName: 'Totem session',
         channelImportance: NotificationChannelImportance.LOW,
         priority: NotificationPriority.LOW,
       ),
@@ -52,7 +52,7 @@ class SessionInfraPlatform {
   }
 
   Future<void> startService() => FlutterForegroundTask.startService(
-    notificationTitle: 'Totem Session',
+    notificationTitle: 'Totem session',
     notificationText: 'Connecting...',
     serviceTypes: [
       ForegroundServiceTypes.microphone,

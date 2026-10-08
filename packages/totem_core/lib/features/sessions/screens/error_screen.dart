@@ -180,7 +180,7 @@ class SessionErrorScreen extends ConsumerWidget {
                                   vertical: 8,
                                 ),
                                 child: Text(
-                                  'Go back to Session Details',
+                                  'Go back to session details',
                                   style: theme.textTheme.bodySmall,
                                   textAlign: TextAlign.center,
                                 ),

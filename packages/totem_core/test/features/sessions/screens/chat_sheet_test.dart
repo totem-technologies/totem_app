@@ -55,7 +55,7 @@ class _ChatSheetHarness {
 SessionDetailSchema _createSessionEvent() {
   return SessionDetailSchema(
     slug: 'session-1',
-    title: 'Session',
+    title: 'session',
     space: MobileSpaceDetailSchema(
       slug: 'space-1',
       title: 'Space',
