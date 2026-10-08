@@ -35,28 +35,22 @@ const _black = Color(0xFF000000);
 class SessionDetails extends StatelessWidget {
   const SessionDetails({
     super.key,
-    required this.phase,
     required this.spaceName,
     required this.sessionName,
     required this.keeperName,
     required this.dateLabel,
     required this.timeLabel,
-    required this.joinTime,
     this.onJoin,
     this.onBack,
-    this.onGuidelines,
   });
 
-  final DetailsPhase phase;
   final String spaceName;
   final String sessionName;
   final String keeperName;
   final String dateLabel;
   final String timeLabel;
-  final String joinTime;
   final VoidCallback? onJoin;
   final VoidCallback? onBack;
-  final VoidCallback? onGuidelines;
 
   @override
   Widget build(BuildContext context) {
@@ -203,51 +197,9 @@ class SessionDetails extends StatelessWidget {
     );
   }
 
-  /// Info card. Facts, when, and the Join action. The note underneath
-  /// says where you are in the timeline.
+  /// Info card. Facts, when, and the Join action. Same shape in every
+  /// phase — timeline copy lives on the overlay, not under the button.
   Widget _card() {
-    final canJoin = phase != DetailsPhase.tooEarly;
-    final lede = TotemText.raw(
-      size: 14,
-      weight: FontWeight.w600,
-      height: 1.3,
-      color: _ink,
-    );
-    final body = TotemText.raw(size: 12, height: 1.45, color: _inkSoft);
-    final strong = body.copyWith(color: _ink, fontWeight: FontWeight.w600);
-
-    final (String ledeText, InlineSpan bodySpan) = switch (phase) {
-      DetailsPhase.tooEarly => (
-        "You're all set for $sessionName.",
-        TextSpan(
-          children: [
-            const TextSpan(text: 'You can join beginning at '),
-            TextSpan(text: joinTime, style: strong),
-            const TextSpan(
-              text:
-                  '. In the meantime, grab some water, get comfortable, or review our ',
-            ),
-            Button.inlineSpan(
-              text: 'Community Guidelines',
-              style: body,
-              onPressed: onGuidelines,
-            ),
-            const TextSpan(text: '.'),
-          ],
-        ),
-      ),
-      DetailsPhase.joinWindow => (
-        'You can join now.',
-        const TextSpan(
-          text: 'Check your camera while your Keeper gets the room ready.',
-        ),
-      ),
-      DetailsPhase.inProgress => (
-        'This Session is already in progress.',
-        const TextSpan(text: 'Join and your Keeper will bring you in.'),
-      ),
-    };
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
@@ -295,27 +247,10 @@ class SessionDetails extends StatelessWidget {
                   Center(
                     child: Button(
                       size: ButtonSize.compact,
-                      onPressed: canJoin ? onJoin ?? () {} : null,
+                      onPressed: onJoin ?? () {},
                       child: const Text('Join Session'),
                     ),
                   ),
-                ],
-              ),
-            ),
-            // Where you are right now. Sits under a hairline inside the card.
-            Container(
-              padding: const EdgeInsets.only(top: 14),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: fade(TotemColors.coreSlate, 0.1)),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 4,
-                children: [
-                  Text(ledeText, style: lede),
-                  Text.rich(TextSpan(style: body, children: [bodySpan])),
                 ],
               ),
             ),

@@ -31,20 +31,7 @@ admission panel.
 Layout follows the screen's own width. Narrow is a phone with bottom
 sheets. From 640 it reads as a window: side panel and centered modal.
 From 1100 it is the web Session layout (Figma 3800:10532).''',
-  stories: [
-    $TooEarly..$generatedName = 'TooEarly',
-    $JoinWindow..$generatedName = 'JoinWindow',
-    $LobbyBeforeStart..$generatedName = 'LobbyBeforeStart',
-    $LobbyLate..$generatedName = 'LobbyLate',
-    $AdmittedEarly..$generatedName = 'AdmittedEarly',
-    $AdmittedLate..$generatedName = 'AdmittedLate',
-    $DeclinedNextSession..$generatedName = 'DeclinedNextSession',
-    $DeclinedRelated..$generatedName = 'DeclinedRelated',
-    $KeeperPreparing..$generatedName = 'KeeperPreparing',
-    $KeeperOneRequest..$generatedName = 'KeeperOneRequest',
-    $KeeperSeveralRequests..$generatedName = 'KeeperSeveralRequests',
-    $KeeperPanelClosed..$generatedName = 'KeeperPanelClosed',
-  ],
+  stories: [$Default..$generatedName = 'Default'],
 );
 typedef SessionEntryScenario = Scenario<SessionEntry, SessionEntryInputArgs>;
 typedef SessionEntryDefaults = Defaults<SessionEntry, SessionEntryInputArgs>;

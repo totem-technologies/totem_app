@@ -215,6 +215,15 @@ class _SessionEntryState extends State<SessionEntry> {
   bool _micOn = true;
   bool _cameraOn = true;
 
+  /// A sheet or dialog is covering the Session details (early arrival
+  /// or Community Guidelines). Hides the home indicator, same as the
+  /// admission panel.
+  bool _browsingCover = false;
+
+  /// Closes whichever details layer is on top. Registered by the
+  /// browsing screen so Escape reaches it.
+  VoidCallback? _closeBrowsingLayer;
+
   _Media get _media => (
     micOn: _micOn,
     cameraOn: _cameraOn,
@@ -258,7 +267,9 @@ class _SessionEntryState extends State<SessionEntry> {
   }
 
   void _onEscape() {
-    if (widget.showOrientation) {
+    if (_browsingCover) {
+      _closeBrowsingLayer?.call();
+    } else if (widget.showOrientation) {
       widget.onDismissOrientation?.call();
     } else if (widget.panelOpen) {
       widget.onDismissPanel?.call();
@@ -273,7 +284,8 @@ class _SessionEntryState extends State<SessionEntry> {
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 640;
         final web = constraints.maxWidth >= 1100;
-        final coverOpen = widget.panelOpen || widget.showOrientation;
+        final coverOpen =
+            widget.panelOpen || widget.showOrientation || _browsingCover;
 
         // Figma frames were 812 / 760. Inside Widgetbook the viewport
         // is the device (iPhone 13 is 844 tall), so a fixed height
@@ -386,6 +398,11 @@ class _SessionEntryState extends State<SessionEntry> {
         phase: widget.phase,
         onJoin: widget.onJoin,
         onBack: widget.onBackToSpace,
+        onCoverChanged: (open) {
+          if (!mounted) return;
+          setState(() => _browsingCover = open);
+        },
+        onBindDismiss: (close) => _closeBrowsingLayer = close,
       ),
       EntryStatus.lobby => _Lobby(
         late: widget.phase == EntryPhase.inProgress,
@@ -1190,7 +1207,10 @@ class _Notice extends StatelessWidget {
       block: !wide,
       child: const Text('Got it'),
     );
+    // Hug the copy. A max column inside the dialog stretches to the
+    // frame and leaves a tall empty panel under the button.
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: Spacing.s12,
       children: [
@@ -1261,14 +1281,28 @@ class _Orientation extends StatelessWidget {
 // Participant screens
 // ------------------------------------------------------------------
 
-/// Before joining: the Session details screen, plus the Community
-/// Guidelines sheet (narrow) or modal (wide) it can open.
+/// Before joining: the Session details screen. Community Guidelines and
+/// the early-arrival note both open here — a sheet on the phone, a
+/// dialog once the frame reads as a window.
 class _PreSession extends StatefulWidget {
-  const _PreSession({required this.phase, this.onJoin, this.onBack});
+  const _PreSession({
+    required this.phase,
+    this.onJoin,
+    this.onBack,
+    this.onCoverChanged,
+    this.onBindDismiss,
+  });
 
   final EntryPhase phase;
   final VoidCallback? onJoin;
   final VoidCallback? onBack;
+
+  /// True while a sheet or dialog is covering the details.
+  final ValueChanged<bool>? onCoverChanged;
+
+  /// Hands the parent a way to dismiss the top layer (Escape).
+  /// Null clears it.
+  final ValueChanged<VoidCallback?>? onBindDismiss;
 
   @override
   State<_PreSession> createState() => _PreSessionState();
@@ -1276,8 +1310,72 @@ class _PreSession extends StatefulWidget {
 
 class _PreSessionState extends State<_PreSession> {
   bool _guideOpen = false;
+  bool _earlyOpen = false;
 
-  void _close() => setState(() => _guideOpen = false);
+  @override
+  void initState() {
+    super.initState();
+    widget.onBindDismiss?.call(_closeTop);
+  }
+
+  @override
+  void didUpdateWidget(covariant _PreSession oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The note only belongs to early arrival. Leaving that phase
+    // drops it so a later Join goes straight into the room.
+    if (widget.phase != EntryPhase.tooEarly && _earlyOpen) {
+      _earlyOpen = false;
+      // Parent is mid-build. Tell it on the next frame.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _publishCover();
+      });
+    }
+    if (widget.onBindDismiss != oldWidget.onBindDismiss) {
+      widget.onBindDismiss?.call(_closeTop);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.onBindDismiss?.call(null);
+    final notify = widget.onCoverChanged;
+    if ((_earlyOpen || _guideOpen) && notify != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => notify(false));
+    }
+    super.dispose();
+  }
+
+  void _publishCover() {
+    widget.onCoverChanged?.call(_earlyOpen || _guideOpen);
+  }
+
+  void _setGuide(bool open) {
+    setState(() => _guideOpen = open);
+    _publishCover();
+  }
+
+  void _setEarly(bool open) {
+    setState(() => _earlyOpen = open);
+    _publishCover();
+  }
+
+  /// Guidelines sits above the early note, so it closes first.
+  void _closeTop() {
+    if (_guideOpen) {
+      _setGuide(false);
+    } else {
+      _setEarly(false);
+    }
+  }
+
+  /// Too early, Join explains the window instead of entering the room.
+  void _onJoin() {
+    if (widget.phase == EntryPhase.tooEarly) {
+      _setEarly(true);
+      return;
+    }
+    widget.onJoin?.call();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1290,16 +1388,18 @@ class _PreSessionState extends State<_PreSession> {
       fit: StackFit.expand,
       children: [
         SessionDetails(
-          phase: widget.phase,
           spaceName: _spaceName,
           sessionName: _sessionName,
           keeperName: _keeperName,
           dateLabel: _startDateLabel,
           timeLabel: _startTime,
-          joinTime: _joinTime,
-          onJoin: widget.onJoin,
+          onJoin: _onJoin,
           onBack: widget.onBack,
-          onGuidelines: () => setState(() => _guideOpen = true),
+        ),
+        _EarlyArrival(
+          open: _earlyOpen,
+          onDismiss: () => _setEarly(false),
+          onGuidelines: () => _setGuide(true),
         ),
         EntryLayer(
           key: ValueKey(wide),
@@ -1307,11 +1407,11 @@ class _PreSessionState extends State<_PreSession> {
           kind: wide ? LayerKind.modal : LayerKind.sheet,
           label: 'Community Guidelines',
           scrim: wide ? LayerScrim.dim : LayerScrim.soft,
-          onDismiss: _close,
+          onDismiss: () => _setGuide(false),
           child: _Notice(
             kicker: 'Before you enter',
             title: 'Community Guidelines',
-            onDone: _close,
+            onDone: () => _setGuide(false),
             children: [
               Padding(
                 padding: const EdgeInsets.only(left: 6),
@@ -1338,6 +1438,71 @@ class _PreSessionState extends State<_PreSession> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The early-arrival note from the card, lifted into its own surface.
+///
+/// Phone: a sheet you can drag down. Window and web: a centered dialog.
+/// Same spring as the other layers — a flick carries, a grab mid-flight
+/// takes over from the live position.
+class _EarlyArrival extends StatelessWidget {
+  const _EarlyArrival({
+    required this.open,
+    required this.onDismiss,
+    required this.onGuidelines,
+  });
+
+  final bool open;
+  final VoidCallback onDismiss;
+  final VoidCallback onGuidelines;
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = _Breakpoints.of(context).wide;
+    final theme = TotemTheme.of(context);
+    final body = _muted(context);
+    final strong = body.copyWith(
+      color: theme.textPrimary,
+      fontWeight: FontWeight.w600,
+    );
+
+    return EntryLayer(
+      key: ValueKey('early-$wide'),
+      open: open,
+      kind: wide ? LayerKind.modal : LayerKind.sheet,
+      label:
+          "You're all set for $_sessionName. You can join beginning at $_joinTime.",
+      scrim: wide ? LayerScrim.dim : LayerScrim.soft,
+      dismissOnScrim: true,
+      onDismiss: onDismiss,
+      child: _Notice(
+        kicker: 'Before you join',
+        title: "You're all set for $_sessionName.",
+        onDone: onDismiss,
+        children: [
+          Text.rich(
+            TextSpan(
+              style: body,
+              children: [
+                const TextSpan(text: 'You can join beginning at '),
+                TextSpan(text: _joinTime, style: strong),
+                const TextSpan(
+                  text:
+                      '. In the meantime, grab some water, get comfortable, or review our ',
+                ),
+                Button.inlineSpan(
+                  text: 'Community Guidelines',
+                  style: body,
+                  onPressed: onGuidelines,
+                ),
+                const TextSpan(text: '.'),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
