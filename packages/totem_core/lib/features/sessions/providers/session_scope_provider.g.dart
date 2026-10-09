@@ -618,11 +618,11 @@ final sessionParticipantsProvider = SessionParticipantsProvider._();
 final class SessionParticipantsProvider
     extends
         $FunctionalProvider<
-          List<Participant<TrackPublication<Track>>>,
-          List<Participant<TrackPublication<Track>>>,
-          List<Participant<TrackPublication<Track>>>
+          List<ParticipantInfo>,
+          List<ParticipantInfo>,
+          List<ParticipantInfo>
         >
-    with $Provider<List<Participant<TrackPublication<Track>>>> {
+    with $Provider<List<ParticipantInfo>> {
   /// The list of participants in the session.
   SessionParticipantsProvider._()
     : super(
@@ -647,27 +647,85 @@ final class SessionParticipantsProvider
 
   @$internal
   @override
-  $ProviderElement<List<Participant<TrackPublication<Track>>>> $createElement(
+  $ProviderElement<List<ParticipantInfo>> $createElement(
     $ProviderPointer pointer,
   ) => $ProviderElement(pointer);
 
   @override
-  List<Participant<TrackPublication<Track>>> create(Ref ref) {
+  List<ParticipantInfo> create(Ref ref) {
     return sessionParticipants(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(List<Participant<TrackPublication<Track>>> value) {
+  Override overrideWithValue(List<ParticipantInfo> value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride:
-          $SyncValueProvider<List<Participant<TrackPublication<Track>>>>(value),
+      providerOverride: $SyncValueProvider<List<ParticipantInfo>>(value),
     );
   }
 }
 
 String _$sessionParticipantsHash() =>
-    r'10990e4bffa481e16748e63e0e77394db35a87cd';
+    r'4386563bda81e6f5498526920e70deb1ebda9fc3';
+
+/// The local participant, once connected.
+
+@ProviderFor(localParticipantInfo)
+final localParticipantInfoProvider = LocalParticipantInfoProvider._();
+
+/// The local participant, once connected.
+
+final class LocalParticipantInfoProvider
+    extends
+        $FunctionalProvider<
+          ParticipantInfo?,
+          ParticipantInfo?,
+          ParticipantInfo?
+        >
+    with $Provider<ParticipantInfo?> {
+  /// The local participant, once connected.
+  LocalParticipantInfoProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'localParticipantInfoProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          LocalParticipantInfoProvider.$allTransitiveDependencies0,
+          LocalParticipantInfoProvider.$allTransitiveDependencies1,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
+
+  @override
+  String debugGetCreateSourceHash() => _$localParticipantInfoHash();
+
+  @$internal
+  @override
+  $ProviderElement<ParticipantInfo?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ParticipantInfo? create(Ref ref) {
+    return localParticipantInfo(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ParticipantInfo? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ParticipantInfo?>(value),
+    );
+  }
+}
+
+String _$localParticipantInfoHash() =>
+    r'0174243906f454b40acdcbc4a3c4c086e8f13a9d';
 
 /// Current session error as a LiveKitError, if applicable.
 
@@ -1601,11 +1659,11 @@ final featuredParticipantProvider = FeaturedParticipantProvider._();
 final class FeaturedParticipantProvider
     extends
         $FunctionalProvider<
-          Participant<TrackPublication<Track>>?,
-          Participant<TrackPublication<Track>>?,
-          Participant<TrackPublication<Track>>?
+          ParticipantInfo?,
+          ParticipantInfo?,
+          ParticipantInfo?
         >
-    with $Provider<Participant<TrackPublication<Track>>?> {
+    with $Provider<ParticipantInfo?> {
   /// Participant currently featured in the room layout.
   FeaturedParticipantProvider._()
     : super(
@@ -1630,27 +1688,25 @@ final class FeaturedParticipantProvider
 
   @$internal
   @override
-  $ProviderElement<Participant<TrackPublication<Track>>?> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
+  $ProviderElement<ParticipantInfo?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
 
   @override
-  Participant<TrackPublication<Track>>? create(Ref ref) {
+  ParticipantInfo? create(Ref ref) {
     return featuredParticipant(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(Participant<TrackPublication<Track>>? value) {
+  Override overrideWithValue(ParticipantInfo? value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride:
-          $SyncValueProvider<Participant<TrackPublication<Track>>?>(value),
+      providerOverride: $SyncValueProvider<ParticipantInfo?>(value),
     );
   }
 }
 
 String _$featuredParticipantHash() =>
-    r'37c1fd41686ef04c3977f8c2c0bcf075635687dd';
+    r'04bc460cf46b284b24988ad0776e269cba71cea4';
 
 /// The wall-clock time when the current featured turn began.
 /// Null while no speaker is featured.
@@ -1719,11 +1775,11 @@ final speakingNextParticipantProvider = SpeakingNextParticipantProvider._();
 final class SpeakingNextParticipantProvider
     extends
         $FunctionalProvider<
-          Participant<TrackPublication<Track>>?,
-          Participant<TrackPublication<Track>>?,
-          Participant<TrackPublication<Track>>?
+          ParticipantInfo?,
+          ParticipantInfo?,
+          ParticipantInfo?
         >
-    with $Provider<Participant<TrackPublication<Track>>?> {
+    with $Provider<ParticipantInfo?> {
   /// Participant expected to speak next.
   SpeakingNextParticipantProvider._()
     : super(
@@ -1748,27 +1804,25 @@ final class SpeakingNextParticipantProvider
 
   @$internal
   @override
-  $ProviderElement<Participant<TrackPublication<Track>>?> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
+  $ProviderElement<ParticipantInfo?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
 
   @override
-  Participant<TrackPublication<Track>>? create(Ref ref) {
+  ParticipantInfo? create(Ref ref) {
     return speakingNextParticipant(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(Participant<TrackPublication<Track>>? value) {
+  Override overrideWithValue(ParticipantInfo? value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride:
-          $SyncValueProvider<Participant<TrackPublication<Track>>?>(value),
+      providerOverride: $SyncValueProvider<ParticipantInfo?>(value),
     );
   }
 }
 
 String _$speakingNextParticipantHash() =>
-    r'aedb4a4c2543eebe2de4ba45925a7e45857d7319';
+    r'cd52410656fabaf460464a1c79a8f7c3d9a95e52';
 
 /// Active session payload.
 
@@ -2023,53 +2077,6 @@ final class AmNextSpeakerProvider extends $FunctionalProvider<bool, bool, bool>
 }
 
 String _$amNextSpeakerHash() => r'367789500c1f18d4431062591ad70cb00e2c750e';
-
-@ProviderFor(isCameraOn)
-final isCameraOnProvider = IsCameraOnProvider._();
-
-final class IsCameraOnProvider extends $FunctionalProvider<bool, bool, bool>
-    with $Provider<bool> {
-  IsCameraOnProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'isCameraOnProvider',
-        isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[currentSessionProvider],
-        $allTransitiveDependencies: <ProviderOrFamily>[
-          IsCameraOnProvider.$allTransitiveDependencies0,
-          IsCameraOnProvider.$allTransitiveDependencies1,
-        ],
-      );
-
-  static final $allTransitiveDependencies0 = currentSessionProvider;
-  static final $allTransitiveDependencies1 =
-      CurrentSessionProvider.$allTransitiveDependencies0;
-
-  @override
-  String debugGetCreateSourceHash() => _$isCameraOnHash();
-
-  @$internal
-  @override
-  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  bool create(Ref ref) {
-    return isCameraOn(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(bool value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<bool>(value),
-    );
-  }
-}
-
-String _$isCameraOnHash() => r'dba9af29058febff4947ca2e89a47e72a9dc62d5';
 
 @ProviderFor(SelfViewSettings)
 final selfViewSettingsProvider = SelfViewSettingsProvider._();

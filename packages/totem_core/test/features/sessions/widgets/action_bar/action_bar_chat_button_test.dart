@@ -13,7 +13,7 @@ import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
-import '../../livekit_mocks.dart';
+import '../../media/test_participants.dart';
 
 class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   @override
@@ -236,7 +236,7 @@ void main() {
             message: 'I am struggling',
             timestamp: 4,
             recipientIdentity: 'keeper-1',
-            participant: MockRemoteParticipant('lucas', 'Lucas'),
+            participant: testParticipant('lucas', name: 'Lucas'),
           ),
         );
     await tester.pump();
@@ -292,7 +292,7 @@ void main() {
               message: 'I need support',
               timestamp: 7,
               recipientIdentity: 'keeper-1',
-              participant: MockRemoteParticipant('lucas', 'Lucas'),
+              participant: testParticipant('lucas', name: 'Lucas'),
             ),
           );
       await tester.pump();
@@ -394,7 +394,7 @@ void main() {
             message: 'Checking in',
             timestamp: 5,
             recipientIdentity: 'bruno-test',
-            participant: MockRemoteParticipant('keeper-1', 'Bruno Keeper'),
+            participant: testParticipant('keeper-1', name: 'Bruno Keeper'),
           ),
         );
     await tester.pump();
@@ -451,7 +451,7 @@ void main() {
             message: 'How are you holding up?',
             timestamp: 6,
             recipientIdentity: 'lucas',
-            participant: MockRemoteParticipant('keeper-1', 'Heather'),
+            participant: testParticipant('keeper-1', name: 'Heather'),
           ),
         );
     await tester.pump();

@@ -2,291 +2,228 @@ import 'dart:async';
 
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:livekit_client/livekit_client.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
 
-import '../../livekit_mocks.dart';
+import '../../media/fake_local_media.dart';
 import '../core/session_controller_mock.dart';
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(FakeCameraCaptureOptions());
-  });
-
   group('SessionDeviceController', () {
-    group('Device Controls', () {
-      late FakeSessionController mockSession;
-      late FakeRoom mockRoom;
-      late MockLocalParticipant mockLocalParticipant;
-      late ProviderContainer container;
+    late FakeSessionController session;
+    late FakeLocalMedia media;
+    late ProviderContainer container;
 
-      setUp(() {
-        mockSession = FakeSessionController();
-        mockLocalParticipant = MockLocalParticipant();
-        mockRoom = FakeRoom(mockLocalParticipant);
-        AudioManager.instance.setSpeakerOutputPreferred(true);
+    setUp(() {
+      session = FakeSessionController();
+      media = session.mockLocalMedia;
+      container = ProviderContainer();
+    });
 
-        mockSession.mockRoom = mockRoom;
+    tearDown(() {
+      container.dispose();
+    });
 
-        when(
-          () => mockLocalParticipant.isMicrophoneEnabled(),
-        ).thenReturn(false);
-        when(
-          () => mockLocalParticipant.setMicrophoneEnabled(any()),
-        ).thenAnswer((_) async => null);
+    SessionDeviceController controller() =>
+        container.read(sessionDeviceControllerProvider(session).notifier);
 
-        when(() => mockLocalParticipant.isCameraEnabled()).thenReturn(false);
-        when(
-          () => mockLocalParticipant.setCameraEnabled(
-            any(),
-            cameraCaptureOptions: any(named: 'cameraCaptureOptions'),
-          ),
-        ).thenAnswer((_) async => null);
+    SessionDeviceState deviceState() =>
+        container.read(sessionDeviceControllerProvider(session));
 
-        container = ProviderContainer();
-      });
+    test('enableMicrophone unmutes the microphone', () async {
+      await controller().enableMicrophone();
 
-      tearDown(() {
-        container.dispose();
-      });
+      check(media.microphoneCommands).deepEquals([true]);
+      check(deviceState().isMicrophoneEnabled).isTrue();
+    });
 
-      test(
-        'enableMicrophone calls setMicrophoneEnabled on localParticipant',
-        () async {
-          final controller = container.read(
-            sessionDeviceControllerProvider(mockSession).notifier,
-          );
+    test('enableMicrophone does nothing if already enabled', () async {
+      media.isMicrophoneEnabled = true;
 
-          await controller.enableMicrophone();
+      await controller().enableMicrophone();
 
-          verify(
-            () => mockLocalParticipant.setMicrophoneEnabled(true),
-          ).called(1);
-        },
+      check(media.microphoneCommands).isEmpty();
+    });
+
+    test('disableMicrophone mutes the microphone', () async {
+      media.isMicrophoneEnabled = true;
+
+      await controller().disableMicrophone();
+
+      check(media.microphoneCommands).deepEquals([false]);
+      check(deviceState().isMicrophoneEnabled).isFalse();
+    });
+
+    test('disableMicrophone does nothing if already disabled', () async {
+      await controller().disableMicrophone();
+
+      check(media.microphoneCommands).isEmpty();
+    });
+
+    test('reflects media changes made outside the controller', () {
+      media
+        ..hasMicrophoneTrack = true
+        ..isMicrophoneEnabled = true;
+      controller();
+      check(deviceState().isMicrophoneEnabled).isTrue();
+
+      // A keeper mutes the participant from the server.
+      media
+        ..isMicrophoneEnabled = false
+        ..emitChange();
+
+      check(deviceState().isMicrophoneEnabled).isFalse();
+    });
+
+    test('controls show the join preference until tracks are published', () {
+      session.mockOptions = const SessionOptions(
+        sessionSlug: 'test-session',
+        token: 'test-token',
+        cameraEnabled: true,
+        microphoneEnabled: true,
+        speakerEnabled: true,
+        cameraOptions: SessionController.defaultCameraCaptureOptions,
       );
+      controller();
+      check(deviceState())
+        ..has((s) => s.isMicrophoneOn, 'isMicrophoneOn').isTrue()
+        ..has((s) => s.isCameraOn, 'isCameraOn').isTrue();
 
-      test('enableMicrophone does nothing if already enabled', () async {
-        when(() => mockLocalParticipant.isMicrophoneEnabled()).thenReturn(true);
-        final controller = container.read(
-          sessionDeviceControllerProvider(mockSession).notifier,
-        );
+      // Both tracks publish muted.
+      media
+        ..hasMicrophoneTrack = true
+        ..hasCameraTrack = true
+        ..emitChange();
 
-        await controller.enableMicrophone();
+      check(deviceState())
+        ..has((s) => s.isMicrophoneOn, 'isMicrophoneOn').isFalse()
+        ..has((s) => s.isCameraOn, 'isCameraOn').isFalse();
+    });
 
-        verifyNever(() => mockLocalParticipant.setMicrophoneEnabled(any()));
-      });
+    test('disableCamera turns the camera off', () async {
+      media.isCameraEnabled = true;
 
-      test(
-        'disableMicrophone calls setMicrophoneEnabled(false) on localParticipant',
-        () async {
-          when(
-            () => mockLocalParticipant.isMicrophoneEnabled(),
-          ).thenReturn(true);
-          final controller = container.read(
-            sessionDeviceControllerProvider(mockSession).notifier,
-          );
+      await controller().disableCamera();
 
-          await controller.disableMicrophone();
+      check(media.cameraCommands).deepEquals([false]);
+      check(deviceState().isCameraEnabled).isFalse();
+    });
 
-          verify(
-            () => mockLocalParticipant.setMicrophoneEnabled(false),
-          ).called(1);
-        },
-      );
-
-      test('disableMicrophone does nothing if already disabled', () async {
-        when(
-          () => mockLocalParticipant.isMicrophoneEnabled(),
-        ).thenReturn(false);
-        final controller = container.read(
-          sessionDeviceControllerProvider(mockSession).notifier,
-        );
-
-        await controller.disableMicrophone();
-
-        verifyNever(() => mockLocalParticipant.setMicrophoneEnabled(any()));
-      });
-
-      test(
-        'disableCamera calls setCameraEnabled(false) on localParticipant',
-        () async {
-          when(() => mockLocalParticipant.isCameraEnabled()).thenReturn(true);
-          final controller = container.read(
-            sessionDeviceControllerProvider(mockSession).notifier,
-          );
-
-          await controller.disableCamera();
-
-          verify(() => mockLocalParticipant.setCameraEnabled(false)).called(1);
-        },
-      );
-
-      test(
-        'coalesces rapid camera requests to the latest enabled state',
-        () async {
-          var cameraEnabled = true;
-          var activeMutations = 0;
-          var maximumActiveMutations = 0;
-          final calls = <bool>[];
-          final mutations = <Completer<void>>[];
-          final secondMutationStarted = Completer<void>();
-
-          when(
-            () => mockLocalParticipant.isCameraEnabled(),
-          ).thenAnswer((_) => cameraEnabled);
-          when(() => mockLocalParticipant.setCameraEnabled(false)).thenAnswer((
-            _,
-          ) {
-            calls.add(false);
-            activeMutations++;
-            if (activeMutations > maximumActiveMutations) {
-              maximumActiveMutations = activeMutations;
-            }
-            final mutation = Completer<void>();
-            mutations.add(mutation);
-            return mutation.future.then<LocalTrackPublication<LocalTrack>?>((
-              _,
-            ) {
-              cameraEnabled = false;
-              activeMutations--;
-              return null;
-            });
-          });
-          when(
-            () => mockLocalParticipant.setCameraEnabled(
-              true,
-              cameraCaptureOptions: any(named: 'cameraCaptureOptions'),
-            ),
-          ).thenAnswer((_) {
-            calls.add(true);
-            activeMutations++;
-            if (activeMutations > maximumActiveMutations) {
-              maximumActiveMutations = activeMutations;
-            }
-            secondMutationStarted.complete();
-            final mutation = Completer<void>();
-            mutations.add(mutation);
-            return mutation.future.then<LocalTrackPublication<LocalTrack>?>((
-              _,
-            ) {
-              cameraEnabled = true;
-              activeMutations--;
-              return null;
-            });
-          });
-
-          final controller = container.read(
-            sessionDeviceControllerProvider(mockSession).notifier,
-          );
-          final request = controller.disableCamera();
-          unawaited(controller.enableCamera());
-          unawaited(controller.disableCamera());
-          unawaited(controller.enableCamera());
-
-          check(calls).deepEquals([false]);
-          check(maximumActiveMutations).equals(1);
-
-          mutations.single.complete();
-          await secondMutationStarted.future;
-
-          check(calls).deepEquals([false, true]);
-          check(maximumActiveMutations).equals(1);
-
-          mutations.last.complete();
-          await request;
-
-          check(cameraEnabled).isTrue();
-        },
-      );
-
-      test(
-        'drops stale camera requests when the latest state is disabled',
-        () async {
-          var cameraEnabled = true;
-          final calls = <bool>[];
-          final mutation = Completer<void>();
-
-          when(
-            () => mockLocalParticipant.isCameraEnabled(),
-          ).thenAnswer((_) => cameraEnabled);
-          when(() => mockLocalParticipant.setCameraEnabled(false)).thenAnswer((
-            _,
-          ) {
-            calls.add(false);
-            return mutation.future.then<LocalTrackPublication<LocalTrack>?>((
-              _,
-            ) {
-              cameraEnabled = false;
-              return null;
-            });
-          });
-
-          final controller = container.read(
-            sessionDeviceControllerProvider(mockSession).notifier,
-          );
-          final request = controller.disableCamera();
-          unawaited(controller.enableCamera());
-          unawaited(controller.disableCamera());
-
-          check(calls).deepEquals([false]);
-          mutation.complete();
-          await request;
-
-          check(calls).deepEquals([false]);
-          check(cameraEnabled).isFalse();
-        },
-      );
-
-      test('recovers after a camera mutation fails', () async {
-        var cameraEnabled = true;
-        var shouldFail = true;
-        final calls = <bool>[];
-
-        when(
-          () => mockLocalParticipant.isCameraEnabled(),
-        ).thenAnswer((_) => cameraEnabled);
-        when(() => mockLocalParticipant.setCameraEnabled(false)).thenAnswer((
-          _,
-        ) {
-          calls.add(false);
-          if (shouldFail) {
-            shouldFail = false;
-            return Future<LocalTrackPublication<LocalTrack>?>.error(
-              StateError('camera unavailable'),
-            );
+    test(
+      'coalesces rapid camera requests to the latest enabled state',
+      () async {
+        media.isCameraEnabled = true;
+        var activeCommands = 0;
+        var maximumActiveCommands = 0;
+        final commands = <Completer<void>>[];
+        final secondCommandStarted = Completer<void>();
+        media.onCameraCommand = (enabled) {
+          activeCommands++;
+          if (activeCommands > maximumActiveCommands) {
+            maximumActiveCommands = activeCommands;
           }
-          cameraEnabled = false;
-          return Future<LocalTrackPublication<LocalTrack>?>.value();
-        });
+          if (enabled) secondCommandStarted.complete();
+          final command = Completer<void>();
+          commands.add(command);
+          return command.future.whenComplete(() => activeCommands--);
+        };
 
-        final controller = container.read(
-          sessionDeviceControllerProvider(mockSession).notifier,
-        );
+        final devices = controller();
+        final request = devices.disableCamera();
+        unawaited(devices.enableCamera());
+        unawaited(devices.disableCamera());
+        unawaited(devices.enableCamera());
 
-        await controller.disableCamera();
-        await controller.disableCamera();
+        check(media.cameraCommands).deepEquals([false]);
+        check(maximumActiveCommands).equals(1);
 
-        check(calls).deepEquals([false, false]);
-        check(cameraEnabled).isFalse();
-      });
+        commands.single.complete();
+        await secondCommandStarted.future;
 
-      test('resetSpeakerRoutingDefaults resets preferences', () {
-        final controller = container.read(
-          sessionDeviceControllerProvider(mockSession).notifier,
-        )..resetSpeakerRoutingDefaults();
-        check(controller.userSpeakerPreference).equals(true);
-      });
+        check(media.cameraCommands).deepEquals([false, true]);
+        check(maximumActiveCommands).equals(1);
 
-      test('disposed controller rejects late device listener setup', () async {
-        final controller = container.read(
-          sessionDeviceControllerProvider(mockSession).notifier,
-        );
+        commands.last.complete();
+        await request;
 
-        await controller.dispose();
-        await controller.setupDeviceChangeListener();
-      });
+        check(media.isCameraEnabled).isTrue();
+      },
+    );
+
+    test(
+      'drops stale camera requests when the latest state is disabled',
+      () async {
+        media.isCameraEnabled = true;
+        final command = Completer<void>();
+        media.onCameraCommand = (_) => command.future;
+
+        final devices = controller();
+        final request = devices.disableCamera();
+        unawaited(devices.enableCamera());
+        unawaited(devices.disableCamera());
+
+        check(media.cameraCommands).deepEquals([false]);
+        command.complete();
+        await request;
+
+        check(media.cameraCommands).deepEquals([false]);
+        check(media.isCameraEnabled).isFalse();
+      },
+    );
+
+    test('recovers after a camera command fails', () async {
+      media.isCameraEnabled = true;
+      var shouldFail = true;
+      media.onCameraCommand = (_) async {
+        if (shouldFail) {
+          shouldFail = false;
+          throw StateError('camera unavailable');
+        }
+      };
+
+      await controller().disableCamera();
+      await controller().disableCamera();
+
+      check(media.cameraCommands).deepEquals([false, false]);
+      check(media.isCameraEnabled).isFalse();
+    });
+
+    test('selecting a camera updates the selected device', () async {
+      await controller().selectCameraDevice(fakeCamera('camera-2', 'Rear'));
+
+      check(deviceState().selectedCameraDeviceId).equals('camera-2');
+    });
+
+    test('selecting a camera is ignored without a room', () async {
+      media.isAvailable = false;
+
+      await controller().selectCameraDevice(fakeCamera('camera-2'));
+
+      check(deviceState().selectedCameraDeviceId).isNull();
+    });
+
+    test('switching cameras reports the new facing', () async {
+      media
+        ..isCameraEnabled = true
+        ..cameraFacing = CameraFacing.front;
+
+      await controller().switchCameraPosition();
+
+      check(deviceState().cameraFacing).equals(CameraFacing.back);
+    });
+
+    test('resetSpeakerRoutingDefaults resets preferences', () {
+      final devices = controller()..resetSpeakerRoutingDefaults();
+      check(devices.userSpeakerPreference).equals(true);
+    });
+
+    test('disposed controller rejects late device listener setup', () async {
+      final devices = controller();
+
+      await devices.dispose();
+      await devices.setupDeviceChangeListener();
     });
   });
 }

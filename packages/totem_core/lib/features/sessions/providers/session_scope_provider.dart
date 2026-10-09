@@ -8,7 +8,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 
 part 'session_scope_provider.g.dart';
 
@@ -20,7 +20,7 @@ typedef SessionParticipantPresentation = ({
 });
 
 typedef SessionParticipantLayout = ({
-  List<Participant> participants,
+  List<ParticipantInfo> participants,
   List<String> talkingOrder,
   String speakingNow,
   String? nextSpeaker,
@@ -40,7 +40,8 @@ SessionParticipantPresentation sessionParticipantPresentation(
 
 SessionParticipantLayout sessionParticipantLayout(SessionRoomState? session) {
   return (
-    participants: session?.participants.participants ?? const <Participant>[],
+    participants:
+        session?.participants.participants ?? const <ParticipantInfo>[],
     talkingOrder: session?.roomState.talkingOrder ?? const <String>[],
     speakingNow: session?.speakingNow ?? '',
     nextSpeaker: session?.roomState.nextSpeaker.value,
@@ -198,11 +199,21 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
 
 /// The list of participants in the session.
 @Riverpod(dependencies: [currentSessionState])
-List<Participant> sessionParticipants(Ref ref) {
+List<ParticipantInfo> sessionParticipants(Ref ref) {
   return ref.watch(
         currentSessionStateProvider.select((s) => s?.participants.participants),
       ) ??
       [];
+}
+
+/// The local participant, once connected.
+@Riverpod(dependencies: [currentSessionState])
+ParticipantInfo? localParticipantInfo(Ref ref) {
+  return ref.watch(
+    currentSessionStateProvider.select(
+      (s) => s?.participantsList.where((p) => p.isLocal).firstOrNull,
+    ),
+  );
 }
 
 /// Current session error as a LiveKitError, if applicable.
@@ -369,7 +380,7 @@ bool hasKeeper(Ref ref) {
 
 /// Participant currently featured in the room layout.
 @Riverpod(dependencies: [currentSessionState])
-Participant? featuredParticipant(Ref ref) {
+ParticipantInfo? featuredParticipant(Ref ref) {
   return ref.watch(
     currentSessionStateProvider.select((s) => s?.featuredParticipant()),
   );
@@ -384,7 +395,7 @@ DateTime? featuredTurnStartTime(Ref ref) {
 
 /// Participant expected to speak next.
 @Riverpod(dependencies: [currentSessionState])
-Participant? speakingNextParticipant(Ref ref) {
+ParticipantInfo? speakingNextParticipant(Ref ref) {
   return ref.watch(
     currentSessionStateProvider.select((s) => s?.speakingNextParticipant()),
   );
@@ -417,14 +428,6 @@ bool amNextSpeaker(Ref ref) {
   final localIdentity = ref.watch(localParticipantIdentityProvider);
   return localIdentity != null &&
       localIdentity == ref.watch(nextSpeakerIdentityProvider);
-}
-
-@Riverpod(dependencies: [currentSession])
-bool isCameraOn(Ref ref) {
-  final session = ref.watch(currentSessionProvider);
-  if (session == null) return false;
-  final devices = ref.watch(sessionDeviceControllerProvider(session));
-  return devices.isCameraEnabled;
 }
 
 enum SelfViewPosition { start, end }

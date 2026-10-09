@@ -311,8 +311,6 @@ class _ListeningTurnGrid extends ConsumerWidget {
                           child: ParticipantCard(
                             key: ValueKey(participant.sid),
                             participant: participant,
-                            session: session,
-                            participantIdentity: participant.identity,
                           ),
                         );
                       } else {
@@ -337,8 +335,6 @@ class _ListeningTurnGrid extends ConsumerWidget {
                   : ParticipantCard(
                       key: ValueKey(speaker.sid),
                       participant: speaker,
-                      session: session,
-                      participantIdentity: speaker.identity,
                     ),
               participants: [
                 for (final participant in sortedParticipants.where(
@@ -347,8 +343,6 @@ class _ListeningTurnGrid extends ConsumerWidget {
                   ParticipantCard(
                     key: ValueKey(participant.sid),
                     participant: participant,
-                    session: session,
-                    participantIdentity: participant.identity,
                   ),
               ],
             );

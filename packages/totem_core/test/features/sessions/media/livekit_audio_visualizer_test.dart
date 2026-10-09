@@ -1,7 +1,8 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
+import 'package:totem_core/features/sessions/media/livekit_audio_visualizer.dart';
+import 'package:totem_core/features/sessions/widgets/audio_visualizer_bars.dart';
 
 void main() {
   group('audioVisualizerSamplesChanged', () {

@@ -13,6 +13,7 @@ import 'package:totem_core/features/sessions/widgets/participant_reorder_modal.d
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
 import '../controllers/core/session_controller_mock.dart';
+import '../media/test_participants.dart';
 import '../session_test_mocks.dart';
 
 class _ReorderTestHarness {
@@ -20,21 +21,11 @@ class _ReorderTestHarness {
     required this.session,
     required this.keeper,
     required this.sessionState,
-    required this.participants,
   });
 
   final MockSessionController session;
   final MockSessionKeeperController keeper;
   final MockSessionRoomState sessionState;
-  final Map<String, MockParticipant> participants;
-}
-
-void _stubParticipant(MockParticipant participant, {required String id}) {
-  when(() => participant.identity).thenReturn(id);
-  when(() => participant.name).thenReturn(switch (id) {
-    'keeper-1' => 'Keeper',
-    _ => 'User ${id.split('-').last}',
-  });
 }
 
 _ReorderTestHarness _createHarness({
@@ -46,15 +37,16 @@ _ReorderTestHarness _createHarness({
   final session = MockSessionController();
   final keeper = MockSessionKeeperController();
   final sessionState = MockSessionRoomState();
-  final participants = <String, MockParticipant>{};
-  final participantList = <MockParticipant>[];
-
-  for (final id in participantIds) {
-    final participant = MockParticipant();
-    _stubParticipant(participant, id: id);
-    participants[id] = participant;
-    participantList.add(participant);
-  }
+  final participantList = [
+    for (final id in participantIds)
+      testParticipant(
+        id,
+        name: switch (id) {
+          'keeper-1' => 'Keeper',
+          _ => 'User ${id.split('-').last}',
+        },
+      ),
+  ];
 
   when(() => session.keeper).thenReturn(keeper);
   when(() => sessionState.roomState).thenReturn(roomState);
@@ -71,7 +63,6 @@ _ReorderTestHarness _createHarness({
     session: session,
     keeper: keeper,
     sessionState: sessionState,
-    participants: participants,
   );
 }
 

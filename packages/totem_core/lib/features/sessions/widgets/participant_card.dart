@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
-import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 
+import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/media/room_media_providers.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/loading_video_placeholder.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
@@ -214,16 +215,9 @@ class FeaturedParticipantCard extends ConsumerWidget {
 }
 
 class ParticipantCard extends ConsumerWidget {
-  const ParticipantCard({
-    required this.participant,
-    required this.session,
-    required this.participantIdentity,
-    super.key,
-  });
+  const ParticipantCard({required this.participant, super.key});
 
-  final Participant participant;
-  final SessionDetailSchema? session;
-  final String participantIdentity;
+  final ParticipantInfo participant;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -326,221 +320,42 @@ class ParticipantCard extends ConsumerWidget {
   }
 }
 
-class LocalParticipantCard extends ConsumerWidget {
-  const LocalParticipantCard({
-    this.isCameraOn = true,
-    this.audioTrack,
-    this.videoTrack,
-    super.key,
-  });
+class ParticipantVideo extends ConsumerWidget {
+  const ParticipantVideo({required this.participant, super.key});
 
-  final bool isCameraOn;
-  final AudioTrack? audioTrack;
-  final VideoTrack? videoTrack;
-
-  bool get _hasRenderer => videoTrack != null && videoTrack!.isActive;
+  final ParticipantInfo participant;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final user = ref.watch(authControllerProvider.select((auth) => auth.user));
-    final showVideo = isCameraOn && _hasRenderer && !videoTrack!.muted;
-
-    return ClipRRect(
-      clipBehavior: Clip.antiAliasWithSaveLayer,
-      borderRadius: BorderRadius.circular(30),
-      child: AspectRatio(
-        aspectRatio: 16 / 21,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: UserAvatar.currentUser(
-                  radius: 0,
-                  borderRadius: BorderRadius.zero,
-                  borderWidth: 0,
-                ),
-              ),
-            ),
-            if (_hasRenderer)
-              IgnorePointer(
-                child: VideoTrackRenderer(
-                  videoTrack!,
-                  key: ValueKey(videoTrack!.sid),
-                  fit: VideoViewFit.cover,
-                  renderMode: VideoRenderMode.platformView,
-                ),
-              ),
-            if (!showVideo)
-              const Positioned.fill(
-                child: IgnorePointer(
-                  child: UserAvatar.currentUser(
-                    radius: 0,
-                    borderRadius: BorderRadius.zero,
-                    borderWidth: 0,
-                  ),
-                ),
-              ),
-            PositionedDirectional(
-              bottom: 14,
-              start: 14,
-              end: 14,
-              child: SmartNameText(
-                name: user?.name.value ?? 'You',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  shadows: kElevationToShadow[6],
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
+    final media = ref.watch(roomMediaProvider);
+    final isStaff = ref.watch(
+      authControllerProvider.select((auth) => auth.user?.isStaff == true),
+    );
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: IgnorePointer(
+            child: _ParticipantVideoAvatar(identity: participant.identity),
+          ),
         ),
-      ),
+        if (media != null)
+          Positioned.fill(
+            child: media.video(participant, showStats: kDebugMode || isStaff),
+          ),
+      ],
     );
   }
 }
 
-@immutable
-class _ParticipantVideoRenderState {
-  const _ParticipantVideoRenderState({
-    required this.publication,
-    required this.track,
-    required this.showVideo,
-  });
+class _ParticipantVideoAvatar extends StatelessWidget {
+  const _ParticipantVideoAvatar({required this.identity});
 
-  final TrackPublication<Track>? publication;
-  final VideoTrack? track;
-  final bool showVideo;
-
-  bool get hasRenderer => publication?.subscribed == true && track != null;
+  final String identity;
 
   @override
-  bool operator ==(Object other) {
-    return other is _ParticipantVideoRenderState &&
-        identical(other.publication, publication) &&
-        identical(other.track, track) &&
-        other.showVideo == showVideo;
-  }
-
-  @override
-  int get hashCode => Object.hash(publication, track, showVideo);
-}
-
-class ParticipantVideo extends ConsumerStatefulWidget {
-  const ParticipantVideo({required this.participant, super.key});
-
-  final Participant<TrackPublication<Track>> participant;
-
-  @override
-  ConsumerState<ParticipantVideo> createState() => _ParticipantVideoState();
-}
-
-class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
-  late _ParticipantVideoRenderState _renderState = _readRenderState();
-
-  EventsListener<ParticipantEvent>? _listener;
-  void _setupListeners() {
-    _listener?.dispose();
-    _listener = widget.participant.createListener()
-      ..on<TrackPublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<TrackUnpublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<TrackSubscribedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<TrackUnsubscribedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<LocalTrackPublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<LocalTrackUnpublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<TrackMutedEvent>(_onTrackMuted)
-      ..on<TrackUnmutedEvent>(_onTrackUnmuted);
-  }
-
-  void _onCameraPublicationChanged(TrackPublication<Track> publication) {
-    if (!mounted || publication.source != TrackSource.camera) return;
-
-    final nextState = _readRenderState();
-    if (nextState == _renderState) return;
-    setState(() => _renderState = nextState);
-  }
-
-  void _onTrackMuted(TrackMutedEvent event) {
-    _onCameraPublicationChanged(event.publication);
-  }
-
-  void _onTrackUnmuted(TrackUnmutedEvent event) {
-    _onCameraPublicationChanged(event.publication);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _setupListeners();
-  }
-
-  @override
-  void didUpdateWidget(covariant ParticipantVideo oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant.sid != widget.participant.sid) {
-      _setupListeners();
-      _renderState = _readRenderState();
-    }
-  }
-
-  @override
-  void dispose() {
-    _listener?.dispose();
-    super.dispose();
-  }
-
-  TrackPublication<Track>? get videoTrack {
-    if (widget.participant is RemoteParticipant) {
-      return widget.participant.getTrackPublicationBySource(TrackSource.camera);
-    } else if (widget.participant is LocalParticipant) {
-      return (widget.participant as LocalParticipant)
-              .getTrackPublicationBySource(TrackSource.camera) ??
-          widget.participant.videoTrackPublications
-              .where((t) => t.track != null)
-              .firstOrNull;
-    } else {
-      return widget.participant.videoTrackPublications
-          .where((t) => t.track != null)
-          .firstOrNull;
-    }
-  }
-
-  _ParticipantVideoRenderState _readRenderState() {
-    final publication = videoTrack;
-    final track = publication?.track;
-    final rendererTrack = track is VideoTrack ? track : null;
-    final hasRenderer =
-        publication?.subscribed == true && rendererTrack != null;
-    final showVideo =
-        hasRenderer &&
-        !publication!.muted &&
-        rendererTrack.isActive &&
-        !rendererTrack.muted;
-    return _ParticipantVideoRenderState(
-      publication: publication,
-      track: rendererTrack,
-      showVideo: showVideo,
-    );
-  }
-
-  Widget _avatar() {
+  Widget build(BuildContext context) {
     return UserAvatar.slug(
-      widget.participant.identity,
+      identity,
       radius: 0,
       borderRadius: BorderRadius.zero,
       borderWidth: 0,
@@ -550,202 +365,6 @@ class _ParticipantVideoState extends ConsumerState<ParticipantVideo> {
         child: Center(
           child: TotemIcon(TotemIcons.person, size: 24, color: Colors.white),
         ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final currentUser = ref.watch(
-      authControllerProvider.select((auth) => auth.user),
-    );
-    final renderState = _renderState;
-    final trackPublication = renderState.publication;
-
-    final content = Stack(
-      children: [
-        Positioned.fill(child: IgnorePointer(child: _avatar())),
-        if (renderState.hasRenderer)
-          IgnorePointer(
-            child: VideoTrackRenderer(
-              key: ValueKey((trackPublication!.sid, renderState.track!.sid)),
-              renderState.track!,
-              fit: VideoViewFit.cover,
-              renderMode: VideoRenderMode.platformView,
-            ),
-          ),
-      ],
-    );
-
-    if (kDebugMode || currentUser?.isStaff == true) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          content,
-          Positioned.fill(
-            child: _ParticipantVideoStatistics(
-              participant: widget.participant,
-              trackPublication: trackPublication,
-            ),
-          ),
-        ],
-      );
-    }
-
-    return content;
-  }
-}
-
-class _ParticipantVideoStatistics extends StatefulWidget {
-  const _ParticipantVideoStatistics({
-    required this.participant,
-    required this.trackPublication,
-  });
-
-  final Participant<TrackPublication<Track>> participant;
-  final TrackPublication<Track>? trackPublication;
-
-  @override
-  State<_ParticipantVideoStatistics> createState() =>
-      _ParticipantVideoStatisticsState();
-}
-
-class _ParticipantVideoStatisticsState
-    extends State<_ParticipantVideoStatistics> {
-  // --- Debug Stats State ---
-  int _currentBitrate = 0;
-  num frameHeight = 0;
-  num frameWidth = 0;
-  num fps = 0;
-  String? qualityLimitationReason;
-  String? decoderImplementation;
-  String? mimeType;
-
-  void resetStats() {
-    _currentBitrate = frameHeight = frameWidth = 0;
-    qualityLimitationReason = decoderImplementation = mimeType = null;
-    fps = 0;
-  }
-
-  EventsListener<TrackEvent>? _trackListener;
-  String? _listenedTrackSid;
-
-  void _setupListeners() {
-    final track = widget.trackPublication?.track;
-    final trackSid = track?.sid;
-
-    if (_listenedTrackSid == trackSid && _trackListener != null) {
-      return;
-    }
-
-    _trackListener?.dispose();
-    _trackListener = null;
-    _listenedTrackSid = trackSid;
-
-    if (track != null) {
-      _trackListener = track.createListener()..listen(_onTrackEvent);
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // When user is a local participant, the track is not inactive by default.
-    if (widget.participant is LocalParticipant) {
-      _isTrackInactive = false;
-    } else {
-      _isTrackInactive = true;
-    }
-    _setupListeners();
-  }
-
-  // Whether the track is inactive due to poor network conditions.
-  late bool _isTrackInactive;
-
-  void _onTrackEvent(TrackEvent event) {
-    if (!mounted) return;
-
-    if (event is VideoReceiverStatsEvent) {
-      resetStats();
-
-      final bitrate = event.currentBitrate;
-      setState(() {
-        frameHeight = event.stats.frameHeight ?? 0;
-        frameWidth = event.stats.frameWidth ?? 0;
-        fps = event.stats.framesPerSecond ?? 0;
-        decoderImplementation = event.stats.decoderImplementation;
-        mimeType = event.stats.mimeType;
-
-        _currentBitrate = bitrate.round();
-        _isTrackInactive = bitrate <= 0;
-      });
-    } else if (event is VideoSenderStatsEvent) {
-      resetStats();
-
-      setState(() {
-        final stats = event.stats.values.lastOrNull;
-        frameHeight = stats?.frameHeight ?? 0;
-        frameWidth = stats?.frameWidth ?? 0;
-        fps = stats?.framesPerSecond ?? 0;
-        qualityLimitationReason = stats?.qualityLimitationReason;
-        mimeType = stats?.mimeType;
-        _currentBitrate = event.currentBitrate.round();
-      });
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _ParticipantVideoStatistics oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant.sid != widget.participant.sid ||
-        oldWidget.trackPublication?.track?.sid !=
-            widget.trackPublication?.track?.sid) {
-      _setupListeners();
-    }
-  }
-
-  @override
-  void dispose() {
-    _trackListener?.dispose();
-    super.dispose();
-  }
-
-  bool _shouldShowStatistics = kDebugMode;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () =>
-          setState(() => _shouldShowStatistics = !_shouldShowStatistics),
-      child: RepaintBoundary(
-        child: _shouldShowStatistics
-            ? Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.7),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'Bitrate: $_currentBitrate\n'
-                    'Res: ${frameWidth}x$frameHeight\n'
-                    'FPS: $fps\n'
-                    'Mime: ${mimeType ?? 'None'}\n'
-                    'Is off: $_isTrackInactive',
-                    style: const TextStyle(
-                      color: Colors.greenAccent,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              )
-            : const SizedBox.expand(),
       ),
     );
   }

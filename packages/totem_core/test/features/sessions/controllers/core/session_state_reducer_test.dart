@@ -1,14 +1,12 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
-import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_reducer.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
-
-class _Participant extends Mock implements Participant {}
+import '../../media/test_participants.dart';
 
 RoomState _roomState({RoomStatus status = RoomStatus.waitingRoom}) {
   return RoomState(
@@ -277,8 +275,8 @@ void main() {
         test(
           'replaces and clears participants without changing the prior state',
           () {
-            final original = _Participant();
-            final replacement = _Participant();
+            final original = testParticipant('original');
+            final replacement = testParticipant('replacement');
             final current = reducer.reduceState(
               _initialState(),
               ParticipantsChanged([original]),

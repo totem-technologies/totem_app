@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
+import 'package:totem_core/features/sessions/media/media_platform.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
@@ -15,10 +18,10 @@ class ActionBarCameraSwitcherButton extends StatefulWidget {
   const ActionBarCameraSwitcherButton({
     required this.isCameraOn,
     required this.onToggle,
-    required this.cameraPosition,
+    required this.cameraFacing,
     required this.availableCameraDevices,
     required this.selectedCameraDeviceId,
-    required this.onCameraPositionChanged,
+    required this.onCameraFacingChanged,
     this.onCameraDeviceSelected,
     super.key,
   });
@@ -29,11 +32,11 @@ class ActionBarCameraSwitcherButton extends StatefulWidget {
   final bool isCameraOn;
   final VoidCallback? onToggle;
 
-  final CameraPosition cameraPosition;
-  final List<MediaDevice> availableCameraDevices;
+  final CameraFacing cameraFacing;
+  final List<MediaDeviceInfo> availableCameraDevices;
   final String? selectedCameraDeviceId;
-  final ValueChanged<CameraPosition> onCameraPositionChanged;
-  final ValueChanged<MediaDevice>? onCameraDeviceSelected;
+  final ValueChanged<CameraFacing> onCameraFacingChanged;
+  final ValueChanged<MediaDeviceInfo>? onCameraDeviceSelected;
 
   @override
   State<ActionBarCameraSwitcherButton> createState() =>
@@ -76,9 +79,7 @@ class _ActionBarCameraSwitcherButtonState
 
   @override
   Widget build(BuildContext context) {
-    final isDesktopPicker = kIsWeb
-        ? !lkPlatformIsWebMobile()
-        : lkPlatformIsDesktop();
+    final isDesktopPicker = usesMediaDevicePicker;
     // If the user only has one camera, we show a simple
     // toggle button without the option to switch cameras
     final canChooseBetweenMultipleCameras =
@@ -106,10 +107,10 @@ class _ActionBarCameraSwitcherButtonState
         return ActionBarCameraSwitcherButtonOverlay(
           buttonKey: _buttonKey,
           isDesktopPicker: isDesktopPicker,
-          initialCameraPosition: widget.cameraPosition,
+          initialCameraFacing: widget.cameraFacing,
           availableCameraDevices: widget.availableCameraDevices,
           selectedCameraDeviceId: widget.selectedCameraDeviceId,
-          onCameraPositionChanged: widget.onCameraPositionChanged,
+          onCameraFacingChanged: widget.onCameraFacingChanged,
           onCameraDeviceSelected: widget.onCameraDeviceSelected,
           onDismissOverlay: _dismissOverlay,
         );
@@ -261,10 +262,10 @@ class ActionBarCameraSwitcherButtonOverlay extends StatefulWidget {
   const ActionBarCameraSwitcherButtonOverlay({
     required this.buttonKey,
     required this.isDesktopPicker,
-    required this.initialCameraPosition,
+    required this.initialCameraFacing,
     required this.availableCameraDevices,
     required this.selectedCameraDeviceId,
-    required this.onCameraPositionChanged,
+    required this.onCameraFacingChanged,
     required this.onCameraDeviceSelected,
     required this.onDismissOverlay,
     super.key,
@@ -272,11 +273,11 @@ class ActionBarCameraSwitcherButtonOverlay extends StatefulWidget {
 
   final GlobalKey buttonKey;
   final bool isDesktopPicker;
-  final CameraPosition initialCameraPosition;
-  final List<MediaDevice> availableCameraDevices;
+  final CameraFacing initialCameraFacing;
+  final List<MediaDeviceInfo> availableCameraDevices;
   final String? selectedCameraDeviceId;
-  final ValueChanged<CameraPosition> onCameraPositionChanged;
-  final ValueChanged<MediaDevice>? onCameraDeviceSelected;
+  final ValueChanged<CameraFacing> onCameraFacingChanged;
+  final ValueChanged<MediaDeviceInfo>? onCameraDeviceSelected;
 
   final VoidCallback onDismissOverlay;
 
@@ -288,7 +289,7 @@ class ActionBarCameraSwitcherButtonOverlay extends StatefulWidget {
 class _ActionBarCameraSwitcherButtonOverlayState
     extends State<ActionBarCameraSwitcherButtonOverlay>
     with SingleTickerProviderStateMixin {
-  late CameraPosition cameraPosition = widget.initialCameraPosition;
+  late CameraFacing cameraFacing = widget.initialCameraFacing;
   bool _isDismissing = false;
 
   static const double buttonWidth = 60;
@@ -359,8 +360,7 @@ class _ActionBarCameraSwitcherButtonOverlayState
                   for (final device in widget.availableCameraDevices)
                     _CameraDeviceTile(
                       device: device,
-                      isSelected:
-                          device.deviceId == widget.selectedCameraDeviceId,
+                      isSelected: device.id == widget.selectedCameraDeviceId,
                       onTap: () {
                         widget.onCameraDeviceSelected?.call(device);
                         widget.onDismissOverlay();
@@ -371,11 +371,8 @@ class _ActionBarCameraSwitcherButtonOverlayState
           )
         : GestureDetector(
             onTap: () {
-              cameraPosition = cameraPosition == CameraPosition.front
-                  ? CameraPosition.back
-                  : CameraPosition.front;
-              setState(() {});
-              widget.onCameraPositionChanged(cameraPosition);
+              setState(() => cameraFacing = cameraFacing.switched);
+              widget.onCameraFacingChanged(cameraFacing);
             },
             child: Container(
               constraints: const BoxConstraints(maxHeight: 40, maxWidth: 260),
@@ -387,10 +384,10 @@ class _ActionBarCameraSwitcherButtonOverlayState
                   AnimatedPositionedDirectional(
                     top: 0,
                     bottom: 0,
-                    start: cameraPosition == CameraPosition.front
+                    start: cameraFacing == CameraFacing.front
                         ? 0
                         : buttonWidth + buttonsSpacing,
-                    end: cameraPosition == CameraPosition.back
+                    end: cameraFacing == CameraFacing.back
                         ? 0
                         : buttonWidth + buttonsSpacing,
                     duration: const Duration(milliseconds: 300),
@@ -531,7 +528,7 @@ class _CameraDeviceTile extends StatelessWidget {
     required this.onTap,
   });
 
-  final MediaDevice device;
+  final MediaDeviceInfo device;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -561,7 +558,7 @@ class _CameraDeviceTile extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  device.label.isEmpty ? 'Camera' : device.label,
+                  device.displayLabel,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
@@ -576,130 +573,33 @@ class _CameraDeviceTile extends StatelessWidget {
   }
 }
 
-class SessionActionBarCameraButton extends StatefulWidget {
-  const SessionActionBarCameraButton({
-    required this.session,
-    required this.participant,
-    super.key,
-  });
+class SessionActionBarCameraButton extends ConsumerStatefulWidget {
+  const SessionActionBarCameraButton({required this.session, super.key});
 
   final SessionController session;
-  final LocalParticipant participant;
 
   @override
-  State<SessionActionBarCameraButton> createState() =>
+  ConsumerState<SessionActionBarCameraButton> createState() =>
       _SessionActionBarCameraButtonState();
 }
 
 class _SessionActionBarCameraButtonState
-    extends State<SessionActionBarCameraButton> {
+    extends ConsumerState<SessionActionBarCameraButton> {
   bool _busy = false;
-  late bool _cameraIsEnabled = _initialCameraEnabled();
-  List<MediaDevice> _availableCameraDevices = [];
-  StreamSubscription<List<MediaDevice>>? _cameraDevicesSubscription;
-  EventsListener<ParticipantEvent>? _participantListener;
 
-  @override
-  void initState() {
-    super.initState();
-    _listenToCameraDevices();
-    _bindParticipantListener();
-  }
-
-  @override
-  void didUpdateWidget(covariant SessionActionBarCameraButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant.sid != widget.participant.sid) {
-      _cameraIsEnabled =
-          widget.participant.isCameraEnabled() ||
-          widget.session.options.cameraEnabled;
-      _bindParticipantListener();
-    }
-  }
-
-  @override
-  void dispose() {
-    _cameraDevicesSubscription?.cancel();
-    _participantListener?.dispose();
-    super.dispose();
-  }
-
-  void _bindParticipantListener() {
-    _participantListener?.dispose();
-    _participantListener = widget.participant.createListener()
-      ..on<TrackPublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<TrackUnpublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<LocalTrackPublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<LocalTrackUnpublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<TrackMutedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<TrackUnmutedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      );
-  }
-
-  bool _initialCameraEnabled() {
-    final publication = widget.participant.getTrackPublicationBySource(
-      TrackSource.camera,
-    );
-    if (publication != null) {
-      final track = publication.track;
-      final isMuted = track?.muted ?? publication.muted;
-      final isActive = track?.isActive ?? true;
-      return isActive && !isMuted;
-    }
-
-    if (widget.participant.isCameraEnabled()) return true;
-    return widget.session.options.cameraEnabled;
-  }
-
-  void _onCameraPublicationChanged(TrackPublication<Track> publication) {
-    if (!mounted || publication.source != TrackSource.camera) return;
-    final track = publication.track;
-    final isMuted = track?.muted ?? publication.muted;
-    final isActive = track?.isActive ?? true;
-    setState(() => _cameraIsEnabled = isActive && !isMuted);
-  }
-
-  void _listenToCameraDevices() {
-    _cameraDevicesSubscription = Hardware.instance.onDeviceChange.stream.listen(
-      (devices) {
-        if (!mounted) return;
-        setState(() {
-          _availableCameraDevices = devices
-              .where((device) => device.kind == 'videoinput')
-              .toList();
-        });
-      },
-    );
-
-    Hardware.instance.videoInputs().then((devices) {
-      if (!mounted) return;
-      setState(() => _availableCameraDevices = devices);
-    });
-  }
-
-  Future<void> _toggleCamera() async {
+  Future<void> _toggleCamera(bool isCameraOn) async {
     if (_busy) return;
 
-    final session = widget.session;
-    final shouldEnable = !_cameraIsEnabled;
+    final devices = ref.read(
+      sessionDeviceControllerProvider(widget.session).notifier,
+    );
     setState(() => _busy = true);
 
     try {
-      if (shouldEnable) {
-        await session.devices.enableCamera();
+      if (isCameraOn) {
+        await devices.disableCamera();
       } else {
-        await session.devices.disableCamera();
+        await devices.enableCamera();
       }
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -708,46 +608,40 @@ class _SessionActionBarCameraButtonState
         message: 'Failed to change camera state from action bar',
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _busy = false;
-          _cameraIsEnabled = session.devices.isCameraEnabled;
-        });
-      }
+      if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final session = widget.session;
-    final isDesktopPicker = kIsWeb
-        ? !lkPlatformIsWebMobile()
-        : lkPlatformIsDesktop();
+    final deviceProvider = sessionDeviceControllerProvider(widget.session);
+    final deviceState = ref.watch(deviceProvider);
+    final isCameraOn = deviceState.isCameraOn;
+    final onToggle = _busy ? null : () => _toggleCamera(isCameraOn);
 
-    if (!isDesktopPicker) {
+    if (!usesMediaDevicePicker) {
       return ActionBarButton(
-        semanticsLabel: 'Camera ${_cameraIsEnabled ? 'on' : 'off'}',
-        role: ActionBarButtonRole.media(enabled: _cameraIsEnabled),
-        onPressed: _busy ? null : _toggleCamera,
+        semanticsLabel: 'Camera ${isCameraOn ? 'on' : 'off'}',
+        role: ActionBarButtonRole.media(enabled: isCameraOn),
+        onPressed: onToggle,
         child: TotemIcon(
-          _cameraIsEnabled ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+          isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
         ),
       );
     }
 
+    final cameraDevices = ref.watch(cameraDevicesProvider);
     return ActionBarCameraSwitcherButton(
-      isCameraOn: _cameraIsEnabled,
-      onToggle: _busy ? null : _toggleCamera,
-      cameraPosition: CameraPosition.front,
-      availableCameraDevices: _availableCameraDevices,
+      isCameraOn: isCameraOn,
+      onToggle: onToggle,
+      cameraFacing: CameraFacing.front,
+      availableCameraDevices: cameraDevices,
       selectedCameraDeviceId:
-          session.devices.selectedCameraDeviceId ??
-          _availableCameraDevices.firstOrNull?.deviceId,
-      onCameraPositionChanged: (_) {},
-      onCameraDeviceSelected: (device) async {
-        await session.devices.selectCameraDevice(device);
-        if (mounted) setState(() {});
-      },
+          deviceState.selectedCameraDeviceId ?? cameraDevices.firstOrNull?.id,
+      onCameraFacingChanged: (_) {},
+      onCameraDeviceSelected: ref
+          .read(deviceProvider.notifier)
+          .selectCameraDevice,
     );
   }
 }

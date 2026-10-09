@@ -347,8 +347,6 @@ class _SpeakingTurnGrid extends ConsumerWidget {
                           child: ParticipantCard(
                             key: ValueKey(participant.sid),
                             participant: participant,
-                            session: session,
-                            participantIdentity: participant.identity,
                           ),
                         );
                       } else {
@@ -367,8 +365,6 @@ class _SpeakingTurnGrid extends ConsumerWidget {
                   ParticipantCard(
                     key: ValueKey(participant.sid),
                     participant: participant,
-                    session: session,
-                    participantIdentity: participant.identity,
                   ),
               ],
             );

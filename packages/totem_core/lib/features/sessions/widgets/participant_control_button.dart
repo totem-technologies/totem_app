@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/media/room_media.dart';
+import 'package:totem_core/features/sessions/media/room_media_providers.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -18,7 +20,7 @@ class ParticipantControlButton extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final Participant participant;
+  final ParticipantInfo participant;
 
   /// Dy passed to [MenuAnchor.alignmentOffset].
   ///
@@ -47,7 +49,6 @@ class _ParticipantControlButtonState
     extends ConsumerState<ParticipantControlButton>
     with WidgetsBindingObserver {
   final _menuController = MenuController();
-  EventsListener<ParticipantEvent>? _participantListener;
 
   static final ButtonStyle _menuItemStyle = MenuItemButton.styleFrom(
     backgroundColor: Colors.transparent,
@@ -61,36 +62,13 @@ class _ParticipantControlButtonState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _bindParticipantListener();
-  }
-
-  @override
-  void didUpdateWidget(covariant ParticipantControlButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.participant, widget.participant)) {
-      _bindParticipantListener();
-    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _participantListener?.dispose();
     _menuController.close();
     super.dispose();
-  }
-
-  void _bindParticipantListener() {
-    _participantListener?.dispose();
-    _participantListener = widget.participant.createListener()
-      ..on<TrackPublishedEvent>((_) => _onParticipantMediaChanged())
-      ..on<TrackUnpublishedEvent>((_) => _onParticipantMediaChanged())
-      ..on<TrackMutedEvent>((_) => _onParticipantMediaChanged())
-      ..on<TrackUnmutedEvent>((_) => _onParticipantMediaChanged());
-  }
-
-  void _onParticipantMediaChanged() {
-    if (mounted) setState(() {});
   }
 
   @override
@@ -101,12 +79,17 @@ class _ParticipantControlButtonState
   @override
   Widget build(BuildContext context) {
     final metrics = widget.metrics;
+    final media =
+        ref
+            .watch(participantMediaStateProvider(widget.participant.identity))
+            .value ??
+        ParticipantMediaState.none;
 
     return MenuAnchor(
       controller: _menuController,
       clipBehavior: Clip.hardEdge,
       alignmentOffset: Offset(0, widget.menuVerticalOffset),
-      menuChildren: _buildMenuItems(context),
+      menuChildren: _buildMenuItems(context, media),
       animated: true,
       style: MenuStyle(
         backgroundColor: WidgetStatePropertyAll(
@@ -152,48 +135,43 @@ class _ParticipantControlButtonState
     );
   }
 
-  List<Widget> _buildMenuItems(BuildContext context) {
+  List<Widget> _buildMenuItems(
+    BuildContext context,
+    ParticipantMediaState media,
+  ) {
     return [
-      if (widget.participant.hasAudio)
+      if (media.hasMicrophone)
         MenuItemButton(
           style: _menuItemStyle,
-          onPressed: widget.participant.isMuted
-              ? null
-              : () => _onMuteParticipant(context),
+          onPressed: media.isMicrophoneOn
+              ? () => _onMuteParticipant(context)
+              : null,
           leadingIcon: const TotemIcon(
             TotemIcons.microphoneOff,
             size: 18,
             color: Colors.white,
           ),
           child: Text(
-            widget.participant.isMuted ? 'Muted' : 'Mute',
+            media.isMicrophoneOn ? 'Mute' : 'Muted',
             style: ParticipantControlButton._menuTextStyle,
           ),
         ),
-      if (widget.participant.hasVideo)
-        () {
-          final publication =
-              widget.participant.videoTrackPublications.firstOrNull;
-          final track = publication?.track;
-          final isVideoOn =
-              (track?.isActive ?? true) &&
-              !(track?.muted ?? publication?.muted ?? false);
-          return MenuItemButton(
-            style: _menuItemStyle,
-            onPressed: isVideoOn
-                ? () => _onDisableParticipantCamera(context)
-                : null,
-            leadingIcon: const TotemIcon(
-              TotemIcons.cameraOff,
-              size: 18,
-              color: Colors.white,
-            ),
-            child: Text(
-              !isVideoOn ? 'Camera Disabled' : 'Disable camera',
-              style: ParticipantControlButton._menuTextStyle,
-            ),
-          );
-        }(),
+      if (media.hasCamera)
+        MenuItemButton(
+          style: _menuItemStyle,
+          onPressed: media.isCameraOn
+              ? () => _onDisableParticipantCamera(context)
+              : null,
+          leadingIcon: const TotemIcon(
+            TotemIcons.cameraOff,
+            size: 18,
+            color: Colors.white,
+          ),
+          child: Text(
+            media.isCameraOn ? 'Disable camera' : 'Camera Disabled',
+            style: ParticipantControlButton._menuTextStyle,
+          ),
+        ),
       MenuItemButton(
         style: _menuItemStyle,
         onPressed: () => _onRemoveParticipant(context),

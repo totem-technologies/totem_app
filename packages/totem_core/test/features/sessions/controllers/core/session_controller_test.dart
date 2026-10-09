@@ -141,6 +141,9 @@ class _CountingRoom implements Room {
   String? get metadata => null;
 
   @override
+  RoomOptions get roomOptions => const RoomOptions();
+
+  @override
   Future<void> prepareConnection(String url, String? token) async {
     prepareConnectionCount++;
     if (prepareConnectionError case final error?) throw error;
@@ -628,9 +631,12 @@ void main() {
             microphoneEnabled = true;
             return MockLocalAudioTrackPublication();
           });
-          when(() => localParticipant.setMicrophoneEnabled(false)).thenAnswer((
-            _,
-          ) async {
+          when(
+            () => localParticipant.setMicrophoneEnabled(
+              false,
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
+          ).thenAnswer((_) async {
             microphoneEnabled = false;
             return null;
           });
@@ -666,8 +672,18 @@ void main() {
             () => microphoneTrack.mute(stopOnMute: false),
             () => localParticipant.publishAudioTrack(microphoneTrack),
           ]);
-          verify(() => localParticipant.setMicrophoneEnabled(false)).called(1);
-          verifyNever(() => localParticipant.setMicrophoneEnabled(true));
+          verify(
+            () => localParticipant.setMicrophoneEnabled(
+              false,
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
+          ).called(1);
+          verifyNever(
+            () => localParticipant.setMicrophoneEnabled(
+              true,
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
+          );
           verifyNever(() => localParticipant.setCameraEnabled(any<bool>()));
         },
       );

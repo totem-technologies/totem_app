@@ -1,7 +1,7 @@
-import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 
 sealed class SessionEvent {
   const SessionEvent();
@@ -28,7 +28,7 @@ class RoomStateChanged extends SessionEvent {
 class ParticipantsChanged extends SessionEvent {
   const ParticipantsChanged(this.participants);
 
-  final List<Participant> participants;
+  final List<ParticipantInfo> participants;
 }
 
 class ParticipantRemoved extends SessionEvent {

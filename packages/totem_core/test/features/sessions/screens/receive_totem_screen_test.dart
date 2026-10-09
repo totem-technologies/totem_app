@@ -20,6 +20,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
+import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -27,6 +28,7 @@ import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
+import '../media/test_participants.dart';
 import '../session_test_fixtures.dart';
 import '../session_test_mocks.dart';
 
@@ -59,8 +61,9 @@ SessionRoomState _buildState({
     ),
     participants: ParticipantsState(
       participants: [
-        MockLocalParticipant('user-1'),
-        MockRemoteParticipant('user-2', 'User Two'),
+        testParticipant('user-1', isLocal: true),
+        testParticipant('user-2', name: 'User Two'),
+        testParticipant('keeper-1', name: 'Keeper'),
       ],
     ),
     chat: const ChatState(),
@@ -115,7 +118,6 @@ void main() {
     when(() => devices.isMicrophoneEnabled).thenReturn(false);
     when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
     when(() => devices.selectedCameraDeviceId).thenReturn(null);
-    when(() => devices.selectedAudioDeviceId).thenReturn(null);
     when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
 
     when(() => devices.enableMicrophone()).thenAnswer((_) async {});
@@ -139,10 +141,11 @@ void main() {
     WidgetTester tester, {
     SessionRoomState? state,
     String? roundMessage,
-    bool isCameraOn = false,
     bool isStaff = false,
     SessionCuesService? feedbackService,
   }) async {
+    final sessionState = state ?? _buildState();
+    when(() => session.state).thenReturn(sessionState);
     final testCuesService = feedbackService ?? _TestSessionCuesService();
 
     final mouseGesture = await tester.createGesture(
@@ -160,10 +163,9 @@ void main() {
             () => FakeAuthController(testAuthenticatedState(isStaff: isStaff)),
           ),
           currentSessionProvider.overrideWith((ref) => session),
-          currentSessionStateProvider.overrideWithValue(state ?? _buildState()),
+          currentSessionStateProvider.overrideWithValue(sessionState),
           roomStatusProvider.overrideWith((ref) => RoomStatus.active),
           currentSessionPromptProvider.overrideWith((ref) => roundMessage),
-          isCameraOnProvider.overrideWith((ref) => isCameraOn),
           resolveCurrentScreenProvider.overrideWith(
             (ref) => RoomScreen.receiving,
           ),
@@ -247,11 +249,11 @@ void main() {
       check(tester.widgetList(find.text('Unmute Anyway'))).length.equals(1);
       await tester.tap(find.text('Unmute Anyway'));
       await tester.pumpAndSettle();
-      verify(() => devices.enableMicrophone()).called(1);
+      check(session.mockLocalMedia.microphoneCommands).deepEquals([true]);
 
       await tester.tap(find.bySemanticsLabel('Camera off'));
       await tester.pump();
-      verify(() => devices.enableCamera()).called(1);
+      check(session.mockLocalMedia.cameraCommands).deepEquals([true]);
     });
 
     testWidgets('toggles mic and camera from desktop shortcuts', (
@@ -350,16 +352,11 @@ void main() {
       ).length.equals(1);
     });
 
-    testWidgets('renders local participant card when camera is on', (
-      tester,
-    ) async {
-      await pumpReceiveTotem(tester, isCameraOn: true);
+    testWidgets('shows the local participant card', (tester) async {
+      await pumpReceiveTotem(tester);
 
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
-      check(tester.widgetList(find.text('Receive'))).length.equals(1);
-      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
+      final card = tester.widget<ParticipantCard>(find.byType(ParticipantCard));
+      check(card.participant.identity).equals('user-1');
     });
 
     testWidgets('allows retry after a failed receive attempt', (tester) async {

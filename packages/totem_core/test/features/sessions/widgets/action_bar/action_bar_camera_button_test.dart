@@ -2,18 +2,18 @@ import 'dart:async';
 
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:livekit_client/livekit_client.dart' hide SessionOptions;
 import 'package:material_ui/material_ui.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 import '../../controllers/core/session_controller_mock.dart';
-import '../../controllers/features/session_device_controller_mock.dart';
-import '../../livekit_mocks.dart';
+import '../../media/fake_local_media.dart';
 
 Finder _cameraCaret() {
   return find.byWidgetPredicate(
@@ -23,14 +23,9 @@ Finder _cameraCaret() {
 
 void main() {
   late FakeSessionController sessionController;
-  late LocalParticipant participant;
-  late FakeSessionDeviceController devices;
 
   setUp(() {
     sessionController = FakeSessionController();
-    participant = MockLocalParticipant();
-    when(() => participant.isCameraEnabled()).thenReturn(false);
-    devices = sessionController.devices as FakeSessionDeviceController;
   });
 
   group('ActionBarCameraSwitcherButton', () {
@@ -52,13 +47,13 @@ void main() {
                 child: ActionBarCameraSwitcherButton(
                   isCameraOn: true,
                   onToggle: () {},
-                  cameraPosition: CameraPosition.front,
-                  availableCameraDevices: const [
-                    MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
-                    MediaDevice('camera-2', 'Rear Camera', 'videoinput', null),
+                  cameraFacing: CameraFacing.front,
+                  availableCameraDevices: [
+                    fakeCamera('camera-1', 'Front Camera'),
+                    fakeCamera('camera-2', 'Rear Camera'),
                   ],
                   selectedCameraDeviceId: 'camera-2',
-                  onCameraPositionChanged: (_) {},
+                  onCameraFacingChanged: (_) {},
                   onCameraDeviceSelected: (_) {},
                 ),
               ),
@@ -98,23 +93,13 @@ void main() {
                     ActionBarCameraSwitcherButton(
                       isCameraOn: true,
                       onToggle: () {},
-                      cameraPosition: CameraPosition.front,
-                      availableCameraDevices: const [
-                        MediaDevice(
-                          'camera-1',
-                          'Front Camera',
-                          'videoinput',
-                          null,
-                        ),
-                        MediaDevice(
-                          'camera-2',
-                          'Rear Camera',
-                          'videoinput',
-                          null,
-                        ),
+                      cameraFacing: CameraFacing.front,
+                      availableCameraDevices: [
+                        fakeCamera('camera-1', 'Front Camera'),
+                        fakeCamera('camera-2', 'Rear Camera'),
                       ],
                       selectedCameraDeviceId: 'camera-1',
-                      onCameraPositionChanged: (_) {},
+                      onCameraFacingChanged: (_) {},
                       onCameraDeviceSelected: (_) {},
                     ),
                   ],
@@ -149,13 +134,13 @@ void main() {
             body: ActionBarCameraSwitcherButton(
               isCameraOn: true,
               onToggle: () {},
-              cameraPosition: CameraPosition.front,
-              availableCameraDevices: const [
-                MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
-                MediaDevice('camera-2', 'Rear Camera', 'videoinput', null),
+              cameraFacing: CameraFacing.front,
+              availableCameraDevices: [
+                fakeCamera('camera-1', 'Front Camera'),
+                fakeCamera('camera-2', 'Rear Camera'),
               ],
               selectedCameraDeviceId: 'camera-2',
-              onCameraPositionChanged: (_) {},
+              onCameraFacingChanged: (_) {},
               onCameraDeviceSelected: (_) {},
             ),
           ),
@@ -188,13 +173,13 @@ void main() {
             body: ActionBarCameraSwitcherButton(
               isCameraOn: true,
               onToggle: () {},
-              cameraPosition: CameraPosition.front,
-              availableCameraDevices: const [
-                MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
-                MediaDevice('camera-2', 'Rear Camera', 'videoinput', null),
+              cameraFacing: CameraFacing.front,
+              availableCameraDevices: [
+                fakeCamera('camera-1', 'Front Camera'),
+                fakeCamera('camera-2', 'Rear Camera'),
               ],
               selectedCameraDeviceId: 'camera-2',
-              onCameraPositionChanged: (_) {},
+              onCameraFacingChanged: (_) {},
               onCameraDeviceSelected: (_) {},
             ),
           ),
@@ -230,13 +215,13 @@ void main() {
             body: ActionBarCameraSwitcherButton(
               isCameraOn: true,
               onToggle: () {},
-              cameraPosition: CameraPosition.front,
-              availableCameraDevices: const [
-                MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
-                MediaDevice('camera-2', 'Rear Camera', 'videoinput', null),
+              cameraFacing: CameraFacing.front,
+              availableCameraDevices: [
+                fakeCamera('camera-1', 'Front Camera'),
+                fakeCamera('camera-2', 'Rear Camera'),
               ],
               selectedCameraDeviceId: 'camera-1',
-              onCameraPositionChanged: (_) {},
+              onCameraFacingChanged: (_) {},
               onCameraDeviceSelected: (_) {},
             ),
           ),
@@ -278,12 +263,12 @@ void main() {
                   onToggle: () {
                     toggles++;
                   },
-                  cameraPosition: CameraPosition.front,
-                  availableCameraDevices: const [
-                    MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
+                  cameraFacing: CameraFacing.front,
+                  availableCameraDevices: [
+                    fakeCamera('camera-1', 'Front Camera'),
                   ],
                   selectedCameraDeviceId: 'camera-1',
-                  onCameraPositionChanged: (_) {},
+                  onCameraFacingChanged: (_) {},
                   onCameraDeviceSelected: (_) {},
                 ),
               ),
@@ -320,12 +305,10 @@ void main() {
             body: ActionBarCameraSwitcherButtonOverlay(
               buttonKey: GlobalKey(),
               isDesktopPicker: true,
-              initialCameraPosition: CameraPosition.front,
-              availableCameraDevices: const [
-                MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
-              ],
+              initialCameraFacing: CameraFacing.front,
+              availableCameraDevices: [fakeCamera('camera-1', 'Front Camera')],
               selectedCameraDeviceId: 'camera-1',
-              onCameraPositionChanged: (_) {},
+              onCameraFacingChanged: (_) {},
               onCameraDeviceSelected: (_) {},
               onDismissOverlay: () {
                 dismissed = true;
@@ -355,10 +338,10 @@ void main() {
             body: ActionBarCameraSwitcherButtonOverlay(
               buttonKey: GlobalKey(),
               isDesktopPicker: true,
-              initialCameraPosition: CameraPosition.front,
+              initialCameraFacing: CameraFacing.front,
               availableCameraDevices: const [],
               selectedCameraDeviceId: null,
-              onCameraPositionChanged: (_) {},
+              onCameraFacingChanged: (_) {},
               onCameraDeviceSelected: (_) {},
               onDismissOverlay: () {},
             ),
@@ -372,7 +355,7 @@ void main() {
     });
 
     testWidgets('desktop overlay selects device and dismisses', (tester) async {
-      MediaDevice? selected;
+      MediaDeviceInfo? selected;
       var dismissed = false;
 
       await tester.pumpWidget(
@@ -381,13 +364,13 @@ void main() {
             body: ActionBarCameraSwitcherButtonOverlay(
               buttonKey: GlobalKey(),
               isDesktopPicker: true,
-              initialCameraPosition: CameraPosition.front,
-              availableCameraDevices: const [
-                MediaDevice('camera-1', 'Front Camera', 'videoinput', null),
-                MediaDevice('camera-2', 'Rear Camera', 'videoinput', null),
+              initialCameraFacing: CameraFacing.front,
+              availableCameraDevices: [
+                fakeCamera('camera-1', 'Front Camera'),
+                fakeCamera('camera-2', 'Rear Camera'),
               ],
               selectedCameraDeviceId: 'camera-1',
-              onCameraPositionChanged: (_) {},
+              onCameraFacingChanged: (_) {},
               onCameraDeviceSelected: (device) {
                 selected = device;
               },
@@ -404,14 +387,14 @@ void main() {
       await tester.tap(find.text('Rear Camera'));
       await tester.pump();
 
-      check(selected?.deviceId).equals('camera-2');
+      check(selected?.id).equals('camera-2');
       check(dismissed).equals(true);
     });
 
     testWidgets('mobile overlay toggles front/back camera position', (
       tester,
     ) async {
-      final selectedPositions = <CameraPosition>[];
+      final selectedPositions = <CameraFacing>[];
 
       await tester.pumpWidget(
         MaterialApp(
@@ -419,10 +402,10 @@ void main() {
             body: ActionBarCameraSwitcherButtonOverlay(
               buttonKey: GlobalKey(),
               isDesktopPicker: false,
-              initialCameraPosition: CameraPosition.front,
+              initialCameraFacing: CameraFacing.front,
               availableCameraDevices: const [],
               selectedCameraDeviceId: null,
-              onCameraPositionChanged: selectedPositions.add,
+              onCameraFacingChanged: selectedPositions.add,
               onCameraDeviceSelected: (_) {},
               onDismissOverlay: () {},
             ),
@@ -439,7 +422,7 @@ void main() {
 
       check(
         selectedPositions,
-      ).deepEquals([CameraPosition.back, CameraPosition.front]);
+      ).deepEquals([CameraFacing.back, CameraFacing.front]);
     });
   });
 
@@ -448,85 +431,73 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets(
-      'shows the local participant camera state when publication is unavailable',
-      (tester) async {
-        sessionController.mockOptions = const SessionOptions(
-          sessionSlug: 'test-session',
-          token: 'test-token',
-          cameraEnabled: true,
-          microphoneEnabled: false,
-          speakerEnabled: true,
-          cameraOptions: SessionController.defaultCameraCaptureOptions,
-        );
-        when(() => participant.isCameraEnabled()).thenReturn(false);
-        when(
-          () => participant.getTrackPublicationBySource(TrackSource.camera),
-        ).thenReturn(null);
-
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SessionActionBarCameraButton(
-                session: sessionController,
-                participant: participant,
-              ),
+    Future<void> pumpCameraButton(WidgetTester tester) {
+      return tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            mediaDeviceCatalogProvider.overrideWithValue(
+              FakeMediaDeviceCatalog(),
             ),
-          ),
-        );
-
-        check(
-          tester.widgetList(find.bySemanticsLabel('Camera on')),
-        ).length.equals(1);
-      },
-    );
-
-    testWidgets('toggling camera when tapped', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionActionBarCameraButton(
-              session: sessionController,
-              participant: participant,
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: SessionActionBarCameraButton(session: sessionController),
             ),
           ),
         ),
       );
+    }
+
+    testWidgets('shows the join preference before the camera is published', (
+      tester,
+    ) async {
+      sessionController.mockOptions = const SessionOptions(
+        sessionSlug: 'test-session',
+        token: 'test-token',
+        cameraEnabled: true,
+        microphoneEnabled: false,
+        speakerEnabled: true,
+        cameraOptions: SessionController.defaultCameraCaptureOptions,
+      );
+
+      await pumpCameraButton(tester);
+
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera on')),
+      ).length.equals(1);
+    });
+
+    testWidgets('toggles the camera on and off', (tester) async {
+      final media = sessionController.mockLocalMedia;
+      await pumpCameraButton(tester);
 
       await tester.tap(find.byType(ActionBarButton));
       await tester.pumpAndSettle();
 
-      check(devices.enableCameraCalled).equals(true);
-      check(devices.disableCameraCalled).equals(false);
-
-      // Model LiveKit's canonical local camera state after enabling it.
-      when(() => participant.isCameraEnabled()).thenReturn(true);
+      check(media.cameraCommands).deepEquals([true]);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera on')),
+      ).length.equals(1);
 
       await tester.tap(find.byType(ActionBarButton));
       await tester.pumpAndSettle();
 
-      check(devices.disableCameraCalled).equals(true);
+      check(media.cameraCommands).deepEquals([true, false]);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera off')),
+      ).length.equals(1);
     });
 
     testWidgets('web camera action ignores overlapping presses and recovers', (
       tester,
     ) async {
+      final media = sessionController.mockLocalMedia;
       final pendingEnable = Completer<void>();
-      final webDevices = MockSessionDeviceController();
-      sessionController.mockDevices = webDevices;
-      when(() => webDevices.isCameraEnabled).thenReturn(false);
-      when(webDevices.enableCamera).thenAnswer((_) => pendingEnable.future);
+      media.onCameraCommand = (enabled) async {
+        if (enabled) await pendingEnable.future;
+      };
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SessionActionBarCameraButton(
-              session: sessionController,
-              participant: participant,
-            ),
-          ),
-        ),
-      );
+      await pumpCameraButton(tester);
       await tester.pump();
 
       check(
@@ -538,7 +509,7 @@ void main() {
       await tester.tap(find.byType(ActionBarButton), warnIfMissed: false);
       await tester.pump();
 
-      verify(webDevices.enableCamera).called(1);
+      check(media.cameraCommands).deepEquals([true]);
 
       pendingEnable.complete();
       await tester.pump();
@@ -547,7 +518,7 @@ void main() {
       await tester.tap(find.byType(ActionBarButton));
       await tester.pump();
 
-      verify(webDevices.enableCamera).called(2);
+      check(media.cameraCommands).deepEquals([true, false]);
     }, skip: !kIsWeb);
   });
 }

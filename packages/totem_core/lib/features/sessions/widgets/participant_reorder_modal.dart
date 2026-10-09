@@ -1,11 +1,11 @@
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:livekit_client/livekit_client.dart' show Participant;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
@@ -446,7 +446,7 @@ class _ParticipantReorderItem extends ConsumerWidget {
   });
 
   final String participantIdentity;
-  final Participant? participant;
+  final ParticipantInfo? participant;
   final int index;
   final bool isSpeakingNow;
   final bool isKeeper;
