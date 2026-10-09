@@ -1,43 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/media/room_media_providers.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
-import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
-class SpeakingIndicatorAudioTrack extends StatelessWidget {
-  const SpeakingIndicatorAudioTrack({
-    required this.audioTrack,
-    this.participant,
-    this.foregroundColor = Colors.white,
-    this.barCount = 3,
-    this.iconSize = 20,
-    super.key,
-  });
-
-  final AudioTrack? audioTrack;
-  final Participant? participant;
-
-  final Color? foregroundColor;
-  final int barCount;
-
-  /// Mic-off glyph size. Defaults to 20 for non-overlay callers (action bar).
-  final double iconSize;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SpeakingIndicatorCore(
-      audioTrack: audioTrack,
-      participant: participant,
-      foregroundColor: foregroundColor,
-      barCount: barCount,
-      iconSize: iconSize,
-    );
-  }
-}
-
-class SpeakingIndicator extends StatelessWidget {
+class SpeakingIndicator extends ConsumerWidget {
   const SpeakingIndicator({
     required this.participant,
     this.foregroundColor = Colors.white,
@@ -46,7 +15,7 @@ class SpeakingIndicator extends StatelessWidget {
     super.key,
   });
 
-  final Participant participant;
+  final ParticipantInfo participant;
   final Color foregroundColor;
   final int barCount;
 
@@ -54,153 +23,20 @@ class SpeakingIndicator extends StatelessWidget {
   final double iconSize;
 
   @override
-  Widget build(BuildContext context) {
-    return _SpeakingIndicatorCore(
-      participant: participant,
-      foregroundColor: foregroundColor,
-      barCount: barCount,
-      iconSize: iconSize,
-    );
-  }
-}
-
-class _SpeakingIndicatorCore extends StatefulWidget {
-  const _SpeakingIndicatorCore({
-    required this.foregroundColor,
-    required this.barCount,
-    this.audioTrack,
-    this.participant,
-    this.iconSize = 20,
-  });
-
-  final AudioTrack? audioTrack;
-  final Participant? participant;
-  final Color? foregroundColor;
-  final int barCount;
-  final double iconSize;
-
-  @override
-  State<_SpeakingIndicatorCore> createState() => _SpeakingIndicatorCoreState();
-}
-
-class _SpeakingIndicatorCoreState extends State<_SpeakingIndicatorCore> {
-  EventsListener<ParticipantEvent>? _participantListener;
-  EventsListener<TrackEvent>? _trackListener;
-
-  TrackPublication<Track>? get audioTrack {
-    final participant = widget.participant;
-
-    if (participant is RemoteParticipant) {
-      return participant.getTrackPublicationBySource(TrackSource.microphone);
-    } else {
-      return participant?.audioTrackPublications
-          .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
-          .firstOrNull;
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _setupListeners();
-  }
-
-  @override
-  void didUpdateWidget(covariant _SpeakingIndicatorCore oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant?.sid != widget.participant?.sid ||
-        oldWidget.audioTrack != widget.audioTrack) {
-      _setupListeners();
-    }
-  }
-
-  AudioTrack? get _resolvedAudioTrack {
-    final publicationTrack = audioTrack?.track;
-    return widget.audioTrack ?? publicationTrack as AudioTrack?;
-  }
-
-  void _setupListeners() {
-    _participantListener?.dispose();
-    _participantListener = widget.participant?.createListener();
-    _participantListener
-      ?..on<TrackPublishedEvent>(
-        (event) => _onMicrophonePublicationChanged(event.publication),
-      )
-      ..on<TrackUnpublishedEvent>(
-        (event) => _onMicrophonePublicationChanged(event.publication),
-      )
-      ..on<TrackSubscribedEvent>(
-        (event) => _onMicrophonePublicationChanged(event.publication),
-      )
-      ..on<TrackUnsubscribedEvent>(
-        (event) => _onMicrophonePublicationChanged(event.publication),
-      )
-      ..on<TrackMutedEvent>(_onTrackMuted)
-      ..on<TrackUnmutedEvent>(_onTrackUnmuted);
-
-    _trackListener?.dispose();
-    _trackListener = null;
-    final resolvedTrack = _resolvedAudioTrack;
-    if (widget.participant == null && resolvedTrack != null) {
-      _trackListener = resolvedTrack.createListener();
-      _trackListener!.listen(_onTrackEvent);
-    }
-  }
-
-  void _onMicrophonePublicationChanged(TrackPublication<Track> publication) {
-    if (!mounted || publication.source != TrackSource.microphone) return;
-    setState(() {});
-  }
-
-  void _onTrackMuted(TrackMutedEvent event) {
-    _onMicrophonePublicationChanged(event.publication);
-  }
-
-  void _onTrackUnmuted(TrackUnmutedEvent event) {
-    _onMicrophonePublicationChanged(event.publication);
-  }
-
-  void _onTrackEvent(TrackEvent event) {
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _participantListener?.dispose();
-    _trackListener?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final resolvedAudioTrack = _resolvedAudioTrack;
-
-    if (resolvedAudioTrack != null && !resolvedAudioTrack.muted) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          return RepaintBoundary(
-            child: SoundWaveformWidget(
-              audioTrack: resolvedAudioTrack,
-              participant: widget.participant,
-              options: AudioVisualizerWidgetOptions(
-                color: widget.foregroundColor,
-                barCount: widget.barCount,
-                barMinOpacity: 0.8,
-                spacing: 2.5,
-                minHeight: constraints.maxHeight * 0.2,
-                maxHeight: constraints.maxHeight,
-              ),
-            ),
-          );
-        },
+  Widget build(BuildContext context, WidgetRef ref) {
+    final media = ref.watch(roomMediaProvider);
+    if (media == null) {
+      return TotemIcon(
+        TotemIcons.microphoneOff,
+        size: iconSize,
+        color: foregroundColor,
       );
     }
-
-    return TotemIcon(
-      TotemIcons.microphoneOff,
-      size: widget.iconSize,
-      color: widget.foregroundColor,
+    return media.microphoneLevel(
+      participant,
+      color: foregroundColor,
+      iconSize: iconSize,
+      barCount: barCount,
     );
   }
 }
@@ -213,7 +49,7 @@ class SpeakingIndicatorOrEmoji extends StatelessWidget {
     super.key,
   });
 
-  final Participant participant;
+  final ParticipantInfo participant;
   final Color backgroundColor;
 
   /// Chrome sizes, resolved by the card from its own size.

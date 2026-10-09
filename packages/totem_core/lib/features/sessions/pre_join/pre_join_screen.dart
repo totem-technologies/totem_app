@@ -213,7 +213,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       onToggleCamera: mediaController.toggleCamera,
       onToggleMicrophone: mediaController.toggleMicrophone,
       onToggleSpeaker: mediaController.toggleSpeaker,
-      onCameraPositionChanged: mediaController.setCameraPosition,
+      onCameraFacingChanged: mediaController.setCameraFacing,
       onCameraDeviceSelected: mediaController.selectCameraDevice,
       joinCard: JoinTransitionCard(
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),

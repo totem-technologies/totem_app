@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart' hide Session;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart'
     as mobile_api
@@ -11,6 +10,9 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
+import 'package:totem_core/features/sessions/media/media_platform.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/banned_participants_modal.dart';
@@ -93,26 +95,16 @@ class MoreOptions extends ConsumerWidget {
     final isKeeper = currentSession.isCurrentUserKeeper();
 
     Widget buildContent([ScrollController? scrollController]) {
-      final cameraTile = MoreOptionsTile.camera(
-        currentSession.devices.localVideoTrack?.currentOptions
-            as CameraCaptureOptions?,
-        () {
-          currentSession.devices.switchCameraPosition();
-          Navigator.of(context).pop();
-        },
-      );
+      final cameraTile = MoreOptionsTile.camera(deviceState.cameraFacing, () {
+        currentSession.devices.switchCameraPosition();
+        Navigator.of(context).pop();
+      });
 
       final outputTile = MoreOptionsTile.output(
-        AudioOutputOptions(
-          speakerOn: deviceState.isSpeakerphoneEnabled,
-          deviceId: deviceState.selectedAudioOutputDeviceId,
-        ),
-        (options) {
-          if (options.speakerOn != null) {
-            currentSession.devices.setSpeakerphone(options.speakerOn ?? false);
-          }
-        },
-        currentSession.devices.selectAudioOutputDevice,
+        speakerOn: deviceState.isSpeakerphoneEnabled,
+        selectedDeviceId: deviceState.selectedAudioOutputDeviceId,
+        onSpeakerChanged: currentSession.devices.setSpeakerphone,
+        onDeviceSelect: currentSession.devices.selectAudioOutputDevice,
       );
 
       final content = SingleChildScrollView(
@@ -549,16 +541,16 @@ class MoreOptionsTile<T> extends StatelessWidget {
   ///
   /// On desktop platforms, the user can choose the camera device on the action bar
   /// See [SessionActionBar]
-  static Widget? camera(CameraCaptureOptions? options, VoidCallback onSwitch) {
-    if (lkPlatformIsMobile()) {
-      return MoreOptionsTile<MediaDevice>(
-        title: switch (options?.cameraPosition) {
-          CameraPosition.front => 'Front',
-          CameraPosition.back => 'Back',
+  static Widget? camera(CameraFacing? facing, VoidCallback onSwitch) {
+    if (isNativeMobile) {
+      return MoreOptionsTile<MediaDeviceInfo>(
+        title: switch (facing) {
+          CameraFacing.front => 'Front',
+          CameraFacing.back => 'Back',
           null => 'Camera disabled',
         },
-        icon: options == null ? TotemIcons.cameraOff : TotemIcons.cameraOn,
-        trailing: options != null
+        icon: facing == null ? TotemIcons.cameraOff : TotemIcons.cameraOn,
+        trailing: facing != null
             ? IgnorePointer(
                 child: IconButton(
                   icon: const Icon(Icons.switch_camera_outlined),
@@ -566,55 +558,48 @@ class MoreOptionsTile<T> extends StatelessWidget {
                 ),
               )
             : null,
-        onTap: switch (options?.cameraPosition) {
-          null => null,
-          _ => onSwitch,
-        },
+        onTap: facing == null ? null : onSwitch,
       );
     }
     return null;
   }
 
-  static Widget? output(
-    AudioOutputOptions options,
-    ValueChanged<AudioOutputOptions> onSwitch,
-    ValueChanged<MediaDevice> onDeviceSelect,
-  ) {
-    if (lkPlatformIsMobile()) {
-      return MoreOptionsTile<MediaDevice>(
+  static Widget? output({
+    required bool speakerOn,
+    required String? selectedDeviceId,
+    required ValueChanged<bool> onSpeakerChanged,
+    required ValueChanged<MediaDeviceInfo> onDeviceSelect,
+  }) {
+    if (isNativeMobile) {
+      return MoreOptionsTile<MediaDeviceInfo>(
         title: 'Speaker',
         icon: TotemIcons.speakerOn,
         trailing: IgnorePointer(
-          child: Switch.adaptive(
-            value: options.speakerOn ?? false,
-            onChanged: (enabled) {},
-          ),
+          child: Switch.adaptive(value: speakerOn, onChanged: (enabled) {}),
         ),
-        onTap: () {
-          onSwitch(options.copyWith(speakerOn: !(options.speakerOn ?? false)));
-        },
+        onTap: () => onSpeakerChanged(!speakerOn),
       );
     } else {
       return _DesktopAudioOutputTile(
-        options: options,
+        selectedDeviceId: selectedDeviceId,
         onDeviceSelect: onDeviceSelect,
       );
     }
   }
 
   static Widget fromMediaDevice({
-    required MediaDevice? device,
-    required Iterable<MediaDevice> options,
-    required ValueChanged<MediaDevice?> onOptionChanged,
+    required MediaDeviceInfo? device,
+    required Iterable<MediaDeviceInfo> options,
+    required ValueChanged<MediaDeviceInfo?> onOptionChanged,
     required TotemIconData icon,
   }) {
-    return MoreOptionsTile<MediaDevice>(
+    return MoreOptionsTile<MediaDeviceInfo>(
       title:
-          device?.humanReadableLabel ??
+          device?.displayLabel ??
           (options.isEmpty ? 'No Connected Device' : 'Default Device'),
       icon: icon,
       options: options,
-      optionToString: (option) => option.humanReadableLabel,
+      optionToString: (option) => option.displayLabel,
       selectedOption: device,
       onOptionChanged: onOptionChanged,
     );
@@ -717,99 +702,44 @@ class MoreOptionsTile<T> extends StatelessWidget {
   }
 }
 
-class _DesktopAudioOutputTile extends StatefulWidget {
+class _DesktopAudioOutputTile extends ConsumerWidget {
   const _DesktopAudioOutputTile({
-    required this.options,
+    required this.selectedDeviceId,
     required this.onDeviceSelect,
   });
 
-  final AudioOutputOptions options;
-  final ValueChanged<MediaDevice> onDeviceSelect;
+  final String? selectedDeviceId;
+  final ValueChanged<MediaDeviceInfo> onDeviceSelect;
 
   @override
-  State<_DesktopAudioOutputTile> createState() =>
-      _DesktopAudioOutputTileState();
-}
-
-class _DesktopAudioOutputTileState extends State<_DesktopAudioOutputTile> {
-  List<MediaDevice> _audioOutputs = const [];
-  StreamSubscription<List<MediaDevice>>? _audioOutputsSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    _listenToAudioOutputs();
-  }
-
-  @override
-  void dispose() {
-    _audioOutputsSubscription?.cancel();
-    super.dispose();
-  }
-
-  void _listenToAudioOutputs() {
-    _audioOutputsSubscription = Hardware.instance.onDeviceChange.stream.listen(
-      _onDeviceChange,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final audioOutputs = ref.watch(
+      mediaDevicesProvider.select(
+        (devices) => (devices.value ?? const <MediaDeviceInfo>[])
+            .where(
+              (device) =>
+                  device.kind == MediaDeviceKind.audioOutput &&
+                  device.label.isNotEmpty &&
+                  device.label != 'Earpiece',
+            )
+            .toList(),
+      ),
     );
-
-    Hardware.instance.audioOutputs().then((devices) {
-      if (!mounted) return;
-      setState(() {
-        _audioOutputs = _filterAudioOutputs(devices);
-      });
-    });
-  }
-
-  void _onDeviceChange(List<MediaDevice> devices) {
-    if (!mounted) return;
-    setState(() {
-      _audioOutputs = _filterAudioOutputs(devices);
-    });
-  }
-
-  List<MediaDevice> _filterAudioOutputs(List<MediaDevice> devices) {
-    return devices.where((device) {
-      return device.kind == 'audiooutput' &&
-          device.label.isNotEmpty &&
-          device.label != 'Earpiece';
-    }).toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
     final selected =
-        _audioOutputs.firstWhereOrNull(
-          (device) => device.deviceId == widget.options.deviceId,
+        audioOutputs.firstWhereOrNull(
+          (device) => device.id == selectedDeviceId,
         ) ??
-        _audioOutputs.firstOrNull;
+        audioOutputs.firstOrNull;
 
     return MoreOptionsTile.fromMediaDevice(
       device: selected,
-      options: _audioOutputs,
+      options: audioOutputs,
       onOptionChanged: (value) {
         if (value != null) {
-          widget.onDeviceSelect(value);
+          onDeviceSelect(value);
         }
       },
       icon: TotemIcons.speakerOn,
     );
-  }
-}
-
-extension on MediaDevice {
-  String get humanReadableLabel {
-    if (label.isNotEmpty) {
-      return label;
-    }
-    switch (kind) {
-      case 'audioinput':
-        return 'Microphone';
-      case 'audiooutput':
-        return 'Speaker';
-      case 'videoinput':
-        return 'Camera';
-      default:
-        return 'Unknown Device';
-    }
   }
 }

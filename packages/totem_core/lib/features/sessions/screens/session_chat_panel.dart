@@ -7,11 +7,10 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:livekit_client/livekit_client.dart'
-    hide Session, SessionOptions;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 
@@ -415,8 +414,11 @@ String? _resolveKeeperIdentity({
   return null;
 }
 
-Participant? _participantFor(List<Participant> participants, String? identity) {
-  return participants.cast<Participant?>().firstWhere(
+ParticipantInfo? _participantFor(
+  List<ParticipantInfo> participants,
+  String? identity,
+) {
+  return participants.cast<ParticipantInfo?>().firstWhere(
     (participant) => participant?.identity == identity,
     orElse: () => null,
   );
@@ -441,7 +443,7 @@ String _pinnedHint({
 String _composerHint({
   required bool isPrivateThread,
   required String? threadTarget,
-  required List<Participant> participants,
+  required List<ParticipantInfo> participants,
   required String? keeperIdentity,
 }) {
   if (!isPrivateThread) {
@@ -472,7 +474,7 @@ class _SessionChatHeader extends StatelessWidget {
   final bool isKeeper;
   final String? threadTarget;
   final String? keeperIdentity;
-  final List<Participant> participants;
+  final List<ParticipantInfo> participants;
   final bool dropdownOpen;
   final VoidCallback onClose;
   final VoidCallback onToggleDropdown;
@@ -608,7 +610,7 @@ class _HeaderTitle extends StatelessWidget {
   final String? threadTarget;
   final String? keeperIdentity;
   final bool isKeeper;
-  final List<Participant> participants;
+  final List<ParticipantInfo> participants;
 
   @override
   Widget build(BuildContext context) {
@@ -852,13 +854,13 @@ class _RecipientDropdownOverlay extends StatelessWidget {
   final String? threadTarget;
   final String? keeperIdentity;
   final String? localIdentity;
-  final List<Participant> participants;
+  final List<ParticipantInfo> participants;
   final VoidCallback onSelectEveryone;
   final ValueChanged<String> onSelectParticipant;
 
   @override
   Widget build(BuildContext context) {
-    final rows = <Participant>[];
+    final rows = <ParticipantInfo>[];
     if (isKeeper) {
       for (final participant in participants) {
         if (participant.identity == localIdentity) continue;

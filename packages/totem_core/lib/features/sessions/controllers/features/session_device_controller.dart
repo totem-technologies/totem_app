@@ -4,13 +4,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_session/audio_session.dart' as audio;
-import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
 import 'package:totem_core/shared/logger.dart';
 
 part 'session_device_controller.g.dart';
@@ -19,75 +18,80 @@ part 'session_device_controller.g.dart';
 class SessionDeviceState {
   const SessionDeviceState({
     required this.selectedCameraDeviceId,
-    required this.selectedAudioDeviceId,
     required this.selectedAudioOutputDeviceId,
     required this.isSpeakerphoneEnabled,
     required this.isMicrophoneEnabled,
     required this.isCameraEnabled,
+    this.isMicrophoneOn = false,
+    this.isCameraOn = false,
+    this.hasMicrophoneTrack = false,
+    this.cameraFacing,
   });
 
   final String? selectedCameraDeviceId;
-  final String? selectedAudioDeviceId;
   final String? selectedAudioOutputDeviceId;
   final bool isSpeakerphoneEnabled;
   final bool isMicrophoneEnabled;
   final bool isCameraEnabled;
 
-  SessionDeviceState copyWith({
-    String? selectedCameraDeviceId,
-    String? selectedAudioDeviceId,
-    String? selectedAudioOutputDeviceId,
-    bool? isSpeakerphoneEnabled,
-    bool? isMicrophoneEnabled,
-    bool? isCameraEnabled,
-  }) {
-    return SessionDeviceState(
-      selectedCameraDeviceId:
-          selectedCameraDeviceId ?? this.selectedCameraDeviceId,
-      selectedAudioDeviceId:
-          selectedAudioDeviceId ?? this.selectedAudioDeviceId,
-      selectedAudioOutputDeviceId:
-          selectedAudioOutputDeviceId ?? this.selectedAudioOutputDeviceId,
-      isSpeakerphoneEnabled:
-          isSpeakerphoneEnabled ?? this.isSpeakerphoneEnabled,
-      isMicrophoneEnabled: isMicrophoneEnabled ?? this.isMicrophoneEnabled,
-      isCameraEnabled: isCameraEnabled ?? this.isCameraEnabled,
-    );
-  }
+  /// What the microphone and camera controls show: the published track's
+  /// state, or the user's join preference until that track is published.
+  final bool isMicrophoneOn;
+  final bool isCameraOn;
+
+  /// Whether a microphone track is published, muted or not.
+  final bool hasMicrophoneTrack;
+
+  /// The facing of the active camera, or null while the camera is off.
+  final CameraFacing? cameraFacing;
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! SessionDeviceState) return false;
     return other.selectedCameraDeviceId == selectedCameraDeviceId &&
-        other.selectedAudioDeviceId == selectedAudioDeviceId &&
         other.selectedAudioOutputDeviceId == selectedAudioOutputDeviceId &&
         other.isSpeakerphoneEnabled == isSpeakerphoneEnabled &&
         other.isMicrophoneEnabled == isMicrophoneEnabled &&
-        other.isCameraEnabled == isCameraEnabled;
+        other.isCameraEnabled == isCameraEnabled &&
+        other.isMicrophoneOn == isMicrophoneOn &&
+        other.isCameraOn == isCameraOn &&
+        other.hasMicrophoneTrack == hasMicrophoneTrack &&
+        other.cameraFacing == cameraFacing;
   }
 
   @override
-  int get hashCode {
-    return selectedCameraDeviceId.hashCode ^
-        selectedAudioDeviceId.hashCode ^
-        selectedAudioOutputDeviceId.hashCode ^
-        isSpeakerphoneEnabled.hashCode ^
-        isMicrophoneEnabled.hashCode ^
-        isCameraEnabled.hashCode;
-  }
+  int get hashCode => Object.hash(
+    selectedCameraDeviceId,
+    selectedAudioOutputDeviceId,
+    isSpeakerphoneEnabled,
+    isMicrophoneEnabled,
+    isCameraEnabled,
+    isMicrophoneOn,
+    isCameraOn,
+    hasMicrophoneTrack,
+    cameraFacing,
+  );
 }
 
 @riverpod
 class SessionDeviceController extends _$SessionDeviceController {
   SessionDeviceState _currentState() {
+    final media = _media;
     return SessionDeviceState(
       selectedCameraDeviceId: selectedCameraDeviceId,
-      selectedAudioDeviceId: selectedAudioDeviceId,
       selectedAudioOutputDeviceId: selectedAudioOutputDeviceId,
       isSpeakerphoneEnabled: isSpeakerphoneEnabled,
       isMicrophoneEnabled: isMicrophoneEnabled,
       isCameraEnabled: isCameraEnabled,
+      isMicrophoneOn: media.hasMicrophoneTrack
+          ? media.isMicrophoneEnabled
+          : session.options.microphoneEnabled,
+      isCameraOn: media.hasCameraTrack
+          ? media.isCameraEnabled
+          : session.options.cameraEnabled,
+      hasMicrophoneTrack: media.hasMicrophoneTrack,
+      cameraFacing: media.cameraFacing,
     );
   }
 
@@ -97,11 +101,14 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   @override
   SessionDeviceState build(SessionController session) {
-    ref.onDispose(dispose);
+    final mediaChanges = _media.changes.listen((_) => _emitState());
+    ref
+      ..onDispose(mediaChanges.cancel)
+      ..onDispose(dispose);
     return _currentState();
   }
 
-  Room? get _room => session.room;
+  LocalMedia get _media => session.localMedia;
 
   StreamSubscription<void>? _becomingNoisySubscription;
   StreamSubscription<audio.AudioDevicesChangedEvent>?
@@ -234,49 +241,11 @@ class SessionDeviceController extends _$SessionDeviceController {
     }
   }
 
-  String? get selectedCameraDeviceId {
-    String? id;
-    final room = _room;
-    final userTrack = room?.localParticipant
-        ?.getTrackPublications()
-        .firstWhereOrNull((track) => track.kind == TrackType.VIDEO)
-        ?.track;
-    if (userTrack?.currentOptions != null &&
-        userTrack?.currentOptions is CameraCaptureOptions) {
-      id ??= (userTrack!.currentOptions as CameraCaptureOptions).deviceId;
-    }
-    return id ??= room
-        // ignore: invalid_use_of_internal_member
-        ?.engine
-        .roomOptions
-        .defaultCameraCaptureOptions
-        .deviceId;
-  }
-
-  LocalVideoTrack? get localVideoTrack {
-    return _room?.localParticipant?.videoTrackPublications
-        .where((t) => t.track != null && t.track!.isActive && !t.track!.muted)
-        .firstOrNull
-        ?.track;
-  }
+  String? get selectedCameraDeviceId => _media.cameraDeviceId;
 
   Future<void> switchCameraPosition() async {
     try {
-      final room = _room;
-      final track = localVideoTrack;
-      if (track != null) {
-        final newPosition = (track.currentOptions as CameraCaptureOptions)
-            .cameraPosition
-            .switched();
-        await track.setCameraPosition(newPosition);
-        logger.i('Switched camera to $newPosition');
-      } else {
-        await room?.localParticipant?.publishVideoTrack(
-          await LocalVideoTrack.createCameraTrack(
-            SessionController.defaultCameraCaptureOptions,
-          ),
-        );
-      }
+      await _media.switchCameraFacing();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -288,13 +257,8 @@ class SessionDeviceController extends _$SessionDeviceController {
     }
   }
 
-  LocalAudioTrack? get localAudioTrack {
-    return _room?.localParticipant?.audioTrackPublications.firstOrNull?.track;
-  }
-
   bool get isSpeakerphoneEnabled =>
-      _systemSpeakerphoneEnabled ??
-      AudioManager.instance.isSpeakerOutputPreferred;
+      _systemSpeakerphoneEnabled ?? _media.isSpeakerOutputPreferred;
 
   Future<void> _refreshSpeakerphoneState() async {
     if (kIsWeb) return;
@@ -337,79 +301,38 @@ class SessionDeviceController extends _$SessionDeviceController {
   }
 
   Future<void> _autoSetSpeakerphone(bool enabled) async {
-    if (_room == null) return;
-    // There is a bug in the livekit library that doesn't effectively turn the speakerphone
-    // on when requested.
-    // A workaround is to first turn it off, then set the desired state.
-    AudioManager.instance.setSpeakerOutputPreferred(false);
-
-    if (enabled) {
-      AudioManager.instance.setSpeakerOutputPreferred(enabled);
-    }
-
+    if (!_media.isAvailable) return;
+    await _media.setSpeakerOutputPreferred(enabled);
     await _refreshSpeakerphoneState();
     _emitState();
   }
 
-  String? get selectedAudioDeviceId => localAudioTrack?.currentOptions.deviceId;
+  String? get selectedAudioOutputDeviceId => _media.audioOutputDeviceId;
 
-  Future<void> selectAudioDevice(MediaDevice device) async {
-    final room = _room;
-    final track = localAudioTrack;
-    if (track != null) {
-      track.setDeviceId(device.deviceId);
-    } else {
-      await room?.localParticipant?.publishAudioTrack(
-        await LocalAudioTrack.create(
-          AudioCaptureOptions(deviceId: device.deviceId),
-        ),
-      );
-    }
-
-    // See https://github.com/livekit/client-sdk-flutter/issues/959
-    await room?.setAudioInputDevice(device);
+  Future<void> selectAudioOutputDevice(MediaDeviceInfo device) async {
+    await _media.selectAudioOutput(device);
     _emitState();
   }
 
-  String? get selectedAudioOutputDeviceId {
-    return _room
-        // ignore: invalid_use_of_internal_member
-        ?.engine
-        .roomOptions
-        .defaultAudioOutputOptions
-        .deviceId;
-  }
-
-  Future<void> selectAudioOutputDevice(MediaDevice device) async {
-    // See https://github.com/livekit/client-sdk-flutter/issues/858
-    await _room?.setAudioOutputDevice(device);
-    _emitState();
-  }
-
-  bool get isMicrophoneEnabled =>
-      _room?.localParticipant?.isMicrophoneEnabled() ?? false;
+  bool get isMicrophoneEnabled => _media.isMicrophoneEnabled;
 
   Future<void> enableMicrophone() async {
-    final room = _room;
-    if (room?.localParticipant?.isMicrophoneEnabled() ?? false) return;
+    if (_media.isMicrophoneEnabled) return;
     if (session.state.roomState.status == RoomStatus.active &&
         !session.state.hasKeeper) {
       return;
     }
 
-    if (room?.localParticipant != null) {
-      await room?.localParticipant?.setMicrophoneEnabled(true);
+    if (_media.isAvailable) {
+      await _media.setMicrophoneEnabled(true);
     }
     _emitState();
   }
 
   Future<void> disableMicrophone() async {
-    final room = _room;
-    if (!(room?.localParticipant?.isMicrophoneEnabled() ?? false)) {
-      return;
-    }
+    if (!_media.isMicrophoneEnabled) return;
     try {
-      await room?.localParticipant?.setMicrophoneEnabled(false);
+      await _media.setMicrophoneEnabled(false);
       _emitState();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -420,23 +343,7 @@ class SessionDeviceController extends _$SessionDeviceController {
     }
   }
 
-  TrackPublication<Track>? get _cameraPublication {
-    return _room?.localParticipant?.getTrackPublicationBySource(
-      TrackSource.camera,
-    );
-  }
-
-  bool get _isCameraEnabled {
-    final publication = _cameraPublication;
-    if (publication == null) return false;
-
-    final track = publication.track;
-    final isMuted = track?.muted ?? publication.muted;
-    final isActive = track?.isActive ?? true;
-    return isActive && !isMuted;
-  }
-
-  bool get isCameraEnabled => _isCameraEnabled;
+  bool get isCameraEnabled => _media.isCameraEnabled;
 
   Future<void> enableCamera() => _requestCameraState(true);
 
@@ -457,33 +364,21 @@ class SessionDeviceController extends _$SessionDeviceController {
     try {
       while (!_disposed) {
         final desiredState = _desiredCameraEnabled;
-        final room = _room;
-        final participant = room?.localParticipant;
         if (desiredState == null ||
-            room == null ||
-            participant == null ||
+            !_media.isAvailable ||
             session.state.connection.state != RoomConnectionState.connected) {
           _desiredCameraEnabled = null;
           return;
         }
 
-        if (participant.isCameraEnabled() == desiredState) {
+        if (_media.isCameraEnabled == desiredState) {
           _desiredCameraEnabled = null;
           _emitState();
           return;
         }
 
         try {
-          if (desiredState) {
-            await participant.setCameraEnabled(
-              true,
-              cameraCaptureOptions: SessionController
-                  .defaultCameraCaptureOptions
-                  .copyWith(deviceId: room.selectedVideoInputDeviceId),
-            );
-          } else {
-            await participant.setCameraEnabled(false);
-          }
+          await _media.setCameraEnabled(desiredState);
         } catch (error, stackTrace) {
           logger.e(
             'Failed to change camera state',
@@ -514,11 +409,9 @@ class SessionDeviceController extends _$SessionDeviceController {
     }
   }
 
-  Future<void> selectCameraDevice(MediaDevice device) async {
-    final room = _room;
-    if (room == null) return;
-
-    await room.setVideoInputDevice(device);
+  Future<void> selectCameraDevice(MediaDeviceInfo device) async {
+    if (!_media.isAvailable) return;
+    await _media.selectCamera(device);
     _emitState();
   }
 

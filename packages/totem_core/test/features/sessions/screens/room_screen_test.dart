@@ -36,6 +36,7 @@ import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
+import '../media/test_participants.dart';
 
 MockLocalParticipant _buildMockParticipant(String id) {
   final participant = MockLocalParticipant(id);
@@ -156,9 +157,9 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   DisconnectReason? disconnectReason,
   List<Object?> extraOverrides = const [],
 }) async {
-  final p1 = _buildMockParticipant('user-1');
-  final p2 = _buildMockParticipant('user-2');
-  final keeper = _buildMockParticipant('keeper-1');
+  final p1 = testParticipant('user-1');
+  final p2 = testParticipant('user-2');
+  final keeper = testParticipant('keeper-1');
 
   final sessionState = SessionRoomState(
     connection: const ConnectionState(
@@ -200,7 +201,6 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         connectionStateProvider.overrideWith((ref) => connectionState),
         roomStatusProvider.overrideWith((ref) => roomStatus),
         isCurrentUserKeeperProvider.overrideWith((ref) => false),
-        isCameraOnProvider.overrideWith((ref) => false),
         currentSessionPromptProvider.overrideWith((ref) => null),
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
@@ -342,7 +342,6 @@ class _KeeperDisconnectedOverrideNotifier extends Notifier<bool> {
 class _TestSessionDeviceController extends SessionDeviceController {
   static SessionDeviceState initialState = const SessionDeviceState(
     selectedCameraDeviceId: null,
-    selectedAudioDeviceId: null,
     selectedAudioOutputDeviceId: null,
     isSpeakerphoneEnabled: true,
     isMicrophoneEnabled: false,
@@ -529,9 +528,7 @@ void main() {
       when(() => devices.isMicrophoneEnabled).thenReturn(false);
       when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
       when(() => devices.selectedCameraDeviceId).thenReturn(null);
-      when(() => devices.selectedAudioDeviceId).thenReturn(null);
       when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
-      when(() => devices.localVideoTrack).thenReturn(null);
       when(() => devices.enableMicrophone()).thenAnswer((_) async {});
       when(() => devices.disableMicrophone()).thenAnswer((_) async {});
       when(() => devices.enableCamera()).thenAnswer((_) async {});
@@ -1315,7 +1312,6 @@ void main() {
       _TestSessionDeviceController.lastInstance = null;
       _TestSessionDeviceController.initialState = const SessionDeviceState(
         selectedCameraDeviceId: null,
-        selectedAudioDeviceId: null,
         selectedAudioOutputDeviceId: null,
         isSpeakerphoneEnabled: true,
         isMicrophoneEnabled: false,
@@ -1330,9 +1326,7 @@ void main() {
       when(() => devices.isMicrophoneEnabled).thenReturn(false);
       when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
       when(() => devices.selectedCameraDeviceId).thenReturn(null);
-      when(() => devices.selectedAudioDeviceId).thenReturn(null);
       when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
-      when(() => devices.localVideoTrack).thenReturn(null);
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
       when(() => session.session).thenReturn(
         _createSessionEvent(
@@ -1370,7 +1364,6 @@ void main() {
       controller?.emit(
         const SessionDeviceState(
           selectedCameraDeviceId: null,
-          selectedAudioDeviceId: null,
           selectedAudioOutputDeviceId: 'headphones',
           isSpeakerphoneEnabled: false,
           isMicrophoneEnabled: false,
@@ -1416,7 +1409,6 @@ void main() {
       controller?.emit(
         const SessionDeviceState(
           selectedCameraDeviceId: null,
-          selectedAudioDeviceId: null,
           selectedAudioOutputDeviceId: 'headphones',
           isSpeakerphoneEnabled: false,
           isMicrophoneEnabled: false,

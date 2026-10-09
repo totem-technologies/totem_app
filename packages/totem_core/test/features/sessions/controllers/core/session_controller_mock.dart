@@ -4,8 +4,12 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/room_media.dart';
 
-import '../../livekit_mocks.dart';
+import '../../media/fake_local_media.dart';
+import '../../media/fake_room_media.dart';
+import '../../media/test_participants.dart';
 import '../features/session_device_controller_mock.dart';
 
 const testSessionOptions = SessionOptions(
@@ -17,7 +21,16 @@ const testSessionOptions = SessionOptions(
   cameraOptions: SessionController.defaultCameraCaptureOptions,
 );
 
-class MockSessionController extends Mock implements SessionController {}
+class MockSessionController extends Mock implements SessionController {
+  FakeLocalMedia mockLocalMedia = FakeLocalMedia();
+  FakeRoomMedia mockRoomMedia = FakeRoomMedia();
+
+  @override
+  LocalMedia get localMedia => mockLocalMedia;
+
+  @override
+  RoomMedia get roomMedia => mockRoomMedia;
+}
 
 RoomState _createRoomState({RoomStatus status = RoomStatus.waitingRoom}) {
   return RoomState(
@@ -44,9 +57,9 @@ SessionRoomState _createSessionState({
     ),
     participants: ParticipantsState(
       participants: [
-        MockLocalParticipant('user-1'),
-        MockLocalParticipant('user-2'),
-        MockLocalParticipant('keeper-1'),
+        testParticipant('user-1'),
+        testParticipant('user-2'),
+        testParticipant('keeper-1'),
       ],
     ),
     chat: const ChatState(),
@@ -62,6 +75,8 @@ class FakeSessionController implements SessionController {
   bool isCurrentUserKeeperValue = false;
   SessionOptions mockOptions = testSessionOptions;
   Room? mockRoom;
+  FakeLocalMedia mockLocalMedia = FakeLocalMedia();
+  FakeRoomMedia mockRoomMedia = FakeRoomMedia();
 
   @override
   SessionRoomState get state => mockState;
@@ -71,6 +86,12 @@ class FakeSessionController implements SessionController {
 
   @override
   Room? get room => mockRoom;
+
+  @override
+  LocalMedia get localMedia => mockLocalMedia;
+
+  @override
+  RoomMedia get roomMedia => mockRoomMedia;
 
   @override
   SessionOptions get options => mockOptions;

@@ -9,13 +9,11 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
-
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
-
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
@@ -25,6 +23,7 @@ import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
+import '../media/test_participants.dart';
 import '../session_test_fixtures.dart';
 import '../session_test_mocks.dart';
 
@@ -70,20 +69,22 @@ SessionDetailSchema _createTestSession() {
 }
 
 /// Creates a [MockRemoteParticipant] with [createListener] stubbed.
-MockRemoteParticipant _mockRemote(String id, String name) {
-  final p = MockRemoteParticipant(id, name);
-  when(() => p.getTrackPublicationBySource(any())).thenReturn(null);
-  return p;
-}
+ParticipantInfo _mockRemote(String id, String name) =>
+    testParticipant(id, name: name);
 
-List<Participant> _buildParticipantsWithLocal(
+List<ParticipantInfo> _buildParticipantsWithLocal(
   MockLocalParticipant localParticipant,
   int count,
 ) {
-  if (count <= 1) return [localParticipant];
+  final local = testParticipant(
+    localParticipant.identity,
+    name: localParticipant.name,
+    isLocal: true,
+  );
+  if (count <= 1) return [local];
 
   return [
-    localParticipant,
+    local,
     ...List.generate(
       count - 1,
       (index) => _mockRemote('user-${index + 2}', 'User ${index + 2}'),
@@ -98,7 +99,7 @@ SessionRoomState _buildState({
   String currentSpeaker = 'speaker-1',
   String? nextSpeaker = 'user-2',
   List<String> talkingOrder = const [],
-  List<Participant>? participants,
+  List<ParticipantInfo>? participants,
 }) {
   final defaultParticipants =
       participants ??
@@ -138,7 +139,7 @@ SessionRoomState _buildState({
 List<String> _participantGridIdentities(WidgetTester tester) {
   return tester
       .widgetList<ParticipantCard>(find.byType(ParticipantCard))
-      .map((card) => card.participantIdentity)
+      .map((card) => card.participant.identity)
       .toList();
 }
 
@@ -179,7 +180,6 @@ void main() {
     when(() => devices.isMicrophoneEnabled).thenReturn(false);
     when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
     when(() => devices.selectedCameraDeviceId).thenReturn(null);
-    when(() => devices.selectedAudioDeviceId).thenReturn(null);
     when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
     when(() => devices.enableMicrophone()).thenAnswer((_) async {});
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
@@ -205,6 +205,7 @@ void main() {
     bool isKeeper = false,
     RoomScreen currentScreen = RoomScreen.listening,
   }) async {
+    when(() => session.state).thenReturn(sessionState);
     tester.view
       ..physicalSize = const Size(390, 844)
       ..devicePixelRatio = 1.0;
@@ -438,11 +439,11 @@ void main() {
         check(tester.widgetList(find.text('Unmute Anyway'))).length.equals(1);
         await tester.tap(find.text('Unmute Anyway'));
         await tester.pumpAndSettle();
-        verify(() => devices.enableMicrophone()).called(1);
+        check(session.mockLocalMedia.microphoneCommands).deepEquals([true]);
 
         await tester.tap(find.bySemanticsLabel('Camera off'));
         await tester.pump();
-        verify(() => devices.enableCamera()).called(1);
+        check(session.mockLocalMedia.cameraCommands).deepEquals([true]);
       });
 
       testWidgets('responds to desktop keyboard shortcuts', (tester) async {

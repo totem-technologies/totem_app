@@ -21,6 +21,12 @@ import 'package:totem_core/features/sessions/controllers/features/session_infra_
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/controllers/utils.dart';
+import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
+import 'package:totem_core/features/sessions/media/livekit_room_media.dart';
+import 'package:totem_core/features/sessions/media/livekit_support.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/media/room_media.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
@@ -91,7 +97,17 @@ class SessionController extends _$SessionController {
   @visibleForTesting
   set room(Room? value) {
     _room = value;
+    _localMedia.attach(value);
+    _roomMedia.attach(value);
   }
+
+  final LiveKitLocalMedia _localMedia = LiveKitLocalMedia(
+    cameraCaptureOptions: defaultCameraCaptureOptions,
+  );
+  LocalMedia get localMedia => _localMedia;
+
+  final LiveKitRoomMedia _roomMedia = LiveKitRoomMedia();
+  RoomMedia get roomMedia => _roomMedia;
 
   EventsListener<RoomEvent>? _listener;
 
@@ -752,6 +768,8 @@ class SessionController extends _$SessionController {
     required String token,
   }) async {
     final room = _room ??= Room(roomOptions: roomOptions);
+    _localMedia.attach(room);
+    _roomMedia.attach(room);
     await room.prepareConnection(url, token);
 
     _listener ??= room.createListener()
@@ -849,6 +867,8 @@ class SessionController extends _$SessionController {
       await _room?.dispose();
     } catch (_) {}
     _room = null;
+    _localMedia.attach(null);
+    _roomMedia.attach(null);
 
     await _joinMediaOwner.disposeAll();
   }
@@ -884,11 +904,11 @@ class SessionController extends _$SessionController {
   }
 
   @visibleForTesting
-  List<Participant> sortedParticipants() {
-    final participants = <Participant>[
+  List<ParticipantInfo> sortedParticipants() {
+    final participants = <ParticipantInfo>[
       if (room != null) ...[
-        ...?room?.remoteParticipants.values,
-        ?room?.localParticipant,
+        ...?room?.remoteParticipants.values.map((p) => p.toInfo()),
+        ?room?.localParticipant?.toInfo(),
       ],
     ];
 

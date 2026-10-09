@@ -11,6 +11,7 @@ import 'package:totem_core/features/sessions/controllers/features/session_messag
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 
 import '../../livekit_mocks.dart';
+import '../../media/test_participants.dart';
 import '../core/session_controller_mock.dart';
 
 void main() {
@@ -515,7 +516,7 @@ void main() {
           message: 'hi lucas',
           timestamp: 2,
           recipientIdentity: 'lucas',
-          participant: MockLocalParticipant('keeper-1'),
+          participant: testParticipant('keeper-1', isLocal: true),
         );
 
         expect(
@@ -561,7 +562,7 @@ void main() {
           message: 'need help',
           timestamp: 2,
           recipientIdentity: 'keeper-1',
-          participant: MockRemoteParticipant('lucas', 'Lucas'),
+          participant: testParticipant('lucas', name: 'Lucas'),
         );
         final echo = SessionChatMessage(
           id: 'd2',
@@ -569,7 +570,7 @@ void main() {
           message: 'hang tight',
           timestamp: 3,
           recipientIdentity: 'lucas',
-          participant: MockRemoteParticipant('keeper-1', 'Heather'),
+          participant: testParticipant('keeper-1', name: 'Heather'),
         );
         final sent = SessionChatMessage(
           id: 'd3',
@@ -577,7 +578,7 @@ void main() {
           message: 'hang tight',
           timestamp: 4,
           recipientIdentity: 'lucas',
-          participant: MockLocalParticipant('keeper-1'),
+          participant: testParticipant('keeper-1', isLocal: true),
         );
 
         expect(everyone.threadTargetFor('keeper-1'), isNull);

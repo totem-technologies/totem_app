@@ -88,6 +88,20 @@ class MockLocalParticipant extends Mock implements LocalParticipant {
   EventsListener<ParticipantEvent> createListener({
     bool synchronized = false,
   }) => listener;
+
+  /// Unstubbed media flags read as off. The session device controller reads
+  /// them through LiveKitLocalMedia whenever the room changes; tests stub them
+  /// with `when` to change the answer.
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    final result = super.noSuchMethod(invocation);
+    if (result == null &&
+        (invocation.memberName == #isMicrophoneEnabled ||
+            invocation.memberName == #isCameraEnabled)) {
+      return false;
+    }
+    return result;
+  }
 }
 
 class FakeRoom extends Fake implements Room {

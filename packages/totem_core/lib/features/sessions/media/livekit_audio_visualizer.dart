@@ -11,8 +11,6 @@ import 'package:totem_core/core/utils/frame_paced_ticker.dart';
 
 import 'package:totem_core/features/sessions/widgets/audio_visualizer_bars.dart';
 
-export 'audio_visualizer_bars.dart';
-
 enum VisualizerState { thinking, listening, active }
 
 class SoundWaveformWidget extends StatefulWidget {

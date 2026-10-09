@@ -83,7 +83,7 @@ class SessionKeeperController extends _$SessionKeeperController {
 
   Future<void> passTotem({String? customPrompt, int? sessionPromptId}) async {
     final room = session.room;
-    if (room == null || !_state.amSpeaking(room)) {
+    if (room == null || !_state.amSpeaking(room.localParticipant?.identity)) {
       throw StateError("Not the user's turn to pass the totem");
     }
     if (!_state.hasKeeper) {
@@ -151,7 +151,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   /// Throws a [StateError] if the user is not the next participant or there is no keeper.
   Future<void> acceptTotem() async {
     final room = session.room;
-    if (room == null || !_state.amNext(room)) {
+    if (room == null || !_state.amNext(room.localParticipant?.identity)) {
       throw StateError("Not the user's turn to accept the totem");
     }
     if (!_state.hasKeeper) {

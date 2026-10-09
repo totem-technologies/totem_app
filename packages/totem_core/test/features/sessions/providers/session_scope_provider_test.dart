@@ -8,10 +8,12 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
     show RoomScreen;
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 
 import '../controllers/core/session_controller_mock.dart';
 import '../livekit_mocks.dart';
+import '../media/test_participants.dart';
 
 RoomState _roomState({
   RoomStatus status = RoomStatus.waitingRoom,
@@ -44,7 +46,7 @@ SessionRoomState _state({
   RoomError? error,
   RoomStatus roomStatus = RoomStatus.waitingRoom,
   TurnState turnState = TurnState.idle,
-  List<Participant> participants = const <Participant>[],
+  List<ParticipantInfo> participants = const <ParticipantInfo>[],
   List<SessionChatMessage> messages = const [],
   String keeper = 'keeper',
   String? currentSpeaker,
@@ -155,7 +157,7 @@ void main() {
 
   group('session scope selectors', () {
     test('participant projections ignore chat-only changes', () {
-      final participant = MockRemoteParticipant('alice', 'Alice');
+      final participant = testParticipant('alice', name: 'Alice');
       final before = _state(participants: [participant]);
       final after = SessionRoomState(
         connection: before.connection,
@@ -257,7 +259,7 @@ void main() {
         sender: true,
       );
 
-      final participants = <Participant>[];
+      final participants = <ParticipantInfo>[];
 
       final container = ProviderContainer(
         overrides: [
@@ -299,10 +301,12 @@ void main() {
 
     test('computes active session properties correctly', () {
       final alice = MockLocalParticipant('alice');
-      final bob = MockLocalParticipant('bob');
-      final keeperParticipant = MockLocalParticipant('keeper');
 
-      final participants = [alice, bob, keeperParticipant];
+      final participants = [
+        testParticipant('alice', isLocal: true),
+        testParticipant('bob'),
+        testParticipant('keeper'),
+      ];
 
       final fakeSession = FakeSessionController()
         ..mockRoom = FakeRoom(alice)
@@ -375,7 +379,7 @@ void main() {
                 error: error,
                 roomStatus: status,
                 turnState: turnState,
-                participants: [alice],
+                participants: [testParticipant('alice', isLocal: true)],
                 keeper: 'keeper',
                 currentSpeaker: currentSpeaker,
                 nextSpeaker: nextSpeaker,

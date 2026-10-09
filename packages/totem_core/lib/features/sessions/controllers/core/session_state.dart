@@ -4,6 +4,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
 
@@ -84,12 +85,12 @@ class ParticipantsState {
     this.removeReason,
   });
 
-  final List<Participant> participants;
+  final List<ParticipantInfo> participants;
   final bool removed;
   final RemoveReason? removeReason;
 
   ParticipantsState copyWith({
-    List<Participant>? participants,
+    List<ParticipantInfo>? participants,
     bool? removed,
     RemoveReason? removeReason,
   }) {
@@ -104,9 +105,9 @@ class ParticipantsState {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is ParticipantsState &&
-        const DeepCollectionEquality().equals(
-          other.participants.map((p) => p.sid),
-          participants.map((p) => p.sid),
+        const ListEquality<ParticipantInfo>().equals(
+          other.participants,
+          participants,
         ) &&
         other.removed == removed &&
         other.removeReason == removeReason;
@@ -114,7 +115,7 @@ class ParticipantsState {
 
   @override
   int get hashCode =>
-      const DeepCollectionEquality().hash(participants.map((p) => p.sid)) ^
+      const ListEquality<ParticipantInfo>().hash(participants) ^
       removed.hashCode ^
       removeReason.hashCode;
 }
@@ -243,7 +244,7 @@ class SessionRoomState {
   SessionPhase get phase => connection.phase;
   RoomConnectionState get connectionState => connection.state;
   RoomState get roomState => turn.roomState;
-  List<Participant> get participantsList => participants.participants;
+  List<ParticipantInfo> get participantsList => participants.participants;
   bool get removed => participants.removed;
   List<SessionChatMessage> get messages => chat.messages;
 
@@ -259,14 +260,14 @@ class SessionRoomState {
     return null;
   }
 
-  bool amSpeaking(Room room) {
+  bool amSpeaking(String? localIdentity) {
     return turn.roomState.currentSpeaker.value != null &&
-        turn.roomState.currentSpeaker.value == room.localParticipant?.identity;
+        turn.roomState.currentSpeaker.value == localIdentity;
   }
 
-  bool amNext(Room room) {
+  bool amNext(String? localIdentity) {
     return turn.roomState.nextSpeaker.value != null &&
-        turn.roomState.nextSpeaker.value == room.localParticipant?.identity;
+        turn.roomState.nextSpeaker.value == localIdentity;
   }
 
   /// The effective speaker identity for [roomState], using keeper as fallback.
@@ -287,7 +288,7 @@ class SessionRoomState {
     return turn.roomState.keeper == userSlug;
   }
 
-  Participant? featuredParticipant() {
+  ParticipantInfo? featuredParticipant() {
     if (participants.participants.isEmpty) return null;
     if (turn.roomState.status == RoomStatus.waitingRoom && !hasKeeper) {
       return null;
@@ -300,7 +301,7 @@ class SessionRoomState {
         );
   }
 
-  Participant? speakingNextParticipant() {
+  ParticipantInfo? speakingNextParticipant() {
     final nextSpeaker = turn.roomState.nextSpeaker.value;
     if (nextSpeaker == null) return null;
     return participants.participants.firstWhereOrNull((participant) {

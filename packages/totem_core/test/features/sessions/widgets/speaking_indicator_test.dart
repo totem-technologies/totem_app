@@ -1,62 +1,31 @@
 import 'package:checks/checks.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:livekit_client/livekit_client.dart'
-    hide ConnectionState, logger;
 import 'package:material_ui/material_ui.dart';
-import 'package:mocktail/mocktail.dart';
+import 'package:totem_core/features/sessions/media/room_media_providers.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
-import 'package:totem_core/features/sessions/widgets/audio_visualizer.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
-import '../livekit_mocks.dart';
+import '../media/fake_room_media.dart';
+import '../media/test_participants.dart';
 
 void main() {
-  late MockRemoteParticipant remoteParticipant;
-
-  setUp(() {
-    remoteParticipant = MockRemoteParticipant('user-1', 'User 1');
-    when(
-      () =>
-          remoteParticipant.getTrackPublicationBySource(TrackSource.microphone),
-    ).thenReturn(null);
-  });
-
-  setUpAll(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(const MethodChannel('livekit_client'), (
-          call,
-        ) async {
-          switch (call.method) {
-            case 'startVisualizer':
-              return true;
-            case 'stopVisualizer':
-            case 'broadcastRequestActivation':
-            case 'broadcastRequestStop':
-              return null;
-            default:
-              return null;
-          }
-        });
-  });
+  final remoteParticipant = testParticipant('user-1', name: 'User 1');
 
   Future<void> pumpWidget(
     WidgetTester tester, {
     required Widget child,
     List<Object?> overrides = const [],
-    Size? viewSize,
+    FakeRoomMedia? roomMedia,
   }) async {
-    if (viewSize != null) {
-      tester.view.physicalSize = viewSize;
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-    }
     await tester.pumpWidget(
       ProviderScope(
-        overrides: overrides.cast(),
+        overrides: [
+          roomMediaProvider.overrideWithValue(roomMedia ?? FakeRoomMedia()),
+          ...overrides.cast(),
+        ],
         child: MaterialApp(home: Scaffold(body: child)),
       ),
     );
@@ -67,147 +36,37 @@ void main() {
     const Size(160, 120),
   );
 
-  group('SpeakingIndicatorAudioTrack', () {
-    testWidgets('shows the muted icon when the audio track is muted', (
-      tester,
-    ) async {
-      final audioTrack = MockLocalAudioTrack(muted: true);
-      final mediaStreamTrack = MockMediaStreamTrack();
-      when(() => audioTrack.mediaStreamTrack).thenReturn(mediaStreamTrack);
-      when(() => mediaStreamTrack.id).thenReturn('local-track-1');
-      when(audioTrack.createListener).thenReturn(MockTrackEventsListener());
-
-      await pumpWidget(
-        tester,
-        child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
-      );
-
-      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
-    });
-
-    testWidgets('shows the muted state when no audio track is provided', (
-      tester,
-    ) async {
-      await pumpWidget(
-        tester,
-        child: const SpeakingIndicatorAudioTrack(audioTrack: null),
-      );
-
-      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
-    });
-
-    testWidgets(
-      'switches between waveform and icon on mute and unmute events',
-      (tester) async {
-        final audioTrack = MockLocalAudioTrack(muted: false);
-        final mediaStreamTrack = MockMediaStreamTrack();
-        when(() => audioTrack.mediaStreamTrack).thenReturn(mediaStreamTrack);
-        when(() => mediaStreamTrack.id).thenReturn('local-track-2');
-        final trackListener = CapturingTrackEventsListener();
-        when(audioTrack.createListener).thenReturn(trackListener);
-
-        await pumpWidget(
-          tester,
-          child: SpeakingIndicatorAudioTrack(audioTrack: audioTrack),
-        );
-
-        check(
-          tester.widgetList(find.byType(SoundWaveformWidget)),
-        ).length.equals(1);
-        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
-
-        await audioTrack.mute(stopOnMute: false);
-        trackListener.emit(MockTrackEvent());
-        await tester.pump();
-
-        check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
-        check(
-          tester.widgetList(find.byType(SoundWaveformWidget)),
-        ).length.equals(0);
-
-        await audioTrack.unmute(stopOnMute: false);
-        trackListener.emit(MockTrackEvent());
-        await tester.pump();
-
-        check(
-          tester.widgetList(find.byType(SoundWaveformWidget)),
-        ).length.equals(1);
-        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump();
-      },
-    );
-  });
-
   group('SpeakingIndicator', () {
-    testWidgets('shows the muted icon when no microphone track exists', (
+    testWidgets('shows the room media level for the participant', (
       tester,
     ) async {
       await pumpWidget(
         tester,
-        child: SpeakingIndicator(participant: remoteParticipant),
+        child: SpeakingIndicator(participant: remoteParticipant, barCount: 4),
       );
 
-      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+      final level = tester.widget<FakeMicrophoneLevel>(
+        find.byType(FakeMicrophoneLevel),
+      );
+      check(level.participant).equals(remoteParticipant);
+      check(level.barCount).equals(4);
     });
 
-    testWidgets(
-      'switches between waveform and icon on participant mute and unmute events',
-      (tester) async {
-        final participant = MockRemoteParticipant('user-2', 'User 2');
-        final publication = MockRemoteTrackPublication<RemoteAudioTrack>();
-        final audioTrack = MockRemoteAudioTrack(muted: false);
-        final mediaStreamTrack = MockMediaStreamTrack();
+    testWidgets('shows the muted icon outside a session', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [roomMediaProvider.overrideWithValue(null)],
+          child: MaterialApp(
+            home: Scaffold(
+              body: SpeakingIndicator(participant: remoteParticipant),
+            ),
+          ),
+        ),
+      );
 
-        when(() => participant.kind).thenReturn(ParticipantKind.STANDARD);
-        when(
-          () => participant.getTrackPublicationBySource(TrackSource.microphone),
-        ).thenReturn(publication);
-        when(() => publication.track).thenReturn(audioTrack);
-        when(() => publication.source).thenReturn(TrackSource.microphone);
-        when(() => audioTrack.mediaStreamTrack).thenReturn(mediaStreamTrack);
-        when(() => mediaStreamTrack.id).thenReturn('remote-track-1');
-
-        final mutedEvent = MockTrackMutedEvent();
-        final unmutedEvent = MockTrackUnmutedEvent();
-        when(() => mutedEvent.publication).thenReturn(publication);
-        when(() => unmutedEvent.publication).thenReturn(publication);
-
-        await pumpWidget(
-          tester,
-          child: SpeakingIndicator(participant: participant),
-        );
-
-        check(
-          tester.widgetList(find.byType(SoundWaveformWidget)),
-        ).length.equals(1);
-        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
-
-        audioTrack.setMuted(true);
-        participant.listener.emitMuted(mutedEvent);
-        audioTrack.trackListener.emit(MockTrackEvent());
-        await tester.pump();
-
-        check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
-        check(
-          tester.widgetList(find.byType(SoundWaveformWidget)),
-        ).length.equals(0);
-
-        audioTrack.setMuted(false);
-        participant.listener.emitUnmuted(unmutedEvent);
-        audioTrack.trackListener.emit(MockTrackEvent());
-        await tester.pump();
-
-        check(
-          tester.widgetList(find.byType(SoundWaveformWidget)),
-        ).length.equals(1);
-        check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump();
-      },
-    );
+      final icon = tester.widget<TotemIcon>(find.byType(TotemIcon));
+      check(icon.icon).equals(TotemIcons.microphoneOff);
+    });
   });
 
   group('SpeakingIndicatorOrEmoji', () {
@@ -230,7 +89,9 @@ void main() {
       await tester.pumpAndSettle();
 
       check(tester.widgetList(find.text('🔥'))).length.equals(1);
-      check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
+      check(
+        tester.widgetList(find.byType(FakeMicrophoneLevel)),
+      ).length.equals(0);
     });
 
     testWidgets('updates when the emoji provider changes', (tester) async {
@@ -247,20 +108,26 @@ void main() {
       );
       final notifier = container.read(emojiReactionsProvider.notifier);
 
-      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(FakeMicrophoneLevel)),
+      ).length.equals(1);
       check(tester.widgetList(find.text('🔥'))).length.equals(0);
 
       await notifier.emitIncomingReaction(remoteParticipant.identity, '🔥');
       await tester.pump();
 
       check(tester.widgetList(find.text('🔥'))).length.equals(1);
-      check(tester.widgetList(find.byType(TotemIcon))).length.equals(0);
+      check(
+        tester.widgetList(find.byType(FakeMicrophoneLevel)),
+      ).length.equals(0);
 
       notifier.clear();
       await tester.pumpAndSettle();
 
       check(tester.widgetList(find.text('🔥'))).length.equals(0);
-      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+      check(
+        tester.widgetList(find.byType(FakeMicrophoneLevel)),
+      ).length.equals(1);
     });
   });
 }
