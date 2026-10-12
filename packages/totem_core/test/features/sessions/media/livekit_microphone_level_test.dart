@@ -11,6 +11,8 @@ import 'package:totem_core/shared/totem_icons.dart';
 
 import '../livekit_mocks.dart';
 
+class _MockLocalParticipant extends Mock implements LocalParticipant {}
+
 void main() {
   late MockRemoteParticipant remoteParticipant;
 
@@ -126,6 +128,61 @@ void main() {
         await tester.pump();
       },
     );
+  });
+
+  group('with the local participant', () {
+    testWidgets('shows the level once the microphone is published', (
+      tester,
+    ) async {
+      final events = EventsEmitter<ParticipantEvent>();
+      final participant = _MockLocalParticipant();
+      var publications = <LocalTrackPublication<LocalAudioTrack>>[];
+      when(
+        participant.createListener,
+      ).thenAnswer((_) => EventsListener(events));
+      when(
+        () => participant.audioTrackPublications,
+      ).thenAnswer((_) => publications);
+      when(() => participant.kind).thenReturn(ParticipantKind.STANDARD);
+
+      await pumpWidget(
+        tester,
+        child: LiveKitMicrophoneLevel(
+          participant: participant,
+          foregroundColor: Colors.white,
+          barCount: 3,
+        ),
+      );
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
+
+      final audioTrack = MockLocalAudioTrack();
+      final mediaStreamTrack = MockMediaStreamTrack();
+      when(() => audioTrack.mediaStreamTrack).thenReturn(mediaStreamTrack);
+      when(() => mediaStreamTrack.id).thenReturn('local-track-3');
+      when(audioTrack.createListener).thenReturn(MockTrackEventsListener());
+      final publication = MockLocalAudioTrackPublication();
+      when(() => publication.track).thenReturn(audioTrack);
+      when(() => publication.source).thenReturn(TrackSource.microphone);
+      when(() => publication.muted).thenReturn(false);
+      publications = [publication];
+      // ignore: invalid_use_of_internal_member
+      events.emit(
+        LocalTrackPublishedEvent(
+          participant: participant,
+          publication: publication,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      check(
+        tester.widgetList(find.byType(SoundWaveformWidget)),
+      ).length.equals(1);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await events.dispose();
+    });
   });
 
   group('with a participant', () {

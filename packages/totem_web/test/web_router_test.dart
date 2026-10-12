@@ -43,8 +43,10 @@ class _FakeBrowserEnvironment implements BrowserEnvironment {
     tabCloseConfirmationEnabled = enabled;
   }
 
+  void Function()? pageExitHandler;
+
   @override
-  void setPageExitHandler(void Function()? onExit) {}
+  void setPageExitHandler(void Function()? onExit) => pageExitHandler = onExit;
 }
 
 class _FakeUrlLauncher extends UrlLauncherPlatform {
@@ -223,6 +225,22 @@ void main() {
     check(browser.tabCloseConfirmationEnabled).isTrue();
     router.setTabCloseConfirmationEnabled(false);
     check(browser.tabCloseConfirmationEnabled).isFalse();
+  });
+
+  test('clearing a page exit handler keeps a newer one', () {
+    final browser = _FakeBrowserEnvironment();
+    final router = WebTotemRouter(browser: browser);
+    void older() {}
+    void newer() {}
+
+    router
+      ..setPageExitHandler(older)
+      ..setPageExitHandler(newer)
+      ..clearPageExitHandler(older);
+    check(browser.pageExitHandler).equals(newer);
+
+    router.clearPageExitHandler(newer);
+    check(browser.pageExitHandler).isNull();
   });
 
   group('GoRouter route configuration', () {

@@ -544,22 +544,23 @@ class SessionController extends _$SessionController {
 
       try {
         if (initialCameraTrack != null || options.cameraEnabled) {
-          await _localMedia.publishJoinCamera(
+          final published = await _localMedia.publishJoinCamera(
             initialCameraTrack,
             publishOptions: defaultVideoPublishOptions,
           );
           if (!ref.mounted) return SessionJoinResult.retryableFailure;
-          _joinMediaOwner.releaseToRoom(initialCameraTrack);
+          // An unpublished track stays with the join owner, which stops it.
+          if (published) _joinMediaOwner.releaseToRoom(initialCameraTrack);
         }
 
         if (!ref.mounted) return SessionJoinResult.retryableFailure;
         if (initialMicrophoneTrack != null || options.microphoneEnabled) {
-          await _localMedia.publishJoinMicrophone(
+          final published = await _localMedia.publishJoinMicrophone(
             initialMicrophoneTrack,
-            muted: !_shouldEnableMicrophone(),
+            muted: !shouldEnableMicrophone(),
           );
           if (!ref.mounted) return SessionJoinResult.retryableFailure;
-          _joinMediaOwner.releaseToRoom(initialMicrophoneTrack);
+          if (published) _joinMediaOwner.releaseToRoom(initialMicrophoneTrack);
         }
 
         if (!ref.mounted) return SessionJoinResult.retryableFailure;
@@ -860,7 +861,9 @@ class SessionController extends _$SessionController {
     await _joinMediaOwner.disposeAll();
   }
 
-  bool _shouldEnableMicrophone() {
+  /// Whether the microphone should be on when joining: the user's preference,
+  /// limited by the room's turn rules.
+  bool shouldEnableMicrophone() {
     if (state.roomState.status == RoomStatus.waitingRoom && !state.hasKeeper) {
       return options.microphoneEnabled;
     }
@@ -877,7 +880,7 @@ class SessionController extends _$SessionController {
     final currentRoom = room;
     if (currentRoom == null) return;
 
-    if (!_shouldEnableMicrophone()) {
+    if (!shouldEnableMicrophone()) {
       try {
         await devices.disableMicrophone();
       } catch (error, stackTrace) {

@@ -104,6 +104,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   final _roomNavigatorObserver = _SessionChatRouteObserver();
   final _notificationController = NotificationController();
 
+  /// The page exit handler this screen registered, if any.
+  VoidCallback? _pageExitHandler;
   NotificationRequest? _closeKeeperLeftNotification;
   NotificationRequest? _offlineNotification;
   Timer? _timeRemainingWarningTimer;
@@ -142,9 +144,10 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _setScreenProtection(false);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
-    TotemRouter.instance
-      ..setTabCloseConfirmationEnabled(false)
-      ..setPageExitHandler(null);
+    TotemRouter.instance.setTabCloseConfirmationEnabled(false);
+    if (_pageExitHandler case final handler?) {
+      TotemRouter.instance.clearPageExitHandler(handler);
+    }
     super.dispose();
   }
 
@@ -412,7 +415,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   Widget build(BuildContext context) {
     final currentSession = ref.watch(currentSessionProvider);
     // Closing the tab skips the leave flow, so leave as the page unloads.
-    TotemRouter.instance.setPageExitHandler(currentSession?.leaveOnPageExit);
+    final pageExitHandler = currentSession?.leaveOnPageExit;
+    if (pageExitHandler != _pageExitHandler) {
+      _pageExitHandler = pageExitHandler;
+      TotemRouter.instance.setPageExitHandler(pageExitHandler);
+    }
     final currentRoomScreen = ref.watch(resolveCurrentScreenProvider)!;
     final currentSessionEvent = ref.watch(currentSessionEventProvider);
     final hasKeeperDisconnected = ref.watch(hasKeeperDisconnectedProvider);

@@ -492,6 +492,11 @@ class _PageExitRecordingRouter extends FakeTotemRouter {
 
   @override
   void setPageExitHandler(VoidCallback? onExit) => pageExitHandler = onExit;
+
+  @override
+  void clearPageExitHandler(VoidCallback onExit) {
+    if (pageExitHandler == onExit) pageExitHandler = null;
+  }
 }
 
 void main() {
@@ -569,6 +574,30 @@ void main() {
 
       await _unmountRoomScreen(tester);
       check(router.pageExitHandler).isNull();
+    });
+
+    testWidgets("leaves a newer screen's page exit handler in place", (
+      tester,
+    ) async {
+      final router = _PageExitRecordingRouter();
+      TotemRouter.instance = router;
+      addTearDown(() => TotemRouter.instance = FakeTotemRouter());
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        ),
+        screen: RoomScreen.loading,
+      );
+      // A replacement screen registers its handler before this one disposes.
+      void newerHandler() {}
+      router.setPageExitHandler(newerHandler);
+
+      await _unmountRoomScreen(tester);
+      check(router.pageExitHandler).equals(newerHandler);
     });
 
     testWidgets('renders loading screen for RoomScreen.loading', (

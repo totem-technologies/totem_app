@@ -17,7 +17,8 @@ const _allowedPaths = [
 ];
 
 final _forbidden = <RegExp, String>{
-  RegExp(r'localParticipant\??\.set(Microphone|Camera)Enabled\('):
+  // Formatting can break the chain after localParticipant.
+  RegExp(r'localParticipant\s*\??\.set(Microphone|Camera)Enabled\('):
       'toggle capture through LocalMedia',
   RegExp(r'\b(publishAudioTrack|publishVideoTrack|unpublishAllTracks)\('):
       'publish or release tracks through LiveKitLocalMedia',
@@ -32,13 +33,13 @@ final _forbidden = <RegExp, String>{
 List<String> findViolations(Map<String, String> files) {
   final violations = <String>[];
   for (final MapEntry(key: path, value: source) in files.entries) {
-    if (_allowedPaths.any(path.startsWith)) continue;
+    final normalizedPath = path.replaceAll(r'\', '/');
+    if (_allowedPaths.any(normalizedPath.startsWith)) continue;
     final lines = source.split('\n');
-    for (var i = 0; i < lines.length; i++) {
-      for (final MapEntry(key: pattern, value: advice) in _forbidden.entries) {
-        if (pattern.hasMatch(lines[i])) {
-          violations.add('$path:${i + 1}: $advice\n  ${lines[i].trim()}');
-        }
+    for (final MapEntry(key: pattern, value: advice) in _forbidden.entries) {
+      for (final match in pattern.allMatches(source)) {
+        final line = '\n'.allMatches(source.substring(0, match.start)).length;
+        violations.add('$path:${line + 1}: $advice\n  ${lines[line].trim()}');
       }
     }
   }

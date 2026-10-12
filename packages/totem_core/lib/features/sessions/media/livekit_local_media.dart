@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/features/sessions/media/livekit_support.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -108,16 +107,19 @@ class LiveKitLocalMedia implements LocalMedia {
     return publication != null && isTrackLive(publication);
   }
 
-  LocalVideoTrack? get _activeCameraTrack => _participant
-      ?.videoTrackPublications
-      .where((t) => t.track != null && isTrackLive(t))
-      .firstOrNull
-      ?.track;
+  LocalVideoTrack? get _activeCameraTrack {
+    final publication = _participant?.getTrackPublicationBySource(
+      TrackSource.camera,
+    );
+    if (publication == null || !isTrackLive(publication)) return null;
+    final track = publication.track;
+    return track is LocalVideoTrack ? track : null;
+  }
 
   @override
   String? get cameraDeviceId {
-    final options = _participant?.videoTrackPublications
-        .firstWhereOrNull((publication) => publication.track != null)
+    final options = _participant
+        ?.getTrackPublicationBySource(TrackSource.camera)
         ?.track
         ?.currentOptions;
     if (options is CameraCaptureOptions && options.deviceId != null) {
@@ -170,39 +172,55 @@ class LiveKitLocalMedia implements LocalMedia {
   /// Publishes the camera when joining: the [track] handed over from
   /// pre-join, or a new one from the room's default capture options, which
   /// hold the pre-join preferences.
-  Future<void> publishJoinCamera(
+  ///
+  /// Returns false if the room was gone or already released, so nothing was
+  /// published and the caller still owns [track].
+  Future<bool> publishJoinCamera(
     LocalVideoTrack? track, {
     required VideoPublishOptions publishOptions,
-  }) => _serialize((_, participant) async {
-    if (track != null) {
-      await participant.publishVideoTrack(
-        track,
-        publishOptions: publishOptions,
-      );
-    } else {
-      await participant.setCameraEnabled(true);
-    }
-  });
+  }) async {
+    var published = false;
+    await _serialize((_, participant) async {
+      if (track != null) {
+        await participant.publishVideoTrack(
+          track,
+          publishOptions: publishOptions,
+        );
+      } else {
+        await participant.setCameraEnabled(true);
+      }
+      published = true;
+    });
+    return published;
+  }
 
   /// Publishes the microphone when joining: the [track] handed over from
   /// pre-join, or a new one. A [muted] track is muted before publishing so
   /// it is never heard; without a pre-join track, a muted microphone is not
   /// opened at all.
-  Future<void> publishJoinMicrophone(
+  ///
+  /// Returns false if the room was gone or already released, so nothing was
+  /// published and the caller still owns [track].
+  Future<bool> publishJoinMicrophone(
     LocalAudioTrack? track, {
     required bool muted,
-  }) => _serialize((_, participant) async {
-    if (track == null) {
-      if (!muted) await _setMicrophoneEnabled(participant, true);
-      return;
-    }
-    if (muted) {
-      await track.mute(
-        stopOnMute: _microphoneCaptureOptions.stopAudioCaptureOnMute,
-      );
-    }
-    await participant.publishAudioTrack(track);
-  });
+  }) async {
+    var published = false;
+    await _serialize((_, participant) async {
+      if (track == null) {
+        if (!muted) await _setMicrophoneEnabled(participant, true);
+      } else {
+        if (muted) {
+          await track.mute(
+            stopOnMute: _microphoneCaptureOptions.stopAudioCaptureOnMute,
+          );
+        }
+        await participant.publishAudioTrack(track);
+      }
+      published = true;
+    });
+    return published;
+  }
 
   @override
   Future<void> release() => _serialize((room, participant) async {

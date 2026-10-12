@@ -127,6 +127,19 @@ void main() {
       ]);
     });
 
+    test('a join publish after release reports it did not publish', () async {
+      when(participant.unpublishAllTracks).thenAnswer((_) async {});
+      final track = MockLocalAudioTrack();
+
+      await media.release();
+      final published = await media.publishJoinMicrophone(track, muted: false);
+
+      // The caller keeps ownership, so the unpublished track still gets
+      // stopped rather than being left capturing.
+      check(published).isFalse();
+      verifyNever(() => participant.publishAudioTrack(track));
+    });
+
     test('releasing unpublishes every local track', () async {
       when(participant.unpublishAllTracks).thenAnswer((_) async {});
 

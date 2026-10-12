@@ -80,6 +80,12 @@ class _LiveKitMicrophoneLevelState extends State<LiveKitMicrophoneLevel> {
       ..on<TrackUnsubscribedEvent>(
         (event) => _onMicrophonePublicationChanged(event.publication),
       )
+      ..on<LocalTrackPublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
+      ..on<LocalTrackUnpublishedEvent>(
+        (event) => _onMicrophonePublicationChanged(event.publication),
+      )
       ..on<TrackMutedEvent>(_onTrackMuted)
       ..on<TrackUnmutedEvent>(_onTrackUnmuted);
 

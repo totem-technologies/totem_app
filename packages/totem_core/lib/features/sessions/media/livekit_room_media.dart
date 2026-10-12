@@ -37,7 +37,7 @@ class LiveKitRoomMedia implements RoomMedia {
     final participant = _participant(identity);
     if (participant == null) return ParticipantMediaState.none;
 
-    final camera = participant.videoTrackPublications.firstOrNull;
+    final camera = participant.getTrackPublicationBySource(TrackSource.camera);
     // A remote track's isActive only says whether our receiving copy has
     // started, and LiveKit reports a subscription before starting it without
     // a later event. The publication's mute state follows the sender's camera.

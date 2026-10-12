@@ -34,8 +34,8 @@ class SessionDeviceState {
   final bool isMicrophoneEnabled;
   final bool isCameraEnabled;
 
-  /// What the microphone and camera controls show: the track's state, or the
-  /// user's join preference until the track is first published.
+  /// What the microphone and camera controls show: the track's state, or what
+  /// joining will do until the track is first published.
   final bool isMicrophoneOn;
   final bool isCameraOn;
 
@@ -94,7 +94,7 @@ class SessionDeviceController extends _$SessionDeviceController {
       isCameraEnabled: isCameraEnabled,
       isMicrophoneOn: _microphoneWasPublished
           ? media.isMicrophoneEnabled
-          : session.options.microphoneEnabled,
+          : session.shouldEnableMicrophone(),
       isCameraOn: _cameraWasPublished
           ? media.isCameraEnabled
           : session.options.cameraEnabled,

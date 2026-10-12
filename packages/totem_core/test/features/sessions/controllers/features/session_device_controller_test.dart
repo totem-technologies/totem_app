@@ -102,6 +102,23 @@ void main() {
         ..has((s) => s.isCameraOn, 'isCameraOn').isFalse();
     });
 
+    test('the microphone shows off when joining muted as a listener', () {
+      session
+        ..mockOptions = const SessionOptions(
+          sessionSlug: 'test-session',
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: true,
+          speakerEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+        )
+        // Someone else is speaking, so joining publishes no microphone.
+        ..mockShouldEnableMicrophone = false;
+      controller();
+
+      check(deviceState().isMicrophoneOn).isFalse();
+    });
+
     test('controls show off once a published track is removed', () {
       session.mockOptions = const SessionOptions(
         sessionSlug: 'test-session',

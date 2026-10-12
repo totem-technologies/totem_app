@@ -26,6 +26,9 @@ class MockSessionController extends Mock implements SessionController {
   FakeRoomMedia mockRoomMedia = FakeRoomMedia();
 
   @override
+  bool shouldEnableMicrophone() => options.microphoneEnabled;
+
+  @override
   LocalMedia get localMedia => mockLocalMedia;
 
   @override
@@ -77,6 +80,13 @@ class FakeSessionController implements SessionController {
   Room? mockRoom;
   FakeLocalMedia mockLocalMedia = FakeLocalMedia();
   FakeRoomMedia mockRoomMedia = FakeRoomMedia();
+
+  /// Whether the room's turn rules allow the microphone on at join.
+  bool mockShouldEnableMicrophone = true;
+
+  @override
+  bool shouldEnableMicrophone() =>
+      mockOptions.microphoneEnabled && mockShouldEnableMicrophone;
 
   @override
   SessionRoomState get state => mockState;

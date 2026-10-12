@@ -92,9 +92,17 @@ class WebTotemRouter extends TotemRouter {
     _browser.setTabCloseConfirmationEnabled(enabled);
   }
 
+  VoidCallback? _pageExitHandler;
+
   @override
   void setPageExitHandler(VoidCallback? onExit) {
+    _pageExitHandler = onExit;
     _browser.setPageExitHandler(onExit);
+  }
+
+  @override
+  void clearPageExitHandler(VoidCallback onExit) {
+    if (_pageExitHandler == onExit) setPageExitHandler(null);
   }
 
   @override

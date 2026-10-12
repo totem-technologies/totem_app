@@ -33,7 +33,15 @@ void main() {
       when(() => remote.hasAudio).thenReturn(false);
       when(() => remote.isMuted).thenReturn(false);
       when(() => remote.hasVideo).thenReturn(true);
-      when(() => remote.videoTrackPublications).thenReturn([camera]);
+      // A screen share listed first must not be mistaken for the camera.
+      final screenShare = MockRemoteTrackPublication<RemoteVideoTrack>();
+      when(() => screenShare.muted).thenReturn(true);
+      when(
+        () => remote.videoTrackPublications,
+      ).thenReturn([screenShare, camera]);
+      when(
+        () => remote.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(camera);
       when(() => camera.muted).thenReturn(false);
       when(() => camera.track).thenReturn(cameraTrack);
       when(() => cameraTrack.muted).thenReturn(false);
