@@ -533,17 +533,13 @@ class SessionActionBar extends ConsumerWidget {
     final deviceProvider = sessionDeviceControllerProvider(session);
     final deviceState = ref.watch(deviceProvider);
     final roomMedia = ref.watch(roomMediaProvider);
-    final localParticipant = ref.watch(localParticipantInfoProvider);
 
     final microphoneButton = ActionBarShortcutTooltip(
       shortcut: ActionBarShortcut.microphone,
       child: ActionBarMicButton(
         microphoneLevel:
-            roomMedia != null &&
-                localParticipant != null &&
-                deviceState.hasMicrophoneTrack
-            ? (color, iconSize, barCount) => roomMedia.microphoneLevel(
-                localParticipant,
+            roomMedia != null && deviceState.hasMicrophoneTrack
+            ? (color, iconSize, barCount) => roomMedia.localMicrophoneLevel(
                 color: color,
                 iconSize: iconSize,
                 barCount: barCount,

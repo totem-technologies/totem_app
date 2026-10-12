@@ -77,6 +77,8 @@ dependencies:
   characters: any
   meta: any
   cupertino_icons: ^2.0.0
+  web: ^1.1.1
+  dart_webrtc: any
 
 dev_dependencies:
   # Testing

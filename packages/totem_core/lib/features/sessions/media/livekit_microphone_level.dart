@@ -1,13 +1,22 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/media/livekit_audio_visualizer.dart';
 import 'package:totem_core/features/sessions/media/livekit_support.dart';
+import 'package:totem_core/features/sessions/media/local_audio_bands.dart';
 import 'package:totem_core/features/sessions/widgets/audio_visualizer_bars.dart';
+import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
-/// Audio level bars for a LiveKit participant's microphone, or for a
-/// standalone [audioTrack] such as the pre-join preview. Shows a
-/// microphone-off icon while the track is muted or missing.
+/// Audio level bars measured on this device for a LiveKit participant's
+/// microphone, or for a standalone [audioTrack] such as the pre-join preview.
+/// Shows a microphone-off icon while the track is muted or missing.
+///
+/// Meant for the local microphone. On web the bars come from
+/// [localAudioBands], which redraws only when the levels change; native
+/// platforms use the SDK visualizer.
 class LiveKitMicrophoneLevel extends StatefulWidget {
   const LiveKitMicrophoneLevel({
     required this.foregroundColor,
@@ -128,6 +137,13 @@ class _LiveKitMicrophoneLevelState extends State<LiveKitMicrophoneLevel> {
     final resolvedAudioTrack = _resolvedAudioTrack;
 
     if (resolvedAudioTrack != null && !resolvedAudioTrack.muted) {
+      if (kIsWeb) {
+        return _WebLevelBars(
+          track: resolvedAudioTrack,
+          barCount: widget.barCount,
+          color: widget.foregroundColor,
+        );
+      }
       return LayoutBuilder(
         builder: (context, constraints) {
           return RepaintBoundary(
@@ -152,6 +168,64 @@ class _LiveKitMicrophoneLevelState extends State<LiveKitMicrophoneLevel> {
       TotemIcons.microphoneOff,
       size: widget.iconSize,
       color: widget.foregroundColor,
+    );
+  }
+}
+
+class _WebLevelBars extends StatefulWidget {
+  const _WebLevelBars({
+    required this.track,
+    required this.barCount,
+    required this.color,
+  });
+
+  final AudioTrack track;
+  final int barCount;
+  final Color? color;
+
+  @override
+  State<_WebLevelBars> createState() => _WebLevelBarsState();
+}
+
+class _WebLevelBarsState extends State<_WebLevelBars> {
+  StreamSubscription<List<double>>? _subscription;
+  late List<double> _levels;
+
+  void _listen() {
+    unawaited(_subscription?.cancel());
+    _levels = List.filled(widget.barCount, 0);
+    _subscription = localAudioBands(
+      widget.track,
+      bandCount: widget.barCount,
+    ).listen((levels) => setState(() => _levels = levels));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _listen();
+  }
+
+  @override
+  void didUpdateWidget(covariant _WebLevelBars oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.track != widget.track ||
+        oldWidget.barCount != widget.barCount) {
+      _listen();
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(_subscription?.cancel());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LevelBars(
+      levels: _levels,
+      color: widget.color ?? IconTheme.of(context).color ?? Colors.white,
     );
   }
 }

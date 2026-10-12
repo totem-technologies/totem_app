@@ -2,6 +2,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/media/livekit_microphone_level.dart';
 import 'package:totem_core/features/sessions/media/livekit_participant_video.dart';
+import 'package:totem_core/features/sessions/media/livekit_speaker_level.dart';
 import 'package:totem_core/features/sessions/media/livekit_support.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/media/room_media.dart';
@@ -11,7 +12,8 @@ import 'package:totem_core/features/sessions/media/room_media.dart';
 /// The session controller owns one instance for its lifetime and attaches
 /// each new [Room] to it.
 class LiveKitRoomMedia implements RoomMedia {
-  // The room re-emits every participant's track and mute events.
+  // The room re-emits every participant's track and mute events. Speaker
+  // changes carry the server's audio levels for the level bars.
   final _binding = LiveKitRoomBinding(
     (listener, notify) => listener
       ..on<RoomConnectedEvent>((_) => notify())
@@ -25,7 +27,8 @@ class LiveKitRoomMedia implements RoomMedia {
       ..on<LocalTrackPublishedEvent>((_) => notify())
       ..on<LocalTrackUnpublishedEvent>((_) => notify())
       ..on<TrackMutedEvent>((_) => notify())
-      ..on<TrackUnmutedEvent>((_) => notify()),
+      ..on<TrackUnmutedEvent>((_) => notify())
+      ..on<ActiveSpeakersChangedEvent>((_) => notify()),
   );
 
   void attach(Room? room) => _binding.attach(room);
@@ -83,8 +86,23 @@ class LiveKitRoomMedia implements RoomMedia {
     required double iconSize,
     int barCount = 3,
   }) {
+    return LiveKitSpeakerLevel(
+      participant: () => _participant(participant.identity),
+      changes: _binding.changes,
+      color: color,
+      iconSize: iconSize,
+      barCount: barCount,
+    );
+  }
+
+  @override
+  Widget localMicrophoneLevel({
+    required Color color,
+    required double iconSize,
+    int barCount = 3,
+  }) {
     return LiveKitMicrophoneLevel(
-      participant: _participant(participant.identity),
+      participant: _binding.room?.localParticipant,
       foregroundColor: color,
       barCount: barCount,
       iconSize: iconSize,

@@ -50,10 +50,20 @@ abstract interface class RoomMedia {
   /// [showStats] adds a staff-only overlay with stream statistics.
   Widget video(ParticipantInfo participant, {bool showStats = false});
 
-  /// Live audio level bars for the participant's microphone, or a
-  /// microphone-off icon while it is muted or missing.
+  /// Audio level bars for the participant's microphone, or a
+  /// microphone-off icon while it is muted or missing. Levels may come from
+  /// the media server, so they can lag speech slightly.
   Widget microphoneLevel(
     ParticipantInfo participant, {
+    required Color color,
+    required double iconSize,
+    int barCount = 3,
+  });
+
+  /// Like [microphoneLevel] for the local participant, but measured on this
+  /// device so the bars respond immediately while the user checks their
+  /// microphone.
+  Widget localMicrophoneLevel({
     required Color color,
     required double iconSize,
     int barCount = 3,
