@@ -8,6 +8,11 @@ abstract interface class BrowserEnvironment {
 
   Uri get currentUri;
 
+  /// The URL flutter_bootstrap.js loaded main.dart.js (or .wasm) from, or
+  /// null outside a bootstrapped page. Deployed builds load from ASSET_BASE,
+  /// not from [currentUri].
+  Uri? get entrypointBaseUri;
+
   void setDocumentTitle(String title);
 
   void setTabCloseConfirmationEnabled(bool enabled);

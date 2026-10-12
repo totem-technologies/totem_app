@@ -6,9 +6,17 @@ import 'browser_environment.dart';
 
 BrowserEnvironment createBrowserEnvironment() => _WebBrowserEnvironment();
 
+/// Set by web/flutter_bootstrap.js before the app loads.
+@JS('totemEntrypointBaseUrl')
+external String? get _entrypointBaseUrl;
+
 class _WebBrowserEnvironment implements BrowserEnvironment {
   @override
   Uri get currentUri => Uri.base;
+
+  @override
+  Uri? get entrypointBaseUri =>
+      _entrypointBaseUrl == null ? null : Uri.tryParse(_entrypointBaseUrl!);
 
   @override
   void setDocumentTitle(String title) {

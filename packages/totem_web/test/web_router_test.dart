@@ -29,6 +29,9 @@ class _FakeBrowserEnvironment implements BrowserEnvironment {
   @override
   Uri get currentUri => Uri.parse('https://totem.org/room/');
 
+  @override
+  Uri? get entrypointBaseUri => Uri.parse('https://cdn.totem.org/web/1234/');
+
   String? title;
   bool tabCloseConfirmationEnabled = false;
 
@@ -256,6 +259,24 @@ void main() {
         classes: <String>['TextPainter'],
       ),
     );
+
+    testWidgets('/__version shows where the app was loaded from', (
+      tester,
+    ) async {
+      final router = await _pumpTestRouter(
+        tester,
+        authState: AuthState.initial(),
+      );
+
+      router.go('/__version');
+      await tester.pumpAndSettle();
+
+      check(
+        tester.widgetList(
+          find.text('Loaded from: https://cdn.totem.org/web/1234/'),
+        ),
+      ).length.equals(1);
+    });
 
     testWidgets('/ route matches the root path', (tester) async {
       final router = await _pumpTestRouter(
