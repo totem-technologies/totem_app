@@ -17,6 +17,7 @@ import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
+import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
@@ -301,28 +302,41 @@ void main() {
   });
 
   group('ParticipantVideo', () {
-    testWidgets('draws the room media video over the participant avatar', (
+    /// Whether an avatar paints above the participant's video. Children of a
+    /// Stack paint in order, which matches element tree order.
+    bool avatarCoversVideo(WidgetTester tester) {
+      final elements = tester.allElements.toList();
+      final video = elements.indexWhere((e) => e.widget is FakeVideoView);
+      final lastAvatar = elements.lastIndexWhere((e) => e.widget is UserAvatar);
+      return lastAvatar > video;
+    }
+
+    testWidgets('covers the video with the avatar while the camera is off', (
       tester,
     ) async {
+      roomMedia.setMediaState(
+        remoteParticipant.identity,
+        const ParticipantMediaState(hasCamera: true),
+      );
       await pumpWidget(
         tester,
         authState: AuthState.unauthenticated(),
         child: ParticipantVideo(participant: remoteParticipant),
       );
+      await tester.pump();
+      final video = tester.element(find.byType(FakeVideoView));
+      check(avatarCoversVideo(tester)).isTrue();
 
-      final video = tester.widget<FakeVideoView>(find.byType(FakeVideoView));
-      check(video.participant).equals(remoteParticipant);
-      final layers = tester
-          .widget<Stack>(
-            find
-                .descendant(
-                  of: find.byType(ParticipantVideo),
-                  matching: find.byType(Stack),
-                )
-                .first,
-          )
-          .children;
-      check(layers.length).equals(2);
+      roomMedia.setMediaState(
+        remoteParticipant.identity,
+        const ParticipantMediaState(hasCamera: true, isCameraOn: true),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      check(avatarCoversVideo(tester)).isFalse();
+      // The video stays mounted, so turning the camera on doesn't reload it.
+      check(tester.element(find.byType(FakeVideoView))).identicalTo(video);
     });
   });
 

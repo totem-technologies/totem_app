@@ -331,17 +331,36 @@ class ParticipantVideo extends ConsumerWidget {
     final isStaff = ref.watch(
       authControllerProvider.select((auth) => auth.user?.isStaff == true),
     );
+    final isCameraOn = ref.watch(
+      participantMediaStateProvider(
+        participant.identity,
+      ).select((state) => state.value?.isCameraOn ?? false),
+    );
+    const avatarInset = 1.0;
+    final avatar = IgnorePointer(
+      child: _ParticipantVideoAvatar(identity: participant.identity),
+    );
     return Stack(
       children: [
+        // Shows while the video loads. Video platform views are positioned and
+        // clipped by the browser, so their edges can land a fraction of a
+        // pixel inside Flutter's; the inset keeps this avatar from peeking out
+        // around a playing video.
         Positioned.fill(
-          child: IgnorePointer(
-            child: _ParticipantVideoAvatar(identity: participant.identity),
-          ),
+          left: avatarInset,
+          top: avatarInset,
+          right: avatarInset,
+          bottom: avatarInset,
+          child: avatar,
         ),
         if (media != null)
           Positioned.fill(
             child: media.video(participant, showStats: kDebugMode || isStaff),
           ),
+        // A muted camera keeps its video mounted so turning it back on doesn't
+        // reload it. Browser video elements paint black while muted, so the
+        // avatar covers the video until the camera is on.
+        if (!isCameraOn) Positioned.fill(child: avatar),
       ],
     );
   }
