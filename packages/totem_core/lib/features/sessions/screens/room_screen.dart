@@ -142,7 +142,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _setScreenProtection(false);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
-    TotemRouter.instance.setTabCloseConfirmationEnabled(false);
+    TotemRouter.instance
+      ..setTabCloseConfirmationEnabled(false)
+      ..setPageExitHandler(null);
     super.dispose();
   }
 
@@ -409,6 +411,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final currentSession = ref.watch(currentSessionProvider);
+    // Closing the tab skips the leave flow, so leave as the page unloads.
+    TotemRouter.instance.setPageExitHandler(currentSession?.leaveOnPageExit);
     final currentRoomScreen = ref.watch(resolveCurrentScreenProvider)!;
     final currentSessionEvent = ref.watch(currentSessionEventProvider);
     final hasKeeperDisconnected = ref.watch(hasKeeperDisconnectedProvider);

@@ -487,6 +487,13 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   );
 }
 
+class _PageExitRecordingRouter extends FakeTotemRouter {
+  VoidCallback? pageExitHandler;
+
+  @override
+  void setPageExitHandler(VoidCallback? onExit) => pageExitHandler = onExit;
+}
+
 void main() {
   setUp(() {
     LeakTesting.settings = LeakTesting.settings.withIgnored(
@@ -540,6 +547,28 @@ void main() {
           duration: 10,
         ),
       );
+    });
+
+    testWidgets('leaves the session when the page unloads', (tester) async {
+      final router = _PageExitRecordingRouter();
+      TotemRouter.instance = router;
+      addTearDown(() => TotemRouter.instance = FakeTotemRouter());
+      when(session.leaveOnPageExit).thenReturn(null);
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        ),
+        screen: RoomScreen.loading,
+      );
+      router.pageExitHandler?.call();
+      verify(session.leaveOnPageExit).called(1);
+
+      await _unmountRoomScreen(tester);
+      check(router.pageExitHandler).isNull();
     });
 
     testWidgets('renders loading screen for RoomScreen.loading', (

@@ -39,6 +39,9 @@ class _FakeBrowserEnvironment implements BrowserEnvironment {
   void setTabCloseConfirmationEnabled(bool enabled) {
     tabCloseConfirmationEnabled = enabled;
   }
+
+  @override
+  void setPageExitHandler(void Function()? onExit) {}
 }
 
 class _FakeUrlLauncher extends UrlLauncherPlatform {

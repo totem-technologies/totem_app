@@ -92,6 +92,11 @@ class WebTotemRouter extends TotemRouter {
   }
 
   @override
+  void setPageExitHandler(VoidCallback? onExit) {
+    _browser.setPageExitHandler(onExit);
+  }
+
+  @override
   void popOrHome([BuildContext? context]) {
     if (context != null) {
       if (context.canPop()) {

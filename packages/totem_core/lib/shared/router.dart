@@ -103,6 +103,10 @@ abstract class TotemRouter {
   void dispose() {}
 
   void setTabCloseConfirmationEnabled(bool enabled);
+
+  /// Runs [onExit] when the page is being unloaded, such as when the user
+  /// closes the tab. Null removes the handler. Only browsers unload pages.
+  void setPageExitHandler(VoidCallback? onExit) {}
 }
 
 /// A class to wrap a Stream as a Listenable for GoRouter refreshes

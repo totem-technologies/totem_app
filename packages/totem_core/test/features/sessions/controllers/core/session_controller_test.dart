@@ -376,6 +376,33 @@ void main() {
         check(room.disposeCount).equals(1);
       });
 
+      test('leaving on page exit signals LiveKit before any await', () {
+        const eventSlug = 'test-session';
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+        final room = _CountingRoom(MockLocalParticipant());
+        container.read(sessionControllerProvider(options).notifier)
+          ..room = room
+          // An unloading page runs nothing after the first await.
+          ..leaveOnPageExit();
+
+        check(room.disconnectCount).equals(1);
+      });
+
       test('concurrent leave calls dispose the connection once', () async {
         const eventSlug = 'test-session';
         final container = _createContainerWithEventOverride(eventSlug);

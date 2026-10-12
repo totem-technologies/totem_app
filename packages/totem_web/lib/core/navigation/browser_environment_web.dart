@@ -24,4 +24,11 @@ class _WebBrowserEnvironment implements BrowserEnvironment {
   void setTabCloseConfirmationEnabled(bool enabled) {
     web.window.onbeforeunload = enabled ? _beforeUnloadListener.toJS : null;
   }
+
+  @override
+  void setPageExitHandler(void Function()? onExit) {
+    web.window.onpagehide = onExit == null
+        ? null
+        : ((web.Event _) => onExit()).toJS;
+  }
 }

@@ -699,6 +699,15 @@ class SessionController extends _$SessionController {
     }
   }
 
+  /// Leaves while the page is unloading, such as when the user closes the
+  /// tab. Nothing after the first await runs then, so [leave] would never
+  /// reach LiveKit. [Room.disconnect] sends its leave request before its
+  /// first await, so the server removes this participant at once instead of
+  /// after its connection timeout. Capture stops with the page.
+  void leaveOnPageExit() {
+    unawaited(_room?.disconnect());
+  }
+
   Future<void> _cleanUp() {
     final cleanup = _cleanupFuture;
     if (cleanup != null) return cleanup;
