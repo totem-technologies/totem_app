@@ -1,3 +1,5 @@
+import 'dart:js_interop';
+
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_web/core/navigation/browser_environment.dart';
@@ -16,5 +18,22 @@ void main() {
     browser.setPageExitHandler(null);
     web.window.dispatchEvent(web.Event('pagehide'));
     check(exits).equals(1);
+  });
+
+  test('leaves other page exit handlers in place', () {
+    final browser = BrowserEnvironment();
+    var otherExits = 0;
+    web.window.onpagehide = ((web.Event _) => otherExits++).toJS;
+    addTearDown(() {
+      web.window.onpagehide = null;
+      browser.setPageExitHandler(null);
+    });
+
+    browser
+      ..setPageExitHandler(() {})
+      ..setPageExitHandler(null);
+    web.window.dispatchEvent(web.Event('pagehide'));
+
+    check(otherExits).equals(1);
   });
 }

@@ -36,7 +36,6 @@ void main() {
             changes: changes.stream,
             color: Colors.white,
             iconSize: 20,
-            barCount: 3,
           ),
         ),
       ),
@@ -45,15 +44,6 @@ void main() {
 
   List<double> levels(WidgetTester tester) =>
       tester.widget<LevelBars>(find.byType(LevelBars)).levels;
-
-  testWidgets('shows the microphone-off icon while muted', (tester) async {
-    when(() => participant.isMuted).thenReturn(true);
-
-    await pump(tester);
-
-    check(find.byType(TotemIcon).evaluate()).length.equals(1);
-    check(find.byType(LevelBars).evaluate()).isEmpty();
-  });
 
   testWidgets('shows the microphone-off icon without a participant', (
     tester,
@@ -83,14 +73,18 @@ void main() {
     check(levels(tester)).every((it) => it.equals(0));
   });
 
-  testWidgets('switches to the icon when the microphone mutes', (tester) async {
+  testWidgets('switches between bars and icon as the microphone mutes', (
+    tester,
+  ) async {
     await pump(tester);
+    check(find.byType(LevelBars).evaluate()).length.equals(1);
 
     when(() => participant.isMuted).thenReturn(true);
     changes.add(null);
     await tester.pump();
 
     check(find.byType(TotemIcon).evaluate()).length.equals(1);
+    check(find.byType(LevelBars).evaluate()).isEmpty();
   });
 
   testWidgets('schedules no frame when nothing changed', (tester) async {

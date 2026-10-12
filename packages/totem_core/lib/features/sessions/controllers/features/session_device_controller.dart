@@ -84,8 +84,6 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   SessionDeviceState _currentState() {
     final media = _media;
-    _microphoneWasPublished |= media.hasMicrophoneTrack;
-    _cameraWasPublished |= media.hasCameraTrack;
     return SessionDeviceState(
       selectedCameraDeviceId: selectedCameraDeviceId,
       selectedAudioOutputDeviceId: selectedAudioOutputDeviceId,
@@ -103,9 +101,19 @@ class SessionDeviceController extends _$SessionDeviceController {
     );
   }
 
+  void _notePublishedTracks() {
+    _microphoneWasPublished |= _media.hasMicrophoneTrack;
+    _cameraWasPublished |= _media.hasCameraTrack;
+  }
+
   void _emitState() {
+    _notePublishedTracks();
     state = _currentState();
   }
+
+  /// Recomputes the controls after the session's state changes, since they
+  /// follow it until each track is first published.
+  void syncWithSession() => _emitState();
 
   @override
   SessionDeviceState build(SessionController session) {
@@ -113,6 +121,7 @@ class SessionDeviceController extends _$SessionDeviceController {
     ref
       ..onDispose(mediaChanges.cancel)
       ..onDispose(dispose);
+    _notePublishedTracks();
     return _currentState();
   }
 

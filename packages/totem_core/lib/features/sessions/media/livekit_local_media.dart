@@ -50,7 +50,11 @@ class LiveKitLocalMedia implements LocalMedia {
       }),
   );
 
-  void attach(Room? room) => _binding.attach(room);
+  void attach(Room? room) {
+    // Drop the reference to a released room once a different one replaces it.
+    if (!identical(room, _releasedRoom)) _releasedRoom = null;
+    _binding.attach(room);
+  }
 
   Room? get _room => _binding.room;
 
@@ -132,11 +136,21 @@ class LiveKitLocalMedia implements LocalMedia {
   String? get audioOutputDeviceId =>
       _room?.roomOptions.defaultAudioOutputOptions.deviceId;
 
+  /// The facing chosen while the camera was off, applied when it turns on.
+  CameraPosition? _nextCameraPosition;
+
+  CameraPosition? get _cameraPosition {
+    final options = _participant
+        ?.getTrackPublicationBySource(TrackSource.camera)
+        ?.track
+        ?.currentOptions;
+    return options is CameraCaptureOptions ? options.cameraPosition : null;
+  }
+
   @override
   CameraFacing? get cameraFacing {
-    final options = _activeCameraTrack?.currentOptions;
-    if (options is! CameraCaptureOptions) return null;
-    return options.cameraPosition.toFacing();
+    if (_activeCameraTrack == null) return _nextCameraPosition?.toFacing();
+    return _cameraPosition?.toFacing();
   }
 
   @override
@@ -231,31 +245,45 @@ class LiveKitLocalMedia implements LocalMedia {
   });
 
   @override
-  Future<void> setCameraEnabled(bool enabled) =>
-      _serialize((room, participant) async {
-        if (enabled) {
-          await participant.setCameraEnabled(
-            true,
-            cameraCaptureOptions: cameraCaptureOptions.copyWith(
-              deviceId: room.selectedVideoInputDeviceId,
-            ),
-          );
-        } else {
-          await participant.setCameraEnabled(false);
-        }
-      });
+  Future<void> setCameraEnabled(bool enabled) => _serialize((
+    room,
+    participant,
+  ) async {
+    if (enabled) {
+      final position = _nextCameraPosition;
+      _nextCameraPosition = null;
+      await participant.setCameraEnabled(
+        true,
+        cameraCaptureOptions: cameraCaptureOptions.copyWith(
+          deviceId: room.selectedVideoInputDeviceId,
+          cameraPosition: position,
+        ),
+      );
+      // Unmuting an existing camera keeps the facing it was captured
+      // with, ignoring the options above.
+      final track = _activeCameraTrack;
+      if (position != null && track != null && _cameraPosition != position) {
+        await track.setCameraPosition(position);
+      }
+    } else {
+      await participant.setCameraEnabled(false);
+    }
+  });
 
   @override
-  Future<void> switchCameraFacing() => _serialize((_, participant) async {
+  Future<void> switchCameraFacing() => _serialize((_, _) async {
     final track = _activeCameraTrack;
     if (track != null) {
       final options = track.currentOptions as CameraCaptureOptions;
       await track.setCameraPosition(options.cameraPosition.switched());
-    } else {
-      await participant.publishVideoTrack(
-        await LocalVideoTrack.createCameraTrack(cameraCaptureOptions),
-      );
+      return;
     }
+    final current =
+        _nextCameraPosition ??
+        _cameraPosition ??
+        cameraCaptureOptions.cameraPosition;
+    _nextCameraPosition = current.switched();
+    _binding.notify();
   });
 
   @override

@@ -198,6 +198,8 @@ class SessionController extends _$SessionController {
       ..listen(sessionInfraControllerProvider, (_, _) {})
       ..listen(sessionKeeperControllerProvider(this), (_, _) {})
       ..listen(sessionMessagingControllerProvider(this), (_, _) {});
+    // The device controls follow the session's state until tracks publish.
+    listenSelf((_, _) => devices.syncWithSession());
 
     ref
         .watch(sessionProvider(options.sessionSlug))
@@ -807,7 +809,8 @@ class SessionController extends _$SessionController {
         if (ref.mounted) messaging.handleDataReceived(data);
       })
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
-      ..on<ParticipantConnectedEvent>(_onParticipantConnected);
+      ..on<ParticipantConnectedEvent>(_onParticipantConnected)
+      ..on<ParticipantNameUpdatedEvent>((_) => _updateParticipantsList());
 
     return room;
   }

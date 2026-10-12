@@ -1,18 +1,14 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/features/sessions/media/livekit_selector.dart';
 
 @immutable
 class _ParticipantVideoRenderState {
-  const new({
-    required this.participant,
-    required this.publication,
-    required this.track,
-  });
+  const new({required this.isLocal, required this.publication, this.track});
 
-  final Participant? participant;
+  /// Whether the participant is local, or null when there is no participant.
+  final bool? isLocal;
   final TrackPublication<Track>? publication;
   final VideoTrack? track;
 
@@ -21,18 +17,19 @@ class _ParticipantVideoRenderState {
   @override
   bool operator ==(Object other) {
     return other is _ParticipantVideoRenderState &&
+        other.isLocal == isLocal &&
         identical(other.publication, publication) &&
         identical(other.track, track);
   }
 
   @override
-  int get hashCode => Object.hash(participant, publication, track);
+  int get hashCode => Object.hash(isLocal, publication, track);
 }
 
 /// A LiveKit participant's camera video, filling its parent. Empty while the
 /// camera is unpublished or unsubscribed. A muted camera keeps its renderer
 /// mounted so unmuting doesn't flash.
-class LiveKitParticipantVideo extends StatefulWidget {
+class LiveKitParticipantVideo extends StatelessWidget {
   const new({
     required this.participant,
     required this.changes,
@@ -50,98 +47,66 @@ class LiveKitParticipantVideo extends StatefulWidget {
   /// Adds a tap-to-toggle overlay with stream statistics.
   final bool showStats;
 
-  @override
-  State<LiveKitParticipantVideo> createState() =>
-      _LiveKitParticipantVideoState();
-}
-
-class _LiveKitParticipantVideoState extends State<LiveKitParticipantVideo> {
-  late _ParticipantVideoRenderState _renderState = _read();
-  StreamSubscription<void>? _subscription;
-
   _ParticipantVideoRenderState _read() {
-    final participant = widget.participant();
+    final participant = this.participant();
     final publication = participant?.getTrackPublicationBySource(
       TrackSource.camera,
     );
     final track = publication?.track;
     return _ParticipantVideoRenderState(
-      participant: participant,
+      isLocal: participant == null ? null : participant is LocalParticipant,
       publication: publication,
       track: track is VideoTrack ? track : null,
     );
   }
 
-  void _listen() {
-    unawaited(_subscription?.cancel());
-    _subscription = widget.changes.listen((_) {
-      final next = _read();
-      if (next == _renderState || !mounted) return;
-      setState(() => _renderState = next);
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _listen();
-  }
-
-  @override
-  void didUpdateWidget(covariant LiveKitParticipantVideo oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.changes != widget.changes) _listen();
-    _renderState = _read();
-  }
-
-  @override
-  void dispose() {
-    unawaited(_subscription?.cancel());
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final renderState = _renderState;
-    final participant = renderState.participant;
-    final trackPublication = renderState.publication;
+    return LiveKitSelector(
+      changes: changes,
+      read: _read,
+      builder: (context, renderState) {
+        final publication = renderState.publication;
+        final track = renderState.track;
+        final content = Stack(
+          children: [
+            if (renderState.hasRenderer)
+              IgnorePointer(
+                child: VideoTrackRenderer(
+                  key: ValueKey((publication!.sid, track!.sid)),
+                  track,
+                  fit: VideoViewFit.cover,
+                  renderMode: VideoRenderMode.platformView,
+                ),
+              ),
+          ],
+        );
 
-    final content = Stack(
-      children: [
-        if (renderState.hasRenderer)
-          IgnorePointer(
-            child: VideoTrackRenderer(
-              key: ValueKey((trackPublication!.sid, renderState.track!.sid)),
-              renderState.track!,
-              fit: VideoViewFit.cover,
-              renderMode: VideoRenderMode.platformView,
+        final isLocal = renderState.isLocal;
+        if (!showStats || isLocal == null) return content;
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            content,
+            Positioned.fill(
+              child: _ParticipantVideoStatistics(
+                isLocal: isLocal,
+                track: track,
+              ),
             ),
-          ),
-      ],
-    );
-
-    if (!widget.showStats || participant == null) return content;
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        content,
-        Positioned.fill(
-          child: _ParticipantVideoStatistics(
-            participant: participant,
-            trackPublication: trackPublication,
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
 
 class _ParticipantVideoStatistics extends StatefulWidget {
-  const new({required this.participant, required this.trackPublication});
+  const new({required this.isLocal, required this.track});
 
-  final Participant<TrackPublication<Track>> participant;
-  final TrackPublication<Track>? trackPublication;
+  final bool isLocal;
+  final VideoTrack? track;
 
   @override
   State<_ParticipantVideoStatistics> createState() =>
@@ -166,20 +131,11 @@ class _ParticipantVideoStatisticsState
   }
 
   EventsListener<TrackEvent>? _trackListener;
-  String? _listenedTrackSid;
 
   void _setupListeners() {
-    final track = widget.trackPublication?.track;
-    final trackSid = track?.sid;
-
-    if (_listenedTrackSid == trackSid && _trackListener != null) {
-      return;
-    }
-
+    final track = widget.track;
     _trackListener?.dispose();
     _trackListener = null;
-    _listenedTrackSid = trackSid;
-
     if (track != null) {
       _trackListener = track.createListener()..listen(_onTrackEvent);
     }
@@ -188,12 +144,9 @@ class _ParticipantVideoStatisticsState
   @override
   void initState() {
     super.initState();
-    // When user is a local participant, the track is not inactive by default.
-    if (widget.participant is LocalParticipant) {
-      _isTrackInactive = false;
-    } else {
-      _isTrackInactive = true;
-    }
+    // Local tracks start live. Remote ones count as inactive until stats
+    // report a bitrate.
+    _isTrackInactive = !widget.isLocal;
     _setupListeners();
   }
 
@@ -235,11 +188,7 @@ class _ParticipantVideoStatisticsState
   @override
   void didUpdateWidget(covariant _ParticipantVideoStatistics oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant.sid != widget.participant.sid ||
-        oldWidget.trackPublication?.track?.sid !=
-            widget.trackPublication?.track?.sid) {
-      _setupListeners();
-    }
+    if (!identical(oldWidget.track, widget.track)) _setupListeners();
   }
 
   @override

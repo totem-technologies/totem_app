@@ -33,10 +33,19 @@ class _WebBrowserEnvironment implements BrowserEnvironment {
     web.window.onbeforeunload = enabled ? _beforeUnloadListener.toJS : null;
   }
 
+  JSFunction? _pageExitListener;
+
   @override
   void setPageExitHandler(void Function()? onExit) {
-    web.window.onpagehide = onExit == null
+    // A listener rather than window.onpagehide, so other handlers stay.
+    if (_pageExitListener case final listener?) {
+      web.window.removeEventListener('pagehide', listener);
+    }
+    _pageExitListener = onExit == null
         ? null
         : ((web.Event _) => onExit()).toJS;
+    if (_pageExitListener case final listener?) {
+      web.window.addEventListener('pagehide', listener);
+    }
   }
 }

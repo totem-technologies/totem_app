@@ -23,7 +23,11 @@ Stream<List<double>> localAudioBands(
   controller = StreamController<List<double>>(
     onListen: () {
       final context = _audioContext ??= web.AudioContext();
-      if (context.state == 'suspended') unawaited(context.resume().toDart);
+      if (context.state == 'suspended') {
+        // Safari refuses to resume outside a user gesture. The bars then read
+        // silence until a later mount resumes the context.
+        unawaited(context.resume().toDart.then((_) {}, onError: (_) {}));
+      }
       final jsTrack = (track.mediaStreamTrack as MediaStreamTrackWeb).jsTrack;
       source = context.createMediaStreamSource(web.MediaStream([jsTrack].toJS));
       final node = context.createAnalyser()

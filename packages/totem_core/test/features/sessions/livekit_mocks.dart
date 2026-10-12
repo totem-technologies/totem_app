@@ -59,7 +59,7 @@ class MockLocalParticipant extends Mock implements LocalParticipant {
     this.participantName = 'Local Participant',
   ]);
   final String id;
-  final String participantName;
+  String participantName;
 
   @override
   String get name => participantName;
@@ -81,13 +81,6 @@ class MockLocalParticipant extends Mock implements LocalParticipant {
       localTrackPublications;
 
   List<LocalTrackPublication<LocalTrack>> localTrackPublications = [];
-
-  final listener = _MockParticipantEventsListener();
-
-  @override
-  EventsListener<ParticipantEvent> createListener({
-    bool synchronized = false,
-  }) => listener;
 
   /// Unstubbed media flags read as off. The session device controller reads
   /// them through LiveKitLocalMedia whenever the room changes; tests stub them
@@ -141,11 +134,6 @@ class FakeEngine extends Fake implements Engine {
   }
 }
 
-class FakeCameraCaptureOptions extends Fake implements CameraCaptureOptions {
-  @override
-  CameraPosition get cameraPosition => CameraPosition.front;
-}
-
 class MockRemoteParticipant extends Mock implements RemoteParticipant {
   new(this.id, this.name);
 
@@ -174,18 +162,7 @@ class MockRemoteParticipant extends Mock implements RemoteParticipant {
 
   @override
   List<RemoteTrackPublication<RemoteTrack>> getTrackPublications() => [];
-
-  final listener = _MockParticipantEventsListener();
-
-  @override
-  EventsListener<ParticipantEvent> createListener({
-    bool synchronized = false,
-  }) => listener;
 }
-
-class MockTrackMutedEvent extends Mock implements TrackMutedEvent;
-
-class MockTrackUnmutedEvent extends Mock implements TrackUnmutedEvent;
 
 class MockTrackEvent extends Mock implements TrackEvent;
 
@@ -196,44 +173,6 @@ class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {
 
   @override
   webrtc.StreamTrackCallback? onEnded;
-}
-
-class _MockParticipantEventsListener extends Mock
-    implements EventsListener<ParticipantEvent> {
-  final Map<Type, List<FutureOr<void> Function(Object)>> _listeners = {};
-
-  @override
-  CancelListenFunc on<E>(
-    FutureOr<void> Function(E event) listener, {
-    bool Function(E)? filter,
-  }) {
-    _listeners.putIfAbsent(E, () => []).add((event) {
-      final typedEvent = event as E;
-      if (filter == null || filter(typedEvent)) return listener(typedEvent);
-    });
-    return () async {};
-  }
-
-  void _emit(Type type, ParticipantEvent event) {
-    final listeners = _listeners[type];
-    if (listeners == null) return;
-    for (final listener in listeners) {
-      listener(event);
-    }
-  }
-
-  void emitMuted(TrackMutedEvent event) => _emit(TrackMutedEvent, event);
-
-  void emitUnmuted(TrackUnmutedEvent event) => _emit(TrackUnmutedEvent, event);
-
-  void emitParticipantEvent(ParticipantEvent event) {
-    _emit(event.runtimeType, event);
-  }
-
-  @override
-  Future<bool> dispose() async {
-    return true;
-  }
 }
 
 class MockRemoteTrackPublication<T extends RemoteTrack> extends Mock
@@ -268,7 +207,7 @@ dynamic _videoTrackDefaults(Invocation invocation) {
     case #source:
       return TrackSource.camera;
     case #currentOptions:
-      return FakeCameraCaptureOptions();
+      return const CameraCaptureOptions();
     case #mediaStream:
       return MockMediaStream();
     case #mediaStreamTrack:

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/media/livekit_audio_visualizer.dart';
+import 'package:totem_core/features/sessions/media/livekit_selector.dart';
 import 'package:totem_core/features/sessions/media/livekit_support.dart';
 import 'package:totem_core/features/sessions/media/local_audio_bands.dart';
 import 'package:totem_core/features/sessions/widgets/level_bars.dart';
@@ -14,7 +15,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 ///
 /// On web the bars come from [localAudioBands], which redraws only when the
 /// levels change; native platforms use the SDK visualizer.
-class LiveKitMicrophoneLevel extends StatefulWidget {
+class LiveKitMicrophoneLevel extends StatelessWidget {
   const new({
     required this.track,
     required this.changes,
@@ -50,69 +51,34 @@ class LiveKitMicrophoneLevel extends StatefulWidget {
   final int barCount;
   final double iconSize;
 
-  @override
-  State<LiveKitMicrophoneLevel> createState() => _LiveKitMicrophoneLevelState();
-}
-
-class _LiveKitMicrophoneLevelState extends State<LiveKitMicrophoneLevel> {
-  StreamSubscription<void>? _subscription;
-  late AudioTrack? _track = _read();
-
   /// The track while it is unmuted.
   AudioTrack? _read() {
-    final track = widget.track();
+    final track = this.track();
     return track == null || track.muted ? null : track;
-  }
-
-  void _listen() {
-    unawaited(_subscription?.cancel());
-    _subscription = widget.changes.listen((_) {
-      final next = _read();
-      if (identical(next, _track) || !mounted) return;
-      setState(() => _track = next);
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _listen();
-  }
-
-  @override
-  void didUpdateWidget(covariant LiveKitMicrophoneLevel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.changes != widget.changes) _listen();
-    _track = _read();
-  }
-
-  @override
-  void dispose() {
-    unawaited(_subscription?.cancel());
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final track = _track;
-    if (track == null) {
-      return TotemIcon(
-        TotemIcons.microphoneOff,
-        size: widget.iconSize,
-        color: widget.color,
-      );
-    }
-    if (kIsWeb) {
-      return _WebLevelBars(
-        track: track,
-        barCount: widget.barCount,
-        color: widget.color,
-      );
-    }
-    return SoundWaveformWidget(
-      audioTrack: track,
-      barCount: widget.barCount,
-      color: widget.color,
+    return LiveKitSelector(
+      changes: changes,
+      read: _read,
+      builder: (context, track) {
+        if (track == null) {
+          return TotemIcon(
+            TotemIcons.microphoneOff,
+            size: iconSize,
+            color: color,
+          );
+        }
+        if (kIsWeb) {
+          return _WebLevelBars(track: track, barCount: barCount, color: color);
+        }
+        return SoundWaveformWidget(
+          audioTrack: track,
+          barCount: barCount,
+          color: color,
+        );
+      },
     );
   }
 }

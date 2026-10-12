@@ -61,25 +61,24 @@ final class RoomMediaProvider
 
 String _$roomMediaHash() => r'a1c25d6bb539947f13473a92a407ea51ec3a1c9e';
 
-@ProviderFor(participantMediaState)
-final participantMediaStateProvider = ParticipantMediaStateFamily._();
+/// A participant's media state. Starts from the current state, so the first
+/// frame is already correct, then follows every change.
 
-final class ParticipantMediaStateProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<ParticipantMediaState>,
-          ParticipantMediaState,
-          Stream<ParticipantMediaState>
-        >
-    with
-        $FutureModifier<ParticipantMediaState>,
-        $StreamProvider<ParticipantMediaState> {
-  ParticipantMediaStateProvider._({
-    required ParticipantMediaStateFamily super.from,
+@ProviderFor(ParticipantMedia)
+final participantMediaProvider = ParticipantMediaFamily._();
+
+/// A participant's media state. Starts from the current state, so the first
+/// frame is already correct, then follows every change.
+final class ParticipantMediaProvider
+    extends $NotifierProvider<ParticipantMedia, ParticipantMediaState> {
+  /// A participant's media state. Starts from the current state, so the first
+  /// frame is already correct, then follows every change.
+  ParticipantMediaProvider._({
+    required ParticipantMediaFamily super.from,
     required String super.argument,
   }) : super(
          retry: null,
-         name: r'participantMediaStateProvider',
+         name: r'participantMediaProvider',
          isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
@@ -92,30 +91,30 @@ final class ParticipantMediaStateProvider
       RoomMediaProvider.$allTransitiveDependencies1;
 
   @override
-  String debugGetCreateSourceHash() => _$participantMediaStateHash();
+  String debugGetCreateSourceHash() => _$participantMediaHash();
 
   @override
   String toString() {
-    return r'participantMediaStateProvider'
+    return r'participantMediaProvider'
         ''
         '($argument)';
   }
 
   @$internal
   @override
-  $StreamProviderElement<ParticipantMediaState> $createElement(
-    $ProviderPointer pointer,
-  ) => $StreamProviderElement(pointer);
+  ParticipantMedia create() => ParticipantMedia();
 
-  @override
-  Stream<ParticipantMediaState> create(Ref ref) {
-    final argument = this.argument as String;
-    return participantMediaState(ref, argument);
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ParticipantMediaState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ParticipantMediaState>(value),
+    );
   }
 
   @override
   bool operator ==(Object other) {
-    return other is ParticipantMediaStateProvider && other.argument == argument;
+    return other is ParticipantMediaProvider && other.argument == argument;
   }
 
   @override
@@ -124,27 +123,63 @@ final class ParticipantMediaStateProvider
   }
 }
 
-String _$participantMediaStateHash() =>
-    r'b8ec8fdb73141224bb801cf258c2c7e9aa4fc583';
+String _$participantMediaHash() => r'c3d1ee51bc122a1705f10a99fcf771514cf0f515';
 
-final class ParticipantMediaStateFamily extends $Family
-    with $FunctionalFamilyOverride<Stream<ParticipantMediaState>, String> {
-  ParticipantMediaStateFamily._()
+/// A participant's media state. Starts from the current state, so the first
+/// frame is already correct, then follows every change.
+
+final class ParticipantMediaFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          ParticipantMedia,
+          ParticipantMediaState,
+          ParticipantMediaState,
+          ParticipantMediaState,
+          String
+        > {
+  ParticipantMediaFamily._()
     : super(
         retry: null,
-        name: r'participantMediaStateProvider',
+        name: r'participantMediaProvider',
         dependencies: <ProviderOrFamily>[roomMediaProvider],
         $allTransitiveDependencies: <ProviderOrFamily>[
-          ParticipantMediaStateProvider.$allTransitiveDependencies0,
-          ParticipantMediaStateProvider.$allTransitiveDependencies1,
-          ParticipantMediaStateProvider.$allTransitiveDependencies2,
+          ParticipantMediaProvider.$allTransitiveDependencies0,
+          ParticipantMediaProvider.$allTransitiveDependencies1,
+          ParticipantMediaProvider.$allTransitiveDependencies2,
         ],
         isAutoDispose: true,
       );
 
-  ParticipantMediaStateProvider call(String identity) =>
-      ParticipantMediaStateProvider._(argument: identity, from: this);
+  /// A participant's media state. Starts from the current state, so the first
+  /// frame is already correct, then follows every change.
+
+  ParticipantMediaProvider call(String identity) =>
+      ParticipantMediaProvider._(argument: identity, from: this);
 
   @override
-  String toString() => r'participantMediaStateProvider';
+  String toString() => r'participantMediaProvider';
+}
+
+/// A participant's media state. Starts from the current state, so the first
+/// frame is already correct, then follows every change.
+
+abstract class _$ParticipantMedia extends $Notifier<ParticipantMediaState> {
+  late final _$args = ref.$arg as String;
+  String get identity => _$args;
+
+  ParticipantMediaState build(String identity);
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<ParticipantMediaState, ParticipantMediaState>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<ParticipantMediaState, ParticipantMediaState>,
+              ParticipantMediaState,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, () => build(_$args));
+  }
 }

@@ -79,11 +79,9 @@ class _ParticipantControlButtonState
   @override
   Widget build(BuildContext context) {
     final metrics = widget.metrics;
-    final media =
-        ref
-            .watch(participantMediaStateProvider(widget.participant.identity))
-            .value ??
-        ParticipantMediaState.none;
+    final media = ref.watch(
+      participantMediaProvider(widget.participant.identity),
+    );
 
     return MenuAnchor(
       controller: _menuController,

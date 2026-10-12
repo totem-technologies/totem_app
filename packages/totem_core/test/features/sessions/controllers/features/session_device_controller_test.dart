@@ -119,6 +119,27 @@ void main() {
       check(deviceState().isMicrophoneOn).isFalse();
     });
 
+    test('the microphone follows the session until it is published', () {
+      session
+        ..mockOptions = const SessionOptions(
+          sessionSlug: 'test-session',
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: true,
+          speakerEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+        )
+        ..mockShouldEnableMicrophone = false;
+      controller();
+      check(deviceState().isMicrophoneOn).isFalse();
+
+      // The participant receives the totem before their microphone publishes.
+      session.mockShouldEnableMicrophone = true;
+      controller().syncWithSession();
+
+      check(deviceState().isMicrophoneOn).isTrue();
+    });
+
     test('controls show off once a published track is removed', () {
       session.mockOptions = const SessionOptions(
         sessionSlug: 'test-session',

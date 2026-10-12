@@ -40,6 +40,9 @@ class ParticipantMediaState {
 /// and audio differently, such as textures, platform views or DOM elements.
 /// Callers own everything drawn around the media: avatars, names and badges.
 abstract interface class RoomMedia {
+  /// The participant's media state right now.
+  ParticipantMediaState stateOf(String identity);
+
   /// The participant's current media state, then every change to it.
   Stream<ParticipantMediaState> watch(String identity);
 
@@ -57,7 +60,6 @@ abstract interface class RoomMedia {
     ParticipantInfo participant, {
     required Color color,
     required double iconSize,
-    int barCount = 3,
   });
 
   /// Like [microphoneLevel] for the local participant, but measured on this
@@ -66,6 +68,6 @@ abstract interface class RoomMedia {
   Widget localMicrophoneLevel({
     required Color color,
     required double iconSize,
-    int barCount = 3,
+    required int barCount,
   });
 }

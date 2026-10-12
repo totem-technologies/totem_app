@@ -58,6 +58,9 @@ class LiveKitRoomBinding {
   /// fires.
   Stream<void> get changes => _changes.stream;
 
+  /// Reports a change that did not come from a room event.
+  void notify() => _changes.add(null);
+
   void attach(Room? room) {
     if (identical(room, _room)) return;
     unawaited(_listener?.dispose());

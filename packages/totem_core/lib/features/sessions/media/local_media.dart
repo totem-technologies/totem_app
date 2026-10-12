@@ -89,7 +89,8 @@ abstract interface class LocalMedia {
   String? get cameraDeviceId;
   String? get audioOutputDeviceId;
 
-  /// The facing of the active camera, or null while the camera is off.
+  /// The facing of the active camera. While the camera is off, the facing
+  /// chosen for when it turns on, or null if none was chosen.
   CameraFacing? get cameraFacing;
 
   /// Mobile only: whether audio should play through the loudspeaker rather
@@ -102,7 +103,8 @@ abstract interface class LocalMedia {
 
   Future<void> setCameraEnabled(bool enabled);
 
-  /// Flips the active camera, or publishes the front camera if none is active.
+  /// Flips the active camera. While the camera is off, changes the facing it
+  /// turns on with instead.
   Future<void> switchCameraFacing();
 
   Future<void> selectCamera(MediaDeviceInfo device);

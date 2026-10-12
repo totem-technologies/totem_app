@@ -332,8 +332,8 @@ class ParticipantVideo extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user?.isStaff == true),
     );
     final isCameraOn = ref.watch(
-      participantMediaStateProvider(participant.identity)
-          .select((state) => state.value?.isCameraOn ?? false),
+      participantMediaProvider(participant.identity)
+          .select((state) => state.isCameraOn),
     );
     const avatarInset = 1.0;
     final avatar = IgnorePointer(

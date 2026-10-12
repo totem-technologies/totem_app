@@ -16,15 +16,16 @@ class FakeRoomMedia implements RoomMedia {
     _changes.add(null);
   }
 
-  ParticipantMediaState _stateOf(String identity) =>
+  @override
+  ParticipantMediaState stateOf(String identity) =>
       _states[identity] ?? ParticipantMediaState.none;
 
   @override
   Stream<ParticipantMediaState> watch(String identity) {
     return Stream.multi((controller) {
-      controller.add(_stateOf(identity));
+      controller.add(stateOf(identity));
       final subscription = _changes.stream.listen(
-        (_) => controller.add(_stateOf(identity)),
+        (_) => controller.add(stateOf(identity)),
       );
       controller.onCancel = subscription.cancel;
     });
@@ -39,14 +40,13 @@ class FakeRoomMedia implements RoomMedia {
     ParticipantInfo participant, {
     required Color color,
     required double iconSize,
-    int barCount = 3,
   }) => const FakeMicrophoneLevel();
 
   @override
   Widget localMicrophoneLevel({
     required Color color,
     required double iconSize,
-    int barCount = 3,
+    required int barCount,
   }) => const FakeLocalMicrophoneLevel();
 }
 

@@ -538,6 +538,57 @@ void main() {
         },
       );
 
+      test('a participant renaming themselves updates the list', () async {
+        const eventSlug = 'test-session';
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant('me', 'Before');
+        final room = _CountingRoom(localParticipant);
+        controller.room = room;
+        await controller.initializeConnection(
+          roomOptions: const RoomOptions(),
+          url: 'wss://example.livekit.cloud',
+          token: options.token,
+        );
+
+        await room.listener.trigger(
+          RoomConnectedEvent(room: room, metadata: null),
+        );
+        check(controller.state.participantsList.map((p) => p.name))
+            .deepEquals(['Before']);
+
+        localParticipant.participantName = 'After';
+        await room.listener.trigger(
+          ParticipantNameUpdatedEvent(
+            participant: localParticipant,
+            name: 'After',
+          ),
+        );
+
+        check(controller.state.participantsList.map((p) => p.name))
+            .deepEquals(['After']);
+      });
+
       test('RoomConnected never duplicates initial camera or microphone enablement', () async {
         const eventSlug = 'test-session';
         final container = _createContainerWithEventOverride(eventSlug);

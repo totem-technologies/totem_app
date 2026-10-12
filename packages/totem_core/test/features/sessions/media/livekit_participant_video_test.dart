@@ -47,14 +47,16 @@ void main() {
 
   Future<void> pumpVideo(
     WidgetTester tester,
-    Participant? Function() participant,
-  ) {
+    Participant? Function() participant, {
+    bool showStats = false,
+  }) {
     return tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: LiveKitParticipantVideo(
             participant: participant,
             changes: changes.stream,
+            showStats: showStats,
           ),
         ),
       ),
@@ -150,6 +152,22 @@ void main() {
       },
       experimentalLeakTesting: ignoreRenderers,
     );
+
+    testWidgets('shows stats for a participant who joins without a camera', (
+      tester,
+    ) async {
+      final participant = MockRemoteParticipant('user-2', 'John Doe');
+      when(() => participant.getTrackPublicationBySource(TrackSource.camera))
+          .thenReturn(null);
+      Participant? current;
+      await pumpVideo(tester, () => current, showStats: true);
+      check(find.textContaining('Bitrate').evaluate()).isEmpty();
+
+      current = participant;
+      await change(tester);
+
+      check(find.textContaining('Bitrate').evaluate()).length.equals(1);
+    });
 
     testWidgets('follows a participant who leaves and rejoins', (tester) async {
       final before = MockRemoteParticipant('user-2', 'John Doe');

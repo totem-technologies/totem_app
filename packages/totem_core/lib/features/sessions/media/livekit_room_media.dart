@@ -53,7 +53,8 @@ class LiveKitRoomMedia implements RoomMedia {
   Participant? _participant(String identity) =>
       _media.room?.getParticipantByIdentity(identity);
 
-  ParticipantMediaState _stateOf(String identity) {
+  @override
+  ParticipantMediaState stateOf(String identity) {
     final participant = _participant(identity);
     if (participant == null) return ParticipantMediaState.none;
 
@@ -77,10 +78,10 @@ class LiveKitRoomMedia implements RoomMedia {
   @override
   Stream<ParticipantMediaState> watch(String identity) {
     return Stream.multi((controller) {
-      var last = _stateOf(identity);
+      var last = stateOf(identity);
       controller.add(last);
       final subscription = _media.changes.listen((_) {
-        final next = _stateOf(identity);
+        final next = stateOf(identity);
         if (next == last) return;
         last = next;
         controller.add(next);
@@ -103,14 +104,12 @@ class LiveKitRoomMedia implements RoomMedia {
     ParticipantInfo participant, {
     required Color color,
     required double iconSize,
-    int barCount = 3,
   }) {
     return LiveKitSpeakerLevel(
       participant: () => _participant(participant.identity),
       changes: _levelChanges,
       color: color,
       iconSize: iconSize,
-      barCount: barCount,
     );
   }
 
@@ -118,7 +117,7 @@ class LiveKitRoomMedia implements RoomMedia {
   Widget localMicrophoneLevel({
     required Color color,
     required double iconSize,
-    int barCount = 3,
+    required int barCount,
   }) {
     return LiveKitMicrophoneLevel(
       track: _localMicrophoneTrack,

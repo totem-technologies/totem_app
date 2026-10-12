@@ -332,6 +332,23 @@ void main() {
       // The video stays mounted, so turning the camera on doesn't reload it.
       check(tester.element(find.byType(FakeVideoView))).identicalTo(video);
     });
+
+    testWidgets('a camera that is already on shows from the first frame', (
+      tester,
+    ) async {
+      roomMedia.setMediaState(
+        remoteParticipant.identity,
+        const ParticipantMediaState(hasCamera: true, isCameraOn: true),
+      );
+
+      await pumpWidget(
+        tester,
+        authState: AuthState.unauthenticated(),
+        child: ParticipantVideo(participant: remoteParticipant),
+      );
+
+      check(avatarCoversVideo(tester)).isFalse();
+    });
   });
 
   group('ParticipantControlButton', () {

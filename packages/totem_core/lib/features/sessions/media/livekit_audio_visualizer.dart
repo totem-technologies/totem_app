@@ -265,7 +265,6 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
   void didUpdateWidget(SoundWaveformWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.audioTrack, widget.audioTrack) ||
-        oldWidget.audioTrack.sid != widget.audioTrack.sid ||
         oldWidget.barCount != widget.barCount) {
       _reattachListeners();
     }

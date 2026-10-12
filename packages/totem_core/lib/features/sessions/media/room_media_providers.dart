@@ -8,9 +8,16 @@ part 'room_media_providers.g.dart';
 @Riverpod(dependencies: [currentSession])
 RoomMedia? roomMedia(Ref ref) => ref.watch(currentSessionProvider)?.roomMedia;
 
+/// A participant's media state. Starts from the current state, so the first
+/// frame is already correct, then follows every change.
 @Riverpod(dependencies: [roomMedia])
-Stream<ParticipantMediaState> participantMediaState(Ref ref, String identity) {
-  final media = ref.watch(roomMediaProvider);
-  if (media == null) return Stream.value(ParticipantMediaState.none);
-  return media.watch(identity);
+class ParticipantMedia extends _$ParticipantMedia {
+  @override
+  ParticipantMediaState build(String identity) {
+    final media = ref.watch(roomMediaProvider);
+    if (media == null) return ParticipantMediaState.none;
+    final subscription = media.watch(identity).listen((next) => state = next);
+    ref.onDispose(subscription.cancel);
+    return media.stateOf(identity);
+  }
 }

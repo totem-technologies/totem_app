@@ -1,19 +1,30 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
 
 import '../livekit_mocks.dart';
 
 class _MockRoom extends Mock implements Room;
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late VoidCallback restoreWebRtcChannels;
+
+  tearDownAll(() => restoreWebRtcChannels());
+
   setUpAll(() {
+    restoreWebRtcChannels = stubFlutterWebRtcChannels();
     registerFallbackValue(const AudioCaptureOptions());
+    registerFallbackValue(MockLocalVideoTrack());
+    registerFallbackValue(const CameraCaptureOptions());
   });
 
   group('LiveKitLocalMedia', () {
@@ -28,6 +39,7 @@ void main() {
       participant = MockLocalParticipant();
       room = _MockRoom();
       when(() => room.localParticipant).thenReturn(participant);
+      when(() => room.roomOptions).thenReturn(const RoomOptions());
       when(room.createListener).thenAnswer((_) => EventsListener(roomEvents));
       when(
         () => participant.setMicrophoneEnabled(
@@ -138,14 +150,6 @@ void main() {
       verifyNever(() => participant.publishAudioTrack(track));
     });
 
-    test('releasing unpublishes every local track', () async {
-      when(participant.unpublishAllTracks).thenAnswer((_) async {});
-
-      await media.release();
-
-      verify(participant.unpublishAllTracks).called(1);
-    });
-
     test('capture stays released for the room after release', () async {
       when(participant.unpublishAllTracks).thenAnswer((_) async {});
 
@@ -197,6 +201,58 @@ void main() {
 
       check(changes).equals(afterDetach);
       check(media.isAvailable).isFalse();
+    });
+
+    group('switching camera facing while the camera is off', () {
+      late MockLocalVideoTrack camera;
+      late bool cameraMuted;
+
+      setUp(() {
+        cameraMuted = true;
+        camera = MockLocalVideoTrack();
+        when(() => camera.muted).thenAnswer((_) => cameraMuted);
+        final publication = MockLocalTrackPublication(videoTrack: camera);
+        when(() => participant.getTrackPublicationBySource(TrackSource.camera))
+            .thenReturn(publication);
+        when(
+          () => participant.setCameraEnabled(
+            any(),
+            cameraCaptureOptions: any(named: 'cameraCaptureOptions'),
+          ),
+        ).thenAnswer((_) async {
+          cameraMuted = false;
+          return null;
+        });
+        when(() => camera.restartTrack(any())).thenAnswer((_) async {});
+        when(() => camera.simulcastCodecs).thenReturn({});
+      });
+
+      test('keeps the camera off and reports the new facing', () async {
+        final before = changes;
+
+        await media.switchCameraFacing();
+
+        verifyNever(() => participant.publishVideoTrack(any()));
+        verifyNever(
+          () => participant.setCameraEnabled(
+            any(),
+            cameraCaptureOptions: any(named: 'cameraCaptureOptions'),
+          ),
+        );
+        check(media.cameraFacing).equals(CameraFacing.back);
+        check(changes).isGreaterThan(before);
+      });
+
+      test('turns the camera on facing the chosen way', () async {
+        await media.switchCameraFacing();
+
+        await media.setCameraEnabled(true);
+
+        final restarted =
+            verify(() => camera.restartTrack(captureAny())).captured.single
+                as CameraCaptureOptions;
+        check(restarted.cameraPosition).equals(CameraPosition.back);
+      });
     });
   });
 }
