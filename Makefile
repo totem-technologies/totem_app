@@ -152,7 +152,8 @@ lint:
 
 format:
 	@echo "Formatting code..."
-	dart format .
+	# Only files git tracks or would track, so build output and scratch are skipped.
+	git ls-files -z --cached --others --exclude-standard '*.dart' | xargs -0 dart format
 
 generate_api_models:
 	cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose --clean; dart format .
