@@ -65,6 +65,16 @@ void main() {
     check(levels(tester)).every((it) => it.isGreaterThan(0));
   });
 
+  testWidgets('shows a quiet speaker LiveKit counts as active', (tester) async {
+    // About -34 dB, just above LiveKit's -35 dB speaking threshold.
+    when(() => participant.isSpeaking).thenReturn(true);
+    when(() => participant.audioLevel).thenReturn(0.02);
+
+    await pump(tester);
+
+    check(levels(tester)).every((it) => it.isGreaterThan(0));
+  });
+
   testWidgets('ignores levels while not speaking', (tester) async {
     when(() => participant.audioLevel).thenReturn(0.5);
 

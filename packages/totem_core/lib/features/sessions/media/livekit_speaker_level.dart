@@ -2,6 +2,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/media/livekit_selector.dart';
 import 'package:totem_core/features/sessions/media/livekit_support.dart';
+import 'package:totem_core/features/sessions/media/speech_level.dart';
 import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
@@ -33,10 +34,9 @@ class LiveKitSpeakerLevel extends StatelessWidget {
     final participant = this.participant();
     final microphoneOn = participant != null && isMicrophoneOn(participant);
     final level = microphoneOn && participant.isSpeaking
-        ? participant.audioLevel
+        ? speechLevel(amplitudeToDb(participant.audioLevel))
         : 0.0;
-    // Coarse steps keep small fluctuations from animating the bars.
-    return (microphoneOn: microphoneOn, level: (level * 20).round() / 20);
+    return (microphoneOn: microphoneOn, level: level);
   }
 
   @override

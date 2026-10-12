@@ -69,6 +69,20 @@ void main() {
     check(tester.binding.hasScheduledFrame).isFalse();
   });
 
+  testWidgets('keeps easing when the system reduces motion', (tester) async {
+    // Jumping bars read as flicker, so they animate regardless.
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    const size = Size(10, 50);
+    await pumpBars(tester, const [0], size: size);
+    await pumpBars(tester, const [1], size: size);
+
+    await tester.pump(const Duration(milliseconds: 250));
+
+    check(paintedBars(tester).single.rect.height).equals(28.75);
+  });
+
   testWidgets('reverses the bar order in right-to-left layouts', (
     tester,
   ) async {

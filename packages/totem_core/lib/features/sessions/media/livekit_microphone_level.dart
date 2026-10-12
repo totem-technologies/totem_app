@@ -6,15 +6,16 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/media/livekit_audio_visualizer.dart';
 import 'package:totem_core/features/sessions/media/livekit_selector.dart';
 import 'package:totem_core/features/sessions/media/livekit_support.dart';
-import 'package:totem_core/features/sessions/media/local_audio_bands.dart';
+import 'package:totem_core/features/sessions/media/local_audio_level.dart';
 import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 /// Audio level bars measured on this device for a local microphone track,
 /// or a microphone-off icon while it is muted or missing.
 ///
-/// On web the bars come from [localAudioBands], which redraws only when the
-/// levels change; native platforms use the SDK visualizer.
+/// On web the bars come from [localAudioLevel], on the same scale as remote
+/// speakers' bars, and redraw only when the level changes. Native platforms
+/// use the SDK visualizer.
 class LiveKitMicrophoneLevel extends StatelessWidget {
   const new({
     required this.track,
@@ -95,16 +96,14 @@ class _WebLevelBars extends StatefulWidget {
 }
 
 class _WebLevelBarsState extends State<_WebLevelBars> {
-  StreamSubscription<List<double>>? _subscription;
-  late List<double> _levels;
+  StreamSubscription<double>? _subscription;
+  var _level = 0.0;
 
   void _listen() {
     unawaited(_subscription?.cancel());
-    _levels = List.filled(widget.barCount, 0);
-    _subscription = localAudioBands(
-      widget.track,
-      bandCount: widget.barCount,
-    ).listen((levels) => setState(() => _levels = levels));
+    _level = 0;
+    _subscription = localAudioLevel(widget.track)
+        .listen((level) => setState(() => _level = level));
   }
 
   @override
@@ -116,10 +115,7 @@ class _WebLevelBarsState extends State<_WebLevelBars> {
   @override
   void didUpdateWidget(covariant _WebLevelBars oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.track != widget.track ||
-        oldWidget.barCount != widget.barCount) {
-      _listen();
-    }
+    if (oldWidget.track != widget.track) _listen();
   }
 
   @override
@@ -130,6 +126,10 @@ class _WebLevelBarsState extends State<_WebLevelBars> {
 
   @override
   Widget build(BuildContext context) {
-    return LevelBars(levels: _levels, color: widget.color);
+    return LevelBars.fromLevel(
+      _level,
+      barCount: widget.barCount,
+      color: widget.color,
+    );
   }
 }

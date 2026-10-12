@@ -18,9 +18,7 @@ class LevelBars extends StatelessWidget {
     required Color color,
     Key? key,
   }) {
-    // Speech levels sit low on LiveKit's linear scale; the square root
-    // spreads them over the bar height.
-    final scaled = math.sqrt(level.clamp(0.0, 1.0));
+    final scaled = level.clamp(0.0, 1.0);
     final center = (barCount - 1) / 2;
     return LevelBars(
       key: key,
@@ -67,46 +65,77 @@ class LevelBars extends StatelessWidget {
   }
 }
 
-class _AnimatedBars extends ImplicitlyAnimatedWidget {
+class _AnimatedBars extends StatefulWidget {
   const new({
-    required super.duration,
+    required this.duration,
     required this.heights,
     required this.color,
     required this.height,
     required this.textDirection,
   });
 
+  final Duration duration;
   final List<double> heights;
   final Color color;
   final double height;
   final TextDirection textDirection;
 
   @override
-  ImplicitlyAnimatedWidgetState<_AnimatedBars> createState() =>
-      _AnimatedBarsState();
+  State<_AnimatedBars> createState() => _AnimatedBarsState();
 }
 
-class _AnimatedBarsState extends ImplicitlyAnimatedWidgetState<_AnimatedBars>
+/// Eases each bar from where it is towards its latest height, like an
+/// implicit animation, but keeps easing when the system reduces motion:
+/// bars that jump read as flicker rather than calm.
+class _AnimatedBarsState extends State<_AnimatedBars>
     with FramePacedTickerProviderStateMixin {
-  List<Tween<double>> _heights = [];
-  ColorTween? _color;
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: widget.duration,
+    value: 1,
+    animationBehavior: AnimationBehavior.preserve,
+  );
+  late List<Tween<double>> _heights = [
+    for (final height in widget.heights) Tween(begin: height, end: height),
+  ];
+  late ColorTween _color = ColorTween(begin: widget.color, end: widget.color);
 
   @override
-  void forEachTween(TweenVisitor<dynamic> visitor) {
+  void didUpdateWidget(covariant _AnimatedBars oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _controller.duration = widget.duration;
+    var retarget = _color.end != widget.color;
+    for (var i = 0; i < widget.heights.length && i < _heights.length; i++) {
+      if (_heights[i].end != widget.heights[i]) retarget = true;
+    }
+    if (!retarget) {
+      // Added bars appear at their height; removed ones go.
+      _heights = [
+        for (var i = 0; i < widget.heights.length; i++)
+          if (i < _heights.length)
+            _heights[i]
+          else
+            Tween(begin: widget.heights[i], end: widget.heights[i]),
+      ];
+      return;
+    }
     _heights = [
       for (var i = 0; i < widget.heights.length; i++)
-        visitor(
-              i < _heights.length ? _heights[i] : null,
-              widget.heights[i],
-              (value) => Tween<double>(begin: value as double),
-            )!
-            as Tween<double>,
+        Tween(
+          begin: i < _heights.length
+              ? _heights[i].evaluate(_controller)
+              : widget.heights[i],
+          end: widget.heights[i],
+        ),
     ];
-    _color = visitor(
-      _color,
-      widget.color,
-      (value) => ColorTween(begin: value as Color),
-    ) as ColorTween?;
+    _color = ColorTween(begin: _color.evaluate(_controller), end: widget.color);
+    _controller.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -116,9 +145,9 @@ class _AnimatedBarsState extends ImplicitlyAnimatedWidgetState<_AnimatedBars>
       widget.height,
     ),
     painter: _BarsPainter(
-      animation: animation,
+      animation: _controller,
       heights: _heights,
-      color: _color!,
+      color: _color,
       textDirection: widget.textDirection,
     ),
   );
@@ -168,9 +197,11 @@ class _BarsPainter extends CustomPainter {
     }
   }
 
-  // Tween endpoints are updated in place when the levels change.
   @override
-  bool shouldRepaint(_BarsPainter oldDelegate) => true;
+  bool shouldRepaint(_BarsPainter oldDelegate) =>
+      !identical(oldDelegate.heights, heights) ||
+      !identical(oldDelegate.color, color) ||
+      oldDelegate.textDirection != textDirection;
 
   @override
   bool shouldRebuildSemantics(_BarsPainter oldDelegate) => false;
