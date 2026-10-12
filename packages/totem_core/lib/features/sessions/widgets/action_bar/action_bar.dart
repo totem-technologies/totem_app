@@ -537,8 +537,7 @@ class SessionActionBar extends ConsumerWidget {
     final microphoneButton = ActionBarShortcutTooltip(
       shortcut: ActionBarShortcut.microphone,
       child: ActionBarMicButton(
-        microphoneLevel:
-            roomMedia != null && deviceState.hasMicrophoneTrack
+        microphoneLevel: roomMedia != null && deviceState.hasMicrophoneTrack
             ? (color, iconSize, barCount) => roomMedia.localMicrophoneLevel(
                 color: color,
                 iconSize: iconSize,

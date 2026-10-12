@@ -25,9 +25,7 @@ Stream<List<double>> localAudioBands(
       final context = _audioContext ??= web.AudioContext();
       if (context.state == 'suspended') unawaited(context.resume().toDart);
       final jsTrack = (track.mediaStreamTrack as MediaStreamTrackWeb).jsTrack;
-      source = context.createMediaStreamSource(
-        web.MediaStream([jsTrack].toJS),
-      );
+      source = context.createMediaStreamSource(web.MediaStream([jsTrack].toJS));
       final node = context.createAnalyser()
         ..fftSize = 256
         ..smoothingTimeConstant = 0.6

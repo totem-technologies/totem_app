@@ -48,7 +48,8 @@ class LevelBars extends StatelessWidget {
             maxHeight: constraints.maxHeight,
           ),
           elements: [
-            for (final level in levels) BarsViewItem(value: level, color: color),
+            for (final level in levels)
+              BarsViewItem(value: level, color: color),
           ],
         ),
       ),

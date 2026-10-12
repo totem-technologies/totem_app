@@ -83,9 +83,7 @@ void main() {
     check(levels(tester)).every((it) => it.equals(0));
   });
 
-  testWidgets('switches to the icon when the microphone mutes', (
-    tester,
-  ) async {
+  testWidgets('switches to the icon when the microphone mutes', (tester) async {
     await pump(tester);
 
     when(() => participant.isMuted).thenReturn(true);
