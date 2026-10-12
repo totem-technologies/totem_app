@@ -52,9 +52,8 @@ void main() {
     final video = tester.element(find.byKey(const ValueKey('video-0')));
     await pump(6);
     check(find.byType(ParticipantTileSurface).evaluate()).length.equals(6);
-    check(
-      tester.element(find.byKey(const ValueKey('video-0'))),
-    ).identicalTo(video);
+    check(tester.element(find.byKey(const ValueKey('video-0'))))
+        .identicalTo(video);
     await pump(2);
     check(find.byType(ParticipantTileSurface).evaluate()).length.equals(2);
     await tester.pumpWidget(const SizedBox.shrink());

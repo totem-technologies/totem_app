@@ -179,7 +179,7 @@ enum SpaceCategories {
   queer('queer'),
   selfImprovement('self-improvement');
 
-  const SpaceCategories(this.slug);
+  new(this.slug);
 
   final String slug;
 }
@@ -266,7 +266,7 @@ Future<bool> rsvpConfirm(Ref ref, String sessionSlug) async {
 /// Indicates that an RSVP could not be confirmed because the user is already
 /// attending another session at the same time.
 final class RsvpConflictException implements Exception {
-  const RsvpConflictException(this.conflict, {this.cause});
+  const new(this.conflict, {this.cause});
 
   final SessionConflictSchema conflict;
   final Object? cause;

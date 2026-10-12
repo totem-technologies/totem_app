@@ -27,7 +27,7 @@ Future<void> showParticipantReorderModals(BuildContext context) {
 }
 
 class ParticipantReorderWidget extends ConsumerStatefulWidget {
-  const ParticipantReorderWidget({super.key});
+  const new({super.key});
 
   @override
   ConsumerState<ParticipantReorderWidget> createState() =>
@@ -362,7 +362,7 @@ class _ParticipantReorderWidgetState
 }
 
 class _ParticipantInfo extends ConsumerWidget {
-  const _ParticipantInfo({required this.participant});
+  const new({required this.participant});
 
   final String participant;
 
@@ -435,7 +435,7 @@ class _ParticipantInfo extends ConsumerWidget {
 }
 
 class _ParticipantReorderItem extends ConsumerWidget {
-  const _ParticipantReorderItem({
+  const new({
     required this.participantIdentity,
     required this.participant,
     required this.index,

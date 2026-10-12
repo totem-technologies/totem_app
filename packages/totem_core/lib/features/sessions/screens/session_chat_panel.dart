@@ -35,7 +35,7 @@ const _messageListPadding = EdgeInsetsDirectional.fromSTEB(
 
 /// In-call chat panel used as a phone sheet, tablet dialog, or docked sidebar.
 class SessionChatPanel extends ConsumerStatefulWidget {
-  const SessionChatPanel({
+  const new({
     super.key,
     this.scrollController,
     this.embedded = false,
@@ -461,7 +461,7 @@ String _composerHint({
 }
 
 class _SessionChatHeader extends StatelessWidget {
-  const _SessionChatHeader({
+  const new({
     required this.isKeeper,
     required this.threadTarget,
     required this.keeperIdentity,
@@ -556,7 +556,7 @@ class _SessionChatHeader extends StatelessWidget {
 }
 
 class _HeaderAvatar extends StatelessWidget {
-  const _HeaderAvatar({required this.threadTarget});
+  const new({required this.threadTarget});
 
   final String? threadTarget;
 
@@ -570,7 +570,7 @@ class _HeaderAvatar extends StatelessWidget {
 }
 
 class _EveryoneAvatar extends StatelessWidget {
-  const _EveryoneAvatar();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -588,7 +588,7 @@ class _EveryoneAvatar extends StatelessWidget {
 }
 
 class _ParticipantAvatar extends ConsumerWidget {
-  const _ParticipantAvatar({required this.identity});
+  const new({required this.identity});
 
   final String identity;
   static const double radius = 16;
@@ -600,7 +600,7 @@ class _ParticipantAvatar extends ConsumerWidget {
 }
 
 class _HeaderTitle extends StatelessWidget {
-  const _HeaderTitle({
+  const new({
     required this.threadTarget,
     required this.keeperIdentity,
     required this.isKeeper,
@@ -678,13 +678,13 @@ enum _MessageFadeEdge {
   top(Key('session-chat-message-edge-fade-top')),
   bottom(Key('session-chat-message-edge-fade-bottom'));
 
-  const _MessageFadeEdge(this.bandKey);
+  new(this.bandKey);
 
   final Key bandKey;
 }
 
 class _MessageScrollEdgeFade extends StatelessWidget {
-  const _MessageScrollEdgeFade({required this.child});
+  const new({required this.child});
 
   final Widget child;
 
@@ -701,7 +701,7 @@ class _MessageScrollEdgeFade extends StatelessWidget {
 }
 
 class _MessageEdgeFadeBand extends StatelessWidget {
-  const _MessageEdgeFadeBand({required this.edge});
+  const new({required this.edge});
 
   final _MessageFadeEdge edge;
 
@@ -738,7 +738,7 @@ class _MessageEdgeFadeBand extends StatelessWidget {
 }
 
 class _PinnedHintPill extends StatelessWidget {
-  const _PinnedHintPill({required this.text});
+  const new({required this.text});
 
   final String text;
 
@@ -770,7 +770,7 @@ class _PinnedHintPill extends StatelessWidget {
 }
 
 class _ParticipantThreadChip extends StatelessWidget {
-  const _ParticipantThreadChip({
+  const new({
     required this.isPrivateThread,
     required this.onMessageKeeper,
     required this.onViewGroup,
@@ -836,7 +836,7 @@ class _ParticipantThreadChip extends StatelessWidget {
 }
 
 class _RecipientDropdownOverlay extends StatelessWidget {
-  const _RecipientDropdownOverlay({
+  const new({
     required this.animation,
     required this.interactive,
     required this.isKeeper,
@@ -965,7 +965,7 @@ class _RecipientDropdownOverlay extends StatelessWidget {
 
 /// 1px #E8E5E0 rule from the Figma recipient menu — not a Material hairline.
 class _RecipientHairline extends StatelessWidget {
-  const _RecipientHairline();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -977,7 +977,7 @@ class _RecipientHairline extends StatelessWidget {
 }
 
 class _RecipientRow extends StatelessWidget {
-  const _RecipientRow({
+  const new({
     required this.selected,
     required this.title,
     required this.leading,

@@ -8,9 +8,8 @@ void main() {
   group('speechBands', () {
     test('silence and background noise read as zero', () {
       check(speechBands(Uint8List(128), 3)).deepEquals([0, 0, 0]);
-      check(
-        speechBands(Uint8List(128)..fillRange(0, 128, 3), 3),
-      ).deepEquals([0, 0, 0]);
+      check(speechBands(Uint8List(128)..fillRange(0, 128, 3), 3))
+          .deepEquals([0, 0, 0]);
     });
 
     test('puts the lowest band in the middle', () {

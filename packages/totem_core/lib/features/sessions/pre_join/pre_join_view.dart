@@ -15,7 +15,7 @@ import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class PreJoinView extends StatelessWidget {
-  const PreJoinView({
+  const new({
     required this.mediaState,
     required this.locked,
     required this.onToggleCamera,

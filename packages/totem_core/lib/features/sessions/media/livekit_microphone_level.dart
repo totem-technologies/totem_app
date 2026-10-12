@@ -15,7 +15,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 /// On web the bars come from [localAudioBands], which redraws only when the
 /// levels change; native platforms use the SDK visualizer.
 class LiveKitMicrophoneLevel extends StatefulWidget {
-  const LiveKitMicrophoneLevel({
+  const new({
     required this.track,
     required this.changes,
     required this.color,
@@ -25,7 +25,7 @@ class LiveKitMicrophoneLevel extends StatefulWidget {
   });
 
   /// Bars for a standalone [track], such as the pre-join preview.
-  LiveKitMicrophoneLevel.preview(
+  new preview(
     AudioTrack track, {
     required Color color,
     required int barCount,
@@ -118,11 +118,7 @@ class _LiveKitMicrophoneLevelState extends State<LiveKitMicrophoneLevel> {
 }
 
 class _WebLevelBars extends StatefulWidget {
-  const _WebLevelBars({
-    required this.track,
-    required this.barCount,
-    required this.color,
-  });
+  const new({required this.track, required this.barCount, required this.color});
 
   final AudioTrack track;
   final int barCount;

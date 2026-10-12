@@ -6,11 +6,11 @@ import 'package:totem_core/features/sessions/widgets/audio_visualizer_bars.dart'
 /// Audio level bars. They animate only when [levels] change, so a quiet
 /// microphone costs no frames.
 class LevelBars extends StatelessWidget {
-  const LevelBars({required this.levels, required this.color, super.key});
+  const new({required this.levels, required this.color, super.key});
 
   /// Bars shaped from a single [level] between 0 and 1: tallest in the
   /// middle, tapering to the sides.
-  factory LevelBars.fromLevel(
+  factory fromLevel(
     double level, {
     required int barCount,
     required Color color,

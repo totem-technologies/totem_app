@@ -54,7 +54,7 @@ VoidCallback stubFlutterWebRtcChannels() {
 }
 
 class MockLocalParticipant extends Mock implements LocalParticipant {
-  MockLocalParticipant([
+  new([
     this.id = 'local-participant',
     this.participantName = 'Local Participant',
   ]);
@@ -105,7 +105,7 @@ class MockLocalParticipant extends Mock implements LocalParticipant {
 }
 
 class FakeRoom extends Fake implements Room {
-  FakeRoom(this.participant);
+  new(this.participant);
 
   final MockLocalParticipant participant;
 
@@ -147,7 +147,7 @@ class FakeCameraCaptureOptions extends Fake implements CameraCaptureOptions {
 }
 
 class MockRemoteParticipant extends Mock implements RemoteParticipant {
-  MockRemoteParticipant(this.id, this.name);
+  new(this.id, this.name);
 
   final String id;
   @override
@@ -183,14 +183,14 @@ class MockRemoteParticipant extends Mock implements RemoteParticipant {
   }) => listener;
 }
 
-class MockTrackMutedEvent extends Mock implements TrackMutedEvent {}
+class MockTrackMutedEvent extends Mock implements TrackMutedEvent;
 
-class MockTrackUnmutedEvent extends Mock implements TrackUnmutedEvent {}
+class MockTrackUnmutedEvent extends Mock implements TrackUnmutedEvent;
 
-class MockTrackEvent extends Mock implements TrackEvent {}
+class MockTrackEvent extends Mock implements TrackEvent;
 
 class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {
-  MockMediaStreamTrack() {
+  new() {
     when(getSettings).thenReturn({});
   }
 
@@ -237,18 +237,14 @@ class _MockParticipantEventsListener extends Mock
 }
 
 class MockRemoteTrackPublication<T extends RemoteTrack> extends Mock
-    implements RemoteTrackPublication<T> {}
+    implements RemoteTrackPublication<T>;
 
 class MockLocalAudioTrackPublication extends Mock
-    implements LocalTrackPublication<LocalAudioTrack> {}
+    implements LocalTrackPublication<LocalAudioTrack>;
 
 class MockLocalTrackPublication extends Mock
     implements LocalTrackPublication<LocalVideoTrack> {
-  MockLocalTrackPublication({
-    bool muted = false,
-    bool isActive = true,
-    LocalVideoTrack? videoTrack,
-  }) {
+  new({bool muted = false, bool isActive = true, LocalVideoTrack? videoTrack}) {
     when(() => track).thenAnswer(
       (_) =>
           videoTrack ?? MockLocalVideoTrack(muted: muted, isActive: isActive),
@@ -306,11 +302,9 @@ class MockRemoteVideoTrack extends Mock implements RemoteVideoTrack {
 }
 
 class MockLocalVideoTrack extends Mock implements LocalVideoTrack {
-  MockLocalVideoTrack({bool muted = false, bool isActive = true})
-    : _muted = muted,
-      _isActive = isActive {
-    when(() => this.muted).thenAnswer((_) => _muted);
-    when(() => this.isActive).thenAnswer((_) => _isActive);
+  new({this._muted = false, this._isActive = true}) {
+    when(() => muted).thenAnswer((_) => _muted);
+    when(() => isActive).thenAnswer((_) => _isActive);
     when(start).thenAnswer((_) async => true);
     when(stop).thenAnswer((_) async => true);
     when(dispose).thenAnswer((_) async => true);
@@ -336,11 +330,9 @@ class MockLocalVideoTrack extends Mock implements LocalVideoTrack {
 }
 
 class MockLocalAudioTrack extends Mock implements LocalAudioTrack {
-  MockLocalAudioTrack({bool muted = false, bool isActive = true})
-    : _muted = muted,
-      _isActive = isActive {
-    when(() => this.muted).thenAnswer((_) => _muted);
-    when(() => this.isActive).thenAnswer((_) => _isActive);
+  new({this._muted = false, this._isActive = true}) {
+    when(() => muted).thenAnswer((_) => _muted);
+    when(() => isActive).thenAnswer((_) => _isActive);
     when(enable).thenAnswer((_) async => true);
     when(start).thenAnswer((_) async => true);
     when(stop).thenAnswer((_) async => true);

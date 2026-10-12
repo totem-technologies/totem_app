@@ -6,7 +6,7 @@ import 'package:totem_core/core/utils/frame_paced_ticker.dart';
 
 @immutable
 class AudioVisualizerWidgetOptions {
-  const AudioVisualizerWidgetOptions({
+  const new({
     this.barCount = 7,
     this.maxHeight = double.infinity,
     this.durationInMilliseconds = 500,
@@ -41,7 +41,7 @@ class AudioVisualizerWidgetOptions {
 }
 
 class BarsViewItem {
-  const BarsViewItem({required this.value, required this.color});
+  const new({required this.value, required this.color});
 
   final double value;
   final Color color;
@@ -49,7 +49,7 @@ class BarsViewItem {
 
 /// One-pixel-wide bars with a shared ticker for height and color interpolation.
 class BarsView extends StatelessWidget {
-  const BarsView({required this.options, required this.elements, super.key});
+  const new({required this.options, required this.elements, super.key});
   final AudioVisualizerWidgetOptions options;
   final List<BarsViewItem> elements;
 
@@ -84,7 +84,7 @@ class BarsView extends StatelessWidget {
 }
 
 class _AnimatedBars extends ImplicitlyAnimatedWidget {
-  const _AnimatedBars({
+  const new({
     required super.duration,
     required this.heights,
     required this.colors,
@@ -132,13 +132,11 @@ class _AnimatedBarsState extends ImplicitlyAnimatedWidgetState<_AnimatedBars>
             )!
             as ColorTween,
     ];
-    _radius =
-        visitor(
-              _radius,
-              widget.cornerRadius,
-              (value) => Tween<double>(begin: value as double),
-            )
-            as Tween<double>?;
+    _radius = visitor(
+      _radius,
+      widget.cornerRadius,
+      (value) => Tween<double>(begin: value as double),
+    ) as Tween<double>?;
   }
 
   @override
@@ -160,7 +158,7 @@ class _AnimatedBarsState extends ImplicitlyAnimatedWidgetState<_AnimatedBars>
 
 /// Animation ticks repaint the bars without rebuilding or laying out widgets.
 class _BarsPainter extends CustomPainter {
-  _BarsPainter({
+  new({
     required this.animation,
     required this.heights,
     required this.colors,

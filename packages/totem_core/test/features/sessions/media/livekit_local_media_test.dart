@@ -9,7 +9,7 @@ import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
 
 import '../livekit_mocks.dart';
 
-class _MockRoom extends Mock implements Room {}
+class _MockRoom extends Mock implements Room;
 
 void main() {
   setUpAll(() {
@@ -74,9 +74,8 @@ void main() {
         const RoomOptions(adaptiveStream: true),
       );
 
-      check(
-        options.defaultAudioCaptureOptions.stopAudioCaptureOnMute,
-      ).isFalse();
+      check(options.defaultAudioCaptureOptions.stopAudioCaptureOnMute)
+          .isFalse();
       check(options.adaptiveStream).isTrue();
     });
 
@@ -115,9 +114,8 @@ void main() {
 
     test('joining muted mutes the microphone before publishing it', () async {
       final track = MockLocalAudioTrack();
-      when(
-        () => participant.publishAudioTrack(track),
-      ).thenAnswer((_) async => MockLocalAudioTrackPublication());
+      when(() => participant.publishAudioTrack(track))
+          .thenAnswer((_) async => MockLocalAudioTrackPublication());
 
       await media.publishJoinMicrophone(track, muted: true);
 

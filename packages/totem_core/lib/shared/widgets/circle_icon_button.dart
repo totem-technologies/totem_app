@@ -3,7 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 class CircleIconButton extends StatelessWidget {
-  const CircleIconButton({
+  const new({
     required this.icon,
     required this.onPressed,
     this.margin,

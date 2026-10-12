@@ -36,7 +36,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
 class VideoSessionScreen extends ConsumerStatefulWidget {
-  const VideoSessionScreen({
+  const new({
     required this.sessionSlug,
     required this.loadingScreen,
     this.now = DateTime.now,
@@ -73,7 +73,7 @@ class _SessionChatRouteObserver extends NavigatorObserver {
 }
 
 class _DockedSessionPanelsRail extends ConsumerWidget {
-  const _DockedSessionPanelsRail({required this.sessionSlug});
+  const new({required this.sessionSlug});
 
   final String sessionSlug;
 

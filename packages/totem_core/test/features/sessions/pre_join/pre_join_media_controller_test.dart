@@ -224,9 +224,8 @@ void main() {
       final state = container.read(
         preJoinMediaControllerProvider(_sessionSlug),
       );
-      check(
-        state.microphone.phase,
-      ).equals(PreJoinCapturePhase.permissionDenied);
+      check(state.microphone.phase)
+          .equals(PreJoinCapturePhase.permissionDenied);
       check(state.microphone.track).isNull();
       check(state.canJoinOnWeb).equals(false);
     },
@@ -363,9 +362,8 @@ void main() {
       check(detached.camera.track).isNull();
       check(detached.camera.phase).equals(PreJoinCapturePhase.uninitialized);
       check(detached.microphone.track).isNull();
-      check(
-        detached.microphone.phase,
-      ).equals(PreJoinCapturePhase.uninitialized);
+      check(detached.microphone.phase)
+          .equals(PreJoinCapturePhase.uninitialized);
 
       container.dispose();
       await Future<void>.delayed(Duration.zero);
@@ -407,9 +405,8 @@ void main() {
     check(factory.videoTracks).length.equals(2);
     check(factory.audioTracks).length.equals(2);
     check(second.cameraTrack).not((it) => it.identicalTo(first.cameraTrack));
-    check(
-      second.microphoneTrack,
-    ).not((it) => it.identicalTo(first.microphoneTrack));
+    check(second.microphoneTrack)
+        .not((it) => it.identicalTo(first.microphoneTrack));
     verifyNever(first.cameraTrack!.stop);
     verifyNever(first.microphoneTrack!.stop);
   });

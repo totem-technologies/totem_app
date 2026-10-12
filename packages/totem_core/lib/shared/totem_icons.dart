@@ -659,7 +659,7 @@ class TotemIcons {
 typedef TotemIconData = String;
 
 class TotemIcon extends StatelessWidget {
-  const TotemIcon(
+  const new(
     this.icon, {
     super.key,
     this.size,

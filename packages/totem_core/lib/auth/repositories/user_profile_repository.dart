@@ -11,7 +11,7 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
 }, name: 'User Repository Provider');
 
 class UserRepository {
-  const UserRepository({required this.apiService});
+  const new({required this.apiService});
 
   final ClientApi apiService;
 

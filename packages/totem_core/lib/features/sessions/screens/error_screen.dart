@@ -14,7 +14,7 @@ import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 class SessionErrorScreen extends ConsumerWidget {
-  const SessionErrorScreen({this.onRetry, this.error, this.session, super.key});
+  const new({this.onRetry, this.error, this.session, super.key});
 
   final AsyncCallback? onRetry;
   final Object? error;

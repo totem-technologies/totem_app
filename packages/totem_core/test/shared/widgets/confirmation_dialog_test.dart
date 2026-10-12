@@ -140,9 +140,8 @@ void main() {
       await tester.pump(const Duration(seconds: 10));
       await tester.pumpAndSettle();
 
-      check(
-        tester.widgetList(find.text('Something Went Wrong')),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('Something Went Wrong'))).length
+          .equals(1);
       check(tester.widgetList(find.text('OK'))).length.equals(1);
     });
   });

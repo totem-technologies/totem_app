@@ -9,7 +9,7 @@ import 'package:material_ui/material_ui.dart';
 typedef OnActionPerformed = AsyncValueGetter<bool>;
 
 class ActionSliderButton extends StatefulWidget {
-  const ActionSliderButton({
+  const new({
     required this.text,
     required this.onActionCompleted,
     this.keepLoadingOnSuccess = false,
@@ -74,7 +74,7 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
 
 @visibleForTesting
 class ActionButton extends StatefulWidget {
-  const ActionButton({
+  const new({
     required this.text,
     required this.onActionCompleted,
     this.keepLoadingOnSuccess = false,
@@ -196,7 +196,7 @@ class _ActionButtonState extends State<ActionButton> {
 
 @visibleForTesting
 class ActionSlider extends StatefulWidget {
-  const ActionSlider({
+  const new({
     required this.text,
     required this.onActionCompleted,
     this.keepLoadingOnSuccess = false,

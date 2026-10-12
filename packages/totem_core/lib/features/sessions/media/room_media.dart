@@ -5,7 +5,7 @@ import 'package:totem_core/features/sessions/media/participant_info.dart';
 /// is on.
 @immutable
 class ParticipantMediaState {
-  const ParticipantMediaState({
+  const new({
     this.hasMicrophone = false,
     this.isMicrophoneOn = false,
     this.hasCamera = false,

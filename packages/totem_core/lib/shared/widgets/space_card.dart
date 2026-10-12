@@ -53,7 +53,7 @@ MobileSpaceDetailSchema _spaceDetailFromSessionDetailSchema(
 }
 
 class SpaceCard extends StatelessWidget {
-  const SpaceCard({
+  const new({
     required this.space,
     super.key,
     this.compact = false,
@@ -61,7 +61,7 @@ class SpaceCard extends StatelessWidget {
     this.aspectRatio = 1.38,
   });
 
-  factory SpaceCard.fromSessionDetailSchema(
+  factory fromSessionDetailSchema(
     SessionDetailSchema session, {
     bool compact = false,
     VoidCallback? onTap,
@@ -288,9 +288,9 @@ class SpaceCard extends StatelessWidget {
 }
 
 class SmallSpaceCard extends StatelessWidget {
-  const SmallSpaceCard({required this.space, this.onTap, super.key});
+  const new({required this.space, this.onTap, super.key});
 
-  factory SmallSpaceCard.fromSessionDetailSchema(
+  factory fromSessionDetailSchema(
     SessionDetailSchema session, {
     VoidCallback? onTap,
   }) {

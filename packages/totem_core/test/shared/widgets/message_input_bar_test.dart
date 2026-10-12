@@ -67,9 +67,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('message-input-send')));
     await tester.pump();
 
-    check(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-    ).equals('Retry me');
+    check(tester.widget<TextField>(find.byType(TextField)).controller!.text)
+        .equals('Retry me');
     check(tester.takeException()).isNull();
   });
 

@@ -22,7 +22,7 @@ import 'package:totem_core/features/sessions/media/local_media.dart';
 /// [applyCapturePolicy]. Both must agree: a soft unmute does not restart a
 /// track that a hard mute stopped.
 class LiveKitLocalMedia implements LocalMedia {
-  LiveKitLocalMedia({required this.cameraCaptureOptions});
+  new({required this.cameraCaptureOptions});
 
   /// Capture options used when this class creates a camera track.
   final CameraCaptureOptions cameraCaptureOptions;
@@ -281,7 +281,7 @@ class LiveKitLocalMedia implements LocalMedia {
 
 /// [MediaDeviceCatalog] backed by LiveKit's [Hardware] singleton.
 class LiveKitDeviceCatalog implements MediaDeviceCatalog {
-  const LiveKitDeviceCatalog();
+  const new();
 
   @override
   Future<List<MediaDeviceInfo>> devices() async {

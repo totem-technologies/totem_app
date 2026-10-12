@@ -102,9 +102,8 @@ void main() {
     await tester.pump();
 
     check(tester.widgetList(findPendingBadge())).length.equals(1);
-    check(
-      tester.widgetList(find.text('New message from Keeper')),
-    ).length.equals(1);
+    check(tester.widgetList(find.text('New message from Keeper'))).length
+        .equals(1);
     check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
 
     await tester.tap(find.bySemanticsLabel('Chat'));
@@ -155,9 +154,8 @@ void main() {
     container.read(_testLastMessageProvider.notifier).set(message);
     await tester.pump();
 
-    check(
-      tester.widgetList(find.textContaining('New message')),
-    ).length.equals(1);
+    check(tester.widgetList(find.textContaining('New message'))).length
+        .equals(1);
   });
 
   testWidgets('does not show popup while chat is open', (tester) async {
@@ -241,9 +239,8 @@ void main() {
         );
     await tester.pump();
 
-    check(
-      tester.widgetList(find.text('New message from Lucas')),
-    ).length.equals(1);
+    check(tester.widgetList(find.text('New message from Lucas'))).length
+        .equals(1);
   });
 
   testWidgets(
@@ -298,9 +295,8 @@ void main() {
       await tester.pump();
 
       check(tester.widgetList(findPendingBadge())).length.equals(1);
-      check(
-        tester.widgetList(find.textContaining('New message')),
-      ).length.equals(1);
+      check(tester.widgetList(find.textContaining('New message'))).length
+          .equals(1);
 
       container.read(sessionChatThreadTargetProvider.notifier).target = 'lucas';
       await tester.pump();
@@ -399,9 +395,8 @@ void main() {
         );
     await tester.pump();
 
-    check(
-      tester.widgetList(find.textContaining('New message')),
-    ).length.equals(1);
+    check(tester.widgetList(find.textContaining('New message'))).length
+        .equals(1);
 
     await tester.tap(find.bySemanticsLabel('Chat'));
     await tester.pumpAndSettle();

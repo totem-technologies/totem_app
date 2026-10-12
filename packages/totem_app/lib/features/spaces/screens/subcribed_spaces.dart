@@ -163,9 +163,8 @@ class _SubscribedSpaceTileState extends ConsumerState<_SubscribedSpaceTile> {
 
                 try {
                   await ref.read(
-                    unsubscribeFromSpaceProvider(
-                      widget.space.slug.value!,
-                    ).future,
+                    unsubscribeFromSpaceProvider(widget.space.slug.value!)
+                        .future,
                   );
                 } catch (error) {
                   // This is handled internally

@@ -5,9 +5,8 @@ import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics
 
 void main() {
   test('scales off the shortest side, not the longest', () {
-    check(
-      ParticipantOverlayMetrics.forCard(const Size(1200, 260)),
-    ).equals(ParticipantOverlayMetrics.forCard(const Size(260, 1200)));
+    check(ParticipantOverlayMetrics.forCard(const Size(1200, 260)))
+        .equals(ParticipantOverlayMetrics.forCard(const Size(260, 1200)));
   });
 
   test('keeps the badge padding invariant at every size', () {

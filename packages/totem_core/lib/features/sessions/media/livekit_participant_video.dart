@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 @immutable
 class _ParticipantVideoRenderState {
-  const _ParticipantVideoRenderState({
+  const new({
     required this.participant,
     required this.publication,
     required this.track,
@@ -33,7 +33,7 @@ class _ParticipantVideoRenderState {
 /// camera is unpublished or unsubscribed. A muted camera keeps its renderer
 /// mounted so unmuting doesn't flash.
 class LiveKitParticipantVideo extends StatefulWidget {
-  const LiveKitParticipantVideo({
+  const new({
     required this.participant,
     required this.changes,
     this.showStats = false,
@@ -138,10 +138,7 @@ class _LiveKitParticipantVideoState extends State<LiveKitParticipantVideo> {
 }
 
 class _ParticipantVideoStatistics extends StatefulWidget {
-  const _ParticipantVideoStatistics({
-    required this.participant,
-    required this.trackPublication,
-  });
+  const new({required this.participant, required this.trackPublication});
 
   final Participant<TrackPublication<Track>> participant;
   final TrackPublication<Track>? trackPublication;

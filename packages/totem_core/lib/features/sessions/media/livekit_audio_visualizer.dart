@@ -12,7 +12,7 @@ import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 /// Level bars for an [audioTrack], analysed on this device by the LiveKit
 /// SDK visualizer. Restarts the visualizer if it stops reporting.
 class SoundWaveformWidget extends StatefulWidget {
-  const SoundWaveformWidget({
+  const new({
     required this.audioTrack,
     required this.barCount,
     required this.color,

@@ -6,7 +6,7 @@ import 'package:totem_core/shared/assets.dart';
 
 class CardScreen extends StatefulWidget {
   /// Creates a card screen.
-  const CardScreen({
+  const new({
     required this.children,
     this.isLoading = false,
     this.formKey,

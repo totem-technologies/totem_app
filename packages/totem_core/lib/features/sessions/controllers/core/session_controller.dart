@@ -41,10 +41,7 @@ export 'package:totem_core/features/sessions/controllers/utils.dart';
 part 'session_controller.g.dart';
 
 class SessionRoomMetadataResult {
-  const SessionRoomMetadataResult({
-    required this.roomState,
-    required this.lastMetadata,
-  });
+  const new({required this.roomState, required this.lastMetadata});
 
   final RoomState? roomState;
   final String? lastMetadata;

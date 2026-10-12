@@ -3,7 +3,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/shared/totem_icons.dart';
 
 class ActionBarSpeakerButton extends StatelessWidget {
-  const ActionBarSpeakerButton({
+  const new({
     required this.isSpeakerOn,
     required this.onSpeakerToggled,
     super.key,

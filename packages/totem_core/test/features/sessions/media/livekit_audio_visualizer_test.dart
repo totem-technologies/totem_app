@@ -19,9 +19,8 @@ void main() {
           const [0.111, 0.5, 0.9],
         ),
       ).isTrue();
-      check(
-        audioVisualizerSamplesChanged(const [0.1], const [0.1, 0.2]),
-      ).isTrue();
+      check(audioVisualizerSamplesChanged(const [0.1], const [0.1, 0.2]))
+          .isTrue();
     });
 
     test('settles a previously visible waveform to silence', () {
@@ -104,9 +103,8 @@ void main() {
         check(paintedBars(tester).single.color).equals(halfway.color);
         await tester.pump(const Duration(milliseconds: 110));
         check(paintedBars(tester).single.rect.height).equals(10);
-        check(
-          paintedBars(tester).single.color.toARGB32(),
-        ).equals(Colors.red.toARGB32());
+        check(paintedBars(tester).single.color.toARGB32())
+            .equals(Colors.red.toARGB32());
         check(tester.binding.hasScheduledFrame).isFalse();
 
         await pumpBars(tester, List.of(low), size: size);

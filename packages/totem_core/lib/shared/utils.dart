@@ -4,7 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 class SeatsLeftText extends StatelessWidget {
-  const SeatsLeftText({required this.seatsLeft, super.key});
+  const new({required this.seatsLeft, super.key});
 
   final int seatsLeft;
 

@@ -41,7 +41,7 @@ enum ActionBarButtonRole {
 // Two named layouts plus a derived width; not a closed token set.
 // ignore: use_enums
 class _ActionBarMetrics {
-  const _ActionBarMetrics({
+  const new({
     required this.buttonSize,
     required this.iconSize,
     required this.gap,
@@ -81,7 +81,7 @@ class _ActionBarMetrics {
 }
 
 class _ActionBarScope extends InheritedWidget {
-  const _ActionBarScope({
+  const new({
     required this.metrics,
     required this.onLightBackground,
     required super.child,
@@ -121,7 +121,7 @@ bool _onLightBackground(BuildContext context) {
 }
 
 class ActionBarButton extends StatefulWidget {
-  const ActionBarButton({
+  const new({
     required this.child,
     required this.onPressed,
     this.semanticsLabel,
@@ -251,7 +251,7 @@ class _ActionBarButtonState extends State<ActionBarButton> {
 }
 
 class ActionBarShortcut {
-  const ActionBarShortcut({required this.label, required this.logicalKeys});
+  const new({required this.label, required this.logicalKeys});
 
   static const LogicalKeyboardKey microphoneKey = LogicalKeyboardKey.keyZ;
   static const LogicalKeyboardKey cameraKey = LogicalKeyboardKey.keyX;
@@ -287,11 +287,7 @@ class ActionBarShortcut {
 }
 
 class ActionBarTooltip extends StatelessWidget {
-  const ActionBarTooltip({
-    required this.message,
-    required this.child,
-    super.key,
-  });
+  const new({required this.message, required this.child, super.key});
 
   final String message;
   final Widget child;
@@ -321,11 +317,7 @@ class ActionBarTooltip extends StatelessWidget {
 }
 
 class ActionBarShortcutTooltip extends StatelessWidget {
-  const ActionBarShortcutTooltip({
-    required this.shortcut,
-    required this.child,
-    super.key,
-  });
+  const new({required this.shortcut, required this.child, super.key});
 
   final ActionBarShortcut shortcut;
   final Widget child;
@@ -340,7 +332,7 @@ class ActionBarShortcutTooltip extends StatelessWidget {
 }
 
 class ActionBar extends StatelessWidget {
-  const ActionBar({required this.children, super.key});
+  const new({required this.children, super.key});
 
   final List<Widget> children;
 
@@ -435,7 +427,7 @@ class ActionBar extends StatelessWidget {
 
 /// The action bar displayed in the pre join screen.
 class PrejoinActionBar extends ConsumerWidget {
-  const PrejoinActionBar({
+  const new({
     required this.locked,
     required this.microphoneLevel,
     required this.isMicOn,
@@ -506,7 +498,7 @@ class PrejoinActionBar extends ConsumerWidget {
 }
 
 class SessionActionBar extends ConsumerWidget {
-  const SessionActionBar({super.key});
+  const new({super.key});
 
   static final GlobalKey actionBarKey = GlobalKey();
 
@@ -613,7 +605,7 @@ class SessionActionBar extends ConsumerWidget {
 }
 
 class _ActionBarMoreButton extends ConsumerStatefulWidget {
-  const _ActionBarMoreButton();
+  const new();
 
   @override
   ConsumerState<_ActionBarMoreButton> createState() =>

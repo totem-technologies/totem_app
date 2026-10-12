@@ -15,7 +15,7 @@ import 'package:uuid/uuid.dart';
 part 'session_messaging_controller.g.dart';
 
 class SessionChatMessage {
-  const SessionChatMessage({
+  const new({
     required this.message,
     required this.timestamp,
     required this.id,
@@ -24,10 +24,7 @@ class SessionChatMessage {
     this.recipientIdentity,
   });
 
-  factory SessionChatMessage.fromMap(
-    Map<String, dynamic> map,
-    ParticipantInfo? participant,
-  ) {
+  factory fromMap(Map<String, dynamic> map, ParticipantInfo? participant) {
     final recipient = map['recipientIdentity'] as String?;
     return SessionChatMessage(
       message: map['message'] as String,
@@ -113,7 +110,7 @@ enum SessionCommunicationTopics {
   chat('lk-chat-topic'),
   participantRemoved('lk-participant-removed-topic');
 
-  const SessionCommunicationTopics(this.topic);
+  new(this.topic);
   final String topic;
 }
 

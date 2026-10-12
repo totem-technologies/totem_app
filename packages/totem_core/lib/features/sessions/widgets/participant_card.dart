@@ -20,7 +20,7 @@ import 'package:totem_core/shared/widgets/totem_icon.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class FeaturedParticipantCard extends ConsumerWidget {
-  const FeaturedParticipantCard({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -215,7 +215,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
 }
 
 class ParticipantCard extends ConsumerWidget {
-  const ParticipantCard({required this.participant, super.key});
+  const new({required this.participant, super.key});
 
   final ParticipantInfo participant;
 
@@ -321,7 +321,7 @@ class ParticipantCard extends ConsumerWidget {
 }
 
 class ParticipantVideo extends ConsumerWidget {
-  const ParticipantVideo({required this.participant, super.key});
+  const new({required this.participant, super.key});
 
   final ParticipantInfo participant;
 
@@ -332,9 +332,8 @@ class ParticipantVideo extends ConsumerWidget {
       authControllerProvider.select((auth) => auth.user?.isStaff == true),
     );
     final isCameraOn = ref.watch(
-      participantMediaStateProvider(
-        participant.identity,
-      ).select((state) => state.value?.isCameraOn ?? false),
+      participantMediaStateProvider(participant.identity)
+          .select((state) => state.value?.isCameraOn ?? false),
     );
     const avatarInset = 1.0;
     final avatar = IgnorePointer(
@@ -367,7 +366,7 @@ class ParticipantVideo extends ConsumerWidget {
 }
 
 class _ParticipantVideoAvatar extends StatelessWidget {
-  const _ParticipantVideoAvatar({required this.identity});
+  const new({required this.identity});
 
   final String identity;
 

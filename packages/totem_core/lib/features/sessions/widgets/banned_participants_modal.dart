@@ -29,11 +29,7 @@ Future<void> showBannedParticipantsModal(
 }
 
 class BannedParticipants extends ConsumerStatefulWidget {
-  const BannedParticipants({
-    required this.session,
-    required this.state,
-    super.key,
-  });
+  const new({required this.session, required this.state, super.key});
 
   final SessionController session;
   final SessionRoomState state;
@@ -154,7 +150,7 @@ class _BannedParticipantsState extends ConsumerState<BannedParticipants> {
 }
 
 class _BannedParticipantItem extends ConsumerStatefulWidget {
-  const _BannedParticipantItem({
+  const new({
     required this.participantSlug,
     required this.session,
     required this.onUnbanned,

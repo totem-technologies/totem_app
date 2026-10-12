@@ -12,7 +12,7 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class ParticipantControlButton extends ConsumerStatefulWidget {
-  const ParticipantControlButton({
+  const new({
     required this.participant,
     required this.menuVerticalOffset,
     required this.metrics,

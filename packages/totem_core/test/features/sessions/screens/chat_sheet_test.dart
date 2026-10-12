@@ -28,7 +28,7 @@ import '../media/test_participants.dart';
 import '../session_test_mocks.dart';
 
 class _TestMessagesNotifier extends Notifier<List<SessionChatMessage>> {
-  _TestMessagesNotifier(this._initial);
+  new(this._initial);
 
   final List<SessionChatMessage> _initial;
 
@@ -42,10 +42,7 @@ class _TestMessagesNotifier extends Notifier<List<SessionChatMessage>> {
 }
 
 class _ChatSheetHarness {
-  const _ChatSheetHarness({
-    required this.container,
-    required this.messagesProvider,
-  });
+  const new({required this.container, required this.messagesProvider});
 
   final ProviderContainer container;
   final NotifierProvider<_TestMessagesNotifier, List<SessionChatMessage>>
@@ -325,16 +322,15 @@ void main() {
       );
 
       check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
-      check(
-        tester.widgetList(find.text('Only you can post messages here')),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('Only you can post messages here')))
+          .length
+          .equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
       check(tester.widgetList(find.text('Message everyone'))).length.equals(1);
       check(tester.widgetList(find.byType(TextField))).length.equals(1);
       check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(0);
-      check(
-        tester.widgetList(find.text('Please mute your mic')),
-      ).length.equals(0);
+      check(tester.widgetList(find.text('Please mute your mic'))).length
+          .equals(0);
     });
 
     testWidgets('keeps the composer above the keyboard', (tester) async {
@@ -354,9 +350,8 @@ void main() {
         useScaffold: false,
       );
 
-      check(
-        tester.getBottomLeft(find.byType(MessageInputBar)).dy <= 500,
-      ).isTrue();
+      check(tester.getBottomLeft(find.byType(MessageInputBar)).dy <= 500)
+          .isTrue();
     });
 
     testWidgets('renders own and received messages as MessageBubbles', (
@@ -609,9 +604,8 @@ void main() {
       ]);
       await tester.pumpAndSettle();
 
-      check(
-        controller.position.pixels,
-      ).equals(controller.position.maxScrollExtent);
+      check(controller.position.pixels)
+          .equals(controller.position.maxScrollExtent);
     });
 
     testWidgets('long messages scroll clear of the hint and the thread chip', (
@@ -776,16 +770,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Everyone').last);
       await tester.pumpAndSettle();
-      check(
-        tester.widgetList(find.textContaining('only you can post')),
-      ).length.equals(1);
+      check(tester.widgetList(find.textContaining('only you can post'))).length
+          .equals(1);
 
-      check(
-        tester.widgetList(find.text('Checking in privately')),
-      ).length.equals(0);
-      check(
-        tester.widget<TextField>(find.byType(TextField)).controller?.text,
-      ).equals('');
+      check(tester.widgetList(find.text('Checking in privately'))).length
+          .equals(0);
+      check(tester.widget<TextField>(find.byType(TextField)).controller?.text)
+          .equals('');
     });
 
     testWidgets('keeps the composer text when the send is rejected', (

@@ -73,7 +73,7 @@ class JoinMediaOwner {
 }
 
 class JoinMediaReceipt {
-  JoinMediaReceipt._(this._owner, this._tracks);
+  new _(this._owner, this._tracks);
 
   final JoinMediaOwner _owner;
   final List<LocalTrack> _tracks;

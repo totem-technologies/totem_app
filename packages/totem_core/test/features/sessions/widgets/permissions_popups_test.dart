@@ -197,9 +197,9 @@ void main() {
       check(controller)
           .has((value) => value!.microphoneRequests, 'microphoneRequests')
           .equals(1);
-      check(
-        controller,
-      ).has((value) => value!.cameraRequests, 'cameraRequests').equals(1);
+      check(controller)
+          .has((value) => value!.cameraRequests, 'cameraRequests')
+          .equals(1);
     });
   });
 
@@ -227,9 +227,8 @@ void main() {
       await tester.pumpAndSettle();
 
       check(result).equals(true);
-      check(
-        tester.widgetList(find.byType(PermissionsRequestSheet)),
-      ).length.equals(0);
+      check(tester.widgetList(find.byType(PermissionsRequestSheet))).length
+          .equals(0);
     });
 
     testWidgets('returns false when dismissed', (tester) async {

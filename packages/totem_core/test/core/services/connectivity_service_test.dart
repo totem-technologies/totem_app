@@ -9,16 +9,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 
-class _MockConnectivity extends Mock implements Connectivity {}
+class _MockConnectivity extends Mock implements Connectivity;
 
 class _ConnectivityHarness {
-  _ConnectivityHarness({
-    required AsyncValueGetter<List<ConnectivityResult>> checkConnectivity,
-  }) {
+  new({required AsyncValueGetter<List<ConnectivityResult>> checkConnectivity}) {
     when(connectivity.checkConnectivity).thenAnswer((_) => checkConnectivity());
-    when(
-      () => connectivity.onConnectivityChanged,
-    ).thenAnswer((_) => changes.stream);
+    when(() => connectivity.onConnectivityChanged)
+        .thenAnswer((_) => changes.stream);
 
     container = ProviderContainer(
       overrides: [connectivityProvider.overrideWithValue(connectivity)],
@@ -49,15 +46,13 @@ void main() {
   group('isOfflineConnectivity', () {
     test('treats empty and none results as offline', () {
       check(isOfflineConnectivity(const [])).equals(true);
-      check(
-        isOfflineConnectivity(const [ConnectivityResult.none]),
-      ).equals(true);
+      check(isOfflineConnectivity(const [ConnectivityResult.none]))
+          .equals(true);
     });
 
     test('treats available transports as online', () {
-      check(
-        isOfflineConnectivity(const [ConnectivityResult.wifi]),
-      ).equals(false);
+      check(isOfflineConnectivity(const [ConnectivityResult.wifi]))
+          .equals(false);
       check(
         isOfflineConnectivity(const [
           ConnectivityResult.wifi,
@@ -156,9 +151,8 @@ void main() {
       final changes = harness.changes;
       final values = harness.values;
 
-      check(
-        await harness.container.read(isOfflineProvider.future),
-      ).equals(false);
+      check(await harness.container.read(isOfflineProvider.future))
+          .equals(false);
 
       changes.add(const [ConnectivityResult.none]);
       await tester.pump();
@@ -185,9 +179,8 @@ void main() {
       final changes = harness.changes;
       final values = harness.values;
 
-      check(
-        await harness.container.read(isOfflineProvider.future),
-      ).equals(false);
+      check(await harness.container.read(isOfflineProvider.future))
+          .equals(false);
 
       changes.add(const [ConnectivityResult.none]);
       await tester.pump(const Duration(milliseconds: 500));

@@ -11,7 +11,7 @@ final localStorageServiceProvider = Provider<LocalStorageService>((ref) {
 }, name: 'Local Storage Service Provider');
 
 class LocalStorageService {
-  const LocalStorageService(this._secureStorage);
+  const new(this._secureStorage);
 
   final SecureStorage _secureStorage;
 

@@ -17,19 +17,16 @@ void main() {
       final notifier = container.read(
         composeToParticipantsProvider('session-1').notifier,
       )..seedRecipients(['a', 'b', 'c']);
-      check(
-        container.read(composeToParticipantsProvider('session-1')).selected,
-      ).deepEquals({'a', 'b', 'c'});
+      check(container.read(composeToParticipantsProvider('session-1')).selected)
+          .deepEquals({'a', 'b', 'c'});
 
       notifier.toggleRecipient('b');
-      check(
-        container.read(composeToParticipantsProvider('session-1')).selected,
-      ).deepEquals({'a', 'c'});
+      check(container.read(composeToParticipantsProvider('session-1')).selected)
+          .deepEquals({'a', 'c'});
 
       notifier.toggleRecipient('b');
-      check(
-        container.read(composeToParticipantsProvider('session-1')).selected,
-      ).deepEquals({'a', 'b', 'c'});
+      check(container.read(composeToParticipantsProvider('session-1')).selected)
+          .deepEquals({'a', 'b', 'c'});
     });
 
     test('seedRecipients is a no-op after the first call', () {
@@ -38,9 +35,8 @@ void main() {
         ..toggleRecipient('a')
         ..seedRecipients(['a', 'b', 'c']);
 
-      check(
-        container.read(composeToParticipantsProvider('session-1')).selected,
-      ).deepEquals({'b'});
+      check(container.read(composeToParticipantsProvider('session-1')).selected)
+          .deepEquals({'b'});
     });
 
     test('families are isolated by session slug', () {
@@ -51,12 +47,10 @@ void main() {
           .read(composeToParticipantsProvider('session-b').notifier)
           .seedRecipients(['b']);
 
-      check(
-        container.read(composeToParticipantsProvider('session-a')).selected,
-      ).deepEquals({'a'});
-      check(
-        container.read(composeToParticipantsProvider('session-b')).selected,
-      ).deepEquals({'b'});
+      check(container.read(composeToParticipantsProvider('session-a')).selected)
+          .deepEquals({'a'});
+      check(container.read(composeToParticipantsProvider('session-b')).selected)
+          .deepEquals({'b'});
     });
   });
 }

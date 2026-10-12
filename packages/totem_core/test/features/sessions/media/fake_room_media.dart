@@ -51,14 +51,14 @@ class FakeRoomMedia implements RoomMedia {
 }
 
 class FakeLocalMicrophoneLevel extends StatelessWidget {
-  const FakeLocalMicrophoneLevel({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => const SizedBox.expand();
 }
 
 class FakeVideoView extends StatelessWidget {
-  const FakeVideoView({required this.participant, super.key});
+  const new({required this.participant, super.key});
 
   final ParticipantInfo participant;
 
@@ -67,7 +67,7 @@ class FakeVideoView extends StatelessWidget {
 }
 
 class FakeMicrophoneLevel extends StatelessWidget {
-  const FakeMicrophoneLevel({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => const SizedBox.shrink();

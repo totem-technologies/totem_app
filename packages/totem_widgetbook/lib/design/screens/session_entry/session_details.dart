@@ -224,8 +224,7 @@ class SessionDetails extends StatelessWidget {
             const TextSpan(text: 'You can join beginning at '),
             TextSpan(text: joinTime, style: strong),
             const TextSpan(
-              text:
-                  '. In the meantime, grab some water, get comfortable, or review our ',
+              text: '. In the meantime, grab some water, get comfortable, or review our ',
             ),
             Button.inlineSpan(
               text: 'Community Guidelines',

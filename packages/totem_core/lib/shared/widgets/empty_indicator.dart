@@ -2,12 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 class EmptyIndicator extends StatelessWidget {
-  const EmptyIndicator({
-    super.key,
-    this.text,
-    this.icon = TotemIcons.lock,
-    this.onRetry,
-  });
+  const new({super.key, this.text, this.icon = TotemIcons.lock, this.onRetry});
 
   final String? text;
   final TotemIconData icon;
