@@ -40,20 +40,18 @@ class FakeRoomMedia implements RoomMedia {
     required Color color,
     required double iconSize,
     int barCount = 3,
-  }) => FakeMicrophoneLevel(participant: participant, barCount: barCount);
+  }) => const FakeMicrophoneLevel();
 
   @override
   Widget localMicrophoneLevel({
     required Color color,
     required double iconSize,
     int barCount = 3,
-  }) => FakeLocalMicrophoneLevel(barCount: barCount);
+  }) => const FakeLocalMicrophoneLevel();
 }
 
 class FakeLocalMicrophoneLevel extends StatelessWidget {
-  const FakeLocalMicrophoneLevel({required this.barCount, super.key});
-
-  final int barCount;
+  const FakeLocalMicrophoneLevel({super.key});
 
   @override
   Widget build(BuildContext context) => const SizedBox.expand();
@@ -69,14 +67,7 @@ class FakeVideoView extends StatelessWidget {
 }
 
 class FakeMicrophoneLevel extends StatelessWidget {
-  const FakeMicrophoneLevel({
-    required this.participant,
-    required this.barCount,
-    super.key,
-  });
-
-  final ParticipantInfo participant;
-  final int barCount;
+  const FakeMicrophoneLevel({super.key});
 
   @override
   Widget build(BuildContext context) => const SizedBox.shrink();

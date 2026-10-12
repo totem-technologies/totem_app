@@ -16,8 +16,6 @@ class ActionBarMicButton extends StatefulWidget {
     required this.onToggle,
     this.microphoneLevel,
     this.requiresUnmuteConfirmation = false,
-    this.indicatorColor,
-    this.indicatorBarCount = 5,
     super.key,
   });
 
@@ -29,8 +27,6 @@ class ActionBarMicButton extends StatefulWidget {
   final MicrophoneLevelBuilder? microphoneLevel;
 
   final bool requiresUnmuteConfirmation;
-  final Color? indicatorColor;
-  final int indicatorBarCount;
 
   @override
   State<ActionBarMicButton> createState() => _ActionBarMicButtonState();
@@ -93,11 +89,9 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
                 return microphoneLevel(
                   // Follow the action-bar ghost color so prejoin cream-on-cream
                   // doesn't eat the bars.
-                  widget.indicatorColor ??
-                      IconTheme.of(context).color ??
-                      AppTheme.cream,
+                  IconTheme.of(context).color ?? AppTheme.cream,
                   IconTheme.of(context).size ?? 20,
-                  widget.indicatorBarCount,
+                  5,
                 );
               },
             )

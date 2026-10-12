@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/features/sessions/media/livekit_support.dart';
 import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
@@ -41,8 +42,7 @@ class _LiveKitSpeakerLevelState extends State<LiveKitSpeakerLevel> {
 
   ({bool microphoneOn, double level}) _read() {
     final participant = widget.participant();
-    final microphoneOn =
-        participant != null && participant.hasAudio && !participant.isMuted;
+    final microphoneOn = participant != null && isMicrophoneOn(participant);
     final level = microphoneOn && participant.isSpeaking
         ? participant.audioLevel
         : 0.0;

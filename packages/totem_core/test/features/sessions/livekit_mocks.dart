@@ -165,10 +165,8 @@ class MockRemoteParticipant extends Mock implements RemoteParticipant {
   @override
   bool get hasVideo => false;
 
-  bool audioMuted = false;
-
   @override
-  bool get isMuted => audioMuted;
+  bool get isMuted => false;
 
   @override
   List<RemoteTrackPublication<RemoteVideoTrack>> get videoTrackPublications =>
@@ -183,32 +181,6 @@ class MockRemoteParticipant extends Mock implements RemoteParticipant {
   EventsListener<ParticipantEvent> createListener({
     bool synchronized = false,
   }) => listener;
-}
-
-class MockRemoteAudioTrack extends Mock implements RemoteAudioTrack {
-  MockRemoteAudioTrack({bool muted = false, bool isActive = true})
-    : _muted = muted,
-      _isActive = isActive {
-    when(() => this.muted).thenAnswer((_) => _muted);
-    when(() => this.isActive).thenAnswer((_) => _isActive);
-    when(start).thenAnswer((_) async => true);
-    when(stop).thenAnswer((_) async => true);
-    when(dispose).thenAnswer((_) async => true);
-  }
-
-  bool _muted;
-  bool _isActive;
-  final CapturingTrackEventsListener trackListener =
-      CapturingTrackEventsListener();
-
-  // ignore: use_setters_to_change_properties
-  void setMuted(bool value) {
-    _muted = value;
-  }
-
-  @override
-  EventsListener<TrackEvent> createListener({bool synchronized = false}) =>
-      trackListener;
 }
 
 class MockTrackMutedEvent extends Mock implements TrackMutedEvent {}
@@ -423,13 +395,17 @@ class MockTrackEventsListener extends Mock
 }
 
 class CapturingTrackEventsListener extends MockTrackEventsListener {
-  void Function(TrackEvent event)? capturedListener;
+  final _listeners = <void Function(TrackEvent event)>[];
 
   @override
   CancelListenFunc listen(void Function(TrackEvent event) listener) {
-    capturedListener = listener;
-    return () async {};
+    _listeners.add(listener);
+    return () async => _listeners.remove(listener);
   }
 
-  void emit(TrackEvent event) => capturedListener?.call(event);
+  void emit(TrackEvent event) {
+    for (final listener in List.of(_listeners)) {
+      listener(event);
+    }
+  }
 }

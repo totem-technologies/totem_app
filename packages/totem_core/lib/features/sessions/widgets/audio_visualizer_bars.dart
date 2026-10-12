@@ -8,63 +8,36 @@ import 'package:totem_core/core/utils/frame_paced_ticker.dart';
 class AudioVisualizerWidgetOptions {
   const AudioVisualizerWidgetOptions({
     this.barCount = 7,
-    this.centeredBands = true,
-    this.width = 12,
-    this.minHeight = 12,
-    this.maxHeight = 100,
+    this.maxHeight = double.infinity,
     this.durationInMilliseconds = 500,
-    this.color,
     this.spacing = 5,
     this.cornerRadius = 9999,
-    this.barMinOpacity = 0.2,
   });
   final int barCount;
-  final bool centeredBands;
-  final double width;
-  final double minHeight;
   final double maxHeight;
   final int durationInMilliseconds;
-  final Color? color;
   final double spacing;
   final double cornerRadius;
-  final double barMinOpacity;
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is AudioVisualizerWidgetOptions &&
         other.barCount == barCount &&
-        other.centeredBands == centeredBands &&
-        other.width == width &&
-        other.minHeight == minHeight &&
         other.maxHeight == maxHeight &&
         other.durationInMilliseconds == durationInMilliseconds &&
-        other.color == color &&
         other.spacing == spacing &&
-        other.cornerRadius == cornerRadius &&
-        other.barMinOpacity == barMinOpacity;
+        other.cornerRadius == cornerRadius;
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
-      barCount,
-      centeredBands,
-      width,
-      minHeight,
-      maxHeight,
-      durationInMilliseconds,
-      color,
-      spacing,
-      cornerRadius,
-      barMinOpacity,
-    );
-  }
-}
-
-extension AudioVisualizerColor on AudioVisualizerWidgetOptions {
-  Color computeColor(BuildContext ctx) =>
-      color ?? Theme.of(ctx).colorScheme.primary;
+  int get hashCode => Object.hash(
+    barCount,
+    maxHeight,
+    durationInMilliseconds,
+    spacing,
+    cornerRadius,
+  );
 }
 
 class BarsViewItem {

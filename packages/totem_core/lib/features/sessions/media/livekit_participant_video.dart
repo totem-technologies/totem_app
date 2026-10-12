@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:material_ui/material_ui.dart';
@@ -5,10 +7,12 @@ import 'package:material_ui/material_ui.dart';
 @immutable
 class _ParticipantVideoRenderState {
   const _ParticipantVideoRenderState({
+    required this.participant,
     required this.publication,
     required this.track,
   });
 
+  final Participant? participant;
   final TrackPublication<Track>? publication;
   final VideoTrack? track;
 
@@ -22,7 +26,7 @@ class _ParticipantVideoRenderState {
   }
 
   @override
-  int get hashCode => Object.hash(publication, track);
+  int get hashCode => Object.hash(participant, publication, track);
 }
 
 /// A LiveKit participant's camera video, filling its parent. Empty while the
@@ -31,11 +35,17 @@ class _ParticipantVideoRenderState {
 class LiveKitParticipantVideo extends StatefulWidget {
   const LiveKitParticipantVideo({
     required this.participant,
+    required this.changes,
     this.showStats = false,
     super.key,
   });
 
-  final Participant<TrackPublication<Track>> participant;
+  /// Looks up the participant on every change, so the video follows them
+  /// across a rejoin.
+  final Participant? Function() participant;
+
+  /// Emits whenever a participant's tracks may have changed.
+  final Stream<void> changes;
 
   /// Adds a tap-to-toggle overlay with stream statistics.
   final bool showStats;
@@ -46,99 +56,54 @@ class LiveKitParticipantVideo extends StatefulWidget {
 }
 
 class _LiveKitParticipantVideoState extends State<LiveKitParticipantVideo> {
-  late _ParticipantVideoRenderState _renderState = _readRenderState();
+  late _ParticipantVideoRenderState _renderState = _read();
+  StreamSubscription<void>? _subscription;
 
-  EventsListener<ParticipantEvent>? _listener;
-  void _setupListeners() {
-    _listener?.dispose();
-    _listener = widget.participant.createListener()
-      ..on<TrackPublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<TrackUnpublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<TrackSubscribedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<TrackUnsubscribedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<LocalTrackPublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<LocalTrackUnpublishedEvent>(
-        (event) => _onCameraPublicationChanged(event.publication),
-      )
-      ..on<TrackMutedEvent>(_onTrackMuted)
-      ..on<TrackUnmutedEvent>(_onTrackUnmuted);
-  }
-
-  void _onCameraPublicationChanged(TrackPublication<Track> publication) {
-    if (!mounted || publication.source != TrackSource.camera) return;
-
-    final nextState = _readRenderState();
-    if (nextState == _renderState) return;
-    setState(() => _renderState = nextState);
-  }
-
-  void _onTrackMuted(TrackMutedEvent event) {
-    _onCameraPublicationChanged(event.publication);
-  }
-
-  void _onTrackUnmuted(TrackUnmutedEvent event) {
-    _onCameraPublicationChanged(event.publication);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _setupListeners();
-  }
-
-  @override
-  void didUpdateWidget(covariant LiveKitParticipantVideo oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.participant.sid != widget.participant.sid) {
-      _setupListeners();
-      _renderState = _readRenderState();
-    }
-  }
-
-  @override
-  void dispose() {
-    _listener?.dispose();
-    super.dispose();
-  }
-
-  TrackPublication<Track>? get videoTrack {
-    if (widget.participant is RemoteParticipant) {
-      return widget.participant.getTrackPublicationBySource(TrackSource.camera);
-    } else if (widget.participant is LocalParticipant) {
-      return (widget.participant as LocalParticipant)
-              .getTrackPublicationBySource(TrackSource.camera) ??
-          widget.participant.videoTrackPublications
-              .where((t) => t.track != null)
-              .firstOrNull;
-    } else {
-      return widget.participant.videoTrackPublications
-          .where((t) => t.track != null)
-          .firstOrNull;
-    }
-  }
-
-  _ParticipantVideoRenderState _readRenderState() {
-    final publication = videoTrack;
+  _ParticipantVideoRenderState _read() {
+    final participant = widget.participant();
+    final publication = participant?.getTrackPublicationBySource(
+      TrackSource.camera,
+    );
     final track = publication?.track;
     return _ParticipantVideoRenderState(
+      participant: participant,
       publication: publication,
       track: track is VideoTrack ? track : null,
     );
   }
 
+  void _listen() {
+    unawaited(_subscription?.cancel());
+    _subscription = widget.changes.listen((_) {
+      final next = _read();
+      if (next == _renderState || !mounted) return;
+      setState(() => _renderState = next);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _listen();
+  }
+
+  @override
+  void didUpdateWidget(covariant LiveKitParticipantVideo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.changes != widget.changes) _listen();
+    _renderState = _read();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_subscription?.cancel());
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final renderState = _renderState;
+    final participant = renderState.participant;
     final trackPublication = renderState.publication;
 
     final content = Stack(
@@ -155,7 +120,7 @@ class _LiveKitParticipantVideoState extends State<LiveKitParticipantVideo> {
       ],
     );
 
-    if (!widget.showStats) return content;
+    if (!widget.showStats || participant == null) return content;
 
     return Stack(
       fit: StackFit.expand,
@@ -163,7 +128,7 @@ class _LiveKitParticipantVideoState extends State<LiveKitParticipantVideo> {
         content,
         Positioned.fill(
           child: _ParticipantVideoStatistics(
-            participant: widget.participant,
+            participant: participant,
             trackPublication: trackPublication,
           ),
         ),

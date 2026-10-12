@@ -130,6 +130,14 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       ..invalidate(sessionChatThreadTargetProvider)
       ..invalidate(sessionChatUnreadThreadsProvider);
 
+    // Closing the tab skips the leave flow, so leave as the page unloads.
+    ref.listenManual(currentSessionProvider, (_, session) {
+      final handler = session?.leaveOnPageExit;
+      if (handler == _pageExitHandler) return;
+      _pageExitHandler = handler;
+      TotemRouter.instance.setPageExitHandler(handler);
+    }, fireImmediately: true);
+
     _listenToBatteryChanges();
     _warmEmojiGlyphs();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -414,12 +422,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final currentSession = ref.watch(currentSessionProvider);
-    // Closing the tab skips the leave flow, so leave as the page unloads.
-    final pageExitHandler = currentSession?.leaveOnPageExit;
-    if (pageExitHandler != _pageExitHandler) {
-      _pageExitHandler = pageExitHandler;
-      TotemRouter.instance.setPageExitHandler(pageExitHandler);
-    }
     final currentRoomScreen = ref.watch(resolveCurrentScreenProvider)!;
     final currentSessionEvent = ref.watch(currentSessionEventProvider);
     final hasKeeperDisconnected = ref.watch(hasKeeperDisconnectedProvider);

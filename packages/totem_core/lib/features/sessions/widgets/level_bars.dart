@@ -36,22 +36,15 @@ class LevelBars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => RepaintBoundary(
-        child: BarsView(
-          options: AudioVisualizerWidgetOptions(
-            color: color,
-            barCount: levels.length,
-            barMinOpacity: 0.8,
-            spacing: 2.5,
-            minHeight: constraints.maxHeight * 0.2,
-            maxHeight: constraints.maxHeight,
-          ),
-          elements: [
-            for (final level in levels)
-              BarsViewItem(value: level, color: color),
-          ],
+    return RepaintBoundary(
+      child: BarsView(
+        options: AudioVisualizerWidgetOptions(
+          barCount: levels.length,
+          spacing: 2.5,
         ),
+        elements: [
+          for (final level in levels) BarsViewItem(value: level, color: color),
+        ],
       ),
     );
   }

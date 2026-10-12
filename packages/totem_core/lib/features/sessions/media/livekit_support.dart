@@ -19,6 +19,21 @@ bool isTrackLive(TrackPublication publication) {
   return (track?.isActive ?? true) && !(track?.muted ?? publication.muted);
 }
 
+/// Whether [participant] publishes a microphone and has it unmuted.
+bool isMicrophoneOn(Participant participant) =>
+    participant.hasAudio && !participant.isMuted;
+
+final _trackChanges = Expando<Stream<void>>();
+
+/// Emits on every event from [track], such as mute changes. Returns the same
+/// stream for the same track, so widgets can compare it across rebuilds.
+Stream<void> trackChanges(Track track) =>
+    _trackChanges[track] ??= Stream<void>.multi((controller) {
+      final listener = track.createListener()
+        ..listen((_) => controller.addSync(null));
+      controller.onCancel = listener.dispose;
+    }, isBroadcast: true);
+
 /// Follows whichever [Room] is attached and reports changes from it.
 ///
 /// The session controller attaches each new room, so subscribers to

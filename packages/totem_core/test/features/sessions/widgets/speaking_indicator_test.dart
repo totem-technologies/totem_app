@@ -37,21 +37,6 @@ void main() {
   );
 
   group('SpeakingIndicator', () {
-    testWidgets('shows the room media level for the participant', (
-      tester,
-    ) async {
-      await pumpWidget(
-        tester,
-        child: SpeakingIndicator(participant: remoteParticipant, barCount: 4),
-      );
-
-      final level = tester.widget<FakeMicrophoneLevel>(
-        find.byType(FakeMicrophoneLevel),
-      );
-      check(level.participant).equals(remoteParticipant);
-      check(level.barCount).equals(4);
-    });
-
     testWidgets('shows the muted icon outside a session', (tester) async {
       await tester.pumpWidget(
         ProviderScope(

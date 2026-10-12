@@ -12,9 +12,8 @@ import 'package:totem_core/features/sessions/media/room_media.dart';
 /// The session controller owns one instance for its lifetime and attaches
 /// each new [Room] to it.
 class LiveKitRoomMedia implements RoomMedia {
-  // The room re-emits every participant's track and mute events. Speaker
-  // changes carry the server's audio levels for the level bars.
-  final _binding = LiveKitRoomBinding(
+  // The room re-emits every participant's track and mute events.
+  final _media = LiveKitRoomBinding(
     (listener, notify) => listener
       ..on<RoomConnectedEvent>((_) => notify())
       ..on<RoomDisconnectedEvent>((_) => notify())
@@ -27,14 +26,32 @@ class LiveKitRoomMedia implements RoomMedia {
       ..on<LocalTrackPublishedEvent>((_) => notify())
       ..on<LocalTrackUnpublishedEvent>((_) => notify())
       ..on<TrackMutedEvent>((_) => notify())
-      ..on<TrackUnmutedEvent>((_) => notify())
-      ..on<ActiveSpeakersChangedEvent>((_) => notify()),
+      ..on<TrackUnmutedEvent>((_) => notify()),
   );
 
-  void attach(Room? room) => _binding.attach(room);
+  // Speaker updates arrive several times a second while anyone talks, so
+  // they get their own binding and only wake the level bars.
+  final _speakers = LiveKitRoomBinding(
+    (listener, notify) =>
+        listener.on<ActiveSpeakersChangedEvent>((_) => notify()),
+  );
+
+  late final Stream<void> _levelChanges = Stream<void>.multi((controller) {
+    final subscriptions = [
+      _media.changes.listen(controller.addSync),
+      _speakers.changes.listen(controller.addSync),
+    ];
+    controller.onCancel = () =>
+        Future.wait([for (final s in subscriptions) s.cancel()]);
+  }, isBroadcast: true);
+
+  void attach(Room? room) {
+    _media.attach(room);
+    _speakers.attach(room);
+  }
 
   Participant? _participant(String identity) =>
-      _binding.room?.getParticipantByIdentity(identity);
+      _media.room?.getParticipantByIdentity(identity);
 
   ParticipantMediaState _stateOf(String identity) {
     final participant = _participant(identity);
@@ -51,7 +68,7 @@ class LiveKitRoomMedia implements RoomMedia {
             : !(camera.track?.muted ?? camera.muted));
     return ParticipantMediaState(
       hasMicrophone: participant.hasAudio,
-      isMicrophoneOn: participant.hasAudio && !participant.isMuted,
+      isMicrophoneOn: isMicrophoneOn(participant),
       hasCamera: participant.hasVideo,
       isCameraOn: participant.hasVideo && isCameraOn,
     );
@@ -62,7 +79,7 @@ class LiveKitRoomMedia implements RoomMedia {
     return Stream.multi((controller) {
       var last = _stateOf(identity);
       controller.add(last);
-      final subscription = _binding.changes.listen((_) {
+      final subscription = _media.changes.listen((_) {
         final next = _stateOf(identity);
         if (next == last) return;
         last = next;
@@ -74,9 +91,11 @@ class LiveKitRoomMedia implements RoomMedia {
 
   @override
   Widget video(ParticipantInfo participant, {bool showStats = false}) {
-    final media = _participant(participant.identity);
-    if (media == null) return const SizedBox.shrink();
-    return LiveKitParticipantVideo(participant: media, showStats: showStats);
+    return LiveKitParticipantVideo(
+      participant: () => _participant(participant.identity),
+      changes: _media.changes,
+      showStats: showStats,
+    );
   }
 
   @override
@@ -88,7 +107,7 @@ class LiveKitRoomMedia implements RoomMedia {
   }) {
     return LiveKitSpeakerLevel(
       participant: () => _participant(participant.identity),
-      changes: _binding.changes,
+      changes: _levelChanges,
       color: color,
       iconSize: iconSize,
       barCount: barCount,
@@ -102,10 +121,19 @@ class LiveKitRoomMedia implements RoomMedia {
     int barCount = 3,
   }) {
     return LiveKitMicrophoneLevel(
-      participant: _binding.room?.localParticipant,
-      foregroundColor: color,
+      track: _localMicrophoneTrack,
+      changes: _media.changes,
+      color: color,
       barCount: barCount,
       iconSize: iconSize,
     );
+  }
+
+  AudioTrack? _localMicrophoneTrack() {
+    final publication = _media.room?.localParticipant
+        ?.getTrackPublicationBySource(TrackSource.microphone);
+    if (publication == null || !isTrackLive(publication)) return null;
+    final track = publication.track;
+    return track is LocalAudioTrack ? track : null;
   }
 }

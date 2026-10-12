@@ -9,15 +9,11 @@ import 'package:totem_core/shared/totem_icons.dart';
 class SpeakingIndicator extends ConsumerWidget {
   const SpeakingIndicator({
     required this.participant,
-    this.foregroundColor = Colors.white,
-    this.barCount = 3,
     this.iconSize = 20,
     super.key,
   });
 
   final ParticipantInfo participant;
-  final Color foregroundColor;
-  final int barCount;
 
   /// Mic-off glyph size. Defaults to 20 so this widget stays overlay-agnostic.
   final double iconSize;
@@ -29,14 +25,13 @@ class SpeakingIndicator extends ConsumerWidget {
       return TotemIcon(
         TotemIcons.microphoneOff,
         size: iconSize,
-        color: foregroundColor,
+        color: Colors.white,
       );
     }
     return media.microphoneLevel(
       participant,
-      color: foregroundColor,
+      color: Colors.white,
       iconSize: iconSize,
-      barCount: barCount,
     );
   }
 }

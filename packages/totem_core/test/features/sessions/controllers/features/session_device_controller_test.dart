@@ -260,16 +260,25 @@ void main() {
       check(deviceState().cameraFacing).equals(CameraFacing.back);
     });
 
-    test('resetSpeakerRoutingDefaults resets preferences', () {
-      final devices = controller()..resetSpeakerRoutingDefaults();
-      check(devices.userSpeakerPreference).equals(true);
-    });
+    test(
+      'choosing the speaker routes audio and becomes the preference',
+      () async {
+        final devices = controller();
 
-    test('disposed controller rejects late device listener setup', () async {
+        await devices.setSpeakerphone(false);
+
+        check(media.isSpeakerOutputPreferred).isFalse();
+        check(devices.userSpeakerPreference).isFalse();
+      },
+    );
+
+    test('joining a session replaces an earlier speaker choice', () async {
       final devices = controller();
+      await devices.setSpeakerphone(false);
 
-      await devices.dispose();
-      await devices.setupDeviceChangeListener();
+      devices.resetSpeakerRoutingDefaults();
+
+      check(devices.userSpeakerPreference).isTrue();
     });
   });
 }

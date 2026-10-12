@@ -61,9 +61,9 @@ class PreJoinView extends StatelessWidget {
         locked: locked,
         microphoneLevel: previewAudioTrack == null
             ? null
-            : (color, iconSize, barCount) => LiveKitMicrophoneLevel(
-                audioTrack: previewAudioTrack,
-                foregroundColor: color,
+            : (color, iconSize, barCount) => LiveKitMicrophoneLevel.preview(
+                previewAudioTrack,
+                color: color,
                 iconSize: iconSize,
                 barCount: barCount,
               ),

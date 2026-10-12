@@ -7,28 +7,24 @@ import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' as sdk;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_core/core/utils/frame_paced_ticker.dart';
+import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 
-import 'package:totem_core/features/sessions/widgets/audio_visualizer_bars.dart';
-
-enum VisualizerState { thinking, listening, active }
-
+/// Level bars for an [audioTrack], analysed on this device by the LiveKit
+/// SDK visualizer. Restarts the visualizer if it stops reporting.
 class SoundWaveformWidget extends StatefulWidget {
   const SoundWaveformWidget({
+    required this.audioTrack,
+    required this.barCount,
+    required this.color,
     super.key,
-    this.participant,
-    this.audioTrack,
-    this.options = const AudioVisualizerWidgetOptions(),
   });
-  final sdk.Participant? participant;
-  final sdk.AudioTrack? audioTrack;
-  final AudioVisualizerWidgetOptions options;
+  final sdk.AudioTrack audioTrack;
+  final int barCount;
+  final Color color;
 
   @override
   State<SoundWaveformWidget> createState() => _SoundWaveformWidgetState();
 }
-
-const agentStateAttributeKey = 'lk.agent.state';
 
 @visibleForTesting
 bool audioVisualizerSamplesChanged(List<double> current, List<double> next) {
@@ -42,15 +38,11 @@ bool audioVisualizerSamplesChanged(List<double> current, List<double> next) {
   return false;
 }
 
-class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
-    with FramePacedTickerProviderStateMixin {
+class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
   static const Duration _watchdogInterval = Duration(seconds: 2);
   static const Duration _baseRestartCooldown = Duration(seconds: 3);
   static const Duration _maxRestartCooldown = Duration(seconds: 30);
   static const int _maxConsecutiveRestartAttempts = 6;
-
-  late AnimationController _controller;
-  late CurvedAnimation _pulseAnimation;
 
   List<double> samples = <double>[];
   List<double> _backgroundSamples = <double>[];
@@ -59,15 +51,6 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
 
   sdk.AudioVisualizer? _visualizer;
   sdk.EventsListener<sdk.AudioVisualizerEvent>? _visualizerListener;
-  sdk.EventsListener<sdk.ParticipantEvent>? _participantListener;
-
-  // Agent support
-  sdk.AgentState _agentState = sdk.AgentState.initializing;
-
-  // Cached bar items to avoid allocations every frame
-  List<BarsViewItem>? _cachedBarItems;
-  VisualizerState? _lastState;
-  List<double>? _lastSamples;
 
   int _listenerGeneration = 0;
   Future<void> _lifecycle = Future.value();
@@ -104,7 +87,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   }
 
   bool get _hasStalledVisualizer {
-    if (widget.audioTrack == null || widget.audioTrack!.muted) return false;
+    if (widget.audioTrack.muted) return false;
     if (_visualizer == null) return true;
     final lastEventAt = _lastVisualizerEventAt;
     if (lastEventAt == null) return true;
@@ -114,7 +97,6 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   Future<void> _disposeResources({
     sdk.AudioVisualizer? visualizer,
     sdk.EventsListener<sdk.AudioVisualizerEvent>? visualizerListener,
-    sdk.EventsListener<sdk.ParticipantEvent>? participantListener,
   }) async {
     await _safeAsyncAction(
       () async => await visualizerListener?.dispose(),
@@ -130,23 +112,16 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
         failureMessage: 'Failed to dispose visualizer',
       );
     }
-    await _safeAsyncAction(
-      () async => await participantListener?.dispose(),
-      failureMessage: 'Failed to dispose participant listener',
-    );
   }
 
   Future<void> _detachListeners() async {
     final visualizerListener = _visualizerListener;
     final visualizer = _visualizer;
-    final participantListener = _participantListener;
     _visualizerListener = null;
     _visualizer = null;
-    _participantListener = null;
     await _disposeResources(
       visualizer: visualizer,
       visualizerListener: visualizerListener,
-      participantListener: participantListener,
     );
   }
 
@@ -165,16 +140,10 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     _pendingUiUpdate = null;
     _lastUiUpdateAt = null;
     _lastVisualizerEventAt = null;
-    _backgroundSamples = List.filled(
-      widget.options.barCount,
-      0,
-      growable: false,
-    );
+    _backgroundSamples = List.filled(widget.barCount, 0, growable: false);
     if (!mounted) return;
     setState(() {
-      samples = List.filled(widget.options.barCount, 0, growable: false);
-      _cachedBarItems = null;
-      _lastSamples = null;
+      samples = List.filled(widget.barCount, 0, growable: false);
     });
   }
 
@@ -213,22 +182,8 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   void initState() {
     super.initState();
 
-    samples = List.filled(widget.options.barCount, 0, growable: false);
-    _backgroundSamples = List.filled(
-      widget.options.barCount,
-      0,
-      growable: false,
-    );
-
-    _controller = AnimationController(
-      duration: Duration(milliseconds: widget.options.durationInMilliseconds),
-      vsync: this,
-    );
-
-    _pulseAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    );
+    samples = List.filled(widget.barCount, 0, growable: false);
+    _backgroundSamples = List.filled(widget.barCount, 0, growable: false);
 
     _visualizerWatchdogTimer = Timer.periodic(_watchdogInterval, (_) {
       if (!mounted || !_hasStalledVisualizer) return;
@@ -252,96 +207,51 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   }
 
   Future<void> _attachListeners({required int generation}) async {
-    sdk.EventsListener<sdk.ParticipantEvent>? participantListener;
     sdk.AudioVisualizer? visualizer;
     sdk.EventsListener<sdk.AudioVisualizerEvent>? visualizerListener;
 
     try {
       if (!mounted || generation != _listenerGeneration) return;
 
-      final participant = widget.participant;
-      if (participant != null) {
-        participantListener = participant.createListener()
-          ..on<sdk.TrackMutedEvent>((event) {
-            if (!mounted ||
-                generation != _listenerGeneration ||
-                event.publication.source != sdk.TrackSource.microphone) {
-              return;
-            }
-            _resetSamples();
-          });
+      visualizer = sdk.createVisualizer(
+        widget.audioTrack,
+        options: sdk.AudioVisualizerOptions(barCount: widget.barCount),
+      );
 
-        if (participant.kind == sdk.ParticipantKind.AGENT) {
-          participantListener.on<sdk.ParticipantAttributesChanged>((event) {
-            if (!mounted || generation != _listenerGeneration) return;
-            final agentAttributes = sdk.AgentAttributes.fromJson(
-              event.attributes,
-            );
-            setState(() {
-              _agentState =
-                  agentAttributes.lkAgentState ?? sdk.AgentState.initializing;
-            });
-          });
-        }
-      }
+      visualizerListener = visualizer.createListener()
+        ..on<sdk.AudioVisualizerEvent>((element) {
+          if (!mounted || generation != _listenerGeneration) return;
 
-      final audioTrack = widget.audioTrack;
-      if (audioTrack != null) {
-        visualizer = sdk.createVisualizer(
-          audioTrack,
-          options: sdk.AudioVisualizerOptions(
-            barCount: widget.options.barCount,
-            centeredBands: widget.options.centeredBands,
-          ),
-        );
+          _lastVisualizerEventAt = DateTime.now();
+          _lastRestartAttemptAt = null;
+          _consecutiveRestartAttempts = 0;
+          final events = element.event;
+          final sampleCount = min(_backgroundSamples.length, events.length);
+          for (var i = 0; i < sampleCount; i++) {
+            final value = events[i];
+            _backgroundSamples[i] = value is num ? value.toDouble() : 0;
+          }
+          for (var i = sampleCount; i < _backgroundSamples.length; i++) {
+            _backgroundSamples[i] = 0;
+          }
+          _scheduleUiUpdate();
+        });
 
-        visualizerListener = visualizer.createListener()
-          ..on<sdk.AudioVisualizerEvent>((element) {
-            if (!mounted || generation != _listenerGeneration) return;
-
-            _lastVisualizerEventAt = DateTime.now();
-            _lastRestartAttemptAt = null;
-            _consecutiveRestartAttempts = 0;
-            final events = element.event;
-            final sampleCount = min(_backgroundSamples.length, events.length);
-            for (var i = 0; i < sampleCount; i++) {
-              final value = events[i];
-              _backgroundSamples[i] = value is num ? value.toDouble() : 0;
-            }
-            for (var i = sampleCount; i < _backgroundSamples.length; i++) {
-              _backgroundSamples[i] = 0;
-            }
-            _scheduleUiUpdate();
-          });
-
-        await visualizer.start();
-        if (!mounted || generation != _listenerGeneration) {
-          await _disposeResources(
-            visualizer: visualizer,
-            visualizerListener: visualizerListener,
-            participantListener: participantListener,
-          );
-          return;
-        }
-        _lastVisualizerEventAt ??= DateTime.now();
-      }
-
+      await visualizer.start();
       if (!mounted || generation != _listenerGeneration) {
         await _disposeResources(
           visualizer: visualizer,
           visualizerListener: visualizerListener,
-          participantListener: participantListener,
         );
         return;
       }
-      _participantListener = participantListener;
+      _lastVisualizerEventAt ??= DateTime.now();
       _visualizer = visualizer;
       _visualizerListener = visualizerListener;
     } catch (error, stackTrace) {
       await _disposeResources(
         visualizer: visualizer,
         visualizerListener: visualizerListener,
-        participantListener: participantListener,
       );
       ErrorHandler.logError(
         error,
@@ -354,14 +264,9 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
   @override
   void didUpdateWidget(SoundWaveformWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final didUpdateParams =
-        !identical(oldWidget.participant, widget.participant) ||
-        oldWidget.participant?.sid != widget.participant?.sid ||
-        !identical(oldWidget.audioTrack, widget.audioTrack) ||
-        oldWidget.audioTrack?.sid != widget.audioTrack?.sid ||
-        oldWidget.options != widget.options;
-
-    if (didUpdateParams) {
+    if (!identical(oldWidget.audioTrack, widget.audioTrack) ||
+        oldWidget.audioTrack.sid != widget.audioTrack.sid ||
+        oldWidget.barCount != widget.barCount) {
       _reattachListeners();
     }
   }
@@ -371,139 +276,11 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget>
     _pendingUiUpdate?.cancel();
     _visualizerWatchdogTimer?.cancel();
     _listenerGeneration++;
-    _pulseAnimation.dispose();
-    _controller.dispose();
     _lifecycle = _lifecycle.then((_) => _detachListeners());
     super.dispose();
   }
 
-  Color _getColorForThinkingState(
-    BuildContext context,
-    int index,
-    int activeIndex,
-  ) {
-    final distance = (index - activeIndex).abs();
-    final maxDistance = samples.length / 4;
-    final gradientStrength = clampDouble(1 - (distance / maxDistance), 0, 1);
-    final alpha =
-        widget.options.barMinOpacity +
-        (gradientStrength * (1 - widget.options.barMinOpacity));
-
-    return widget.options.computeColor(context).withValues(alpha: alpha);
-  }
-
-  Color _getColorForListeningState(
-    BuildContext context,
-    int index,
-    int centerIndex,
-  ) {
-    const baseAlpha = 0.1;
-    final alpha = index == centerIndex
-        ? baseAlpha + (_pulseAnimation.value - baseAlpha)
-        : baseAlpha;
-
-    return widget.options.computeColor(context).withValues(alpha: alpha);
-  }
-
-  List<BarsViewItem> _createBarsViewItems(
-    int length,
-    Color Function(int) colorProvider,
-  ) {
-    return List.generate(
-      length,
-      (i) => BarsViewItem(value: samples[i], color: colorProvider(i)),
-    );
-  }
-
-  List<BarsViewItem> _generateElements(
-    BuildContext context,
-    VisualizerState state,
-  ) {
-    final baseColor = widget.options.computeColor(context);
-    final centerIndex = (samples.length / 2).floor();
-
-    // For active state, only regenerate if samples changed
-    // This avoids creating new objects every animation frame
-    if (state == VisualizerState.active) {
-      final samplesChanged =
-          _lastSamples == null ||
-          _lastSamples!.length != samples.length ||
-          !listEquals(_lastSamples, samples);
-
-      if (_cachedBarItems != null && _lastState == state && !samplesChanged) {
-        return _cachedBarItems!;
-      }
-
-      _lastSamples = List.of(samples);
-      _lastState = state;
-      _cachedBarItems = _createBarsViewItems(samples.length, (_) => baseColor);
-      return _cachedBarItems!;
-    }
-
-    // For thinking/listening states, we need animation so regenerate
-    _lastState = state;
-    switch (state) {
-      case VisualizerState.thinking:
-        final activeIndex = (_pulseAnimation.value * (samples.length - 1))
-            .round();
-        return _createBarsViewItems(
-          samples.length,
-          (i) => _getColorForThinkingState(context, i, activeIndex),
-        );
-
-      case VisualizerState.listening:
-        return _createBarsViewItems(
-          samples.length,
-          (i) => _getColorForListeningState(context, i, centerIndex),
-        );
-
-      case VisualizerState.active:
-        return _cachedBarItems!; // Already handled above
-    }
-  }
-
-  VisualizerState _determineState() {
-    if (widget.participant?.kind == sdk.ParticipantKind.AGENT &&
-        _agentState == sdk.AgentState.thinking) {
-      return VisualizerState.thinking;
-    }
-
-    if (widget.participant == null ||
-        widget.participant?.kind == sdk.ParticipantKind.AGENT &&
-            (_agentState == sdk.AgentState.initializing ||
-                _agentState == sdk.AgentState.listening)) {
-      return VisualizerState.listening;
-    }
-
-    return VisualizerState.active;
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final state = _determineState();
-
-    // Only use AnimatedBuilder when animation is needed (thinking/listening)
-    // For active state, just rebuild when samples change via setState
-    if (state == VisualizerState.active) {
-      // Stop animation to save CPU when not needed
-      if (_controller.isAnimating) {
-        _controller.stop();
-      }
-      final elements = _generateElements(context, state);
-      return BarsView(options: widget.options, elements: elements);
-    }
-
-    // Resume animation for thinking/listening states
-    if (!_controller.isAnimating) {
-      _controller.repeat(reverse: true);
-    }
-
-    return AnimatedBuilder(
-      animation: _pulseAnimation,
-      builder: (ctx, _) {
-        final elements = _generateElements(ctx, state);
-        return BarsView(options: widget.options, elements: elements);
-      },
-    );
-  }
+  Widget build(BuildContext context) =>
+      LevelBars(levels: samples, color: widget.color);
 }

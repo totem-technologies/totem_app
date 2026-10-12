@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
@@ -9,8 +11,28 @@ import 'package:totem_core/features/sessions/media/livekit_participant_video.dar
 
 import '../livekit_mocks.dart';
 
+typedef _Camera = ({
+  MockRemoteTrackPublication<RemoteVideoTrack> publication,
+  MockRemoteVideoTrack track,
+});
+
+_Camera _camera(String sid) {
+  final publication = MockRemoteTrackPublication<RemoteVideoTrack>();
+  final track = MockRemoteVideoTrack();
+  when(() => publication.track).thenReturn(track);
+  when(() => publication.source).thenReturn(TrackSource.camera);
+  when(() => publication.sid).thenReturn('pub-$sid');
+  when(() => publication.subscribed).thenReturn(true);
+  when(() => publication.muted).thenReturn(false);
+  when(() => track.sid).thenReturn('track-$sid');
+  when(() => track.isActive).thenReturn(true);
+  when(() => track.muted).thenReturn(false);
+  return (publication: publication, track: track);
+}
+
 void main() {
   late VoidCallback restoreWebRtcChannels;
+  late StreamController<void> changes;
 
   setUpAll(() {
     restoreWebRtcChannels = stubFlutterWebRtcChannels();
@@ -20,60 +42,52 @@ void main() {
     restoreWebRtcChannels();
   });
 
-  Future<void> pumpVideo(WidgetTester tester, Participant participant) {
+  setUp(() => changes = StreamController<void>.broadcast(sync: true));
+  tearDown(() => changes.close());
+
+  Future<void> pumpVideo(
+    WidgetTester tester,
+    Participant? Function() participant,
+  ) {
     return tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: LiveKitParticipantVideo(participant: participant)),
+        home: Scaffold(
+          body: LiveKitParticipantVideo(
+            participant: participant,
+            changes: changes.stream,
+          ),
+        ),
       ),
     );
   }
+
+  Future<void> change(WidgetTester tester) async {
+    changes.add(null);
+    await tester.pumpAndSettle();
+  }
+
+  final ignoreRenderers = LeakTesting.settings.withIgnored(
+    classes: <String>['RTCVideoRenderer'],
+  );
 
   group('LiveKitParticipantVideo', () {
     testWidgets('keeps a camera renderer mounted across mute transitions', (
       tester,
     ) async {
-      final mockParticipant = MockRemoteParticipant('user-2', 'John Doe');
-      final mockPublication = MockRemoteTrackPublication<RemoteVideoTrack>();
-      final mockTrack = MockRemoteVideoTrack();
-      final mutedEvent = MockTrackMutedEvent();
-      final unmutedEvent = MockTrackUnmutedEvent();
-
+      final participant = MockRemoteParticipant('user-2', 'John Doe');
+      final camera = _camera('1');
       when(
-        () => mockParticipant.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(mockPublication);
-      when(() => mockPublication.track).thenReturn(mockTrack);
-      when(() => mockPublication.source).thenReturn(TrackSource.camera);
-      when(() => mockPublication.sid).thenReturn('pub-sid');
-      when(() => mockPublication.subscribed).thenReturn(true);
-      when(() => mockPublication.muted).thenReturn(false);
-      when(() => mockTrack.sid).thenReturn('track-sid');
-      when(() => mockTrack.isActive).thenReturn(true);
-      when(() => mockTrack.muted).thenReturn(false);
-      when(() => mutedEvent.publication).thenReturn(mockPublication);
-      when(() => unmutedEvent.publication).thenReturn(mockPublication);
-      await pumpVideo(tester, mockParticipant);
+        () => participant.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(camera.publication);
+      await pumpVideo(tester, () => participant);
       await tester.pumpAndSettle();
 
       final renderer = tester.element(find.byType(VideoTrackRenderer));
-      check(
-        tester.widgetList(find.byType(VideoTrackRenderer)),
-      ).length.equals(1);
 
-      for (final event in [
-        mutedEvent,
-        unmutedEvent,
-        mutedEvent,
-        unmutedEvent,
-      ]) {
-        final isMuted = identical(event, mutedEvent);
-        when(() => mockPublication.muted).thenReturn(isMuted);
-        when(() => mockTrack.muted).thenReturn(isMuted);
-        if (isMuted) {
-          mockParticipant.listener.emitMuted(event as TrackMutedEvent);
-        } else {
-          mockParticipant.listener.emitUnmuted(event as TrackUnmutedEvent);
-        }
-        await tester.pump();
+      for (final muted in [true, false, true, false]) {
+        when(() => camera.publication.muted).thenReturn(muted);
+        when(() => camera.track.muted).thenReturn(muted);
+        await change(tester);
 
         check(
           tester.element(find.byType(VideoTrackRenderer)),
@@ -88,42 +102,19 @@ void main() {
       tester,
     ) async {
       final participant = MockRemoteParticipant('user-2', 'John Doe');
-      final firstPublication = MockRemoteTrackPublication<RemoteVideoTrack>();
-      final firstTrack = MockRemoteVideoTrack();
-      final secondPublication = MockRemoteTrackPublication<RemoteVideoTrack>();
-      final secondTrack = MockRemoteVideoTrack();
+      final first = _camera('first');
+      final second = _camera('second');
       RemoteTrackPublication<RemoteVideoTrack>? cameraPublication =
-          firstPublication;
-
+          first.publication;
       when(
         () => participant.getTrackPublicationBySource(TrackSource.camera),
       ).thenAnswer((_) => cameraPublication);
-      for (final entry in [
-        (publication: firstPublication, track: firstTrack, sid: 'first'),
-        (publication: secondPublication, track: secondTrack, sid: 'second'),
-      ]) {
-        when(() => entry.publication.track).thenReturn(entry.track);
-        when(() => entry.publication.source).thenReturn(TrackSource.camera);
-        when(() => entry.publication.sid).thenReturn('pub-${entry.sid}');
-        when(() => entry.publication.subscribed).thenReturn(true);
-        when(() => entry.publication.muted).thenReturn(false);
-        when(() => entry.track.sid).thenReturn('track-${entry.sid}');
-        when(() => entry.track.isActive).thenReturn(true);
-        when(() => entry.track.muted).thenReturn(false);
-      }
-      await pumpVideo(tester, participant);
+      await pumpVideo(tester, () => participant);
       await tester.pumpAndSettle();
       final firstRenderer = tester.element(find.byType(VideoTrackRenderer));
 
-      cameraPublication = secondPublication;
-      participant.listener.emitParticipantEvent(
-        TrackSubscribedEvent(
-          participant: participant,
-          publication: secondPublication,
-          track: secondTrack,
-        ),
-      );
-      await tester.pumpAndSettle();
+      cameraPublication = second.publication;
+      await change(tester);
 
       check(
         tester.widgetList(find.byType(VideoTrackRenderer)),
@@ -133,13 +124,7 @@ void main() {
       ).not((it) => it.identicalTo(firstRenderer));
 
       cameraPublication = null;
-      participant.listener.emitParticipantEvent(
-        TrackUnpublishedEvent(
-          participant: participant,
-          publication: secondPublication,
-        ),
-      );
-      await tester.pumpAndSettle();
+      await change(tester);
 
       check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
 
@@ -148,81 +133,20 @@ void main() {
     });
 
     testWidgets(
-      'shows a locally published camera after the initial build',
-      (tester) async {
-        final participant = MockLocalParticipant();
-        final publication = MockLocalTrackPublication();
-        final track = MockLocalVideoTrack();
-        LocalTrackPublication<LocalVideoTrack>? cameraPublication;
-
-        when(
-          () => participant.getTrackPublicationBySource(TrackSource.camera),
-        ).thenAnswer((_) => cameraPublication);
-        when(() => publication.track).thenReturn(track);
-        when(() => publication.source).thenReturn(TrackSource.camera);
-        when(() => publication.sid).thenReturn('local-pub-sid');
-        when(() => publication.subscribed).thenReturn(true);
-        when(() => publication.muted).thenReturn(false);
-        when(() => track.sid).thenReturn('local-track-sid');
-        when(() => track.isActive).thenReturn(true);
-        when(() => track.muted).thenReturn(false);
-        await pumpVideo(tester, participant);
-
-        check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
-
-        cameraPublication = publication;
-        participant.listener.emitParticipantEvent(
-          LocalTrackPublishedEvent(
-            participant: participant,
-            publication: publication,
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        check(
-          tester.widgetList(find.byType(VideoTrackRenderer)),
-        ).length.equals(1);
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pumpAndSettle();
-      },
-      experimentalLeakTesting: LeakTesting.settings.withIgnored(
-        classes: <String>['RTCVideoRenderer'],
-      ),
-    );
-
-    testWidgets(
-      'shows a camera track subscribed after the initial build',
+      'shows a camera that becomes available after the initial build',
       (tester) async {
         final participant = MockRemoteParticipant('user-2', 'John Doe');
-        final publication = MockRemoteTrackPublication<RemoteVideoTrack>();
-        final track = MockRemoteVideoTrack();
+        final camera = _camera('1');
         RemoteTrackPublication<RemoteVideoTrack>? cameraPublication;
-
         when(
           () => participant.getTrackPublicationBySource(TrackSource.camera),
         ).thenAnswer((_) => cameraPublication);
-        when(() => publication.track).thenReturn(track);
-        when(() => publication.source).thenReturn(TrackSource.camera);
-        when(() => publication.sid).thenReturn('pub-sid');
-        when(() => publication.subscribed).thenReturn(true);
-        when(() => publication.muted).thenReturn(false);
-        when(() => track.sid).thenReturn('track-sid');
-        when(() => track.isActive).thenReturn(true);
-        when(() => track.muted).thenReturn(false);
-        await pumpVideo(tester, participant);
+        await pumpVideo(tester, () => participant);
 
         check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
 
-        cameraPublication = publication;
-        participant.listener.emitParticipantEvent(
-          TrackSubscribedEvent(
-            participant: participant,
-            publication: publication,
-            track: track,
-          ),
-        );
-        await tester.pumpAndSettle();
+        cameraPublication = camera.publication;
+        await change(tester);
 
         check(
           tester.widgetList(find.byType(VideoTrackRenderer)),
@@ -231,9 +155,35 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
       },
-      experimentalLeakTesting: LeakTesting.settings.withIgnored(
-        classes: <String>['RTCVideoRenderer'],
-      ),
+      experimentalLeakTesting: ignoreRenderers,
     );
+
+    testWidgets('follows a participant who leaves and rejoins', (tester) async {
+      final before = MockRemoteParticipant('user-2', 'John Doe');
+      final after = MockRemoteParticipant('user-2', 'John Doe');
+      final camera = _camera('before');
+      final rejoinedCamera = _camera('after');
+      when(
+        () => before.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(camera.publication);
+      when(
+        () => after.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(rejoinedCamera.publication);
+      Participant? current = before;
+      await pumpVideo(tester, () => current);
+      await tester.pumpAndSettle();
+
+      current = null;
+      await change(tester);
+      check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
+
+      current = after;
+      await change(tester);
+      final key = tester.widget(find.byType(VideoTrackRenderer)).key;
+      check((key! as ValueKey).value).equals(('pub-after', 'track-after'));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }, experimentalLeakTesting: ignoreRenderers);
   });
 }
