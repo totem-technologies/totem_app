@@ -1,23 +1,57 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-/// The quietest level, in dBFS, the bars show. Background noise stays below
-/// it once the browser's noise suppression has run, while LiveKit already
-/// counts a speaker as active from -35 dB.
-const _quietestDb = -45.0;
+/// Turns one speaker's sound levels into bar heights, scaled to how loud
+/// that speaker has recently been.
+///
+/// Browsers and microphones capture at very different levels, since each
+/// browser applies its own gain control. Scaling to each speaker's own
+/// recent peak makes ordinary speech look alike everywhere. The peak decays slowly, so one loud moment stops dominating
+/// after a few seconds.
+class SpeechLevelMeter {
+  /// [now] reads the time; it defaults to a stopwatch started here.
+  new({Duration Function()? now}) : _now = now ?? _startStopwatch();
 
-/// The level, in dBFS, that fills the bars.
-const _loudestDb = -15.0;
+  static Duration Function() _startStopwatch() {
+    final stopwatch = Stopwatch()..start();
+    return () => stopwatch.elapsed;
+  }
 
-/// Bar height between 0 and 1 for a sound level in dBFS. Local and remote
-/// levels share this scale, so the same voice looks the same everywhere.
-/// Heights move in steps of 0.05 so small fluctuations don't redraw.
-double speechLevel(double db) {
-  final level = ((db - _quietestDb) / (_loudestDb - _quietestDb)).clamp(
-    0.0,
-    1.0,
-  );
-  return (level * 20).round() / 20;
+  /// Levels below this, in dBFS, are noise for every speaker.
+  static const _gateDb = -50.0;
+
+  /// The bars span this many dB below the speaker's recent peak.
+  static const _rangeDb = 24.0;
+
+  /// The peak never decays below this, so a long silence doesn't make
+  /// breathing and room noise look like speech.
+  static const _quietestPeakDb = -40.0;
+
+  /// How fast the remembered peak falls when the speaker gets quieter.
+  static const _peakDecayDbPerSecond = 1.5;
+
+  final Duration Function() _now;
+  double _peakDb = _quietestPeakDb;
+  Duration? _lastReading;
+
+  /// The bar height between 0 and 1 for a sound level in dBFS. Heights move
+  /// in steps of 0.05 so small fluctuations don't redraw.
+  double level(double db) {
+    final now = _now();
+    if (_lastReading case final last?) {
+      final seconds =
+          (now - last).inMicroseconds / Duration.microsecondsPerSecond;
+      _peakDb = math.max(
+        _quietestPeakDb,
+        _peakDb - _peakDecayDbPerSecond * seconds,
+      );
+    }
+    _lastReading = now;
+    if (db < _gateDb) return 0;
+    _peakDb = math.max(_peakDb, db);
+    final level = ((db - (_peakDb - _rangeDb)) / _rangeDb).clamp(0.0, 1.0);
+    return (level * 20).round() / 20;
+  }
 }
 
 /// The level in dBFS of a linear amplitude between 0 and 1, such as the

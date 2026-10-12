@@ -6,24 +6,63 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/features/sessions/media/speech_level.dart';
 
 void main() {
-  group('speechLevel', () {
-    test('background noise reads as silence', () {
-      check(speechLevel(double.negativeInfinity)).equals(0);
-      check(speechLevel(-60)).equals(0);
-      check(speechLevel(-45)).equals(0);
+  group('SpeechLevelMeter', () {
+    late Duration now;
+    late SpeechLevelMeter meter;
+
+    setUp(() {
+      now = Duration.zero;
+      meter = SpeechLevelMeter(now: () => now);
     });
 
-    test('quiet speech LiveKit counts as active shows', () {
-      check(speechLevel(-35)).isGreaterThan(0.25);
+    double read(
+      double db, {
+      Duration after = const Duration(milliseconds: 100),
+    }) {
+      now += after;
+      return meter.level(db);
+    }
+
+    test('silence and noise below the gate read as zero', () {
+      check(read(double.negativeInfinity)).equals(0);
+      check(read(-60)).equals(0);
     });
 
-    test('loud speech fills the bars', () {
-      check(speechLevel(-15)).equals(1);
-      check(speechLevel(0)).equals(1);
+    test('the loudest recent speech fills the bars', () {
+      check(read(-20)).equals(1);
+      check(read(-32)).isGreaterThan(0.3);
+      check(read(-32)).isLessThan(0.7);
+    });
+
+    test('quiet and loud microphones look the same', () {
+      final quiet = SpeechLevelMeter(now: () => now);
+      final loud = SpeechLevelMeter(now: () => now);
+      quiet.level(-40);
+      loud.level(-20);
+
+      check(quiet.level(-46)).equals(loud.level(-26));
+    });
+
+    test('background noise well below speech reads as zero', () {
+      read(-20);
+
+      check(read(-48)).equals(0);
+    });
+
+    test('a loud moment stops dominating after a while', () {
+      read(-10);
+      final soonAfter = read(-25);
+
+      final muchLater = read(-25, after: const Duration(seconds: 20));
+
+      check(muchLater).isGreaterThan(soonAfter);
+      check(muchLater).equals(1);
     });
 
     test('moves in steps, so small fluctuations do not redraw', () {
-      check(speechLevel(-30)).equals(speechLevel(-29.9));
+      read(-20);
+
+      check(read(-30)).equals(read(-30.05));
     });
   });
 

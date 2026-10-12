@@ -6,6 +6,7 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/media/livekit_speaker_level.dart';
+import 'package:totem_core/features/sessions/media/speech_level.dart';
 import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
@@ -34,6 +35,7 @@ void main() {
           child: LiveKitSpeakerLevel(
             participant: lookup ?? () => participant,
             changes: changes.stream,
+            meter: SpeechLevelMeter(),
             color: Colors.white,
             iconSize: 20,
           ),

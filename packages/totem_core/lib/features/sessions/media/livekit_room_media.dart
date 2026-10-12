@@ -6,6 +6,7 @@ import 'package:totem_core/features/sessions/media/livekit_speaker_level.dart';
 import 'package:totem_core/features/sessions/media/livekit_support.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/media/room_media.dart';
+import 'package:totem_core/features/sessions/media/speech_level.dart';
 
 /// [RoomMedia] backed by the LiveKit Flutter SDK.
 ///
@@ -45,7 +46,11 @@ class LiveKitRoomMedia implements RoomMedia {
         Future.wait([for (final s in subscriptions) s.cancel()]);
   }, isBroadcast: true);
 
+  /// Each participant's level scaling, kept while they are in the room.
+  final _meters = <String, SpeechLevelMeter>{};
+
   void attach(Room? room) {
+    if (!identical(room, _media.room)) _meters.clear();
     _media.attach(room);
     _speakers.attach(room);
   }
@@ -108,6 +113,7 @@ class LiveKitRoomMedia implements RoomMedia {
     return LiveKitSpeakerLevel(
       participant: () => _participant(participant.identity),
       changes: _levelChanges,
+      meter: _meters.putIfAbsent(participant.identity, SpeechLevelMeter.new),
       color: color,
       iconSize: iconSize,
     );

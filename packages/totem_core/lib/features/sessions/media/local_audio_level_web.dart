@@ -10,9 +10,8 @@ import 'package:web/web.dart' as web;
 /// Every analyser shares one context; browsers limit how many can run.
 web.AudioContext? _audioContext;
 
-/// The speech level of a local microphone [track], on the same scale as the
-/// levels LiveKit reports for remote speakers, for live feedback without
-/// network delay. Measures the waveform ten times a second into one reused
+/// The speech level of a local microphone [track], scaled like remote
+/// speakers' levels, for live feedback without network delay. Measures the waveform ten times a second into one reused
 /// buffer, and emits only when the level changes.
 Stream<double> localAudioLevel(AudioTrack track) {
   Timer? timer;
@@ -38,10 +37,11 @@ Stream<double> localAudioLevel(AudioTrack track) {
       final buffer = JSFloat32Array.withLength(node.fftSize);
       // A view of the JS buffer, taken once; it sees each refill.
       final samples = buffer.toDart;
+      final meter = SpeechLevelMeter();
       var shown = 0.0;
       timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
         node.getFloatTimeDomainData(buffer);
-        final next = heldSpeechLevel(shown, speechLevel(rmsDb(samples)));
+        final next = heldSpeechLevel(shown, meter.level(rmsDb(samples)));
         if (next == shown) return;
         shown = next;
         controller.add(next);

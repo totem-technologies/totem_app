@@ -14,6 +14,7 @@ class LiveKitSpeakerLevel extends StatelessWidget {
   const new({
     required this.participant,
     required this.changes,
+    required this.meter,
     required this.color,
     required this.iconSize,
     super.key,
@@ -27,6 +28,9 @@ class LiveKitSpeakerLevel extends StatelessWidget {
   /// changed.
   final Stream<void> changes;
 
+  /// Scales this participant's levels to how loud they have recently been.
+  final SpeechLevelMeter meter;
+
   final Color color;
   final double iconSize;
 
@@ -34,7 +38,7 @@ class LiveKitSpeakerLevel extends StatelessWidget {
     final participant = this.participant();
     final microphoneOn = participant != null && isMicrophoneOn(participant);
     final level = microphoneOn && participant.isSpeaking
-        ? speechLevel(amplitudeToDb(participant.audioLevel))
+        ? meter.level(amplitudeToDb(participant.audioLevel))
         : 0.0;
     return (microphoneOn: microphoneOn, level: level);
   }
