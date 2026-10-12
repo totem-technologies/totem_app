@@ -35,12 +35,26 @@ void main() {
     });
 
     test('quiet and loud microphones look the same', () {
-      final quiet = SpeechLevelMeter(now: () => now);
-      final loud = SpeechLevelMeter(now: () => now);
-      quiet.level(-40);
-      loud.level(-20);
+      final quieter = SpeechLevelMeter(now: () => now);
+      final louder = SpeechLevelMeter(now: () => now);
+      quieter.level(-20);
+      louder.level(-10);
 
-      check(quiet.level(-46)).equals(loud.level(-26));
+      check(quieter.level(-30)).equals(louder.level(-20));
+    });
+
+    test('noise just above the gate shows barely any bar', () {
+      check(read(-50)).equals(0);
+      check(read(-49)).isLessThan(0.1);
+      check(read(-45)).isLessThan(0.25);
+    });
+
+    test('noise stays low after a long silence', () {
+      read(-20);
+      read(double.negativeInfinity, after: const Duration(seconds: 30));
+
+      check(read(-49)).isLessThan(0.1);
+      check(read(-45)).isLessThan(0.25);
     });
 
     test('background noise well below speech reads as zero', () {

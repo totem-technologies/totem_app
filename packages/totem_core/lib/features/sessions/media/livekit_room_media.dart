@@ -14,12 +14,15 @@ import 'package:totem_core/features/sessions/media/speech_level.dart';
 /// each new [Room] to it.
 class LiveKitRoomMedia implements RoomMedia {
   // The room re-emits every participant's track and mute events.
-  final _media = LiveKitRoomBinding(
+  late final _media = LiveKitRoomBinding(
     (listener, notify) => listener
       ..on<RoomConnectedEvent>((_) => notify())
       ..on<RoomDisconnectedEvent>((_) => notify())
       ..on<ParticipantConnectedEvent>((_) => notify())
-      ..on<ParticipantDisconnectedEvent>((_) => notify())
+      ..on<ParticipantDisconnectedEvent>((event) {
+        _meters.remove(event.participant.identity);
+        notify();
+      })
       ..on<TrackPublishedEvent>((_) => notify())
       ..on<TrackUnpublishedEvent>((_) => notify())
       ..on<TrackSubscribedEvent>((_) => notify())

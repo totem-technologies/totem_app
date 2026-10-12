@@ -11,8 +11,9 @@ import 'package:web/web.dart' as web;
 web.AudioContext? _audioContext;
 
 /// The speech level of a local microphone [track], scaled like remote
-/// speakers' levels, for live feedback without network delay. Measures the waveform ten times a second into one reused
-/// buffer, and emits only when the level changes.
+/// speakers' levels, for live feedback without network delay. Measures the
+/// waveform ten times a second into one reused buffer, and emits only when
+/// the level changes.
 Stream<double> localAudioLevel(AudioTrack track) {
   Timer? timer;
   web.MediaStreamAudioSourceNode? source;

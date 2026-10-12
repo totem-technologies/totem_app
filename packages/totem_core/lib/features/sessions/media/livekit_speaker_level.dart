@@ -34,6 +34,9 @@ class LiveKitSpeakerLevel extends StatelessWidget {
   final Color color;
   final double iconSize;
 
+  /// Feeds [meter], so it runs once per change for every mounted tile. That
+  /// is safe because the meter depends on elapsed time, not on how often it
+  /// is read.
   ({bool microphoneOn, double level}) _read() {
     final participant = this.participant();
     final microphoneOn = participant != null && isMicrophoneOn(participant);

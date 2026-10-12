@@ -8,6 +8,6 @@ export 'local_audio_level_stub.dart'
 /// words.
 double heldSpeechLevel(double shown, double measured) {
   if (measured >= shown) return measured;
-  // Stay on the 0.05 steps of speechLevel.
+  // Stay on the 0.05 steps of SpeechLevelMeter.level.
   return (math.max(measured, shown - 0.15) * 20).round() / 20;
 }

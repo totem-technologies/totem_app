@@ -6,8 +6,8 @@ import 'dart:typed_data';
 ///
 /// Browsers and microphones capture at very different levels, since each
 /// browser applies its own gain control. Scaling to each speaker's own
-/// recent peak makes ordinary speech look alike everywhere. The peak decays slowly, so one loud moment stops dominating
-/// after a few seconds.
+/// recent peak makes ordinary speech look alike everywhere. The peak decays
+/// slowly, so one loud moment stops dominating after a few seconds.
 class SpeechLevelMeter {
   /// [now] reads the time; it defaults to a stopwatch started here.
   new({Duration Function()? now}) : _now = now ?? _startStopwatch();
@@ -23,9 +23,10 @@ class SpeechLevelMeter {
   /// The bars span this many dB below the speaker's recent peak.
   static const _rangeDb = 24.0;
 
-  /// The peak never decays below this, so a long silence doesn't make
-  /// breathing and room noise look like speech.
-  static const _quietestPeakDb = -40.0;
+  /// The peak never decays below this, so the bars never reach below the
+  /// gate: sound just above it shows a sliver, not a jump. Microphones that
+  /// peak lower than this don't fill the bars.
+  static const double _quietestPeakDb = _gateDb + _rangeDb;
 
   /// How fast the remembered peak falls when the speaker gets quieter.
   static const _peakDecayDbPerSecond = 1.5;
