@@ -36,8 +36,8 @@ dependencies:
   flutter_local_notifications: ^22.2.0
   posthog_flutter: ^5.25.1
   intl: ^0.20.2
-  sentry_flutter: ^9.21.0
-  sentry_dio: ^9.21.0
+  sentry_flutter: ^10.0.0
+  sentry_dio: ^10.0.0
 
   # Video Experience
   # livekit_client: ^2.13.0
@@ -57,10 +57,12 @@ dependencies:
   in_app_review: ^2.0.11
   battery_plus: ^7.0.0
   permission_handler: ^13.0.0
-  # Locked to 1.5.1
+  # 1.5.2+ adds Swift Package Manager support. Its Android build changes
+  # broke some setups (issues #67 and #74); they build here with AGP 9 and
+  # the JVM 17 target set in android/build.gradle.kts.
   # https://github.com/prongbang/screen_protector/issues/67
   # https://github.com/prongbang/screen_protector/issues/74
-  screen_protector: 1.5.1
+  screen_protector: ^1.5.3
 
   # UI & Utilities
   material_ui: ^1.1.1
@@ -74,6 +76,7 @@ dependencies:
   collection: ^1.19.1
   characters: any
   meta: any
+  cupertino_icons: ^2.0.0
 
 dev_dependencies:
   # Testing

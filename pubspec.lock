@@ -61,10 +61,10 @@ packages:
     dependency: transitive
     description:
       name: archive
-      sha256: "6c5bcd986e06b94e3c40244af471750840a3d2341d1f9763a1100a14add517b4"
+      sha256: f773153144ce0456ae77d96bd247f2efd58efe4f3e5ad42616d0385c031aea11
       url: "https://pub.dev"
     source: hosted
-    version: "4.3.0"
+    version: "4.5.1"
   args:
     dependency: transitive
     description:
@@ -369,6 +369,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.2"
+  cupertino_icons:
+    dependency: transitive
+    description:
+      name: cupertino_icons
+      sha256: b7cc2390aac296c083bea762859413eb1cf5b630c70e0c7e4d831018f762a8b2
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   cupertino_ui:
     dependency: transitive
     description:
@@ -663,18 +671,18 @@ packages:
     dependency: transitive
     description:
       name: flutter_local_notifications
-      sha256: "357be7ff996dc272e2037c69c1bdd5d1bd21172219d55f8bd2e11aeea602e6d3"
+      sha256: "9ee28742343dd13df758bb4185e8ded37ac2d1aeca6648c3ba7862c99797517e"
       url: "https://pub.dev"
     source: hosted
-    version: "22.3.1"
+    version: "22.3.2"
   flutter_local_notifications_linux:
     dependency: transitive
     description:
       name: flutter_local_notifications_linux
-      sha256: "9ca97e63776f29ab1b955725c09999fc2c150523269db150c39274f2a43c5a8b"
+      sha256: "3b89a4bf095fa5f8a99beeabf982c5bd506c3ad25e7b9e61da945e994dc5b615"
       url: "https://pub.dev"
     source: hosted
-    version: "8.0.1"
+    version: "8.0.2"
   flutter_local_notifications_platform_interface:
     dependency: transitive
     description:
@@ -884,10 +892,10 @@ packages:
     dependency: transitive
     description:
       name: image
-      sha256: a1e7f4951e538a568e14b856702afc9ae1d2f4b202daced8d22c1b9cd211ce89
+      sha256: "89ed75b2f8231fe676808c5564f9590d728024ded7ac782a7ed8474f1c95b72a"
       url: "https://pub.dev"
     source: hosted
-    version: "4.10.1"
+    version: "4.12.0"
   image_picker:
     dependency: transitive
     description:
@@ -916,10 +924,10 @@ packages:
     dependency: transitive
     description:
       name: image_picker_ios
-      sha256: "815921d05ef87d64dc64e9f7f855967614a9a67086d0c60fa27d47a1cd9a8896"
+      sha256: "4fb88d4350ffc208c2a09fc321db1f80282688716b8cfe10c8c80acc5ae8934a"
       url: "https://pub.dev"
     source: hosted
-    version: "0.8.13+9"
+    version: "0.8.13+10"
   image_picker_linux:
     dependency: transitive
     description:
@@ -993,10 +1001,18 @@ packages:
     dependency: transitive
     description:
       name: jni
-      sha256: d2c361082d554d4593c3012e26f6b188f902acd291330f13d6427641a92b3da1
+      sha256: f038e58b4dc2c9037f50e233175086337e0b305e356d28211bf55f21c504cbd3
       url: "https://pub.dev"
     source: hosted
-    version: "0.14.2"
+    version: "1.0.3"
+  jni_util:
+    dependency: transitive
+    description:
+      name: jni_util
+      sha256: "1ba86da04a5f2bf18fde2edb235587e70c5b0fc5bd4ba955f46b00942c3fc35f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   json_annotation:
     dependency: transitive
     description:
@@ -1371,10 +1387,10 @@ packages:
     dependency: transitive
     description:
       name: posthog_flutter
-      sha256: "37d4efdb0b5df0ae4022cd0d67e4f168957103496f846e855fae2feaaf28a648"
+      sha256: aa50b63fb4007d114dd83f8527e471f18fc713225864fcb2678858a6a22e391a
       url: "https://pub.dev"
     source: hosted
-    version: "5.51.1"
+    version: "5.54.0"
   process:
     dependency: transitive
     description:
@@ -1475,10 +1491,10 @@ packages:
     dependency: transitive
     description:
       name: screen_protector
-      sha256: "7f53d7a0c238a62dc970841fd13053f2b79f14b7f8d2c82a11fef65b066f42cd"
+      sha256: "66f2ffbfbe7acc26db49de893e0c49078c67b546c27a57958d9bd9901f77c38e"
       url: "https://pub.dev"
     source: hosted
-    version: "1.5.1"
+    version: "1.5.3"
   sdp_transform:
     dependency: transitive
     description:
@@ -1491,26 +1507,26 @@ packages:
     dependency: transitive
     description:
       name: sentry
-      sha256: "40a247686af64e497df29ab0de1303a20ca55a2e3c7c7e39b989fac47dcadf84"
+      sha256: "1c409bd2868210fcffd792a5a703d14049e019e30a705c7aa705a8985b92c114"
       url: "https://pub.dev"
     source: hosted
-    version: "9.30.1"
+    version: "10.0.0"
   sentry_dio:
     dependency: transitive
     description:
       name: sentry_dio
-      sha256: "890e4c173dc353e9c82c93262011aefd128f51d692535636623961912cd59a50"
+      sha256: b0d613bde5d66d4dfa6e80fe8a69894cbc67e5ce5c7c296d381a5125ad2c638a
       url: "https://pub.dev"
     source: hosted
-    version: "9.30.1"
+    version: "10.0.0"
   sentry_flutter:
     dependency: transitive
     description:
       name: sentry_flutter
-      sha256: bdd8897b38ce31185c42ed910628059c4eccbc0b0641213e8d1c63e2fda3f5a3
+      sha256: "9c6e25e3bbdea1f8d779fbc43fa941e078c23972cb8881d2ebd6b82343b80aee"
       url: "https://pub.dev"
     source: hosted
-    version: "9.30.1"
+    version: "10.0.0"
   share_plus:
     dependency: transitive
     description:
@@ -1752,10 +1768,10 @@ packages:
     dependency: transitive
     description:
       name: timezone
-      sha256: "981d1020d6ef8fe1e7b3de5054e5b25579ae7c403d7734adc508ffc47668e9cb"
+      sha256: "9f4e5a1a0e4fef7dd3424842c0575db01bfb7a11730e8d55753fcd5c5c98767b"
       url: "https://pub.dev"
     source: hosted
-    version: "0.11.1"
+    version: "0.11.2"
   typed_data:
     dependency: transitive
     description:
@@ -1872,10 +1888,10 @@ packages:
     dependency: transitive
     description:
       name: vector_graphics_compiler
-      sha256: "4dca4feb77dc3ec7f6e27e49c53241eb8217f55e4f9b12599a27f8903bca5682"
+      sha256: "670a59098f5c4c9f8eab25edba4f72e1bc8172b428b012339ac892eb31c68f2b"
       url: "https://pub.dev"
     source: hosted
-    version: "1.3.0"
+    version: "1.3.1"
   vector_math:
     dependency: transitive
     description:

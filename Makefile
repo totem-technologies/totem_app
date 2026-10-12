@@ -19,10 +19,7 @@ clean:
 	rm -rf $(APP_DIR)/build/
 	rm -rf $(APP_DIR)/.dart_tool/build/
 	rm -rf ~/.gradle/caches/*
-	rm -rf $(APP_DIR)/ios/Pods
-	rm -rf $(APP_DIR)/ios/Podfile.lock
 	rm -rf $(APP_DIR)/ios/.symlinks
-	rm -rf $(APP_DIR)/ios/Flutter/Flutter.podspec
 	rm -rf $(APP_DIR)/ios/Flutter/Flutter.framework
 	rm -rf $(APP_DIR)/ios/Flutter/App.framework
 # 	rm -rf ~/Library/Developer/Xcode/DerivedData/*
