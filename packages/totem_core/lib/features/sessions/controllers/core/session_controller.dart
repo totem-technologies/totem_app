@@ -481,15 +481,16 @@ class SessionController extends _$SessionController {
 
     try {
       await initializeConnection(
-        roomOptions: RoomOptions(
-          defaultCameraCaptureOptions: options.cameraOptions,
-          defaultAudioCaptureOptions: const AudioCaptureOptions(),
-          defaultAudioOutputOptions: AudioOutputOptions(
-            speakerOn: options.speakerEnabled,
+        roomOptions: LiveKitLocalMedia.applyCapturePolicy(
+          RoomOptions(
+            defaultCameraCaptureOptions: options.cameraOptions,
+            defaultAudioOutputOptions: AudioOutputOptions(
+              speakerOn: options.speakerEnabled,
+            ),
+            dynacast: true,
+            defaultVideoPublishOptions: defaultVideoPublishOptions,
+            adaptiveStream: true,
           ),
-          dynacast: true,
-          defaultVideoPublishOptions: defaultVideoPublishOptions,
-          adaptiveStream: true,
         ),
         url: AppConfig.instance.liveKitUrl,
         token: options.token,
@@ -537,36 +538,28 @@ class SessionController extends _$SessionController {
       );
       if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
-      final localParticipant = room?.localParticipant;
-      if (localParticipant == null) {
+      if (!_localMedia.isAvailable) {
         throw StateError('Room connected without a local participant');
       }
 
       try {
-        if (initialCameraTrack != null) {
-          await localParticipant.publishVideoTrack(
+        if (initialCameraTrack != null || options.cameraEnabled) {
+          await _localMedia.publishJoinCamera(
             initialCameraTrack,
             publishOptions: defaultVideoPublishOptions,
           );
           if (!ref.mounted) return SessionJoinResult.retryableFailure;
           _joinMediaOwner.releaseToRoom(initialCameraTrack);
-        } else if (options.cameraEnabled) {
-          await localParticipant.setCameraEnabled(true);
-          if (!ref.mounted) return SessionJoinResult.retryableFailure;
         }
 
         if (!ref.mounted) return SessionJoinResult.retryableFailure;
-        if (initialMicrophoneTrack != null) {
-          if (!_shouldEnableMicrophone()) {
-            await initialMicrophoneTrack.mute(stopOnMute: false);
-            if (!ref.mounted) return SessionJoinResult.retryableFailure;
-          }
-          await localParticipant.publishAudioTrack(initialMicrophoneTrack);
+        if (initialMicrophoneTrack != null || options.microphoneEnabled) {
+          await _localMedia.publishJoinMicrophone(
+            initialMicrophoneTrack,
+            muted: !_shouldEnableMicrophone(),
+          );
           if (!ref.mounted) return SessionJoinResult.retryableFailure;
           _joinMediaOwner.releaseToRoom(initialMicrophoneTrack);
-        } else if (options.microphoneEnabled && _shouldEnableMicrophone()) {
-          await localParticipant.setMicrophoneEnabled(true);
-          if (!ref.mounted) return SessionJoinResult.retryableFailure;
         }
 
         if (!ref.mounted) return SessionJoinResult.retryableFailure;
@@ -826,28 +819,13 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> _disableLocalMediaTracks() async {
-    final localParticipant = _room?.localParticipant;
-    if (localParticipant == null) {
-      return;
-    }
-
     try {
-      await localParticipant.setCameraEnabled(false);
+      await _localMedia.release();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        message: 'Failed to disable camera while leaving session',
-      );
-    }
-
-    try {
-      await localParticipant.setMicrophoneEnabled(false);
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to disable microphone while leaving session',
+        message: 'Failed to release local media while leaving session',
       );
     }
   }

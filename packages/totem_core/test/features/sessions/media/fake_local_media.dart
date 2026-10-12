@@ -43,6 +43,7 @@ class FakeLocalMedia implements LocalMedia {
   Future<void> Function(bool enabled)? onCameraCommand;
 
   final List<bool> microphoneCommands = [];
+  int releaseCount = 0;
   final List<bool> cameraCommands = [];
 
   /// Simulates a change made outside the app, such as a keeper muting the
@@ -87,6 +88,17 @@ class FakeLocalMedia implements LocalMedia {
   @override
   Future<void> selectAudioOutput(MediaDeviceInfo device) async {
     audioOutputDeviceId = device.id;
+    emitChange();
+  }
+
+  @override
+  Future<void> release() async {
+    releaseCount++;
+    hasMicrophoneTrack = false;
+    isMicrophoneEnabled = false;
+    hasCameraTrack = false;
+    isCameraEnabled = false;
+    cameraFacing = null;
     emitChange();
   }
 

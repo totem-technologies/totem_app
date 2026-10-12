@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -132,19 +133,31 @@ class _SessionDisconnectedScreenState
   @override
   void initState() {
     super.initState();
-    _shutDownCamera();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (ref.context.mounted) ref.invalidate(spacesSummaryProvider);
+      if (!ref.context.mounted) return;
+      _releaseLocalMedia();
+      ref.invalidate(spacesSummaryProvider);
     });
     _spacesSummaryRefreshTimer = Timer(const Duration(milliseconds: 2750), () {
       if (mounted) ref.invalidate(spacesSummaryProvider);
     });
   }
 
-  void _shutDownCamera() {
+  void _releaseLocalMedia() {
     final session = ref.read(currentSessionProvider);
-    session?.room?.localParticipant?.setCameraEnabled(false);
-    session?.room?.localParticipant?.setMicrophoneEnabled(false);
+    if (session == null) return;
+    unawaited(
+      session.localMedia.release().catchError((
+        Object error,
+        StackTrace stackTrace,
+      ) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to release local media after disconnecting',
+        );
+      }),
+    );
   }
 
   @override

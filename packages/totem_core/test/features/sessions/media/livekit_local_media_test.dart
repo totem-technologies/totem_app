@@ -69,6 +69,88 @@ void main() {
       });
     }
 
+    test('rooms default to the same soft mute for server-side mutes', () {
+      final options = LiveKitLocalMedia.applyCapturePolicy(
+        const RoomOptions(adaptiveStream: true),
+      );
+
+      check(
+        options.defaultAudioCaptureOptions.stopAudioCaptureOnMute,
+      ).isFalse();
+      check(options.adaptiveStream).isTrue();
+    });
+
+    test('unmuting restarts a microphone whose capture was stopped', () async {
+      final publication = MockLocalAudioTrackPublication();
+      final track = MockLocalAudioTrack(muted: true, isActive: false);
+      when(() => publication.track).thenReturn(track);
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.microphone),
+      ).thenReturn(publication);
+      when(track.restartTrack).thenAnswer((_) async {});
+
+      await media.setMicrophoneEnabled(true);
+
+      verifyInOrder([
+        track.restartTrack,
+        () => participant.setMicrophoneEnabled(
+          true,
+          audioCaptureOptions: any(named: 'audioCaptureOptions'),
+        ),
+      ]);
+    });
+
+    test('unmuting a live microphone does not restart capture', () async {
+      final publication = MockLocalAudioTrackPublication();
+      final track = MockLocalAudioTrack(muted: true);
+      when(() => publication.track).thenReturn(track);
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.microphone),
+      ).thenReturn(publication);
+
+      await media.setMicrophoneEnabled(true);
+
+      verifyNever(track.restartTrack);
+    });
+
+    test('joining muted mutes the microphone before publishing it', () async {
+      final track = MockLocalAudioTrack();
+      when(
+        () => participant.publishAudioTrack(track),
+      ).thenAnswer((_) async => MockLocalAudioTrackPublication());
+
+      await media.publishJoinMicrophone(track, muted: true);
+
+      verifyInOrder([
+        () => track.mute(stopOnMute: false),
+        () => participant.publishAudioTrack(track),
+      ]);
+    });
+
+    test('releasing unpublishes every local track', () async {
+      when(participant.unpublishAllTracks).thenAnswer((_) async {});
+
+      await media.release();
+
+      verify(participant.unpublishAllTracks).called(1);
+    });
+
+    test('capture stays released for the room after release', () async {
+      when(participant.unpublishAllTracks).thenAnswer((_) async {});
+
+      final release = media.release();
+      // A late automatic unmute during shutdown.
+      final unmute = media.setMicrophoneEnabled(true);
+      await Future.wait([release, unmute]);
+
+      verifyNever(
+        () => participant.setMicrophoneEnabled(
+          any(),
+          audioCaptureOptions: any(named: 'audioCaptureOptions'),
+        ),
+      );
+    });
+
     test('reports local mutes but not remote ones', () async {
       final afterAttach = changes;
 

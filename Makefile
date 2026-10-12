@@ -146,6 +146,7 @@ test-scripts:
 
 lint:
 	@echo "Running linter..."
+	dart run scripts/check_media_boundary.dart
 	cd $(APP_DIR) && flutter analyze
 	cd $(CORE_DIR) && flutter analyze
 	cd $(WEB_DIR) && flutter analyze

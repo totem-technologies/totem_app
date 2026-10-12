@@ -97,6 +97,7 @@ abstract interface class LocalMedia {
   bool get isSpeakerOutputPreferred;
 
   /// Muting keeps the microphone captured and only stops sending audio.
+  /// Unmuting always resumes live capture, however the microphone was muted.
   Future<void> setMicrophoneEnabled(bool enabled);
 
   Future<void> setCameraEnabled(bool enabled);
@@ -108,4 +109,9 @@ abstract interface class LocalMedia {
   Future<void> selectAudioOutput(MediaDeviceInfo device);
 
   Future<void> setSpeakerOutputPreferred(bool preferred);
+
+  /// Stops capture and unpublishes the camera and microphone, for leaving or
+  /// ending a session. Mutes never stop capture; this is the only call that
+  /// does.
+  Future<void> release();
 }

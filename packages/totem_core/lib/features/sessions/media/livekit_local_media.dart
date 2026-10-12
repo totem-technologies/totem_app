@@ -8,21 +8,34 @@ import 'package:totem_core/features/sessions/media/local_media.dart';
 /// [LocalMedia] backed by the LiveKit Flutter SDK.
 ///
 /// The session controller owns one instance for its lifetime and attaches
-/// each new [Room] to it.
+/// each new [Room] to it. Every capture operation on the local participant
+/// goes through this class, so the microphone's mute policy is decided here
+/// and nowhere else.
+///
+/// The policy: muting disables the microphone track instead of stopping
+/// capture. Stopping and reacquiring the microphone makes Android Chrome
+/// switch audio modes, which leaves playback and capture quiet until the
+/// page reloads. Capture stops only in [release].
+///
+/// LiveKit reads the policy from more than one place. `setSourceEnabled`
+/// only reads the options passed to it, while server-side mutes, such as a
+/// keeper muting a participant, only read the room defaults set by
+/// [applyCapturePolicy]. Both must agree: a soft unmute does not restart a
+/// track that a hard mute stopped.
 class LiveKitLocalMedia implements LocalMedia {
   LiveKitLocalMedia({required this.cameraCaptureOptions});
 
   /// Capture options used when this class creates a camera track.
   final CameraCaptureOptions cameraCaptureOptions;
 
-  /// Muting disables the microphone track instead of stopping capture.
-  /// Stopping and reacquiring the microphone makes Android Chrome switch
-  /// audio modes, which leaves playback and capture quiet until the page
-  /// reloads. `setSourceEnabled` only reads this flag from the options passed
-  /// to it, not from the room defaults.
-  static const microphoneToggleOptions = AudioCaptureOptions(
+  static const _microphoneCaptureOptions = AudioCaptureOptions(
     stopAudioCaptureOnMute: false,
   );
+
+  /// Sets the room defaults that server-side mutes read. Every room the
+  /// session creates must pass through this.
+  static RoomOptions applyCapturePolicy(RoomOptions options) =>
+      options.copyWith(defaultAudioCaptureOptions: _microphoneCaptureOptions);
 
   final _binding = LiveKitRoomBinding(
     (listener, notify) => listener
@@ -41,6 +54,32 @@ class LiveKitLocalMedia implements LocalMedia {
   void attach(Room? room) => _binding.attach(room);
 
   Room? get _room => _binding.room;
+
+  /// Capture operations run one at a time, in call order, so [release] waits
+  /// for a publication still in flight. LiveKit queues its own publishes but
+  /// not unpublishing.
+  Future<void> _queue = Future.value();
+
+  /// The room [release] ran for. Later capture operations on it do nothing,
+  /// so a late toggle during shutdown cannot reopen capture.
+  Room? _releasedRoom;
+
+  Future<void> _serialize(
+    Future<void> Function(Room room, LocalParticipant participant) operation,
+  ) {
+    final result = _queue.then((_) async {
+      final room = _room;
+      final participant = room?.localParticipant;
+      if (room == null ||
+          participant == null ||
+          identical(room, _releasedRoom)) {
+        return;
+      }
+      await operation(room, participant);
+    });
+    _queue = result.catchError((Object _) {});
+    return result;
+  }
 
   LocalParticipant? get _participant => _room?.localParticipant;
 
@@ -103,47 +142,107 @@ class LiveKitLocalMedia implements LocalMedia {
       AudioManager.instance.isSpeakerOutputPreferred;
 
   @override
-  Future<void> setMicrophoneEnabled(bool enabled) async {
-    await _participant?.setMicrophoneEnabled(
+  Future<void> setMicrophoneEnabled(bool enabled) => _serialize(
+    (_, participant) => _setMicrophoneEnabled(participant, enabled),
+  );
+
+  Future<void> _setMicrophoneEnabled(
+    LocalParticipant participant,
+    bool enabled,
+  ) async {
+    if (enabled) {
+      // Something outside this class, such as the OS reclaiming the
+      // microphone, may have stopped capture. A soft unmute alone would
+      // leave the microphone silent.
+      final track = participant
+          .getTrackPublicationBySource(TrackSource.microphone)
+          ?.track;
+      if (track is LocalAudioTrack && !track.isActive) {
+        await track.restartTrack();
+      }
+    }
+    await participant.setMicrophoneEnabled(
       enabled,
-      audioCaptureOptions: microphoneToggleOptions,
+      audioCaptureOptions: _microphoneCaptureOptions,
     );
   }
 
-  @override
-  Future<void> setCameraEnabled(bool enabled) async {
-    final room = _room;
-    final participant = _participant;
-    if (room == null || participant == null) return;
-    if (enabled) {
-      await participant.setCameraEnabled(
-        true,
-        cameraCaptureOptions: cameraCaptureOptions.copyWith(
-          deviceId: room.selectedVideoInputDeviceId,
-        ),
+  /// Publishes the camera when joining: the [track] handed over from
+  /// pre-join, or a new one from the room's default capture options, which
+  /// hold the pre-join preferences.
+  Future<void> publishJoinCamera(
+    LocalVideoTrack? track, {
+    required VideoPublishOptions publishOptions,
+  }) => _serialize((_, participant) async {
+    if (track != null) {
+      await participant.publishVideoTrack(
+        track,
+        publishOptions: publishOptions,
       );
     } else {
-      await participant.setCameraEnabled(false);
+      await participant.setCameraEnabled(true);
     }
-  }
+  });
+
+  /// Publishes the microphone when joining: the [track] handed over from
+  /// pre-join, or a new one. A [muted] track is muted before publishing so
+  /// it is never heard; without a pre-join track, a muted microphone is not
+  /// opened at all.
+  Future<void> publishJoinMicrophone(
+    LocalAudioTrack? track, {
+    required bool muted,
+  }) => _serialize((_, participant) async {
+    if (track == null) {
+      if (!muted) await _setMicrophoneEnabled(participant, true);
+      return;
+    }
+    if (muted) {
+      await track.mute(
+        stopOnMute: _microphoneCaptureOptions.stopAudioCaptureOnMute,
+      );
+    }
+    await participant.publishAudioTrack(track);
+  });
 
   @override
-  Future<void> switchCameraFacing() async {
+  Future<void> release() => _serialize((room, participant) async {
+    _releasedRoom = room;
+    // Unpublishing stops each track, including a soft-muted microphone that
+    // a mute would leave captured.
+    await participant.unpublishAllTracks();
+  });
+
+  @override
+  Future<void> setCameraEnabled(bool enabled) =>
+      _serialize((room, participant) async {
+        if (enabled) {
+          await participant.setCameraEnabled(
+            true,
+            cameraCaptureOptions: cameraCaptureOptions.copyWith(
+              deviceId: room.selectedVideoInputDeviceId,
+            ),
+          );
+        } else {
+          await participant.setCameraEnabled(false);
+        }
+      });
+
+  @override
+  Future<void> switchCameraFacing() => _serialize((_, participant) async {
     final track = _activeCameraTrack;
     if (track != null) {
       final options = track.currentOptions as CameraCaptureOptions;
       await track.setCameraPosition(options.cameraPosition.switched());
     } else {
-      await _participant?.publishVideoTrack(
+      await participant.publishVideoTrack(
         await LocalVideoTrack.createCameraTrack(cameraCaptureOptions),
       );
     }
-  }
+  });
 
   @override
-  Future<void> selectCamera(MediaDeviceInfo device) async {
-    await _room?.setVideoInputDevice(device.toLiveKit());
-  }
+  Future<void> selectCamera(MediaDeviceInfo device) =>
+      _serialize((room, _) => room.setVideoInputDevice(device.toLiveKit()));
 
   @override
   Future<void> selectAudioOutput(MediaDeviceInfo device) async {

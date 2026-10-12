@@ -102,6 +102,35 @@ void main() {
         ..has((s) => s.isCameraOn, 'isCameraOn').isFalse();
     });
 
+    test('controls show off once a published track is removed', () {
+      session.mockOptions = const SessionOptions(
+        sessionSlug: 'test-session',
+        token: 'test-token',
+        cameraEnabled: true,
+        microphoneEnabled: true,
+        speakerEnabled: true,
+        cameraOptions: SessionController.defaultCameraCaptureOptions,
+      );
+      media
+        ..hasMicrophoneTrack = true
+        ..isMicrophoneEnabled = true
+        ..hasCameraTrack = true
+        ..isCameraEnabled = true;
+      controller();
+
+      // Both tracks are unpublished, for example by the server.
+      media
+        ..hasMicrophoneTrack = false
+        ..isMicrophoneEnabled = false
+        ..hasCameraTrack = false
+        ..isCameraEnabled = false
+        ..emitChange();
+
+      check(deviceState())
+        ..has((s) => s.isMicrophoneOn, 'isMicrophoneOn').isFalse()
+        ..has((s) => s.isCameraOn, 'isCameraOn').isFalse();
+    });
+
     test('disableCamera turns the camera off', () async {
       media.isCameraEnabled = true;
 

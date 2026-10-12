@@ -34,8 +34,8 @@ class SessionDeviceState {
   final bool isMicrophoneEnabled;
   final bool isCameraEnabled;
 
-  /// What the microphone and camera controls show: the published track's
-  /// state, or the user's join preference until that track is published.
+  /// What the microphone and camera controls show: the track's state, or the
+  /// user's join preference until the track is first published.
   final bool isMicrophoneOn;
   final bool isCameraOn;
 
@@ -76,18 +76,26 @@ class SessionDeviceState {
 
 @riverpod
 class SessionDeviceController extends _$SessionDeviceController {
+  /// Whether each track has been published at least once. Until then the
+  /// controls show the user's join preference; afterwards a missing track
+  /// means off, so the controls can always republish it.
+  bool _microphoneWasPublished = false;
+  bool _cameraWasPublished = false;
+
   SessionDeviceState _currentState() {
     final media = _media;
+    _microphoneWasPublished |= media.hasMicrophoneTrack;
+    _cameraWasPublished |= media.hasCameraTrack;
     return SessionDeviceState(
       selectedCameraDeviceId: selectedCameraDeviceId,
       selectedAudioOutputDeviceId: selectedAudioOutputDeviceId,
       isSpeakerphoneEnabled: isSpeakerphoneEnabled,
       isMicrophoneEnabled: isMicrophoneEnabled,
       isCameraEnabled: isCameraEnabled,
-      isMicrophoneOn: media.hasMicrophoneTrack
+      isMicrophoneOn: _microphoneWasPublished
           ? media.isMicrophoneEnabled
           : session.options.microphoneEnabled,
-      isCameraOn: media.hasCameraTrack
+      isCameraOn: _cameraWasPublished
           ? media.isCameraEnabled
           : session.options.cameraEnabled,
       hasMicrophoneTrack: media.hasMicrophoneTrack,

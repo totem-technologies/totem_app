@@ -189,6 +189,7 @@ class _DelayedInitializeSessionController extends SessionController {
   final initializationGate = Completer<void>();
   late Room initializedRoom;
   int initializationCount = 0;
+  RoomOptions? lastRoomOptions;
 
   @override
   Future<Room> initializeConnection({
@@ -197,6 +198,7 @@ class _DelayedInitializeSessionController extends SessionController {
     required String token,
   }) async {
     initializationCount++;
+    lastRoomOptions = roomOptions;
     if (!initializationStarted.isCompleted) {
       initializationStarted.complete();
     }
@@ -730,6 +732,53 @@ void main() {
 
         check(room.prepareConnectionCount).equals(1);
         check(room.connectCount).equals(1);
+      });
+
+      test('server-side mutes keep the microphone captured', () async {
+        // The backend mutes participants through LiveKit, and the SDK applies
+        // those mutes with the room's default capture options. A stopped
+        // microphone would stay silent after the next soft unmute.
+        const eventSlug = 'test-session';
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final container = ProviderContainer(
+          overrides: [
+            sessionProvider(
+              eventSlug,
+            ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+            sessionControllerProvider(
+              options,
+            ).overrideWith(_DelayedInitializeSessionController.new),
+          ],
+        );
+        addTearDown(container.dispose);
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+        final controller =
+            container.read(sessionControllerProvider(options).notifier)
+                  as _DelayedInitializeSessionController
+              ..initializedRoom = _CountingRoom(MockLocalParticipant());
+
+        final join = controller.join();
+        await controller.initializationStarted.future;
+
+        check(controller.lastRoomOptions?.defaultAudioCaptureOptions)
+            .isNotNull()
+            .has((o) => o.stopAudioCaptureOnMute, 'stopAudioCaptureOnMute')
+            .isFalse();
+
+        controller.initializationGate.complete();
+        await join;
       });
 
       test(
