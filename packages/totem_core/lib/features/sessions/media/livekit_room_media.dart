@@ -38,7 +38,14 @@ class LiveKitRoomMedia implements RoomMedia {
     if (participant == null) return ParticipantMediaState.none;
 
     final camera = participant.videoTrackPublications.firstOrNull;
-    final isCameraOn = camera != null && isTrackLive(camera);
+    // A remote track's isActive only says whether our receiving copy has
+    // started, and LiveKit reports a subscription before starting it without
+    // a later event. The publication's mute state follows the sender's camera.
+    final isCameraOn =
+        camera != null &&
+        (participant is LocalParticipant
+            ? isTrackLive(camera)
+            : !(camera.track?.muted ?? camera.muted));
     return ParticipantMediaState(
       hasMicrophone: participant.hasAudio,
       isMicrophoneOn: participant.hasAudio && !participant.isMuted,
