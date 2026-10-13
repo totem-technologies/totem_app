@@ -244,10 +244,13 @@ class PreJoinMediaController extends _$PreJoinMediaController {
           error: error,
         ),
       );
-      ErrorHandler.logError(
+      ErrorHandler.report(
         error,
         stackTrace: stackTrace,
         message: 'Failed to create local video track',
+        disposition: _isWebMediaPermissionDenied(error)
+            ? ErrorDisposition.expected
+            : ErrorDisposition.unexpected,
       );
     }
   }
@@ -313,10 +316,13 @@ class PreJoinMediaController extends _$PreJoinMediaController {
           error: error,
         ),
       );
-      ErrorHandler.logError(
+      ErrorHandler.report(
         error,
         stackTrace: stackTrace,
         message: 'Failed to create local audio track',
+        disposition: _isWebMediaPermissionDenied(error)
+            ? ErrorDisposition.expected
+            : ErrorDisposition.unexpected,
       );
       return null;
     }

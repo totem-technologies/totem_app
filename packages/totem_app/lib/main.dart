@@ -25,7 +25,7 @@ Future<void> main() async {
           options: DefaultFirebaseOptions.currentPlatform,
         );
         TotemRouter.instance = AppTotemRouter();
-        NotificationsService.instance.initialize();
+        await NotificationsService.instance.initialize();
       },
       providerOverrides: [
         authControllerProvider.overrideWith(MobileAuthController.new),

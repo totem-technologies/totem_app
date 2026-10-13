@@ -57,14 +57,20 @@ class NotificationsService {
   final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
-  Future<void> initialize() async {
-    if (_initialized) {
-      return;
-    }
+  Future<void>? _initialization;
+  StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
+  StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
 
+  Future<void> initialize() {
+    if (_initialized) return Future.value();
+    return _initialization ??= _initialize().whenComplete(() {
+      _initialization = null;
+    });
+  }
+
+  Future<void> _initialize() async {
     try {
       logger.i('⏰ Initializing NotificationsService...');
-      _initialized = true;
 
       // Set up Firebase
       {
@@ -73,9 +79,12 @@ class NotificationsService {
         if (initialMessage != null) {
           _handleFirebaseMessage(initialMessage);
         }
-        FirebaseMessaging.onMessageOpenedApp.listen(_handleFirebaseMessage);
+        _messageOpenedSubscription = FirebaseMessaging.onMessageOpenedApp
+            .listen(_handleFirebaseMessage);
 
-        FirebaseMessaging.onMessage.listen((message) {
+        _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
+          message,
+        ) {
           logger
             ..i('⏰ Got a message whilst in the foreground!')
             ..i('⏰ Message data: ${message.data}');
@@ -105,11 +114,14 @@ class NotificationsService {
             requestSoundPermission: false,
           ),
         );
-        await flutterLocalNotificationsPlugin.initialize(
+        final didInitialize = await flutterLocalNotificationsPlugin.initialize(
           settings: initializationSettings,
           onDidReceiveNotificationResponse: _handleNotificationTap,
           onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
         );
+        if (didInitialize != true) {
+          throw StateError('Local notifications plugin did not initialize');
+        }
 
         final notificationAppLaunchDetails =
             await flutterLocalNotificationsPlugin
@@ -131,15 +143,20 @@ class NotificationsService {
         }
       }
 
+      _initialized = true;
       logger.i('⏰ NotificationsService initialized successfully');
     } catch (error, stackTrace) {
+      await _messageOpenedSubscription?.cancel();
+      await _foregroundMessageSubscription?.cancel();
+      _messageOpenedSubscription = null;
+      _foregroundMessageSubscription = null;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to initialize notifications service',
       );
-      // Fail gracefully - mark as initialized anyway
-      _initialized = true;
+      // Notifications are optional. Leave [_initialized] false so a later
+      // lifecycle owner can retry instead of pretending the service works.
     }
   }
 
@@ -229,16 +246,16 @@ class NotificationsService {
     );
   }
 
-  Future<void> requestPermissions() {
+  Future<void> requestPermissions() async {
     try {
-      return FirebaseMessaging.instance.requestPermission(provisional: true);
+      await FirebaseMessaging.instance.requestPermission(provisional: true);
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to request notification permissions',
       );
-      return Future.value();
+      return;
     }
   }
 }

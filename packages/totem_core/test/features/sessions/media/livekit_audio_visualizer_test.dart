@@ -1,8 +1,25 @@
 import 'package:checks/checks.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/features/sessions/media/livekit_audio_visualizer.dart';
 
 void main() {
+  group('AudioVisualizerCircuitBreaker', () {
+    test('disables a missing native implementation across widget remounts', () {
+      final circuitBreaker = AudioVisualizerCircuitBreaker()
+        ..recordFailure(MissingPluginException());
+
+      check(circuitBreaker.canAttempt).isFalse();
+    });
+
+    test('keeps transient failures retryable', () {
+      final circuitBreaker = AudioVisualizerCircuitBreaker()
+        ..recordFailure(StateError('listener startup failed'));
+
+      check(circuitBreaker.canAttempt).isTrue();
+    });
+  });
+
   group('audioVisualizerSamplesChanged', () {
     test('ignores imperceptible changes and detects visible changes', () {
       check(

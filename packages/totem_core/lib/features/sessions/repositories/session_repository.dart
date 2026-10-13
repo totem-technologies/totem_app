@@ -19,6 +19,16 @@ bool _isStaleVersionError(ErrorCode? code) => code == ErrorCode.staleVersion;
 bool _isInvalidTransitionError(ErrorCode? code) =>
     code == ErrorCode.invalidTransition;
 
+bool _isExpectedJoinOutcome(Object error) {
+  if (error is! ApiError<JoinResponse, RoomErrorResponse>) return false;
+  return switch (error.error?.code) {
+    ErrorCode.notJoinable ||
+    ErrorCode.roomAlreadyEnded ||
+    ErrorCode.roomNotActive => true,
+    _ => false,
+  };
+}
+
 Future<RoomState> _postEvent({
   required ClientApi apiService,
   required String sessionSlug,
@@ -122,6 +132,7 @@ Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) {
     operationName: 'join session',
     timeout: _shortTimeoutDuration,
     diagnostics: {'session_slug': sessionSlug},
+    shouldReport: (error) => !_isExpectedJoinOutcome(error),
   );
 }
 

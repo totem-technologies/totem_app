@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:math' show min;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart' as sdk;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -38,6 +39,22 @@ bool audioVisualizerSamplesChanged(List<double> current, List<double> next) {
   return false;
 }
 
+@visibleForTesting
+class AudioVisualizerCircuitBreaker {
+  bool _permanentlyUnavailable = false;
+
+  bool get canAttempt => !_permanentlyUnavailable;
+
+  void recordFailure(Object error) {
+    if (error is MissingPluginException ||
+        error is PlatformException && error.code == 'unimplemented') {
+      _permanentlyUnavailable = true;
+    }
+  }
+}
+
+final _audioVisualizerCircuitBreaker = AudioVisualizerCircuitBreaker();
+
 class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
   static const Duration _watchdogInterval = Duration(seconds: 2);
   static const Duration _baseRestartCooldown = Duration(seconds: 3);
@@ -58,6 +75,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
   DateTime? _lastVisualizerEventAt;
   DateTime? _lastRestartAttemptAt;
   int _consecutiveRestartAttempts = 0;
+  bool _visualizerUnavailable = false;
 
   Future<void> _safeAsyncAction(
     AsyncCallback action, {
@@ -66,11 +84,9 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
     try {
       await action();
     } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: failureMessage,
-      );
+      // Cleanup follows a failed visualizer start or widget teardown. Preserve
+      // the root start failure as the report and keep cleanup diagnostics local.
+      debugPrint('$failureMessage: $error\n$stackTrace');
     }
   }
 
@@ -87,7 +103,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
   }
 
   bool get _hasStalledVisualizer {
-    if (widget.audioTrack.muted) return false;
+    if (_visualizerUnavailable || widget.audioTrack.muted) return false;
     if (_visualizer == null) return true;
     final lastEventAt = _lastVisualizerEventAt;
     if (lastEventAt == null) return true;
@@ -187,7 +203,8 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
 
     _visualizerWatchdogTimer = Timer.periodic(_watchdogInterval, (_) {
       if (!mounted || !_hasStalledVisualizer) return;
-      if (_consecutiveRestartAttempts >= _maxConsecutiveRestartAttempts) {
+      if (!_audioVisualizerCircuitBreaker.canAttempt ||
+          _consecutiveRestartAttempts >= _maxConsecutiveRestartAttempts) {
         return;
       }
 
@@ -211,7 +228,12 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
     sdk.EventsListener<sdk.AudioVisualizerEvent>? visualizerListener;
 
     try {
-      if (!mounted || generation != _listenerGeneration) return;
+      if (!mounted ||
+          generation != _listenerGeneration ||
+          !_audioVisualizerCircuitBreaker.canAttempt) {
+        _visualizerUnavailable = true;
+        return;
+      }
 
       visualizer = sdk.createVisualizer(
         widget.audioTrack,
@@ -253,10 +275,18 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
         visualizer: visualizer,
         visualizerListener: visualizerListener,
       );
-      ErrorHandler.logError(
+      _audioVisualizerCircuitBreaker.recordFailure(error);
+      _visualizerUnavailable = !_audioVisualizerCircuitBreaker.canAttempt;
+      ErrorHandler.report(
         error,
         stackTrace: stackTrace,
         message: 'Failed to attach audio visualizer listeners',
+        incidentKey: 'audio-visualizer:${error.runtimeType}',
+        diagnostics: {
+          'feature': 'audio_visualizer',
+          'recovery': _visualizerUnavailable ? 'unavailable' : 'retrying',
+          'restart_attempt': _consecutiveRestartAttempts,
+        },
       );
     }
   }
