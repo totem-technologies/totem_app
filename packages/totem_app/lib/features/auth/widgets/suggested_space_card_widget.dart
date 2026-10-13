@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/assets.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/utils.dart';
 import 'package:totem_core/shared/widgets/totem_image.dart';
@@ -150,16 +152,16 @@ class SuggestedSpaceCard extends StatelessWidget {
                           child: ClipOval(
                             child: TotemImage(
                               imageUrl: session.space.author.profileImage.value,
-                              loadingPlaceholder: const Icon(
-                                Icons.person,
+                              loadingPlaceholder: const TotemIcon(
+                                TotemIcons.person,
                                 color: Colors.white,
                                 size: 25,
                               ),
                               errorWidget: Container(
                                 color: theme.colorScheme.primary,
                                 alignment: AlignmentDirectional.center,
-                                child: const Icon(
-                                  Icons.person,
+                                child: const TotemIcon(
+                                  TotemIcons.person,
                                   color: Colors.white,
                                   size: 14,
                                 ),

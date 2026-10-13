@@ -3,6 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/features/spaces/widgets/sessions_calendar.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+
+Finder _totemIcon(String icon) => find.byWidgetPredicate(
+  (widget) => widget is TotemIcon && widget.icon == icon,
+);
 
 NextSessionSchema _session(
   DateTime start, {
@@ -54,14 +59,14 @@ void main() {
         _session(DateTime(2025, 2, 10)),
       ]);
       check(tester.widgetList(find.text('January 2025'))).length.equals(1);
-      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.tap(_totemIcon(TotemIcons.arrowBack));
       await tester.pump();
       check(tester.widgetList(find.text('December 2024'))).length.equals(1);
-      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.tap(_totemIcon(TotemIcons.arrowForward));
       await tester.pump();
       check(tester.widgetList(find.text('January 2025'))).length.equals(1);
 
-      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.tap(_totemIcon(TotemIcons.arrowForward));
       await tester.pump();
       check(tester.widgetList(find.text('February 2025'))).length.equals(1);
     },

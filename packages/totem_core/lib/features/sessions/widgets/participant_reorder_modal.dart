@@ -518,7 +518,7 @@ class _ParticipantReorderItem extends ConsumerWidget {
             ),
           ),
           trailing: isKeeper
-              ? Icon(Icons.lock, size: 24, color: foregroundColor)
+              ? TotemIcon(TotemIcons.lock, size: 24, color: foregroundColor)
               : ReorderableDragStartListener(
                   index: index,
                   child: TotemIcon(

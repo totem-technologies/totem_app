@@ -274,7 +274,7 @@ class _WebPermissionsDeniedDialogState
                     child: IconButton(
                       tooltip: 'Close',
                       onPressed: () => Navigator.of(context).pop(false),
-                      icon: const Icon(Icons.close),
+                      icon: const TotemIcon(TotemIcons.close),
                     ),
                   ),
                   Text(
@@ -609,7 +609,7 @@ class _CircleCheckbox extends StatelessWidget {
         border: isChecked ? null : Border.all(color: AppTheme.gray, width: 1.5),
       ),
       child: isChecked
-          ? const Icon(Icons.check, size: 14, color: Colors.white)
+          ? const TotemIcon(TotemIcons.checkmark, size: 14, color: Colors.white)
           : null,
     );
   }

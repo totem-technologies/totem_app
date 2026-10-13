@@ -169,7 +169,7 @@ class ErrorHandler {
         content: Row(
           spacing: 12,
           children: [
-            Icon(Icons.error_outline, color: theme.colorScheme.error),
+            TotemIcon(TotemIcons.errorOutlined, color: theme.colorScheme.error),
             Expanded(
               child: Text(
                 message,

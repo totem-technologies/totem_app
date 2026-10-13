@@ -9,6 +9,7 @@ import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/calendar_service.dart';
 import 'package:totem_core/shared/network.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+
 import 'package:totem_core/shared/widgets/confetti.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -141,7 +142,7 @@ class _AttendingDialogState extends State<AttendingDialog> {
                             ),
                           );
                         },
-                        icon: Icon(Icons.adaptive.share),
+                        icon: TotemIcon(TotemIcons.share),
                       ),
                     );
                   },
@@ -159,7 +160,7 @@ class _AttendingDialogState extends State<AttendingDialog> {
                     iconSize: 18,
                     color: AppTheme.gray,
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
+                    icon: const TotemIcon(TotemIcons.close),
                   ),
                 ),
               ],

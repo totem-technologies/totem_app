@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+
 import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
@@ -143,8 +145,8 @@ class _BlogImage extends StatelessWidget {
             errorWidget: const ColoredBox(
               color: AppTheme.cream,
               child: Center(
-                child: Icon(
-                  Icons.article_outlined,
+                child: TotemIcon(
+                  TotemIcons.blog,
                   size: 48,
                   color: AppTheme.gray,
                 ),
@@ -244,7 +246,7 @@ class _ReadMoreButton extends StatelessWidget {
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
           SizedBox(width: 6),
-          Icon(Icons.arrow_forward_ios, size: 12),
+          TotemIcon(TotemIcons.arrowForward, size: 12),
         ],
       ),
     );

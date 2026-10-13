@@ -6,6 +6,8 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
 import 'package:totem_core/features/messages/models/message.dart';
 import 'package:totem_core/features/messages/providers/thread_provider.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 import '../widgets/day_separator.dart';
@@ -103,8 +105,8 @@ class _ThreadHeader extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: () => context.pop(),
-                child: const Icon(
-                  Icons.arrow_back_ios_new,
+                child: const TotemIcon(
+                  TotemIcons.arrowBack,
                   size: 18,
                   color: AppTheme.textHeading,
                 ),

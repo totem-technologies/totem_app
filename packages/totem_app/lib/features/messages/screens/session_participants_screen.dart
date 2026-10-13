@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 import '../mocks/message_mocks.dart';
 
@@ -195,8 +196,8 @@ class _NavBar extends StatelessWidget {
           children: [
             IconButton(
               onPressed: () => context.pop(),
-              icon: const Icon(
-                Icons.arrow_back_ios_new,
+              icon: const TotemIcon(
+                TotemIcons.arrowBack,
                 size: 18,
                 color: AppTheme.textHeading,
               ),
@@ -419,7 +420,7 @@ class _ParticipantDialog extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: onSendMessage,
-              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 22),
+              icon: const TotemIcon(TotemIcons.chat, size: 22),
               label: const Text('Send message'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.messagePurple,

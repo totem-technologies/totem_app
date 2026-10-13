@@ -5,6 +5,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 typedef OnActionPerformed = AsyncValueGetter<bool>;
 
@@ -409,8 +410,8 @@ class ActionSliderState extends State<ActionSlider> {
                                         ),
                                   ),
                                 )
-                              : Icon(
-                                  Icons.arrow_forward_ios,
+                              : TotemIcon(
+                                  TotemIcons.arrowForward,
                                   size: 20,
                                   color: backgroundColor,
                                 ),
