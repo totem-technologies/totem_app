@@ -116,17 +116,19 @@ Future<void> _pumpRoomScreen(
   required RoomConnectionState connectionState,
   required RoomStatus roomStatus,
 }) async {
+  final session = FakeSessionController();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         authControllerProvider.overrideWith(
           () => FakeAuthController(AuthState.unauthenticated()),
         ),
-        currentSessionProvider.overrideWith((ref) => null),
+        currentSessionProvider.overrideWith((ref) => session),
         currentSessionEventProvider.overrideWith((ref) => event),
         resolveCurrentScreenProvider.overrideWith((ref) => RoomScreen.loading),
         connectionStateProvider.overrideWith((ref) => connectionState),
         roomStatusProvider.overrideWith((ref) => roomStatus),
+        getRecommendedSessionsProvider(limit: 1).overrideWith((ref) => []),
         disconnectionReasonProvider.overrideWith((ref) => null),
       ],
       child: MaterialApp(
@@ -391,10 +393,12 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   required RoomConnectionState connectionState,
   required RoomStatus roomStatus,
   bool hasKeeperDisconnected = false,
-  RoomScreen roomScreen = RoomScreen.listening,
+  bool mountSession = false,
+  RoomScreen roomScreen = RoomScreen.loading,
   List<Object?> extraOverrides = const [],
   AsyncValueSetter<ProviderContainer>? beforeMount,
 }) async {
+  final session = FakeSessionController();
   final eventStateProvider =
       NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>(
         () => _SessionEventOverrideNotifier(event),
@@ -431,7 +435,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
         ),
       ),
     ),
-    currentSessionProvider.overrideWith((ref) => null),
+    currentSessionProvider.overrideWith((ref) => mountSession ? session : null),
     currentSessionEventProvider.overrideWith(
       (ref) => ref.watch(eventStateProvider),
     ),
@@ -448,6 +452,8 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
       (ref) => ref.watch(hasKeeperDisconnectedStateProvider),
     ),
     disconnectionReasonProvider.overrideWith((ref) => null),
+    if (mountSession)
+      getRecommendedSessionsProvider(limit: 1).overrideWith((ref) => []),
     ...extraOverrides,
   ];
   final child = MaterialApp(
@@ -476,6 +482,12 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
     );
   }
   await tester.pumpAndSettle();
+  if (mountSession) {
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+  }
 
   return _MutableRoomScreenHarness(
     container: container,
@@ -1100,6 +1112,8 @@ void main() {
           event: event,
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
+          mountSession: true,
+          roomScreen: RoomScreen.loading,
         );
 
         await tester.pump(const Duration(seconds: 1));
@@ -1205,6 +1219,8 @@ void main() {
         event: event,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
+        mountSession: true,
+        roomScreen: RoomScreen.loading,
       );
 
       await tester.pump(const Duration(seconds: 30));
@@ -1235,6 +1251,8 @@ void main() {
         event: event,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
+        mountSession: true,
+        roomScreen: RoomScreen.loading,
       );
 
       await tester.pump(const Duration(seconds: 30));
@@ -1266,6 +1284,8 @@ void main() {
         event: eventA,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
+        mountSession: true,
+        roomScreen: RoomScreen.loading,
       );
 
       await tester.pump(const Duration(seconds: 1));
@@ -1453,6 +1473,8 @@ void main() {
           ),
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
+          mountSession: true,
+          roomScreen: RoomScreen.loading,
           extraOverrides: [
             isOfflineProvider.overrideWith((ref) => connectivityChanges.stream),
           ],
@@ -1495,6 +1517,8 @@ void main() {
           ),
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
+          mountSession: true,
+          roomScreen: RoomScreen.loading,
           extraOverrides: [
             isOfflineProvider.overrideWith((ref) => connectivityChanges.stream),
           ],
@@ -1557,6 +1581,8 @@ void main() {
         ),
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
+        mountSession: true,
+        roomScreen: RoomScreen.loading,
         extraOverrides: [
           isOfflineProvider.overrideWith((ref) => connectivityChanges.stream),
         ],
@@ -1591,6 +1617,8 @@ void main() {
           ),
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
+          mountSession: true,
+          roomScreen: RoomScreen.loading,
           extraOverrides: [
             isOfflineProvider.overrideWith((ref) => connectivityChanges.stream),
           ],
@@ -1612,41 +1640,41 @@ void main() {
       },
     );
 
-    testWidgets('dismisses the offline notification on disconnected screen', (
-      tester,
-    ) async {
-      final connectivityChanges = StreamController<bool>();
-      addTearDown(connectivityChanges.close);
+    testWidgets(
+      'dismisses the offline notification when the screen is disposed',
+      (tester) async {
+        final connectivityChanges = StreamController<bool>();
+        addTearDown(connectivityChanges.close);
 
-      final harness = await _pumpRoomScreenWithMutableState(
-        tester,
-        event: _createSessionEventWithElapsed(
-          _testNow(tester),
-          elapsed: const Duration(minutes: 1),
-        ),
-        connectionState: RoomConnectionState.connected,
-        roomStatus: RoomStatus.active,
-        extraOverrides: [
-          isOfflineProvider.overrideWith((ref) => connectivityChanges.stream),
-        ],
-      );
+        await _pumpRoomScreenWithMutableState(
+          tester,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 1),
+          ),
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+          mountSession: true,
+          roomScreen: RoomScreen.loading,
+          extraOverrides: [
+            isOfflineProvider.overrideWith((ref) => connectivityChanges.stream),
+          ],
+        );
 
-      connectivityChanges.add(false);
-      await tester.pump();
-      connectivityChanges.add(true);
-      await tester.pumpAndSettle();
-      check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
+        connectivityChanges.add(false);
+        await tester.pump();
+        connectivityChanges.add(true);
+        await tester.pumpAndSettle();
+        check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
 
-      harness.container
-          .read(harness.roomScreenProvider.notifier)
-          .set(RoomScreen.disconnected);
-      await tester.pump();
-      await tester.pump();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
 
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(0);
-      check(tester.widgetList(find.text("You're Offline"))).length.equals(0);
-    });
+        check(tester.widgetList(find.byType(NotificationBanner))).length
+            .equals(0);
+        check(tester.widgetList(find.text("You're Offline"))).length.equals(0);
+      },
+    );
   });
 
   group('VideoRoomScreen - keeper disconnect notification lifecycle', () {
@@ -1664,6 +1692,7 @@ void main() {
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
         hasKeeperDisconnected: true,
+        mountSession: true,
       );
 
       check(tester.widgetList(find.byType(NotificationBanner))).length
@@ -1688,6 +1717,7 @@ void main() {
           event: event,
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
+          mountSession: true,
         );
 
         harness.container
@@ -1719,6 +1749,7 @@ void main() {
         event: event,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
+        mountSession: true,
       );
 
       harness.container
@@ -1750,6 +1781,7 @@ void main() {
         event: event,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
+        mountSession: true,
       );
 
       harness.container
@@ -1781,6 +1813,7 @@ void main() {
           event: event,
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
+          mountSession: true,
         );
 
         harness.container
@@ -1813,7 +1846,7 @@ void main() {
           event: event,
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
-          roomScreen: RoomScreen.listening,
+          mountSession: true,
         );
 
         harness.container
@@ -1846,7 +1879,7 @@ void main() {
           event: event,
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
-          roomScreen: RoomScreen.listening,
+          mountSession: true,
         );
 
         harness.container
@@ -1879,7 +1912,7 @@ void main() {
         event: event,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
-        roomScreen: RoomScreen.listening,
+        mountSession: true,
       );
 
       harness.container
@@ -1911,7 +1944,7 @@ void main() {
         event: event,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
-        roomScreen: RoomScreen.listening,
+        mountSession: true,
       );
 
       // Show notification first
@@ -1958,7 +1991,7 @@ void main() {
         event: event,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
-        roomScreen: RoomScreen.listening,
+        mountSession: true,
       );
 
       harness.container
@@ -2003,6 +2036,7 @@ void main() {
         event: event,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
+        mountSession: true,
         roomScreen: RoomScreen.disconnected,
       );
 
@@ -2023,6 +2057,7 @@ void main() {
         event: event,
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
+        mountSession: true,
         roomScreen: RoomScreen.error,
       );
 
@@ -2049,7 +2084,7 @@ void main() {
           connectionState: RoomConnectionState.connected,
           roomStatus: RoomStatus.active,
           hasKeeperDisconnected: true,
-          roomScreen: RoomScreen.listening,
+          mountSession: true,
         );
 
         await tester.pumpAndSettle();
@@ -2073,6 +2108,7 @@ void main() {
         ),
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.waitingRoom,
+        mountSession: true,
         extraOverrides: [
           sessionCuesServiceProvider.overrideWithValue(feedbackService),
         ],
@@ -2106,6 +2142,7 @@ void main() {
         ),
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
+        mountSession: true,
         extraOverrides: [
           sessionCuesServiceProvider.overrideWithValue(feedbackService),
         ],
@@ -2132,7 +2169,7 @@ void main() {
         ),
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
-        roomScreen: RoomScreen.listening,
+        mountSession: true,
         extraOverrides: [
           sessionCuesServiceProvider.overrideWithValue(feedbackService),
         ],
