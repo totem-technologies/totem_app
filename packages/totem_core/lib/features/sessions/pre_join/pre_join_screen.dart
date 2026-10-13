@@ -103,7 +103,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   }
 
   Future<void> _setWakeLock({required bool enabled}) {
-    if (_wakeLockRequested == enabled) return _wakeLockOperation;
+    if (_wakeLockRequested == enabled && _wakeLockEnabled == enabled) {
+      return _wakeLockOperation;
+    }
     _wakeLockRequested = enabled;
     return _wakeLockOperation = _wakeLockOperation.then(
       (_) => _applyWakeLock(enabled: enabled),

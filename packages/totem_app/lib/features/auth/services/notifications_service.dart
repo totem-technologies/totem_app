@@ -59,6 +59,7 @@ class NotificationsService {
   bool _initialized = false;
   bool _firebaseInitialized = false;
   bool _localNotificationsReady = false;
+  bool _initialLocalNotificationChecked = false;
   Future<void>? _initialization;
   StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
@@ -120,16 +121,6 @@ class NotificationsService {
         if (didInitialize != true) {
           throw StateError('Local notifications plugin did not initialize');
         }
-
-        final notificationAppLaunchDetails =
-            await flutterLocalNotificationsPlugin
-                .getNotificationAppLaunchDetails();
-        if (notificationAppLaunchDetails?.notificationResponse != null &&
-            (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false)) {
-          _handleNotificationTap(
-            notificationAppLaunchDetails!.notificationResponse!,
-          );
-        }
         _localNotificationsReady = true;
       } catch (error, stackTrace) {
         ErrorHandler.logError(
@@ -142,11 +133,35 @@ class NotificationsService {
       }
     }
 
+    if (_localNotificationsReady && !_initialLocalNotificationChecked) {
+      await _handleInitialLocalNotification();
+    }
+
     if (!await _restoreBackgroundPayload()) return;
     if (!_firebaseInitialized || !_localNotificationsReady) return;
 
     _initialized = true;
     logger.i('⏰ NotificationsService initialized successfully');
+  }
+
+  Future<void> _handleInitialLocalNotification() async {
+    try {
+      final notificationAppLaunchDetails = await flutterLocalNotificationsPlugin
+          .getNotificationAppLaunchDetails();
+      _initialLocalNotificationChecked = true;
+      if (notificationAppLaunchDetails?.notificationResponse != null &&
+          (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false)) {
+        _handleNotificationTap(
+          notificationAppLaunchDetails!.notificationResponse!,
+        );
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to handle initial local notification',
+      );
+    }
   }
 
   Future<bool> _restoreBackgroundPayload() async {

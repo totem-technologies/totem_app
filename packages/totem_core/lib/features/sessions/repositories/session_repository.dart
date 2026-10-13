@@ -31,8 +31,6 @@ bool isTerminalSessionJoinError(Object? error) {
   };
 }
 
-bool _isExpectedJoinOutcome(Object error) => isTerminalSessionJoinError(error);
-
 Future<RoomState> _postEvent({
   required ClientApi apiService,
   required String sessionSlug,
@@ -136,7 +134,7 @@ Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) {
     operationName: 'join session',
     timeout: _shortTimeoutDuration,
     diagnostics: {'session_slug': sessionSlug},
-    shouldReport: (error) => !_isExpectedJoinOutcome(error),
+    shouldReport: (error) => !isTerminalSessionJoinError(error),
   );
 }
 
