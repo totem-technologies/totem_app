@@ -112,6 +112,57 @@ void main() {
       },
     );
 
+    test('preserves auth handling for an HTML 401 response', () async {
+      await check(
+        RepositoryUtils.handleApiCall<String>(
+          apiCall: () async {
+            throw DioException(
+              requestOptions: RequestOptions(path: '/auth/request-pin'),
+              response: Response<dynamic>(
+                requestOptions: RequestOptions(path: '/auth/request-pin'),
+                statusCode: 401,
+                headers: Headers.fromMap({
+                  'content-type': ['text/html; charset=utf-8'],
+                }),
+                data: '<!doctype html><html>sign in</html>',
+              ),
+              type: DioExceptionType.badResponse,
+            );
+          },
+          operationName: 'request PIN',
+        ),
+      ).throws<AppAuthException>((error) {
+        error.has((it) => it.code, 'code').equals('UNAUTHENTICATED');
+      });
+    });
+
+    test(
+      'preserves retryable server handling for an HTML 503 response',
+      () async {
+        await check(
+          RepositoryUtils.handleApiCall<String>(
+            apiCall: () async {
+              throw DioException(
+                requestOptions: RequestOptions(path: '/auth/request-pin'),
+                response: Response<dynamic>(
+                  requestOptions: RequestOptions(path: '/auth/request-pin'),
+                  statusCode: 503,
+                  headers: Headers.fromMap({
+                    'content-type': ['text/html; charset=utf-8'],
+                  }),
+                  data: '<!doctype html><html>temporarily unavailable</html>',
+                ),
+                type: DioExceptionType.badResponse,
+              );
+            },
+            operationName: 'request PIN',
+          ),
+        ).throws<AppNetworkException>((error) {
+          error.has((it) => it.code, 'code').equals('SERVER_ERROR_503');
+        });
+      },
+    );
+
     test('converts DioException 403 into forbidden exception', () async {
       check(
         RepositoryUtils.handleApiCall<String>(

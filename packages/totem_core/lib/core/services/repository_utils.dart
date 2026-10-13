@@ -180,9 +180,12 @@ class RepositoryUtils {
             responseBody.trimLeft().toLowerCase().startsWith('<html'));
 
     // A CDN/WAF challenge is infrastructure failure, not an authorization
-    // outcome. Keeping it as data incompatibility preserves the original
-    // endpoint/status diagnostics without treating it as an expected 403.
-    if (isHtmlResponse) {
+    // outcome. Do not override authentication or server-failure semantics:
+    // 401 must continue through auth recovery and HTML 5xx responses remain
+    // retryable network failures.
+    if (isHtmlResponse &&
+        statusCode != 401 &&
+        (statusCode == null || statusCode < 500)) {
       return AppDataException(
         'Unexpected HTML response while requesting JSON',
         code: 'UNEXPECTED_HTML_RESPONSE',

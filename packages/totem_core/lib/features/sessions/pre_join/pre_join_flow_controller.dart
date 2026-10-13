@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_core/core/api/api_client/api_client.dart';
+
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -8,18 +8,6 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 
 part 'pre_join_flow_controller.g.dart';
-
-bool _isTerminalJoinError(Object error) {
-  final resolved = error is ApiError ? error.error : error;
-  return switch (resolved) {
-    RoomErrorResponse(:final code)
-        when code == ErrorCode.notJoinable ||
-            code == ErrorCode.roomAlreadyEnded ||
-            code == ErrorCode.roomNotActive =>
-      true,
-    _ => false,
-  };
-}
 
 @riverpod
 class PreJoinFlowController extends _$PreJoinFlowController {
@@ -135,7 +123,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           clearSessionOptions: true,
         );
       }
-      if (!_isTerminalJoinError(error)) {
+      if (!isTerminalSessionJoinError(error)) {
         ErrorHandler.logError(
           error,
           stackTrace: stackTrace,

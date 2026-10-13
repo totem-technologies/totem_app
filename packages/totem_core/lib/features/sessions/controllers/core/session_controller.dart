@@ -482,8 +482,11 @@ class SessionController extends _$SessionController {
 
   bool get _canPublishInitialMedia =>
       ref.mounted &&
-      state.connectionState == RoomConnectionState.connecting &&
-      state.roomState.status != RoomStatus.ended;
+      state.roomState.status != RoomStatus.ended &&
+      switch (state.connectionState) {
+        RoomConnectionState.connecting || RoomConnectionState.connected => true,
+        _ => false,
+      };
 
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
     final previousCleanup = _cleanupFuture;

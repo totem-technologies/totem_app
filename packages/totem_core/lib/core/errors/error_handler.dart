@@ -12,9 +12,10 @@ import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
-/// Centralized error handling for the Totem App.
+/// The outcome of an error at its ownership boundary.
 enum ErrorDisposition { expected, recovered, unexpected }
 
+/// Centralized error handling for the Totem App.
 class ErrorHandler {
   const new _();
 
@@ -79,6 +80,7 @@ class ErrorHandler {
     final now = DateTime.now();
     final previous = _recentIncidents[key];
     if (previous != null && now.difference(previous) < cooldown) return false;
+    _recentIncidents.remove(key);
     if (_recentIncidents.length >= _maximumRecentIncidents) {
       _recentIncidents.remove(_recentIncidents.keys.first);
     }

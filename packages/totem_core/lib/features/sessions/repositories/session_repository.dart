@@ -19,15 +19,19 @@ bool _isStaleVersionError(ErrorCode? code) => code == ErrorCode.staleVersion;
 bool _isInvalidTransitionError(ErrorCode? code) =>
     code == ErrorCode.invalidTransition;
 
-bool _isExpectedJoinOutcome(Object error) {
-  if (error is! ApiError<JoinResponse, RoomErrorResponse>) return false;
-  return switch (error.error?.code) {
-    ErrorCode.notJoinable ||
-    ErrorCode.roomAlreadyEnded ||
-    ErrorCode.roomNotActive => true,
+bool isTerminalSessionJoinError(Object? error) {
+  final response = error is ApiError ? error.error : error;
+  return switch (response) {
+    RoomErrorResponse(:final code)
+        when code == ErrorCode.notJoinable ||
+            code == ErrorCode.roomAlreadyEnded ||
+            code == ErrorCode.roomNotActive =>
+      true,
     _ => false,
   };
 }
+
+bool _isExpectedJoinOutcome(Object error) => isTerminalSessionJoinError(error);
 
 Future<RoomState> _postEvent({
   required ClientApi apiService,

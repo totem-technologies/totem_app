@@ -99,7 +99,6 @@ class NotificationsService {
           stackTrace: stackTrace,
           message: 'Failed to initialize Firebase messaging',
         );
-        return;
       }
     }
 
@@ -140,10 +139,17 @@ class NotificationsService {
         );
         // Firebase remains available; leave this false for a later explicit
         // retry rather than claiming local notifications are operational.
-        return;
       }
     }
 
+    if (!await _restoreBackgroundPayload()) return;
+    if (!_firebaseInitialized || !_localNotificationsReady) return;
+
+    _initialized = true;
+    logger.i('⏰ NotificationsService initialized successfully');
+  }
+
+  Future<bool> _restoreBackgroundPayload() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final payload = prefs.getString(_backgroundKey);
@@ -151,14 +157,14 @@ class NotificationsService {
         _handlePayload(jsonDecode(payload) as Map);
         await prefs.remove(_backgroundKey);
       }
-      _initialized = true;
-      logger.i('⏰ NotificationsService initialized successfully');
+      return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to restore notification payload',
       );
+      return false;
     }
   }
 
@@ -218,7 +224,6 @@ class NotificationsService {
         'Spaces',
         channelDescription: 'Spaces',
         icon: 'ic_notification',
-        largeIcon: DrawableResourceAndroidBitmap('ic_notification'),
         color: Color(0xFFF4DC92),
         importance: Importance.max,
         priority: Priority.high,

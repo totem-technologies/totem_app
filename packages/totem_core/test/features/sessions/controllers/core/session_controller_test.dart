@@ -791,6 +791,47 @@ void main() {
         check(room.connectCount).equals(1);
       });
 
+      test('join succeeds when connected without pre-join media', () async {
+        const eventSlug = 'test-session';
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(subscription.close);
+
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant();
+        when(() => localParticipant.setCameraEnabled(any<bool>()))
+            .thenAnswer((_) async => null);
+        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+            .thenAnswer((_) async => null);
+        when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+        final room = _CountingRoom(
+          localParticipant,
+          emitConnectedOnConnect: true,
+        );
+        controller.room = room;
+
+        check(await controller.join()).equals(SessionJoinResult.success);
+        check(room.connectCount).equals(1);
+        check(
+          container.read(sessionControllerProvider(options)).connection.state,
+        ).equals(RoomConnectionState.connected);
+      });
+
       test('server-side mutes keep the microphone captured', () async {
         // The backend mutes participants through LiveKit, and the SDK applies
         // those mutes with the room's default capture options. A stopped

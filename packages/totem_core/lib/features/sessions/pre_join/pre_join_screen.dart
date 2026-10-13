@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
@@ -64,6 +65,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   bool _reportedFullyDisplayed = false;
   bool _joined = false;
   bool _wakeLockEnabled = false;
+  bool _wakeLockRequested = false;
+  Future<void> _wakeLockOperation = Future.value();
   PreJoinMediaController? _mediaController;
   bool _terminalMediaReleaseRequested = false;
 
@@ -99,7 +102,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     }
   }
 
-  Future<void> _setWakeLock({required bool enabled}) async {
+  Future<void> _setWakeLock({required bool enabled}) {
+    if (_wakeLockRequested == enabled) return _wakeLockOperation;
+    _wakeLockRequested = enabled;
+    return _wakeLockOperation = _wakeLockOperation.then(
+      (_) => _applyWakeLock(enabled: enabled),
+    );
+  }
+
+  Future<void> _applyWakeLock({required bool enabled}) async {
     if (_wakeLockEnabled == enabled) return;
     if (enabled &&
         kIsWeb &&
@@ -231,17 +242,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     final _ = await ref.refresh(sessionProvider(widget.sessionSlug).future);
   }
 
-  bool _isTerminalSessionError(Object? error) {
-    final resolved = error is ApiError ? error.error : error;
-    if (resolved is! RoomErrorResponse) return false;
-    return switch (resolved.code) {
-      ErrorCode.notJoinable ||
-      ErrorCode.roomAlreadyEnded ||
-      ErrorCode.roomNotActive => true,
-      _ => false,
-    };
-  }
-
   void _releaseTerminalPreviewMedia() {
     final mediaController = _mediaController;
     if (mediaController == null || _terminalMediaReleaseRequested) return;
@@ -327,13 +327,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     final sessionData = ref.watch(sessionProvider(widget.sessionSlug));
 
     if (tokenData.hasError) {
-      if (_isTerminalSessionError(tokenData.error)) {
+      if (isTerminalSessionJoinError(tokenData.error)) {
         _releaseTerminalPreviewMedia();
       }
       return _buildErrorScreen(tokenData.error, session: sessionData.value);
     }
     if (sessionData.hasError) {
-      if (_isTerminalSessionError(sessionData.error)) {
+      if (isTerminalSessionJoinError(sessionData.error)) {
         _releaseTerminalPreviewMedia();
       }
       return _buildErrorScreen(sessionData.error);
