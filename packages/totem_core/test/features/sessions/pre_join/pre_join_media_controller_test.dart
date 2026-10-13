@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_foreground.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 
@@ -32,6 +33,30 @@ class _PreviewTrackFactory extends PreJoinPreviewTrackFactory {
     final track = MockPreJoinLocalAudioTrack();
     audioTracks.add(track);
     return track;
+  }
+}
+
+class _ForegroundMonitor implements PreJoinForegroundMonitor {
+  // ignore: unnecessary_type_name_in_constructor
+  _ForegroundMonitor.create({required this.isForeground});
+
+  final changesController = StreamController<bool>.broadcast();
+  @override
+  final bool requiresForegroundGate = true;
+  @override
+  bool isForeground;
+
+  @override
+  Stream<bool> get changes => changesController.stream;
+
+  void emit(bool value) {
+    isForeground = value;
+    changesController.add(value);
+  }
+
+  @override
+  void dispose() {
+    unawaited(changesController.close());
   }
 }
 
@@ -96,10 +121,13 @@ Future<PreJoinMediaState> _waitUntilInitialized(
 ProviderContainer _createContainer(
   PreJoinPreviewTrackFactory factory, {
   ValueGetter<PreJoinMediaController>? controller,
+  PreJoinForegroundMonitor? foregroundMonitor,
 }) {
   return ProviderContainer(
     overrides: [
       preJoinPreviewTrackFactoryProvider.overrideWithValue(factory),
+      if (foregroundMonitor != null)
+        preJoinForegroundMonitorProvider.overrideWithValue(foregroundMonitor),
       if (controller != null)
         preJoinMediaControllerProvider(_sessionSlug).overrideWith(controller),
     ],
@@ -230,6 +258,123 @@ void main() {
       check(state.canJoinOnWeb).equals(false);
     },
   );
+
+  test('hidden foreground gate defers camera and resumes it once', () async {
+    final factory = _PreviewTrackFactory();
+    final foreground = _ForegroundMonitor.create(isForeground: false);
+    final container = _createContainer(factory, foregroundMonitor: foreground);
+    addTearDown(() {
+      foreground.dispose();
+      container.dispose();
+    });
+
+    await Future<void>.delayed(Duration.zero);
+    check(factory.videoTracks).isEmpty();
+    check(factory.audioTracks).length.equals(1);
+    check(
+      container.read(preJoinMediaControllerProvider(_sessionSlug)).camera.phase,
+    ).equals(PreJoinCapturePhase.waitingForForeground);
+
+    foreground
+      ..emit(true)
+      ..emit(true);
+    final state = await _waitUntilInitialized(container);
+
+    check(factory.videoTracks).length.equals(1);
+    check(state.camera.isReady).isTrue();
+  });
+
+  test(
+    'backgrounded in-flight camera is disposed before foreground retry',
+    () async {
+      final factory = _DelayedCameraFactory();
+      final foreground = _ForegroundMonitor.create(isForeground: true);
+      final container = _createContainer(
+        factory,
+        foregroundMonitor: foreground,
+      );
+      addTearDown(() {
+        foreground.dispose();
+        container.dispose();
+      });
+      await Future<void>.delayed(Duration.zero);
+      check(factory.cameraRequested).isTrue();
+
+      foreground.emit(false);
+      factory.gate.complete();
+      for (
+        var attempt = 0;
+        attempt < 20 && factory.videoTracks.isEmpty;
+        attempt++
+      ) {
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      final staleTrack = factory.videoTracks.single;
+      verify(staleTrack.stop).called(1);
+      verify(staleTrack.dispose).called(1);
+      check(
+        container
+            .read(preJoinMediaControllerProvider(_sessionSlug))
+            .camera
+            .phase,
+      ).equals(PreJoinCapturePhase.waitingForForeground);
+
+      foreground.emit(true);
+      await _waitUntilInitialized(container);
+      check(factory.videoTracks).length.equals(2);
+    },
+  );
+
+  test(
+    'camera disabled while deferred does not start after foreground',
+    () async {
+      final factory = _PreviewTrackFactory();
+      final foreground = _ForegroundMonitor.create(isForeground: false);
+      final container = _createContainer(
+        factory,
+        foregroundMonitor: foreground,
+      );
+      addTearDown(() {
+        foreground.dispose();
+        container.dispose();
+      });
+      await Future<void>.delayed(Duration.zero);
+
+      await container
+          .read(preJoinMediaControllerProvider(_sessionSlug).notifier)
+          .toggleCamera();
+      foreground.emit(true);
+      await Future<void>.delayed(Duration.zero);
+
+      check(factory.videoTracks).isEmpty();
+      check(
+        container
+            .read(preJoinMediaControllerProvider(_sessionSlug))
+            .camera
+            .phase,
+      ).equals(PreJoinCapturePhase.disabled);
+    },
+  );
+
+  test('terminal release stops preview tracks and prevents restart', () async {
+    final factory = _PreviewTrackFactory();
+    final container = _createContainer(factory);
+    addTearDown(container.dispose);
+    await _waitUntilInitialized(container);
+
+    final controller = container.read(
+      preJoinMediaControllerProvider(_sessionSlug).notifier,
+    );
+    await controller.releaseForTerminalOutcome();
+    await controller.toggleCamera();
+
+    verify(factory.videoTracks.single.stop).called(1);
+    verify(factory.videoTracks.single.dispose).called(1);
+    verify(factory.audioTracks.single.stop).called(1);
+    verify(factory.audioTracks.single.dispose).called(1);
+    check(factory.videoTracks).length.equals(1);
+  });
 
   test('camera and microphone capture are initialized sequentially', () async {
     final factory = _DelayedCameraFactory();

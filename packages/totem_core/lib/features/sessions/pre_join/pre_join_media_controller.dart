@@ -10,6 +10,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_foreground.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 
 part 'pre_join_media_controller.g.dart';
@@ -91,15 +92,76 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   LocalAudioTrack? _transferredAudioTrack;
   bool _togglingCamera = false;
   bool _togglingMicrophone = false;
+  bool _terminal = false;
+  int _captureGeneration = 0;
+  Future<void>? _terminalRelease;
+  StreamSubscription<bool>? _foregroundSubscription;
+  late PreJoinForegroundMonitor _foregroundMonitor;
 
   @override
   PreJoinMediaState build(String sessionSlug) {
-    ref.onDispose(() => unawaited(_disposeOwnedTracks()));
+    _foregroundMonitor = ref.read(preJoinForegroundMonitorProvider);
+    _foregroundSubscription = _foregroundMonitor.changes.listen(
+      _onForegroundChanged,
+    );
+    ref.onDispose(() {
+      _foregroundSubscription?.cancel();
+      unawaited(releaseForTerminalOutcome());
+    });
     _initialization = Future<void>.microtask(
       () => _guardInitialization(initialize),
     );
     unawaited(_detectHeadphones());
     return const PreJoinMediaState();
+  }
+
+  bool get _canStartCamera =>
+      !_terminal &&
+      !state.transferred &&
+      (!_foregroundMonitor.requiresForegroundGate ||
+          _foregroundMonitor.isForeground);
+
+  void _onForegroundChanged(bool isForeground) {
+    if (!isForeground) {
+      _captureGeneration++;
+      if (state.camera.phase == PreJoinCapturePhase.initializing) {
+        _setCamera(
+          const PreJoinCaptureState(
+            phase: PreJoinCapturePhase.waitingForForeground,
+          ),
+        );
+      }
+      return;
+    }
+    unawaited(_resumeDeferredCamera());
+  }
+
+  Future<void> _resumeDeferredCamera() async {
+    if (!_canStartCamera ||
+        !state.preferences.isCameraOn ||
+        state.camera.isReady ||
+        state.camera.phase == PreJoinCapturePhase.initializing) {
+      return;
+    }
+    _setCamera(
+      const PreJoinCaptureState(phase: PreJoinCapturePhase.initializing),
+    );
+    await _captureOperations.schedule(_initializeCamera);
+  }
+
+  void _setCameraWaitingForForeground() {
+    if (!ref.mounted ||
+        _terminal ||
+        state.transferred ||
+        !state.preferences.isCameraOn ||
+        state.camera.isReady) {
+      return;
+    }
+    _setCamera(
+      const PreJoinCaptureState(
+        phase: PreJoinCapturePhase.waitingForForeground,
+      ),
+    );
   }
 
   Future<void> _guardInitialization(AsyncCallback operation) async {
@@ -137,10 +199,15 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   }
 
   Future<void> initialize() async {
+    if (_terminal || state.transferred) return;
     // Serialize every getUserMedia path. Safari is sensitive to overlapping
     // capture requests during a cold browser start, including user toggles.
     if (state.preferences.isCameraOn) {
-      await _captureOperations.schedule(_initializeCamera);
+      if (_canStartCamera) {
+        await _captureOperations.schedule(_initializeCamera);
+      } else {
+        _setCameraWaitingForForeground();
+      }
     } else {
       _setCamera(
         const PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
@@ -148,7 +215,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     }
 
     // Preferences may change while camera initialization is in flight.
-    if (!ref.mounted) return;
+    if (!ref.mounted || _terminal || state.transferred) return;
     if (state.preferences.isMicOn) {
       if (!state.microphone.isReady) {
         await _captureOperations.schedule(_initializeMicrophone);
@@ -186,8 +253,19 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   }
 
   Future<void> _initializeCamera() async {
+    if (!_canStartCamera || !state.preferences.isCameraOn) {
+      _setCameraWaitingForForeground();
+      return;
+    }
+    final captureGeneration = _captureGeneration;
     await _disposeCameraTrack();
-    if (!ref.mounted || !state.preferences.isCameraOn) return;
+    if (!ref.mounted ||
+        !_canStartCamera ||
+        captureGeneration != _captureGeneration ||
+        !state.preferences.isCameraOn) {
+      _setCameraWaitingForForeground();
+      return;
+    }
 
     _setCamera(
       const PreJoinCaptureState(phase: PreJoinCapturePhase.initializing),
@@ -197,8 +275,11 @@ class PreJoinMediaController extends _$PreJoinMediaController {
       track = await ref
           .read(preJoinPreviewTrackFactoryProvider)
           .createVideoTrack(state.preferences.cameraOptions);
-      if (!ref.mounted) {
+      if (!ref.mounted ||
+          !_canStartCamera ||
+          captureGeneration != _captureGeneration) {
         await _disposeTrack(track, 'camera');
+        _setCameraWaitingForForeground();
         return;
       }
       if (!state.preferences.isCameraOn) {
@@ -209,12 +290,19 @@ class PreJoinMediaController extends _$PreJoinMediaController {
         return;
       }
       await track?.start();
-      if (!ref.mounted || !state.preferences.isCameraOn) {
+      if (!ref.mounted ||
+          !_canStartCamera ||
+          captureGeneration != _captureGeneration ||
+          !state.preferences.isCameraOn) {
         await _disposeTrack(track, 'camera');
         if (ref.mounted) {
-          _setCamera(
-            const PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
-          );
+          if (state.preferences.isCameraOn) {
+            _setCameraWaitingForForeground();
+          } else {
+            _setCamera(
+              const PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
+            );
+          }
         }
         return;
       }
@@ -234,7 +322,11 @@ class PreJoinMediaController extends _$PreJoinMediaController {
       }
     } catch (error, stackTrace) {
       await _disposeTrack(track, 'camera');
-      if (!ref.mounted) return;
+      if (!ref.mounted || _terminal) return;
+      if (!_canStartCamera || captureGeneration != _captureGeneration) {
+        _setCameraWaitingForForeground();
+        return;
+      }
       state = state.copyWith(
         preferences: state.preferences.copyWith(isCameraOn: false),
         camera: PreJoinCaptureState(
@@ -257,7 +349,12 @@ class PreJoinMediaController extends _$PreJoinMediaController {
 
   Future<LocalAudioTrack?> _initializeMicrophone() async {
     await _disposeMicrophoneTrack();
-    if (!ref.mounted || !state.preferences.isMicOn) return null;
+    if (!ref.mounted ||
+        _terminal ||
+        state.transferred ||
+        !state.preferences.isMicOn) {
+      return null;
+    }
 
     _setMicrophone(
       const PreJoinCaptureState(phase: PreJoinCapturePhase.initializing),
@@ -329,7 +426,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   }
 
   Future<void> toggleCamera() async {
-    if (_togglingCamera || state.transferred) return;
+    if (_terminal || _togglingCamera || state.transferred) return;
     _togglingCamera = true;
     try {
       if (state.preferences.isCameraOn) {
@@ -358,7 +455,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   }
 
   Future<void> toggleMicrophone() async {
-    if (_togglingMicrophone || state.transferred) return;
+    if (_terminal || _togglingMicrophone || state.transferred) return;
     _togglingMicrophone = true;
     try {
       if (state.preferences.isMicOn) {
@@ -390,7 +487,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   }
 
   void toggleSpeaker() {
-    if (state.transferred) return;
+    if (_terminal || state.transferred) return;
     state = state.copyWith(
       preferences: state.preferences.copyWith(
         isSpeakerOn: !state.preferences.isSpeakerOn,
@@ -413,7 +510,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   }
 
   void _setCameraOptions(CameraCaptureOptions options) {
-    if (state.transferred) return;
+    if (_terminal || state.transferred) return;
     state = state.copyWith(
       preferences: state.preferences.copyWith(cameraOptions: options),
     );
@@ -424,7 +521,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
 
   Future<PreJoinMediaState> retryFailedMedia() async {
     await _initialization;
-    if (state.transferred) return state;
+    if (_terminal || state.transferred) return state;
 
     Future<void> retry() async {
       if (state.camera.phase == PreJoinCapturePhase.unavailable ||
@@ -449,6 +546,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   }
 
   Future<PreJoinMediaState> resetAfterFailedJoin() async {
+    if (_terminal) return state;
     detachTransferredTracks();
     await _initialization;
     await _captureOperations.pending;
@@ -477,6 +575,23 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     return state;
   }
 
+  /// Releases preview media when this screen reaches a terminal outcome.
+  ///
+  /// Tracks handed to the session remain session-owned and are never disposed
+  /// here. Invalidating the capture generation makes a delayed getUserMedia
+  /// result self-dispose instead of resurrecting the preview.
+  Future<void> releaseForTerminalOutcome() {
+    return _terminalRelease ??= _releaseForTerminalOutcome();
+  }
+
+  Future<void> _releaseForTerminalOutcome() async {
+    _terminal = true;
+    _captureGeneration++;
+    await _initialization;
+    await _captureOperations.pending;
+    await _disposeOwnedTracks();
+  }
+
   /// Removes transferred tracks from the render state without disposing them.
   ///
   /// The Session owns these tracks after [takeForJoin]. Detaching synchronously
@@ -503,6 +618,9 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   Future<SessionJoinMedia> takeForJoin({
     bool requireUsableMedia = false,
   }) async {
+    if (_terminal) {
+      throw StateError('Pre-join media has been released');
+    }
     if (state.transferred) {
       throw StateError('Pre-join media has already been transferred');
     }

@@ -480,6 +480,11 @@ class SessionController extends _$SessionController {
     await leave();
   }
 
+  bool get _canPublishInitialMedia =>
+      ref.mounted &&
+      state.connectionState == RoomConnectionState.connecting &&
+      state.roomState.status != RoomStatus.ended;
+
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
     final previousCleanup = _cleanupFuture;
     if (previousCleanup != null) await previousCleanup;
@@ -571,6 +576,7 @@ class SessionController extends _$SessionController {
       }
 
       try {
+        if (!_canPublishInitialMedia) return SessionJoinResult.retryableFailure;
         if (initialCameraTrack != null || options.cameraEnabled) {
           final published = await _localMedia.publishJoinCamera(
             initialCameraTrack,
@@ -581,7 +587,7 @@ class SessionController extends _$SessionController {
           if (published) _joinMediaOwner.releaseToRoom(initialCameraTrack);
         }
 
-        if (!ref.mounted) return SessionJoinResult.retryableFailure;
+        if (!_canPublishInitialMedia) return SessionJoinResult.retryableFailure;
         if (initialMicrophoneTrack != null || options.microphoneEnabled) {
           final published = await _localMedia.publishJoinMicrophone(
             initialMicrophoneTrack,
@@ -591,7 +597,7 @@ class SessionController extends _$SessionController {
           if (published) _joinMediaOwner.releaseToRoom(initialMicrophoneTrack);
         }
 
-        if (!ref.mounted) return SessionJoinResult.retryableFailure;
+        if (!_canPublishInitialMedia) return SessionJoinResult.retryableFailure;
         await _applyJoinMediaState();
         if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
