@@ -36,7 +36,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
 class VideoSessionScreen extends ConsumerStatefulWidget {
-  const VideoSessionScreen({
+  const new({
     required this.sessionSlug,
     required this.loadingScreen,
     this.now = DateTime.now,
@@ -73,7 +73,7 @@ class _SessionChatRouteObserver extends NavigatorObserver {
 }
 
 class _DockedSessionPanelsRail extends ConsumerWidget {
-  const _DockedSessionPanelsRail({required this.sessionSlug});
+  const new({required this.sessionSlug});
 
   final String sessionSlug;
 
@@ -104,6 +104,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   final _roomNavigatorObserver = _SessionChatRouteObserver();
   final _notificationController = NotificationController();
 
+  /// The page exit handler this screen registered, if any.
+  VoidCallback? _pageExitHandler;
   NotificationRequest? _closeKeeperLeftNotification;
   NotificationRequest? _offlineNotification;
   Timer? _timeRemainingWarningTimer;
@@ -128,6 +130,14 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       ..invalidate(sessionChatThreadTargetProvider)
       ..invalidate(sessionChatUnreadThreadsProvider);
 
+    // Closing the tab skips the leave flow, so leave as the page unloads.
+    ref.listenManual(currentSessionProvider, (_, session) {
+      final handler = session?.leaveOnPageExit;
+      if (handler == _pageExitHandler) return;
+      _pageExitHandler = handler;
+      TotemRouter.instance.setPageExitHandler(handler);
+    }, fireImmediately: true);
+
     _listenToBatteryChanges();
     _warmEmojiGlyphs();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -143,6 +153,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
     TotemRouter.instance.setTabCloseConfirmationEnabled(false);
+    if (_pageExitHandler case final handler?) {
+      TotemRouter.instance.clearPageExitHandler(handler);
+    }
     super.dispose();
   }
 

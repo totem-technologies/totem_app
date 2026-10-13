@@ -8,7 +8,7 @@ import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 enum ConfirmationDialogType { destructive, standard }
 
 class ConfirmationDialog extends StatefulWidget {
-  const ConfirmationDialog({
+  const new({
     required this.confirmButtonText,
     required this.onConfirm,
     this.contentStyle,
@@ -195,7 +195,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
 }
 
 class ConfirmationDialogButton extends StatefulWidget {
-  const ConfirmationDialogButton.elevated({
+  const new elevated({
     required this.onConfirm,
     required this.child,
     this.onBusyChanged,
@@ -205,7 +205,7 @@ class ConfirmationDialogButton extends StatefulWidget {
     super.key,
   }) : _outlined = false;
 
-  const ConfirmationDialogButton.outlined({
+  const new outlined({
     required this.onConfirm,
     required this.child,
     this.onBusyChanged,

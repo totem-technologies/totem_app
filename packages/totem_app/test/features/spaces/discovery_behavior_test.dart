@@ -134,9 +134,8 @@ void main() {
     await tester.pumpAndSettle();
 
     check(tester.widgetList(find.byType(SessionCard))).length.equals(1);
-    check(
-      tester.widgetList(find.text('Support session')),
-    ).length.isGreaterThan(0);
+    check(tester.widgetList(find.text('Support session'))).length
+        .isGreaterThan(0);
     check(tester.widgetList(find.text('Creative session'))).length.equals(0);
   });
 

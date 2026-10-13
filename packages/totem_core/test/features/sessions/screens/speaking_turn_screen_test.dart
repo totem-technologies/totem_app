@@ -16,9 +16,9 @@ import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_prompts_controller.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
@@ -30,6 +30,7 @@ import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
+import '../media/test_participants.dart';
 import '../session_test_fixtures.dart';
 import '../session_test_mocks.dart';
 
@@ -92,20 +93,22 @@ SessionDetailSchema _createTestSession() {
   );
 }
 
-MockRemoteParticipant _mockRemote(String id, String name) {
-  final participant = MockRemoteParticipant(id, name);
-  when(() => participant.getTrackPublicationBySource(any())).thenReturn(null);
-  return participant;
-}
+ParticipantInfo _mockRemote(String id, String name) =>
+    testParticipant(id, name: name);
 
-List<Participant> _buildParticipantsWithLocal(
+List<ParticipantInfo> _buildParticipantsWithLocal(
   MockLocalParticipant localParticipant,
   int count,
 ) {
-  if (count <= 1) return [localParticipant];
+  final local = testParticipant(
+    localParticipant.identity,
+    name: localParticipant.name,
+    isLocal: true,
+  );
+  if (count <= 1) return [local];
 
   return [
-    localParticipant,
+    local,
     ...List.generate(
       count - 1,
       (index) => _mockRemote('user-${index + 2}', 'User ${index + 2}'),
@@ -119,7 +122,7 @@ SessionRoomState _buildState({
   String keeper = 'user-1',
   String currentSpeaker = 'user-1',
   String? nextSpeaker = 'user-2',
-  List<Participant>? participants,
+  List<ParticipantInfo>? participants,
   DateTime? turnStartedAt,
 }) {
   final defaultParticipants =
@@ -189,7 +192,6 @@ void main() {
     when(() => devices.isMicrophoneEnabled).thenReturn(false);
     when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
     when(() => devices.selectedCameraDeviceId).thenReturn(null);
-    when(() => devices.selectedAudioDeviceId).thenReturn(null);
     when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
     when(() => devices.enableMicrophone()).thenAnswer((_) async {});
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
@@ -202,9 +204,8 @@ void main() {
       () =>
           localParticipant.getTrackPublicationBySource(TrackSource.microphone),
     ).thenReturn(null);
-    when(
-      () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
-    ).thenReturn(null);
+    when(() => localParticipant.getTrackPublicationBySource(TrackSource.camera))
+        .thenReturn(null);
     when(() => localParticipant.isCameraEnabled()).thenReturn(false);
   });
 
@@ -215,6 +216,7 @@ void main() {
     SessionCuesService? cuesService,
   }) async {
     when(() => session.isCurrentUserKeeper()).thenReturn(isKeeper);
+    when(() => session.state).thenReturn(sessionState);
     final testCuesService = cuesService ?? _TestSessionCuesService();
 
     await tester.pumpWidget(
@@ -280,12 +282,10 @@ void main() {
 
         await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
-        check(
-          tester.widgetList(find.byType(ParticipantCard)),
-        ).length.equals(participantCount);
-        check(
-          tester.widgetList(find.byType(SpeakingTurnScreen)),
-        ).length.equals(1);
+        check(tester.widgetList(find.byType(ParticipantCard))).length
+            .equals(participantCount);
+        check(tester.widgetList(find.byType(SpeakingTurnScreen))).length
+            .equals(1);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       }
@@ -303,17 +303,14 @@ void main() {
       await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
       check(tester.widgetList(find.byType(TextField))).length.equals(1);
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
-      check(
-        tester.widgetList(find.text('Your prompt for this round')),
-      ).length.equals(1);
+      check(tester.widgetList(find.byType(ActionSliderButton))).length
+          .equals(1);
+      check(tester.widgetList(find.text('Your prompt for this round'))).length
+          .equals(1);
       check(tester.widgetList(find.text('Pass to User Two'))).length.equals(1);
       check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
-      check(
-        tester.widgetList(find.byType(ParticipantCard)),
-      ).length.isGreaterOrEqual(1);
+      check(tester.widgetList(find.byType(ParticipantCard))).length
+          .isGreaterOrEqual(1);
     });
 
     testWidgets('action bar exposes controls and toggles mic/camera', (
@@ -327,24 +324,21 @@ void main() {
 
       await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
-      check(
-        tester.widgetList(find.bySemanticsLabel('Microphone off')),
-      ).length.equals(1);
-      check(
-        tester.widgetList(find.bySemanticsLabel('Camera off')),
-      ).length.equals(1);
+      check(tester.widgetList(find.bySemanticsLabel('Microphone off'))).length
+          .equals(1);
+      check(tester.widgetList(find.bySemanticsLabel('Camera off'))).length
+          .equals(1);
       check(tester.widgetList(find.bySemanticsLabel('Chat'))).length.equals(1);
-      check(
-        tester.widgetList(find.bySemanticsLabel('Send reaction')),
-      ).length.equals(0);
+      check(tester.widgetList(find.bySemanticsLabel('Send reaction'))).length
+          .equals(0);
 
       await tester.tap(find.bySemanticsLabel('Microphone off'));
       await tester.pump();
-      verify(() => devices.enableMicrophone()).called(1);
+      check(session.mockLocalMedia.microphoneCommands).deepEquals([true]);
 
       await tester.tap(find.bySemanticsLabel('Camera off'));
       await tester.pump();
-      verify(() => devices.enableCamera()).called(1);
+      check(session.mockLocalMedia.cameraCommands).deepEquals([true]);
     });
 
     testWidgets('disables shortcuts while the prompt field is focused', (
@@ -387,9 +381,8 @@ void main() {
       );
       final cuesService = _TestSessionCuesService();
 
-      when(
-        () => keeper.passTotem(customPrompt: 'A round message'),
-      ).thenAnswer((_) async {});
+      when(() => keeper.passTotem(customPrompt: 'A round message'))
+          .thenAnswer((_) async {});
 
       await pumpSpeakingTurn(
         tester,
@@ -527,9 +520,8 @@ void main() {
       check(newOffset.dx).equals(16.0); // _padding is 16
 
       final prefs = await SharedPreferences.getInstance();
-      check(
-        prefs.getString(AppConsts.storageSelfViewPositionKey),
-      ).equals('start');
+      check(prefs.getString(AppConsts.storageSelfViewPositionKey))
+          .equals('start');
 
       // Drag back past the midpoint
       await tester.drag(cardFinder, const Offset(500, 0));
@@ -537,9 +529,8 @@ void main() {
 
       final backOffset = tester.getTopLeft(cardFinder);
       check(backOffset.dx).equals(714.0); // Should snap back to end
-      check(
-        prefs.getString(AppConsts.storageSelfViewPositionKey),
-      ).equals('end');
+      check(prefs.getString(AppConsts.storageSelfViewPositionKey))
+          .equals('end');
     });
   });
 }

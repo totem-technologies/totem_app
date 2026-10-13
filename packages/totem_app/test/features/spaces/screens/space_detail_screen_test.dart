@@ -143,9 +143,8 @@ void main() {
           overrides: [
             authControllerProvider.overrideWith(_FakeAuthController.new),
             spaceProvider(newSpace.slug).overrideWith((_) async => newSpace),
-            sessionProvider(
-              newSession.slug,
-            ).overrideWith((_) async => newSession),
+            sessionProvider(newSession.slug)
+                .overrideWith((_) async => newSession),
             rsvpConfirmProvider(newSession.slug).overrideWith(
               (_) async => throw RsvpConflictException(
                 SessionConflictSchema(
@@ -170,13 +169,12 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      check(
-        tester.widgetList(find.text('You have a session at this time.')),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('You have a session at this time.')))
+          .length
+          .equals(1);
       check(tester.widgetList(find.text('Existing session'))).length.equals(1);
-      check(
-        tester.widgetList(find.text('New session')),
-      ).length.isGreaterOrEqual(1);
+      check(tester.widgetList(find.text('New session'))).length
+          .isGreaterOrEqual(1);
       check(tester.widgetList(find.text('Switch sessions'))).length.equals(1);
     },
     experimentalLeakTesting: LeakTesting.settings.withIgnored(
@@ -347,9 +345,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     check((spaceLoads, eventLoads, summaryLoads)).equals((1, 1, 1));
-    check(
-      tester.widgetList(find.byTooltip('Give up your spot')),
-    ).length.equals(1);
+    check(tester.widgetList(find.byTooltip('Give up your spot'))).length
+        .equals(1);
 
     await tester.scrollUntilVisible(
       find.text('Upcoming session'),

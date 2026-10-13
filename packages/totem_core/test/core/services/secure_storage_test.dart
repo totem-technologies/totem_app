@@ -7,7 +7,7 @@ import 'package:totem_core/core/services/secure_storage.dart';
 
 import '../../setup.dart';
 
-class _MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
+class _MockFlutterSecureStorage extends Mock implements FlutterSecureStorage;
 
 void main() {
   late _MockFlutterSecureStorage plugin;
@@ -24,11 +24,10 @@ void main() {
     () async {
       final failure = PlatformException(code: 'duplicate', message: 'exists');
       var writeAttempts = 0;
-      when(() => plugin.write(key: 'token', value: 'secret')).thenAnswer((
-        _,
-      ) async {
-        if (writeAttempts++ == 0) throw failure;
-      });
+      when(() => plugin.write(key: 'token', value: 'secret'))
+          .thenAnswer((_) async {
+            if (writeAttempts++ == 0) throw failure;
+          });
       when(() => plugin.delete(key: 'token')).thenAnswer((_) async {});
 
       await storage.write(key: 'token', value: 'secret');
@@ -42,9 +41,8 @@ void main() {
   );
 
   test('swallows unrecoverable write failures', () async {
-    when(
-      () => plugin.write(key: 'token', value: 'secret'),
-    ).thenThrow(StateError('unavailable'));
+    when(() => plugin.write(key: 'token', value: 'secret'))
+        .thenThrow(StateError('unavailable'));
 
     await storage.write(key: 'token', value: 'secret');
 
@@ -58,9 +56,8 @@ void main() {
   });
 
   test('swallows delete and deleteAll failures', () async {
-    when(
-      () => plugin.delete(key: 'token'),
-    ).thenThrow(StateError('unavailable'));
+    when(() => plugin.delete(key: 'token'))
+        .thenThrow(StateError('unavailable'));
     when(() => plugin.deleteAll()).thenThrow(StateError('unavailable'));
 
     await storage.delete(key: 'token');

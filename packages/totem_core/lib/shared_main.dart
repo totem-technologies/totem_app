@@ -1,5 +1,3 @@
-// ignore_for_file: experimental_member_use
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -86,8 +84,6 @@ void _configureSentry(SentryFlutterOptions options) {
     ..navigatorKey = TotemRouter.instance.navigatorKey
     ..sendDefaultPii = true
     ..tracesSampleRate = config.isDevelopment ? 1.0 : 0.1
-    ..profilesSampleRate = config.isDevelopment ? 1.0 : 0.1
-    ..enableLogs = true
     ..attachScreenshot = true
     ..attachViewHierarchy = true
     ..enableAutoPerformanceTracing = true

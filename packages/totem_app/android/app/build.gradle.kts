@@ -34,7 +34,8 @@ android {
         applicationId = "org.totem.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 24 // flutter.minSdkVersion
+        // Android 8.0. sentry_flutter 10 requires API 26.
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -84,7 +85,5 @@ flutter {
 }
 
 dependencies {
-    implementation("androidx.window:window:1.0.0")
-    implementation("androidx.window:window-java:1.0.0")
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

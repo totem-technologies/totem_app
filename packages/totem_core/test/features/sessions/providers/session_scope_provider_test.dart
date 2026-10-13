@@ -8,10 +8,12 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
     show RoomScreen;
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 
 import '../controllers/core/session_controller_mock.dart';
 import '../livekit_mocks.dart';
+import '../media/test_participants.dart';
 
 RoomState _roomState({
   RoomStatus status = RoomStatus.waitingRoom,
@@ -44,7 +46,7 @@ SessionRoomState _state({
   RoomError? error,
   RoomStatus roomStatus = RoomStatus.waitingRoom,
   TurnState turnState = TurnState.idle,
-  List<Participant> participants = const <Participant>[],
+  List<ParticipantInfo> participants = const <ParticipantInfo>[],
   List<SessionChatMessage> messages = const [],
   String keeper = 'keeper',
   String? currentSpeaker,
@@ -142,9 +144,8 @@ void main() {
       controller.markRead(null);
 
       check(container.read(sessionChatUnreadThreadsProvider)).contains('lucas');
-      check(
-        container.read(sessionChatUnreadThreadsProvider).contains(null),
-      ).isFalse();
+      check(container.read(sessionChatUnreadThreadsProvider).contains(null))
+          .isFalse();
       check(controller.latestUnreadThread?.thread).equals('lucas');
 
       controller.markRead('lucas');
@@ -155,7 +156,7 @@ void main() {
 
   group('session scope selectors', () {
     test('participant projections ignore chat-only changes', () {
-      final participant = MockRemoteParticipant('alice', 'Alice');
+      final participant = testParticipant('alice', name: 'Alice');
       final before = _state(participants: [participant]);
       final after = SessionRoomState(
         connection: before.connection,
@@ -173,12 +174,10 @@ void main() {
         ),
       );
 
-      check(
-        sessionParticipantPresentation(before, participant.identity),
-      ).equals(sessionParticipantPresentation(after, participant.identity));
-      check(
-        sessionParticipantLayout(before),
-      ).equals(sessionParticipantLayout(after));
+      check(sessionParticipantPresentation(before, participant.identity))
+          .equals(sessionParticipantPresentation(after, participant.identity));
+      check(sessionParticipantLayout(before))
+          .equals(sessionParticipantLayout(after));
     });
 
     test('defaults when scope is not overridden', () {
@@ -187,12 +186,10 @@ void main() {
 
       check(container.read(currentSessionProvider)).isNull();
       check(container.read(currentSessionStateProvider)).isNull();
-      check(
-        container.read(connectionStateProvider),
-      ).equals(RoomConnectionState.connecting);
-      check(
-        container.read(sessionPhaseProvider),
-      ).equals(SessionPhase.connecting);
+      check(container.read(connectionStateProvider))
+          .equals(RoomConnectionState.connecting);
+      check(container.read(sessionPhaseProvider))
+          .equals(SessionPhase.connecting);
       check(container.read(sessionErrorProvider)).isNull();
       check(container.read(roomStatusProvider)).equals(RoomStatus.waitingRoom);
       check(container.read(turnStateProvider)).equals(TurnState.idle);
@@ -240,13 +237,11 @@ void main() {
       );
       addTearDown(disconnectContainer.dispose);
 
-      check(
-        disconnectContainer.read(sessionErrorProvider),
-      ).equals(disconnectError);
+      check(disconnectContainer.read(sessionErrorProvider))
+          .equals(disconnectError);
       check(disconnectContainer.read(sessionLivekitErrorProvider)).isNull();
-      check(
-        disconnectContainer.read(disconnectionReasonProvider),
-      ).equals(DisconnectReason.unknown);
+      check(disconnectContainer.read(disconnectionReasonProvider))
+          .equals(DisconnectReason.unknown);
     });
 
     test('computes selectors from state', () {
@@ -257,7 +252,7 @@ void main() {
         sender: true,
       );
 
-      final participants = <Participant>[];
+      final participants = <ParticipantInfo>[];
 
       final container = ProviderContainer(
         overrides: [
@@ -279,12 +274,10 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      check(
-        container.read(connectionStateProvider),
-      ).equals(RoomConnectionState.connected);
-      check(
-        container.read(sessionPhaseProvider),
-      ).equals(SessionPhase.connected);
+      check(container.read(connectionStateProvider))
+          .equals(RoomConnectionState.connected);
+      check(container.read(sessionPhaseProvider))
+          .equals(SessionPhase.connected);
       check(container.read(roomStatusProvider)).equals(RoomStatus.active);
       check(container.read(turnStateProvider)).equals(TurnState.passing);
       check(container.read(sessionParticipantsProvider)).isEmpty();
@@ -299,10 +292,12 @@ void main() {
 
     test('computes active session properties correctly', () {
       final alice = MockLocalParticipant('alice');
-      final bob = MockLocalParticipant('bob');
-      final keeperParticipant = MockLocalParticipant('keeper');
 
-      final participants = [alice, bob, keeperParticipant];
+      final participants = [
+        testParticipant('alice', isLocal: true),
+        testParticipant('bob'),
+        testParticipant('keeper'),
+      ];
 
       final fakeSession = FakeSessionController()
         ..mockRoom = FakeRoom(alice)
@@ -328,19 +323,16 @@ void main() {
       addTearDown(container.dispose);
 
       check(container.read(hasKeeperProvider)).equals(true);
-      check(
-        container.read(featuredParticipantProvider)?.identity,
-      ).equals('keeper');
-      check(
-        container.read(speakingNextParticipantProvider)?.identity,
-      ).equals('alice');
+      check(container.read(featuredParticipantProvider)?.identity)
+          .equals('keeper');
+      check(container.read(speakingNextParticipantProvider)?.identity)
+          .equals('alice');
 
       check(container.read(isCurrentUserKeeperProvider)).equals(true);
       check(container.read(isMyTurnProvider)).equals(false);
       check(container.read(amNextSpeakerProvider)).equals(true);
-      check(
-        container.read(resolveCurrentScreenProvider),
-      ).equals(RoomScreen.listening);
+      check(container.read(resolveCurrentScreenProvider))
+          .equals(RoomScreen.listening);
     });
 
     test('resolveCurrentScreen resolves different states', () {
@@ -375,7 +367,7 @@ void main() {
                 error: error,
                 roomStatus: status,
                 turnState: turnState,
-                participants: [alice],
+                participants: [testParticipant('alice', isLocal: true)],
                 keeper: 'keeper',
                 currentSpeaker: currentSpeaker,
                 nextSpeaker: nextSpeaker,

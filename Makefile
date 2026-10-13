@@ -19,10 +19,7 @@ clean:
 	rm -rf $(APP_DIR)/build/
 	rm -rf $(APP_DIR)/.dart_tool/build/
 	rm -rf ~/.gradle/caches/*
-	rm -rf $(APP_DIR)/ios/Pods
-	rm -rf $(APP_DIR)/ios/Podfile.lock
 	rm -rf $(APP_DIR)/ios/.symlinks
-	rm -rf $(APP_DIR)/ios/Flutter/Flutter.podspec
 	rm -rf $(APP_DIR)/ios/Flutter/Flutter.framework
 	rm -rf $(APP_DIR)/ios/Flutter/App.framework
 # 	rm -rf ~/Library/Developer/Xcode/DerivedData/*
@@ -146,6 +143,7 @@ test-scripts:
 
 lint:
 	@echo "Running linter..."
+	dart run scripts/check_media_boundary.dart
 	cd $(APP_DIR) && flutter analyze
 	cd $(CORE_DIR) && flutter analyze
 	cd $(WEB_DIR) && flutter analyze
@@ -154,7 +152,8 @@ lint:
 
 format:
 	@echo "Formatting code..."
-	dart format .
+	# Only files git tracks or would track, so build output and scratch are skipped.
+	git ls-files -z --cached --others --exclude-standard '*.dart' | xargs -0 dart format
 
 generate_api_models:
 	cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose --clean; dart format .

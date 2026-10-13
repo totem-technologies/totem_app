@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 class InfoText extends StatelessWidget {
-  const InfoText(this.text, {super.key});
+  const new(this.text, {super.key});
 
   final String text;
 

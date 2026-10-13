@@ -213,20 +213,16 @@ void main() {
           }),
           sessionProvider(_slug).overrideWith((_) async => _event()),
           if (successfulJoin) ...[
-            preJoinFlowControllerProvider(
-              _slug,
-            ).overrideWith(_PermissionsGrantedFlowController.new),
-            sessionControllerProvider(
-              _options,
-            ).overrideWith(_SuccessfulSessionController.new),
+            preJoinFlowControllerProvider(_slug)
+                .overrideWith(_PermissionsGrantedFlowController.new),
+            sessionControllerProvider(_options)
+                .overrideWith(_SuccessfulSessionController.new),
           ],
           if (pendingJoin) ...[
-            preJoinFlowControllerProvider(
-              _slug,
-            ).overrideWith(_PermissionsGrantedFlowController.new),
-            sessionControllerProvider(
-              _options,
-            ).overrideWith(_PendingSessionController.new),
+            preJoinFlowControllerProvider(_slug)
+                .overrideWith(_PermissionsGrantedFlowController.new),
+            sessionControllerProvider(_options)
+                .overrideWith(_PendingSessionController.new),
           ],
         ],
         child: const SentryDisplayWidget(
@@ -350,9 +346,8 @@ void main() {
     await tester.pump();
 
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
-    check(
-      tester.element(find.byType(VideoTrackRenderer)),
-    ).identicalTo(previewRenderer);
+    check(tester.element(find.byType(VideoTrackRenderer)))
+        .identicalTo(previewRenderer);
 
     _PendingSessionController.joinCompleter!.complete(
       SessionJoinResult.success,
@@ -366,9 +361,8 @@ void main() {
     await pumpScreen(tester, alreadyPresent: true, successfulJoin: true);
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(
-      tester.widgetList(find.text("You're already in this session")),
-    ).length.equals(0);
+    check(tester.widgetList(find.text("You're already in this session"))).length
+        .equals(0);
 
     final join = tester.widget<ActionSliderButton>(
       find.byType(ActionSliderButton),
@@ -377,9 +371,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(
-      tester.widgetList(find.text("You're already in this session")),
-    ).length.equals(1);
+    check(tester.widgetList(find.text("You're already in this session"))).length
+        .equals(1);
     check(tester.widgetList(find.text('Join Here'))).length.equals(1);
 
     await tester.tap(find.text('Join Here'));
@@ -387,9 +380,8 @@ void main() {
     check(await joinFuture).equals(true);
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(
-      tester.widgetList(find.text("You're already in this session")),
-    ).length.equals(0);
+    check(tester.widgetList(find.text("You're already in this session"))).length
+        .equals(0);
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
   });
 

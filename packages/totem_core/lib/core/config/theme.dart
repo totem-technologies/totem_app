@@ -3,7 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 /// This was generated based on the css.
 class AppTheme {
-  const AppTheme._();
+  const new _();
 
   // --- Colors ---
   // Extracted from the @theme block in styles.css

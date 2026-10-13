@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:livekit_client/livekit_client.dart' show Participant;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -14,6 +13,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
@@ -24,11 +24,11 @@ import 'package:totem_core/shared/widgets/chat/message_input_bar.dart';
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
-import '../livekit_mocks.dart';
+import '../media/test_participants.dart';
 import '../session_test_mocks.dart';
 
 class _TestMessagesNotifier extends Notifier<List<SessionChatMessage>> {
-  _TestMessagesNotifier(this._initial);
+  new(this._initial);
 
   final List<SessionChatMessage> _initial;
 
@@ -42,10 +42,7 @@ class _TestMessagesNotifier extends Notifier<List<SessionChatMessage>> {
 }
 
 class _ChatSheetHarness {
-  const _ChatSheetHarness({
-    required this.container,
-    required this.messagesProvider,
-  });
+  const new({required this.container, required this.messagesProvider});
 
   final ProviderContainer container;
   final NotifierProvider<_TestMessagesNotifier, List<SessionChatMessage>>
@@ -96,7 +93,7 @@ SessionDetailSchema _createSessionEvent() {
 
 SessionRoomState _createSessionState({
   List<SessionChatMessage> messages = const [],
-  List<Participant>? participants,
+  List<ParticipantInfo>? participants,
 }) {
   return SessionRoomState(
     connection: const ConnectionState(
@@ -107,8 +104,8 @@ SessionRoomState _createSessionState({
       participants:
           participants ??
           [
-            MockRemoteParticipant('keeper-1', 'Heather'),
-            MockRemoteParticipant('lucas', 'Lucas'),
+            testParticipant('keeper-1', name: 'Heather'),
+            testParticipant('lucas', name: 'Lucas'),
           ],
     ),
     chat: ChatState(messages: messages),
@@ -135,7 +132,7 @@ List<Object?> _sharedOverrides({
   required SessionController session,
   required AuthState authState,
   RoomScreen currentScreen = RoomScreen.listening,
-  List<Participant>? participants,
+  List<ParticipantInfo>? participants,
 }) {
   return [
     authControllerProvider.overrideWith(() => FakeAuthController(authState)),
@@ -167,7 +164,7 @@ void main() {
     required SessionController session,
     required AuthState authState,
     RoomScreen currentScreen = RoomScreen.listening,
-    List<Participant>? participants,
+    List<ParticipantInfo>? participants,
     bool useScaffold = true,
   }) async {
     await tester.pumpWidget(
@@ -325,16 +322,15 @@ void main() {
       );
 
       check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
-      check(
-        tester.widgetList(find.text('Only you can post messages here')),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('Only you can post messages here')))
+          .length
+          .equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
       check(tester.widgetList(find.text('Message everyone'))).length.equals(1);
       check(tester.widgetList(find.byType(TextField))).length.equals(1);
       check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(0);
-      check(
-        tester.widgetList(find.text('Please mute your mic')),
-      ).length.equals(0);
+      check(tester.widgetList(find.text('Please mute your mic'))).length
+          .equals(0);
     });
 
     testWidgets('keeps the composer above the keyboard', (tester) async {
@@ -354,9 +350,8 @@ void main() {
         useScaffold: false,
       );
 
-      check(
-        tester.getBottomLeft(find.byType(MessageInputBar)).dy <= 500,
-      ).isTrue();
+      check(tester.getBottomLeft(find.byType(MessageInputBar)).dy <= 500)
+          .isTrue();
     });
 
     testWidgets('renders own and received messages as MessageBubbles', (
@@ -367,14 +362,14 @@ void main() {
         sender: true,
         message: 'My message',
         timestamp: DateTime(2024, 1, 1, 10, 25).millisecondsSinceEpoch,
-        participant: MockLocalParticipant('me@example.com'),
+        participant: testParticipant('me@example.com', isLocal: true),
       );
       final other = SessionChatMessage(
         id: 'msg-2',
         sender: false,
         message: 'Their message',
         timestamp: DateTime(2024, 1, 1, 10, 34).millisecondsSinceEpoch,
-        participant: MockRemoteParticipant('keeper-1', 'Heather'),
+        participant: testParticipant('keeper-1', name: 'Heather'),
       );
 
       await pumpChatSheet(
@@ -416,7 +411,7 @@ void main() {
         message: 'Secret for Lucas',
         timestamp: 2,
         recipientIdentity: 'lucas',
-        participant: MockLocalParticipant('keeper-1'),
+        participant: testParticipant('keeper-1', isLocal: true),
       );
 
       await pumpChatSheet(
@@ -458,7 +453,7 @@ void main() {
             dateCreated: DateTime(2024),
           ),
         ),
-        participants: [MockRemoteParticipant('lucas', 'Lucas')],
+        participants: [testParticipant('lucas', name: 'Lucas')],
       );
 
       check(tester.widgetList(find.text('Message Keeper'))).length.equals(0);
@@ -524,7 +519,7 @@ void main() {
           sender: false,
           message: 'Message $index',
           timestamp: index,
-          participant: MockRemoteParticipant('user-$index', 'User $index'),
+          participant: testParticipant('user-$index', name: 'User $index'),
         ),
       );
 
@@ -556,7 +551,7 @@ void main() {
           sender: false,
           message: 'Newest message',
           timestamp: 20,
-          participant: MockRemoteParticipant('user-20', 'User 20'),
+          participant: testParticipant('user-20', name: 'User 20'),
         ),
       ];
 
@@ -579,7 +574,7 @@ void main() {
           sender: false,
           message: 'Message $index',
           timestamp: index,
-          participant: MockRemoteParticipant('user-$index', 'User $index'),
+          participant: testParticipant('user-$index', name: 'User $index'),
         ),
       );
 
@@ -604,14 +599,13 @@ void main() {
           sender: false,
           message: 'Newest message',
           timestamp: 20,
-          participant: MockRemoteParticipant('user-20', 'User 20'),
+          participant: testParticipant('user-20', name: 'User 20'),
         ),
       ]);
       await tester.pumpAndSettle();
 
-      check(
-        controller.position.pixels,
-      ).equals(controller.position.maxScrollExtent);
+      check(controller.position.pixels)
+          .equals(controller.position.maxScrollExtent);
     });
 
     testWidgets('long messages scroll clear of the hint and the thread chip', (
@@ -631,7 +625,7 @@ void main() {
         sender: false,
         message: body,
         timestamp: DateTime(2024, 1, 1, 10, 45).millisecondsSinceEpoch,
-        participant: MockRemoteParticipant('keeper-1', 'Heather'),
+        participant: testParticipant('keeper-1', name: 'Heather'),
         recipientIdentity: 'lucas',
       );
 
@@ -776,16 +770,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Everyone').last);
       await tester.pumpAndSettle();
-      check(
-        tester.widgetList(find.textContaining('only you can post')),
-      ).length.equals(1);
+      check(tester.widgetList(find.textContaining('only you can post'))).length
+          .equals(1);
 
-      check(
-        tester.widgetList(find.text('Checking in privately')),
-      ).length.equals(0);
-      check(
-        tester.widget<TextField>(find.byType(TextField)).controller?.text,
-      ).equals('');
+      check(tester.widgetList(find.text('Checking in privately'))).length
+          .equals(0);
+      check(tester.widget<TextField>(find.byType(TextField)).controller?.text)
+          .equals('');
     });
 
     testWidgets('keeps the composer text when the send is rejected', (
@@ -916,7 +907,7 @@ void main() {
         participants: List.generate(
           50,
           (index) =>
-              MockRemoteParticipant('participant-$index', 'Participant $index'),
+              testParticipant('participant-$index', name: 'Participant $index'),
         ),
       );
 

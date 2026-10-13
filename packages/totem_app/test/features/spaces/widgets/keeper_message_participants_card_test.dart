@@ -79,9 +79,8 @@ void main() {
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();
 
-      check(
-        tester.widgetList(find.text('Session Participants Screen')),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('Session Participants Screen'))).length
+          .equals(1);
     });
   });
 }

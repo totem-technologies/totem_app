@@ -10,6 +10,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -18,13 +19,12 @@ import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
-import '../livekit_mocks.dart';
+import '../media/test_participants.dart';
 import '../session_test_mocks.dart';
 
 class _TestSessionDeviceController extends SessionDeviceController {
   static const _defaultState = SessionDeviceState(
     selectedCameraDeviceId: null,
-    selectedAudioDeviceId: null,
     selectedAudioOutputDeviceId: null,
     isSpeakerphoneEnabled: false,
     isMicrophoneEnabled: false,
@@ -37,7 +37,7 @@ class _TestSessionDeviceController extends SessionDeviceController {
 
 SessionRoomState _sessionState({
   required RoomState roomState,
-  List<Participant> participants = const [],
+  List<ParticipantInfo> participants = const [],
 }) {
   return SessionRoomState(
     connection: const ConnectionState(
@@ -64,10 +64,8 @@ Future<void> _pumpMoreOptions(
         ),
         currentSessionProvider.overrideWith((ref) => session),
         currentSessionStateProvider.overrideWithValue(state),
-        sessionDeviceControllerProvider(
-          session,
-        ).overrideWith(() => deviceController),
-        isCameraOnProvider.overrideWith((ref) => false),
+        sessionDeviceControllerProvider(session)
+            .overrideWith(() => deviceController),
         userProfileProvider.overrideWith(
           (ref, slug) => Future.value(
             PublicUserSchema(
@@ -151,7 +149,6 @@ void main() {
     when(() => session.isCurrentUserKeeper()).thenReturn(true);
     when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
     when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
-    when(() => devices.localVideoTrack).thenReturn(null);
     when(() => devices.switchCameraPosition()).thenAnswer((_) async {});
     when(() => keeper.forcePassTotem()).thenAnswer((_) async {});
   });
@@ -185,16 +182,14 @@ void main() {
       );
 
       // Tile is rendered but with null onTap
-      check(
-        tester.widgetList(find.textContaining('Force pass')),
-      ).length.equals(1);
+      check(tester.widgetList(find.textContaining('Force pass'))).length
+          .equals(1);
 
       // Tapping does nothing — no dialog appears
       await tester.tap(find.textContaining('Force pass'));
       await tester.pumpAndSettle();
-      check(
-        tester.widgetList(find.byType(ConfirmationDialog)),
-      ).length.equals(0);
+      check(tester.widgetList(find.byType(ConfirmationDialog))).length
+          .equals(0);
     });
 
     testWidgets('force pass tile is not shown when not keeper', (tester) async {
@@ -222,9 +217,8 @@ void main() {
         deviceController: deviceController,
       );
 
-      check(
-        tester.widgetList(find.textContaining('Force pass')),
-      ).length.equals(0);
+      check(tester.widgetList(find.textContaining('Force pass'))).length
+          .equals(0);
     });
 
     testWidgets('force pass tile is not shown when not active', (tester) async {
@@ -250,9 +244,8 @@ void main() {
         deviceController: deviceController,
       );
 
-      check(
-        tester.widgetList(find.textContaining('Force pass')),
-      ).length.equals(0);
+      check(tester.widgetList(find.textContaining('Force pass'))).length
+          .equals(0);
     });
 
     // ── Dialog content: normal speaking turn ───────────────────────
@@ -260,8 +253,8 @@ void main() {
     testWidgets(
       'shows confirmation dialog with next participant name from list',
       (tester) async {
-        final p1 = MockLocalParticipant('user-1', 'p1');
-        final p2 = MockLocalParticipant('user-2', 'p2');
+        final p1 = testParticipant('user-1', name: 'p1');
+        final p2 = testParticipant('user-2', name: 'p2');
 
         final state = _sessionState(
           roomState: const RoomState(
@@ -317,8 +310,8 @@ void main() {
           roundNumber: 1,
         ),
         participants: [
-          MockLocalParticipant('user-1'),
-          MockLocalParticipant('user-2'),
+          testParticipant('user-1', isLocal: true),
+          testParticipant('user-2', isLocal: true),
         ],
       );
 
@@ -337,9 +330,8 @@ void main() {
 
       verify(() => keeper.forcePassTotem()).called(1);
       // Dialog should be closed
-      check(
-        tester.widgetList(find.byType(ConfirmationDialog)),
-      ).length.equals(0);
+      check(tester.widgetList(find.byType(ConfirmationDialog))).length
+          .equals(0);
     });
 
     // ── Early return ───────────────────────────────────────────────
@@ -375,9 +367,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // No dialog should appear because nextParticipantIdentity is null
-      check(
-        tester.widgetList(find.byType(ConfirmationDialog)),
-      ).length.equals(0);
+      check(tester.widgetList(find.byType(ConfirmationDialog))).length
+          .equals(0);
       verifyNever(() => keeper.forcePassTotem());
     });
   });

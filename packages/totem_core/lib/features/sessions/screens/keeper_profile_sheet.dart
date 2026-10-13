@@ -15,7 +15,7 @@ Future<void> showKeeperProfileSheet(BuildContext context, String slug) {
 }
 
 class KeeperProfileSheet extends StatelessWidget {
-  const KeeperProfileSheet({required this.slug, super.key});
+  const new({required this.slug, super.key});
 
   final String slug;
 

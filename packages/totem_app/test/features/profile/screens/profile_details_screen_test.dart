@@ -130,9 +130,8 @@ void main() {
       check(calls).equals(1);
       check(tester.widgetList(find.byType(LoadingIndicator))).length.equals(1);
       check(
-        (tester.widget<mui.ElevatedButton>(
-          find.byType(mui.ElevatedButton),
-        )).onPressed,
+        (tester.widget<mui.ElevatedButton>(find.byType(mui.ElevatedButton)))
+            .onPressed,
       ).isNull();
 
       await tester.tap(find.byType(mui.ElevatedButton));
@@ -164,9 +163,8 @@ void main() {
     await tester.pump();
 
     check(calls).equals(1);
-    check(
-      tester.widgetList(find.byType(ProfileDetailsScreen)),
-    ).length.equals(1);
+    check(tester.widgetList(find.byType(ProfileDetailsScreen))).length
+        .equals(1);
     check(
       tester
           .widget<mui.ElevatedButton>(find.byType(mui.ElevatedButton))
@@ -178,9 +176,8 @@ void main() {
     await tester.pump();
 
     check(calls).equals(2);
-    check(
-      tester.widgetList(find.byType(ProfileDetailsScreen)),
-    ).length.equals(0);
+    check(tester.widgetList(find.byType(ProfileDetailsScreen))).length
+        .equals(0);
     await tester.pumpAndSettle();
   });
 }

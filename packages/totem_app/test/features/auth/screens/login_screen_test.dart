@@ -31,9 +31,8 @@ void main() {
     await tester.pump();
 
     check(auth.requestPinCalls).equals(0);
-    check(
-      tester.widgetList(find.text('Please enter your email')),
-    ).length.equals(1);
+    check(tester.widgetList(find.text('Please enter your email'))).length
+        .equals(1);
     await disposeAuthScreenTest(tester, router);
   });
 
@@ -60,9 +59,8 @@ void main() {
     await tester.pump();
 
     check(auth.requestPinCalls).equals(1);
-    check(
-      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
-    ).isNull();
+    check(tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed)
+        .isNull();
 
     request.complete();
     await tester.pump();
@@ -92,9 +90,8 @@ void main() {
     await tester.pump();
 
     check(auth.requestPinCalls).equals(1);
-    check(
-      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
-    ).isNotNull();
+    check(tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed)
+        .isNotNull();
     check(router.state.uri.path).equals(RouteNames.login);
     await disposeAuthScreenTest(tester, router);
   });

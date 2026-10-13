@@ -4,7 +4,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 
 /// Shared metadata components used across session cards.
 class SessionMetadataIcon extends StatelessWidget {
-  const SessionMetadataIcon({
+  const new({
     required this.icon,
     super.key,
     this.size = 10,
@@ -23,7 +23,7 @@ class SessionMetadataIcon extends StatelessWidget {
 
 /// A metadata item widget combining an icon with text.
 class SessionMetadataItem extends StatelessWidget {
-  const SessionMetadataItem({
+  const new({
     required this.icon,
     required this.text,
     super.key,
@@ -64,7 +64,7 @@ class SessionMetadataItem extends StatelessWidget {
 
 /// A metadata widget for displaying time with separate period styling.
 class SessionTimeMetadata extends StatelessWidget {
-  const SessionTimeMetadata({
+  const new({
     required this.time,
     required this.period,
     super.key,
@@ -124,7 +124,7 @@ class SessionTimeMetadata extends StatelessWidget {
 
 /// A metadata widget for displaying remaining seat count.
 class SessionSeatsMetadata extends StatelessWidget {
-  const SessionSeatsMetadata({
+  const new({
     required this.seatsLeft,
     super.key,
     this.countStyle,

@@ -1,14 +1,15 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
+import 'package:totem_core/features/sessions/media/room_media_providers.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
@@ -40,7 +41,7 @@ enum ActionBarButtonRole {
 // Two named layouts plus a derived width; not a closed token set.
 // ignore: use_enums
 class _ActionBarMetrics {
-  const _ActionBarMetrics({
+  const new({
     required this.buttonSize,
     required this.iconSize,
     required this.gap,
@@ -80,7 +81,7 @@ class _ActionBarMetrics {
 }
 
 class _ActionBarScope extends InheritedWidget {
-  const _ActionBarScope({
+  const new({
     required this.metrics,
     required this.onLightBackground,
     required super.child,
@@ -120,7 +121,7 @@ bool _onLightBackground(BuildContext context) {
 }
 
 class ActionBarButton extends StatefulWidget {
-  const ActionBarButton({
+  const new({
     required this.child,
     required this.onPressed,
     this.semanticsLabel,
@@ -250,7 +251,7 @@ class _ActionBarButtonState extends State<ActionBarButton> {
 }
 
 class ActionBarShortcut {
-  const ActionBarShortcut({required this.label, required this.logicalKeys});
+  const new({required this.label, required this.logicalKeys});
 
   static const LogicalKeyboardKey microphoneKey = LogicalKeyboardKey.keyZ;
   static const LogicalKeyboardKey cameraKey = LogicalKeyboardKey.keyX;
@@ -286,11 +287,7 @@ class ActionBarShortcut {
 }
 
 class ActionBarTooltip extends StatelessWidget {
-  const ActionBarTooltip({
-    required this.message,
-    required this.child,
-    super.key,
-  });
+  const new({required this.message, required this.child, super.key});
 
   final String message;
   final Widget child;
@@ -320,11 +317,7 @@ class ActionBarTooltip extends StatelessWidget {
 }
 
 class ActionBarShortcutTooltip extends StatelessWidget {
-  const ActionBarShortcutTooltip({
-    required this.shortcut,
-    required this.child,
-    super.key,
-  });
+  const new({required this.shortcut, required this.child, super.key});
 
   final ActionBarShortcut shortcut;
   final Widget child;
@@ -339,7 +332,7 @@ class ActionBarShortcutTooltip extends StatelessWidget {
 }
 
 class ActionBar extends StatelessWidget {
-  const ActionBar({required this.children, super.key});
+  const new({required this.children, super.key});
 
   final List<Widget> children;
 
@@ -433,99 +426,58 @@ class ActionBar extends StatelessWidget {
 }
 
 /// The action bar displayed in the pre join screen.
-class PrejoinActionBar extends StatefulWidget {
-  const PrejoinActionBar({
+class PrejoinActionBar extends ConsumerWidget {
+  const new({
     required this.locked,
-    required this.previewAudioTrack,
+    required this.microphoneLevel,
     required this.isMicOn,
     required this.onToggleMic,
     required this.isSpeakerOn,
     required this.onToggleSpeaker,
     required this.isCameraOn,
     required this.onToggleCamera,
-    required this.cameraPosition,
+    required this.cameraFacing,
     required this.selectedCameraDeviceId,
-    required this.onCameraPositionChanged,
+    required this.onCameraFacingChanged,
     required this.onCameraDeviceSelected,
     super.key,
   });
 
   final bool locked;
-  final LocalAudioTrack? previewAudioTrack;
+  final MicrophoneLevelBuilder? microphoneLevel;
   final bool isMicOn;
   final AsyncCallback onToggleMic;
   final bool isSpeakerOn;
   final VoidCallback onToggleSpeaker;
   final bool isCameraOn;
   final VoidCallback onToggleCamera;
-  final CameraPosition cameraPosition;
+  final CameraFacing cameraFacing;
   final String? selectedCameraDeviceId;
-  final ValueChanged<CameraPosition> onCameraPositionChanged;
-  final ValueChanged<MediaDevice> onCameraDeviceSelected;
+  final ValueChanged<CameraFacing> onCameraFacingChanged;
+  final ValueChanged<MediaDeviceInfo> onCameraDeviceSelected;
 
   @override
-  State<PrejoinActionBar> createState() => _PrejoinActionBarState();
-}
-
-class _PrejoinActionBarState extends State<PrejoinActionBar> {
-  List<MediaDevice> _availableCameraDevices = [];
-  StreamSubscription<List<MediaDevice>>? _cameraDevicesSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    _listenToCameraDevices();
-  }
-
-  @override
-  void dispose() {
-    _cameraDevicesSubscription?.cancel();
-    super.dispose();
-  }
-
-  void _listenToCameraDevices() {
-    _cameraDevicesSubscription = Hardware.instance.onDeviceChange.stream.listen(
-      (devices) {
-        if (!mounted) return;
-        setState(() {
-          _availableCameraDevices = devices
-              .where((device) => device.kind == 'videoinput')
-              .toList();
-        });
-      },
-    );
-
-    Hardware.instance.videoInputs().then((devices) {
-      if (!mounted) return;
-      setState(() {
-        _availableCameraDevices = devices;
-      });
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cameraDevices = ref.watch(cameraDevicesProvider);
     final microphoneButton = ActionBarShortcutTooltip(
       shortcut: ActionBarShortcut.microphone,
       child: ActionBarMicButton(
-        participant: null,
-        audioTrack: widget.previewAudioTrack,
-        isMicOn: widget.isMicOn,
-        onToggle: !widget.locked ? (v) => widget.onToggleMic() : null,
+        microphoneLevel: microphoneLevel,
+        isMicOn: isMicOn,
+        onToggle: !locked ? (v) => onToggleMic() : null,
       ),
     );
     final cameraButton = ActionBarShortcutTooltip(
       shortcut: ActionBarShortcut.camera,
       child: ActionBarCameraSwitcherButton(
-        isCameraOn: widget.isCameraOn,
-        onToggle: widget.locked ? null : widget.onToggleCamera,
-        cameraPosition: widget.cameraPosition,
-        availableCameraDevices: _availableCameraDevices,
+        isCameraOn: isCameraOn,
+        onToggle: locked ? null : onToggleCamera,
+        cameraFacing: cameraFacing,
+        availableCameraDevices: cameraDevices,
         selectedCameraDeviceId:
-            widget.selectedCameraDeviceId ??
-            _availableCameraDevices.firstOrNull?.deviceId,
-        onCameraPositionChanged: widget.onCameraPositionChanged,
-        onCameraDeviceSelected: widget.onCameraDeviceSelected,
+            selectedCameraDeviceId ?? cameraDevices.firstOrNull?.id,
+        onCameraFacingChanged: onCameraFacingChanged,
+        onCameraDeviceSelected: onCameraDeviceSelected,
       ),
     );
 
@@ -534,10 +486,10 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
       children: [
         microphoneButton,
         // ActionBarSpeakerButton(
-        //   isSpeakerOn: widget.isSpeakerOn,
-        //   onSpeakerToggled: widget.locked
+        //   isSpeakerOn: isSpeakerOn,
+        //   onSpeakerToggled: locked
         //       ? null
-        //       : (v) => widget.onToggleSpeaker(),
+        //       : (v) => onToggleSpeaker(),
         // ),
         cameraButton,
       ],
@@ -546,7 +498,7 @@ class _PrejoinActionBarState extends State<PrejoinActionBar> {
 }
 
 class SessionActionBar extends ConsumerWidget {
-  const SessionActionBar({super.key});
+  const new({super.key});
 
   static final GlobalKey actionBarKey = GlobalKey();
 
@@ -557,7 +509,7 @@ class SessionActionBar extends ConsumerWidget {
     );
     final session = ref.watch(currentSessionProvider);
     final currentScreen = ref.watch(resolveCurrentScreenProvider);
-    final user = session?.room?.localParticipant;
+    final localIdentity = ref.watch(localParticipantIdentityProvider);
     final totemState = ref.watch(
       currentSessionStateProvider.select(
         (state) => state == null
@@ -566,23 +518,34 @@ class SessionActionBar extends ConsumerWidget {
       ),
     );
 
-    if (session == null || currentScreen == null || user == null) {
+    if (session == null || currentScreen == null || localIdentity == null) {
       return const SizedBox.shrink();
     }
+
+    final deviceProvider = sessionDeviceControllerProvider(session);
+    final deviceState = ref.watch(deviceProvider);
+    final roomMedia = ref.watch(roomMediaProvider);
 
     final microphoneButton = ActionBarShortcutTooltip(
       shortcut: ActionBarShortcut.microphone,
       child: ActionBarMicButton(
-        participant: user,
-        initiallyEnabled: session.options.microphoneEnabled,
+        microphoneLevel: roomMedia != null && deviceState.hasMicrophoneTrack
+            ? (color, iconSize, barCount) => roomMedia.localMicrophoneLevel(
+                color: color,
+                iconSize: iconSize,
+                barCount: barCount,
+              )
+            : null,
+        isMicOn: deviceState.isMicrophoneOn,
         requiresUnmuteConfirmation:
             totemState?.status == RoomStatus.active &&
-            totemState?.speaker != user.identity,
+            totemState?.speaker != localIdentity,
         onToggle: (shouldEnable) async {
+          final devices = ref.read(deviceProvider.notifier);
           if (shouldEnable) {
-            await session.devices.enableMicrophone();
+            await devices.enableMicrophone();
           } else {
-            await session.devices.disableMicrophone();
+            await devices.disableMicrophone();
           }
         },
       ),
@@ -590,7 +553,7 @@ class SessionActionBar extends ConsumerWidget {
 
     final cameraButton = ActionBarShortcutTooltip(
       shortcut: ActionBarShortcut.camera,
-      child: SessionActionBarCameraButton(session: session, participant: user),
+      child: SessionActionBarCameraButton(session: session),
     );
 
     final emojiBarButton = ActionBarShortcutTooltip(
@@ -642,7 +605,7 @@ class SessionActionBar extends ConsumerWidget {
 }
 
 class _ActionBarMoreButton extends ConsumerStatefulWidget {
-  const _ActionBarMoreButton();
+  const new();
 
   @override
   ConsumerState<_ActionBarMoreButton> createState() =>

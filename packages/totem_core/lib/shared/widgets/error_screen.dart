@@ -7,7 +7,7 @@ import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
 class ErrorScreen extends StatefulWidget {
-  const ErrorScreen({
+  const new({
     this.title,
     this.error,
     this.showHomeButton,
@@ -156,7 +156,7 @@ Future<void> showErrorDialog(BuildContext context, [String? error]) {
 }
 
 class ErrorDialog extends StatelessWidget {
-  const ErrorDialog({
+  const new({
     super.key,
     this.title = 'Something went wrong!\nPlease try again later',
     this.message,

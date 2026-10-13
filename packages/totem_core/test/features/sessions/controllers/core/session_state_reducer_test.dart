@@ -1,14 +1,13 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
-import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_reducer.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 
-class _Participant extends Mock implements Participant {}
+import '../../media/test_participants.dart';
 
 RoomState _roomState({RoomStatus status = RoomStatus.waitingRoom}) {
   return RoomState(
@@ -143,9 +142,8 @@ void main() {
       group('RoomStateChanged event', () {
         test('updates room state', () {
           final current = _initialState();
-          final nextRoomState = _roomState(
-            status: RoomStatus.active,
-          ).copyWith(version: 2, talkingOrder: ['user-1', 'user-2']);
+          final nextRoomState = _roomState(status: RoomStatus.active)
+              .copyWith(version: 2, talkingOrder: ['user-1', 'user-2']);
 
           final next = reducer.reduceState(
             current,
@@ -175,9 +173,8 @@ void main() {
             check(current.turnStartedAt).isNull();
 
             // Room goes active — speakerOf falls back to keeper.
-            final active = _roomState(
-              status: RoomStatus.active,
-            ).copyWith(currentSpeaker: const Omittable(''));
+            final active = _roomState(status: RoomStatus.active)
+                .copyWith(currentSpeaker: const Omittable(''));
 
             final next = reducer.reduceState(current, RoomStateChanged(active));
 
@@ -187,9 +184,8 @@ void main() {
           test('stamps when speaker changes', () {
             final current = _initialState();
 
-            final withSpeaker = _roomState(
-              status: RoomStatus.active,
-            ).copyWith(currentSpeaker: const Omittable('user-1'));
+            final withSpeaker = _roomState(status: RoomStatus.active)
+                .copyWith(currentSpeaker: const Omittable('user-1'));
 
             final next = reducer.reduceState(
               current,
@@ -202,9 +198,8 @@ void main() {
           test('keeps existing stamp when same speaker continues', () {
             final current = _initialState();
 
-            final active = _roomState(
-              status: RoomStatus.active,
-            ).copyWith(currentSpeaker: const Omittable('user-1'));
+            final active = _roomState(status: RoomStatus.active)
+                .copyWith(currentSpeaker: const Omittable('user-1'));
 
             final first = reducer.reduceState(
               current,
@@ -222,9 +217,8 @@ void main() {
           test('carries forward through non-room-state events', () {
             final current = _initialState();
 
-            final active = _roomState(
-              status: RoomStatus.active,
-            ).copyWith(currentSpeaker: const Omittable('user-1'));
+            final active = _roomState(status: RoomStatus.active)
+                .copyWith(currentSpeaker: const Omittable('user-1'));
 
             final afterRoom = reducer.reduceState(
               current,
@@ -277,8 +271,8 @@ void main() {
         test(
           'replaces and clears participants without changing the prior state',
           () {
-            final original = _Participant();
-            final replacement = _Participant();
+            final original = testParticipant('original');
+            final replacement = testParticipant('replacement');
             final current = reducer.reduceState(
               _initialState(),
               ParticipantsChanged([original]),

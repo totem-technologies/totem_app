@@ -14,7 +14,7 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 /// Centralized error handling for the Totem App.
 class ErrorHandler {
-  const ErrorHandler._();
+  const new _();
 
   static final Expando<bool> _reportedErrors = Expando<bool>(
     'totem.reportedErrors',

@@ -139,6 +139,17 @@
       #splash-loader::before { animation-duration: 3s; }
     }
   </style>
+  <style id="video-clip-style">
+    /* Firefox skips the clip-path Flutter puts on a platform view's wrapper
+       when the child is a <video>, so rounded video tiles render square. Any
+       radius on the video itself makes Firefox honor the wrapper's clip.
+       0.5px is too small to see; measured CPU cost is within noise. */
+    @supports (-moz-appearance: none) {
+      video {
+        border-radius: 0.5px;
+      }
+    }
+  </style>
   <script id="splash-screen-script">
     function removeSplashFromWeb() {
       document.getElementById("splash")?.remove();

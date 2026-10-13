@@ -116,12 +116,10 @@ void main() {
         .requestPermissions();
 
     final permissions = container.read(permissionsControllerProvider);
-    check(
-      permissions.asData?.value.cameraStatus,
-    ).equals(PermissionStatus.granted);
-    check(
-      permissions.asData?.value.microphoneStatus,
-    ).equals(PermissionStatus.granted);
+    check(permissions.asData?.value.cameraStatus)
+        .equals(PermissionStatus.granted);
+    check(permissions.asData?.value.microphoneStatus)
+        .equals(PermissionStatus.granted);
     check(permissions.asData?.value)
         .has((state) => state!.notificationStatus, 'notificationStatus')
         .equals(PermissionStatus.granted);

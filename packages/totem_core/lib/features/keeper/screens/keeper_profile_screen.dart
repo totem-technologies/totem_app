@@ -16,11 +16,7 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:url_launcher/link.dart';
 
 class KeeperProfileScreen extends ConsumerWidget {
-  const KeeperProfileScreen({
-    required this.slug,
-    this.showAppBar = true,
-    super.key,
-  });
+  const new({required this.slug, this.showAppBar = true, super.key});
 
   final String slug;
 

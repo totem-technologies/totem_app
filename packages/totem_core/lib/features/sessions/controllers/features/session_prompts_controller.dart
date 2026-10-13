@@ -9,7 +9,7 @@ part 'session_prompts_controller.g.dart';
 enum SessionPromptsFailure { conflict, validation, network, unexpected }
 
 class SessionPromptsState {
-  const SessionPromptsState({
+  const new({
     this.snapshot,
     this.loading = false,
     this.mutating = false,
@@ -218,8 +218,7 @@ class SessionPromptsController extends _$SessionPromptsController {
   String _messageFor(Object error) => _messageForFailure(_failureFor(error));
 
   String _messageForFailure(SessionPromptsFailure failure) => switch (failure) {
-    SessionPromptsFailure.conflict =>
-      'Prepared prompts changed elsewhere. Review the refreshed list and try again.',
+    SessionPromptsFailure.conflict => 'Prepared prompts changed elsewhere. Review the refreshed list and try again.',
     SessionPromptsFailure.validation => 'This prompt change is not valid.',
     SessionPromptsFailure.network =>
       'Could not save prompts. Check your connection and try again.',

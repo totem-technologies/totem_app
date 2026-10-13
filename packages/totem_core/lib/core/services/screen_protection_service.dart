@@ -5,7 +5,7 @@ import 'package:screen_protector/screen_protector.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 
 class ScreenProtectionService {
-  const ScreenProtectionService();
+  const new();
   static bool _captureProtectionEnabled = false;
   static bool get captureProtectionEnabled => _captureProtectionEnabled;
 

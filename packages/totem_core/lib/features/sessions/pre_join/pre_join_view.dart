@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
+import 'package:totem_core/features/sessions/media/livekit_microphone_level.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_preview_card.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
-import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -13,13 +15,13 @@ import 'package:totem_core/shared/widgets/circle_icon_button.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class PreJoinView extends StatelessWidget {
-  const PreJoinView({
+  const new({
     required this.mediaState,
     required this.locked,
     required this.onToggleCamera,
     required this.onToggleMicrophone,
     required this.onToggleSpeaker,
-    required this.onCameraPositionChanged,
+    required this.onCameraFacingChanged,
     required this.onCameraDeviceSelected,
     required this.joinCard,
     super.key,
@@ -31,12 +33,13 @@ class PreJoinView extends StatelessWidget {
   final AsyncCallback onToggleCamera;
   final AsyncCallback onToggleMicrophone;
   final VoidCallback onToggleSpeaker;
-  final ValueChanged<CameraPosition> onCameraPositionChanged;
-  final ValueChanged<MediaDevice> onCameraDeviceSelected;
+  final ValueChanged<CameraFacing> onCameraFacingChanged;
+  final ValueChanged<MediaDeviceInfo> onCameraDeviceSelected;
 
   @override
   Widget build(BuildContext context) {
     final preferences = mediaState.preferences;
+    final previewAudioTrack = mediaState.microphone.track;
     final cameraPreview = Container(
       margin: const EdgeInsetsDirectional.symmetric(horizontal: 40),
       alignment: AlignmentDirectional.center,
@@ -46,7 +49,6 @@ class PreJoinView extends StatelessWidget {
         image: true,
         child: LocalParticipantCard(
           isCameraOn: preferences.isCameraOn,
-          audioTrack: mediaState.microphone.track,
           videoTrack: mediaState.camera.track,
         ),
       ),
@@ -57,16 +59,23 @@ class PreJoinView extends StatelessWidget {
       onToggleCamera: locked ? null : onToggleCamera,
       child: PrejoinActionBar(
         locked: locked,
-        previewAudioTrack: mediaState.microphone.track,
+        microphoneLevel: previewAudioTrack == null
+            ? null
+            : (color, iconSize, barCount) => LiveKitMicrophoneLevel.preview(
+                previewAudioTrack,
+                color: color,
+                iconSize: iconSize,
+                barCount: barCount,
+              ),
         isMicOn: preferences.isMicOn,
         onToggleMic: onToggleMicrophone,
         isSpeakerOn: preferences.isSpeakerOn,
         onToggleSpeaker: onToggleSpeaker,
         isCameraOn: preferences.isCameraOn,
         onToggleCamera: onToggleCamera,
-        cameraPosition: preferences.cameraOptions.cameraPosition,
+        cameraFacing: preferences.cameraOptions.cameraPosition.toFacing(),
         selectedCameraDeviceId: preferences.cameraOptions.deviceId,
-        onCameraPositionChanged: onCameraPositionChanged,
+        onCameraFacingChanged: onCameraFacingChanged,
         onCameraDeviceSelected: onCameraDeviceSelected,
       ),
     );

@@ -6,7 +6,7 @@ import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/widgets/upcoming_session_card.dart';
 
 class KeeperSpaces extends ConsumerWidget {
-  const KeeperSpaces({
+  const new({
     required this.keeperSlug,
     this.title,
     this.horizontalPadding = const EdgeInsetsDirectional.symmetric(
