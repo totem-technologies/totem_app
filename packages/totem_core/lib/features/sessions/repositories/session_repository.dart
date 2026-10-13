@@ -156,6 +156,9 @@ Future<RoomState> roomState(
     operationName: 'get room state',
     timeout: _shortTimeoutDuration,
     diagnostics: {'session_slug': sessionSlug},
+    // This provider is only consumed by the controller's passive poll loop.
+    // The controller reports a sustained outage once it knows recovery failed.
+    shouldReport: (_) => false,
   );
 }
 

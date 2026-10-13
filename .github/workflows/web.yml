@@ -40,6 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FLAVOR: ${{ github.event_name == 'release' && 'production' || 'staging' }}
+      SENTRY_RELEASE: totem-web@${{ github.sha }}
     steps:
       - uses: actions/checkout@v6
         with:

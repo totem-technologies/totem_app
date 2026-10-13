@@ -10,6 +10,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
@@ -120,6 +121,8 @@ class SessionController extends _$SessionController {
   bool _pollPending = false;
   bool _pendingReconcile = false;
   int _connectionGeneration = 0;
+  int _consecutivePollFailures = 0;
+  static const _pollFailureReportThreshold = 3;
   static const syncTimerDuration = Duration(seconds: 20);
   static const _statePollInterval = Duration(seconds: 15);
 
@@ -385,17 +388,43 @@ class SessionController extends _$SessionController {
         return;
       }
 
+      if (_consecutivePollFailures > 0) {
+        logger.i(
+          'Room-state polling recovered after $_consecutivePollFailures failure(s)',
+        );
+        _consecutivePollFailures = 0;
+      }
       if (roomState.version > state.roomState.version) {
         applyRoomState(roomState);
         logger.d('Polled server state: version ${roomState.version}');
       }
-    } catch (e, s) {
+    } catch (error, stackTrace) {
+      _consecutivePollFailures++;
       logger.d(
         'poll room state failed (will retry next tick)',
-        error: e,
-        stackTrace: s,
+        error: error,
+        stackTrace: stackTrace,
       );
-      // Network hiccup or transient error - the next poll will retry.
+
+      final isUnexpected = error is AppDataException || error is StateError;
+      if (isUnexpected ||
+          _consecutivePollFailures >= _pollFailureReportThreshold) {
+        ErrorHandler.report(
+          error,
+          stackTrace: stackTrace,
+          message: 'Room-state polling failed',
+          incidentKey:
+              'room-state-poll:${options.sessionSlug}:${error.runtimeType}',
+          diagnostics: {
+            'feature': 'session',
+            'operation': 'poll_room_state',
+            'session_slug': options.sessionSlug,
+            'attempt_reconcile': attemptReconcile,
+            'consecutive_failures': _consecutivePollFailures,
+            'recovery': 'pending',
+          },
+        );
+      }
     }
   }
 

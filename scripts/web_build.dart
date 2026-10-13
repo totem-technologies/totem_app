@@ -49,6 +49,7 @@ Future<void> main() async {
 
   // --base-href /room/ : app is served from /room/ on the Django origin.
   // --web-define ASSET_BASE : where flutter_bootstrap.js loads assets from.
+  final sentryRelease = Platform.environment['SENTRY_RELEASE'];
   final build = await Process.start(
     'flutter',
     [
@@ -56,6 +57,8 @@ Future<void> main() async {
       'web',
       '--wasm',
       '--dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true',
+      if (sentryRelease != null && sentryRelease.isNotEmpty)
+        '--dart-define=SENTRY_RELEASE=$sentryRelease',
       '--base-href',
       '/room/',
       '--web-define=ASSET_BASE=$assetBase',

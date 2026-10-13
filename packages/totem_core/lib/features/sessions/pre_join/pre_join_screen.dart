@@ -54,17 +54,20 @@ class PreJoinScreen extends ConsumerStatefulWidget {
   ConsumerState<PreJoinScreen> createState() => _PreJoinScreenState();
 }
 
-class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
+class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
+    with WidgetsBindingObserver {
   final GlobalKey _preJoinViewKey = GlobalKey();
   bool _showingAlreadyPresentDialog = false;
   bool _showingWebPermissionsDialog = false;
   bool _reportedFullyDisplayed = false;
   bool _joined = false;
+  bool _wakeLockEnabled = false;
 
   @override
   void initState() {
     super.initState();
-    unawaited(WakelockPlus.enable());
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_setWakeLock(enabled: true));
     _initializeNativePermissions();
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
@@ -73,11 +76,48 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (!_joined) {
       unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     }
-    unawaited(WakelockPlus.disable());
+    unawaited(_setWakeLock(enabled: false));
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_setWakeLock(enabled: true));
+    } else if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      unawaited(_setWakeLock(enabled: false));
+    }
+  }
+
+  Future<void> _setWakeLock({required bool enabled}) async {
+    if (_wakeLockEnabled == enabled) return;
+    if (enabled &&
+        kIsWeb &&
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+    try {
+      if (enabled) {
+        await WakelockPlus.enable();
+      } else {
+        await WakelockPlus.disable();
+      }
+      _wakeLockEnabled = enabled;
+    } catch (error, stackTrace) {
+      ErrorHandler.report(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to update pre-join wake lock',
+        disposition: ErrorDisposition.recovered,
+        diagnostics: {'feature': 'pre_join', 'wake_lock_enabled': enabled},
+      );
+    }
   }
 
   void _initializeNativePermissions() {

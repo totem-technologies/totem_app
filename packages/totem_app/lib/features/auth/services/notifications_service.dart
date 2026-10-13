@@ -57,6 +57,8 @@ class NotificationsService {
   final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
+  bool _firebaseInitialized = false;
+  bool _localNotificationsReady = false;
   Future<void>? _initialization;
   StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
@@ -69,43 +71,40 @@ class NotificationsService {
   }
 
   Future<void> _initialize() async {
-    try {
-      logger.i('⏰ Initializing NotificationsService...');
-
-      // Set up Firebase
-      {
+    logger.i('⏰ Initializing NotificationsService...');
+    if (!_firebaseInitialized) {
+      try {
         final initialMessage = await FirebaseMessaging.instance
             .getInitialMessage();
-        if (initialMessage != null) {
-          _handleFirebaseMessage(initialMessage);
-        }
-        _messageOpenedSubscription = FirebaseMessaging.onMessageOpenedApp
+        if (initialMessage != null) _handleFirebaseMessage(initialMessage);
+        _messageOpenedSubscription ??= FirebaseMessaging.onMessageOpenedApp
             .listen(_handleFirebaseMessage);
-
-        _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((
+        _foregroundMessageSubscription ??= FirebaseMessaging.onMessage.listen((
           message,
         ) {
-          logger
-            ..i('⏰ Got a message whilst in the foreground!')
-            ..i('⏰ Message data: ${message.data}');
-
           if (message.notification != null) {
-            logger.i(
-              '⏰ Message also contained a notification: '
-              '${message.notification}',
-            );
-
-            showNotification(
-              title: message.notification?.title ?? '',
-              body: message.notification?.body ?? '',
-              data: message.data,
+            unawaited(
+              showNotification(
+                title: message.notification?.title ?? '',
+                body: message.notification?.body ?? '',
+                data: message.data,
+              ),
             );
           }
         });
+        _firebaseInitialized = true;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to initialize Firebase messaging',
+        );
+        return;
       }
+    }
 
-      // Set up local notifications
-      {
+    if (!_localNotificationsReady) {
+      try {
         const initializationSettings = InitializationSettings(
           android: AndroidInitializationSettings('ic_notification'),
           iOS: DarwinInitializationSettings(
@@ -132,31 +131,34 @@ class NotificationsService {
             notificationAppLaunchDetails!.notificationResponse!,
           );
         }
+        _localNotificationsReady = true;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to initialize local notifications',
+        );
+        // Firebase remains available; leave this false for a later explicit
+        // retry rather than claiming local notifications are operational.
+        return;
       }
+    }
 
-      {
-        final prefs = await SharedPreferences.getInstance();
-        final payload = prefs.getString(_backgroundKey);
-        if (payload != null) {
-          _handlePayload(jsonDecode(payload) as Map);
-          await prefs.remove(_backgroundKey);
-        }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final payload = prefs.getString(_backgroundKey);
+      if (payload != null) {
+        _handlePayload(jsonDecode(payload) as Map);
+        await prefs.remove(_backgroundKey);
       }
-
       _initialized = true;
       logger.i('⏰ NotificationsService initialized successfully');
     } catch (error, stackTrace) {
-      await _messageOpenedSubscription?.cancel();
-      await _foregroundMessageSubscription?.cancel();
-      _messageOpenedSubscription = null;
-      _foregroundMessageSubscription = null;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        message: 'Failed to initialize notifications service',
+        message: 'Failed to restore notification payload',
       );
-      // Notifications are optional. Leave [_initialized] false so a later
-      // lifecycle owner can retry instead of pretending the service works.
     }
   }
 
@@ -209,6 +211,7 @@ class NotificationsService {
     required String body,
     required Map<String, dynamic> data,
   }) async {
+    if (!_localNotificationsReady) return;
     const notificationDetails = NotificationDetails(
       android: AndroidNotificationDetails(
         'spaces',
@@ -231,13 +234,23 @@ class NotificationsService {
 
     final payload = jsonEncode(data);
 
-    await flutterLocalNotificationsPlugin.show(
-      id: DateTime.timestamp().millisecondsSinceEpoch % 2147483647,
-      title: title,
-      body: body,
-      notificationDetails: notificationDetails,
-      payload: payload,
-    );
+    try {
+      await flutterLocalNotificationsPlugin.show(
+        id: DateTime.timestamp().millisecondsSinceEpoch % 2147483647,
+        title: title,
+        body: body,
+        notificationDetails: notificationDetails,
+        payload: payload,
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.report(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to display local notification',
+        incidentKey: 'local-notification-display:${error.runtimeType}',
+        diagnostics: {'feature': 'notifications'},
+      );
+    }
   }
 
   Future<String?> get fcmToken {
