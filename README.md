@@ -127,6 +127,43 @@ Cloudflare deployment requires these repository secrets:
 - `CLOUDFLARE_API_TOKEN` with **Workers Scripts: Edit** permission.
 - `CLOUDFLARE_ACCOUNT_ID` for the target account.
 
+### Sentry web source maps
+
+Release deployments upload Flutter Web source maps through the official
+`sentry_dart_plugin` before the same generated assets are deployed to
+Cloudflare. Configure these repository settings:
+
+| Setting | Value |
+| --- | --- |
+| Secret `SENTRY_AUTH_TOKEN` | Sentry token allowed to create releases and upload source maps for the project |
+| Variable `SENTRY_ORG` | Sentry organization slug |
+| Variable `SENTRY_PROJECT` | Sentry project slug |
+| Variable `SENTRY_URL` | Optional self-hosted Sentry URL; leave unset for sentry.io |
+
+A pushed `v*` tag uses release `totem_web@<tag>` with distribution `staging`.
+Publishing that GitHub Release uses the same release name with distribution
+`production`. The Flutter SDK sends the same release and distribution with web
+events; it retains the application-configured Sentry environment.
+
+After deployment, open **Releases** in the configured Sentry project, select
+`totem_web@<tag>`, and inspect its **Artifact Bundles** (or source-map artifacts)
+to confirm the uploaded bundle. To test JavaScript-fallback symbolication, use
+Firefox (the current bootstrap disables its Wasm renderer), open the deployed
+staging app, and trigger a temporary uncaught JavaScript error from DevTools:
+
+```js
+setTimeout(() => { throw new Error('Sentry JS fallback source-map check'); });
+```
+
+Confirm the resulting Sentry event resolves JavaScript frames to the uploaded
+source context, then remove the temporary test event. The build produces both
+JavaScript and WebAssembly maps, and the plugin uploads all map artifacts. Wasm
+symbolication is **unverified**: the plugin injects Debug IDs into JavaScript
+artifacts, while current Sentry Flutter documentation does not guarantee
+WebAssembly-frame symbolication. Oversized `.map` files (over Cloudflare's
+25 MiB per-static-asset limit) are removed only after a successful Sentry upload;
+JavaScript and Wasm executables are never removed or rebuilt.
+
 To deploy manually with Cloudflare credentials configured:
 
 ```sh
