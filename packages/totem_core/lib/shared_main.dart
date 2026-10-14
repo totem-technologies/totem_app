@@ -85,7 +85,7 @@ void _configureSentry(SentryFlutterOptions options) {
     ..environment = config.environment.name
     ..dsn = config.sentryDsn
     ..navigatorKey = TotemRouter.instance.navigatorKey
-    ..sendDefaultPii = true
+    ..sendDefaultPii = false
     ..tracesSampleRate = config.isDevelopment ? 1.0 : 0.1
     ..attachScreenshot = true
     ..attachViewHierarchy = true

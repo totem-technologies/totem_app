@@ -21,6 +21,7 @@ import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart'
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
@@ -553,7 +554,7 @@ class MoreOptionsTile<T> extends StatelessWidget {
         trailing: facing != null
             ? IgnorePointer(
                 child: IconButton(
-                  icon: const Icon(Icons.switch_camera_outlined),
+                  icon: const TotemIcon(TotemIcons.cameraOn),
                   onPressed: () {},
                 ),
               )
@@ -697,7 +698,7 @@ class MoreOptionsTile<T> extends StatelessWidget {
           : null,
       trailing:
           trailing ??
-          (onTap != null ? Icon(Icons.adaptive.arrow_forward) : null),
+          (onTap != null ? const TotemIcon(TotemIcons.arrowForward) : null),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/messages/providers/compose_to_participants_provider.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 import '../mocks/message_mocks.dart';
 
@@ -286,8 +287,8 @@ class _NavBar extends StatelessWidget {
           children: [
             IconButton(
               onPressed: () => context.pop(),
-              icon: const Icon(
-                Icons.arrow_back_ios_new,
+              icon: const TotemIcon(
+                TotemIcons.arrowBack,
                 size: 18,
                 color: AppTheme.textHeading,
               ),
@@ -420,8 +421,8 @@ class _ResultIcon extends StatelessWidget {
         color: success ? AppTheme.messageSuccessBg : AppTheme.messageErrorBg,
         shape: BoxShape.circle,
       ),
-      child: Icon(
-        success ? Icons.check_rounded : Icons.close_rounded,
+      child: TotemIcon(
+        success ? TotemIcons.checkmark : TotemIcons.close,
         color: success
             ? AppTheme.messageSuccessIcon
             : AppTheme.messageErrorIcon,
@@ -466,7 +467,11 @@ class _RecipientChip extends StatelessWidget {
           spacing: 5,
           children: [
             if (selected)
-              const Icon(Icons.check, color: AppTheme.white, size: 12),
+              const TotemIcon(
+                TotemIcons.checkmark,
+                color: AppTheme.white,
+                size: 12,
+              ),
             Text(
               label,
               style: TextStyle(

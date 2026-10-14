@@ -73,6 +73,96 @@ void main() {
       });
     });
 
+    test(
+      'classifies an HTML challenge response as an invalid API response',
+      () async {
+        Object? reportedError;
+        Map<String, Object?>? reportContext;
+
+        await check(
+          RepositoryUtils.handleApiCall<String>(
+            apiCall: () async {
+              throw DioException(
+                requestOptions: RequestOptions(path: '/auth/request-pin'),
+                response: Response<dynamic>(
+                  requestOptions: RequestOptions(path: '/auth/request-pin'),
+                  statusCode: 403,
+                  headers: Headers.fromMap({
+                    'content-type': ['text/html; charset=utf-8'],
+                  }),
+                  data: '<!doctype html><html>challenge</html>',
+                ),
+                type: DioExceptionType.badResponse,
+              );
+            },
+            operationName: 'request PIN',
+            errorReporter: (error, {stackTrace, message, diagnostics}) {
+              reportedError = error;
+              reportContext = diagnostics;
+            },
+          ),
+        ).throws<AppDataException>((error) {
+          error.has((it) => it.code, 'code').equals('UNEXPECTED_HTML_RESPONSE');
+        });
+
+        check(reportedError).isA<AppDataException>();
+        check(reportContext!['response_content_type'])
+            .equals('text/html; charset=utf-8');
+        check(reportContext!.containsKey('response_data')).isFalse();
+      },
+    );
+
+    test('preserves auth handling for an HTML 401 response', () async {
+      await check(
+        RepositoryUtils.handleApiCall<String>(
+          apiCall: () async {
+            throw DioException(
+              requestOptions: RequestOptions(path: '/auth/request-pin'),
+              response: Response<dynamic>(
+                requestOptions: RequestOptions(path: '/auth/request-pin'),
+                statusCode: 401,
+                headers: Headers.fromMap({
+                  'content-type': ['text/html; charset=utf-8'],
+                }),
+                data: '<!doctype html><html>sign in</html>',
+              ),
+              type: DioExceptionType.badResponse,
+            );
+          },
+          operationName: 'request PIN',
+        ),
+      ).throws<AppAuthException>((error) {
+        error.has((it) => it.code, 'code').equals('UNAUTHENTICATED');
+      });
+    });
+
+    test(
+      'preserves retryable server handling for an HTML 503 response',
+      () async {
+        await check(
+          RepositoryUtils.handleApiCall<String>(
+            apiCall: () async {
+              throw DioException(
+                requestOptions: RequestOptions(path: '/auth/request-pin'),
+                response: Response<dynamic>(
+                  requestOptions: RequestOptions(path: '/auth/request-pin'),
+                  statusCode: 503,
+                  headers: Headers.fromMap({
+                    'content-type': ['text/html; charset=utf-8'],
+                  }),
+                  data: '<!doctype html><html>temporarily unavailable</html>',
+                ),
+                type: DioExceptionType.badResponse,
+              );
+            },
+            operationName: 'request PIN',
+          ),
+        ).throws<AppNetworkException>((error) {
+          error.has((it) => it.code, 'code').equals('SERVER_ERROR_503');
+        });
+      },
+    );
+
     test('converts DioException 403 into forbidden exception', () async {
       check(
         RepositoryUtils.handleApiCall<String>(
@@ -283,6 +373,15 @@ void main() {
   });
 
   group('ErrorHandler', () {
+    test('does not capture an expected permission outcome', () {
+      final reported = ErrorHandler.report(
+        StateError('permission denied'),
+        disposition: ErrorDisposition.expected,
+      );
+
+      check(reported).isFalse();
+    });
+
     test('marks the same exception as reported only once', () {
       final error = StateError('one failure');
 
@@ -321,6 +420,20 @@ void main() {
         check(because: name, ErrorHandler.wasReported(second)).equals(false);
         check(because: name, ErrorHandler.logError(second)).equals(true);
       }
+    });
+
+    test('deduplicates repeated callback failures by incident context', () {
+      final first = ErrorHandler.report(
+        StateError('listener failed'),
+        incidentKey: 'visualizer:listener',
+      );
+      final second = ErrorHandler.report(
+        StateError('listener failed'),
+        incidentKey: 'visualizer:listener',
+      );
+
+      check(first).isTrue();
+      check(second).isFalse();
     });
 
     test('safely reports values unsupported as Expando keys', () {

@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -122,11 +123,13 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           clearSessionOptions: true,
         );
       }
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to join room',
-      );
+      if (!isTerminalSessionJoinError(error)) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to join room',
+        );
+      }
       return PreJoinJoinOutcome.retryableFailure;
     } finally {
       session?.allowAutoDispose();

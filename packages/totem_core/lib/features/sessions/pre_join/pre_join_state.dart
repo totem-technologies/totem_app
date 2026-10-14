@@ -5,6 +5,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 enum PreJoinCapturePhase {
   uninitialized,
   initializing,
+  waitingForForeground,
   ready,
   disabled,
   unavailable,
@@ -65,7 +66,8 @@ class PreJoinCaptureState<T extends LocalTrack> {
 
   bool get initializationComplete => switch (phase) {
     PreJoinCapturePhase.uninitialized ||
-    PreJoinCapturePhase.initializing => false,
+    PreJoinCapturePhase.initializing ||
+    PreJoinCapturePhase.waitingForForeground => false,
     _ => true,
   };
 
