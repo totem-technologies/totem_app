@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/messages/providers/is_current_user_keeper_provider.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 import '../mocks/message_mocks.dart';
 
@@ -121,8 +122,8 @@ class _NavBar extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => context.pop(),
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new,
+                    icon: const TotemIcon(
+                      TotemIcons.arrowBack,
                       size: 18,
                       color: AppTheme.textHeading,
                     ),

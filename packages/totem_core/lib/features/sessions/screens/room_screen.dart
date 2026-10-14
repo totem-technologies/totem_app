@@ -422,8 +422,15 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final currentSession = ref.watch(currentSessionProvider);
-    final currentRoomScreen = ref.watch(resolveCurrentScreenProvider)!;
+    final currentRoomScreen = ref.watch(resolveCurrentScreenProvider);
     final currentSessionEvent = ref.watch(currentSessionEventProvider);
+
+    if (currentSession == null ||
+        currentRoomScreen == null ||
+        currentSessionEvent == null) {
+      return widget.loadingScreen;
+    }
+
     final hasKeeperDisconnected = ref.watch(hasKeeperDisconnectedProvider);
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
@@ -447,7 +454,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     }
 
     final showingDisconnectedScreen =
-        currentSessionEvent?.ended == true ||
+        currentSessionEvent.ended ||
         roomStatus == RoomStatus.ended ||
         currentRoomScreen == RoomScreen.disconnected ||
         currentRoomScreen == RoomScreen.error;
@@ -456,8 +463,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       roomStatus != RoomStatus.waitingRoom && !showingDisconnectedScreen,
     );
 
-    if (currentSessionEvent != null &&
-        connectionState == RoomConnectionState.connected &&
+    if (connectionState == RoomConnectionState.connected &&
         roomStatus == RoomStatus.active &&
         !currentSessionEvent.ended) {
       _scheduleTimeRemainingWarning(currentSessionEvent);
@@ -540,36 +546,30 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         _onConnectivityChanged(next.value!, wasOffline: previous?.value);
       });
 
-    if (currentSession != null) {
-      final audioRouteNotifier = ref.read(
-        sessionDeviceControllerProvider(currentSession).notifier,
-      );
+    final audioRouteNotifier = ref.read(
+      sessionDeviceControllerProvider(currentSession).notifier,
+    );
 
-      ref.listen(
-        sessionDeviceControllerProvider(currentSession).select(
-          (state) => (
-            speakerphone: state.isSpeakerphoneEnabled,
-            outputDeviceId: state.selectedAudioOutputDeviceId,
-          ),
+    ref.listen(
+      sessionDeviceControllerProvider(currentSession).select(
+        (state) => (
+          speakerphone: state.isSpeakerphoneEnabled,
+          outputDeviceId: state.selectedAudioOutputDeviceId,
         ),
-        (previous, next) {
-          if (!mounted || previous == null || previous == next) return;
-          if (!audioRouteNotifier.audioRouteNotificationsEnabled) return;
-          if (ref.read(connectionStateProvider) !=
-              RoomConnectionState.connected) {
-            return;
-          }
+      ),
+      (previous, next) {
+        if (!mounted || previous == null || previous == next) return;
+        if (!audioRouteNotifier.audioRouteNotificationsEnabled) return;
+        if (ref.read(connectionStateProvider) !=
+            RoomConnectionState.connected) {
+          return;
+        }
 
-          _onAudioRouteChanged(
-            ref.read(sessionDeviceControllerProvider(currentSession)),
-          );
-        },
-      );
-    }
-
-    if (currentSession == null || currentSessionEvent == null) {
-      return widget.loadingScreen;
-    }
+        _onAudioRouteChanged(
+          ref.read(sessionDeviceControllerProvider(currentSession)),
+        );
+      },
+    );
 
     final isOffline = ref.watch(isOfflineProvider).value ?? _lastIsOffline;
 

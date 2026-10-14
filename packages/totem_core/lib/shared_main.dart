@@ -14,6 +14,8 @@ import 'package:totem_core/core/services/observer_service.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 
+const _sentryRelease = String.fromEnvironment('SENTRY_RELEASE');
+
 Future<void> sharedMain(
   Widget app,
   AsyncCallback init, {
@@ -82,13 +84,14 @@ void _configureSentry(SentryFlutterOptions options) {
     ..environment = config.environment.name
     ..dsn = config.sentryDsn
     ..navigatorKey = TotemRouter.instance.navigatorKey
-    ..sendDefaultPii = true
+    ..sendDefaultPii = false
     ..tracesSampleRate = config.isDevelopment ? 1.0 : 0.1
     ..attachScreenshot = true
     ..attachViewHierarchy = true
     ..enableAutoPerformanceTracing = true
     ..enableTimeToFullDisplayTracing = true
     ..enableTombstone = true;
+  if (_sentryRelease.isNotEmpty) options.release = _sentryRelease;
 }
 
 void _initializeBestEffortServices() {

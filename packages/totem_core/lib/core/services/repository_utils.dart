@@ -93,6 +93,7 @@ class RepositoryUtils {
               'total_attempts': totalAttempts,
               'retry_on_network_error': retryOnNetworkError,
               if (timeout != null) 'timeout_ms': timeout.inMilliseconds,
+              'recovery': 'exhausted',
               ...diagnostics,
               ..._errorDiagnostics(error),
             },
@@ -139,10 +140,13 @@ class RepositoryUtils {
         'request_method': error.requestOptions.method,
         'request_path': error.requestOptions.path,
         'status_code': ?error.response?.statusCode,
-        'error_message': ?error.message,
+        'response_content_type': ?error.response?.headers.value('content-type'),
         if (error.response?.data case final responseData?)
-          'response_data': _truncate(responseData.toString()),
-        if (error.error case final cause?) 'cause': _truncate(cause.toString()),
+          'response_type': responseData.runtimeType.toString(),
+        if (error.response?.data case final String responseBody?)
+          'response_length': responseBody.length,
+        if (error.error case final cause?)
+          'cause_type': cause.runtimeType.toString(),
       };
     }
     if (error is ApiError) {
@@ -150,22 +154,12 @@ class RepositoryUtils {
         'error_type': error.runtimeType.toString(),
         'status_code': error.statusCode,
         if (error.error case final typedError?)
-          'response_error': _truncate(typedError.toString()),
+          'response_error_type': typedError.runtimeType.toString(),
         if (error.rawError case final rawError?)
-          'raw_response': _truncate(rawError),
+          'raw_response_type': rawError.runtimeType.toString(),
       };
     }
-    return {
-      'error_type': error.runtimeType.toString(),
-      'cause': _truncate(error.toString()),
-    };
-  }
-
-  static String _truncate(String value) {
-    const maxLength = 2000;
-    return value.length <= maxLength
-        ? value
-        : '${value.substring(0, maxLength)}…';
+    return {'error_type': error.runtimeType.toString()};
   }
 
   /// Converts DioException to app-specific exceptions.
@@ -175,6 +169,29 @@ class RepositoryUtils {
   ) {
     final statusCode = error.response?.statusCode;
     final details = _errorDiagnostics(error);
+    final responseBody = error.response?.data;
+    final contentType = error.response?.headers.value('content-type') ?? '';
+    final isHtmlResponse =
+        responseBody is String &&
+        (contentType.toLowerCase().contains('text/html') ||
+            responseBody.trimLeft().toLowerCase().startsWith(
+              '<!doctype html',
+            ) ||
+            responseBody.trimLeft().toLowerCase().startsWith('<html'));
+
+    // A CDN/WAF challenge is infrastructure failure, not an authorization
+    // outcome. Do not override authentication or server-failure semantics:
+    // 401 must continue through auth recovery and HTML 5xx responses remain
+    // retryable network failures.
+    if (isHtmlResponse &&
+        statusCode != 401 &&
+        (statusCode == null || statusCode < 500)) {
+      return AppDataException(
+        'Unexpected HTML response while requesting JSON',
+        code: 'UNEXPECTED_HTML_RESPONSE',
+        details: {...details, 'unexpected_html_response': true},
+      );
+    }
 
     if (statusCode == 401) {
       return AppAuthException(

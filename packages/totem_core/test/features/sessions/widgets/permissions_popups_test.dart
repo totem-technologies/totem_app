@@ -12,6 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:platform/testing.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_core/features/sessions/widgets/permissions_popups.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 class FakePermissionsController extends PermissionsController {
   static PermissionsState initialState = const PermissionsState();
@@ -463,7 +464,14 @@ void main() {
       await tester.pump();
 
       check(taps).equals(0);
-      check(tester.widgetList(find.byIcon(Icons.check))).length.equals(1);
+      check(
+        tester.widgetList(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is TotemIcon && widget.icon == TotemIcons.checkmark,
+          ),
+        ),
+      ).length.equals(1);
     });
   });
 }

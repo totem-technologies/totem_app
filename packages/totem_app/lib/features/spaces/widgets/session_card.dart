@@ -6,6 +6,7 @@ import 'package:totem_core/core/models/upcoming_session_data.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+
 import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
@@ -126,12 +127,12 @@ class _SessionMetadata extends StatelessWidget {
 
     return Row(
       children: [
-        Icon(Icons.access_time_outlined, size: 14, color: _iconColor),
+        TotemIcon(TotemIcons.clockCircle, size: 14, color: _iconColor),
         const SizedBox(width: 4),
         Text('$formattedTime $formattedPeriod', style: _textStyle),
         const SizedBox(width: 16),
         if (isAttending)
-          Icon(Icons.check_circle_outline, size: 14, color: _iconColor)
+          TotemIcon(TotemIcons.checkmark, size: 14, color: _iconColor)
         else
           TotemIcon(TotemIcons.seats, size: 14, color: _iconColor),
         const SizedBox(width: 4),

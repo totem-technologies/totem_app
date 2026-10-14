@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 class SessionsCalendar extends StatefulWidget {
   const SessionsCalendar({
@@ -330,7 +331,7 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
                   button: true,
                   child: IconButton(
                     onPressed: _previousMonth,
-                    icon: const Icon(Icons.chevron_left),
+                    icon: const TotemIcon(TotemIcons.arrowBack),
                     iconSize: 24,
                   ),
                 ),
@@ -340,7 +341,7 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
                   button: true,
                   child: IconButton(
                     onPressed: _nextMonth,
-                    icon: const Icon(Icons.chevron_right),
+                    icon: const TotemIcon(TotemIcons.arrowForward),
                     iconSize: 24,
                   ),
                 ),
