@@ -104,8 +104,12 @@ class MoreOptions extends ConsumerWidget {
       final outputTile = MoreOptionsTile.output(
         speakerOn: deviceState.isSpeakerphoneEnabled,
         selectedDeviceId: deviceState.selectedAudioOutputDeviceId,
+        supportsSelection: deviceState.supportsAudioOutputSelection,
+        supportsOutputChooser: deviceState.supportsAudioOutputChooser,
         onSpeakerChanged: currentSession.devices.setSpeakerphone,
         onDeviceSelect: currentSession.devices.selectAudioOutputDevice,
+        onOutputChooserRequested:
+            currentSession.devices.requestAudioOutputDevice,
       );
 
       final content = SingleChildScrollView(
@@ -568,8 +572,11 @@ class MoreOptionsTile<T> extends StatelessWidget {
   static Widget? output({
     required bool speakerOn,
     required String? selectedDeviceId,
+    required bool supportsSelection,
+    required bool supportsOutputChooser,
     required ValueChanged<bool> onSpeakerChanged,
     required ValueChanged<MediaDeviceInfo> onDeviceSelect,
+    required VoidCallback onOutputChooserRequested,
   }) {
     if (isNativeMobile) {
       return MoreOptionsTile<MediaDeviceInfo>(
@@ -580,12 +587,14 @@ class MoreOptionsTile<T> extends StatelessWidget {
         ),
         onTap: () => onSpeakerChanged(!speakerOn),
       );
-    } else {
-      return _DesktopAudioOutputTile(
-        selectedDeviceId: selectedDeviceId,
-        onDeviceSelect: onDeviceSelect,
-      );
     }
+    return _AudioOutputTile(
+      selectedDeviceId: selectedDeviceId,
+      supportsSelection: supportsSelection,
+      supportsOutputChooser: supportsOutputChooser,
+      onDeviceSelect: onDeviceSelect,
+      onOutputChooserRequested: onOutputChooserRequested,
+    );
   }
 
   static Widget fromMediaDevice({
@@ -703,41 +712,71 @@ class MoreOptionsTile<T> extends StatelessWidget {
   }
 }
 
-class _DesktopAudioOutputTile extends ConsumerWidget {
-  const new({required this.selectedDeviceId, required this.onDeviceSelect});
+class _AudioOutputTile extends ConsumerWidget {
+  const new({
+    required this.selectedDeviceId,
+    required this.supportsSelection,
+    required this.supportsOutputChooser,
+    required this.onDeviceSelect,
+    required this.onOutputChooserRequested,
+  });
 
   final String? selectedDeviceId;
+  final bool supportsSelection;
+  final bool supportsOutputChooser;
   final ValueChanged<MediaDeviceInfo> onDeviceSelect;
+  final VoidCallback onOutputChooserRequested;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final audioOutputs = ref.watch(
       mediaDevicesProvider.select(
         (devices) => (devices.value ?? const <MediaDeviceInfo>[])
-            .where(
-              (device) =>
-                  device.kind == MediaDeviceKind.audioOutput &&
-                  device.label.isNotEmpty &&
-                  device.label != 'Earpiece',
-            )
+            .where((device) => device.kind == MediaDeviceKind.audioOutput)
             .toList(),
       ),
     );
+    if (!supportsSelection) {
+      return MoreOptionsTile<MediaDeviceInfo>(
+        title: 'Audio output — Controlled by your device',
+        icon: TotemIcons.speakerOn,
+      );
+    }
+
     final selected =
         audioOutputs.firstWhereOrNull(
           (device) => device.id == selectedDeviceId,
         ) ??
         audioOutputs.firstOrNull;
+    final picker = audioOutputs.length > 1
+        ? MoreOptionsTile.fromMediaDevice(
+            device: selected,
+            options: audioOutputs,
+            onOptionChanged: (value) {
+              if (value != null) onDeviceSelect(value);
+            },
+            icon: TotemIcons.speakerOn,
+          )
+        : null;
+    final chooser = supportsOutputChooser
+        ? MoreOptionsTile<void>(
+            title: 'Choose audio output',
+            icon: TotemIcons.speakerOn,
+            onTap: onOutputChooserRequested,
+          )
+        : null;
 
-    return MoreOptionsTile.fromMediaDevice(
-      device: selected,
-      options: audioOutputs,
-      onOptionChanged: (value) {
-        if (value != null) {
-          onDeviceSelect(value);
-        }
-      },
-      icon: TotemIcons.speakerOn,
-    );
+    return switch ((picker, chooser)) {
+      (final picker?, final chooser?) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [picker, chooser],
+      ),
+      (final picker?, null) => picker,
+      (null, final chooser?) => chooser,
+      (null, null) => MoreOptionsTile<MediaDeviceInfo>(
+        title: 'Audio output — Controlled by your device',
+        icon: TotemIcons.speakerOn,
+      ),
+    };
   }
 }

@@ -89,6 +89,12 @@ abstract interface class LocalMedia {
   String? get cameraDeviceId;
   String? get audioOutputDeviceId;
 
+  /// Whether this platform can apply an explicit output-device selection.
+  bool get supportsAudioOutputSelection;
+
+  /// Whether the browser can open its native output-device chooser.
+  bool get supportsAudioOutputChooser;
+
   /// The facing of the active camera. While the camera is off, the facing
   /// chosen for when it turns on, or null if none was chosen.
   CameraFacing? get cameraFacing;
@@ -109,6 +115,9 @@ abstract interface class LocalMedia {
 
   Future<void> selectCamera(MediaDeviceInfo device);
   Future<void> selectAudioOutput(MediaDeviceInfo device);
+
+  /// Opens the browser's native output-device chooser when supported.
+  Future<void> requestAudioOutput();
 
   Future<void> setSpeakerOutputPreferred(bool preferred);
 

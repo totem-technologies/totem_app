@@ -13,6 +13,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  checks: any
 dependency_overrides:
   livekit_client:
     git:

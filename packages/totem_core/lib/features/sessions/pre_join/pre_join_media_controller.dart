@@ -111,7 +111,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     _initialization = Future<void>.microtask(
       () => _guardInitialization(initialize),
     );
-    unawaited(_detectHeadphones());
+    if (!kIsWeb) unawaited(_detectHeadphones());
     return const PreJoinMediaState();
   }
 

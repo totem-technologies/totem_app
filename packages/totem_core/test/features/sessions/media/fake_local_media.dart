@@ -14,6 +14,8 @@ class FakeLocalMedia implements LocalMedia {
     this.cameraDeviceId,
     this.audioOutputDeviceId,
     this.cameraFacing,
+    this.supportsAudioOutputSelection = true,
+    this.supportsAudioOutputChooser = false,
     this.isSpeakerOutputPreferred = true,
   });
 
@@ -33,6 +35,10 @@ class FakeLocalMedia implements LocalMedia {
   String? cameraDeviceId;
   @override
   String? audioOutputDeviceId;
+  @override
+  bool supportsAudioOutputSelection;
+  @override
+  bool supportsAudioOutputChooser;
   @override
   CameraFacing? cameraFacing;
   @override
@@ -90,6 +96,9 @@ class FakeLocalMedia implements LocalMedia {
     audioOutputDeviceId = device.id;
     emitChange();
   }
+
+  @override
+  Future<void> requestAudioOutput() async {}
 
   @override
   Future<void> release() async {
