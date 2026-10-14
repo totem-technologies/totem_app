@@ -156,8 +156,8 @@ setTimeout(() => { throw new Error('Sentry JS fallback source-map check'); });
 ```
 
 Confirm the resulting Sentry event resolves JavaScript frames to the uploaded
-source context, then remove the temporary test event. The build produces both
-JavaScript and WebAssembly maps, and the plugin uploads all map artifacts. Wasm
+source context, then remove the temporary test event. Release builds produce
+both JavaScript and WebAssembly maps, and the plugin uploads all map artifacts. Wasm
 symbolication is **unverified**: the plugin injects Debug IDs into JavaScript
 artifacts, while current Sentry Flutter documentation does not guarantee
 WebAssembly-frame symbolication. Oversized `.map` files (over Cloudflare's

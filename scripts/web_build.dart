@@ -52,17 +52,17 @@ Future<void> main() async {
   // --web-define ASSET_BASE : where flutter_bootstrap.js loads assets from.
   final sentryRelease = Platform.environment['SENTRY_RELEASE'];
   final sentryDist = Platform.environment['SENTRY_DIST'];
+  final hasSentryRelease = sentryRelease != null && sentryRelease.isNotEmpty;
   final arguments = [
     'build',
     'web',
     '--wasm',
-    '--source-maps',
+    if (hasSentryRelease) '--source-maps',
     '--dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true',
     '--base-href',
     '/room/',
     '--web-define=ASSET_BASE=$assetBase',
-    if (sentryRelease != null && sentryRelease.isNotEmpty)
-      '--dart-define=SENTRY_RELEASE=$sentryRelease',
+    if (hasSentryRelease) '--dart-define=SENTRY_RELEASE=$sentryRelease',
     if (sentryDist != null && sentryDist.isNotEmpty)
       '--dart-define=SENTRY_DIST=$sentryDist',
   ];
@@ -76,7 +76,7 @@ Future<void> main() async {
   if (code != 0) exit(code);
 
   final buildDirectory = Directory('$webDir/build/web');
-  _verifyAndReportSourceMaps(buildDirectory);
+  if (hasSentryRelease) _verifyAndReportSourceMaps(buildDirectory);
   _stripInlinedSourceMap(File('${buildDirectory.path}/index.html'));
 }
 
@@ -125,11 +125,10 @@ void _verifyAndReportSourceMaps(Directory buildDirectory) {
 
 // flutter.js is inlined into the Django-served index.html, so its relative
 // `//# sourceMappingURL=flutter.js.map` comment resolves against /room/ -- which
-// makes dev tools GET /room/flutter.js.map from Django (its asset proxy is
-// dev-only and 500s in prod). The map isn't shipped and Flutter has no flag to
-// omit the comment, so strip the comment itself. Removing the exact substring
-// (rather than the whole line) is safe even if a minifier ever puts the comment
-// on the same line as real code.
+// makes dev tools GET /room/flutter.js.map from Django instead of the Worker.
+// Flutter has no flag to omit the comment, so strip it for source-map builds
+// too. Removing the exact substring (rather than the whole line) is safe even
+// if a minifier ever puts the comment on the same line as real code.
 void _stripInlinedSourceMap(File index) {
   final html = index.readAsStringSync();
   index.writeAsStringSync(html.replaceAll(_sourceMapMarker, ''));
