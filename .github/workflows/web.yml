@@ -19,6 +19,13 @@ name: Web
 #   FIREBASE_OPTIONS_B64    base64 firebase_options.dart
 #   CLOUDFLARE_API_TOKEN    token with Workers Scripts:Edit
 #   CLOUDFLARE_ACCOUNT_ID   Cloudflare account id
+#   SENTRY_AUTH_TOKEN       Sentry auth token with source-map upload access
+#
+# Required repository variables:
+#   SENTRY_ORG              Sentry organization slug
+#   SENTRY_PROJECT          Sentry project slug
+# Optional repository variables:
+#   SENTRY_URL              Self-hosted Sentry URL
 
 on:
   push:
@@ -40,7 +47,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FLAVOR: ${{ github.event_name == 'release' && 'production' || 'staging' }}
-      SENTRY_RELEASE: totem-web@${{ github.sha }}
+      SENTRY_RELEASE: ${{ github.event_name == 'release' && format('totem_web@{0}', github.event.release.tag_name) || startsWith(github.ref, 'refs/tags/v') && format('totem_web@{0}', github.ref_name) || '' }}
+      SENTRY_DIST: ${{ github.event_name == 'release' && 'production' || startsWith(github.ref, 'refs/tags/v') && 'staging' || '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -56,6 +64,37 @@ jobs:
 
       - name: Build web
         uses: ./.github/actions/build-web
+
+      - name: Upload Sentry source maps
+        if: ${{ github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') }}
+        working-directory: packages/totem_web
+        shell: bash
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          SENTRY_URL: ${{ vars.SENTRY_URL }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for variable in SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT; do
+            if [ -z "${!variable:-}" ]; then
+              missing+=("$variable")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Sentry source-map upload requires: ${missing[*]}. Configure the repository secret/variables before deploying a web release."
+            exit 1
+          fi
+          dart run sentry_dart_plugin
+
+      - name: Remove source maps over the Worker asset limit
+        if: ${{ github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') }}
+        working-directory: packages/totem_web
+        shell: bash
+        run: |
+          set -euo pipefail
+          find build/web -type f -name '*.map' -size +25M -print -delete
 
       # Deploy on a published release (production) or a pushed v* tag (staging).
       # PR / main builds stop at the build above, as a compile check.

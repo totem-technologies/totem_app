@@ -34,8 +34,18 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   checks: ^0.3.2
   leak_tracker_flutter_testing: any
+  sentry_dart_plugin: ^3.4.0
 
   url_launcher_platform_interface: any
+
+sentry:
+  upload_source_maps: true
+  upload_sources: true
+  upload_debug_symbols: false
+  wait_for_processing: true
+  commits: false
+  legacy_web_symbolication: false
+
 flutter:
   uses-material-design: true
 

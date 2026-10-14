@@ -15,6 +15,7 @@ import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 
 const _sentryRelease = String.fromEnvironment('SENTRY_RELEASE');
+const _sentryDist = String.fromEnvironment('SENTRY_DIST');
 
 Future<void> sharedMain(
   Widget app,
@@ -92,6 +93,7 @@ void _configureSentry(SentryFlutterOptions options) {
     ..enableTimeToFullDisplayTracing = true
     ..enableTombstone = true;
   if (_sentryRelease.isNotEmpty) options.release = _sentryRelease;
+  if (_sentryDist.isNotEmpty) options.dist = _sentryDist;
 }
 
 void _initializeBestEffortServices() {
