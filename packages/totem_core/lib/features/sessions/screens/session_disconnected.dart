@@ -399,7 +399,10 @@ class _MediumSmallLayout extends StatelessWidget {
           start: 48,
           child: CircleIconButton(
             icon: TotemIcons.close,
-            onPressed: onRefreshHome,
+            onPressed: () {
+              onRefreshHome();
+              TotemRouter.instance.toHome();
+            },
             color: AppTheme.white.withValues(alpha: 0.8),
           ),
         ),
