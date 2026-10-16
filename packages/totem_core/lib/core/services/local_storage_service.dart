@@ -52,8 +52,7 @@ class LocalStorageService {
     return hasSeenString == 'true';
   }
 
-  /// Mark that the user has completed the welcome onboarding screens
-  /// This ensures they won't see the welcome screens again
+  /// Mark that the user has completed the welcome onboarding screens.
   Future<void> markWelcomeOnboardingCompleted() async {
     await _secureStorage.write(
       key: AppConsts.hasSeenWelcomeOnboarding,

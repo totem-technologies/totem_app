@@ -246,9 +246,7 @@ class ErrorHandler {
           );
         },
       );
-    } else
-    // For other errors, just show a snackbar
-    {
+    } else {
       showErrorSnackBar(context, message);
     }
   }
