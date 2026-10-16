@@ -31,6 +31,7 @@ dependencies:
   connectivity_plus: ^7.0.0
   uuid: ^4.5.1
   degenerate_dio: ^0.5.0
+  degenerate_runtime: ^0.5.0
 
   # Messaging
   flutter_local_notifications: ^22.2.0
@@ -101,7 +102,6 @@ dev_dependencies:
 
   # curl -L https://totem.org/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose; dart format .
   degenerate: ^0.5.0
-  degenerate_runtime: ^0.5.0
 
   # App Icon and Splash Screens
   flutter_launcher_icons: ^0.14.3
