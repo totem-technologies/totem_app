@@ -1,7 +1,3 @@
-// Uses the generated client's existing transitive test adapter without adding a
-// test-only dependency solely for repository boundary tests.
-// ignore_for_file: depend_on_referenced_packages
-
 import 'dart:convert';
 
 import 'package:checks/checks.dart';

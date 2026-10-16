@@ -12,6 +12,7 @@ dev_dependencies:
   meta: any
   flutter_test:
     sdk: flutter
+  checks: any
 
 dependency_overrides:
   livekit_client:
