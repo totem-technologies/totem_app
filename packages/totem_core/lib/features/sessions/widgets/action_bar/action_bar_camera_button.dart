@@ -619,8 +619,7 @@ class _SessionActionBarCameraButtonState
       availableCameraDevices: cameraDevices,
       selectedCameraDeviceId:
           deviceState.selectedCameraDeviceId ?? cameraDevices.firstOrNull?.id,
-      onCameraFacingChanged: (_) =>
-          ref.read(deviceProvider.notifier).switchCameraPosition(),
+      onCameraFacingChanged: ref.read(deviceProvider.notifier).setCameraFacing,
       onCameraDeviceSelected: usesMediaDevicePicker
           ? ref.read(deviceProvider.notifier).selectCameraDevice
           : null,

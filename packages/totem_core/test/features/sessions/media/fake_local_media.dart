@@ -78,6 +78,12 @@ class FakeLocalMedia implements LocalMedia {
   }
 
   @override
+  Future<void> setCameraFacing(CameraFacing facing) async {
+    cameraFacing = facing;
+    emitChange();
+  }
+
+  @override
   Future<void> switchCameraFacing() async {
     cameraFacing = cameraFacing?.switched ?? CameraFacing.front;
     hasCameraTrack = true;

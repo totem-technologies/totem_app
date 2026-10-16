@@ -504,6 +504,23 @@ void main() {
       check(media.cameraFacing).equals(CameraFacing.back);
     }, skip: !kIsWeb);
 
+    testWidgets(
+      'mobile web applies the requested facing when state is unknown',
+      (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        final media = sessionController.mockLocalMedia..isCameraEnabled = true;
+
+        await pumpCameraButton(tester);
+        await tester.tap(find.bySemanticsLabel('Switch camera'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Front'));
+        await tester.pumpAndSettle();
+
+        check(media.cameraFacing).equals(CameraFacing.back);
+      },
+      skip: !kIsWeb,
+    );
+
     testWidgets('web camera action ignores overlapping presses and recovers', (
       tester,
     ) async {

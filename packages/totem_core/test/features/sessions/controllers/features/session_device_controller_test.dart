@@ -313,6 +313,17 @@ void main() {
     });
 
     test(
+      'sets the requested camera facing when the current facing is unknown',
+      () async {
+        media.isCameraEnabled = true;
+
+        await controller().setCameraFacing(CameraFacing.back);
+
+        check(deviceState().cameraFacing).equals(CameraFacing.back);
+      },
+    );
+
+    test(
       'choosing the speaker routes audio and becomes the preference',
       () async {
         final devices = controller();

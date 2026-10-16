@@ -597,24 +597,6 @@ class MoreOptionsTile<T> extends StatelessWidget {
     );
   }
 
-  static Widget fromMediaDevice({
-    required MediaDeviceInfo? device,
-    required Iterable<MediaDeviceInfo> options,
-    required ValueChanged<MediaDeviceInfo?> onOptionChanged,
-    required TotemIconData icon,
-  }) {
-    return MoreOptionsTile<MediaDeviceInfo>(
-      title:
-          device?.displayLabel ??
-          (options.isEmpty ? 'No Connected Device' : 'Default Device'),
-      icon: icon,
-      options: options,
-      optionToString: (option) => option.displayLabel,
-      selectedOption: device,
-      onOptionChanged: onOptionChanged,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -743,14 +725,21 @@ class _AudioOutputTile extends ConsumerWidget {
         : audioOutputs.firstWhereOrNull(
             (device) => device.id == selectedDeviceId,
           );
+    String outputLabel(MediaDeviceInfo device) {
+      if (device.label.trim().isNotEmpty) return device.displayLabel;
+      return 'Speaker ${audioOutputs.indexOf(device) + 1}';
+    }
+
     final picker = audioOutputs.length > 1
-        ? MoreOptionsTile.fromMediaDevice(
-            device: selected,
+        ? MoreOptionsTile<MediaDeviceInfo>(
+            title: selected == null ? 'Default Device' : outputLabel(selected),
+            icon: TotemIcons.speakerOn,
             options: audioOutputs,
+            optionToString: outputLabel,
+            selectedOption: selected,
             onOptionChanged: (value) {
               if (value != null) onDeviceSelect(value);
             },
-            icon: TotemIcons.speakerOn,
           )
         : null;
     final chooser = supportsOutputChooser

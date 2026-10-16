@@ -148,6 +148,20 @@ void main() {
       check(gateway.startCount).equals(2);
       check(gateway.stopCount).equals(1);
     });
+
+    test('does not notify a stopped room after a late selection', () async {
+      final gateway = _FakeGateway(
+        outputs: [fakeOutput('default'), fakeOutput('headphones')],
+      );
+      final router = WebAudioOutputRouter(gateway: gateway);
+      var changes = 0;
+      await router.start(() => changes++);
+      await router.stop();
+
+      await router.select(fakeOutput('headphones'));
+
+      check(changes).equals(0);
+    });
   });
 }
 

@@ -71,6 +71,17 @@ class _BrowserWebAudioOutputGateway implements WebAudioOutputGateway {
     _audioContainerObserver = null;
     _audioElementsObserver?.disconnect();
     _audioElementsObserver = null;
+    if (_sinkId case final sinkId? when sinkId.isNotEmpty) {
+      try {
+        await _applyToExistingAudioElements('', rollbackSinkId: sinkId);
+      } catch (error, stackTrace) {
+        logger.w(
+          'Failed to restore browser-default audio output during cleanup.',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+    }
     _sinkId = null;
   }
 
@@ -112,21 +123,18 @@ class _BrowserWebAudioOutputGateway implements WebAudioOutputGateway {
     if (!supportsSelection) {
       throw UnsupportedError('Browser audio-output selection is unavailable.');
     }
+    final previousSinkId = _sinkId ?? '';
     _isChangingSink = true;
     try {
-      await _applyToExistingAudioElements(deviceId);
+      await _applyToExistingAudioElements(
+        deviceId,
+        rollbackSinkId: previousSinkId,
+      );
       _sinkId = deviceId;
-      try {
-        await _applyToExistingAudioElements(deviceId);
-      } catch (error, stackTrace) {
-        logger.w(
-          'Failed to apply the selected browser audio output to a new track.',
-          error: error,
-          stackTrace: stackTrace,
-        );
-      }
     } finally {
       _isChangingSink = false;
+      // The observer skips mutations during the asynchronous update, so
+      // reconcile any audio elements created in that interval afterwards.
       unawaited(_applyToNewAudioElements());
     }
   }
@@ -168,7 +176,7 @@ class _BrowserWebAudioOutputGateway implements WebAudioOutputGateway {
       return;
     }
     try {
-      await _applyToExistingAudioElements(sinkId);
+      await _applyToExistingAudioElements(sinkId, rollbackSinkId: '');
     } catch (error, stackTrace) {
       logger.w(
         'Failed to apply the selected browser audio output to a new track.',
@@ -178,11 +186,13 @@ class _BrowserWebAudioOutputGateway implements WebAudioOutputGateway {
     }
   }
 
-  Future<void> _applyToExistingAudioElements(String deviceId) async {
+  Future<void> _applyToExistingAudioElements(
+    String deviceId, {
+    required String rollbackSinkId,
+  }) async {
     final container = web.document.getElementById('livekit_audio_container');
     if (container == null) return;
 
-    final previousSinkId = _sinkId ?? '';
     final changed = <web.HTMLAudioElement>[];
     final elements = container.querySelectorAll('audio');
     try {
@@ -199,7 +209,7 @@ class _BrowserWebAudioOutputGateway implements WebAudioOutputGateway {
     } catch (_) {
       try {
         await Future.wait([
-          for (final audio in changed) _setSinkId(audio, previousSinkId),
+          for (final audio in changed) _setSinkId(audio, rollbackSinkId),
         ]);
       } catch (error, stackTrace) {
         logger.w(

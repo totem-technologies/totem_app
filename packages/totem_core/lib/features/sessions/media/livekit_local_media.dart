@@ -291,6 +291,22 @@ class LiveKitLocalMedia implements LocalMedia {
   });
 
   @override
+  Future<void> setCameraFacing(CameraFacing facing) => _serialize((_, _) async {
+    final position = facing.toLiveKit();
+    final track = _activeCameraTrack;
+    if (track != null) {
+      final options = track.currentOptions as CameraCaptureOptions;
+      if (options.cameraPosition != position) {
+        await track.setCameraPosition(position);
+      }
+      return;
+    }
+    if (_nextCameraPosition == position) return;
+    _nextCameraPosition = position;
+    _binding.notify();
+  });
+
+  @override
   Future<void> switchCameraFacing() => _serialize((_, _) async {
     final track = _activeCameraTrack;
     if (track != null) {

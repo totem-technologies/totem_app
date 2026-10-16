@@ -402,9 +402,10 @@ void main() {
     SessionDeviceState deviceState({
       required bool supportsSelection,
       required bool supportsChooser,
+      String? selectedAudioOutputDeviceId,
     }) => SessionDeviceState(
       selectedCameraDeviceId: null,
-      selectedAudioOutputDeviceId: null,
+      selectedAudioOutputDeviceId: selectedAudioOutputDeviceId,
       isSpeakerphoneEnabled: false,
       isMicrophoneEnabled: false,
       isCameraEnabled: false,
@@ -431,6 +432,30 @@ void main() {
 
       check(tester.widgetList(find.byType(DropdownButton<MediaDeviceInfo>)))
           .isNotEmpty();
+    });
+
+    testWidgets('uses distinct labels for unnamed selectable outputs', (
+      tester,
+    ) async {
+      await _pumpMoreOptions(
+        tester,
+        session: session,
+        state: _sessionState(roomState: roomState),
+        deviceController: _TestSessionDeviceController(
+          deviceState(
+            supportsSelection: true,
+            supportsChooser: false,
+            selectedAudioOutputDeviceId: 'headphones',
+          ),
+        ),
+        audioOutputs: [
+          fakeAudioOutput('default', ''),
+          fakeAudioOutput('headphones', ''),
+        ],
+      );
+      await tester.pump();
+
+      check(tester.widgetList(find.text('Speaker 2'))).isNotEmpty();
     });
 
     testWidgets('shows the browser chooser when only default is visible', (

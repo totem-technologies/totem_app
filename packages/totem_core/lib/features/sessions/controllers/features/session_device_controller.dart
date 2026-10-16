@@ -272,6 +272,20 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   String? get selectedCameraDeviceId => _media.cameraDeviceId;
 
+  Future<void> setCameraFacing(CameraFacing facing) async {
+    try {
+      await _media.setCameraFacing(facing);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to set camera facing',
+      );
+    } finally {
+      _emitState();
+    }
+  }
+
   Future<void> switchCameraPosition() async {
     try {
       await _media.switchCameraFacing();

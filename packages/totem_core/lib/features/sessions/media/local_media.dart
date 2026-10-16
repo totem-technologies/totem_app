@@ -109,6 +109,10 @@ abstract interface class LocalMedia {
 
   Future<void> setCameraEnabled(bool enabled);
 
+  /// Sets the active camera facing. While the camera is off, chooses the
+  /// facing it turns on with instead.
+  Future<void> setCameraFacing(CameraFacing facing);
+
   /// Flips the active camera. While the camera is off, changes the facing it
   /// turns on with instead.
   Future<void> switchCameraFacing();

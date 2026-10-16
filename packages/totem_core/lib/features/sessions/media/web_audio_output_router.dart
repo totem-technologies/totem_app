@@ -134,6 +134,7 @@ class WebAudioOutputRouter {
     _started = false;
     await _changesSubscription?.cancel();
     _changesSubscription = null;
+    _onChanged = null;
     _selectedDeviceId = null;
     await _gateway.stop();
   });
