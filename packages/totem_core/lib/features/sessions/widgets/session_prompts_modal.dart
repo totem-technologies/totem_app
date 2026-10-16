@@ -215,7 +215,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                       height: 40,
                       child: IconButton(
                         tooltip: 'Close',
-                        padding: EdgeInsets.zero,
+                        padding: EdgeInsetsDirectional.zero,
                         onPressed: saving ? null : _closePanel,
                         icon: const TotemIcon(
                           TotemIcons.x,

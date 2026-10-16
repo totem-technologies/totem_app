@@ -147,9 +147,9 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
+        padding: EdgeInsetsDirectional.only(
+          start: 24,
+          end: 24,
           bottom: 24 + keyboardHeight,
         ),
         child: SafeArea(

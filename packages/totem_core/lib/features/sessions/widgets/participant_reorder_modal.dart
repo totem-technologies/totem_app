@@ -332,7 +332,7 @@ class _ParticipantReorderWidgetState
             ),
             if (_selectedIdentity != null)
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsetsDirectional.all(16.0),
                 child: _ParticipantInfo(participant: _selectedIdentity!),
               ),
           ],
@@ -375,7 +375,7 @@ class _ParticipantInfo extends ConsumerWidget {
       child: IntrinsicWidth(
         child: Card(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsetsDirectional.all(16.0),
             child: participant.when(
               data: (user) => Column(
                 mainAxisSize: MainAxisSize.min,
