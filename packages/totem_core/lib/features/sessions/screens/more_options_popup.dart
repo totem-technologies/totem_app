@@ -729,6 +729,8 @@ class _AudioOutputTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!supportsSelection) return _controlledByDeviceTile();
+
     final audioOutputs = ref.watch(
       mediaDevicesProvider.select(
         (devices) => (devices.value ?? const <MediaDeviceInfo>[])
@@ -736,18 +738,11 @@ class _AudioOutputTile extends ConsumerWidget {
             .toList(),
       ),
     );
-    if (!supportsSelection) {
-      return MoreOptionsTile<MediaDeviceInfo>(
-        title: 'Audio output — Controlled by your device',
-        icon: TotemIcons.speakerOn,
-      );
-    }
-
-    final selected =
-        audioOutputs.firstWhereOrNull(
-          (device) => device.id == selectedDeviceId,
-        ) ??
-        audioOutputs.firstOrNull;
+    final selected = selectedDeviceId == null
+        ? audioOutputs.firstOrNull
+        : audioOutputs.firstWhereOrNull(
+            (device) => device.id == selectedDeviceId,
+          );
     final picker = audioOutputs.length > 1
         ? MoreOptionsTile.fromMediaDevice(
             device: selected,
@@ -773,10 +768,12 @@ class _AudioOutputTile extends ConsumerWidget {
       ),
       (final picker?, null) => picker,
       (null, final chooser?) => chooser,
-      (null, null) => MoreOptionsTile<MediaDeviceInfo>(
-        title: 'Audio output — Controlled by your device',
-        icon: TotemIcons.speakerOn,
-      ),
+      (null, null) => _controlledByDeviceTile(),
     };
   }
+
+  Widget _controlledByDeviceTile() => MoreOptionsTile<MediaDeviceInfo>(
+    title: 'Audio output — Controlled by your device',
+    icon: TotemIcons.speakerOn,
+  );
 }

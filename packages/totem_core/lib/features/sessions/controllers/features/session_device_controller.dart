@@ -10,6 +10,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/shared/logger.dart';
 
 part 'session_device_controller.g.dart';
@@ -354,6 +355,9 @@ class SessionDeviceController extends _$SessionDeviceController {
   Future<void> requestAudioOutputDevice() async {
     try {
       await _media.requestAudioOutput();
+      // selectAudioOutput() grants may expose devices without firing
+      // navigator.mediaDevices.devicechange.
+      ref.invalidate(mediaDevicesProvider);
       _emitState();
     } catch (error, stackTrace) {
       logger.w(

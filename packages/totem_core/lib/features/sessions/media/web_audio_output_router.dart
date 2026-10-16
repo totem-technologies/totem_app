@@ -37,6 +37,7 @@ class WebAudioOutputRouter {
   final WebAudioOutputGateway _gateway;
   StreamSubscription<void>? _changesSubscription;
   Future<void> _operations = Future.value();
+  Future<void> _lifecycleOperations = Future.value();
   VoidCallback? _onChanged;
   String? _selectedDeviceId;
   bool _started = false;
@@ -50,23 +51,22 @@ class WebAudioOutputRouter {
   @visibleForTesting
   Future<void> get pending => _operations;
 
-  Future<void> start(VoidCallback onChanged) async {
-    if (_started || !supportsSelection) return;
-    _started = true;
-    _onChanged = onChanged;
-    await _gateway.start();
-    if (!_started) {
-      await _gateway.stop();
-      return;
-    }
-    _changesSubscription = _gateway.changes.listen((_) {
-      if (_selectedDeviceId == null || _reconcileScheduled || !_started) {
-        return;
-      }
-      _reconcileScheduled = true;
-      scheduleMicrotask(() {
-        _reconcileScheduled = false;
-        unawaited(_enqueue(_restoreDefaultIfSelectionDisappeared));
+  Future<void> start(VoidCallback onChanged) {
+    if (!supportsSelection) return Future.value();
+    return _enqueueLifecycle(() async {
+      if (_started) return;
+      _started = true;
+      _onChanged = onChanged;
+      await _gateway.start();
+      _changesSubscription = _gateway.changes.listen((_) {
+        if (_selectedDeviceId == null || _reconcileScheduled || !_started) {
+          return;
+        }
+        _reconcileScheduled = true;
+        scheduleMicrotask(() {
+          _reconcileScheduled = false;
+          unawaited(_enqueue(_restoreDefaultIfSelectionDisappeared));
+        });
       });
     });
   }
@@ -123,12 +123,18 @@ class WebAudioOutputRouter {
     return result;
   }
 
-  Future<void> stop() async {
+  Future<void> _enqueueLifecycle(Future<void> Function() operation) {
+    final result = _lifecycleOperations.then((_) => operation());
+    _lifecycleOperations = result.catchError((Object _) {});
+    return result;
+  }
+
+  Future<void> stop() => _enqueueLifecycle(() async {
     if (!_started) return;
     _started = false;
     await _changesSubscription?.cancel();
     _changesSubscription = null;
     _selectedDeviceId = null;
     await _gateway.stop();
-  }
+  });
 }

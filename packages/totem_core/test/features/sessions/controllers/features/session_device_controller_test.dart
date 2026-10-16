@@ -6,6 +6,7 @@ import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 
 import '../../media/fake_local_media.dart';
 import '../core/session_controller_mock.dart';
@@ -31,6 +32,36 @@ void main() {
 
     SessionDeviceState deviceState() =>
         container.read(sessionDeviceControllerProvider(session));
+
+    test(
+      'refreshes outputs after the browser grants an output device',
+      () async {
+        final catalog = FakeMediaDeviceCatalog([fakeAudioOutput('default')]);
+        final devicesContainer = ProviderContainer(
+          overrides: [mediaDeviceCatalogProvider.overrideWithValue(catalog)],
+        );
+        addTearDown(devicesContainer.dispose);
+        final mediaDevicesSubscription = devicesContainer.listen(
+          mediaDevicesProvider,
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(mediaDevicesSubscription.close);
+        await devicesContainer.read(mediaDevicesProvider.future);
+        catalog.current = [
+          fakeAudioOutput('default'),
+          fakeAudioOutput('headphones'),
+        ];
+
+        await devicesContainer
+            .read(sessionDeviceControllerProvider(session).notifier)
+            .requestAudioOutputDevice();
+
+        check(await devicesContainer.read(mediaDevicesProvider.future))
+            .has((devices) => devices.map((device) => device.id), 'ids')
+            .deepEquals(['default', 'headphones']);
+      },
+    );
 
     test('enableMicrophone unmutes the microphone', () async {
       await controller().enableMicrophone();

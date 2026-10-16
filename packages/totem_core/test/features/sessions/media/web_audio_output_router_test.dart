@@ -135,6 +135,19 @@ void main() {
         check(gateway.audioOutputRequests).equals(2);
       },
     );
+
+    test('restarts browser listeners after a queued teardown', () async {
+      final gateway = _FakeGateway();
+      final router = WebAudioOutputRouter(gateway: gateway);
+      await router.start(() {});
+
+      final stopping = router.stop();
+      final restarting = router.start(() {});
+      await Future.wait([stopping, restarting]);
+
+      check(gateway.startCount).equals(2);
+      check(gateway.stopCount).equals(1);
+    });
   });
 }
 
@@ -165,6 +178,7 @@ class _FakeGateway implements WebAudioOutputGateway {
   int audioOutputRequests = 0;
   int outputChooserRequests = 0;
   String? futureTrackSinkId;
+  bool _started = false;
 
   void emitChange() => _changes.add(null);
 
@@ -200,11 +214,15 @@ class _FakeGateway implements WebAudioOutputGateway {
 
   @override
   Future<void> start() async {
+    if (_started) return;
+    _started = true;
     startCount++;
   }
 
   @override
   Future<void> stop() async {
+    if (!_started) return;
+    _started = false;
     stopCount++;
   }
 }

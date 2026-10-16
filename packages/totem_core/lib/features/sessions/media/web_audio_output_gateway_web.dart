@@ -18,24 +18,26 @@ class _BrowserWebAudioOutputGateway implements WebAudioOutputGateway {
   late final JSFunction _visibilityChangeListener = ((web.Event _) {
     if (web.document.visibilityState == 'visible') _changes.add(null);
   }).toJS;
-  web.MutationObserver? _observer;
+  web.MutationObserver? _audioContainerObserver;
+  web.MutationObserver? _audioElementsObserver;
   String? _sinkId;
+  bool _isChangingSink = false;
   bool _started = false;
 
-  bool get _hasMediaDevices =>
-      web.window.navigator.hasProperty('mediaDevices'.toJS).toDart;
-
-  @override
-  bool get supportsSelection =>
-      _hasMediaDevices &&
+  late final bool _supportsSelection =
+      web.window.navigator.hasProperty('mediaDevices'.toJS).toDart &&
       web.HTMLAudioElement().hasProperty('setSinkId'.toJS).toDart;
-
-  @override
-  bool get supportsOutputChooser =>
-      supportsSelection &&
+  late final bool _supportsOutputChooser =
+      _supportsSelection &&
       web.window.navigator.mediaDevices
           .hasProperty('selectAudioOutput'.toJS)
           .toDart;
+
+  @override
+  bool get supportsSelection => _supportsSelection;
+
+  @override
+  bool get supportsOutputChooser => _supportsOutputChooser;
 
   @override
   Stream<void> get changes => _changes.stream;
@@ -51,15 +53,7 @@ class _BrowserWebAudioOutputGateway implements WebAudioOutputGateway {
       'visibilitychange',
       _visibilityChangeListener,
     );
-    _observer =
-        web.MutationObserver(
-          ((JSArray<web.MutationRecord> _, web.MutationObserver _) {
-            unawaited(_applyToNewAudioElements());
-          }).toJS,
-        )..observe(
-          web.document,
-          web.MutationObserverInit(childList: true, subtree: true),
-        );
+    _observeAudioElements();
   }
 
   @override
@@ -73,8 +67,10 @@ class _BrowserWebAudioOutputGateway implements WebAudioOutputGateway {
       'visibilitychange',
       _visibilityChangeListener,
     );
-    _observer?.disconnect();
-    _observer = null;
+    _audioContainerObserver?.disconnect();
+    _audioContainerObserver = null;
+    _audioElementsObserver?.disconnect();
+    _audioElementsObserver = null;
     _sinkId = null;
   }
 
@@ -116,13 +112,61 @@ class _BrowserWebAudioOutputGateway implements WebAudioOutputGateway {
     if (!supportsSelection) {
       throw UnsupportedError('Browser audio-output selection is unavailable.');
     }
-    await _applyToExistingAudioElements(deviceId);
-    _sinkId = deviceId;
+    _isChangingSink = true;
+    try {
+      await _applyToExistingAudioElements(deviceId);
+      _sinkId = deviceId;
+      try {
+        await _applyToExistingAudioElements(deviceId);
+      } catch (error, stackTrace) {
+        logger.w(
+          'Failed to apply the selected browser audio output to a new track.',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+    } finally {
+      _isChangingSink = false;
+      unawaited(_applyToNewAudioElements());
+    }
+  }
+
+  void _observeAudioElements() {
+    final container = web.document.getElementById('livekit_audio_container');
+    if (container != null) {
+      _observeAudioContainer(container);
+      return;
+    }
+
+    final body = web.document.body;
+    if (body == null) return;
+    _audioContainerObserver = web.MutationObserver(
+      ((JSArray<web.MutationRecord> _, web.MutationObserver _) {
+        final container = web.document.getElementById(
+          'livekit_audio_container',
+        );
+        if (container == null) return;
+        _audioContainerObserver?.disconnect();
+        _audioContainerObserver = null;
+        _observeAudioContainer(container);
+      }).toJS,
+    )..observe(body, web.MutationObserverInit(childList: true));
+  }
+
+  void _observeAudioContainer(web.Element container) {
+    _audioElementsObserver?.disconnect();
+    _audioElementsObserver = web.MutationObserver(
+      ((JSArray<web.MutationRecord> _, web.MutationObserver _) {
+        unawaited(_applyToNewAudioElements());
+      }).toJS,
+    )..observe(container, web.MutationObserverInit(childList: true));
   }
 
   Future<void> _applyToNewAudioElements() async {
     final sinkId = _sinkId;
-    if (!_started || sinkId == null) return;
+    if (_isChangingSink || !_started || sinkId == null || sinkId.isEmpty) {
+      return;
+    }
     try {
       await _applyToExistingAudioElements(sinkId);
     } catch (error, stackTrace) {
@@ -135,20 +179,44 @@ class _BrowserWebAudioOutputGateway implements WebAudioOutputGateway {
   }
 
   Future<void> _applyToExistingAudioElements(String deviceId) async {
-    final elements = web.document.querySelectorAll(
-      '#livekit_audio_container audio',
-    );
-    for (var index = 0; index < elements.length; index++) {
-      final element = elements.item(index);
-      if (element == null || !element.instanceOfString('HTMLAudioElement')) {
-        continue;
+    final container = web.document.getElementById('livekit_audio_container');
+    if (container == null) return;
+
+    final previousSinkId = _sinkId ?? '';
+    final changed = <web.HTMLAudioElement>[];
+    final elements = container.querySelectorAll('audio');
+    try {
+      for (var index = 0; index < elements.length; index++) {
+        final element = elements.item(index);
+        if (element == null || !element.instanceOfString('HTMLAudioElement')) {
+          continue;
+        }
+        final audio = element as web.HTMLAudioElement;
+        if (audio.sinkId == deviceId) continue;
+        await _setSinkId(audio, deviceId);
+        changed.add(audio);
       }
-      final audio = element as web.HTMLAudioElement;
-      final promise = audio.callMethod<JSPromise<JSAny?>>(
-        'setSinkId'.toJS,
-        deviceId.toJS,
-      );
-      await promise.toDart;
+    } catch (_) {
+      try {
+        await Future.wait([
+          for (final audio in changed) _setSinkId(audio, previousSinkId),
+        ]);
+      } catch (error, stackTrace) {
+        logger.w(
+          'Failed to restore browser audio outputs after a sink change failed.',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+      rethrow;
     }
+  }
+
+  Future<void> _setSinkId(web.HTMLAudioElement audio, String deviceId) async {
+    final promise = audio.callMethod<JSPromise<JSAny?>>(
+      'setSinkId'.toJS,
+      deviceId.toJS,
+    );
+    await promise.toDart;
   }
 }
