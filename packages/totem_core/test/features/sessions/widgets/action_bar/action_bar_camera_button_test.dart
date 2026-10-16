@@ -239,7 +239,9 @@ void main() {
       check(tester.widgetList(find.text('Front Camera'))).length.equals(0);
     }, skip: !kIsWeb);
 
-    testWidgets('one-camera mode is platform-adaptive', (tester) async {
+    testWidgets('shows a simple toggle when only one camera is available', (
+      tester,
+    ) async {
       var toggles = 0;
 
       await tester.binding.setSurfaceSize(const Size(800, 1000));
@@ -277,21 +279,16 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      final hasSwitcherArrow = _cameraCaret().evaluate().isNotEmpty;
-      if (!hasSwitcherArrow) {
-        check(tester.widgetList(_cameraCaret())).length.equals(0);
-        check(
-          tester.widgetList(
-            find.byKey(ActionBarCameraSwitcherButton.deviceClusterKey),
-          ),
-        ).length.equals(0);
-        await tester.tap(find.byType(ActionBarButton));
-        await tester.pump();
+      check(tester.widgetList(_cameraCaret())).length.equals(0);
+      check(
+        tester.widgetList(
+          find.byKey(ActionBarCameraSwitcherButton.deviceClusterKey),
+        ),
+      ).length.equals(0);
+      await tester.tap(find.byType(ActionBarButton));
+      await tester.pump();
 
-        check(toggles).equals(1);
-      } else {
-        check(tester.widgetList(_cameraCaret())).length.equals(1);
-      }
+      check(toggles).equals(1);
     });
 
     testWidgets('dismisses overlay when tapping outside', (tester) async {
@@ -481,6 +478,31 @@ void main() {
       check(tester.widgetList(find.bySemanticsLabel('Camera off'))).length
           .equals(1);
     });
+
+    testWidgets('mobile web opens front and back camera controls', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final media = sessionController.mockLocalMedia
+        ..isCameraEnabled = true
+        ..cameraFacing = CameraFacing.front;
+
+      await pumpCameraButton(tester);
+
+      check(tester.widgetList(find.byType(ActionBarCameraSwitcherButton)))
+          .length
+          .equals(1);
+      await tester.tap(find.bySemanticsLabel('Switch camera'));
+      await tester.pumpAndSettle();
+
+      check(tester.widgetList(find.text('Front'))).length.equals(1);
+      check(tester.widgetList(find.text('Back'))).length.equals(1);
+
+      await tester.tap(find.text('Front'));
+      await tester.pumpAndSettle();
+
+      check(media.cameraFacing).equals(CameraFacing.back);
+    }, skip: !kIsWeb);
 
     testWidgets('web camera action ignores overlapping presses and recovers', (
       tester,
