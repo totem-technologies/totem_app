@@ -8,7 +8,6 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
-import 'package:totem_core/shared/widgets/empty_indicator.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
@@ -288,14 +287,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                                 ),
                         ),
                       )
-                    else if (localPrompts.isEmpty)
-                      const SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(
-                          child: EmptyIndicator(text: 'No prompts yet'),
-                        ),
-                      )
-                    else
+                    else if (localPrompts.isNotEmpty)
                       SliverPadding(
                         padding: EdgeInsetsDirectional.symmetric(
                           horizontal: horizontalPadding,
