@@ -31,6 +31,7 @@ dependencies:
   connectivity_plus: ^7.0.0
   uuid: ^4.5.1
   degenerate_dio: ^0.5.0
+  degenerate_runtime: ^0.5.0
 
   # Messaging
   flutter_local_notifications: ^22.2.0
@@ -112,7 +113,6 @@ dev_dependencies:
   platform: any
   checks: ^0.3.2
   leak_tracker_flutter_testing: any
-
 flutter:
   default-flavor: production
   uses-material-design: true

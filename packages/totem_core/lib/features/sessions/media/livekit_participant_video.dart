@@ -209,7 +209,7 @@ class _ParticipantVideoStatisticsState
         child: _shouldShowStatistics
             ? Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
+                  padding: const EdgeInsetsDirectional.symmetric(
                     horizontal: 4,
                     vertical: 4,
                   ),

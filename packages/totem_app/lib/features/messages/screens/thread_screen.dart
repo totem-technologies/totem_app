@@ -64,7 +64,7 @@ class _MessageList extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       reverse: true,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 20, 20, 20),
       itemCount: messages.length + 1,
       itemBuilder: (context, index) {
         if (index == messages.length) {
@@ -72,7 +72,7 @@ class _MessageList extends StatelessWidget {
         }
         final msg = messages[index];
         return Padding(
-          padding: const EdgeInsets.only(bottom: 19),
+          padding: const EdgeInsetsDirectional.only(bottom: 19),
           child: MessageBubble(
             text: msg.text,
             timestamp: DateFormat.jm().format(msg.sentAt),

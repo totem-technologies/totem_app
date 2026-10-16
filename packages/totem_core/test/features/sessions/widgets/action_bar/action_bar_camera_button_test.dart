@@ -43,7 +43,7 @@ void main() {
               // above the button the same way it does in session.
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 120),
+                padding: const EdgeInsetsDirectional.only(bottom: 120),
                 child: ActionBarCameraSwitcherButton(
                   isCameraOn: true,
                   onToggle: () {},
@@ -255,7 +255,7 @@ void main() {
               // above the button the same way it does in session.
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 120),
+                padding: const EdgeInsetsDirectional.only(bottom: 120),
                 child: ActionBarCameraSwitcherButton(
                   isCameraOn: true,
                   onToggle: () {

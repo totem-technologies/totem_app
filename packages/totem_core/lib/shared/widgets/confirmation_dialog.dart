@@ -76,9 +76,15 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
       child: ViewportResolver(
         builder: (context, viewportKind) {
           final contentPadding = switch (viewportKind) {
-            ViewportKind.mediumSmall || ViewportKind.mediumPlus =>
-              const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-            _ => const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            ViewportKind.mediumSmall ||
+            ViewportKind.mediumPlus => const EdgeInsetsDirectional.symmetric(
+              horizontal: 40,
+              vertical: 24,
+            ),
+            _ => const EdgeInsetsDirectional.symmetric(
+              horizontal: 24,
+              vertical: 28,
+            ),
           };
           return AlertDialog(
             scrollable: widget.scrollable,
