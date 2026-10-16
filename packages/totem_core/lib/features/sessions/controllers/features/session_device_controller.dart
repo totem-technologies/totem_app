@@ -10,6 +10,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/shared/logger.dart';
 
 part 'session_device_controller.g.dart';
@@ -22,6 +23,8 @@ class SessionDeviceState {
     required this.isSpeakerphoneEnabled,
     required this.isMicrophoneEnabled,
     required this.isCameraEnabled,
+    this.supportsAudioOutputSelection = true,
+    this.supportsAudioOutputChooser = false,
     this.isMicrophoneOn = false,
     this.isCameraOn = false,
     this.hasMicrophoneTrack = false,
@@ -33,6 +36,8 @@ class SessionDeviceState {
   final bool isSpeakerphoneEnabled;
   final bool isMicrophoneEnabled;
   final bool isCameraEnabled;
+  final bool supportsAudioOutputSelection;
+  final bool supportsAudioOutputChooser;
 
   /// What the microphone and camera controls show: the track's state, or what
   /// joining will do until the track is first published.
@@ -54,6 +59,8 @@ class SessionDeviceState {
         other.isSpeakerphoneEnabled == isSpeakerphoneEnabled &&
         other.isMicrophoneEnabled == isMicrophoneEnabled &&
         other.isCameraEnabled == isCameraEnabled &&
+        other.supportsAudioOutputSelection == supportsAudioOutputSelection &&
+        other.supportsAudioOutputChooser == supportsAudioOutputChooser &&
         other.isMicrophoneOn == isMicrophoneOn &&
         other.isCameraOn == isCameraOn &&
         other.hasMicrophoneTrack == hasMicrophoneTrack &&
@@ -67,6 +74,8 @@ class SessionDeviceState {
     isSpeakerphoneEnabled,
     isMicrophoneEnabled,
     isCameraEnabled,
+    supportsAudioOutputSelection,
+    supportsAudioOutputChooser,
     isMicrophoneOn,
     isCameraOn,
     hasMicrophoneTrack,
@@ -90,6 +99,8 @@ class SessionDeviceController extends _$SessionDeviceController {
       isSpeakerphoneEnabled: isSpeakerphoneEnabled,
       isMicrophoneEnabled: isMicrophoneEnabled,
       isCameraEnabled: isCameraEnabled,
+      supportsAudioOutputSelection: media.supportsAudioOutputSelection,
+      supportsAudioOutputChooser: media.supportsAudioOutputChooser,
       isMicrophoneOn: _microphoneWasPublished
           ? media.isMicrophoneEnabled
           : session.shouldEnableMicrophone(),
@@ -183,6 +194,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   }
 
   Future<void> _setupDeviceChangeListener(int generation) async {
+    if (kIsWeb) return;
     try {
       final session = await audio.AudioSession.instance;
       if (!_isDeviceListenerSetupCurrent(generation)) return;
@@ -260,6 +272,20 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   String? get selectedCameraDeviceId => _media.cameraDeviceId;
 
+  Future<void> setCameraFacing(CameraFacing facing) async {
+    try {
+      await _media.setCameraFacing(facing);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to set camera facing',
+      );
+    } finally {
+      _emitState();
+    }
+  }
+
   Future<void> switchCameraPosition() async {
     try {
       await _media.switchCameraFacing();
@@ -311,6 +337,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   }
 
   Future<void> setSpeakerphone(bool enabled) async {
+    if (kIsWeb) return;
     if (!_hasExternalOutput) {
       _userSpeakerPreference = enabled;
     }
@@ -327,8 +354,32 @@ class SessionDeviceController extends _$SessionDeviceController {
   String? get selectedAudioOutputDeviceId => _media.audioOutputDeviceId;
 
   Future<void> selectAudioOutputDevice(MediaDeviceInfo device) async {
-    await _media.selectAudioOutput(device);
-    _emitState();
+    try {
+      await _media.selectAudioOutput(device);
+      _emitState();
+    } catch (error, stackTrace) {
+      logger.w(
+        'Failed to select audio output.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> requestAudioOutputDevice() async {
+    try {
+      await _media.requestAudioOutput();
+      // selectAudioOutput() grants may expose devices without firing
+      // navigator.mediaDevices.devicechange.
+      ref.invalidate(mediaDevicesProvider);
+      _emitState();
+    } catch (error, stackTrace) {
+      logger.w(
+        'Failed to open the browser audio-output chooser.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   bool get isMicrophoneEnabled => _media.isMicrophoneEnabled;

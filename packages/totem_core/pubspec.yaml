@@ -113,6 +113,7 @@ dev_dependencies:
   checks: ^0.3.2
   leak_tracker_flutter_testing: any
 
+  degenerate_runtime: any
 flutter:
   default-flavor: production
   uses-material-design: true
