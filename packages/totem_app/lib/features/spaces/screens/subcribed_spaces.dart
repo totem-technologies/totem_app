@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -141,7 +142,7 @@ class _SubscribedSpaceTileState extends ConsumerState<_SubscribedSpaceTile> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.cardBackground,
           borderRadius: BorderRadius.circular(35),
         ),
         padding: const EdgeInsetsDirectional.only(

@@ -8,6 +8,7 @@ class AppTheme {
   // --- Colors ---
   // Extracted from the @theme block in styles.css
   static const Color cream = Color(0xFFF3F1E9);
+  static const Color cardBackground = Color(0xFFFAEFE5); // Card surface (peach)
   static const Color yellow = Color(0x80FFD000);
   static const Color mauve = Color(0xFF987AA5);
 
@@ -47,7 +48,7 @@ class AppTheme {
 
   // --- Messaging surface & text tokens ---
   // Slightly warmer/darker palette used across the messages feature (from Figma).
-  static const Color surfaceCard = Color(0xFFFAFAF7); // Cards & nav bar surface
+  static const Color surfaceCard = cardBackground; // Cards & nav bar surface
   static const Color textHeading = Color(0xFF1F293B); // Primary heading text
   static const Color textMuted = Color(0xFF8C8A82); // Secondary / caption text
   static const Color divider = Color(0xFFE8E5E0); // Hairline dividers
@@ -381,7 +382,7 @@ class AppTheme {
 
     // --- Card Theme ---
     cardTheme: CardThemeData(
-      color: white,
+      color: cardBackground,
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       margin: const EdgeInsetsDirectional.symmetric(

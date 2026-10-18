@@ -102,7 +102,7 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
           boxShadow: AppTheme.cardShadow,
         ),
         child: Material(
-          color: Colors.white,
+          color: AppTheme.cardBackground,
           borderRadius: BorderRadius.circular(
             UpcomingSessionCard._borderRadius,
           ),

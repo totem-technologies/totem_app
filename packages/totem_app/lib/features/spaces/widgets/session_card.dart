@@ -34,7 +34,7 @@ class SessionCard extends StatelessWidget {
           ],
         ),
         child: Material(
-          color: Colors.white,
+          color: AppTheme.cardBackground,
           borderRadius: BorderRadius.circular(_borderRadius),
           clipBehavior: Clip.antiAlias,
           child: InkWell(

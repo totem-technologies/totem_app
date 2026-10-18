@@ -103,7 +103,7 @@ class _EmptyState extends StatelessWidget {
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 20),
         padding: const EdgeInsetsDirectional.all(20),
         decoration: BoxDecoration(
-          color: AppTheme.white,
+          color: AppTheme.cardBackground,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(

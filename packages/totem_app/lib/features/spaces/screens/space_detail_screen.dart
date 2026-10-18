@@ -591,7 +591,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.cardBackground,
         borderRadius: BorderRadius.circular(17),
       ),
       padding: const EdgeInsetsDirectional.all(20),
@@ -1075,7 +1075,7 @@ class _UpcomingSessionCard extends StatelessWidget {
       onTap: () => _openSession(context),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.cardBackground,
           borderRadius: BorderRadius.circular(20),
         ),
         clipBehavior: Clip.antiAlias,

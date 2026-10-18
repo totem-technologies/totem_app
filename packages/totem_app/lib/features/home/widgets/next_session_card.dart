@@ -44,7 +44,7 @@ class NextSessionCard extends StatelessWidget {
           boxShadow: AppTheme.cardShadow,
         ),
         child: Material(
-          color: Colors.white,
+          color: AppTheme.cardBackground,
           borderRadius: BorderRadius.circular(_borderRadius),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
