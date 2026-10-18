@@ -131,7 +131,7 @@ class DateIndicator extends StatelessWidget {
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppTheme.cardBackground,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(_borderRadius),
         ),
         child: isToday

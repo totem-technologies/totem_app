@@ -20,7 +20,7 @@ class KeeperMessageParticipantsCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsetsDirectional.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.cardBackground,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(

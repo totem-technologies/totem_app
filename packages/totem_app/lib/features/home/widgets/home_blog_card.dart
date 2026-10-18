@@ -40,7 +40,7 @@ class HomeBlogCard extends StatelessWidget {
           ],
         ),
         child: Material(
-          color: AppTheme.cardBackground,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(_borderRadius),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
