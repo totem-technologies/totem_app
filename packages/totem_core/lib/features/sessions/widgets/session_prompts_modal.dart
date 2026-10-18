@@ -2,13 +2,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_prompts_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_core/shared/widgets/error_screen.dart';
+import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
+
+// TODO(prompts): Improve overall error handling.
+//                Display feedback to users when an error occurs.
 
 const _maxPromptLength = 1000;
 
@@ -41,11 +47,7 @@ Future<void> showSessionPromptsModal(
 }
 
 class SessionPromptsModal extends ConsumerStatefulWidget {
-  const SessionPromptsModal({
-    required this.sessionSlug,
-    this.embedded = false,
-    super.key,
-  });
+  const new({required this.sessionSlug, this.embedded = false, super.key});
 
   final String sessionSlug;
   final bool embedded;
@@ -104,10 +106,15 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
       sessionPromptsControllerProvider(widget.sessionSlug),
     );
     if (session == null || prompts.mutating) return;
-    await session.keeper.setPrompt(
-      customPrompt: customPrompt,
-      sessionPromptId: sessionPromptId,
-    );
+    try {
+      await session.keeper.setPrompt(
+        customPrompt: customPrompt,
+        sessionPromptId: sessionPromptId,
+      );
+    } catch (error, stackTrace) {
+      if (!mounted) return;
+      await ErrorHandler.handleApiError(context, error, stackTrace: stackTrace);
+    }
   }
 
   @override
@@ -117,29 +124,13 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
     );
     final localPrompts = prompts.prompts;
     final saving = prompts.mutating;
-    if (prompts.snapshot == null) {
-      return Center(
-        child: prompts.loading
-            ? const CircularProgressIndicator()
-            : TextButton(
-                onPressed: () => ref
-                    .read(
-                      sessionPromptsControllerProvider(
-                        widget.sessionSlug,
-                      ).notifier,
-                    )
-                    .refresh(),
-                child: const Text('Retry loading prompts'),
-              ),
-      );
-    }
+
     ref.listen<SessionPromptsState>(
       sessionPromptsControllerProvider(widget.sessionSlug),
       (previous, next) {
         if (next.message != null && next.message != previous?.message) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(next.message!)));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(next.message!)));
         }
       },
     );
@@ -206,7 +197,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Discussion Prompts',
+                            'Session Prompts',
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
@@ -215,7 +206,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Drag prompts to set the discussion order.',
+                            'Drag to reorder prompts.',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: Colors.black,
                             ),
@@ -229,7 +220,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                       height: 40,
                       child: IconButton(
                         tooltip: 'Close',
-                        padding: EdgeInsets.zero,
+                        padding: EdgeInsetsDirectional.zero,
                         onPressed: saving ? null : _closePanel,
                         icon: const TotemIcon(
                           TotemIcons.x,
@@ -274,18 +265,29 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                           ),
                         ),
                       ),
-                    if (localPrompts.isEmpty)
-                      const SliverFillRemaining(
+                    if (prompts.snapshot == null)
+                      SliverFillRemaining(
                         hasScrollBody: false,
                         child: Center(
-                          child: Text(
-                            'No prompts yet',
-                            style: TextStyle(color: AppTheme.gray),
-                            textAlign: TextAlign.center,
-                          ),
+                          child: prompts.loading
+                              ? const LoadingIndicator(
+                                  semanticsLabel: 'Loading prompts',
+                                )
+                              : ErrorScreen(
+                                  hideAppBar: true,
+                                  showHomeButton: false,
+                                  title: 'Failed to load the prompts',
+                                  onRetry: () => ref
+                                      .read(
+                                        sessionPromptsControllerProvider(
+                                          widget.sessionSlug,
+                                        ).notifier,
+                                      )
+                                      .refresh(),
+                                ),
                         ),
                       )
-                    else
+                    else if (localPrompts.isNotEmpty)
                       SliverPadding(
                         padding: EdgeInsetsDirectional.symmetric(
                           horizontal: horizontalPadding,
@@ -356,7 +358,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
 }
 
 class _PromptTile extends StatelessWidget {
-  const _PromptTile({
+  const new({
     required this.prompt,
     super.key,
     this.current = false,
@@ -396,7 +398,7 @@ class _PromptTile extends StatelessWidget {
                     dimension: 40,
                     child: Center(
                       child: TotemIcon(
-                        TotemIcons.reorderParticipants,
+                        TotemIcons.reorder,
                         size: 18,
                         color: Colors.black,
                       ),
@@ -424,7 +426,7 @@ class _PromptTile extends StatelessWidget {
           ),
           if (!current && prompt.consumedRoundNumbers.isNotEmpty)
             Text(
-              'Used in rounds ${prompt.consumedRoundNumbers.join(', ')}',
+              'Used in round${prompt.consumedRoundNumbers.length == 1 ? '' : 's'} ${prompt.consumedRoundNumbers.length < 3 ? prompt.consumedRoundNumbers.join(' and ') : '${prompt.consumedRoundNumbers.take(prompt.consumedRoundNumbers.length - 1).join(', ')}, and ${prompt.consumedRoundNumbers.last}'}',
               style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.mauve),
             ),
         ],

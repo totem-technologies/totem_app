@@ -13,7 +13,7 @@ import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
-import '../../livekit_mocks.dart';
+import '../../media/test_participants.dart';
 
 class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   @override
@@ -102,9 +102,8 @@ void main() {
     await tester.pump();
 
     check(tester.widgetList(findPendingBadge())).length.equals(1);
-    check(
-      tester.widgetList(find.text('New message from Keeper')),
-    ).length.equals(1);
+    check(tester.widgetList(find.text('New message from Keeper'))).length
+        .equals(1);
     check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
 
     await tester.tap(find.bySemanticsLabel('Chat'));
@@ -155,9 +154,8 @@ void main() {
     container.read(_testLastMessageProvider.notifier).set(message);
     await tester.pump();
 
-    check(
-      tester.widgetList(find.textContaining('New message')),
-    ).length.equals(1);
+    check(tester.widgetList(find.textContaining('New message'))).length
+        .equals(1);
   });
 
   testWidgets('does not show popup while chat is open', (tester) async {
@@ -236,14 +234,13 @@ void main() {
             message: 'I am struggling',
             timestamp: 4,
             recipientIdentity: 'keeper-1',
-            participant: MockRemoteParticipant('lucas', 'Lucas'),
+            participant: testParticipant('lucas', name: 'Lucas'),
           ),
         );
     await tester.pump();
 
-    check(
-      tester.widgetList(find.text('New message from Lucas')),
-    ).length.equals(1);
+    check(tester.widgetList(find.text('New message from Lucas'))).length
+        .equals(1);
   });
 
   testWidgets(
@@ -292,15 +289,14 @@ void main() {
               message: 'I need support',
               timestamp: 7,
               recipientIdentity: 'keeper-1',
-              participant: MockRemoteParticipant('lucas', 'Lucas'),
+              participant: testParticipant('lucas', name: 'Lucas'),
             ),
           );
       await tester.pump();
 
       check(tester.widgetList(findPendingBadge())).length.equals(1);
-      check(
-        tester.widgetList(find.textContaining('New message')),
-      ).length.equals(1);
+      check(tester.widgetList(find.textContaining('New message'))).length
+          .equals(1);
 
       container.read(sessionChatThreadTargetProvider.notifier).target = 'lucas';
       await tester.pump();
@@ -394,14 +390,13 @@ void main() {
             message: 'Checking in',
             timestamp: 5,
             recipientIdentity: 'bruno-test',
-            participant: MockRemoteParticipant('keeper-1', 'Bruno Keeper'),
+            participant: testParticipant('keeper-1', name: 'Bruno Keeper'),
           ),
         );
     await tester.pump();
 
-    check(
-      tester.widgetList(find.textContaining('New message')),
-    ).length.equals(1);
+    check(tester.widgetList(find.textContaining('New message'))).length
+        .equals(1);
 
     await tester.tap(find.bySemanticsLabel('Chat'));
     await tester.pumpAndSettle();
@@ -451,7 +446,7 @@ void main() {
             message: 'How are you holding up?',
             timestamp: 6,
             recipientIdentity: 'lucas',
-            participant: MockRemoteParticipant('keeper-1', 'Heather'),
+            participant: testParticipant('keeper-1', name: 'Heather'),
           ),
         );
     await tester.pump();

@@ -202,9 +202,8 @@ void main() {
                 count: 1,
               ),
             ),
-            blogPostProvider(
-              'post-slug',
-            ).overrideWith((_) async => _detail('post-slug')),
+            blogPostProvider('post-slug')
+                .overrideWith((_) async => _detail('post-slug')),
           ],
           child: MaterialApp.router(
             theme: AppTheme.lightTheme,

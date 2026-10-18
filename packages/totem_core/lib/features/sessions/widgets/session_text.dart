@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 
 class SessionTitle extends ConsumerWidget {
-  const SessionTitle({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +43,7 @@ class SessionTitle extends ConsumerWidget {
 }
 
 class SessionElapsedTimer extends ConsumerStatefulWidget {
-  const SessionElapsedTimer({super.key});
+  const new({super.key});
 
   @override
   ConsumerState<SessionElapsedTimer> createState() =>
@@ -127,10 +127,15 @@ Widget? roundPromptText(String? roundPrompt) {
   return Builder(
     builder: (context) {
       final theme = Theme.of(context);
-      return Text(
-        '"$roundPrompt"',
-        style: theme.textTheme.bodyLarge?.copyWith(fontStyle: FontStyle.italic),
-        textAlign: TextAlign.center,
+      return Padding(
+        padding: const EdgeInsetsDirectional.symmetric(horizontal: 20.0),
+        child: Text(
+          '"$roundPrompt"',
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontStyle: FontStyle.italic,
+          ),
+          textAlign: TextAlign.center,
+        ),
       );
     },
   );

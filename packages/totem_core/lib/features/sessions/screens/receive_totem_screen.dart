@@ -14,7 +14,7 @@ import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class ReceiveTotemScreen extends ConsumerStatefulWidget {
-  const ReceiveTotemScreen({super.key});
+  const new({super.key});
 
   @override
   ConsumerState<ReceiveTotemScreen> createState() => _ReceiveTotemScreenState();
@@ -32,6 +32,7 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(currentSessionProvider);
+    final localParticipant = ref.watch(localParticipantInfoProvider);
     final roundPrompt = ref.watch(currentSessionPromptProvider);
 
     Future<bool> onAccept() async {
@@ -88,11 +89,9 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
             padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
             child: AspectRatio(
               aspectRatio: 16 / 21,
-              child: ParticipantCard(
-                participant: session!.room!.localParticipant!,
-                session: session.session,
-                participantIdentity: session.room!.localParticipant!.identity,
-              ),
+              child: localParticipant == null
+                  ? const SizedBox.shrink()
+                  : ParticipantCard(participant: localParticipant),
             ),
           );
 

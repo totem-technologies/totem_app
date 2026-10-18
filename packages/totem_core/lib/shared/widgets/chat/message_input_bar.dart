@@ -7,7 +7,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 
 /// Pill composer + circular send button shared by DMs and session chat.
 class MessageInputBar extends StatefulWidget {
-  const MessageInputBar({
+  const new({
     super.key,
     this.onSend,
     this.hintText = 'Type a message...',
@@ -147,7 +147,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
 }
 
 class _SendButton extends StatefulWidget {
-  const _SendButton({
+  const new({
     required this.controller,
     required this.onSubmit,
     required this.enabled,

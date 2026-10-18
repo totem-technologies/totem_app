@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 /// Shared clipping and paint isolation for video and its Flutter overlays.
 class ParticipantTileSurface extends StatelessWidget {
-  const ParticipantTileSurface({
+  const new({
     required this.children,
     this.clipBehavior = Clip.antiAlias,
     super.key,

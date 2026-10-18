@@ -29,6 +29,9 @@ class _FakeBrowserEnvironment implements BrowserEnvironment {
   @override
   Uri get currentUri => Uri.parse('https://totem.org/room/');
 
+  @override
+  Uri? get entrypointBaseUri => Uri.parse('https://cdn.totem.org/web/1234/');
+
   String? title;
   bool tabCloseConfirmationEnabled = false;
 
@@ -39,6 +42,11 @@ class _FakeBrowserEnvironment implements BrowserEnvironment {
   void setTabCloseConfirmationEnabled(bool enabled) {
     tabCloseConfirmationEnabled = enabled;
   }
+
+  void Function()? pageExitHandler;
+
+  @override
+  void setPageExitHandler(void Function()? onExit) => pageExitHandler = onExit;
 }
 
 class _FakeUrlLauncher extends UrlLauncherPlatform {
@@ -118,9 +126,8 @@ final _fakeUser = UserSchema(
 List<dynamic> _sessionRouteOverrides(String slug) => [
   sessionTokenProvider(slug).overrideWith((_) async => throw Exception('test')),
   sessionProvider(slug).overrideWith((_) async => throw Exception('test')),
-  preJoinMediaControllerProvider(
-    slug,
-  ).overrideWith(_FakePreJoinMediaController.new),
+  preJoinMediaControllerProvider(slug)
+      .overrideWith(_FakePreJoinMediaController.new),
 ];
 
 /// Creates a test widget tree with a [ProviderScope] and [GoRouter].
@@ -195,18 +202,14 @@ void main() {
   group('buildHomeUrl', () {
     final router = WebTotemRouter(browser: _FakeBrowserEnvironment());
     test('returns correct URLs for each HomeRoute', () {
-      check(
-        router.buildHomeUrl(HomeRoutes.home),
-      ).equals('https://totem.org/users/dashboard/');
-      check(
-        router.buildHomeUrl(HomeRoutes.spaces),
-      ).equals('https://totem.org/spaces/');
-      check(
-        router.buildHomeUrl(HomeRoutes.blog),
-      ).equals('https://totem.org/blog/');
-      check(
-        router.buildHomeUrl(HomeRoutes.profile),
-      ).equals('https://totem.org/users/profile/');
+      check(router.buildHomeUrl(HomeRoutes.home))
+          .equals('https://totem.org/users/dashboard/');
+      check(router.buildHomeUrl(HomeRoutes.spaces))
+          .equals('https://totem.org/spaces/');
+      check(router.buildHomeUrl(HomeRoutes.blog))
+          .equals('https://totem.org/blog/');
+      check(router.buildHomeUrl(HomeRoutes.profile))
+          .equals('https://totem.org/users/profile/');
     });
   });
 
@@ -217,6 +220,22 @@ void main() {
     check(browser.tabCloseConfirmationEnabled).isTrue();
     router.setTabCloseConfirmationEnabled(false);
     check(browser.tabCloseConfirmationEnabled).isFalse();
+  });
+
+  test('clearing a page exit handler keeps a newer one', () {
+    final browser = _FakeBrowserEnvironment();
+    final router = WebTotemRouter(browser: browser);
+    void older() {}
+    void newer() {}
+
+    router
+      ..setPageExitHandler(older)
+      ..setPageExitHandler(newer)
+      ..clearPageExitHandler(older);
+    check(browser.pageExitHandler).equals(newer);
+
+    router.clearPageExitHandler(newer);
+    check(browser.pageExitHandler).isNull();
   });
 
   group('GoRouter route configuration', () {
@@ -253,6 +272,24 @@ void main() {
         classes: <String>['TextPainter'],
       ),
     );
+
+    testWidgets('/__version shows where the app was loaded from', (
+      tester,
+    ) async {
+      final router = await _pumpTestRouter(
+        tester,
+        authState: AuthState.initial(),
+      );
+
+      router.go('/__version');
+      await tester.pumpAndSettle();
+
+      check(
+        tester.widgetList(
+          find.text('Loaded from: https://cdn.totem.org/web/1234/'),
+        ),
+      ).length.equals(1);
+    });
 
     testWidgets('/ route matches the root path', (tester) async {
       final router = await _pumpTestRouter(
@@ -304,9 +341,8 @@ void main() {
 
       // Root always redirects to origin via the redirect screen.
       check(tester.widgetList(find.byType(Scaffold))).length.equals(1);
-      check(
-        urlLauncher.launches,
-      ).deepEquals([(url: 'https://totem.org/', window: '_self')]);
+      check(urlLauncher.launches)
+          .deepEquals([(url: 'https://totem.org/', window: '_self')]);
     });
   });
 }

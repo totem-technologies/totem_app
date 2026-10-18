@@ -25,9 +25,8 @@ void main() {
 
   group('SessionController defaultVideoPublishOptions', () {
     test('uses the codec for the current runtime', () {
-      check(
-        SessionController.defaultVideoPublishOptions.videoCodec,
-      ).equals(kIsWeb || kIsWasm ? 'h264' : 'h265');
+      check(SessionController.defaultVideoPublishOptions.videoCodec)
+          .equals(kIsWeb || kIsWasm ? 'h264' : 'h265');
     });
 
     test('configures h264 as backup video codec', () {

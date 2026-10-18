@@ -10,6 +10,8 @@ import 'package:totem_app/features/auth/controllers/user_profile_controller.dart
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/assets.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+
 import 'package:totem_core/shared/router.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -35,8 +37,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     ),
     const _OnboardingData(
       title: 'Our Ask',
-      description:
-          'Keep everything confidential, and speak only from your own experience.',
+      description: 'Keep everything confidential, and speak only from your own experience.',
       image: TotemImageAssets.onboarding3,
     ),
   ];
@@ -264,8 +265,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                         child: const CircleAvatar(
                                           radius: 27,
                                           backgroundColor: AppTheme.mauve,
-                                          child: Icon(
-                                            Icons.arrow_back_ios_new,
+                                          child: TotemIcon(
+                                            TotemIcons.arrowBack,
                                             color: AppTheme.white,
                                           ),
                                         ),
@@ -320,8 +321,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                                         ),
                                                         maxLines: 1,
                                                       )
-                                                    : const Icon(
-                                                        Icons.arrow_forward_ios,
+                                                    : const TotemIcon(
+                                                        TotemIcons.arrowForward,
                                                         color: AppTheme.white,
                                                       ),
                                               ),

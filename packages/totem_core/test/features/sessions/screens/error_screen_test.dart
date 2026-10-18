@@ -43,6 +43,10 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(seconds: 3));
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
   }
 
   group('RoomErrorScreen', () {
@@ -66,9 +70,8 @@ void main() {
         );
 
         check(tester.takeException()).isNull();
-        check(
-          tester.widgetList(find.byType(CustomScrollView)),
-        ).length.equals(1);
+        check(tester.widgetList(find.byType(CustomScrollView))).length
+            .equals(1);
         check(
           tester
               .state<ScrollableState>(find.byType(Scrollable))
@@ -115,9 +118,13 @@ void main() {
         await tester.pumpAndSettle();
 
         check(scrollable.position.pixels).isGreaterThan(0);
-        check(
-          tester.widgetList(find.text('Go back to Session Details')),
-        ).length.equals(1);
+        await tester.scrollUntilVisible(
+          find.text('Go back to session details'),
+          100,
+          scrollable: find.byType(Scrollable),
+        );
+        check(tester.widgetList(find.text('Go back to session details'))).length
+            .equals(1);
       });
     });
 
@@ -127,23 +134,19 @@ void main() {
       ) async {
         await pumpErrorScreen(tester, onRetry: () async {});
 
-        check(
-          tester.widgetList(find.text('Try Joining Again')),
-        ).length.equals(1);
-        check(
-          tester.widgetList(find.byType(ConfirmationDialogButton)),
-        ).length.equals(1);
+        check(tester.widgetList(find.text('Try Joining Again'))).length
+            .equals(1);
+        check(tester.widgetList(find.byType(ConfirmationDialogButton))).length
+            .equals(1);
       });
 
       testWidgets('hides retry button when onRetry is null', (tester) async {
         await pumpErrorScreen(tester);
 
-        check(
-          tester.widgetList(find.text('Try Joining Again')),
-        ).length.equals(0);
-        check(
-          tester.widgetList(find.byType(ConfirmationDialogButton)),
-        ).length.equals(0);
+        check(tester.widgetList(find.text('Try Joining Again'))).length
+            .equals(0);
+        check(tester.widgetList(find.byType(ConfirmationDialogButton))).length
+            .equals(0);
       });
 
       testWidgets('retry button invokes onRetry callback', (tester) async {
@@ -182,9 +185,8 @@ void main() {
             ),
           ),
         ).length.equals(1);
-        check(
-          tester.widgetList(find.text('Something went wrong')),
-        ).length.equals(0);
+        check(tester.widgetList(find.text('Something went wrong'))).length
+            .equals(0);
       });
 
       testWidgets('reacts to connectivity changes while visible', (
@@ -198,9 +200,8 @@ void main() {
           onRetry: () async {},
           connectivityStream: connectivityChanges.stream,
         );
-        check(
-          tester.widgetList(find.text('Something went wrong')),
-        ).length.equals(1);
+        check(tester.widgetList(find.text('Something went wrong'))).length
+            .equals(1);
 
         connectivityChanges.add(true);
         await tester.pumpAndSettle();
@@ -208,9 +209,8 @@ void main() {
 
         connectivityChanges.add(false);
         await tester.pumpAndSettle();
-        check(
-          tester.widgetList(find.text('Something went wrong')),
-        ).length.equals(1);
+        check(tester.widgetList(find.text('Something went wrong'))).length
+            .equals(1);
       });
     });
 
@@ -232,12 +232,10 @@ void main() {
           onRetry: () async {},
         );
 
-        check(
-          tester.widgetList(find.byType(SessionDisconnectedScreen)),
-        ).length.equals(1);
-        check(
-          tester.widgetList(find.text('Something went wrong')),
-        ).length.equals(0);
+        check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
+            .equals(1);
+        check(tester.widgetList(find.text('Something went wrong'))).length
+            .equals(0);
       });
     });
 
@@ -259,12 +257,10 @@ void main() {
           onRetry: () async {},
         );
 
-        check(
-          tester.widgetList(find.text('Something went wrong')),
-        ).length.equals(0);
-        check(
-          tester.widgetList(find.byType(SessionDisconnectedScreen)),
-        ).length.equals(1);
+        check(tester.widgetList(find.text('Something went wrong'))).length
+            .equals(0);
+        check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
+            .equals(1);
       });
     });
   });

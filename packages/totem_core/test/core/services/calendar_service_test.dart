@@ -25,7 +25,7 @@ void main() {
         return true;
       });
       final event = AppCalendarEvent(
-        title: 'Session',
+        title: 'session',
         description: 'A session',
         location: 'Room 1',
         start: DateTime.utc(2026, 1, 2, 10),
@@ -36,9 +36,8 @@ void main() {
 
       check(await CalendarService.addToCalendar(event)).equals(true);
       check(receivedCall!.method).equals('addToCalendar');
-      check(
-        jsonEncode(receivedCall!.arguments),
-      ).equals(jsonEncode(event.toMap()));
+      check(jsonEncode(receivedCall!.arguments))
+          .equals(jsonEncode(event.toMap()));
     },
   );
 
@@ -59,7 +58,7 @@ void main() {
 }
 
 AppCalendarEvent _event() => AppCalendarEvent(
-  title: 'Session',
+  title: 'session',
   description: 'Description',
   location: 'Location',
   start: DateTime.utc(2026, 1, 2, 10),

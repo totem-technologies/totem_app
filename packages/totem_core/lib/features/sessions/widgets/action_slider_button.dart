@@ -5,11 +5,12 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 typedef OnActionPerformed = AsyncValueGetter<bool>;
 
 class ActionSliderButton extends StatefulWidget {
-  const ActionSliderButton({
+  const new({
     required this.text,
     required this.onActionCompleted,
     this.keepLoadingOnSuccess = false,
@@ -74,7 +75,7 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
 
 @visibleForTesting
 class ActionButton extends StatefulWidget {
-  const ActionButton({
+  const new({
     required this.text,
     required this.onActionCompleted,
     this.keepLoadingOnSuccess = false,
@@ -177,7 +178,7 @@ class _ActionButtonState extends State<ActionButton> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 40),
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: 40),
         ),
         child: effectiveLoading
             ? const SizedBox(
@@ -196,7 +197,7 @@ class _ActionButtonState extends State<ActionButton> {
 
 @visibleForTesting
 class ActionSlider extends StatefulWidget {
-  const ActionSlider({
+  const new({
     required this.text,
     required this.onActionCompleted,
     this.keepLoadingOnSuccess = false,
@@ -409,8 +410,8 @@ class ActionSliderState extends State<ActionSlider> {
                                         ),
                                   ),
                                 )
-                              : Icon(
-                                  Icons.arrow_forward_ios,
+                              : TotemIcon(
+                                  TotemIcons.arrowForward,
                                   size: 20,
                                   color: backgroundColor,
                                 ),

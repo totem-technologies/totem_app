@@ -6,7 +6,7 @@ import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 class ActionBarEmojiButton extends ConsumerStatefulWidget {
-  const ActionBarEmojiButton({required this.onEmojiSelected, super.key});
+  const new({required this.onEmojiSelected, super.key});
 
   final ValueChanged<String> onEmojiSelected;
 

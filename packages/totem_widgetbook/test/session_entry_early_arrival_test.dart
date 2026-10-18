@@ -20,11 +20,10 @@ void main() {
     await tester.pump();
 
     // The card is just facts and Join. The note waits for the tap.
-    check(
-      find.textContaining('You can join beginning at').evaluate(),
-    ).isEmpty();
+    check(find.textContaining('You can join beginning at').evaluate())
+        .isEmpty();
 
-    await tester.tap(find.text('Join Session'));
+    await tester.tap(find.text('Join session'));
     await _settleNotice(tester);
 
     check(joined).equals(0);
@@ -43,7 +42,7 @@ void main() {
     await tester.pumpWidget(_host(phase: EntryPhase.tooEarly));
     await tester.pump();
 
-    await tester.tap(find.text('Join Session'));
+    await tester.tap(find.text('Join session'));
     await _settleNotice(tester);
 
     check(find.text('BEFORE YOU JOIN').evaluate()).isNotEmpty();
@@ -61,7 +60,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.text('Join Session'));
+    await tester.tap(find.text('Join session'));
     await tester.pump();
 
     check(joined).equals(1);

@@ -179,21 +179,23 @@ enum SpaceCategories {
   queer('queer'),
   selfImprovement('self-improvement');
 
-  const SpaceCategories(this.slug);
+  new(this.slug);
 
   final String slug;
 }
 
 @riverpod
 Future<List<SessionDetailSchema>> getRecommendedSessions(
-  Ref ref, [
+  Ref ref, {
   Set<SpaceCategories>? topics,
-]) {
+  int? limit,
+}) {
   final mobileApiService = ref.read(apiServiceProvider);
   return RepositoryUtils.handleApiCall<List<SessionDetailSchema>>(
     apiCall: () =>
         mobileApiService.spaces.totemSpacesMobileApiGetRecommendedSpaces(
           categories: topics?.map((topic) => topic.slug).toList(),
+          limit: limit,
         ),
     operationName: 'get recommended sessions',
     maxRetries: 0,
@@ -264,7 +266,7 @@ Future<bool> rsvpConfirm(Ref ref, String sessionSlug) async {
 /// Indicates that an RSVP could not be confirmed because the user is already
 /// attending another session at the same time.
 final class RsvpConflictException implements Exception {
-  const RsvpConflictException(this.conflict, {this.cause});
+  const new(this.conflict, {this.cause});
 
   final SessionConflictSchema conflict;
   final Object? cause;

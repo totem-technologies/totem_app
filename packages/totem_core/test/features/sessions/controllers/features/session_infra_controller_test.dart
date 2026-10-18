@@ -9,7 +9,7 @@ import 'package:totem_core/features/sessions/controllers/features/session_infra_
 import '../../../../setup.dart';
 
 class _FakeSessionInfraPlatform extends SessionInfraPlatform {
-  _FakeSessionInfraPlatform({
+  new({
     this.canUse = true,
     this.android = false,
     this.notificationPermission = NotificationPermission.granted,
@@ -100,9 +100,8 @@ void main() {
     'desktop sessions do not request native foreground-task permissions',
     () async {
       final platform = _FakeSessionInfraPlatform(canUse: false);
-      final controller = createContainer(
-        platform,
-      ).read(sessionInfraControllerProvider.notifier);
+      final controller = createContainer(platform)
+          .read(sessionInfraControllerProvider.notifier);
 
       check(await controller.requestPermissions()).isTrue();
       await controller.activate();
@@ -119,9 +118,8 @@ void main() {
       notificationPermission: NotificationPermission.denied,
       requestedNotificationPermission: NotificationPermission.denied,
     );
-    final controller = createContainer(
-      platform,
-    ).read(sessionInfraControllerProvider.notifier);
+    final controller = createContainer(platform)
+        .read(sessionInfraControllerProvider.notifier);
 
     await controller.activate();
 
@@ -138,9 +136,8 @@ void main() {
         ignoringBatteryOptimizations: false,
         ignoreBatteryOptimizationResult: true,
       );
-      final controller = createContainer(
-        platform,
-      ).read(sessionInfraControllerProvider.notifier);
+      final controller = createContainer(platform)
+          .read(sessionInfraControllerProvider.notifier);
 
       check(await controller.requestPermissions()).isTrue();
 
@@ -152,9 +149,8 @@ void main() {
     'activation and deactivation are serialized around service ownership',
     () async {
       final platform = _FakeSessionInfraPlatform();
-      final controller = createContainer(
-        platform,
-      ).read(sessionInfraControllerProvider.notifier);
+      final controller = createContainer(platform)
+          .read(sessionInfraControllerProvider.notifier);
 
       await Future.wait([controller.activate(), controller.deactivate()]);
 
@@ -170,9 +166,8 @@ void main() {
     () async {
       final platform = _FakeSessionInfraPlatform()
         ..startError = Exception('boom');
-      final controller = createContainer(
-        platform,
-      ).read(sessionInfraControllerProvider.notifier);
+      final controller = createContainer(platform)
+          .read(sessionInfraControllerProvider.notifier);
 
       await controller.activate();
       await controller.deactivate();
@@ -199,7 +194,7 @@ void main() {
 }
 
 class _DelayedPermissionPlatform extends _FakeSessionInfraPlatform {
-  _DelayedPermissionPlatform(this.completer);
+  new(this.completer);
 
   final Completer<NotificationPermission> completer;
 

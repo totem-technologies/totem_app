@@ -6,7 +6,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class _TransitionCardContainer extends StatelessWidget {
-  const _TransitionCardContainer({
+  const new({
     required this.children,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
     this.constraints = const BoxConstraints(maxWidth: 650),
@@ -53,10 +53,7 @@ class _TransitionCardContainer extends StatelessWidget {
 }
 
 class _TransitionCardBase extends StatefulWidget {
-  const _TransitionCardBase({
-    required this.childBuilder,
-    this.keyboardShortcutText,
-  });
+  const new({required this.childBuilder, this.keyboardShortcutText});
 
   final Widget Function(BuildContext context, bool hasMouseConnected)
   childBuilder;
@@ -111,7 +108,7 @@ class _TransitionCardBaseState extends State<_TransitionCardBase> {
 }
 
 class _GenericTransitionCard extends StatelessWidget {
-  const _GenericTransitionCard({
+  const new({
     required this.actionText,
     required this.onActionPressed,
     required this.instructionTextClick,
@@ -173,7 +170,7 @@ class _GenericTransitionCard extends StatelessWidget {
 }
 
 class JoinTransitionCard extends StatelessWidget {
-  const JoinTransitionCard({
+  const new({
     required this.onActionPressed,
     this.keepActionLoadingOnSuccess = false,
     this.isSliderLoading,
@@ -241,7 +238,7 @@ class JoinTransitionCard extends StatelessWidget {
 }
 
 class PassTransitionCard extends StatelessWidget {
-  const PassTransitionCard({
+  const new({
     required this.onActionPressed,
     this.actionText = 'Pass',
     this.keepActionLoadingOnSuccess = false,
@@ -296,7 +293,7 @@ class PassTransitionCard extends StatelessWidget {
 }
 
 class ReceiveTransitionCard extends StatelessWidget {
-  const ReceiveTransitionCard({
+  const new({
     required this.onActionPressed,
     this.actionText = 'Receive',
     this.keepActionLoadingOnSuccess = false,
@@ -327,9 +324,9 @@ class ReceiveTransitionCard extends StatelessWidget {
 }
 
 class StartTransitionCard extends StatelessWidget {
-  const StartTransitionCard({
+  const new({
     required this.onActionPressed,
-    this.actionText = 'Start Session',
+    this.actionText = 'Start session',
     this.keepActionLoadingOnSuccess = false,
     this.isSliderLoading,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
@@ -347,10 +344,8 @@ class StartTransitionCard extends StatelessWidget {
     return _GenericTransitionCard(
       actionText: actionText,
       onActionPressed: onActionPressed,
-      instructionTextClick:
-          'Bring participants out of the waiting room and begin the conversation.',
-      instructionTextSwipe:
-          'Bring participants out of the waiting room and begin the conversation.',
+      instructionTextClick: 'Bring participants out of the waiting room and begin the conversation.',
+      instructionTextSwipe: 'Bring participants out of the waiting room and begin the conversation.',
       keyboardShortcutText: 'press space bar to start',
       keepActionLoadingOnSuccess: keepActionLoadingOnSuccess,
       isSliderLoading: isSliderLoading,
@@ -360,7 +355,7 @@ class StartTransitionCard extends StatelessWidget {
 }
 
 class WaitingReceiveTransitionCard extends StatelessWidget {
-  const WaitingReceiveTransitionCard({
+  const new({
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
     super.key,
   });
@@ -382,7 +377,7 @@ class WaitingReceiveTransitionCard extends StatelessWidget {
 }
 
 class PromptTransitionCard extends StatefulWidget {
-  const PromptTransitionCard({
+  const new({
     required this.onActionPressed,
     this.initialPrompt,
     this.initialSessionPromptId,

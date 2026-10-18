@@ -14,7 +14,7 @@ final emojiReactionClockProvider = Provider<ValueGetter<DateTime>>(
 
 @immutable
 class SessionEmojiReaction {
-  const SessionEmojiReaction({
+  const new({
     required this.timestamp,
     required this.userIdentity,
     required this.emoji,

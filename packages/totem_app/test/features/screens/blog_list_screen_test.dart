@@ -65,15 +65,13 @@ void main() {
 
       // Check if FeaturedBlogPost is rendered for the first item
       check(tester.widgetList(find.byType(FeaturedBlogPost))).length.equals(1);
-      check(
-        tester.widgetList(find.text('Featured Blog Post')),
-      ).length.isGreaterThan(0);
+      check(tester.widgetList(find.text('Featured Blog Post'))).length
+          .isGreaterThan(0);
 
       // Check if HomeBlogCard is rendered for the subsequent items
       check(tester.widgetList(find.byType(HomeBlogCard))).length.equals(1);
-      check(
-        tester.widgetList(find.text('Second Blog Post')),
-      ).length.isGreaterThan(0);
+      check(tester.widgetList(find.text('Second Blog Post'))).length
+          .isGreaterThan(0);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

@@ -22,7 +22,7 @@ void main() {
 }
 
 class _Host extends StatelessWidget {
-  const _Host({required this.label});
+  const new({required this.label});
 
   final String label;
 

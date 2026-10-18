@@ -19,9 +19,11 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.d
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_view.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
+import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
@@ -37,14 +39,22 @@ import '../livekit_mocks.dart';
 const _slug = 'pre-join-screen-test';
 
 class _TrackFactory extends PreJoinPreviewTrackFactory {
+  final videoTracks = <MockLocalVideoTrack>[];
+  final audioTracks = <MockLocalAudioTrack>[];
+
   @override
   Future<LocalVideoTrack?> createVideoTrack(
     CameraCaptureOptions cameraOptions,
-  ) async => MockLocalVideoTrack();
+  ) async {
+    final track = MockLocalVideoTrack();
+    videoTracks.add(track);
+    return track;
+  }
 
   @override
   Future<LocalAudioTrack?> createAudioTrack() async {
     final track = MockLocalAudioTrack();
+    audioTracks.add(track);
     when(track.createListener).thenReturn(MockTrackEventsListener());
     return track;
   }
@@ -122,7 +132,7 @@ class _PendingSessionController extends SessionController {
 
 SessionDetailSchema _event() => SessionDetailSchema(
   slug: _slug,
-  title: 'Test Session',
+  title: 'Test session',
   space: MobileSpaceDetailSchema(
     slug: 'space',
     title: 'Space',
@@ -185,11 +195,14 @@ void main() {
 
   Future<void> pumpScreen(
     WidgetTester tester, {
-    Exception? tokenError,
+    Object? tokenError,
+    bool sessionEnded = false,
     bool alreadyPresent = false,
     bool successfulJoin = false,
     bool pendingJoin = false,
     bool initiallyOffline = false,
+    Future<JoinResponse> Function()? getSessionToken,
+    Future<SessionDetailSchema> Function()? getSession,
     PreJoinPreviewTrackFactory? trackFactory,
   }) async {
     await tester.pumpWidget(
@@ -204,29 +217,33 @@ void main() {
           isOfflineProvider.overrideWith(
             (ref) => Stream.value(initiallyOffline),
           ),
-          sessionTokenProvider(_slug).overrideWith((_) async {
+          getRecommendedSessionsProvider(limit: 1).overrideWith((_) => []),
+          sessionTokenProvider(_slug).overrideWith((_) {
+            if (getSessionToken != null) return getSessionToken();
+            // ApiError is the generated client's failure value and deliberately
+            // does not implement Exception.
+            // ignore: only_throw_errors
             if (tokenError != null) throw tokenError;
-            return JoinResponse(
-              token: 'token',
-              isAlreadyPresent: alreadyPresent,
+            return Future.value(
+              JoinResponse(token: 'token', isAlreadyPresent: alreadyPresent),
             );
           }),
-          sessionProvider(_slug).overrideWith((_) async => _event()),
+          sessionProvider(_slug).overrideWith(
+            (_) =>
+                getSession?.call() ??
+                Future.value(_event().copyWith(ended: sessionEnded)),
+          ),
           if (successfulJoin) ...[
-            preJoinFlowControllerProvider(
-              _slug,
-            ).overrideWith(_PermissionsGrantedFlowController.new),
-            sessionControllerProvider(
-              _options,
-            ).overrideWith(_SuccessfulSessionController.new),
+            preJoinFlowControllerProvider(_slug)
+                .overrideWith(_PermissionsGrantedFlowController.new),
+            sessionControllerProvider(_options)
+                .overrideWith(_SuccessfulSessionController.new),
           ],
           if (pendingJoin) ...[
-            preJoinFlowControllerProvider(
-              _slug,
-            ).overrideWith(_PermissionsGrantedFlowController.new),
-            sessionControllerProvider(
-              _options,
-            ).overrideWith(_PendingSessionController.new),
+            preJoinFlowControllerProvider(_slug)
+                .overrideWith(_PermissionsGrantedFlowController.new),
+            sessionControllerProvider(_options)
+                .overrideWith(_PendingSessionController.new),
           ],
         ],
         child: const SentryDisplayWidget(
@@ -237,6 +254,122 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
   }
+
+  testWidgets('shows a disabled pre-join shell while checking eligibility', (
+    tester,
+  ) async {
+    final token = Completer<JoinResponse>();
+    final session = Completer<SessionDetailSchema>();
+    final factory = _TrackFactory();
+    await pumpScreen(
+      tester,
+      trackFactory: factory,
+      getSessionToken: () => token.future,
+      getSession: () => session.future,
+    );
+
+    check(factory.videoTracks).isEmpty();
+    check(factory.audioTracks).isEmpty();
+    check(tester.widgetList(find.byType(PreJoinView))).length.equals(1);
+    check(tester.widgetList(find.byType(CircularProgressIndicator))).isEmpty();
+    check(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .enabled,
+    ).isFalse();
+    check(
+      tester
+          .widget<ActionBarMicButton>(find.byType(ActionBarMicButton))
+          .onToggle,
+    ).isNull();
+    check(
+      tester
+          .widget<ActionBarCameraSwitcherButton>(
+            find.byType(ActionBarCameraSwitcherButton),
+          )
+          .onToggle,
+    ).isNull();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('already-ended sessions do not create preview tracks', (
+    tester,
+  ) async {
+    final factory = _TrackFactory();
+    await pumpScreen(tester, sessionEnded: true, trackFactory: factory);
+
+    check(factory.videoTracks).isEmpty();
+    check(factory.audioTracks).isEmpty();
+    check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
+        .equals(1);
+  });
+
+  testWidgets('terminal token errors do not create preview tracks', (
+    tester,
+  ) async {
+    final factory = _TrackFactory();
+    await pumpScreen(
+      tester,
+      trackFactory: factory,
+      tokenError: const ApiError<JoinResponse, RoomErrorResponse>(
+        statusCode: 409,
+        error: RoomErrorResponse(
+          code: ErrorCode.notJoinable,
+          message: 'Session is not joinable',
+        ),
+      ),
+    );
+
+    check(factory.videoTracks).isEmpty();
+    check(factory.audioTracks).isEmpty();
+    check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
+        .equals(1);
+  });
+
+  testWidgets('terminal token error releases active preview tracks', (
+    tester,
+  ) async {
+    Object? tokenError;
+    final factory = _TrackFactory();
+    await pumpScreen(
+      tester,
+      trackFactory: factory,
+      getSessionToken: () async {
+        // ApiError is the generated client's failure value and deliberately
+        // does not implement Exception.
+        // ignore: only_throw_errors
+        if (tokenError != null) throw tokenError;
+        return const JoinResponse(token: 'token', isAlreadyPresent: false);
+      },
+    );
+
+    check(factory.videoTracks).length.equals(1);
+    check(factory.audioTracks).length.equals(1);
+
+    tokenError = const ApiError<JoinResponse, RoomErrorResponse>(
+      statusCode: 409,
+      error: RoomErrorResponse(
+        code: ErrorCode.roomAlreadyEnded,
+        message: 'Session already ended',
+      ),
+    );
+    ProviderScope.containerOf(tester.element(find.byType(PreJoinScreen)))
+        .invalidate(sessionTokenProvider(_slug));
+    await tester.pump();
+    await tester.pump();
+
+    check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
+        .equals(1);
+    verify(factory.videoTracks.single.stop).called(1);
+    verify(factory.videoTracks.single.dispose).called(1);
+    verify(factory.audioTracks.single.stop).called(1);
+    verify(factory.audioTracks.single.dispose).called(1);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
 
   testWidgets('renders declarative pre-join controls', (tester) async {
     await pumpScreen(tester);
@@ -350,9 +483,8 @@ void main() {
     await tester.pump();
 
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
-    check(
-      tester.element(find.byType(VideoTrackRenderer)),
-    ).identicalTo(previewRenderer);
+    check(tester.element(find.byType(VideoTrackRenderer)))
+        .identicalTo(previewRenderer);
 
     _PendingSessionController.joinCompleter!.complete(
       SessionJoinResult.success,
@@ -366,9 +498,8 @@ void main() {
     await pumpScreen(tester, alreadyPresent: true, successfulJoin: true);
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(
-      tester.widgetList(find.text("You're Already in This Session")),
-    ).length.equals(0);
+    check(tester.widgetList(find.text("You're already in this session"))).length
+        .equals(0);
 
     final join = tester.widget<ActionSliderButton>(
       find.byType(ActionSliderButton),
@@ -377,9 +508,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(
-      tester.widgetList(find.text("You're Already in This Session")),
-    ).length.equals(1);
+    check(tester.widgetList(find.text("You're already in this session"))).length
+        .equals(1);
     check(tester.widgetList(find.text('Join Here'))).length.equals(1);
 
     await tester.tap(find.text('Join Here'));
@@ -387,9 +517,8 @@ void main() {
     check(await joinFuture).equals(true);
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(
-      tester.widgetList(find.text("You're Already in This Session")),
-    ).length.equals(0);
+    check(tester.widgetList(find.text("You're already in this session"))).length
+        .equals(0);
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
   });
 

@@ -51,9 +51,8 @@ void main() {
           ),
         );
 
-        check(
-          tester.widgetList(find.byType(ActionSliderButton)),
-        ).length.equals(1);
+        check(tester.widgetList(find.byType(ActionSliderButton))).length
+            .equals(1);
         await tester
             .widget<ActionSliderButton>(find.byType(ActionSliderButton))
             .onActionCompleted();
@@ -68,9 +67,8 @@ void main() {
         buildTestWidget(const WaitingReceiveTransitionCard()),
       );
 
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(0);
+      check(tester.widgetList(find.byType(ActionSliderButton))).length
+          .equals(0);
       check(
         tester.widgetList(
           find.textContaining('Waiting for the receiver to accept'),
@@ -98,9 +96,8 @@ void main() {
       );
 
       check(tester.widgetList(find.byType(TextField))).length.equals(1);
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
+      check(tester.widgetList(find.byType(ActionSliderButton))).length
+          .equals(1);
 
       await tester.enterText(find.byType(TextField), 'Test prompt');
 

@@ -1,5 +1,3 @@
-// ignore_for_file: experimental_member_use
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -15,6 +13,9 @@ import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/core/services/observer_service.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
+
+const _sentryRelease = String.fromEnvironment('SENTRY_RELEASE');
+const _sentryDist = String.fromEnvironment('SENTRY_DIST');
 
 Future<void> sharedMain(
   Widget app,
@@ -84,15 +85,15 @@ void _configureSentry(SentryFlutterOptions options) {
     ..environment = config.environment.name
     ..dsn = config.sentryDsn
     ..navigatorKey = TotemRouter.instance.navigatorKey
-    ..sendDefaultPii = true
+    ..sendDefaultPii = false
     ..tracesSampleRate = config.isDevelopment ? 1.0 : 0.1
-    ..profilesSampleRate = config.isDevelopment ? 1.0 : 0.1
-    ..enableLogs = true
     ..attachScreenshot = true
     ..attachViewHierarchy = true
     ..enableAutoPerformanceTracing = true
     ..enableTimeToFullDisplayTracing = true
     ..enableTombstone = true;
+  if (_sentryRelease.isNotEmpty) options.release = _sentryRelease;
+  if (_sentryDist.isNotEmpty) options.dist = _sentryDist;
 }
 
 void _initializeBestEffortServices() {

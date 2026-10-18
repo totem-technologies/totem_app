@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class RouteNames {
-  const RouteNames._();
+  const new _();
 
   static const welcome = '/';
 
@@ -70,7 +70,7 @@ enum HomeRoutes {
   messages(RouteNames.messages),
   profile(RouteNames.profile);
 
-  const HomeRoutes(this.path);
+  new(this.path);
 
   final String path;
 
@@ -103,11 +103,19 @@ abstract class TotemRouter {
   void dispose() {}
 
   void setTabCloseConfirmationEnabled(bool enabled);
+
+  /// Runs [onExit] when the page is being unloaded, such as when the user
+  /// closes the tab. Null removes the handler. Only browsers unload pages.
+  void setPageExitHandler(VoidCallback? onExit) {}
+
+  /// Removes [onExit] if it is still the page exit handler, so a screen that
+  /// is disposing doesn't remove a handler its replacement already set.
+  void clearPageExitHandler(VoidCallback onExit) {}
 }
 
 /// A class to wrap a Stream as a Listenable for GoRouter refreshes
 class GoRouterRefreshStream extends ChangeNotifier {
-  GoRouterRefreshStream(Stream<dynamic> stream) {
+  new(Stream<dynamic> stream) {
     _subscription = stream.asBroadcastStream().listen((dynamic _) {
       notifyListeners();
     });

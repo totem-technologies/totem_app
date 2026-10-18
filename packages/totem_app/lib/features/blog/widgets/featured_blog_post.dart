@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/shared/network.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/totem_image.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
@@ -180,9 +182,8 @@ class FeaturedBlogPost extends StatelessWidget {
                             ),
                             if (publishedDate != null)
                               Text(
-                                DateFormat.yMMMd(
-                                  'en_US',
-                                ).format(publishedDate!),
+                                DateFormat.yMMMd('en_US')
+                                    .format(publishedDate!),
                                 style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 10,
@@ -212,7 +213,10 @@ class FeaturedBlogPost extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                        icon: const TotemIcon(
+                          TotemIcons.arrowForward,
+                          size: 16,
+                        ),
                         iconAlignment: IconAlignment.end,
                       ),
                     ],

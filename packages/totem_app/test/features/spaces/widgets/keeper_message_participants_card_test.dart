@@ -8,7 +8,7 @@ import 'package:totem_core/shared/router.dart';
 
 SessionDetailSchema _mockSession() => SessionDetailSchema(
   slug: 'test-session',
-  title: 'Test Session',
+  title: 'Test session',
   space: MobileSpaceDetailSchema(
     slug: 'test-space',
     title: 'Test Space',
@@ -69,7 +69,7 @@ void main() {
   Widget wrapCard(GoRouter router) => MaterialApp.router(routerConfig: router);
 
   group('KeeperMessageParticipantsCard', () {
-    testWidgets('tapping the button opens the Session Participants screen', (
+    testWidgets('tapping the button opens the session Participants screen', (
       tester,
     ) async {
       final router = createRouter();
@@ -79,9 +79,8 @@ void main() {
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();
 
-      check(
-        tester.widgetList(find.text('Session Participants Screen')),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('Session Participants Screen'))).length
+          .equals(1);
     });
   });
 }

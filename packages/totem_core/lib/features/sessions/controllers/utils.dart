@@ -1,8 +1,8 @@
-import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 
-List<Participant> participantsSorting({
-  required List<Participant> originalParticipants,
+List<ParticipantInfo> participantsSorting({
+  required List<ParticipantInfo> originalParticipants,
   required List<String> talkingOrder,
   required String speakingNow,
   required String? nextSpeaker,
@@ -23,7 +23,7 @@ List<Participant> participantsSorting({
     final participantsMap = {for (final p in participants) p.identity: p};
 
     final speakingOrderSet = talkingOrder.toSet();
-    final sortedParticipants = <Participant>[];
+    final sortedParticipants = <ParticipantInfo>[];
 
     for (final identity in talkingOrder) {
       final participant = participantsMap[identity];
@@ -62,7 +62,7 @@ extension SessionStateExtension on RoomState {
   /// Walk the talking order starting after [after], wrapping around.
   String? nextInOrder({
     required String after,
-    required Iterable<Participant> participants,
+    required Iterable<ParticipantInfo> participants,
   }) {
     if (!talkingOrder.contains(after)) return null;
 
@@ -82,7 +82,7 @@ extension SessionStateExtension on RoomState {
   /// For example, in the list [Bob, Foo, Boo, Fob], if Bob is speaking and the Keeper wants to
   /// force pass them, they would pass to Foo. If Foo is passing, the keeper would pass to Boo.
   String? nextParticipantForcePassIdentity({
-    required Iterable<Participant> participants,
+    required Iterable<ParticipantInfo> participants,
   }) {
     final speaker = nextSpeaker.value;
     if (speaker == null) return null;

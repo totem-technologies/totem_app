@@ -61,7 +61,7 @@ class ConflictingSessionsDialog extends StatelessWidget {
         newSession: newSession,
       ),
       scrollable: true,
-      confirmButtonText: 'Switch Sessions',
+      confirmButtonText: 'Switch sessions',
       onConfirm: () async {
         final switched = await onSwitch();
         if (switched && context.mounted) {

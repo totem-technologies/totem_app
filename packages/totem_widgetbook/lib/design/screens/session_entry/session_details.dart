@@ -248,7 +248,7 @@ class SessionDetails extends StatelessWidget {
                     child: Button(
                       size: ButtonSize.compact,
                       onPressed: onJoin ?? () {},
-                      child: const Text('Join Session'),
+                      child: const Text('Join session'),
                     ),
                   ),
                 ],
@@ -337,7 +337,7 @@ class SessionDetails extends StatelessWidget {
           Semantics(
             header: true,
             child: Text(
-              'About this Session',
+              'About this session',
               style: TotemText.raw(
                 size: 14,
                 weight: FontWeight.w600,

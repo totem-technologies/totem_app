@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_benchmark/benchmark_config.dart';
 import 'package:totem_benchmark/benchmark_room.dart';
-import 'package:totem_core/features/sessions/widgets/audio_visualizer_bars.dart';
+import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/features/sessions/widgets/participant_tile_surface.dart';
 
 void main() {
@@ -52,9 +52,8 @@ void main() {
     final video = tester.element(find.byKey(const ValueKey('video-0')));
     await pump(6);
     check(find.byType(ParticipantTileSurface).evaluate()).length.equals(6);
-    check(
-      tester.element(find.byKey(const ValueKey('video-0'))),
-    ).identicalTo(video);
+    check(tester.element(find.byKey(const ValueKey('video-0'))))
+        .identicalTo(video);
     await pump(2);
     check(find.byType(ParticipantTileSurface).evaluate()).length.equals(2);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -75,11 +74,8 @@ void main() {
         ),
       ),
     );
-    List<double> samples() => tester
-        .widget<BarsView>(find.byType(BarsView))
-        .elements
-        .map((item) => item.value)
-        .toList();
+    List<double> samples() =>
+        tester.widget<LevelBars>(find.byType(LevelBars)).levels;
     await pump(WaveformMode.animated);
     final initial = samples();
     await tester.pump(const Duration(milliseconds: 140));

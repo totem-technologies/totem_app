@@ -7,9 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
@@ -18,6 +20,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
+import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/permissions_popups.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
@@ -30,9 +33,8 @@ Future<bool> showAlreadyPresentDialog(BuildContext context) async {
     return await showDialog<bool>(
           context: context,
           builder: (context) => ConfirmationDialog(
-            title: "You're Already in This Session",
-            content:
-                'You are already in this session on another device. Do you want to leave the other session and join on this device?',
+            title: "You're already in this session",
+            content: 'You are already in this session on another device. Do you want to leave the other session and join on this device?',
             icon: TotemIcons.questionMarkCircle,
             iconSize: 60,
             confirmButtonText: 'Join Here',
@@ -47,7 +49,7 @@ Future<bool> showAlreadyPresentDialog(BuildContext context) async {
 }
 
 class PreJoinScreen extends ConsumerStatefulWidget {
-  const PreJoinScreen({required this.sessionSlug, super.key});
+  const new({required this.sessionSlug, super.key});
 
   final String sessionSlug;
 
@@ -55,17 +57,24 @@ class PreJoinScreen extends ConsumerStatefulWidget {
   ConsumerState<PreJoinScreen> createState() => _PreJoinScreenState();
 }
 
-class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
+class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
+    with WidgetsBindingObserver {
   final GlobalKey _preJoinViewKey = GlobalKey();
   bool _showingAlreadyPresentDialog = false;
   bool _showingWebPermissionsDialog = false;
   bool _reportedFullyDisplayed = false;
   bool _joined = false;
+  bool _wakeLockEnabled = false;
+  bool _wakeLockRequested = false;
+  Future<void> _wakeLockOperation = Future.value();
+  PreJoinMediaController? _mediaController;
+  bool _terminalMediaReleaseRequested = false;
 
   @override
   void initState() {
     super.initState();
-    unawaited(WakelockPlus.enable());
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_setWakeLock(enabled: true));
     _initializeNativePermissions();
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
@@ -74,11 +83,58 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (!_joined) {
       unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     }
-    unawaited(WakelockPlus.disable());
+    unawaited(_setWakeLock(enabled: false));
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_setWakeLock(enabled: true));
+    } else if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      unawaited(_setWakeLock(enabled: false));
+    }
+  }
+
+  Future<void> _setWakeLock({required bool enabled}) {
+    if (_wakeLockRequested == enabled && _wakeLockEnabled == enabled) {
+      return _wakeLockOperation;
+    }
+    _wakeLockRequested = enabled;
+    return _wakeLockOperation = _wakeLockOperation.then(
+      (_) => _applyWakeLock(enabled: enabled),
+    );
+  }
+
+  Future<void> _applyWakeLock({required bool enabled}) async {
+    if (_wakeLockEnabled == enabled) return;
+    if (enabled &&
+        kIsWeb &&
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+    try {
+      if (enabled) {
+        await WakelockPlus.enable();
+      } else {
+        await WakelockPlus.disable();
+      }
+      _wakeLockEnabled = enabled;
+    } catch (error, stackTrace) {
+      ErrorHandler.report(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to update pre-join wake lock',
+        disposition: ErrorDisposition.recovered,
+        diagnostics: {'feature': 'pre_join', 'wake_lock_enabled': enabled},
+      );
+    }
   }
 
   void _initializeNativePermissions() {
@@ -188,6 +244,47 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final _ = await ref.refresh(sessionProvider(widget.sessionSlug).future);
   }
 
+  void _releaseTerminalPreviewMedia() {
+    final mediaController = _mediaController;
+    if (mediaController == null || _terminalMediaReleaseRequested) return;
+    _terminalMediaReleaseRequested = true;
+    unawaited(mediaController.releaseForTerminalOutcome());
+  }
+
+  Widget _buildEligibilityLoading() {
+    const media = PreJoinMediaState(
+      preferences: PreJoinMediaPreferences(isCameraOn: false, isMicOn: false),
+      camera: PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
+      microphone: PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
+    );
+    return PreJoinView(
+      key: _preJoinViewKey,
+      mediaState: media,
+      locked: true,
+      onToggleCamera: Future<void>.value,
+      onToggleMicrophone: Future<void>.value,
+      onToggleSpeaker: () {},
+      onCameraFacingChanged: (_) {},
+      onCameraDeviceSelected: (_) {},
+      joinCard: JoinTransitionCard(
+        margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
+        onActionPressed: () => Future.value(false),
+        enabled: false,
+      ),
+    );
+  }
+
+  Widget _buildEndedScreen(SessionDetailSchema session) {
+    _releaseTerminalPreviewMedia();
+    return RoomBackground(
+      status: RoomStatus.ended,
+      child: SessionDisconnectedScreen(
+        session: session,
+        sessionDisconnectedReason: SessionDisconnectedReason.keeperEnded,
+      ),
+    );
+  }
+
   Widget _buildErrorScreen(Object? error, {SessionDetailSchema? session}) {
     return RoomBackground(
       child: SessionErrorScreen(
@@ -202,6 +299,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final mediaController = ref.read(
       preJoinMediaControllerProvider(widget.sessionSlug).notifier,
     );
+    _mediaController = mediaController;
     final permissionsGranted = (kIsWeb || kIsWasm)
         ? media.canJoinOnWeb
         : flow.nativePermissionsGranted;
@@ -213,7 +311,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       onToggleCamera: mediaController.toggleCamera,
       onToggleMicrophone: mediaController.toggleMicrophone,
       onToggleSpeaker: mediaController.toggleSpeaker,
-      onCameraPositionChanged: mediaController.setCameraPosition,
+      onCameraFacingChanged: mediaController.setCameraFacing,
       onCameraDeviceSelected: mediaController.selectCameraDevice,
       joinCard: JoinTransitionCard(
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
@@ -229,6 +327,28 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   Widget build(BuildContext context) {
     final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
     final sessionData = ref.watch(sessionProvider(widget.sessionSlug));
+
+    if (tokenData.hasError) {
+      if (isTerminalSessionJoinError(tokenData.error)) {
+        _releaseTerminalPreviewMedia();
+      }
+      return _buildErrorScreen(tokenData.error, session: sessionData.value);
+    }
+    if (sessionData.hasError) {
+      if (isTerminalSessionJoinError(sessionData.error)) {
+        _releaseTerminalPreviewMedia();
+      }
+      return _buildErrorScreen(sessionData.error);
+    }
+
+    final loadingData =
+        (tokenData.isLoading && !tokenData.isRefreshing) ||
+        (sessionData.isLoading && !sessionData.isRefreshing);
+    if (loadingData) return _buildEligibilityLoading();
+
+    final session = sessionData.value;
+    if (session?.ended ?? false) return _buildEndedScreen(session!);
+
     final media = ref.watch(preJoinMediaControllerProvider(widget.sessionSlug));
     final flow = ref.watch(preJoinFlowControllerProvider(widget.sessionSlug));
     _joined = flow.phase == PreJoinFlowPhase.joined;
@@ -237,14 +357,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
       _handleWebMediaState(next);
     });
 
-    if (tokenData.hasError) {
-      return _buildErrorScreen(tokenData.error, session: sessionData.value);
-    }
-    if (sessionData.hasError) return _buildErrorScreen(sessionData.error);
-
-    final loadingData =
-        (tokenData.isLoading && !tokenData.isRefreshing) ||
-        (sessionData.isLoading && !sessionData.isRefreshing);
     final preJoinView = _buildPreJoinView(media, flow);
     final hasStartedJoin =
         flow.phase != PreJoinFlowPhase.idle && flow.sessionOptions != null;

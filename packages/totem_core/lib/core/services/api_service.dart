@@ -37,10 +37,7 @@ final apiServiceProvider = Provider<api.ClientApi>((ref) {
 }, name: 'Totem API Service Provider');
 
 class AuthTokenInterceptor extends dio.Interceptor {
-  const AuthTokenInterceptor({
-    required this.secureStorage,
-    required this.authRepository,
-  });
+  const new({required this.secureStorage, required this.authRepository});
 
   final SecureStorage secureStorage;
   final AuthRepository Function() authRepository;

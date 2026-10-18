@@ -47,6 +47,7 @@ jobs:
 
           claude_args: |
             --model opus
+            --allowedTools "Bash(flutter analyze:*),Bash(flutter test:*),Bash(dart format:*)"
 
           # Optional: Trigger when specific user is assigned to an issue
           # assignee_trigger: "claude-bot"

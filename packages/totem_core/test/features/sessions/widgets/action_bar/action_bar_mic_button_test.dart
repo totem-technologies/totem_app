@@ -19,7 +19,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ActionBarMicButton(
-            participant: null,
+            isMicOn: false,
             onToggle: (shouldEnable) async {
               requested = shouldEnable;
             },
@@ -38,16 +38,20 @@ void main() {
     tester,
   ) async {
     var callCount = 0;
+    var isMicOn = false;
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ActionBarMicButton(
-            participant: null,
-            requiresUnmuteConfirmation: true,
-            onToggle: (_) async {
-              callCount++;
-            },
+          body: StatefulBuilder(
+            builder: (context, setState) => ActionBarMicButton(
+              isMicOn: isMicOn,
+              requiresUnmuteConfirmation: true,
+              onToggle: (shouldEnable) async {
+                callCount++;
+                setState(() => isMicOn = shouldEnable);
+              },
+            ),
           ),
         ),
       ),
@@ -71,29 +75,8 @@ void main() {
     await tester.pumpAndSettle();
 
     check(callCount).equals(1);
-    check(
-      tester.widgetList(find.bySemanticsLabel('Microphone on')),
-    ).length.equals(1);
-  });
-
-  testWidgets('shows the initial session microphone state before publication', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ActionBarMicButton(
-            participant: null,
-            initiallyEnabled: true,
-            onToggle: (_) async {},
-          ),
-        ),
-      ),
-    );
-
-    check(
-      tester.widgetList(find.bySemanticsLabel('Microphone on')),
-    ).length.equals(1);
+    check(tester.widgetList(find.bySemanticsLabel('Microphone on'))).length
+        .equals(1);
   });
 
   testWidgets('controlled isMicOn drives the displayed microphone state', (
@@ -102,24 +85,18 @@ void main() {
     Future<void> pumpMic(bool isMicOn) => tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ActionBarMicButton(
-            participant: null,
-            isMicOn: isMicOn,
-            onToggle: (_) async {},
-          ),
+          body: ActionBarMicButton(isMicOn: isMicOn, onToggle: (_) async {}),
         ),
       ),
     );
 
     await pumpMic(true);
-    check(
-      tester.widgetList(find.bySemanticsLabel('Microphone on')),
-    ).length.equals(1);
+    check(tester.widgetList(find.bySemanticsLabel('Microphone on'))).length
+        .equals(1);
 
     await pumpMic(false);
-    check(
-      tester.widgetList(find.bySemanticsLabel('Microphone off')),
-    ).length.equals(1);
+    check(tester.widgetList(find.bySemanticsLabel('Microphone off'))).length
+        .equals(1);
   });
 
   testWidgets('ActionBarMicButton ignores re-entry while busy', (tester) async {
@@ -130,7 +107,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ActionBarMicButton(
-            participant: null,
+            isMicOn: false,
             onToggle: (_) {
               callCount++;
               return completer.future;

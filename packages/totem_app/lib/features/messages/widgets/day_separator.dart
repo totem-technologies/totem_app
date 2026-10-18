@@ -9,10 +9,13 @@ class DaySeparator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsetsDirectional.symmetric(vertical: 12),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 16,
+            vertical: 7,
+          ),
           decoration: BoxDecoration(
             color: AppTheme.messageDaySeparatorBg,
             borderRadius: BorderRadius.circular(15),

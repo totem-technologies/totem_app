@@ -14,9 +14,9 @@ import 'package:totem_core/core/services/secure_storage.dart';
 
 import '../../setup.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+class _MockAuthRepository extends Mock implements AuthRepository;
 
-class _MockSecureStorage extends Mock implements SecureStorage {}
+class _MockSecureStorage extends Mock implements SecureStorage;
 
 class _RecordingAdapter implements HttpClientAdapter {
   RequestOptions? request;
@@ -65,9 +65,8 @@ void main() {
         value: any(named: 'value'),
       ),
     ).thenAnswer((_) async {});
-    when(
-      () => secureStorage.delete(key: any(named: 'key')),
-    ).thenAnswer((_) async {});
+    when(() => secureStorage.delete(key: any(named: 'key')))
+        .thenAnswer((_) async {});
   });
 
   test(
@@ -81,15 +80,12 @@ void main() {
   );
 
   test('refreshes expired credentials and persists rotated tokens', () async {
-    when(
-      () => secureStorage.read(key: AppConsts.accessTokenKey),
-    ).thenAnswer((_) async => 'expired-access');
-    when(
-      () => secureStorage.read(key: AppConsts.refreshTokenKey),
-    ).thenAnswer((_) async => 'refresh-1');
-    when(
-      () => authRepository.isAccessTokenExpired('expired-access'),
-    ).thenReturn(true);
+    when(() => secureStorage.read(key: AppConsts.accessTokenKey))
+        .thenAnswer((_) async => 'expired-access');
+    when(() => secureStorage.read(key: AppConsts.refreshTokenKey))
+        .thenAnswer((_) async => 'refresh-1');
+    when(() => authRepository.isAccessTokenExpired('expired-access'))
+        .thenReturn(true);
     when(() => authRepository.refreshAccessToken('refresh-1')).thenAnswer(
       (_) async => const TokenResponse(
         accessToken: 'access-2',
@@ -116,36 +112,30 @@ void main() {
   test(
     'does not overwrite an authorization header supplied by the caller',
     () async {
-      when(
-        () => secureStorage.read(key: AppConsts.accessTokenKey),
-      ).thenAnswer((_) async => 'valid-access');
-      when(
-        () => authRepository.isAccessTokenExpired('valid-access'),
-      ).thenReturn(false);
+      when(() => secureStorage.read(key: AppConsts.accessTokenKey))
+          .thenAnswer((_) async => 'valid-access');
+      when(() => authRepository.isAccessTokenExpired('valid-access'))
+          .thenReturn(false);
 
       await dio.get<void>(
         '/protected',
         options: Options(headers: {'Authorization': 'Bearer caller-token'}),
       );
 
-      check(
-        adapter.request!.headers['Authorization'],
-      ).equals('Bearer caller-token');
+      check(adapter.request!.headers['Authorization'])
+          .equals('Bearer caller-token');
     },
   );
 
   test(
     'keeps credentials when refresh fails because the network is unavailable',
     () async {
-      when(
-        () => secureStorage.read(key: AppConsts.accessTokenKey),
-      ).thenAnswer((_) async => 'expired-access');
-      when(
-        () => secureStorage.read(key: AppConsts.refreshTokenKey),
-      ).thenAnswer((_) async => 'refresh-1');
-      when(
-        () => authRepository.isAccessTokenExpired('expired-access'),
-      ).thenReturn(true);
+      when(() => secureStorage.read(key: AppConsts.accessTokenKey))
+          .thenAnswer((_) async => 'expired-access');
+      when(() => secureStorage.read(key: AppConsts.refreshTokenKey))
+          .thenAnswer((_) async => 'refresh-1');
+      when(() => authRepository.isAccessTokenExpired('expired-access'))
+          .thenReturn(true);
       when(() => authRepository.refreshAccessToken('refresh-1')).thenThrow(
         DioException(
           requestOptions: RequestOptions(path: '/auth/refresh'),
@@ -166,15 +156,12 @@ void main() {
   test(
     'clears credentials when refresh is rejected as unauthenticated',
     () async {
-      when(
-        () => secureStorage.read(key: AppConsts.accessTokenKey),
-      ).thenAnswer((_) async => 'expired-access');
-      when(
-        () => secureStorage.read(key: AppConsts.refreshTokenKey),
-      ).thenAnswer((_) async => 'refresh-1');
-      when(
-        () => authRepository.isAccessTokenExpired('expired-access'),
-      ).thenReturn(true);
+      when(() => secureStorage.read(key: AppConsts.accessTokenKey))
+          .thenAnswer((_) async => 'expired-access');
+      when(() => secureStorage.read(key: AppConsts.refreshTokenKey))
+          .thenAnswer((_) async => 'refresh-1');
+      when(() => authRepository.isAccessTokenExpired('expired-access'))
+          .thenReturn(true);
       when(() => authRepository.refreshAccessToken('refresh-1')).thenThrow(
         DioException(
           requestOptions: RequestOptions(path: '/auth/refresh'),
@@ -195,12 +182,10 @@ void main() {
 
       check(error).isNotNull();
       check(error!.error).isA<AppAuthException>();
-      verify(
-        () => secureStorage.delete(key: AppConsts.accessTokenKey),
-      ).called(1);
-      verify(
-        () => secureStorage.delete(key: AppConsts.refreshTokenKey),
-      ).called(1);
+      verify(() => secureStorage.delete(key: AppConsts.accessTokenKey))
+          .called(1);
+      verify(() => secureStorage.delete(key: AppConsts.refreshTokenKey))
+          .called(1);
     },
   );
 }

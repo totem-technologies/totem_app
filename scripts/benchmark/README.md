@@ -4,7 +4,7 @@ This runs the shared call layout, video tile clipping, name overlays, waveform
 bars, room background, and status notice without joining LiveKit or starting the
 app's authentication, API, or telemetry services. Every participant has an HTML
 video element playing a local loop. Audio levels are deterministic synthetic
-samples delivered every 140 ms to the production `BarsView`, with its normal
+samples delivered every 140 ms to the production `LevelBars`, with its normal
 three bars and interpolation. No microphone or camera is used.
 
 The dedicated `totem_benchmark` package has no `.env` asset and is never an entry
@@ -92,7 +92,8 @@ configure the runner. `CHROME_BIN` and `FIREFOX_BIN` override the macOS executab
 defaults. Browser runs are sequential. Scenario order reverses on alternate
 repetitions to reduce order bias. Keep other workloads stable for comparisons.
 The browser's reduced-motion preference is inherited and recorded; compare runs
-with matching preferences, because it can shorten the waveform's transitions.
+with matching preferences. The waveform keeps animating under reduced motion,
+but other animations shorten.
 Use `--motion no-preference` or `--motion reduce` to hold that preference fixed.
 Use `--build-dir scratch/room-benchmark/<previous-run>/build` to capture an archived
 build without rebuilding it. This also works with `serve` for visual comparisons.

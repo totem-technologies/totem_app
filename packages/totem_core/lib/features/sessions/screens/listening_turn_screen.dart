@@ -18,7 +18,7 @@ import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 // TODO(totem): Refactor this screen declaration
 //              A lot of the code is redundant and a lot of this could be suggared
 class ListeningTurnScreen extends ConsumerWidget {
-  const ListeningTurnScreen({required this.session, super.key});
+  const new({required this.session, super.key});
 
   final SessionDetailSchema session;
 
@@ -217,7 +217,7 @@ class ListeningTurnScreen extends ConsumerWidget {
 }
 
 class _ListeningTurnGrid extends ConsumerWidget {
-  const _ListeningTurnGrid({
+  const new({
     required this.session,
     required this.speakingNow,
     this.showSpeakingNowParticipant = false,
@@ -311,8 +311,6 @@ class _ListeningTurnGrid extends ConsumerWidget {
                           child: ParticipantCard(
                             key: ValueKey(participant.sid),
                             participant: participant,
-                            session: session,
-                            participantIdentity: participant.identity,
                           ),
                         );
                       } else {
@@ -337,8 +335,6 @@ class _ListeningTurnGrid extends ConsumerWidget {
                   : ParticipantCard(
                       key: ValueKey(speaker.sid),
                       participant: speaker,
-                      session: session,
-                      participantIdentity: speaker.identity,
                     ),
               participants: [
                 for (final participant in sortedParticipants.where(
@@ -347,8 +343,6 @@ class _ListeningTurnGrid extends ConsumerWidget {
                   ParticipantCard(
                     key: ValueKey(participant.sid),
                     participant: participant,
-                    session: session,
-                    participantIdentity: participant.identity,
                   ),
               ],
             );

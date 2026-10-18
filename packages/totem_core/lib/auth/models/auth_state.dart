@@ -11,17 +11,17 @@ enum AuthStatus {
 
 @immutable
 class AuthState {
-  const AuthState({required this.status, this.user, this.email, this.error});
+  const new({required this.status, this.user, this.email, this.error});
 
-  factory AuthState.initial() {
+  factory initial() {
     return const AuthState(status: AuthStatus.initial);
   }
 
-  factory AuthState.loading() {
+  factory loading() {
     return const AuthState(status: AuthStatus.loading);
   }
 
-  factory AuthState.authenticated({required UserSchema user}) {
+  factory authenticated({required UserSchema user}) {
     return AuthState(
       status: AuthStatus.authenticated,
       user: user,
@@ -29,15 +29,15 @@ class AuthState {
     );
   }
 
-  factory AuthState.unauthenticated() {
+  factory unauthenticated() {
     return const AuthState(status: AuthStatus.unauthenticated);
   }
 
-  factory AuthState.awaitingVerification({required String email}) {
+  factory awaitingVerification({required String email}) {
     return AuthState(status: AuthStatus.awaitingVerification, email: email);
   }
 
-  factory AuthState.error(String message) {
+  factory error(String message) {
     return AuthState(status: AuthStatus.error, error: message);
   }
 

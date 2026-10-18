@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 void main() {
   void autoSizeTest(String description, AsyncValueSetter<WidgetTester> body) {
@@ -53,18 +54,16 @@ void main() {
       await tester.pump();
 
       check(calls).equals(1);
-      check(
-        tester.widgetList(find.byType(CircularProgressIndicator)),
-      ).length.equals(1);
+      check(tester.widgetList(find.byType(CircularProgressIndicator))).length
+          .equals(1);
 
       completer.complete(false);
       await tester.pump();
       await tester.pump();
 
       check(tester.widgetList(find.text('Continue'))).length.equals(1);
-      check(
-        tester.widgetList(find.byType(CircularProgressIndicator)),
-      ).length.equals(0);
+      check(tester.widgetList(find.byType(CircularProgressIndicator))).length
+          .equals(0);
     });
 
     autoSizeTest('keeps loading on successful completion when configured', (
@@ -83,9 +82,8 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      check(
-        tester.widgetList(find.byType(CircularProgressIndicator)),
-      ).length.equals(1);
+      check(tester.widgetList(find.byType(CircularProgressIndicator))).length
+          .equals(1);
       check(tester.widgetList(find.text('Start'))).length.equals(0);
     });
 
@@ -110,9 +108,8 @@ void main() {
       await tester.pump();
 
       check(calls).equals(0);
-      check(
-        tester.widgetList(find.byType(CircularProgressIndicator)),
-      ).length.equals(1);
+      check(tester.widgetList(find.byType(CircularProgressIndicator))).length
+          .equals(1);
     });
   });
 
@@ -135,9 +132,7 @@ void main() {
       await tester.pump();
 
       check(calls).equals(0);
-      check(
-        tester.widgetList(find.byIcon(Icons.arrow_forward_ios)),
-      ).length.equals(1);
+      check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
     });
 
     autoSizeTest(
@@ -161,17 +156,14 @@ void main() {
         await tester.pump();
 
         check(calls).equals(1);
-        check(
-          tester.widgetList(find.byType(CircularProgressIndicator)),
-        ).length.equals(1);
+        check(tester.widgetList(find.byType(CircularProgressIndicator))).length
+            .equals(1);
 
         completer.complete(false);
         await tester.pump();
         await tester.pump();
 
-        check(
-          tester.widgetList(find.byIcon(Icons.arrow_forward_ios)),
-        ).length.equals(1);
+        check(tester.widgetList(find.byType(TotemIcon))).length.equals(1);
       },
     );
 
@@ -187,9 +179,8 @@ void main() {
 
       await tester.pump();
 
-      check(
-        tester.widgetList(find.byType(CircularProgressIndicator)),
-      ).length.equals(1);
+      check(tester.widgetList(find.byType(CircularProgressIndicator))).length
+          .equals(1);
     });
   });
 

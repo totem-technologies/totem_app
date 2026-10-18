@@ -1,11 +1,11 @@
 name: totem_web
 description: "Guided introspection groups."
 publish_to: "none"
-version: 0.0.86+86
+version: 0.0.90+90
 resolution: workspace
 
 environment:
-  sdk: ^3.11.3
+  sdk: ^3.13.5
 
 dependencies:
   flutter:
@@ -19,7 +19,7 @@ dependencies:
   http: ^1.6.0
   web: ^1.1.1
 
-  sentry_flutter: ^9.21.0
+  sentry_flutter: ^10.0.0
 
   # State Management
   flutter_riverpod: ^3.3.1
@@ -34,8 +34,18 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   checks: ^0.3.2
   leak_tracker_flutter_testing: any
+  sentry_dart_plugin: ^3.4.0
 
   url_launcher_platform_interface: any
+
+sentry:
+  upload_source_maps: true
+  upload_sources: true
+  upload_debug_symbols: false
+  wait_for_processing: true
+  commits: false
+  legacy_web_symbolication: false
+
 flutter:
   uses-material-design: true
 

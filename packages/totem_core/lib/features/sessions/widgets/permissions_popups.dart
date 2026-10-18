@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
+import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
+import 'package:totem_core/features/sessions/widgets/permissions_browser.dart'
+    as browser;
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
 Future<void> showBackgroundActivityDialog(BuildContext context) async {
@@ -28,7 +31,7 @@ Future<void> showBackgroundActivityDialog(BuildContext context) async {
 }
 
 class BackgroundActivityDialog extends StatelessWidget {
-  const BackgroundActivityDialog({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +39,7 @@ class BackgroundActivityDialog extends StatelessWidget {
     return AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-      contentPadding: const EdgeInsets.all(24),
+      contentPadding: const EdgeInsetsDirectional.all(24),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -72,7 +75,7 @@ class BackgroundActivityDialog extends StatelessWidget {
                 if (context.mounted) Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsetsDirectional.symmetric(vertical: 12),
                 textStyle: const TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.bold,
@@ -91,70 +94,256 @@ class BackgroundActivityDialog extends StatelessWidget {
   }
 }
 
-/// Shows a dialog on web when browser permissions are denied, allowing
-/// the user to retry granting permissions or go back.
+/// Shows browser-specific recovery instructions when web permissions are denied.
 ///
-/// Returns true if permissions were eventually granted, false if the
-/// user chose to go back without granting.
+/// Returns true if permissions were granted after retrying. Native platforms do
+/// not show this dialog.
 Future<bool> showWebPermissionsDeniedDialog(
   BuildContext context, {
   AsyncValueGetter<bool>? retryPermissions,
 }) async {
+  if (!(kIsWeb || kIsWasm) || !context.mounted) return false;
+
   final container = ProviderScope.containerOf(context, listen: false);
-
-  if (!context.mounted) return false;
-
-  final tryAgain = await showDialog<bool>(
+  final permissionsGranted = await showDialog<bool>(
     context: context,
     barrierDismissible: false,
-    builder: (context) {
-      return ConfirmationDialog(
-        icon: TotemIcons.lock,
-        title: 'Permissions Required',
-        content:
-            'Totem needs access to your camera and microphone to join this session. '
-            'Please grant permissions and try again.',
-        confirmButtonText: 'Try again',
-        onConfirm: () async {
-          Navigator.of(context).pop(true);
-        },
+    builder: (context) => _WebPermissionsDeniedDialog(
+      instructions: _permissionsInstructions(),
+      onCheckAgain: () async {
+        if (retryPermissions != null) return await retryPermissions();
+
+        // Legacy callers use the permissions controller. The session pre-join
+        // flow supplies [retryPermissions] to refresh the real preview tracks.
+        final controller = container.read(
+          permissionsControllerProvider.notifier,
+        );
+        await controller.requestPermissions();
+        return (await controller.currentStatuses).requiredPermissionsGranted;
+      },
+    ),
+  );
+
+  if (!context.mounted) return false;
+  if (permissionsGranted == true) return true;
+
+  if (context.canPop()) context.pop();
+  return false;
+}
+
+class _PermissionInstructions {
+  const new({required this.browser, required this.steps, required this.helper});
+
+  final String browser;
+  final List<String> steps;
+  final String helper;
+}
+
+_PermissionInstructions _permissionsInstructions() {
+  final userAgent = browser.permissionsBrowserUserAgent;
+  final platform = defaultTargetPlatform;
+  final isMac = platform == TargetPlatform.macOS;
+  final isWindows = platform == TargetPlatform.windows;
+  final isAndroid = platform == TargetPlatform.android;
+  final isIOS = platform == TargetPlatform.iOS;
+
+  // Edge
+  if (userAgent.contains('Edg/') ||
+      userAgent.contains('EdgA/') ||
+      userAgent.contains('EdgiOS/')) {
+    return _PermissionInstructions(
+      browser: 'Edge',
+      steps: const [
+        'Click the lock icon beside the web address.',
+        'Open Permissions for this site.',
+        'Set Microphone and Camera to Allow, then reload.',
+      ],
+      helper: isWindows
+          ? 'Still blocked? On Windows, open Settings → Privacy → Microphone (and Camera) and let desktop apps use them.'
+          : isMac
+          ? 'Still blocked? On macOS, open System Settings → Privacy & Security → Microphone (and Camera) and turn on Edge.'
+          : 'Still blocked? Check your device settings and allow Edge to use the microphone and camera.',
+    );
+  }
+  // Firefox
+  if (userAgent.contains('Firefox/') || userAgent.contains('FxiOS/')) {
+    return const _PermissionInstructions(
+      browser: 'Firefox',
+      steps: [
+        'Click the crossed-out microphone and camera icon in the address bar.',
+        'Click the ✕ beside “Blocked Temporarily”.',
+        'Reload the page and choose Allow when asked.',
+      ],
+      helper: 'Firefox forgets temporary blocks on reload, a refresh is often all it takes.',
+    );
+  }
+  // Safari
+  if (userAgent.contains('Safari/') &&
+      !userAgent.contains('Chrome/') &&
+      !userAgent.contains('CriOS/')) {
+    return _PermissionInstructions(
+      browser: 'Safari',
+      steps: isIOS
+          ? const [
+              'Tap the aA button in the address bar → Website Settings.',
+              'Set Microphone and Camera to Allow.',
+              "Reload the page, we'll bring you straight back here.",
+            ]
+          : const [
+              'Open the Safari menu → Settings for This Website…',
+              'Set Microphone and Camera to Allow.',
+              "Reload the page, we'll bring you straight back here.",
+            ],
+      helper: isMac
+          ? 'Still blocked? Open System Settings → Privacy & Security → Microphone (and Camera) and turn on Safari.'
+          : isIOS
+          ? 'Still blocked? Open Settings → Safari → Camera and Microphone and allow access.'
+          : 'Still blocked? Check your device privacy settings and allow Safari to use the microphone and camera.',
+    );
+  }
+
+  // Chrome
+  return _PermissionInstructions(
+    browser: 'Chrome',
+    steps: const [
+      'Click the lock icon at the left of the address bar.',
+      'Switch Microphone and Camera to Allow.',
+      "Reload the page, we'll bring you straight back here.",
+    ],
+    helper: isMac
+        ? 'Still blocked? On macOS, open System Settings → Privacy & Security → microphone and camera and turn on Chrome.'
+        : isWindows
+        ? 'Still blocked? On Windows, open Settings → Privacy → Microphone (and Camera) and let desktop apps use them.'
+        : isAndroid
+        ? 'Still blocked? Open Android Settings → Apps → Chrome → Permissions and allow the microphone and camera.'
+        : 'Still blocked? Check your device privacy settings and allow Chrome to use the microphone and camera.',
+  );
+}
+
+class _WebPermissionsDeniedDialog extends StatefulWidget {
+  const new({required this.instructions, required this.onCheckAgain});
+
+  final _PermissionInstructions instructions;
+  final AsyncValueGetter<bool> onCheckAgain;
+
+  @override
+  State<_WebPermissionsDeniedDialog> createState() =>
+      _WebPermissionsDeniedDialogState();
+}
+
+class _WebPermissionsDeniedDialogState
+    extends State<_WebPermissionsDeniedDialog> {
+  Future<bool> _checkAgain() async {
+    try {
+      final granted = await widget.onCheckAgain();
+      if (granted && mounted) Navigator.of(context).pop(true);
+      return granted;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to check permissions again',
       );
-    },
-  );
-
-  if (!context.mounted) return false;
-
-  if (tryAgain != true) {
-    if (context.canPop()) {
-      context.pop();
+      return false;
     }
-    return false;
   }
 
-  final permissionsGranted = await (() async {
-    if (retryPermissions != null) {
-      return await retryPermissions();
-    }
-
-    // Native and legacy callers still use the permissions controller. The
-    // Session pre-join flow supplies [retryPermissions] on web so the real
-    // preview tracks request access without opening throwaway media streams.
-    final controller = container.read(permissionsControllerProvider.notifier);
-    await controller.requestPermissions();
-    return (await controller.currentStatuses).requiredPermissionsGranted;
-  })();
-
-  if (!context.mounted) return false;
-
-  if (permissionsGranted) {
-    return true;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final instructions = widget.instructions;
+    return Dialog(
+      insetPadding: const EdgeInsets.all(20),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: SingleChildScrollView(
+          padding: const EdgeInsetsDirectional.symmetric(
+            vertical: 14,
+            horizontal: 32,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 18,
+            children: [
+              Column(
+                spacing: 5,
+                children: [
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.of(context).pop(false),
+                      icon: const TotemIcon(TotemIcons.close),
+                    ),
+                  ),
+                  Text(
+                    'Your browser is still blocking us',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    'It needs to be changed in ${instructions.browser}. Three quick steps:',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelLarge,
+                  ),
+                ],
+              ),
+              for (var index = 0; index < instructions.steps.length; index++)
+                _PermissionStep(
+                  number: index + 1,
+                  text: instructions.steps[index],
+                ),
+              Text(
+                instructions.helper,
+                style: theme.textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+              Center(
+                child: ActionButton(
+                  onActionCompleted: _checkAgain,
+                  text: 'Check again',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
+}
 
-  // Permissions still not granted - show dialog again.
-  return await showWebPermissionsDeniedDialog(
-    context,
-    retryPermissions: retryPermissions,
-  );
+class _PermissionStep extends StatelessWidget {
+  const new({required this.number, required this.text});
+
+  final int number;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      spacing: 12,
+      children: [
+        CircleAvatar(
+          radius: 14,
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: theme.colorScheme.onPrimary,
+          child: Center(child: Text('$number', textAlign: TextAlign.center)),
+        ),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 Future<bool> showPermissionsRequestSheet(BuildContext context) async {
@@ -205,7 +394,7 @@ Future<bool> showPermissionsRequestSheet(BuildContext context) async {
 }
 
 class PermissionsRequestSheet extends ConsumerStatefulWidget {
-  const PermissionsRequestSheet({super.key});
+  const new({super.key});
 
   @override
   ConsumerState<PermissionsRequestSheet> createState() =>
@@ -330,7 +519,7 @@ class _PermissionsRequestSheetState
 }
 
 class PermissionItemTile extends StatelessWidget {
-  const PermissionItemTile({
+  const new({
     required this.icon,
     required this.title,
     required this.description,
@@ -359,7 +548,10 @@ class PermissionItemTile extends StatelessWidget {
           onTap: isGranted ? null : onTap,
           borderRadius: BorderRadius.circular(20),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 10,
+              vertical: 12,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -405,7 +597,7 @@ class PermissionItemTile extends StatelessWidget {
 }
 
 class _CircleCheckbox extends StatelessWidget {
-  const _CircleCheckbox({required this.isChecked});
+  const new({required this.isChecked});
 
   final bool isChecked;
 
@@ -420,7 +612,7 @@ class _CircleCheckbox extends StatelessWidget {
         border: isChecked ? null : Border.all(color: AppTheme.gray, width: 1.5),
       ),
       child: isChecked
-          ? const Icon(Icons.check, size: 14, color: Colors.white)
+          ? const TotemIcon(TotemIcons.checkmark, size: 14, color: Colors.white)
           : null,
     );
   }

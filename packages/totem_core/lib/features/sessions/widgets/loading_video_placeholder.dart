@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shimmer/shimmer.dart';
 
 class LoadingVideoPlaceholder extends StatelessWidget {
-  const LoadingVideoPlaceholder({super.key, this.borderRadius});
+  const new({super.key, this.borderRadius});
 
   final double? borderRadius;
 

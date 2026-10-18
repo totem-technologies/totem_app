@@ -100,8 +100,8 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(20),
+        margin: const EdgeInsetsDirectional.symmetric(horizontal: 20),
+        padding: const EdgeInsetsDirectional.all(20),
         decoration: BoxDecoration(
           color: AppTheme.white,
           borderRadius: BorderRadius.circular(20),
@@ -150,7 +150,7 @@ class _KeeperCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsetsDirectional.symmetric(vertical: 14),
       child: Row(
         children: [
           UserAvatar.custom(seed: seed, radius: 24, borderWidth: 0),

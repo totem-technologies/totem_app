@@ -9,6 +9,7 @@ import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/session_metadata.dart';
@@ -17,9 +18,9 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 /// A card widget displaying an upcoming session with its details.
 class UpcomingSessionCard extends ConsumerStatefulWidget {
-  const UpcomingSessionCard({required this.data, super.key, this.onTap});
+  const new({required this.data, super.key, this.onTap});
 
-  factory UpcomingSessionCard.fromSessionDetail(
+  factory fromSessionDetail(
     SessionDetailSchema session, {
     Key? key,
     VoidCallback? onTap,
@@ -31,7 +32,7 @@ class UpcomingSessionCard extends ConsumerStatefulWidget {
     );
   }
 
-  factory UpcomingSessionCard.fromSpaceAndSession(
+  factory fromSpaceAndSession(
     MobileSpaceDetailSchema space,
     NextSessionSchema session, {
     Key? key,
@@ -270,7 +271,11 @@ class _UpcomingSessionCardState extends ConsumerState<UpcomingSessionCard> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check, size: 14, color: Colors.white),
+                  TotemIcon(
+                    TotemIcons.checkmark,
+                    size: 14,
+                    color: Colors.white,
+                  ),
                   SizedBox(width: 4),
                   Text(
                     'Attending',

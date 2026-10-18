@@ -1,5 +1,5 @@
 class TotemImageAssets {
-  const TotemImageAssets._();
+  const new _();
 
   static const genericBackground = 'assets/images/welcome_background.jpg';
   static const welcomeCardImage = 'assets/images/welcome_card_img.webp';
@@ -17,7 +17,7 @@ class TotemImageAssets {
 }
 
 class TotemAudioAssets {
-  const TotemAudioAssets._();
+  const new _();
 
   static const enterLeaveSessionRingtone =
       'assets/audio/enter_leave_session_ringtone.mp3';

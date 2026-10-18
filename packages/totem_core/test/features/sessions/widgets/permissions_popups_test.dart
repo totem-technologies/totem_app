@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task_method_channel.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task_platform_interface.dart';
@@ -11,6 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:platform/testing.dart';
 import 'package:totem_core/features/sessions/controllers/features/permissions_controller.dart';
 import 'package:totem_core/features/sessions/widgets/permissions_popups.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 class FakePermissionsController extends PermissionsController {
   static PermissionsState initialState = const PermissionsState();
@@ -196,9 +198,9 @@ void main() {
       check(controller)
           .has((value) => value!.microphoneRequests, 'microphoneRequests')
           .equals(1);
-      check(
-        controller,
-      ).has((value) => value!.cameraRequests, 'cameraRequests').equals(1);
+      check(controller)
+          .has((value) => value!.cameraRequests, 'cameraRequests')
+          .equals(1);
     });
   });
 
@@ -226,9 +228,8 @@ void main() {
       await tester.pumpAndSettle();
 
       check(result).equals(true);
-      check(
-        tester.widgetList(find.byType(PermissionsRequestSheet)),
-      ).length.equals(0);
+      check(tester.widgetList(find.byType(PermissionsRequestSheet))).length
+          .equals(0);
     });
 
     testWidgets('returns false when dismissed', (tester) async {
@@ -381,6 +382,46 @@ void main() {
     });
   });
 
+  group('showWebPermissionsDeniedDialog', () {
+    testWidgets('shows recovery instructions and retries until granted', (
+      tester,
+    ) async {
+      final context = await pumpHost(tester, child: const SizedBox.shrink());
+      var retryCalls = 0;
+      var permissionsGranted = false;
+
+      final result = showWebPermissionsDeniedDialog(
+        context,
+        retryPermissions: () async {
+          retryCalls++;
+          return permissionsGranted;
+        },
+      );
+      await tester.pumpAndSettle();
+
+      if (!kIsWeb) {
+        check(await result).equals(false);
+        check(tester.widgetList(find.byType(Dialog))).length.equals(0);
+        return;
+      }
+
+      check(tester.widgetList(find.byType(Dialog))).length.equals(1);
+
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pumpAndSettle();
+      check(retryCalls).equals(1);
+      check(tester.widgetList(find.byType(Dialog))).length.equals(1);
+
+      permissionsGranted = true;
+      await tester.tap(find.byType(ElevatedButton));
+      await tester.pumpAndSettle();
+
+      check(retryCalls).equals(2);
+      check(await result).equals(true);
+      check(tester.widgetList(find.byType(Dialog))).length.equals(0);
+    });
+  });
+
   group('PermissionItemTile', () {
     testWidgets('invokes onTap when not granted', (tester) async {
       var taps = 0;
@@ -423,7 +464,14 @@ void main() {
       await tester.pump();
 
       check(taps).equals(0);
-      check(tester.widgetList(find.byIcon(Icons.check))).length.equals(1);
+      check(
+        tester.widgetList(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is TotemIcon && widget.icon == TotemIcons.checkmark,
+          ),
+        ),
+      ).length.equals(1);
     });
   });
 }

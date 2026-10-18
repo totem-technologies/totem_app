@@ -1,7 +1,8 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 class InfoText extends StatelessWidget {
-  const InfoText(this.text, {super.key});
+  const new(this.text, {super.key});
 
   final String text;
 
@@ -14,7 +15,7 @@ class InfoText extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 4,
         children: [
-          Icon(Icons.info_outline, color: theme.disabledColor, size: 16),
+          TotemIcon(TotemIcons.info, color: theme.disabledColor, size: 16),
           Expanded(
             child: Text(
               text,
