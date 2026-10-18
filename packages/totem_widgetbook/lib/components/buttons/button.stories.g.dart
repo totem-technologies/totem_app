@@ -24,8 +24,12 @@ final ButtonComponent = Component<Button, StoryArgs<Button>>(
 
 Primary is Figma "Button / Primary" (3734:10292): mauve pill, white
 SemiBold 16, 52px tall. Secondary keeps that geometry with a mauve
-outline. Text drops the pill. A null `onPressed` disables it, which
-reads as "waiting, not broken". For a link inside a sentence, use
+outline. Text drops the pill.
+
+Width is flex, not a Figma frame. Regular pills sit on a 140 min
+and grow when [block] is set, so the same control works on phone
+and desktop. A null `onPressed` disables it, which reads as
+"waiting, not broken". For a link inside a sentence, use
 [Button.inlineSpan].''',
   stories: [
     $Primary..$generatedName = 'Primary',

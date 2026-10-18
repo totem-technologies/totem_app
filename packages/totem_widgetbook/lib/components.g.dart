@@ -25,6 +25,7 @@ import 'package:totem_widgetbook/components/sessions/participant_card.stories.da
 import 'package:totem_widgetbook/components/sessions/session_card.stories.dart' as _totem_widgetbook_components_sessions_session_card_stories;
 import 'package:totem_widgetbook/components/sessions/session_controls.stories.dart' as _totem_widgetbook_components_sessions_session_controls_stories;
 import 'package:totem_widgetbook/components/sessions/waiting_card.stories.dart' as _totem_widgetbook_components_sessions_waiting_card_stories;
+import 'package:totem_widgetbook/screens/session_details.stories.dart' as _totem_widgetbook_screens_session_details_stories;
 import 'package:totem_widgetbook/screens/session_entry.stories.dart' as _totem_widgetbook_screens_session_entry_stories;
 
 final components = <_widgetbook.Component>[
@@ -46,5 +47,6 @@ final components = <_widgetbook.Component>[
   _totem_widgetbook_components_sessions_session_card_stories.SessionCardComponent,
   _totem_widgetbook_components_sessions_session_controls_stories.SessionControlsComponent,
   _totem_widgetbook_components_sessions_waiting_card_stories.WaitingCardComponent,
+  _totem_widgetbook_screens_session_details_stories.SessionDetailsPageComponent,
   _totem_widgetbook_screens_session_entry_stories.SessionEntryComponent,
 ];

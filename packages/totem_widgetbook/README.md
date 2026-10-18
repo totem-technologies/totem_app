@@ -54,6 +54,7 @@ Components/
   Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard
 Screens/
   session/:slug   SessionEntry (12 states)
+  spaces/event/:slug  SessionDetailsPage (4 states)
 ```
 
 ### Rules
