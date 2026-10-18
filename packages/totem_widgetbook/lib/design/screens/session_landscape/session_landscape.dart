@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../components/button/button.dart';
@@ -7,6 +8,8 @@ import '../../components/participant_card/participant_card.dart';
 import '../../components/session_controls/session_controls.dart';
 import '../../paint.dart';
 import '../../tokens/tokens.dart';
+import '../session_entry/entry_layer.dart';
+import 'session_chat.dart';
 
 /// Who holds the talking piece. Listening shows a featured speaker;
 /// speaking shows an equal grid of everyone else plus a self-view.
@@ -43,7 +46,7 @@ class LandscapePerson {
 /// Chrome (prompt, pass, controls) sits in a right-hand column so the
 /// video cluster can stay compact. This is catalog-only — wire it into
 /// the live session screens after review.
-class SessionLandscape extends StatelessWidget {
+class SessionLandscape extends StatefulWidget {
   const SessionLandscape({
     super.key,
     required this.people,
@@ -83,53 +86,112 @@ class SessionLandscape extends StatelessWidget {
   final VoidCallback? onMore;
 
   @override
+  State<SessionLandscape> createState() => _SessionLandscapeState();
+}
+
+class _SessionLandscapeState extends State<SessionLandscape> {
+  /// Compact (phone, including landscape) uses a sheet. Regular
+  /// (tablet / desktop) uses the 412 drawer. Same cut as the live
+  /// session: shortest side under 600 is a phone.
+  static const _phoneShortestSide = 600.0;
+
+  /// Figma session chat rail (3518:9823).
+  static const _chatDrawerWidth = 412.0;
+
+  var _chatOpen = false;
+
+  void _toggleChat() {
+    setState(() => _chatOpen = !_chatOpen);
+    widget.onChat?.call();
+  }
+
+  void _closeChat() {
+    if (!_chatOpen) return;
+    setState(() => _chatOpen = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final phone = MediaQuery.sizeOf(context).shortestSide < _phoneShortestSide;
+
     return Semantics(
       container: true,
       label: 'session',
-      child: ColoredBox(
-        color: TotemColors.coreSlate,
-        child: DefaultTextStyle.merge(
-          style: const TextStyle(color: TotemColors.coreCream),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final wide = constraints.maxWidth >= 900;
-              return Padding(
-                padding: EdgeInsets.fromLTRB(
-                  wide ? Spacing.s24 : Spacing.s12,
-                  wide ? Spacing.s20 : Spacing.s12,
-                  wide ? Spacing.s24 : Spacing.s12,
-                  wide ? Spacing.s20 : Spacing.s12,
-                ),
-                child: turn == LandscapeTurn.speaking
-                    ? _SpeakingStage(
-                        people: people,
-                        prompt: prompt,
-                        nextName: nextName,
-                        micOn: micOn,
-                        cameraOn: cameraOn,
-                        reactionsOpen: reactionsOpen,
-                        onMic: onMic,
-                        onCamera: onCamera,
-                        onPass: onPass,
-                        onChat: onChat,
-                        onReactions: onReactions,
-                        onMore: onMore,
-                      )
-                    : _ListeningStage(
-                        people: people,
-                        nextName: nextName,
-                        micOn: micOn,
-                        cameraOn: cameraOn,
-                        reactionsOpen: reactionsOpen,
-                        onMic: onMic,
-                        onCamera: onCamera,
-                        onChat: onChat,
-                        onReactions: onReactions,
-                        onMore: onMore,
-                      ),
-              );
-            },
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): _closeChat,
+        },
+        child: Focus(
+          autofocus: true,
+          child: ColoredBox(
+            color: TotemColors.coreSlate,
+            child: DefaultTextStyle.merge(
+              style: const TextStyle(color: TotemColors.coreCream),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final wide = constraints.maxWidth >= 900;
+                      return Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          wide ? Spacing.s24 : Spacing.s12,
+                          wide ? Spacing.s20 : Spacing.s12,
+                          wide ? Spacing.s24 : Spacing.s12,
+                          wide ? Spacing.s20 : Spacing.s12,
+                        ),
+                        child: widget.turn == LandscapeTurn.speaking
+                            ? _SpeakingStage(
+                                people: widget.people,
+                                prompt: widget.prompt,
+                                nextName: widget.nextName,
+                                micOn: widget.micOn,
+                                cameraOn: widget.cameraOn,
+                                reactionsOpen: widget.reactionsOpen,
+                                onMic: widget.onMic,
+                                onCamera: widget.onCamera,
+                                onPass: widget.onPass,
+                                onChat: _toggleChat,
+                                onReactions: widget.onReactions,
+                                onMore: widget.onMore,
+                              )
+                            : _ListeningStage(
+                                people: widget.people,
+                                nextName: widget.nextName,
+                                micOn: widget.micOn,
+                                cameraOn: widget.cameraOn,
+                                reactionsOpen: widget.reactionsOpen,
+                                onMic: widget.onMic,
+                                onCamera: widget.onCamera,
+                                onChat: _toggleChat,
+                                onReactions: widget.onReactions,
+                                onMore: widget.onMore,
+                              ),
+                      );
+                    },
+                  ),
+                  // Phone: sheet from the bottom. Tablet / desktop: drawer
+                  // from the right. Same spring as Session Entry so a flick
+                  // carries and a grab mid-flight restarts from the live value.
+                  // Key the layer on the size class — sheet offsets on Y,
+                  // drawer on X, and mixing them mid-flight jumps the panel.
+                  EntryLayer(
+                    key: ValueKey(phone),
+                    open: _chatOpen,
+                    kind: phone ? LayerKind.sheet : LayerKind.panel,
+                    label: 'Chat',
+                    scrim: LayerScrim.soft,
+                    dismissOnScrim: true,
+                    onDismiss: _closeChat,
+                    expandChild: true,
+                    panelMaxWidth: _chatDrawerWidth,
+                    sheetHeightFactor: 0.92,
+                    background: TotemColors.coreCream,
+                    child: SessionChat(onClose: _closeChat),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

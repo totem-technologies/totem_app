@@ -52,6 +52,10 @@ class EntryLayer extends StatefulWidget {
     this.dismissOnScrim = false,
     this.onDismiss,
     required this.child,
+    this.expandChild = false,
+    this.panelMaxWidth = 360,
+    this.sheetHeightFactor = 0.78,
+    this.background,
   });
 
   final bool open;
@@ -61,6 +65,21 @@ class EntryLayer extends StatefulWidget {
   final bool dismissOnScrim;
   final VoidCallback? onDismiss;
   final Widget child;
+
+  /// Chat (and anything with an [Expanded] list) needs the surface, not a
+  /// scroll view of its own. Leave this off for Session Entry cards so
+  /// those sheets still hug their content.
+  final bool expandChild;
+
+  /// Figma session chat is 412. Admission stays at 360.
+  final double panelMaxWidth;
+
+  /// How much of the parent the sheet covers. Chat wants more than the
+  /// compact admission sheet.
+  final double sheetHeightFactor;
+
+  /// Solid fill. Null keeps the existing white / frosted drawer.
+  final Color? background;
 
   @override
   State<EntryLayer> createState() => _EntryLayerState();
@@ -260,13 +279,14 @@ class _EntryLayerState extends State<EntryLayer>
     final ink = DefaultTextStyle.of(
       context,
     ).style.copyWith(color: theme.textPrimary);
+    final surface = widget.background ?? theme.surface;
 
     switch (widget.kind) {
       case LayerKind.sheet:
         return Align(
           alignment: Alignment.bottomCenter,
           child: FractionallySizedBox(
-            heightFactor: 0.78,
+            heightFactor: widget.sheetHeightFactor,
             alignment: Alignment.bottomCenter,
             child: Align(
               alignment: Alignment.bottomCenter,
@@ -276,7 +296,7 @@ class _EntryLayerState extends State<EntryLayer>
                   key: _slideKey,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: theme.surface,
+                    color: surface,
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(Radii.lg),
                     ),
@@ -284,26 +304,39 @@ class _EntryLayerState extends State<EntryLayer>
                   ),
                   child: DefaultTextStyle(
                     style: ink,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(
-                        Spacing.s20,
-                        Spacing.s4,
-                        Spacing.s20,
-                        Spacing.s32,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _Grabber(
-                            horizontal: false,
-                            onStart: _onDragStart,
-                            onUpdate: _onDragUpdate,
-                            onEnd: _onDragEnd,
+                    child: widget.expandChild
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _Grabber(
+                                horizontal: false,
+                                onStart: _onDragStart,
+                                onUpdate: _onDragUpdate,
+                                onEnd: _onDragEnd,
+                              ),
+                              Expanded(child: widget.child),
+                            ],
+                          )
+                        : SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(
+                              Spacing.s20,
+                              Spacing.s4,
+                              Spacing.s20,
+                              Spacing.s32,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _Grabber(
+                                  horizontal: false,
+                                  onStart: _onDragStart,
+                                  onUpdate: _onDragUpdate,
+                                  onEnd: _onDragEnd,
+                                ),
+                                widget.child,
+                              ],
+                            ),
                           ),
-                          widget.child,
-                        ],
-                      ),
-                    ),
                   ),
                 ),
               ),
@@ -314,57 +347,64 @@ class _EntryLayerState extends State<EntryLayer>
       case LayerKind.panel:
         // Flush top and right — no floating inset. Leading corners only.
         const radius = BorderRadius.horizontal(left: Radius.circular(Radii.lg));
+        final panelFill = widget.background ?? fade(theme.surface, 0.94);
+        Widget panelBody = ColoredBox(
+          color: panelFill,
+          child: DefaultTextStyle(
+            style: ink,
+            child: Stack(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: widget.expandChild
+                      ? widget.child
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.all(Spacing.s20),
+                          child: widget.child,
+                        ),
+                ),
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 20,
+                  child: _Grabber(
+                    horizontal: true,
+                    onStart: _onDragStart,
+                    onUpdate: _onDragUpdate,
+                    onEnd: _onDragEnd,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        // Frost only when we are still on the default white glass. A
+        // solid cream chat panel should read as a wall, not a window.
+        if (widget.background == null) {
+          panelBody = BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: Shadows.frostedGlassBlur / 2,
+              sigmaY: Shadows.frostedGlassBlur / 2,
+            ),
+            child: panelBody,
+          );
+        }
         return Align(
           alignment: Alignment.centerRight,
           child: Transform.translate(
             offset: Offset(offset, 0),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 360),
+            child: SizedBox(
+              width: widget.panelMaxWidth,
+              height: double.infinity,
               child: DecoratedBox(
                 key: _slideKey,
                 decoration: const BoxDecoration(
                   borderRadius: radius,
                   boxShadow: Shadows.elevation2,
                 ),
-                child: ClipRRect(
-                  borderRadius: radius,
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(
-                      sigmaX: Shadows.frostedGlassBlur / 2,
-                      sigmaY: Shadows.frostedGlassBlur / 2,
-                    ),
-                    child: ColoredBox(
-                      color: fade(theme.surface, 0.94),
-                      child: DefaultTextStyle(
-                        style: ink,
-                        child: Stack(
-                          children: [
-                            SizedBox(
-                              width: double.infinity,
-                              height: double.infinity,
-                              child: SingleChildScrollView(
-                                padding: const EdgeInsets.all(Spacing.s20),
-                                child: widget.child,
-                              ),
-                            ),
-                            Positioned(
-                              left: 0,
-                              top: 0,
-                              bottom: 0,
-                              width: 20,
-                              child: _Grabber(
-                                horizontal: true,
-                                onStart: _onDragStart,
-                                onUpdate: _onDragUpdate,
-                                onEnd: _onDragEnd,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                child: ClipRRect(borderRadius: radius, child: panelBody),
               ),
             ),
           ),
