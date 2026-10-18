@@ -28,6 +28,7 @@ flutter:
   # Keep these under assets/ (not lib/) so Flutter web does not look
   # them up as packages/totem_widgetbook/lib/....
   assets:
+    - assets/design/home/
     - assets/design/participant_card/
     - assets/design/session_card/
     - assets/design/session_controls/

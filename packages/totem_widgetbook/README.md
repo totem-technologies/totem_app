@@ -53,6 +53,7 @@ Components/
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
   Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard
 Screens/
+  home            HomeScreen (4 states)
   session/:slug   SessionEntry (12 states)
 ```
 

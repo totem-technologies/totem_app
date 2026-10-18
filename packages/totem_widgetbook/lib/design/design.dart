@@ -14,5 +14,6 @@ export 'paint.dart';
 export 'pressable.dart';
 export 'screens/session_entry/entry_layer.dart';
 export 'screens/session_entry/session_details.dart';
+export 'screens/home/home_screen.dart';
 export 'screens/session_entry/session_entry.dart';
 export 'tokens/tokens.dart';
