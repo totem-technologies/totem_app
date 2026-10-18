@@ -14,6 +14,11 @@ const _assets = 'assets/design/session_card';
 /// Native size is the Figma frame: 362 × 253, split evenly between the
 /// photo and the white body. Width follows the parent; height keeps that
 /// ratio so a narrower column doesn't squash the type against the picture.
+/// A tight parent height wins over the ratio — the Sessions list pins
+/// cards at 250 (Figma 2315:8056).
+///
+/// [onAddToCalendar] turns on the calendar slot: a round mauve button at
+/// the end of the Keeper row (Figma 2253:1859).
 class SessionCard extends StatelessWidget {
   const SessionCard({
     super.key,
@@ -25,7 +30,9 @@ class SessionCard extends StatelessWidget {
     required this.time,
     required this.meridiem,
     required this.seatsLeft,
+    this.photoAlignment = const Alignment(0, -0.44),
     this.onSelect,
+    this.onAddToCalendar,
   });
 
   /// Cover photo. Crops to the top half of the card.
@@ -52,8 +59,16 @@ class SessionCard extends StatelessWidget {
   /// Open seats. The card always says "seats left" after the number.
   final int seatsLeft;
 
+  /// Where the cover photo crops. The default suits the portrait in the
+  /// Figma card.
+  final Alignment photoAlignment;
+
   /// Whole card is the hit target when this is set.
   final VoidCallback? onSelect;
+
+  /// Shows the calendar button. Keep [onSelect] null when this is set, so
+  /// the button is not a control nested inside another.
+  final VoidCallback? onAddToCalendar;
 
   String get _seatsLabel =>
       seatsLeft == 1 ? '1 seat left' : '$seatsLeft seats left';
@@ -77,7 +92,7 @@ class SessionCard extends StatelessWidget {
                 child: Image(
                   image: photo,
                   fit: BoxFit.cover,
-                  alignment: const Alignment(0, -0.44),
+                  alignment: photoAlignment,
                 ),
               ),
               Expanded(child: _body()),
@@ -201,27 +216,33 @@ class SessionCard extends StatelessWidget {
             ],
           ),
           Row(
-            spacing: 6,
             children: [
-              _avatar(),
-              Text('with', style: TotemText.raw(size: 14, color: ink)),
-              Flexible(
-                child: Text(
-                  keeperName,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
-                  style: TotemText.raw(
-                    size: 14,
-                    weight: FontWeight.w600,
-                    color: ink,
-                  ),
-                ),
-              ),
+              Expanded(child: _keeper(ink)),
+              if (onAddToCalendar case final onTap?)
+                _CalendarButton(onTap: onTap),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _keeper(Color ink) {
+    return Row(
+      spacing: 6,
+      children: [
+        _avatar(),
+        Text('with', style: TotemText.raw(size: 14, color: ink)),
+        Flexible(
+          child: Text(
+            keeperName,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: TotemText.raw(size: 14, weight: FontWeight.w600, color: ink),
+          ),
+        ),
+      ],
     );
   }
 
@@ -253,6 +274,40 @@ class SessionCard extends StatelessWidget {
           weight: FontWeight.w600,
           height: 1,
           color: TotemColors.coreWhite,
+        ),
+      ),
+    );
+  }
+}
+
+/// 30px mauve circle with the calendar glyph (Figma 2253:1859).
+class _CalendarButton extends StatelessWidget {
+  const _CalendarButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      pressedScale: 0.92,
+      focusColor: TotemColors.coreMauve,
+      focusRadius: BorderRadius.circular(Radii.full),
+      semanticLabel: 'Add to calendar',
+      builder: (context, states) => Container(
+        width: 30,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: states.contains(WidgetState.hovered)
+              ? mix(TotemColors.coreSlate, 0.12, TotemColors.coreMauve)
+              : TotemColors.coreMauve,
+          shape: BoxShape.circle,
+        ),
+        child: SvgPicture.asset(
+          '$_assets/icon-calendar.svg',
+          width: 18,
+          height: 18,
         ),
       ),
     );
