@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
-import 'package:totem_core/features/sessions/widgets/audio_visualizer_bars.dart';
+import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/features/sessions/widgets/participant_tile_surface.dart';
@@ -48,7 +48,9 @@ class BenchmarkRoom extends StatelessWidget {
                       child: Container(
                         width: metrics.badgeSize,
                         height: metrics.badgeSize,
-                        padding: EdgeInsets.all(metrics.badgePadding),
+                        padding: EdgeInsetsDirectional.all(
+                          metrics.badgePadding,
+                        ),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: Colors.black54,
@@ -90,7 +92,7 @@ class BenchmarkRoom extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsetsDirectional.all(16),
             child: Row(
               children: [
                 const Expanded(child: Text('Room rendering benchmark')),
@@ -113,7 +115,7 @@ class BenchmarkRoom extends StatelessWidget {
             ),
           ),
           const Padding(
-            padding: EdgeInsets.all(12),
+            padding: EdgeInsetsDirectional.all(12),
             child: Text('Local video · synthetic audio levels'),
           ),
         ],
@@ -123,7 +125,7 @@ class BenchmarkRoom extends StatelessWidget {
 }
 
 /// Feeds deterministic levels at the same 140 ms cadence as the call's audio
-/// visualizer. BarsView owns the production interpolation and painting.
+/// visualizer, drawn by the production LevelBars.
 class SyntheticWaveform extends StatefulWidget {
   const SyntheticWaveform({
     required this.participant,
@@ -170,28 +172,13 @@ class _SyntheticWaveformState extends State<SyntheticWaveform> {
   }
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => BarsView(
-      options: AudioVisualizerWidgetOptions(
-        color: Colors.white,
-        barCount: 3,
-        spacing: 2.5,
-        barMinOpacity: 0.8,
-        minHeight: constraints.maxHeight * 0.2,
-        maxHeight: constraints.maxHeight,
-      ),
-      elements: [
-        for (var bar = 0; bar < 3; bar++)
-          BarsViewItem(
-            value:
-                0.1 +
-                0.8 *
-                    math
-                        .sin(_sample * 0.9 + bar * 1.7 + widget.participant)
-                        .abs(),
-            color: Colors.white,
-          ),
-      ],
-    ),
+  Widget build(BuildContext context) => LevelBars(
+    color: Colors.white,
+    levels: [
+      for (var bar = 0; bar < 3; bar++)
+        0.1 +
+            0.8 *
+                math.sin(_sample * 0.9 + bar * 1.7 + widget.participant).abs(),
+    ],
   );
 }

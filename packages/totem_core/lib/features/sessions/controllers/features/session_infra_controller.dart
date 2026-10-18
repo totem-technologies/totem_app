@@ -10,7 +10,7 @@ import 'package:totem_core/core/errors/error_handler.dart';
 part 'session_infra_controller.g.dart';
 
 class SessionInfraPlatform {
-  const SessionInfraPlatform();
+  const new();
 
   bool get canUseForegroundTask =>
       !kIsWeb && !kIsWasm && (Platform.isAndroid || Platform.isIOS);
@@ -73,7 +73,7 @@ class SessionInfraPlatform {
 
 @riverpod
 class SessionInfraController extends _$SessionInfraController {
-  SessionInfraController({SessionInfraPlatform? platform})
+  new({SessionInfraPlatform? platform})
     : _platform = platform ?? const SessionInfraPlatform();
 
   final SessionInfraPlatform _platform;

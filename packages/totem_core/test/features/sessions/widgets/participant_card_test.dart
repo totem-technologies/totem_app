@@ -1,16 +1,15 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
-import 'package:livekit_client/livekit_client.dart'
-    hide ConnectionState, logger;
 import 'package:material_ui/material_ui.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/media/room_media.dart';
+import 'package:totem_core/features/sessions/media/room_media_providers.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
@@ -22,26 +21,17 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
-import '../livekit_mocks.dart';
+import '../media/fake_room_media.dart';
+import '../media/test_participants.dart';
 
 void main() {
-  late MockRemoteParticipant remoteParticipant;
+  final remoteParticipant = testParticipant('user-2', name: 'John Doe');
   late FakeSessionController fakeSessionState;
-
-  late VoidCallback restoreWebRtcChannels;
-
-  setUpAll(() {
-    registerFallbackValue(GlobalKey());
-    restoreWebRtcChannels = stubFlutterWebRtcChannels();
-  });
-
-  tearDownAll(() {
-    restoreWebRtcChannels();
-  });
+  late FakeRoomMedia roomMedia;
 
   setUp(() {
-    remoteParticipant = MockRemoteParticipant('user-2', 'John Doe');
     fakeSessionState = FakeSessionController();
+    roomMedia = FakeRoomMedia();
   });
 
   Future<void> pumpWidget(
@@ -73,6 +63,7 @@ void main() {
               ),
             ),
           ),
+          roomMediaProvider.overrideWithValue(roomMedia),
           ...overrides.cast(),
         ],
         child: MaterialApp(
@@ -94,17 +85,12 @@ void main() {
             fakeSessionState.mockState,
           ),
         ],
-        child: ParticipantCard(
-          participant: remoteParticipant,
-          session: null,
-          participantIdentity: remoteParticipant.identity,
-        ),
+        child: ParticipantCard(participant: remoteParticipant),
       );
 
       check(tester.widgetList(find.text('John Doe'))).length.equals(1);
-      check(
-        tester.widgetList(find.byType(SpeakingIndicatorOrEmoji)),
-      ).length.equals(1);
+      check(tester.widgetList(find.byType(SpeakingIndicatorOrEmoji))).length
+          .equals(1);
     });
 
     testWidgets(
@@ -128,23 +114,18 @@ void main() {
               fakeSessionState.mockState,
             ),
           ],
-          child: ParticipantCard(
-            participant: remoteParticipant,
-            session: null,
-            participantIdentity: remoteParticipant.identity,
-          ),
+          child: ParticipantCard(participant: remoteParticipant),
         );
 
-        check(
-          tester.widgetList(find.byType(ParticipantControlButton)),
-        ).length.equals(0);
+        check(tester.widgetList(find.byType(ParticipantControlButton))).length
+            .equals(0);
       },
     );
 
     testWidgets('shows keeper shield icon if participant is keeper', (
       tester,
     ) async {
-      final keeperParticipant = MockRemoteParticipant('keeper-1', 'The Keeper');
+      final keeperParticipant = testParticipant('keeper-1', name: 'The Keeper');
 
       // Add keeper-1 as keeper to the room state
       fakeSessionState.mockState = SessionRoomState(
@@ -175,11 +156,7 @@ void main() {
             fakeSessionState.mockState,
           ),
         ],
-        child: ParticipantCard(
-          participant: keeperParticipant,
-          session: null,
-          participantIdentity: keeperParticipant.identity,
-        ),
+        child: ParticipantCard(participant: keeperParticipant),
       );
 
       check(tester.widgetList(find.byType(TotemIconLogo))).length.equals(1);
@@ -224,21 +201,14 @@ void main() {
       );
 
       check(tester.widgetList(find.text('Waiting room'))).length.equals(1);
-      check(
-        tester.widgetList(find.byType(TotemIcon)),
-      ).length.equals(1); // clock icon
+      check(tester.widgetList(find.byType(TotemIcon))).length
+          .equals(1); // clock icon
     });
 
     testWidgets('sizes overlay badges from the card on phone-sized windows', (
       tester,
     ) async {
-      final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
-      when(
-        () => speaker.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(null);
-      when(
-        () => speaker.getTrackPublicationBySource(TrackSource.microphone),
-      ).thenReturn(null);
+      final speaker = testParticipant('user-1', name: 'Jane Doe');
       fakeSessionState.mockState = SessionRoomState(
         connection: fakeSessionState.mockState.connection,
         chat: fakeSessionState.mockState.chat,
@@ -271,9 +241,8 @@ void main() {
         child: const FeaturedParticipantCard(),
       );
 
-      check(
-        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(28, 28));
+      check(tester.getSize(find.byType(SpeakingIndicatorOrEmoji)))
+          .equals(const Size(28, 28));
       final decoration = tester
           .widget<Container>(
             find.descendant(
@@ -283,19 +252,12 @@ void main() {
           )
           .decoration;
       check(decoration).isA<BoxDecoration>();
-      check(
-        (decoration! as BoxDecoration).boxShadow!,
-      ).deepEquals(kElevationToShadow[6]!);
+      check((decoration! as BoxDecoration).boxShadow!)
+          .deepEquals(kElevationToShadow[6]!);
     });
 
     testWidgets('caps overlay badges on desktop-class windows', (tester) async {
-      final speaker = MockRemoteParticipant('user-1', 'Jane Doe');
-      when(
-        () => speaker.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(null);
-      when(
-        () => speaker.getTrackPublicationBySource(TrackSource.microphone),
-      ).thenReturn(null);
+      final speaker = testParticipant('user-1', name: 'Jane Doe');
       fakeSessionState.mockState = SessionRoomState(
         connection: fakeSessionState.mockState.connection,
         chat: fakeSessionState.mockState.chat,
@@ -328,307 +290,65 @@ void main() {
         child: const FeaturedParticipantCard(),
       );
 
-      check(
-        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
-      ).equals(const Size(28, 28));
-    });
-  });
-
-  group('LocalParticipantCard', () {
-    testWidgets('keeps a local renderer mounted while the camera is covered', (
-      tester,
-    ) async {
-      final cameraOn = ValueNotifier(true);
-      final track = MockLocalVideoTrack();
-      when(() => track.sid).thenReturn('local-track');
-      addTearDown(cameraOn.dispose);
-
-      await pumpWidget(
-        tester,
-        authState: AuthState.unauthenticated(),
-        child: ValueListenableBuilder<bool>(
-          valueListenable: cameraOn,
-          builder: (_, isCameraOn, _) =>
-              LocalParticipantCard(isCameraOn: isCameraOn, videoTrack: track),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final renderer = tester.element(find.byType(VideoTrackRenderer));
-
-      cameraOn.value = false;
-      await tester.pump();
-
-      check(
-        tester.element(find.byType(VideoTrackRenderer)),
-      ).identicalTo(renderer);
-      check(tester.widgetList(find.byType(UserAvatar))).length.equals(2);
-
-      cameraOn.value = true;
-      await tester.pump();
-
-      check(
-        tester.element(find.byType(VideoTrackRenderer)),
-      ).identicalTo(renderer);
-      check(tester.widgetList(find.byType(UserAvatar))).length.equals(1);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
+      check(tester.getSize(find.byType(SpeakingIndicatorOrEmoji)))
+          .equals(const Size(28, 28));
     });
   });
 
   group('ParticipantVideo', () {
-    testWidgets('keeps a camera renderer mounted across mute transitions', (
+    /// Whether an avatar paints above the participant's video. Children of a
+    /// Stack paint in order, which matches element tree order.
+    bool avatarCoversVideo(WidgetTester tester) {
+      final elements = tester.allElements.toList();
+      final video = elements.indexWhere((e) => e.widget is FakeVideoView);
+      final lastAvatar = elements.lastIndexWhere((e) => e.widget is UserAvatar);
+      return lastAvatar > video;
+    }
+
+    testWidgets('covers the video with the avatar while the camera is off', (
       tester,
     ) async {
-      final mockParticipant = MockRemoteParticipant('user-2', 'John Doe');
-      final mockPublication = MockRemoteTrackPublication<RemoteVideoTrack>();
-      final mockTrack = MockRemoteVideoTrack();
-      final mutedEvent = MockTrackMutedEvent();
-      final unmutedEvent = MockTrackUnmutedEvent();
+      roomMedia.setMediaState(
+        remoteParticipant.identity,
+        const ParticipantMediaState(hasCamera: true),
+      );
+      await pumpWidget(
+        tester,
+        authState: AuthState.unauthenticated(),
+        child: ParticipantVideo(participant: remoteParticipant),
+      );
+      await tester.pump();
+      final video = tester.element(find.byType(FakeVideoView));
+      check(avatarCoversVideo(tester)).isTrue();
 
-      when(
-        () => mockParticipant.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(mockPublication);
-      when(() => mockPublication.track).thenReturn(mockTrack);
-      when(() => mockPublication.source).thenReturn(TrackSource.camera);
-      when(() => mockPublication.sid).thenReturn('pub-sid');
-      when(() => mockPublication.subscribed).thenReturn(true);
-      when(() => mockPublication.muted).thenReturn(false);
-      when(() => mockTrack.sid).thenReturn('track-sid');
-      when(() => mockTrack.isActive).thenReturn(true);
-      when(() => mockTrack.muted).thenReturn(false);
-      when(() => mutedEvent.publication).thenReturn(mockPublication);
-      when(() => unmutedEvent.publication).thenReturn(mockPublication);
+      roomMedia.setMediaState(
+        remoteParticipant.identity,
+        const ParticipantMediaState(hasCamera: true, isCameraOn: true),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      check(avatarCoversVideo(tester)).isFalse();
+      // The video stays mounted, so turning the camera on doesn't reload it.
+      check(tester.element(find.byType(FakeVideoView))).identicalTo(video);
+    });
+
+    testWidgets('a camera that is already on shows from the first frame', (
+      tester,
+    ) async {
+      roomMedia.setMediaState(
+        remoteParticipant.identity,
+        const ParticipantMediaState(hasCamera: true, isCameraOn: true),
+      );
 
       await pumpWidget(
         tester,
         authState: AuthState.unauthenticated(),
-        overrides: [
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
-          ),
-        ],
-        child: ParticipantVideo(participant: mockParticipant),
+        child: ParticipantVideo(participant: remoteParticipant),
       );
-      await tester.pumpAndSettle();
 
-      final renderer = tester.element(find.byType(VideoTrackRenderer));
-      check(
-        tester.widgetList(find.byType(VideoTrackRenderer)),
-      ).length.equals(1);
-      final visibleAvatarCount = tester
-          .widgetList(find.byType(UserAvatar))
-          .length;
-
-      for (final event in [
-        mutedEvent,
-        unmutedEvent,
-        mutedEvent,
-        unmutedEvent,
-      ]) {
-        final isMuted = identical(event, mutedEvent);
-        when(() => mockPublication.muted).thenReturn(isMuted);
-        when(() => mockTrack.muted).thenReturn(isMuted);
-        if (isMuted) {
-          mockParticipant.listener.emitMuted(event as TrackMutedEvent);
-        } else {
-          mockParticipant.listener.emitUnmuted(event as TrackUnmutedEvent);
-        }
-        await tester.pump();
-
-        check(
-          tester.element(find.byType(VideoTrackRenderer)),
-        ).identicalTo(renderer);
-        check(
-          tester.widgetList(find.byType(UserAvatar)),
-        ).length.equals(visibleAvatarCount);
-      }
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
+      check(avatarCoversVideo(tester)).isFalse();
     });
-
-    testWidgets('replaces or removes the renderer when the track changes', (
-      tester,
-    ) async {
-      final participant = MockRemoteParticipant('user-2', 'John Doe');
-      final firstPublication = MockRemoteTrackPublication<RemoteVideoTrack>();
-      final firstTrack = MockRemoteVideoTrack();
-      final secondPublication = MockRemoteTrackPublication<RemoteVideoTrack>();
-      final secondTrack = MockRemoteVideoTrack();
-      RemoteTrackPublication<RemoteVideoTrack>? cameraPublication =
-          firstPublication;
-
-      when(
-        () => participant.getTrackPublicationBySource(TrackSource.camera),
-      ).thenAnswer((_) => cameraPublication);
-      for (final entry in [
-        (publication: firstPublication, track: firstTrack, sid: 'first'),
-        (publication: secondPublication, track: secondTrack, sid: 'second'),
-      ]) {
-        when(() => entry.publication.track).thenReturn(entry.track);
-        when(() => entry.publication.source).thenReturn(TrackSource.camera);
-        when(() => entry.publication.sid).thenReturn('pub-${entry.sid}');
-        when(() => entry.publication.subscribed).thenReturn(true);
-        when(() => entry.publication.muted).thenReturn(false);
-        when(() => entry.track.sid).thenReturn('track-${entry.sid}');
-        when(() => entry.track.isActive).thenReturn(true);
-        when(() => entry.track.muted).thenReturn(false);
-      }
-
-      await pumpWidget(
-        tester,
-        authState: AuthState.unauthenticated(),
-        overrides: [
-          currentSessionStateProvider.overrideWithValue(
-            fakeSessionState.mockState,
-          ),
-        ],
-        child: ParticipantVideo(participant: participant),
-      );
-      await tester.pumpAndSettle();
-      final firstRenderer = tester.element(find.byType(VideoTrackRenderer));
-
-      cameraPublication = secondPublication;
-      participant.listener.emitParticipantEvent(
-        TrackSubscribedEvent(
-          participant: participant,
-          publication: secondPublication,
-          track: secondTrack,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      check(
-        tester.widgetList(find.byType(VideoTrackRenderer)),
-      ).length.equals(1);
-      check(
-        tester.element(find.byType(VideoTrackRenderer)),
-      ).not((it) => it.identicalTo(firstRenderer));
-
-      cameraPublication = null;
-      participant.listener.emitParticipantEvent(
-        TrackUnpublishedEvent(
-          participant: participant,
-          publication: secondPublication,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    });
-
-    testWidgets(
-      'shows a locally published camera after the initial build',
-      (tester) async {
-        final participant = MockLocalParticipant();
-        final publication = MockLocalTrackPublication();
-        final track = MockLocalVideoTrack();
-        LocalTrackPublication<LocalVideoTrack>? cameraPublication;
-
-        when(
-          () => participant.getTrackPublicationBySource(TrackSource.camera),
-        ).thenAnswer((_) => cameraPublication);
-        when(() => publication.track).thenReturn(track);
-        when(() => publication.source).thenReturn(TrackSource.camera);
-        when(() => publication.sid).thenReturn('local-pub-sid');
-        when(() => publication.subscribed).thenReturn(true);
-        when(() => publication.muted).thenReturn(false);
-        when(() => track.sid).thenReturn('local-track-sid');
-        when(() => track.isActive).thenReturn(true);
-        when(() => track.muted).thenReturn(false);
-
-        await pumpWidget(
-          tester,
-          authState: AuthState.unauthenticated(),
-          overrides: [
-            currentSessionStateProvider.overrideWithValue(
-              fakeSessionState.mockState,
-            ),
-          ],
-          child: ParticipantVideo(participant: participant),
-        );
-
-        check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
-
-        cameraPublication = publication;
-        participant.listener.emitParticipantEvent(
-          LocalTrackPublishedEvent(
-            participant: participant,
-            publication: publication,
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        check(
-          tester.widgetList(find.byType(VideoTrackRenderer)),
-        ).length.equals(1);
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pumpAndSettle();
-      },
-      experimentalLeakTesting: LeakTesting.settings.withIgnored(
-        classes: <String>['RTCVideoRenderer'],
-      ),
-    );
-
-    testWidgets(
-      'shows a camera track subscribed after the initial build',
-      (tester) async {
-        final participant = MockRemoteParticipant('user-2', 'John Doe');
-        final publication = MockRemoteTrackPublication<RemoteVideoTrack>();
-        final track = MockRemoteVideoTrack();
-        RemoteTrackPublication<RemoteVideoTrack>? cameraPublication;
-
-        when(
-          () => participant.getTrackPublicationBySource(TrackSource.camera),
-        ).thenAnswer((_) => cameraPublication);
-        when(() => publication.track).thenReturn(track);
-        when(() => publication.source).thenReturn(TrackSource.camera);
-        when(() => publication.sid).thenReturn('pub-sid');
-        when(() => publication.subscribed).thenReturn(true);
-        when(() => publication.muted).thenReturn(false);
-        when(() => track.sid).thenReturn('track-sid');
-        when(() => track.isActive).thenReturn(true);
-        when(() => track.muted).thenReturn(false);
-
-        await pumpWidget(
-          tester,
-          authState: AuthState.unauthenticated(),
-          overrides: [
-            currentSessionStateProvider.overrideWithValue(
-              fakeSessionState.mockState,
-            ),
-          ],
-          child: ParticipantVideo(participant: participant),
-        );
-
-        check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
-
-        cameraPublication = publication;
-        participant.listener.emitParticipantEvent(
-          TrackSubscribedEvent(
-            participant: participant,
-            publication: publication,
-            track: track,
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        check(
-          tester.widgetList(find.byType(VideoTrackRenderer)),
-        ).length.equals(1);
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pumpAndSettle();
-      },
-      experimentalLeakTesting: LeakTesting.settings.withIgnored(
-        classes: <String>['RTCVideoRenderer'],
-      ),
-    );
   });
 
   group('ParticipantControlButton', () {
@@ -641,13 +361,20 @@ void main() {
         child: _MenuCloseTestWrapper(participant: remoteParticipant),
       );
 
+      roomMedia.setMediaState(
+        remoteParticipant.identity,
+        const ParticipantMediaState(hasMicrophone: true, isMicrophoneOn: true),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.byType(ParticipantControlButton));
       await tester.pumpAndSettle();
       check(tester.widgetList(find.text('Mute'))).length.equals(1);
 
-      remoteParticipant.audioMuted = true;
-      remoteParticipant.listener.emitMuted(MockTrackMutedEvent());
-      await tester.pump();
+      roomMedia.setMediaState(
+        remoteParticipant.identity,
+        const ParticipantMediaState(hasMicrophone: true),
+      );
+      await tester.pumpAndSettle();
 
       check(tester.widgetList(find.text('Muted'))).length.equals(1);
       final mutedButton = tester.widget<MenuItemButton>(
@@ -658,9 +385,11 @@ void main() {
       );
       check(mutedButton.onPressed).isNull();
 
-      remoteParticipant.audioMuted = false;
-      remoteParticipant.listener.emitUnmuted(MockTrackUnmutedEvent());
-      await tester.pump();
+      roomMedia.setMediaState(
+        remoteParticipant.identity,
+        const ParticipantMediaState(hasMicrophone: true, isMicrophoneOn: true),
+      );
+      await tester.pumpAndSettle();
 
       check(tester.widgetList(find.text('Mute'))).length.equals(1);
       final unmutedButton = tester.widget<MenuItemButton>(
@@ -701,9 +430,9 @@ void main() {
 }
 
 class _MenuCloseTestWrapper extends StatefulWidget {
-  const _MenuCloseTestWrapper({required this.participant});
+  const new({required this.participant});
 
-  final Participant participant;
+  final ParticipantInfo participant;
 
   @override
   State<_MenuCloseTestWrapper> createState() => _MenuCloseTestWrapperState();

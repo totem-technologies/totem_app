@@ -23,6 +23,7 @@ const _assetBase = {
 };
 
 const _sourceMapMarker = '//# sourceMappingURL=flutter.js.map';
+const _cloudflareStaticAssetLimit = 25 * 1024 * 1024;
 
 Future<void> main() async {
   // scripts/web_build.dart -> repo root is two levels up.
@@ -49,24 +50,34 @@ Future<void> main() async {
 
   // --base-href /room/ : app is served from /room/ on the Django origin.
   // --web-define ASSET_BASE : where flutter_bootstrap.js loads assets from.
+  final sentryRelease = Platform.environment['SENTRY_RELEASE'];
+  final sentryDist = Platform.environment['SENTRY_DIST'];
+  final hasSentryRelease = sentryRelease != null && sentryRelease.isNotEmpty;
+  final arguments = [
+    'build',
+    'web',
+    '--wasm',
+    if (hasSentryRelease) '--source-maps',
+    '--dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true',
+    '--base-href',
+    '/room/',
+    '--web-define=ASSET_BASE=$assetBase',
+    if (hasSentryRelease) '--dart-define=SENTRY_RELEASE=$sentryRelease',
+    if (sentryDist != null && sentryDist.isNotEmpty)
+      '--dart-define=SENTRY_DIST=$sentryDist',
+  ];
   final build = await Process.start(
     'flutter',
-    [
-      'build',
-      'web',
-      '--wasm',
-      '--dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true',
-      '--base-href',
-      '/room/',
-      '--web-define=ASSET_BASE=$assetBase',
-    ],
+    arguments,
     workingDirectory: webDir,
     mode: ProcessStartMode.inheritStdio,
   );
   final code = await build.exitCode;
   if (code != 0) exit(code);
 
-  _stripInlinedSourceMap(File('$webDir/build/web/index.html'));
+  final buildDirectory = Directory('$webDir/build/web');
+  if (hasSentryRelease) _verifyAndReportSourceMaps(buildDirectory);
+  _stripInlinedSourceMap(File('${buildDirectory.path}/index.html'));
 }
 
 String? _readEnvironment(File envFile) {
@@ -80,13 +91,44 @@ String? _readEnvironment(File envFile) {
   return null;
 }
 
+void _verifyAndReportSourceMaps(Directory buildDirectory) {
+  final sourceMaps =
+      buildDirectory
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.map'))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
+  final hasJavaScriptMap = sourceMaps.any(
+    (file) => file.path.endsWith('.js.map'),
+  );
+  final hasWasmMap = sourceMaps.any((file) => file.path.endsWith('.wasm.map'));
+
+  if (!hasJavaScriptMap || !hasWasmMap) {
+    stderr.writeln(
+      'web_build: expected JavaScript and WebAssembly source maps in '
+      '${buildDirectory.path}.',
+    );
+    exit(1);
+  }
+
+  for (final sourceMap in sourceMaps) {
+    final size = sourceMap.lengthSync();
+    final exceedsLimit = size > _cloudflareStaticAssetLimit;
+    print(
+      'web_build: ${sourceMap.path} '
+      '(${(size / (1024 * 1024)).toStringAsFixed(2)} MiB)'
+      '${exceedsLimit ? ' exceeds Cloudflare\'s 25 MiB static asset limit' : ''}',
+    );
+  }
+}
+
 // flutter.js is inlined into the Django-served index.html, so its relative
 // `//# sourceMappingURL=flutter.js.map` comment resolves against /room/ -- which
-// makes dev tools GET /room/flutter.js.map from Django (its asset proxy is
-// dev-only and 500s in prod). The map isn't shipped and Flutter has no flag to
-// omit the comment, so strip the comment itself. Removing the exact substring
-// (rather than the whole line) is safe even if a minifier ever puts the comment
-// on the same line as real code.
+// makes dev tools GET /room/flutter.js.map from Django instead of the Worker.
+// Flutter has no flag to omit the comment, so strip it for source-map builds
+// too. Removing the exact substring (rather than the whole line) is safe even
+// if a minifier ever puts the comment on the same line as real code.
 void _stripInlinedSourceMap(File index) {
   final html = index.readAsStringSync();
   index.writeAsStringSync(html.replaceAll(_sourceMapMarker, ''));

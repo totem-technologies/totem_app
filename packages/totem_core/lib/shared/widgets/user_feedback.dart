@@ -30,7 +30,7 @@ Future<void> showUserFeedbackPopup(
 }
 
 class UserFeedback extends ConsumerStatefulWidget {
-  const UserFeedback({required this.onFeedbackSubmitted, super.key});
+  const new({required this.onFeedbackSubmitted, super.key});
 
   final OnFeedbackSubmitted? onFeedbackSubmitted;
 
@@ -129,8 +129,7 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
             builder: (context) {
               return ConfirmationDialog(
                 title: 'Discard Feedback?',
-                content:
-                    'You have unsent feedback. Are you sure you want to discard it?',
+                content: 'You have unsent feedback. Are you sure you want to discard it?',
                 confirmButtonText: 'Discard',
                 onConfirm: () async {
                   _feedbackController.clear();
@@ -148,9 +147,9 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
+        padding: EdgeInsetsDirectional.only(
+          start: 24,
+          end: 24,
           bottom: 24 + keyboardHeight,
         ),
         child: SafeArea(
@@ -202,8 +201,7 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                         minLines: 4,
                         enabled: !_loading,
                         decoration: const InputDecoration(
-                          hintText:
-                              'Share your thoughts, suggestions, or report issues...',
+                          hintText: 'Share your thoughts, suggestions, or report issues...',
                         ),
                         style: TextStyle(
                           color: theme.colorScheme.onSurfaceVariant,

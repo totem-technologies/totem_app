@@ -9,7 +9,7 @@ import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/shared/network.dart';
 
 class UserAvatar extends ConsumerWidget {
-  const UserAvatar.custom({
+  const new custom({
     super.key,
     this.radius = 30,
     this.image,
@@ -25,7 +25,7 @@ class UserAvatar extends ConsumerWidget {
        _usesCurrentUser = false,
        _alwaysUseCurrentUser = false;
 
-  const UserAvatar.fromUserSchema(
+  const new fromUserSchema(
     this.user, {
     super.key,
     this.radius = 30,
@@ -41,7 +41,7 @@ class UserAvatar extends ConsumerWidget {
        _usesCurrentUser = true,
        _alwaysUseCurrentUser = false;
 
-  const UserAvatar.currentUser({
+  const new currentUser({
     super.key,
     this.radius = 30,
     this.showImage = true,
@@ -57,7 +57,7 @@ class UserAvatar extends ConsumerWidget {
        _usesCurrentUser = true,
        _alwaysUseCurrentUser = true;
 
-  const UserAvatar.slug(
+  const new slug(
     this.slug, {
     super.key,
     this.radius = 30,
@@ -196,9 +196,8 @@ class UserAvatar extends ConsumerWidget {
             await showGeneralDialog(
               context: context,
               barrierDismissible: true,
-              barrierLabel: MaterialLocalizations.of(
-                context,
-              ).modalBarrierDismissLabel,
+              barrierLabel: MaterialLocalizations.of(context)
+                  .modalBarrierDismissLabel,
               barrierColor: Colors.black.withValues(alpha: 0.8),
               pageBuilder: (context, animation, secondaryAnimation) {
                 return _FullScreenImageViewer(
@@ -214,7 +213,7 @@ class UserAvatar extends ConsumerWidget {
 }
 
 class _FullScreenImageViewer extends StatefulWidget {
-  const _FullScreenImageViewer({required this.image, required this.heroTag});
+  const new({required this.image, required this.heroTag});
   final ImageProvider image;
   final Object heroTag;
 

@@ -21,8 +21,7 @@ final ParticipantCardComponent =
       name: component.name ?? 'ParticipantCard',
       path: component.path ?? 'components/sessions',
       docsBuilder: component.docsBuilder,
-      docComment:
-          r'''One tile for the circle and the waiting-room preview. Video (or a still)
+      docComment: r'''One tile for the circle and the waiting-room preview. Video (or a still)
 fills the card edge to edge. No picture? The Figma wash sits
 underneath so the name still reads. The name sits low and centered;
 more sits top right; the talking piece sits top left when this

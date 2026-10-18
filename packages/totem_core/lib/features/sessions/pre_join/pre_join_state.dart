@@ -5,6 +5,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 enum PreJoinCapturePhase {
   uninitialized,
   initializing,
+  waitingForForeground,
   ready,
   disabled,
   unavailable,
@@ -23,7 +24,7 @@ enum PreJoinJoinOutcome {
 
 @immutable
 class PreJoinMediaPreferences {
-  const PreJoinMediaPreferences({
+  const new({
     this.isSpeakerOn = true,
     this.isCameraOn = true,
     this.isMicOn = true,
@@ -52,9 +53,9 @@ class PreJoinMediaPreferences {
 
 @immutable
 class PreJoinCaptureState<T extends LocalTrack> {
-  const PreJoinCaptureState({required this.phase, this.track, this.error});
+  const new({required this.phase, this.track, this.error});
 
-  const PreJoinCaptureState.uninitialized()
+  const new uninitialized()
     : phase = PreJoinCapturePhase.uninitialized,
       track = null,
       error = null;
@@ -65,7 +66,8 @@ class PreJoinCaptureState<T extends LocalTrack> {
 
   bool get initializationComplete => switch (phase) {
     PreJoinCapturePhase.uninitialized ||
-    PreJoinCapturePhase.initializing => false,
+    PreJoinCapturePhase.initializing ||
+    PreJoinCapturePhase.waitingForForeground => false,
     _ => true,
   };
 
@@ -74,7 +76,7 @@ class PreJoinCaptureState<T extends LocalTrack> {
 
 @immutable
 class PreJoinMediaState {
-  const PreJoinMediaState({
+  const new({
     this.preferences = const PreJoinMediaPreferences(),
     this.camera = const PreJoinCaptureState<LocalVideoTrack>.uninitialized(),
     this.microphone =
@@ -115,7 +117,7 @@ class PreJoinMediaState {
 
 @immutable
 class PreJoinFlowState {
-  const PreJoinFlowState({
+  const new({
     this.phase = PreJoinFlowPhase.idle,
     this.sessionOptions,
     this.nativePermissionsGranted = false,

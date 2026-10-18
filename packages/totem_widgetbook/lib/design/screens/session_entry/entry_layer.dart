@@ -276,9 +276,8 @@ class _EntryLayerState extends State<EntryLayer>
 
   Widget _placed(double offset) {
     final theme = TotemTheme.of(context);
-    final ink = DefaultTextStyle.of(
-      context,
-    ).style.copyWith(color: theme.textPrimary);
+    final ink = DefaultTextStyle.of(context).style
+        .copyWith(color: theme.textPrimary);
     final surface = widget.background ?? theme.surface;
 
     switch (widget.kind) {

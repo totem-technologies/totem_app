@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 import '../mocks/message_mocks.dart';
 
@@ -21,9 +22,8 @@ class SessionParticipantsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     const participants = mockSessionParticipants;
-    final date = DateFormat(
-      "EEEE, MMM d · h:mm a",
-    ).format(session.start.toLocal());
+    final date = DateFormat("EEEE, MMM d · h:mm a")
+        .format(session.start.toLocal());
     final subtitle =
         '${participants.length} participants  ·  ${session.duration} min';
 
@@ -196,8 +196,8 @@ class _NavBar extends StatelessWidget {
           children: [
             IconButton(
               onPressed: () => context.pop(),
-              icon: const Icon(
-                Icons.arrow_back_ios_new,
+              icon: const TotemIcon(
+                TotemIcons.arrowBack,
                 size: 18,
                 color: AppTheme.textHeading,
               ),
@@ -300,10 +300,8 @@ class _ParticipantCard extends StatelessWidget {
                     ),
                     Text(
                       participant.email,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textMuted,
-                        fontSize: 12,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: AppTheme.textMuted, fontSize: 12),
                     ),
                     Text(
                       participant.joinedSessions,
@@ -422,7 +420,7 @@ class _ParticipantDialog extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: onSendMessage,
-              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 22),
+              icon: const TotemIcon(TotemIcons.chat, size: 22),
               label: const Text('Send message'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.messagePurple,

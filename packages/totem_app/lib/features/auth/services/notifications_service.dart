@@ -57,46 +57,54 @@ class NotificationsService {
   final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
-  Future<void> initialize() async {
-    if (_initialized) {
-      return;
-    }
+  bool _firebaseInitialized = false;
+  bool _localNotificationsReady = false;
+  bool _initialLocalNotificationChecked = false;
+  Future<void>? _initialization;
+  StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
+  StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
 
-    try {
-      logger.i('⏰ Initializing NotificationsService...');
-      _initialized = true;
+  Future<void> initialize() {
+    if (_initialized) return Future.value();
+    return _initialization ??= _initialize().whenComplete(() {
+      _initialization = null;
+    });
+  }
 
-      // Set up Firebase
-      {
+  Future<void> _initialize() async {
+    logger.i('⏰ Initializing NotificationsService...');
+    if (!_firebaseInitialized) {
+      try {
         final initialMessage = await FirebaseMessaging.instance
             .getInitialMessage();
-        if (initialMessage != null) {
-          _handleFirebaseMessage(initialMessage);
-        }
-        FirebaseMessaging.onMessageOpenedApp.listen(_handleFirebaseMessage);
-
-        FirebaseMessaging.onMessage.listen((message) {
-          logger
-            ..i('⏰ Got a message whilst in the foreground!')
-            ..i('⏰ Message data: ${message.data}');
-
+        if (initialMessage != null) _handleFirebaseMessage(initialMessage);
+        _messageOpenedSubscription ??= FirebaseMessaging.onMessageOpenedApp
+            .listen(_handleFirebaseMessage);
+        _foregroundMessageSubscription ??= FirebaseMessaging.onMessage.listen((
+          message,
+        ) {
           if (message.notification != null) {
-            logger.i(
-              '⏰ Message also contained a notification: '
-              '${message.notification}',
-            );
-
-            showNotification(
-              title: message.notification?.title ?? '',
-              body: message.notification?.body ?? '',
-              data: message.data,
+            unawaited(
+              showNotification(
+                title: message.notification?.title ?? '',
+                body: message.notification?.body ?? '',
+                data: message.data,
+              ),
             );
           }
         });
+        _firebaseInitialized = true;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to initialize Firebase messaging',
+        );
       }
+    }
 
-      // Set up local notifications
-      {
+    if (!_localNotificationsReady) {
+      try {
         const initializationSettings = InitializationSettings(
           android: AndroidInitializationSettings('ic_notification'),
           iOS: DarwinInitializationSettings(
@@ -105,41 +113,73 @@ class NotificationsService {
             requestSoundPermission: false,
           ),
         );
-        await flutterLocalNotificationsPlugin.initialize(
+        final didInitialize = await flutterLocalNotificationsPlugin.initialize(
           settings: initializationSettings,
           onDidReceiveNotificationResponse: _handleNotificationTap,
           onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
         );
-
-        final notificationAppLaunchDetails =
-            await flutterLocalNotificationsPlugin
-                .getNotificationAppLaunchDetails();
-        if (notificationAppLaunchDetails?.notificationResponse != null &&
-            (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false)) {
-          _handleNotificationTap(
-            notificationAppLaunchDetails!.notificationResponse!,
-          );
+        if (didInitialize != true) {
+          throw StateError('Local notifications plugin did not initialize');
         }
+        _localNotificationsReady = true;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to initialize local notifications',
+        );
+        // Firebase remains available; leave this false for a later explicit
+        // retry rather than claiming local notifications are operational.
       }
+    }
 
-      {
-        final prefs = await SharedPreferences.getInstance();
-        final payload = prefs.getString(_backgroundKey);
-        if (payload != null) {
-          _handlePayload(jsonDecode(payload) as Map);
-          await prefs.remove(_backgroundKey);
-        }
+    if (_localNotificationsReady && !_initialLocalNotificationChecked) {
+      await _handleInitialLocalNotification();
+    }
+
+    if (!await _restoreBackgroundPayload()) return;
+    if (!_firebaseInitialized || !_localNotificationsReady) return;
+
+    _initialized = true;
+    logger.i('⏰ NotificationsService initialized successfully');
+  }
+
+  Future<void> _handleInitialLocalNotification() async {
+    try {
+      final notificationAppLaunchDetails = await flutterLocalNotificationsPlugin
+          .getNotificationAppLaunchDetails();
+      _initialLocalNotificationChecked = true;
+      if (notificationAppLaunchDetails?.notificationResponse != null &&
+          (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false)) {
+        _handleNotificationTap(
+          notificationAppLaunchDetails!.notificationResponse!,
+        );
       }
-
-      logger.i('⏰ NotificationsService initialized successfully');
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        message: 'Failed to initialize notifications service',
+        message: 'Failed to handle initial local notification',
       );
-      // Fail gracefully - mark as initialized anyway
-      _initialized = true;
+    }
+  }
+
+  Future<bool> _restoreBackgroundPayload() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final payload = prefs.getString(_backgroundKey);
+      if (payload != null) {
+        _handlePayload(jsonDecode(payload) as Map);
+        await prefs.remove(_backgroundKey);
+      }
+      return true;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to restore notification payload',
+      );
+      return false;
     }
   }
 
@@ -192,13 +232,13 @@ class NotificationsService {
     required String body,
     required Map<String, dynamic> data,
   }) async {
+    if (!_localNotificationsReady) return;
     const notificationDetails = NotificationDetails(
       android: AndroidNotificationDetails(
         'spaces',
         'Spaces',
         channelDescription: 'Spaces',
-        icon: '@drawable/ic_notification',
-        largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+        icon: 'ic_notification',
         color: Color(0xFFF4DC92),
         importance: Importance.max,
         priority: Priority.high,
@@ -214,13 +254,23 @@ class NotificationsService {
 
     final payload = jsonEncode(data);
 
-    await flutterLocalNotificationsPlugin.show(
-      id: DateTime.timestamp().millisecondsSinceEpoch % 2147483647,
-      title: title,
-      body: body,
-      notificationDetails: notificationDetails,
-      payload: payload,
-    );
+    try {
+      await flutterLocalNotificationsPlugin.show(
+        id: DateTime.timestamp().millisecondsSinceEpoch % 2147483647,
+        title: title,
+        body: body,
+        notificationDetails: notificationDetails,
+        payload: payload,
+      );
+    } catch (error, stackTrace) {
+      ErrorHandler.report(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to display local notification',
+        incidentKey: 'local-notification-display:${error.runtimeType}',
+        diagnostics: {'feature': 'notifications'},
+      );
+    }
   }
 
   Future<String?> get fcmToken {
@@ -229,16 +279,16 @@ class NotificationsService {
     );
   }
 
-  Future<void> requestPermissions() {
+  Future<void> requestPermissions() async {
     try {
-      return FirebaseMessaging.instance.requestPermission(provisional: true);
+      await FirebaseMessaging.instance.requestPermission(provisional: true);
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to request notification permissions',
       );
-      return Future.value();
+      return;
     }
   }
 }

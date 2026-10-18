@@ -4,10 +4,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
 class ErrorScreen extends StatefulWidget {
-  const ErrorScreen({
+  const new({
     this.title,
     this.error,
     this.showHomeButton,
@@ -156,7 +158,7 @@ Future<void> showErrorDialog(BuildContext context, [String? error]) {
 }
 
 class ErrorDialog extends StatelessWidget {
-  const ErrorDialog({
+  const new({
     super.key,
     this.title = 'Something went wrong!\nPlease try again later',
     this.message,
@@ -185,8 +187,8 @@ class ErrorDialog extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0xFFE53935), width: 2.5),
               ),
-              child: const Icon(
-                Icons.close,
+              child: const TotemIcon(
+                TotemIcons.close,
                 color: Color(0xFFE53935),
                 size: 40,
               ),

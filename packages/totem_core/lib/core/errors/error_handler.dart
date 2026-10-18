@@ -12,13 +12,81 @@ import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
+/// The outcome of an error at its ownership boundary.
+enum ErrorDisposition { expected, recovered, unexpected }
+
 /// Centralized error handling for the Totem App.
 class ErrorHandler {
-  const ErrorHandler._();
+  const new _();
 
   static final Expando<bool> _reportedErrors = Expando<bool>(
     'totem.reportedErrors',
   );
+  static final Map<String, DateTime> _recentIncidents = <String, DateTime>{};
+  static const _maximumRecentIncidents = 100;
+
+  /// Reports only failures which need investigation.
+  ///
+  /// Expected outcomes and recovered failures stay in local logs, while an
+  /// [incidentKey] prevents repeated callbacks for the same operation from
+  /// creating separate Sentry events. Identity tracking still handles an error
+  /// crossing multiple architectural layers.
+  static bool report(
+    Object? error, {
+    StackTrace? stackTrace,
+    String? message,
+    Map<String, Object?>? diagnostics,
+    ErrorDisposition disposition = ErrorDisposition.unexpected,
+    String? incidentKey,
+    Duration incidentCooldown = const Duration(minutes: 5),
+  }) {
+    if (kDebugMode) {
+      logger.e(message, error: error, stackTrace: stackTrace);
+      if (diagnostics != null && diagnostics.isNotEmpty) {
+        logger.d('Error diagnostics: $diagnostics');
+      }
+    }
+
+    if (disposition != ErrorDisposition.unexpected) return false;
+    if (_supportsIdentityTracking(error)) {
+      if (_reportedErrors[error!] ?? false) return false;
+      _reportedErrors[error] = true;
+    }
+    if (incidentKey != null && !_claimIncident(incidentKey, incidentCooldown)) {
+      return false;
+    }
+
+    if (AppConfig.instance.sentryDsn != null &&
+        AppConfig.instance.sentryDsn!.isNotEmpty) {
+      Sentry.captureException(
+        error,
+        stackTrace: stackTrace,
+        message: message != null ? SentryMessage(message) : null,
+        withScope: (scope) {
+          scope
+            ..setTag('handled', 'true')
+            ..setTag('error_disposition', disposition.name);
+          if (diagnostics != null && diagnostics.isNotEmpty) {
+            scope.setContexts('diagnostics', diagnostics);
+          }
+        },
+      );
+    }
+
+    return true;
+  }
+
+  static bool _claimIncident(String key, Duration cooldown) {
+    final now = DateTime.now();
+    final previous = _recentIncidents[key];
+    if (previous != null && now.difference(previous) < cooldown) return false;
+    _recentIncidents.remove(key);
+    if (_recentIncidents.length >= _maximumRecentIncidents) {
+      _recentIncidents.remove(_recentIncidents.keys.first);
+    }
+    _recentIncidents[key] = now;
+    return true;
+  }
 
   /// Reports [error] at most once for this exception instance.
   ///
@@ -33,33 +101,12 @@ class ErrorHandler {
     StackTrace? stackTrace,
     String? message,
     Map<String, Object?>? diagnostics,
-  }) {
-    if (_supportsIdentityTracking(error)) {
-      if (_reportedErrors[error!] ?? false) return false;
-      _reportedErrors[error] = true;
-    }
-
-    if (kDebugMode) {
-      logger.e(message, error: error, stackTrace: stackTrace);
-      if (diagnostics != null && diagnostics.isNotEmpty) {
-        logger.d('Error diagnostics: $diagnostics');
-      }
-    }
-
-    if (AppConfig.instance.sentryDsn != null &&
-        AppConfig.instance.sentryDsn!.isNotEmpty) {
-      Sentry.captureException(
-        error,
-        stackTrace: stackTrace,
-        message: message != null ? SentryMessage(message) : null,
-        withScope: diagnostics == null || diagnostics.isEmpty
-            ? null
-            : (scope) => scope.setContexts('diagnostics', diagnostics),
-      );
-    }
-
-    return true;
-  }
+  }) => report(
+    error,
+    stackTrace: stackTrace,
+    message: message,
+    diagnostics: diagnostics,
+  );
 
   /// Whether this exact exception has already crossed a reporting boundary.
   ///
@@ -124,7 +171,7 @@ class ErrorHandler {
         content: Row(
           spacing: 12,
           children: [
-            Icon(Icons.error_outline, color: theme.colorScheme.error),
+            TotemIcon(TotemIcons.errorOutlined, color: theme.colorScheme.error),
             Expanded(
               child: Text(
                 message,

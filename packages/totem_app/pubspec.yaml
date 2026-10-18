@@ -1,9 +1,9 @@
 name: totem_app
 description: "Guided introspection groups."
 publish_to: "none"
-version: 0.0.86+86
+version: 0.0.90+90
 environment:
-  sdk: ^3.11.3
+  sdk: ^3.13.5
 resolution: workspace
 
 dependencies:
@@ -35,7 +35,7 @@ dependencies:
   flutter_local_notifications: ^22.2.0
   posthog_flutter: ^5.24.1
   intl: ^0.20.2
-  sentry_flutter: ^9.21.0
+  sentry_flutter: ^10.0.0
   shared_preferences: ^2.5.3
 
   # UI & Utilities

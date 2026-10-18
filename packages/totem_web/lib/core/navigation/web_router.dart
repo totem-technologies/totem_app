@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/foundation.dart' show kIsWasm;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -49,7 +50,7 @@ class WebTotemRouter extends TotemRouter {
         ),
         GoRoute(
           path: '/__version',
-          builder: (context, state) => const _VersionScreen(),
+          builder: (context, state) => _VersionScreen(browser: _browser),
         ),
         GoRoute(
           path: '/:slug',
@@ -89,6 +90,19 @@ class WebTotemRouter extends TotemRouter {
   @override
   void setTabCloseConfirmationEnabled(bool enabled) {
     _browser.setTabCloseConfirmationEnabled(enabled);
+  }
+
+  VoidCallback? _pageExitHandler;
+
+  @override
+  void setPageExitHandler(VoidCallback? onExit) {
+    _pageExitHandler = onExit;
+    _browser.setPageExitHandler(onExit);
+  }
+
+  @override
+  void clearPageExitHandler(VoidCallback onExit) {
+    if (_pageExitHandler == onExit) setPageExitHandler(null);
   }
 
   @override
@@ -154,7 +168,9 @@ class WebTotemRouter extends TotemRouter {
 }
 
 class _VersionScreen extends StatefulWidget {
-  const _VersionScreen();
+  const _VersionScreen({required this.browser});
+
+  final BrowserEnvironment browser;
 
   @override
   State<_VersionScreen> createState() => _VersionScreenState();
@@ -191,7 +207,17 @@ class _VersionScreenState extends State<_VersionScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Version')),
       body: Center(
-        child: SelectableText(_version, style: theme.textTheme.headlineMedium),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 16,
+          children: [
+            SelectableText(_version, style: theme.textTheme.headlineMedium),
+            SelectableText(
+              'Loaded from: ${widget.browser.entrypointBaseUri ?? 'unknown'}',
+            ),
+            const SelectableText('Build: ${kIsWasm ? 'Wasm' : 'JavaScript'}'),
+          ],
+        ),
       ),
     );
   }

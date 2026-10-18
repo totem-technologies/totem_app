@@ -1,9 +1,9 @@
-# Totem Client.
+# Totem Client
 
 The open-source Flutter client for [Totem](https://totem.org), a platform for
-guided group introspection. Supports iOS, Android, and web.
+guided group introspection. It supports iOS, Android, and web.
 
-## Getting started
+## Install
 
 Install [Flutter](https://docs.flutter.dev/get-started/install). iOS development
 also requires macOS and Xcode.
@@ -16,17 +16,19 @@ make install
 make githooks
 ```
 
-Set up [Firebase](https://firebase.google.com/docs/flutter/setup) locally.
-`make flutterfire` configures the mobile package. For web, run
-`flutterfire configure --platforms=web` from `packages/totem_web`.
-Generated Firebase configuration files are not committed.
+Configure [Firebase](https://firebase.google.com/docs/flutter/setup) locally:
 
-For local configuration, copy `config/development.local.env.example` to
-`config/development.local.env`. Set `MOBILE_API_URL` there to use a local backend;
-do not edit the generated package `.env` files. See the
-[configuration guide](config/README.md).
+```sh
+make flutterfire # mobile
+cd packages/totem_web && flutterfire configure --platforms=web
+```
 
-## Development
+Firebase configuration is generated locally and is not committed. To point a
+local app at a backend, create `config/development.local.env` from its example
+and set `MOBILE_API_URL`. Do not edit generated package `.env` files; see the
+[configuration guide](config/README.md) for the supported configuration layers.
+
+## Develop
 
 ```sh
 make run          # Mobile app
@@ -35,15 +37,14 @@ make lint
 make test
 ```
 
-The [Makefile](Makefile) lists additional commands. Code is split between the
+The [Makefile](Makefile) contains additional commands. The codebase has a
 [mobile app](packages/totem_app), [web client](packages/totem_web), and
-[shared library](packages/totem_core).
+[shared library](packages/totem_core). Follow the engineering and test
+conventions in [AGENTS.md](AGENTS.md).
 
-For repeatable room performance experiments without a call connection, see the
-[local rendering benchmark](scripts/benchmark/README.md). It uses looping video
-and the shared room widgets, with automated Chrome and Firefox captures.
+### Useful development commands
 
-To test a session deep link with the app running:
+Open a session deep link while the app is running:
 
 ```sh
 # Android
@@ -53,7 +54,10 @@ adb shell 'am start -a android.intent.action.VIEW -c android.intent.category.BRO
 xcrun simctl openurl booted "https://totem.org/spaces/session/doa689fvb"
 ```
 
-## Releases
+For repeatable room rendering experiments without a call connection, use the
+[local rendering benchmark](scripts/benchmark/README.md).
+
+## Release
 
 From a clean, up-to-date `main` branch:
 
@@ -61,71 +65,76 @@ From a clean, up-to-date `main` branch:
 make release
 ```
 
-This commits the version change and pushes a release tag. CI attaches the mobile
-builds to a draft GitHub release and uploads them to Google Play's internal
-testing tracks and App Store Connect. See the
-[release workflow](.github/workflows/draft-release-on-tag.yml) for build targets
-and signing configuration.
+This commits the version change and pushes a release tag. CI creates a draft
+GitHub release, uploads mobile builds to it, and sends them to Google Play
+internal testing and App Store Connect. Publishing the GitHub release deploys
+the production web client.
 
-Use a new build number if a store has already accepted a build, even when
-retrying a failed release. Accepted builds cannot be overwritten. After Apple
-finishes processing, assign the builds to TestFlight groups manually. Tester
-management and promotion beyond internal testing remain manual.
+Use a new build number after a store accepts a build; accepted builds cannot be
+overwritten. After Apple processes a build, assign it to TestFlight groups
+manually. See the [release workflow](.github/workflows/draft-release-on-tag.yml)
+for the signing configuration and build targets.
 
-Publishing the GitHub release also deploys the production web client.
+### Release credentials
 
-### Store credentials
+Configure the repository secrets required by the release workflow, including:
 
-Configure these repository secrets in addition to the build and signing
-secrets referenced by the workflow:
-
-| Secret | Value |
+| Secret | Purpose |
 | --- | --- |
 | `APP_STORE_CONNECT_KEY_ID` | App Store Connect API key ID |
 | `APP_STORE_CONNECT_ISSUER_ID` | App Store Connect API issuer ID |
-| `APP_STORE_CONNECT_PRIVATE_KEY` | Contents of the downloaded `AuthKey_<KEY_ID>.p8` file |
-| `ANDROID_SERVICE_ACCOUNT_JSON` | JSON key for the Google service account linked to Play Console |
+| `APP_STORE_CONNECT_PRIVATE_KEY` | Downloaded `AuthKey_<KEY_ID>.p8` contents |
+| `ANDROID_SERVICE_ACCOUNT_JSON` | Google Play service-account JSON |
 
-**Apple:** Create a team API key with access to both apps and permission to
-download provisioning profiles as well as upload builds. The app records,
-bundle IDs, distribution certificates, and provisioning profiles must already
-exist. Save the `.p8` key when creating it; it can only be downloaded once.
+Apple requires an existing app record, bundle ID, distribution certificate, and
+valid provisioning profile. Export the signing certificate and its private key
+as a password-protected `.p12` for `IOS_BUILD_CERTIFICATE_BASE64`; store its
+password in `IOS_BUILD_CERTIFICATE_PASSWORD`. Keep the provisioning-profile
+names synchronized with the release workflow.
 
-Provisioning profiles must be unexpired and include the distribution certificate
-used by CI. Renew them in Apple's developer portal; CI downloads profiles but
-does not renew them. If a profile is renamed, update the release workflow,
-Runner signing settings, and export options together.
-
-The signing certificate must be exported with its private key as a
-password-protected `.p12`. A provisioning profile or API key cannot replace a
-missing signing private key. Store the export in `IOS_BUILD_CERTIFICATE_BASE64`
-and its password in `IOS_BUILD_CERTIFICATE_PASSWORD`.
-
-**Google:** Enable the Google Play Android Developer API for a dedicated service
-account's project, link the account in Play Console, and grant it access to both
-apps with **View app information (read-only)** and **Release apps to testing
-tracks** permissions. The app records and Play App Signing setup must already
-exist.
+For Google Play, enable the Android Developer API for a dedicated service
+account, link it in Play Console, and grant access to both apps with **View app
+information (read-only)** and **Release apps to testing tracks** permissions.
 
 ## Web hosting
 
-Django serves the client at `/room/`, while Cloudflare Workers serves its assets.
-This lets the web client share the backend's login session and origin. Hosting
-configuration lives in [wrangler.toml](packages/totem_web/wrangler.toml), and
-deployment is managed by the [Web workflow](.github/workflows/web.yml).
+Django serves the client at `/room/` so it shares the backend login session and
+origin; Cloudflare Workers serves its assets. Deployment configuration is in
+[wrangler.toml](packages/totem_web/wrangler.toml) and CI is in the
+[Web workflow](.github/workflows/web.yml).
 
-Web run and build commands enable HTML video with
-`--dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true`. The browser displays the
-video elements directly through `HtmlElementView`.
-Pass the same flag when invoking `flutter run` or `flutter build web` directly.
-The Flutter UI still uses CanvasKit or skwasm; COOP/COEP headers independently
-enable skwasm's rendering worker. When testing a build, check video clipping,
-mirroring, camera toggles, and controls and menus over the video.
+The Makefile applies `WEBRTC_USE_HTML_ELEMENT_VIEW=true` to web runs and builds.
+Pass the same `--dart-define` when invoking Flutter directly.
 
-Cloudflare deployment requires these repository secrets:
+| Trigger | Result |
+| --- | --- |
+| Pull request or push to `main` | Staging build validation |
+| Push a `v*` tag | Staging deployment |
+| Publish the GitHub release | Production deployment |
 
-- `CLOUDFLARE_API_TOKEN` with **Workers Scripts: Edit** permission.
-- `CLOUDFLARE_ACCOUNT_ID` for the target account.
+A pushed `v*` tag uses release `totem_web@<tag>` with distribution `staging`.
+Publishing that GitHub Release uses the same release name with distribution
+`production`. The Flutter SDK sends the same release and distribution with web
+events; it retains the application-configured Sentry environment.
+
+After deployment, open **Releases** in the configured Sentry project, select
+`totem_web@<tag>`, and inspect its **Artifact Bundles** (or source-map artifacts)
+to confirm the uploaded bundle. To test JavaScript-fallback symbolication, use
+Firefox (the current bootstrap disables its Wasm renderer), open the deployed
+staging app, and trigger a temporary uncaught JavaScript error from DevTools:
+
+```js
+setTimeout(() => { throw new Error('Sentry JS fallback source-map check'); });
+```
+
+Confirm the resulting Sentry event resolves JavaScript frames to the uploaded
+source context, then remove the temporary test event. Release builds produce
+both JavaScript and WebAssembly maps, and the plugin uploads all map artifacts. Wasm
+symbolication is **unverified**: the plugin injects Debug IDs into JavaScript
+artifacts, while current Sentry Flutter documentation does not guarantee
+WebAssembly-frame symbolication. Oversized `.map` files (over Cloudflare's
+25 MiB per-static-asset limit) are removed only after a successful Sentry upload;
+JavaScript and Wasm executables are never removed or rebuilt.
 
 To deploy manually with Cloudflare credentials configured:
 
@@ -134,30 +143,34 @@ make deploy-web-staging
 # or: make deploy-web-production
 ```
 
-### Pull request previews
+Cloudflare requires `CLOUDFLARE_API_TOKEN` with **Workers Scripts: Edit** and
+`CLOUDFLARE_ACCOUNT_ID`. Release deployments also upload Sentry source maps and
+require `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT`; `SENTRY_URL` is
+optional for self-hosted Sentry. Tags use `totem_web@<tag>` with the `staging`
+distribution, and published releases use the same name with `production`.
+Confirm uploaded artifacts in the corresponding Sentry release when setting up
+a deployment.
 
-Repository PRs, including drafts, receive an **Open preview** link in a bot
-comment. Fork PRs do not. Use that staging link to open the app; the Cloudflare
-URL serves assets only. Previews share staging accounts and data.
+### Pull-request previews
 
-The selected build applies to newly opened or reloaded rooms for two hours
-across tabs in the same login session. An already loaded room keeps its build.
-Open the preview link again to restart the two-hour window, or use **Return to
-normal staging** in the PR comment to clear the selection. Separate browser
-profiles can compare builds concurrently. Closing a PR does not remove its
-preview deployment.
+Eligible repository pull requests, including drafts, receive an **Open preview**
+link in a bot comment; fork pull requests do not. Preview assets share staging
+accounts and data. A selected build applies to newly opened or reloaded rooms
+for two hours within a login session. Use **Return to normal staging** in the
+comment to clear it, or reopen the preview link to restart the window.
 
-For initial setup:
+Initial setup requires preview middleware from `totem-server` with
+`ROOM_PREVIEW_ENABLED=True` on staging, plus a one-time preview Worker deploy:
 
-- Deploy the preview middleware from `totem-server` and enable
-  `ROOM_PREVIEW_ENABLED=True` on staging only.
-- Create the preview Worker before uploading PR versions. After building the web
-  bundle, run `bunx wrangler deploy --env preview` from `packages/totem_web` once.
+```sh
+cd packages/totem_web
+bunx wrangler deploy --env preview
+```
 
 See the [preview workflow](.github/workflows/web-preview.yml) for deployment
-details. Use **Re-run jobs** in Actions to retry a failed preview build.
+and retry details.
 
 ## Community
 
-Visit [totem.org](https://totem.org), or open an issue or pull request to discuss
-development.
+Visit [totem.org](https://totem.org), or open an issue or pull request to
+discuss development.

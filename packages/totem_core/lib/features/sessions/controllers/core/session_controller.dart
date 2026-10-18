@@ -10,6 +10,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
@@ -21,6 +22,12 @@ import 'package:totem_core/features/sessions/controllers/features/session_infra_
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/controllers/utils.dart';
+import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
+import 'package:totem_core/features/sessions/media/livekit_room_media.dart';
+import 'package:totem_core/features/sessions/media/livekit_support.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/media/room_media.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
@@ -35,10 +42,7 @@ export 'package:totem_core/features/sessions/controllers/utils.dart';
 part 'session_controller.g.dart';
 
 class SessionRoomMetadataResult {
-  const SessionRoomMetadataResult({
-    required this.roomState,
-    required this.lastMetadata,
-  });
+  const new({required this.roomState, required this.lastMetadata});
 
   final RoomState? roomState;
   final String? lastMetadata;
@@ -91,7 +95,17 @@ class SessionController extends _$SessionController {
   @visibleForTesting
   set room(Room? value) {
     _room = value;
+    _localMedia.attach(value);
+    _roomMedia.attach(value);
   }
+
+  final LiveKitLocalMedia _localMedia = LiveKitLocalMedia(
+    cameraCaptureOptions: defaultCameraCaptureOptions,
+  );
+  LocalMedia get localMedia => _localMedia;
+
+  final LiveKitRoomMedia _roomMedia = LiveKitRoomMedia();
+  RoomMedia get roomMedia => _roomMedia;
 
   EventsListener<RoomEvent>? _listener;
 
@@ -107,6 +121,8 @@ class SessionController extends _$SessionController {
   bool _pollPending = false;
   bool _pendingReconcile = false;
   int _connectionGeneration = 0;
+  int _consecutivePollFailures = 0;
+  static const _pollFailureReportThreshold = 3;
   static const syncTimerDuration = Duration(seconds: 20);
   static const _statePollInterval = Duration(seconds: 15);
 
@@ -185,6 +201,8 @@ class SessionController extends _$SessionController {
       ..listen(sessionInfraControllerProvider, (_, _) {})
       ..listen(sessionKeeperControllerProvider(this), (_, _) {})
       ..listen(sessionMessagingControllerProvider(this), (_, _) {});
+    // The device controls follow the session's state until tracks publish.
+    listenSelf((_, _) => devices.syncWithSession());
 
     ref
         .watch(sessionProvider(options.sessionSlug))
@@ -370,17 +388,43 @@ class SessionController extends _$SessionController {
         return;
       }
 
+      if (_consecutivePollFailures > 0) {
+        logger.i(
+          'Room-state polling recovered after $_consecutivePollFailures failure(s)',
+        );
+        _consecutivePollFailures = 0;
+      }
       if (roomState.version > state.roomState.version) {
         applyRoomState(roomState);
         logger.d('Polled server state: version ${roomState.version}');
       }
-    } catch (e, s) {
+    } catch (error, stackTrace) {
+      _consecutivePollFailures++;
       logger.d(
         'poll room state failed (will retry next tick)',
-        error: e,
-        stackTrace: s,
+        error: error,
+        stackTrace: stackTrace,
       );
-      // Network hiccup or transient error - the next poll will retry.
+
+      final isUnexpected = error is AppDataException || error is StateError;
+      if (isUnexpected ||
+          _consecutivePollFailures >= _pollFailureReportThreshold) {
+        ErrorHandler.report(
+          error,
+          stackTrace: stackTrace,
+          message: 'Room-state polling failed',
+          incidentKey:
+              'room-state-poll:${options.sessionSlug}:${error.runtimeType}',
+          diagnostics: {
+            'feature': 'session',
+            'operation': 'poll_room_state',
+            'session_slug': options.sessionSlug,
+            'attempt_reconcile': attemptReconcile,
+            'consecutive_failures': _consecutivePollFailures,
+            'recovery': 'pending',
+          },
+        );
+      }
     }
   }
 
@@ -436,6 +480,14 @@ class SessionController extends _$SessionController {
     await leave();
   }
 
+  bool get _canPublishInitialMedia =>
+      ref.mounted &&
+      state.roomState.status != RoomStatus.ended &&
+      switch (state.connectionState) {
+        RoomConnectionState.connecting || RoomConnectionState.connected => true,
+        _ => false,
+      };
+
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
     final previousCleanup = _cleanupFuture;
     if (previousCleanup != null) await previousCleanup;
@@ -465,15 +517,16 @@ class SessionController extends _$SessionController {
 
     try {
       await initializeConnection(
-        roomOptions: RoomOptions(
-          defaultCameraCaptureOptions: options.cameraOptions,
-          defaultAudioCaptureOptions: const AudioCaptureOptions(),
-          defaultAudioOutputOptions: AudioOutputOptions(
-            speakerOn: options.speakerEnabled,
+        roomOptions: LiveKitLocalMedia.applyCapturePolicy(
+          RoomOptions(
+            defaultCameraCaptureOptions: options.cameraOptions,
+            defaultAudioOutputOptions: AudioOutputOptions(
+              speakerOn: options.speakerEnabled,
+            ),
+            dynacast: true,
+            defaultVideoPublishOptions: defaultVideoPublishOptions,
+            adaptiveStream: true,
           ),
-          dynacast: true,
-          defaultVideoPublishOptions: defaultVideoPublishOptions,
-          adaptiveStream: true,
         ),
         url: AppConfig.instance.liveKitUrl,
         token: options.token,
@@ -521,39 +574,33 @@ class SessionController extends _$SessionController {
       );
       if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
-      final localParticipant = room?.localParticipant;
-      if (localParticipant == null) {
+      if (!_localMedia.isAvailable) {
         throw StateError('Room connected without a local participant');
       }
 
       try {
-        if (initialCameraTrack != null) {
-          await localParticipant.publishVideoTrack(
+        if (!_canPublishInitialMedia) return SessionJoinResult.retryableFailure;
+        if (initialCameraTrack != null || options.cameraEnabled) {
+          final published = await _localMedia.publishJoinCamera(
             initialCameraTrack,
             publishOptions: defaultVideoPublishOptions,
           );
           if (!ref.mounted) return SessionJoinResult.retryableFailure;
-          _joinMediaOwner.releaseToRoom(initialCameraTrack);
-        } else if (options.cameraEnabled) {
-          await localParticipant.setCameraEnabled(true);
-          if (!ref.mounted) return SessionJoinResult.retryableFailure;
+          // An unpublished track stays with the join owner, which stops it.
+          if (published) _joinMediaOwner.releaseToRoom(initialCameraTrack);
         }
 
-        if (!ref.mounted) return SessionJoinResult.retryableFailure;
-        if (initialMicrophoneTrack != null) {
-          if (!_shouldEnableMicrophone()) {
-            await initialMicrophoneTrack.mute(stopOnMute: false);
-            if (!ref.mounted) return SessionJoinResult.retryableFailure;
-          }
-          await localParticipant.publishAudioTrack(initialMicrophoneTrack);
+        if (!_canPublishInitialMedia) return SessionJoinResult.retryableFailure;
+        if (initialMicrophoneTrack != null || options.microphoneEnabled) {
+          final published = await _localMedia.publishJoinMicrophone(
+            initialMicrophoneTrack,
+            muted: !shouldEnableMicrophone(),
+          );
           if (!ref.mounted) return SessionJoinResult.retryableFailure;
-          _joinMediaOwner.releaseToRoom(initialMicrophoneTrack);
-        } else if (options.microphoneEnabled && _shouldEnableMicrophone()) {
-          await localParticipant.setMicrophoneEnabled(true);
-          if (!ref.mounted) return SessionJoinResult.retryableFailure;
+          if (published) _joinMediaOwner.releaseToRoom(initialMicrophoneTrack);
         }
 
-        if (!ref.mounted) return SessionJoinResult.retryableFailure;
+        if (!_canPublishInitialMedia) return SessionJoinResult.retryableFailure;
         await _applyJoinMediaState();
         if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
@@ -690,6 +737,15 @@ class SessionController extends _$SessionController {
     }
   }
 
+  /// Leaves while the page is unloading, such as when the user closes the
+  /// tab. Nothing after the first await runs then, so [leave] would never
+  /// reach LiveKit. [Room.disconnect] sends its leave request before its
+  /// first await, so the server removes this participant at once instead of
+  /// after its connection timeout. Capture stops with the page.
+  void leaveOnPageExit() {
+    unawaited(_room?.disconnect());
+  }
+
   Future<void> _cleanUp() {
     final cleanup = _cleanupFuture;
     if (cleanup != null) return cleanup;
@@ -752,6 +808,8 @@ class SessionController extends _$SessionController {
     required String token,
   }) async {
     final room = _room ??= Room(roomOptions: roomOptions);
+    _localMedia.attach(room);
+    _roomMedia.attach(room);
     await room.prepareConnection(url, token);
 
     _listener ??= room.createListener()
@@ -789,7 +847,8 @@ class SessionController extends _$SessionController {
         if (ref.mounted) messaging.handleDataReceived(data);
       })
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
-      ..on<ParticipantConnectedEvent>(_onParticipantConnected);
+      ..on<ParticipantConnectedEvent>(_onParticipantConnected)
+      ..on<ParticipantNameUpdatedEvent>((_) => _updateParticipantsList());
 
     return room;
   }
@@ -808,28 +867,13 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> _disableLocalMediaTracks() async {
-    final localParticipant = _room?.localParticipant;
-    if (localParticipant == null) {
-      return;
-    }
-
     try {
-      await localParticipant.setCameraEnabled(false);
+      await _localMedia.release();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        message: 'Failed to disable camera while leaving session',
-      );
-    }
-
-    try {
-      await localParticipant.setMicrophoneEnabled(false);
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to disable microphone while leaving session',
+        message: 'Failed to release local media while leaving session',
       );
     }
   }
@@ -849,11 +893,15 @@ class SessionController extends _$SessionController {
       await _room?.dispose();
     } catch (_) {}
     _room = null;
+    _localMedia.attach(null);
+    _roomMedia.attach(null);
 
     await _joinMediaOwner.disposeAll();
   }
 
-  bool _shouldEnableMicrophone() {
+  /// Whether the microphone should be on when joining: the user's preference,
+  /// limited by the room's turn rules.
+  bool shouldEnableMicrophone() {
     if (state.roomState.status == RoomStatus.waitingRoom && !state.hasKeeper) {
       return options.microphoneEnabled;
     }
@@ -870,7 +918,7 @@ class SessionController extends _$SessionController {
     final currentRoom = room;
     if (currentRoom == null) return;
 
-    if (!_shouldEnableMicrophone()) {
+    if (!shouldEnableMicrophone()) {
       try {
         await devices.disableMicrophone();
       } catch (error, stackTrace) {
@@ -884,11 +932,11 @@ class SessionController extends _$SessionController {
   }
 
   @visibleForTesting
-  List<Participant> sortedParticipants() {
-    final participants = <Participant>[
+  List<ParticipantInfo> sortedParticipants() {
+    final participants = <ParticipantInfo>[
       if (room != null) ...[
-        ...?room?.remoteParticipants.values,
-        ?room?.localParticipant,
+        ...?room?.remoteParticipants.values.map((p) => p.toInfo()),
+        ?room?.localParticipant?.toInfo(),
       ],
     ];
 

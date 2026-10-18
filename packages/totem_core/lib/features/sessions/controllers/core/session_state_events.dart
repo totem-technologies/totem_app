@@ -1,18 +1,14 @@
-import 'package:livekit_client/livekit_client.dart' hide logger;
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 
 sealed class SessionEvent {
-  const SessionEvent();
+  const new();
 }
 
 class ConnectionChanged extends SessionEvent {
-  const ConnectionChanged(
-    this.connectionState,
-    this.phase, {
-    this.wasJoining = false,
-  });
+  const new(this.connectionState, this.phase, {this.wasJoining = false});
 
   final RoomConnectionState connectionState;
   final SessionPhase phase;
@@ -20,31 +16,31 @@ class ConnectionChanged extends SessionEvent {
 }
 
 class RoomStateChanged extends SessionEvent {
-  const RoomStateChanged(this.roomState);
+  const new(this.roomState);
 
   final RoomState roomState;
 }
 
 class ParticipantsChanged extends SessionEvent {
-  const ParticipantsChanged(this.participants);
+  const new(this.participants);
 
-  final List<Participant> participants;
+  final List<ParticipantInfo> participants;
 }
 
 class ParticipantRemoved extends SessionEvent {
-  const ParticipantRemoved(this.reason);
+  const new(this.reason);
 
   final RemoveReason reason;
 }
 
 class SessionErrorChanged extends SessionEvent {
-  const SessionErrorChanged(this.error);
+  const new(this.error);
 
   final RoomError? error;
 }
 
 class SessionChatMessageAdded extends SessionEvent {
-  const SessionChatMessageAdded(this.message);
+  const new(this.message);
 
   final SessionChatMessage message;
 }

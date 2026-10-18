@@ -24,7 +24,7 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class SpeakingTurnScreen extends ConsumerStatefulWidget {
-  const SpeakingTurnScreen({required this.session, super.key});
+  const new({required this.session, super.key});
 
   final SessionDetailSchema session;
 
@@ -120,31 +120,35 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 actionText: nextText,
               );
 
-        Widget passCard;
-        if (isWaitingReceive) {
-          passCard = normalPassCard;
-        } else if (isKeeper) {
-          passCard = PromptTransitionCard(
-            initialPrompt: roundPrompt,
-            initialSessionPromptId: preparedPrompt?.id,
-            onManagePrompts: () => showSessionPromptsModal(
-              context,
-              sessionSlug: widget.session.slug,
-            ),
-            onActionPressed:
-                ({customPrompt, sessionPromptId, clearPrompt = false}) {
-                  return _onPassTotem(
-                    customPrompt: customPrompt,
-                    sessionPromptId: sessionPromptId,
-                    clearPrompt: clearPrompt,
-                    nextText: nextText,
-                  );
-                },
-            actionText: nextText,
-          );
-        } else {
-          passCard = normalPassCard;
-        }
+        final passCard = Padding(
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: 20.0),
+          child: () {
+            if (isWaitingReceive) {
+              return normalPassCard;
+            } else if (isKeeper) {
+              return PromptTransitionCard(
+                initialPrompt: roundPrompt,
+                initialSessionPromptId: preparedPrompt?.id,
+                onManagePrompts: () => showSessionPromptsModal(
+                  context,
+                  sessionSlug: widget.session.slug,
+                ),
+                onActionPressed:
+                    ({customPrompt, sessionPromptId, clearPrompt = false}) {
+                      return _onPassTotem(
+                        customPrompt: customPrompt,
+                        sessionPromptId: sessionPromptId,
+                        clearPrompt: clearPrompt,
+                        nextText: nextText,
+                      );
+                    },
+                actionText: nextText,
+              );
+            } else {
+              return normalPassCard;
+            }
+          }(),
+        );
         final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
         final restingBottom = switch (viewportKind.isLarge) {
           true => 180,
@@ -260,7 +264,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
 ///
 /// When in a large screen, the grid is an adaptive layout.
 class _SpeakingTurnGrid extends ConsumerWidget {
-  const _SpeakingTurnGrid({
+  const new({
     required this.session,
     required this.viewportKind,
     this.maxPerLineCount = 10,
@@ -347,8 +351,6 @@ class _SpeakingTurnGrid extends ConsumerWidget {
                           child: ParticipantCard(
                             key: ValueKey(participant.sid),
                             participant: participant,
-                            session: session,
-                            participantIdentity: participant.identity,
                           ),
                         );
                       } else {
@@ -367,8 +369,6 @@ class _SpeakingTurnGrid extends ConsumerWidget {
                   ParticipantCard(
                     key: ValueKey(participant.sid),
                     participant: participant,
-                    session: session,
-                    participantIdentity: participant.identity,
                   ),
               ],
             );
@@ -383,7 +383,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
 /// This only works inside a Stack widget.
 @visibleForTesting
 class SelfView extends ConsumerStatefulWidget {
-  const SelfView({super.key});
+  const new({super.key});
 
   @override
   ConsumerState<SelfView> createState() => _SelfViewState();

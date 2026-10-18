@@ -36,7 +36,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
 class VideoSessionScreen extends ConsumerStatefulWidget {
-  const VideoSessionScreen({
+  const new({
     required this.sessionSlug,
     required this.loadingScreen,
     this.now = DateTime.now,
@@ -73,7 +73,7 @@ class _SessionChatRouteObserver extends NavigatorObserver {
 }
 
 class _DockedSessionPanelsRail extends ConsumerWidget {
-  const _DockedSessionPanelsRail({required this.sessionSlug});
+  const new({required this.sessionSlug});
 
   final String sessionSlug;
 
@@ -104,6 +104,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   final _roomNavigatorObserver = _SessionChatRouteObserver();
   final _notificationController = NotificationController();
 
+  /// The page exit handler this screen registered, if any.
+  VoidCallback? _pageExitHandler;
   NotificationRequest? _closeKeeperLeftNotification;
   NotificationRequest? _offlineNotification;
   Timer? _timeRemainingWarningTimer;
@@ -128,6 +130,14 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       ..invalidate(sessionChatThreadTargetProvider)
       ..invalidate(sessionChatUnreadThreadsProvider);
 
+    // Closing the tab skips the leave flow, so leave as the page unloads.
+    ref.listenManual(currentSessionProvider, (_, session) {
+      final handler = session?.leaveOnPageExit;
+      if (handler == _pageExitHandler) return;
+      _pageExitHandler = handler;
+      TotemRouter.instance.setPageExitHandler(handler);
+    }, fireImmediately: true);
+
     _listenToBatteryChanges();
     _warmEmojiGlyphs();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -143,6 +153,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _batterySubscription?.cancel();
     TotemRouter.instance.setTabCloseConfirmationEnabled(false);
+    if (_pageExitHandler case final handler?) {
+      TotemRouter.instance.clearPageExitHandler(handler);
+    }
     super.dispose();
   }
 
@@ -409,8 +422,15 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   @override
   Widget build(BuildContext context) {
     final currentSession = ref.watch(currentSessionProvider);
-    final currentRoomScreen = ref.watch(resolveCurrentScreenProvider)!;
+    final currentRoomScreen = ref.watch(resolveCurrentScreenProvider);
     final currentSessionEvent = ref.watch(currentSessionEventProvider);
+
+    if (currentSession == null ||
+        currentRoomScreen == null ||
+        currentSessionEvent == null) {
+      return widget.loadingScreen;
+    }
+
     final hasKeeperDisconnected = ref.watch(hasKeeperDisconnectedProvider);
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
@@ -434,7 +454,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     }
 
     final showingDisconnectedScreen =
-        currentSessionEvent?.ended == true ||
+        currentSessionEvent.ended ||
         roomStatus == RoomStatus.ended ||
         currentRoomScreen == RoomScreen.disconnected ||
         currentRoomScreen == RoomScreen.error;
@@ -443,8 +463,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       roomStatus != RoomStatus.waitingRoom && !showingDisconnectedScreen,
     );
 
-    if (currentSessionEvent != null &&
-        connectionState == RoomConnectionState.connected &&
+    if (connectionState == RoomConnectionState.connected &&
         roomStatus == RoomStatus.active &&
         !currentSessionEvent.ended) {
       _scheduleTimeRemainingWarning(currentSessionEvent);
@@ -527,36 +546,30 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         _onConnectivityChanged(next.value!, wasOffline: previous?.value);
       });
 
-    if (currentSession != null) {
-      final audioRouteNotifier = ref.read(
-        sessionDeviceControllerProvider(currentSession).notifier,
-      );
+    final audioRouteNotifier = ref.read(
+      sessionDeviceControllerProvider(currentSession).notifier,
+    );
 
-      ref.listen(
-        sessionDeviceControllerProvider(currentSession).select(
-          (state) => (
-            speakerphone: state.isSpeakerphoneEnabled,
-            outputDeviceId: state.selectedAudioOutputDeviceId,
-          ),
+    ref.listen(
+      sessionDeviceControllerProvider(currentSession).select(
+        (state) => (
+          speakerphone: state.isSpeakerphoneEnabled,
+          outputDeviceId: state.selectedAudioOutputDeviceId,
         ),
-        (previous, next) {
-          if (!mounted || previous == null || previous == next) return;
-          if (!audioRouteNotifier.audioRouteNotificationsEnabled) return;
-          if (ref.read(connectionStateProvider) !=
-              RoomConnectionState.connected) {
-            return;
-          }
+      ),
+      (previous, next) {
+        if (!mounted || previous == null || previous == next) return;
+        if (!audioRouteNotifier.audioRouteNotificationsEnabled) return;
+        if (ref.read(connectionStateProvider) !=
+            RoomConnectionState.connected) {
+          return;
+        }
 
-          _onAudioRouteChanged(
-            ref.read(sessionDeviceControllerProvider(currentSession)),
-          );
-        },
-      );
-    }
-
-    if (currentSession == null || currentSessionEvent == null) {
-      return widget.loadingScreen;
-    }
+        _onAudioRouteChanged(
+          ref.read(sessionDeviceControllerProvider(currentSession)),
+        );
+      },
+    );
 
     final isOffline = ref.watch(isOfflineProvider).value ?? _lastIsOffline;
 

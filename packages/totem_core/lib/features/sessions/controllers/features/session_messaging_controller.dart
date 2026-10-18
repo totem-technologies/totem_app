@@ -6,6 +6,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/media/livekit_support.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/shared/logger.dart';
 import 'package:uuid/uuid.dart';
@@ -13,7 +15,7 @@ import 'package:uuid/uuid.dart';
 part 'session_messaging_controller.g.dart';
 
 class SessionChatMessage {
-  const SessionChatMessage({
+  const new({
     required this.message,
     required this.timestamp,
     required this.id,
@@ -22,10 +24,7 @@ class SessionChatMessage {
     this.recipientIdentity,
   });
 
-  factory SessionChatMessage.fromMap(
-    Map<String, dynamic> map,
-    Participant? participant,
-  ) {
+  factory fromMap(Map<String, dynamic> map, ParticipantInfo? participant) {
     final recipient = map['recipientIdentity'] as String?;
     return SessionChatMessage(
       message: map['message'] as String,
@@ -44,7 +43,7 @@ class SessionChatMessage {
   final int timestamp;
   final String id;
   final bool sender;
-  final Participant? participant;
+  final ParticipantInfo? participant;
 
   /// LiveKit identity of the private recipient. Null means Everyone.
   final String? recipientIdentity;
@@ -111,7 +110,7 @@ enum SessionCommunicationTopics {
   chat('lk-chat-topic'),
   participantRemoved('lk-participant-removed-topic');
 
-  const SessionCommunicationTopics(this.topic);
+  new(this.topic);
   final String topic;
 }
 
@@ -140,7 +139,7 @@ class SessionMessagingController extends _$SessionMessagingController {
       try {
         final message = SessionChatMessage.fromMap(
           jsonDecode(data) as Map<String, dynamic>,
-          event.participant,
+          event.participant?.toInfo(),
         );
 
         // LiveKit lets any client publish with arbitrary destinations, so the
@@ -324,7 +323,7 @@ class SessionMessagingController extends _$SessionMessagingController {
       timestamp: DateTime.now().millisecondsSinceEpoch,
       id: const Uuid().v4(),
       sender: true,
-      participant: localParticipant,
+      participant: localParticipant.toInfo(),
       recipientIdentity: trimmedRecipient,
     );
 

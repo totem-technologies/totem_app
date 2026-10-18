@@ -91,12 +91,10 @@ void main() {
     await tester.pump();
 
     check(auth.verifyPinCalls).equals(1);
-    check(
-      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
-    ).isNotNull();
-    check(
-      tester.widgetList(find.textContaining('Attempts: 1 of 3')),
-    ).length.equals(1);
+    check(tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed)
+        .isNotNull();
+    check(tester.widgetList(find.textContaining('Attempts: 1 of 3'))).length
+        .equals(1);
     await disposeAuthScreenTest(tester, router);
   });
 }

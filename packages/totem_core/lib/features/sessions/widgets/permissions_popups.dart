@@ -31,7 +31,7 @@ Future<void> showBackgroundActivityDialog(BuildContext context) async {
 }
 
 class BackgroundActivityDialog extends StatelessWidget {
-  const BackgroundActivityDialog({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +39,7 @@ class BackgroundActivityDialog extends StatelessWidget {
     return AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-      contentPadding: const EdgeInsets.all(24),
+      contentPadding: const EdgeInsetsDirectional.all(24),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -75,7 +75,7 @@ class BackgroundActivityDialog extends StatelessWidget {
                 if (context.mounted) Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsetsDirectional.symmetric(vertical: 12),
                 textStyle: const TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.bold,
@@ -132,11 +132,7 @@ Future<bool> showWebPermissionsDeniedDialog(
 }
 
 class _PermissionInstructions {
-  const _PermissionInstructions({
-    required this.browser,
-    required this.steps,
-    required this.helper,
-  });
+  const new({required this.browser, required this.steps, required this.helper});
 
   final String browser;
   final List<String> steps;
@@ -178,8 +174,7 @@ _PermissionInstructions _permissionsInstructions() {
         'Click the ✕ beside “Blocked Temporarily”.',
         'Reload the page and choose Allow when asked.',
       ],
-      helper:
-          'Firefox forgets temporary blocks on reload, a refresh is often all it takes.',
+      helper: 'Firefox forgets temporary blocks on reload, a refresh is often all it takes.',
     );
   }
   // Safari
@@ -226,10 +221,7 @@ _PermissionInstructions _permissionsInstructions() {
 }
 
 class _WebPermissionsDeniedDialog extends StatefulWidget {
-  const _WebPermissionsDeniedDialog({
-    required this.instructions,
-    required this.onCheckAgain,
-  });
+  const new({required this.instructions, required this.onCheckAgain});
 
   final _PermissionInstructions instructions;
   final AsyncValueGetter<bool> onCheckAgain;
@@ -282,7 +274,7 @@ class _WebPermissionsDeniedDialogState
                     child: IconButton(
                       tooltip: 'Close',
                       onPressed: () => Navigator.of(context).pop(false),
-                      icon: const Icon(Icons.close),
+                      icon: const TotemIcon(TotemIcons.close),
                     ),
                   ),
                   Text(
@@ -324,7 +316,7 @@ class _WebPermissionsDeniedDialogState
 }
 
 class _PermissionStep extends StatelessWidget {
-  const _PermissionStep({required this.number, required this.text});
+  const new({required this.number, required this.text});
 
   final int number;
   final String text;
@@ -402,7 +394,7 @@ Future<bool> showPermissionsRequestSheet(BuildContext context) async {
 }
 
 class PermissionsRequestSheet extends ConsumerStatefulWidget {
-  const PermissionsRequestSheet({super.key});
+  const new({super.key});
 
   @override
   ConsumerState<PermissionsRequestSheet> createState() =>
@@ -527,7 +519,7 @@ class _PermissionsRequestSheetState
 }
 
 class PermissionItemTile extends StatelessWidget {
-  const PermissionItemTile({
+  const new({
     required this.icon,
     required this.title,
     required this.description,
@@ -556,7 +548,10 @@ class PermissionItemTile extends StatelessWidget {
           onTap: isGranted ? null : onTap,
           borderRadius: BorderRadius.circular(20),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 10,
+              vertical: 12,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -602,7 +597,7 @@ class PermissionItemTile extends StatelessWidget {
 }
 
 class _CircleCheckbox extends StatelessWidget {
-  const _CircleCheckbox({required this.isChecked});
+  const new({required this.isChecked});
 
   final bool isChecked;
 
@@ -617,7 +612,7 @@ class _CircleCheckbox extends StatelessWidget {
         border: isChecked ? null : Border.all(color: AppTheme.gray, width: 1.5),
       ),
       child: isChecked
-          ? const Icon(Icons.check, size: 14, color: Colors.white)
+          ? const TotemIcon(TotemIcons.checkmark, size: 14, color: Colors.white)
           : null,
     );
   }

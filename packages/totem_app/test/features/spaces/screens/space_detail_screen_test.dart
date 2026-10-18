@@ -11,10 +11,16 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/assets.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/confetti.dart';
 
 import '../../../../../totem_core/test/setup.dart';
+
+Finder _totemIcon(String icon) => find.byWidgetPredicate(
+  (widget) => widget is TotemIcon && widget.icon == icon,
+);
 
 final class _FakeAuthController extends AuthController {
   @override
@@ -143,9 +149,8 @@ void main() {
           overrides: [
             authControllerProvider.overrideWith(_FakeAuthController.new),
             spaceProvider(newSpace.slug).overrideWith((_) async => newSpace),
-            sessionProvider(
-              newSession.slug,
-            ).overrideWith((_) async => newSession),
+            sessionProvider(newSession.slug)
+                .overrideWith((_) async => newSession),
             rsvpConfirmProvider(newSession.slug).overrideWith(
               (_) async => throw RsvpConflictException(
                 SessionConflictSchema(
@@ -170,13 +175,12 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      check(
-        tester.widgetList(find.text('You have a session at this time.')),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('You have a session at this time.')))
+          .length
+          .equals(1);
       check(tester.widgetList(find.text('Existing session'))).length.equals(1);
-      check(
-        tester.widgetList(find.text('New session')),
-      ).length.isGreaterOrEqual(1);
+      check(tester.widgetList(find.text('New session'))).length
+          .isGreaterOrEqual(1);
       check(tester.widgetList(find.text('Switch sessions'))).length.equals(1);
     },
     experimentalLeakTesting: LeakTesting.settings.withIgnored(
@@ -237,7 +241,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     check(tester.widgetList(find.text("You're going!"))).length.equals(1);
 
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(_totemIcon(TotemIcons.close));
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
@@ -347,9 +351,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     check((spaceLoads, eventLoads, summaryLoads)).equals((1, 1, 1));
-    check(
-      tester.widgetList(find.byTooltip('Give up your spot')),
-    ).length.equals(1);
+    check(tester.widgetList(find.byTooltip('Give up your spot'))).length
+        .equals(1);
 
     await tester.scrollUntilVisible(
       find.text('Upcoming session'),

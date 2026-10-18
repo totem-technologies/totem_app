@@ -22,6 +22,7 @@ import '../../../../auth/controllers/auth_controller_mock.dart';
 import '../../controllers/core/session_controller_mock.dart';
 import '../../controllers/features/session_device_controller_mock.dart';
 import '../../livekit_mocks.dart';
+import '../../media/test_participants.dart';
 
 class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   @override
@@ -33,7 +34,7 @@ class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   }
 }
 
-class _MockRoom extends Mock implements Room {}
+class _MockRoom extends Mock implements Room;
 
 SessionRoomState _createSessionState() {
   return SessionRoomState(
@@ -43,9 +44,9 @@ SessionRoomState _createSessionState() {
     ),
     participants: ParticipantsState(
       participants: [
-        MockLocalParticipant('user-1'),
-        MockLocalParticipant('user-2'),
-        MockLocalParticipant('keeper-1'),
+        testParticipant('user-1'),
+        testParticipant('user-2'),
+        testParticipant('keeper-1'),
       ],
     ),
     chat: const ChatState(),
@@ -171,20 +172,16 @@ void main() {
       );
       when(() => deviceController.isCameraEnabled).thenReturn(false);
       when(() => deviceController.selectedCameraDeviceId).thenReturn(null);
-      when(() => deviceController.localVideoTrack).thenReturn(null);
-      when(
-        () => deviceController.enableCamera(),
-      ).thenAnswer((_) => Future<void>.value());
-      when(
-        () => deviceController.disableCamera(),
-      ).thenAnswer((_) => Future<void>.value());
+      when(() => deviceController.enableCamera())
+          .thenAnswer((_) => Future<void>.value());
+      when(() => deviceController.disableCamera())
+          .thenAnswer((_) => Future<void>.value());
 
       when(
         () => participant.getTrackPublicationBySource(TrackSource.microphone),
       ).thenReturn(null);
-      when(
-        () => participant.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(null);
+      when(() => participant.getTrackPublicationBySource(TrackSource.camera))
+          .thenReturn(null);
       when(() => participant.isMicrophoneEnabled()).thenReturn(false);
       when(() => participant.isCameraEnabled()).thenReturn(false);
 
@@ -257,9 +254,9 @@ void main() {
     autoSizeTest(
       'confirms before unmuting when another participant has the Totem',
       (tester) async {
-        when(
-          () => deviceController.disableMicrophone(),
-        ).thenAnswer((_) async {});
+        session.mockLocalMedia
+          ..hasMicrophoneTrack = true
+          ..isMicrophoneEnabled = true;
         await pumpSessionActionBar(tester, screen: RoomScreen.listening);
 
         await tester.tap(find.byType(ActionBarButton).first);
@@ -285,9 +282,9 @@ void main() {
             isStaff: isStaff,
           );
 
-          check(
-            tester.widgetList(find.bySemanticsLabel('Microphone on')),
-          ).length.equals(isStaff ? 1 : 0);
+          check(tester.widgetList(find.bySemanticsLabel('Microphone on')))
+              .length
+              .equals(isStaff ? 1 : 0);
 
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
@@ -305,9 +302,8 @@ void main() {
         await pumpSessionActionBar(tester, screen: scenario.screen);
         await tester.pumpAndSettle();
 
-        check(
-          tester.widgetList(find.byType(ActionBarEmojiButton)),
-        ).length.equals(scenario.showsReactions ? 1 : 0);
+        check(tester.widgetList(find.byType(ActionBarEmojiButton))).length
+            .equals(scenario.showsReactions ? 1 : 0);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       }
@@ -387,9 +383,8 @@ void main() {
       await tester.pump();
 
       check(tester.widgetList(findPendingBadge())).length.equals(1);
-      check(
-        tester.widgetList(find.text('New message from Keeper')),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('New message from Keeper'))).length
+          .equals(1);
       check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
     });
 

@@ -1,13 +1,14 @@
 name: _
 publish_to: none
 environment:
-  sdk: ^3.11.3
+  sdk: ^3.13.5
 workspace:
   - packages/totem_core
   - packages/totem_app
   - packages/totem_web
   - packages/totem_benchmark
   - packages/totem_widgetbook
+
 dev_dependencies:
   meta: any
   flutter_test:
@@ -20,5 +21,5 @@ dependency_overrides:
       ref: fix/combined-stats-and-renderer
   flutter_webrtc:
     git:
-      url: https://github.com/totem-technologies/flutter-webrtc
-      ref: fix/web-texture-renderer-and-video-view-lifecycle
+      url: https://github.com/flutter-webrtc/flutter-webrtc
+      ref: 381926ca5b1bfea4e8b46743eee97c2ee9a9a72b

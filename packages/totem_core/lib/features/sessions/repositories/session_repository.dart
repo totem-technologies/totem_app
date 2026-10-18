@@ -19,6 +19,18 @@ bool _isStaleVersionError(ErrorCode? code) => code == ErrorCode.staleVersion;
 bool _isInvalidTransitionError(ErrorCode? code) =>
     code == ErrorCode.invalidTransition;
 
+bool isTerminalSessionJoinError(Object? error) {
+  final response = error is ApiError ? error.error : error;
+  return switch (response) {
+    RoomErrorResponse(:final code)
+        when code == ErrorCode.notJoinable ||
+            code == ErrorCode.roomAlreadyEnded ||
+            code == ErrorCode.roomNotActive =>
+      true,
+    _ => false,
+  };
+}
+
 Future<RoomState> _postEvent({
   required ClientApi apiService,
   required String sessionSlug,
@@ -122,6 +134,7 @@ Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) {
     operationName: 'join session',
     timeout: _shortTimeoutDuration,
     diagnostics: {'session_slug': sessionSlug},
+    shouldReport: (error) => !isTerminalSessionJoinError(error),
   );
 }
 
@@ -145,6 +158,9 @@ Future<RoomState> roomState(
     operationName: 'get room state',
     timeout: _shortTimeoutDuration,
     diagnostics: {'session_slug': sessionSlug},
+    // This provider is only consumed by the controller's passive poll loop.
+    // The controller reports a sustained outage once it knows recovery failed.
+    shouldReport: (_) => false,
   );
 }
 

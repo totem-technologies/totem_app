@@ -7,11 +7,10 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:livekit_client/livekit_client.dart'
-    hide Session, SessionOptions;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
 
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 
@@ -36,7 +35,7 @@ const _messageListPadding = EdgeInsetsDirectional.fromSTEB(
 
 /// In-call chat panel used as a phone sheet, tablet dialog, or docked sidebar.
 class SessionChatPanel extends ConsumerStatefulWidget {
-  const SessionChatPanel({
+  const new({
     super.key,
     this.scrollController,
     this.embedded = false,
@@ -244,7 +243,9 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     }
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsetsDirectional.only(
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: Material(
         color: AppTheme.cream,
         child: Column(
@@ -415,8 +416,11 @@ String? _resolveKeeperIdentity({
   return null;
 }
 
-Participant? _participantFor(List<Participant> participants, String? identity) {
-  return participants.cast<Participant?>().firstWhere(
+ParticipantInfo? _participantFor(
+  List<ParticipantInfo> participants,
+  String? identity,
+) {
+  return participants.cast<ParticipantInfo?>().firstWhere(
     (participant) => participant?.identity == identity,
     orElse: () => null,
   );
@@ -441,7 +445,7 @@ String _pinnedHint({
 String _composerHint({
   required bool isPrivateThread,
   required String? threadTarget,
-  required List<Participant> participants,
+  required List<ParticipantInfo> participants,
   required String? keeperIdentity,
 }) {
   if (!isPrivateThread) {
@@ -459,7 +463,7 @@ String _composerHint({
 }
 
 class _SessionChatHeader extends StatelessWidget {
-  const _SessionChatHeader({
+  const new({
     required this.isKeeper,
     required this.threadTarget,
     required this.keeperIdentity,
@@ -472,7 +476,7 @@ class _SessionChatHeader extends StatelessWidget {
   final bool isKeeper;
   final String? threadTarget;
   final String? keeperIdentity;
-  final List<Participant> participants;
+  final List<ParticipantInfo> participants;
   final bool dropdownOpen;
   final VoidCallback onClose;
   final VoidCallback onToggleDropdown;
@@ -535,7 +539,7 @@ class _SessionChatHeader extends StatelessWidget {
             child: IconButton(
               onPressed: onClose,
               mouseCursor: SystemMouseCursors.click,
-              padding: EdgeInsets.zero,
+              padding: EdgeInsetsDirectional.zero,
               constraints: const BoxConstraints.tightFor(
                 width: 32.0,
                 height: 32.0,
@@ -554,7 +558,7 @@ class _SessionChatHeader extends StatelessWidget {
 }
 
 class _HeaderAvatar extends StatelessWidget {
-  const _HeaderAvatar({required this.threadTarget});
+  const new({required this.threadTarget});
 
   final String? threadTarget;
 
@@ -568,7 +572,7 @@ class _HeaderAvatar extends StatelessWidget {
 }
 
 class _EveryoneAvatar extends StatelessWidget {
-  const _EveryoneAvatar();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -586,7 +590,7 @@ class _EveryoneAvatar extends StatelessWidget {
 }
 
 class _ParticipantAvatar extends ConsumerWidget {
-  const _ParticipantAvatar({required this.identity});
+  const new({required this.identity});
 
   final String identity;
   static const double radius = 16;
@@ -598,7 +602,7 @@ class _ParticipantAvatar extends ConsumerWidget {
 }
 
 class _HeaderTitle extends StatelessWidget {
-  const _HeaderTitle({
+  const new({
     required this.threadTarget,
     required this.keeperIdentity,
     required this.isKeeper,
@@ -608,7 +612,7 @@ class _HeaderTitle extends StatelessWidget {
   final String? threadTarget;
   final String? keeperIdentity;
   final bool isKeeper;
-  final List<Participant> participants;
+  final List<ParticipantInfo> participants;
 
   @override
   Widget build(BuildContext context) {
@@ -676,13 +680,13 @@ enum _MessageFadeEdge {
   top(Key('session-chat-message-edge-fade-top')),
   bottom(Key('session-chat-message-edge-fade-bottom'));
 
-  const _MessageFadeEdge(this.bandKey);
+  new(this.bandKey);
 
   final Key bandKey;
 }
 
 class _MessageScrollEdgeFade extends StatelessWidget {
-  const _MessageScrollEdgeFade({required this.child});
+  const new({required this.child});
 
   final Widget child;
 
@@ -699,7 +703,7 @@ class _MessageScrollEdgeFade extends StatelessWidget {
 }
 
 class _MessageEdgeFadeBand extends StatelessWidget {
-  const _MessageEdgeFadeBand({required this.edge});
+  const new({required this.edge});
 
   final _MessageFadeEdge edge;
 
@@ -736,7 +740,7 @@ class _MessageEdgeFadeBand extends StatelessWidget {
 }
 
 class _PinnedHintPill extends StatelessWidget {
-  const _PinnedHintPill({required this.text});
+  const new({required this.text});
 
   final String text;
 
@@ -768,7 +772,7 @@ class _PinnedHintPill extends StatelessWidget {
 }
 
 class _ParticipantThreadChip extends StatelessWidget {
-  const _ParticipantThreadChip({
+  const new({
     required this.isPrivateThread,
     required this.onMessageKeeper,
     required this.onViewGroup,
@@ -834,7 +838,7 @@ class _ParticipantThreadChip extends StatelessWidget {
 }
 
 class _RecipientDropdownOverlay extends StatelessWidget {
-  const _RecipientDropdownOverlay({
+  const new({
     required this.animation,
     required this.interactive,
     required this.isKeeper,
@@ -852,13 +856,13 @@ class _RecipientDropdownOverlay extends StatelessWidget {
   final String? threadTarget;
   final String? keeperIdentity;
   final String? localIdentity;
-  final List<Participant> participants;
+  final List<ParticipantInfo> participants;
   final VoidCallback onSelectEveryone;
   final ValueChanged<String> onSelectParticipant;
 
   @override
   Widget build(BuildContext context) {
-    final rows = <Participant>[];
+    final rows = <ParticipantInfo>[];
     if (isKeeper) {
       for (final participant in participants) {
         if (participant.identity == localIdentity) continue;
@@ -963,7 +967,7 @@ class _RecipientDropdownOverlay extends StatelessWidget {
 
 /// 1px #E8E5E0 rule from the Figma recipient menu — not a Material hairline.
 class _RecipientHairline extends StatelessWidget {
-  const _RecipientHairline();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -975,7 +979,7 @@ class _RecipientHairline extends StatelessWidget {
 }
 
 class _RecipientRow extends StatelessWidget {
-  const _RecipientRow({
+  const new({
     required this.selected,
     required this.title,
     required this.leading,

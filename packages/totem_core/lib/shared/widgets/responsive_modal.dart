@@ -15,7 +15,7 @@ Future<T?> showResponsiveModal<T>({
   Color? dialogBarrierColor,
   ShapeBorder? dialogShape,
   AlignmentGeometry dialogAlignment = Alignment.center,
-  EdgeInsetsGeometry dialogInsetPadding = const EdgeInsets.all(24),
+  EdgeInsetsGeometry dialogInsetPadding = const EdgeInsetsDirectional.all(24),
 }) {
   assert(
     debugCheckHasDirectionality(context),

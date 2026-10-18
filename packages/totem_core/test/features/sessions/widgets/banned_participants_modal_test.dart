@@ -143,9 +143,8 @@ void main() {
       await tester.tap(find.text('Open banned modal'));
       await tester.pumpAndSettle();
 
-      check(
-        tester.widgetList(find.text('Banned Participants')),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('Banned Participants'))).length
+          .equals(1);
       check(tester.widgetList(find.text('User user-1'))).length.equals(1);
       check(tester.widgetList(find.text('User user-2'))).length.equals(1);
 
@@ -156,9 +155,8 @@ void main() {
       await tester.tap(unbanButtons.first);
       await tester.pump();
 
-      check(
-        tester.widgetList(find.byType(CircularProgressIndicator)),
-      ).length.equals(1);
+      check(tester.widgetList(find.byType(CircularProgressIndicator))).length
+          .equals(1);
 
       unbanCompleter.complete();
       await tester.pumpAndSettle();
@@ -230,12 +228,11 @@ void main() {
       await tester.tap(find.text('Open banned modal'));
       await tester.pumpAndSettle();
 
-      check(
-        tester.widgetList(find.text('Banned Participants')),
-      ).length.equals(1);
-      check(
-        tester.widgetList(find.text('No participants have been banned')),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('Banned Participants'))).length
+          .equals(1);
+      check(tester.widgetList(find.text('No participants have been banned')))
+          .length
+          .equals(1);
       check(tester.widgetList(find.text('Unban'))).length.equals(0);
     });
 
@@ -300,9 +297,8 @@ void main() {
       await tester.tap(find.text('Open banned modal'));
       await tester.pumpAndSettle();
 
-      check(
-        tester.widgetList(find.text('Banned Participants')),
-      ).length.equals(1);
+      check(tester.widgetList(find.text('Banned Participants'))).length
+          .equals(1);
       check(tester.widgetList(find.text('User user-1'))).length.equals(1);
 
       // Close button is visible
@@ -319,9 +315,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Modal is dismissed
-      check(
-        tester.widgetList(find.text('Banned Participants')),
-      ).length.equals(0);
+      check(tester.widgetList(find.text('Banned Participants'))).length
+          .equals(0);
       check(tester.widgetList(find.text('User user-1'))).length.equals(0);
       // Original screen is still visible
       check(tester.widgetList(find.text('Open banned modal'))).length.equals(1);

@@ -1,11 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 class ImageGradientMask extends StatelessWidget {
-  const ImageGradientMask({
-    required this.child,
-    super.key,
-    this.gradientHeight = 135.0,
-  });
+  const new({required this.child, super.key, this.gradientHeight = 135.0});
 
   final Widget child;
 

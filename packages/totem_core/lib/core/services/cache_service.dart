@@ -12,7 +12,7 @@ final cacheServiceProvider = Provider<CacheService>((ref) {
 }, name: 'Cache Service Provider');
 
 class CacheService {
-  const CacheService(this._secureStorage);
+  const new(this._secureStorage);
 
   final SecureStorage _secureStorage;
 
