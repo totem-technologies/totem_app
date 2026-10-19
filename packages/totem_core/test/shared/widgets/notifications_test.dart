@@ -356,13 +356,15 @@ void main() {
 
         check(identical(replacement, first)).equals(false);
         await tester.pumpAndSettle();
-        check(tester.widgetList(find.text('Flaky connection'))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.text('Flaky connection')),
+        ).length.equals(1);
 
         replacement.dismissActive();
         await tester.pumpAndSettle();
-        check(tester.widgetList(find.text('Flaky connection'))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.text('Flaky connection')),
+        ).length.equals(0);
       },
     );
   });
@@ -624,13 +626,15 @@ void main() {
         }
 
         await tester.pump();
-        check(tester.widgetList(find.text('Hidden permanent'))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.text('Hidden permanent')),
+        ).length.equals(1);
 
         controller.dismissAll();
         await tester.pumpAndSettle();
-        check(tester.widgetList(find.text('Hidden permanent'))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.text('Hidden permanent')),
+        ).length.equals(0);
       },
     );
   });
@@ -827,7 +831,8 @@ void main() {
                 width: 220,
                 child: NotificationBanner(
                   icon: TotemIcons.chat,
-                  title: 'Very long notification title that must remain stable in UI',
+                  title:
+                      'Very long notification title that must remain stable in UI',
                   message:
                       'Very long notification message that should be truncated '
                       'safely without causing overflow exceptions during layout.',

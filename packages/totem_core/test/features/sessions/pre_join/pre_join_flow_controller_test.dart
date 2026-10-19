@@ -238,10 +238,12 @@ void main() {
           .requestJoin();
 
       check(outcome).equals(PreJoinJoinOutcome.confirmationRequired);
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.idle);
-      check(container.read(preJoinFlowControllerProvider(_slug)).sessionOptions)
-          .isNull();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).sessionOptions,
+      ).isNull();
     },
   );
 
@@ -261,10 +263,12 @@ void main() {
         .requestJoin();
 
     check(outcome).equals(PreJoinJoinOutcome.joined);
-    check(_SuccessfulSessionController.receivedMedia?.cameraTrack)
-        .equals(factory.videoTracks.single);
-    check(_SuccessfulSessionController.receivedMedia?.microphoneTrack)
-        .equals(factory.audioTracks.single);
+    check(
+      _SuccessfulSessionController.receivedMedia?.cameraTrack,
+    ).equals(factory.videoTracks.single);
+    check(
+      _SuccessfulSessionController.receivedMedia?.microphoneTrack,
+    ).equals(factory.audioTracks.single);
   });
 
   test('permission revocation prevents joining with stale tracks', () async {
@@ -286,8 +290,9 @@ void main() {
 
     check(outcome).equals(PreJoinJoinOutcome.permissionsDenied);
     check(_SuccessfulSessionController.receivedMedia).isNull();
-    check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-        .equals(PreJoinFlowPhase.idle);
+    check(
+      container.read(preJoinFlowControllerProvider(_slug)).phase,
+    ).equals(PreJoinFlowPhase.idle);
   });
 
   test('native join succeeds when no camera or microphone exists', () async {
@@ -330,8 +335,9 @@ void main() {
           .requestJoin();
       await factory.cameraStarted.future;
 
-      check(container.read(preJoinFlowControllerProvider(_slug)).sessionOptions)
-          .isNull();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).sessionOptions,
+      ).isNull();
 
       factory.cameraGate.complete();
       check(await join).equals(PreJoinJoinOutcome.joined);
@@ -360,8 +366,9 @@ void main() {
 
     final flow = container.read(preJoinFlowControllerProvider(_slug).notifier);
     check(await flow.requestJoin()).equals(PreJoinJoinOutcome.retryableFailure);
-    check(container.read(preJoinMediaControllerProvider(_slug)).transferred)
-        .equals(false);
+    check(
+      container.read(preJoinMediaControllerProvider(_slug)).transferred,
+    ).equals(false);
 
     failPrecache = false;
     container.invalidate(sessionProvider(_slug));
@@ -405,8 +412,9 @@ void main() {
       check(_RetryableSessionController.resets).equals(1);
       check(factory.videoTracks).length.equals(2);
       check(factory.audioTracks).length.equals(2);
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
       _RetryableSessionController.resetStarted = null;
       _RetryableSessionController.resetGate = null;
     },

@@ -1777,7 +1777,9 @@ class _DeclinedState extends State<_Declined> {
                         ),
                       ),
                       Text(
-                        next ? 'The next one is open.' : 'Nothing else is on the calendar yet. This one sits close to what you came for.',
+                        next
+                            ? 'The next one is open.'
+                            : 'Nothing else is on the calendar yet. This one sits close to what you came for.',
                         style: _muted(context),
                       ),
                       SessionCard(

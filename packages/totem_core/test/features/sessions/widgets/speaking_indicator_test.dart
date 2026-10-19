@@ -61,8 +61,9 @@ void main() {
       await pumpWidget(
         tester,
         overrides: [
-          participantEmojisProvider(remoteParticipant.identity)
-              .overrideWith((ref) => ['🔥']),
+          participantEmojisProvider(
+            remoteParticipant.identity,
+          ).overrideWith((ref) => ['🔥']),
         ],
         child: SpeakingIndicatorOrEmoji(
           participant: remoteParticipant,
@@ -73,8 +74,9 @@ void main() {
       await tester.pumpAndSettle();
 
       check(tester.widgetList(find.text('🔥'))).length.equals(1);
-      check(tester.widgetList(find.byType(FakeMicrophoneLevel))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(FakeMicrophoneLevel)),
+      ).length.equals(0);
     });
 
     testWidgets('updates when the emoji provider changes', (tester) async {
@@ -91,23 +93,26 @@ void main() {
       );
       final notifier = container.read(emojiReactionsProvider.notifier);
 
-      check(tester.widgetList(find.byType(FakeMicrophoneLevel))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(FakeMicrophoneLevel)),
+      ).length.equals(1);
       check(tester.widgetList(find.text('🔥'))).length.equals(0);
 
       await notifier.emitIncomingReaction(remoteParticipant.identity, '🔥');
       await tester.pump();
 
       check(tester.widgetList(find.text('🔥'))).length.equals(1);
-      check(tester.widgetList(find.byType(FakeMicrophoneLevel))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(FakeMicrophoneLevel)),
+      ).length.equals(0);
 
       notifier.clear();
       await tester.pumpAndSettle();
 
       check(tester.widgetList(find.text('🔥'))).length.equals(0);
-      check(tester.widgetList(find.byType(FakeMicrophoneLevel))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(FakeMicrophoneLevel)),
+      ).length.equals(1);
     });
   });
 }

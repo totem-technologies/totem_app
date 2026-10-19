@@ -34,8 +34,9 @@ void main() {
           const [0.111, 0.5, 0.9],
         ),
       ).isTrue();
-      check(audioVisualizerSamplesChanged(const [0.1], const [0.1, 0.2]))
-          .isTrue();
+      check(
+        audioVisualizerSamplesChanged(const [0.1], const [0.1, 0.2]),
+      ).isTrue();
     });
 
     test('settles a previously visible waveform to silence', () {
