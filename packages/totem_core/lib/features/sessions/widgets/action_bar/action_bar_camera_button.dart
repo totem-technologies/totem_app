@@ -80,14 +80,9 @@ class _ActionBarCameraSwitcherButtonState
   @override
   Widget build(BuildContext context) {
     final isDesktopPicker = usesMediaDevicePicker;
-    // If the user only has one camera, we show a simple
-    // toggle button without the option to switch cameras
-    final canChooseBetweenMultipleCameras =
-        isDesktopPicker && widget.availableCameraDevices.length > 1;
-    if (isDesktopPicker && !canChooseBetweenMultipleCameras) {
+    if (widget.availableCameraDevices.length <= 1) {
       return ActionBarButton(
         semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
-        // Off is pinkTint, not cream — that's the muted media treatment.
         role: ActionBarButtonRole.media(enabled: widget.isCameraOn),
         onPressed: widget.onToggle,
         child: TotemIcon(
@@ -616,29 +611,18 @@ class _SessionActionBarCameraButtonState
     final isCameraOn = deviceState.isCameraOn;
     final onToggle = _busy ? null : () => _toggleCamera(isCameraOn);
 
-    if (!usesMediaDevicePicker) {
-      return ActionBarButton(
-        semanticsLabel: 'Camera ${isCameraOn ? 'on' : 'off'}',
-        role: ActionBarButtonRole.media(enabled: isCameraOn),
-        onPressed: onToggle,
-        child: TotemIcon(
-          isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
-        ),
-      );
-    }
-
     final cameraDevices = ref.watch(cameraDevicesProvider);
     return ActionBarCameraSwitcherButton(
       isCameraOn: isCameraOn,
       onToggle: onToggle,
-      cameraFacing: CameraFacing.front,
+      cameraFacing: deviceState.cameraFacing ?? CameraFacing.front,
       availableCameraDevices: cameraDevices,
       selectedCameraDeviceId:
           deviceState.selectedCameraDeviceId ?? cameraDevices.firstOrNull?.id,
-      onCameraFacingChanged: (_) {},
-      onCameraDeviceSelected: ref
-          .read(deviceProvider.notifier)
-          .selectCameraDevice,
+      onCameraFacingChanged: ref.read(deviceProvider.notifier).setCameraFacing,
+      onCameraDeviceSelected: usesMediaDevicePicker
+          ? ref.read(deviceProvider.notifier).selectCameraDevice
+          : null,
     );
   }
 }
