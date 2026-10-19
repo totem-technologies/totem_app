@@ -120,35 +120,32 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 actionText: nextText,
               );
 
-        final passCard = Padding(
-          padding: const EdgeInsetsDirectional.symmetric(horizontal: 20.0),
-          child: () {
-            if (isWaitingReceive) {
-              return normalPassCard;
-            } else if (isKeeper) {
-              return PromptTransitionCard(
-                initialPrompt: roundPrompt,
-                initialSessionPromptId: preparedPrompt?.id,
-                onManagePrompts: () => showSessionPromptsModal(
-                  context,
-                  sessionSlug: widget.session.slug,
-                ),
-                onActionPressed:
-                    ({customPrompt, sessionPromptId, clearPrompt = false}) {
-                      return _onPassTotem(
-                        customPrompt: customPrompt,
-                        sessionPromptId: sessionPromptId,
-                        clearPrompt: clearPrompt,
-                        nextText: nextText,
-                      );
-                    },
-                actionText: nextText,
-              );
-            } else {
-              return normalPassCard;
-            }
-          }(),
-        );
+        final passCard = () {
+          if (isWaitingReceive) {
+            return normalPassCard;
+          } else if (isKeeper) {
+            return PromptTransitionCard(
+              initialPrompt: roundPrompt,
+              initialSessionPromptId: preparedPrompt?.id,
+              onManagePrompts: () => showSessionPromptsModal(
+                context,
+                sessionSlug: widget.session.slug,
+              ),
+              onActionPressed:
+                  ({customPrompt, sessionPromptId, clearPrompt = false}) {
+                    return _onPassTotem(
+                      customPrompt: customPrompt,
+                      sessionPromptId: sessionPromptId,
+                      clearPrompt: clearPrompt,
+                      nextText: nextText,
+                    );
+                  },
+              actionText: nextText,
+            );
+          } else {
+            return normalPassCard;
+          }
+        }();
         final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
         final restingBottom = switch (viewportKind.isLarge) {
           true => 180,
@@ -161,6 +158,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
         final double yOffset = keyboardInset > 0
             ? -math.max(0.0, (keyboardInset + 16) - restingBottom)
             : 0.0;
+        final promptText = roundPromptText(roundPrompt);
 
         switch (viewportKind) {
           case ViewportKind.smallPortrait:
@@ -173,7 +171,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                     child: participantGrid,
                   ),
                 ),
-                ?roundPromptText(roundPrompt),
+                ?promptText,
                 Transform.translate(
                   offset: Offset(0, yOffset),
                   child: passCard,
@@ -201,10 +199,9 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                       Flexible(
                         child: Column(
                           spacing: 16,
-                          mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            ?roundPromptText(roundPrompt),
+                            ?promptText,
                             Transform.translate(
                               offset: Offset(0, yOffset),
                               child: passCard,
@@ -232,7 +229,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 children: [
                   const SessionTitle(),
                   Expanded(child: Center(child: participantGrid)),
-                  ?roundPromptText(roundPrompt),
+                  ?promptText,
                   Transform.translate(
                     offset: Offset(0, yOffset),
                     child: passCard,

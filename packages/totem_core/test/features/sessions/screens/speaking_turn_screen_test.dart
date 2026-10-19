@@ -214,6 +214,7 @@ void main() {
     required SessionRoomState sessionState,
     required bool isKeeper,
     SessionCuesService? cuesService,
+    String? currentPrompt,
   }) async {
     when(() => session.isCurrentUserKeeper()).thenReturn(isKeeper);
     when(() => session.state).thenReturn(sessionState);
@@ -227,6 +228,7 @@ void main() {
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
           currentSessionProvider.overrideWith((ref) => session),
+          currentSessionPromptProvider.overrideWith((ref) => currentPrompt),
           sessionPromptsControllerProvider('test-session').overrideWithValue(
             const SessionPromptsState(
               snapshot: SessionPromptsSchema(revision: 0, prompts: []),
