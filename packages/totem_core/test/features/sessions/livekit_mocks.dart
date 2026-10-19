@@ -122,6 +122,7 @@ class FakeRoom extends Fake implements Room {
       return Future<void>.value();
     }
     if (invocation.memberName == #selectedVideoInputDeviceId) return null;
+    if (invocation.memberName == #name) return 'Test Room';
     return super.noSuchMethod(invocation);
   }
 }

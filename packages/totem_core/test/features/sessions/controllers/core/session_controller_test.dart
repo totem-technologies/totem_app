@@ -8,10 +8,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
 import 'package:mocktail/mocktail.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
+import '../../../../auth/controllers/auth_controller_mock.dart';
 import '../../../../setup.dart';
 import '../../livekit_mocks.dart';
 
@@ -115,12 +118,18 @@ class _CountingRoom implements Room {
     this.prepareConnectionError,
     this.connectError,
     this.emitConnectedOnConnect = false,
+    this.disconnectGate,
+    this.disconnectError,
+    this.emitDisconnectedOnDisconnect = false,
   });
 
   final MockLocalParticipant participant;
   final Error? prepareConnectionError;
   final LiveKitException? connectError;
   final bool emitConnectedOnConnect;
+  final Completer<void>? disconnectGate;
+  final Exception? disconnectError;
+  final bool emitDisconnectedOnDisconnect;
   final _CountingRoomEventsListener listener = _CountingRoomEventsListener();
 
   int prepareConnectionCount = 0;
@@ -171,6 +180,11 @@ class _CountingRoom implements Room {
   @override
   Future<void> disconnect() async {
     disconnectCount++;
+    if (emitDisconnectedOnDisconnect) {
+      await listener.trigger(RoomDisconnectedEvent());
+    }
+    await disconnectGate?.future;
+    if (disconnectError case final error?) throw error;
   }
 
   @override
@@ -436,6 +450,211 @@ void main() {
         check(room.disposeCount).equals(1);
         check(controller.room).isNull();
       });
+
+      test('concurrent leave calls share the in-flight disconnect', () async {
+        const eventSlug = 'test-session';
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: true,
+          microphoneEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant();
+        when(() => localParticipant.setCameraEnabled(any<bool>()))
+            .thenAnswer((_) async => null);
+        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+            .thenAnswer((_) async => null);
+        final disconnectGate = Completer<void>();
+        final room = _CountingRoom(
+          localParticipant,
+          disconnectGate: disconnectGate,
+        );
+        controller.room = room;
+
+        final firstLeave = controller.leave();
+        await pumpEventQueue();
+        final secondLeave = controller.leave();
+        final thirdLeave = controller.leave();
+
+        check(room.disconnectCount).equals(1);
+        check(identical(firstLeave, secondLeave)).isTrue();
+        check(identical(secondLeave, thirdLeave)).isTrue();
+        disconnectGate.complete();
+        await Future.wait([firstLeave, secondLeave, thirdLeave]);
+
+        check(room.disposeCount).equals(1);
+        check(controller.room).isNull();
+      });
+
+      test(
+        'disconnect failure still cleans up and permits a later leave',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          when(() => localParticipant.setCameraEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          final failedRoom = _CountingRoom(
+            localParticipant,
+            disconnectError: TimeoutException('disconnect timed out'),
+          );
+          controller.room = failedRoom;
+
+          await check(controller.leave()).throws<TimeoutException>();
+          check(failedRoom.disposeCount).equals(1);
+          check(controller.room).isNull();
+
+          final nextRoom = _CountingRoom(localParticipant);
+          controller.room = nextRoom;
+          await controller.leave();
+          check(nextRoom.disconnectCount).equals(1);
+          check(nextRoom.disposeCount).equals(1);
+        },
+      );
+
+      test(
+        'session end transition leaves once and ignores repeated updates',
+        () async {
+          const eventSlug = 'test-session';
+          final container = ProviderContainer(
+            overrides: [
+              authControllerProvider.overrideWith(
+                () => FakeAuthController(AuthState.unauthenticated()),
+              ),
+              sessionProvider(eventSlug)
+                  .overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+            ],
+          );
+          addTearDown(container.dispose);
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          when(() => localParticipant.setCameraEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          final disconnectGate = Completer<void>();
+          final room = _CountingRoom(
+            localParticipant,
+            disconnectGate: disconnectGate,
+          );
+          controller.room = room;
+          const ended = RoomState(
+            keeper: 'keeper',
+            nextSpeaker: Omittable(''),
+            currentSpeaker: Omittable(''),
+            status: RoomStatus.ended,
+            turnState: TurnState.idle,
+            sessionSlug: eventSlug,
+            statusDetail: RoomStateStatusDetailEnded(
+              EndedDetail(reason: EndReason.keeperEnded),
+            ),
+            talkingOrder: [],
+            version: 0,
+            roundNumber: 0,
+          );
+
+          controller
+            ..applyRoomState(ended)
+            ..applyRoomState(ended);
+          await pumpEventQueue();
+
+          check(room.disconnectCount).equals(1);
+          disconnectGate.complete();
+          await pumpEventQueue();
+          check(room.disposeCount).equals(1);
+        },
+      );
+
+      test(
+        'disconnect event during leave does not start another cleanup',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          when(() => localParticipant.setCameraEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
+              .thenAnswer((_) async => null);
+          final room = _CountingRoom(
+            localParticipant,
+            emitDisconnectedOnDisconnect: true,
+          );
+          controller.room = room;
+
+          await controller.leave();
+
+          check(room.disconnectCount).equals(1);
+          check(room.disposeCount).equals(1);
+          check(controller.state.phase).equals(SessionPhase.idle);
+        },
+      );
 
       test('sequential leave calls clean up each new connection', () async {
         const eventSlug = 'test-session';
