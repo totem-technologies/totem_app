@@ -155,7 +155,9 @@
       document.getElementById("splash")?.remove();
       document.getElementById("splash-branding")?.remove();
       document.getElementById("splash-loader")?.remove();
-      document.body.style.background = "transparent";
+      // AppTheme.cream, not transparent: anything the Flutter view doesn't
+      // cover (e.g. mobile browser chrome resizing) would otherwise be white.
+      document.body.style.background = "#F3F1E9";
     }
   </script>
 </head>

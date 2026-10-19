@@ -52,16 +52,27 @@ class _RoomBackgroundState extends State<RoomBackground> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    _notifyBackgroundChanged();
+  }
+
+  @override
   void didUpdateWidget(covariant RoomBackground oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.status != oldWidget.status) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        RoomBackground.onBackgroundChanged?.call(switch (widget.status) {
-          RoomStatus.waitingRoom => waitingDecoration,
-          _ => roomDecoration,
-        });
-      });
+      _notifyBackgroundChanged();
     }
+  }
+
+  void _notifyBackgroundChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      RoomBackground.onBackgroundChanged?.call(switch (widget.status) {
+        RoomStatus.waitingRoom => waitingDecoration,
+        _ => roomDecoration,
+      });
+    });
   }
 
   @override

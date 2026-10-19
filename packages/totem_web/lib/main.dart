@@ -19,41 +19,53 @@ import 'package:web/web.dart' as web;
 @JS('removeSplashFromWeb')
 external void _removeSplashFromWeb();
 
-Future<void> main() async {
-  RoomBackground.onBackgroundChanged = (decoration) {
-    final style = web.document.body?.style;
-    if (style == null) return;
+/// The last room background applied to the page, re-applied once the splash
+/// is removed (removing it resets the body background).
+BoxDecoration? _pageBackground;
 
-    String toHex(Color color) =>
-        '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+/// Mirrors the room background onto the page body so any area the Flutter
+/// view doesn't cover (e.g. when mobile browser chrome resizes the viewport)
+/// matches the session instead of showing the default white page.
+void _applyPageBackground(BoxDecoration decoration) {
+  _pageBackground = decoration;
+  final style = web.document.body?.style;
+  if (style == null) return;
 
-    final gradient = decoration.gradient;
-    if (gradient is LinearGradient) {
-      final colors = gradient.colors;
-      final stops =
-          gradient.stops ??
-          List<double>.generate(
-            colors.length,
-            (index) => index / (colors.length - 1),
-          );
-      final value = StringBuffer('linear-gradient(to bottom');
-      for (var index = 0; index < colors.length; index++) {
-        value
-          ..write(', ')
-          ..write(toHex(colors[index]))
-          ..write(' ')
-          ..write('${stops[index] * 100}%');
-      }
-      value.write(')');
-      style
-        ..setProperty('background-color', 'transparent')
-        ..setProperty('background-image', value.toString());
-    } else if (decoration.color != null) {
-      style
-        ..setProperty('background-image', 'none')
-        ..setProperty('background-color', toHex(decoration.color!));
+  String toHex(Color color) =>
+      '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+
+  final gradient = decoration.gradient;
+  if (gradient is LinearGradient) {
+    final colors = gradient.colors;
+    final stops =
+        gradient.stops ??
+        List<double>.generate(
+          colors.length,
+          (index) => index / (colors.length - 1),
+        );
+    final value = StringBuffer('linear-gradient(to bottom');
+    for (var index = 0; index < colors.length; index++) {
+      value
+        ..write(', ')
+        ..write(toHex(colors[index]))
+        ..write(' ')
+        ..write('${stops[index] * 100}%');
     }
-  };
+    value.write(')');
+    // Fill anything past the gradient with its bottom color.
+    style
+      ..setProperty('background-color', toHex(colors.last))
+      ..setProperty('background-image', value.toString())
+      ..setProperty('background-repeat', 'no-repeat');
+  } else if (decoration.color != null) {
+    style
+      ..setProperty('background-image', 'none')
+      ..setProperty('background-color', toHex(decoration.color!));
+  }
+}
+
+Future<void> main() async {
+  RoomBackground.onBackgroundChanged = _applyPageBackground;
 
   await sharedMain(
     const TotemWebApp(),
@@ -73,6 +85,9 @@ Future<void> main() async {
     scheduleFrame: WidgetsBinding.instance.scheduleForcedFrame,
   );
   _removeSplashFromWeb();
+  if (_pageBackground case final background?) {
+    _applyPageBackground(background);
+  }
 }
 
 class TotemWebApp extends ConsumerStatefulWidget {
