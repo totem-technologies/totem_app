@@ -243,7 +243,9 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     }
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsetsDirectional.only(
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: Material(
         color: AppTheme.cream,
         child: Column(
@@ -537,7 +539,7 @@ class _SessionChatHeader extends StatelessWidget {
             child: IconButton(
               onPressed: onClose,
               mouseCursor: SystemMouseCursors.click,
-              padding: EdgeInsets.zero,
+              padding: EdgeInsetsDirectional.zero,
               constraints: const BoxConstraints.tightFor(
                 width: 32.0,
                 height: 32.0,

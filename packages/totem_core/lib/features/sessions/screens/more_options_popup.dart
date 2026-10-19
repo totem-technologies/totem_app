@@ -47,11 +47,11 @@ Future<void> showOptionsSheet(
     dialogBarrierColor: Colors.black12,
     dialogBackgroundColor: const Color(0xFFF3F1E9),
     dialogAlignment: Alignment.bottomCenter,
-    dialogInsetPadding: EdgeInsets.only(
+    dialogInsetPadding: EdgeInsetsDirectional.only(
       bottom: bottomInset,
       top: 24,
-      left: 24,
-      right: 24,
+      start: 24,
+      end: 24,
     ),
     isScrollControlled: true,
     bottomSheetBuilder: (context) {

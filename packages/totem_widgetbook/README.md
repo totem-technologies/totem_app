@@ -53,7 +53,7 @@ Components/
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
   Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard
 Screens/
-  session/:slug   SessionEntry (12 states)
+  session/:slug   SessionEntry (one story; args are the states)
 ```
 
 ### Rules
@@ -92,7 +92,8 @@ navigation.
   `ComponentMeta(path: 'Screens/spaces/:slug')` for `RouteNames.space(':slug')`.
 - **Route params and query params become args.** They are the knobs.
 - **Each story is a meaningful screen state**, e.g. loaded, empty, error, or
-  keeper vs participant.
+  keeper vs participant. Session entry is one story: those states are its
+  args, and the args panel is what changes the screen.
 - **Inject the data.** A screen takes its data and callbacks through
   constructor params, not providers or repositories. If a screen reads
   providers, split it into a thin route widget (reads providers, handles

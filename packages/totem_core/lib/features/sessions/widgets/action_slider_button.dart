@@ -178,7 +178,7 @@ class _ActionButtonState extends State<ActionButton> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 40),
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: 40),
         ),
         child: effectiveLoading
             ? const SizedBox(

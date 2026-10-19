@@ -58,6 +58,8 @@ class SessionPromptsController extends _$SessionPromptsController {
   }
 
   Future<void> refresh() async {
+    if (state.mutating) return;
+
     final generation = _generation;
     state = state.copyWith(
       loading: state.snapshot == null,
@@ -173,7 +175,7 @@ class SessionPromptsController extends _$SessionPromptsController {
           message: current.messageOrDefault,
         );
       } else {
-        await _recoverAfterFailure(generation, SessionPromptsFailure.conflict);
+        await _recoverAfterFailure(generation, _failureFor(error));
       }
     } catch (error) {
       if (generation != _generation) return;

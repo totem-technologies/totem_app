@@ -1,6 +1,3 @@
-// Uses the generated client's existing transitive test adapter without adding a
-// test-only dependency solely for repository boundary tests.
-
 import 'dart:convert';
 
 import 'package:checks/checks.dart';

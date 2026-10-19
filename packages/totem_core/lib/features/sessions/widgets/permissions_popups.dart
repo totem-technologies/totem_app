@@ -39,7 +39,7 @@ class BackgroundActivityDialog extends StatelessWidget {
     return AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-      contentPadding: const EdgeInsets.all(24),
+      contentPadding: const EdgeInsetsDirectional.all(24),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -75,7 +75,7 @@ class BackgroundActivityDialog extends StatelessWidget {
                 if (context.mounted) Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsetsDirectional.symmetric(vertical: 12),
                 textStyle: const TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.bold,
@@ -548,7 +548,10 @@ class PermissionItemTile extends StatelessWidget {
           onTap: isGranted ? null : onTap,
           borderRadius: BorderRadius.circular(20),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 10,
+              vertical: 12,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

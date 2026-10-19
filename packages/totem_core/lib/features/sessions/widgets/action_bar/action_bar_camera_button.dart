@@ -337,7 +337,7 @@ class _ActionBarCameraSwitcherButtonOverlayState
 
     final menuContent = widget.isDesktopPicker
         ? Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsetsDirectional.all(12),
             constraints: const BoxConstraints(maxWidth: 260),
             child: Column(
               mainAxisSize: MainAxisSize.min,

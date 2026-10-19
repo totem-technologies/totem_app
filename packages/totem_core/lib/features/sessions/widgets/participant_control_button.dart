@@ -54,7 +54,7 @@ class _ParticipantControlButtonState
     backgroundColor: Colors.transparent,
     foregroundColor: Colors.white,
     disabledForegroundColor: Colors.white54,
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    padding: const EdgeInsetsDirectional.symmetric(horizontal: 12, vertical: 8),
     textStyle: ParticipantControlButton._menuTextStyle,
   );
 

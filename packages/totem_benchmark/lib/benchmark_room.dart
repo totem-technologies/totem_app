@@ -48,7 +48,9 @@ class BenchmarkRoom extends StatelessWidget {
                       child: Container(
                         width: metrics.badgeSize,
                         height: metrics.badgeSize,
-                        padding: EdgeInsets.all(metrics.badgePadding),
+                        padding: EdgeInsetsDirectional.all(
+                          metrics.badgePadding,
+                        ),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: Colors.black54,
@@ -90,7 +92,7 @@ class BenchmarkRoom extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsetsDirectional.all(16),
             child: Row(
               children: [
                 const Expanded(child: Text('Room rendering benchmark')),
@@ -113,7 +115,7 @@ class BenchmarkRoom extends StatelessWidget {
             ),
           ),
           const Padding(
-            padding: EdgeInsets.all(12),
+            padding: EdgeInsetsDirectional.all(12),
             child: Text('Local video · synthetic audio levels'),
           ),
         ],

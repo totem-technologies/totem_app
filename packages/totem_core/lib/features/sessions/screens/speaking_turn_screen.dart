@@ -120,31 +120,35 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 actionText: nextText,
               );
 
-        Widget passCard;
-        if (isWaitingReceive) {
-          passCard = normalPassCard;
-        } else if (isKeeper) {
-          passCard = PromptTransitionCard(
-            initialPrompt: roundPrompt,
-            initialSessionPromptId: preparedPrompt?.id,
-            onManagePrompts: () => showSessionPromptsModal(
-              context,
-              sessionSlug: widget.session.slug,
-            ),
-            onActionPressed:
-                ({customPrompt, sessionPromptId, clearPrompt = false}) {
-                  return _onPassTotem(
-                    customPrompt: customPrompt,
-                    sessionPromptId: sessionPromptId,
-                    clearPrompt: clearPrompt,
-                    nextText: nextText,
-                  );
-                },
-            actionText: nextText,
-          );
-        } else {
-          passCard = normalPassCard;
-        }
+        final passCard = Padding(
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: 20.0),
+          child: () {
+            if (isWaitingReceive) {
+              return normalPassCard;
+            } else if (isKeeper) {
+              return PromptTransitionCard(
+                initialPrompt: roundPrompt,
+                initialSessionPromptId: preparedPrompt?.id,
+                onManagePrompts: () => showSessionPromptsModal(
+                  context,
+                  sessionSlug: widget.session.slug,
+                ),
+                onActionPressed:
+                    ({customPrompt, sessionPromptId, clearPrompt = false}) {
+                      return _onPassTotem(
+                        customPrompt: customPrompt,
+                        sessionPromptId: sessionPromptId,
+                        clearPrompt: clearPrompt,
+                        nextText: nextText,
+                      );
+                    },
+                actionText: nextText,
+              );
+            } else {
+              return normalPassCard;
+            }
+          }(),
+        );
         final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
         final restingBottom = switch (viewportKind.isLarge) {
           true => 180,
