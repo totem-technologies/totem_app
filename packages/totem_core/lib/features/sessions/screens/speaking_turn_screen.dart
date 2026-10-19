@@ -24,7 +24,7 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class SpeakingTurnScreen extends ConsumerStatefulWidget {
-  const new({required this.session, super.key});
+  const SpeakingTurnScreen({required this.session, super.key});
 
   final SessionDetailSchema session;
 
@@ -261,7 +261,7 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
 ///
 /// When in a large screen, the grid is an adaptive layout.
 class _SpeakingTurnGrid extends ConsumerWidget {
-  const new({
+  const _SpeakingTurnGrid({
     required this.session,
     required this.viewportKind,
     this.maxPerLineCount = 10,
@@ -380,7 +380,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
 /// This only works inside a Stack widget.
 @visibleForTesting
 class SelfView extends ConsumerStatefulWidget {
-  const new({super.key});
+  const SelfView({super.key});
 
   @override
   ConsumerState<SelfView> createState() => _SelfViewState();

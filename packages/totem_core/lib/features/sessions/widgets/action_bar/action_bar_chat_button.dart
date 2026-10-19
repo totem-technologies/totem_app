@@ -13,7 +13,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
 class ActionBarChatButton extends ConsumerStatefulWidget {
-  const new({super.key});
+  const ActionBarChatButton({super.key});
 
   @override
   ConsumerState<ActionBarChatButton> createState() =>

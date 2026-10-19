@@ -5,7 +5,7 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class RoomBackground extends StatefulWidget {
-  const new({
+  const RoomBackground({
     required this.child,
     this.padding = EdgeInsetsDirectional.zero,
     this.overlayStyle = SystemUiOverlayStyle.light,

@@ -16,7 +16,7 @@ part 'session_device_controller.g.dart';
 
 @immutable
 class SessionDeviceState {
-  const new({
+  const SessionDeviceState({
     required this.selectedCameraDeviceId,
     required this.selectedAudioOutputDeviceId,
     required this.isSpeakerphoneEnabled,

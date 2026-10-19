@@ -4,7 +4,7 @@
 /// deduplicates by identity. Canonicalized const exceptions would cause
 /// separate failures to be mistaken for the same occurrence.
 abstract class AppException implements Exception {
-  new(this.message, {this.code, this.details});
+  AppException(this.message, {this.code, this.details});
   final String message;
   final String? code;
   final dynamic details;
@@ -17,20 +17,20 @@ abstract class AppException implements Exception {
 
 /// Network-related exceptions (connectivity, timeouts, etc.)
 class AppNetworkException extends AppException {
-  new(super.message, {super.code, super.details});
+  AppNetworkException(super.message, {super.code, super.details});
 
-  factory noConnection() {
+  factory AppNetworkException.noConnection() {
     return AppNetworkException(
       'No internet connection available',
       code: 'NO_CONNECTION',
     );
   }
 
-  factory timeout() {
+  factory AppNetworkException.timeout() {
     return AppNetworkException('Request timed out', code: 'TIMEOUT');
   }
 
-  factory serverError(int? statusCode, {dynamic details}) {
+  factory AppNetworkException.serverError(int? statusCode, {dynamic details}) {
     return AppNetworkException(
       'Server error occurred',
       code: 'SERVER_ERROR_${statusCode ?? "UNKNOWN"}',
@@ -41,47 +41,47 @@ class AppNetworkException extends AppException {
 
 /// Authentication-related exceptions
 class AppAuthException extends AppException {
-  new(super.message, {super.code, super.details});
+  AppAuthException(super.message, {super.code, super.details});
 
-  factory unauthenticated() {
+  factory AppAuthException.unauthenticated() {
     return AppAuthException(
       'User is not authenticated',
       code: 'UNAUTHENTICATED',
     );
   }
 
-  factory tokenExpired() {
+  factory AppAuthException.tokenExpired() {
     return AppAuthException(
       'Authentication token has expired',
       code: 'TOKEN_EXPIRED',
     );
   }
 
-  factory invalidCredentials() {
+  factory AppAuthException.invalidCredentials() {
     return AppAuthException(
       'Invalid credentials provided',
       code: 'INVALID_CREDENTIALS',
     );
   }
 
-  factory magicLinkExpired() {
+  factory AppAuthException.magicLinkExpired() {
     return AppAuthException(
       'Magic link has expired',
       code: 'MAGIC_LINK_EXPIRED',
     );
   }
 
-  factory invalidPin() {
+  factory AppAuthException.invalidPin() {
     return AppAuthException('Invalid PIN provided', code: 'INVALID_PIN');
   }
 
-  factory pinAttemptsExceeded() {
+  factory AppAuthException.pinAttemptsExceeded() {
     return AppAuthException(
       'Maximum PIN attempts exceeded',
       code: 'PIN_ATTEMPTS_EXCEEDED',
     );
   }
-  factory timeout() {
+  factory AppAuthException.timeout() {
     return AppAuthException(
       'Timeout during authentication process',
       code: 'AUTH_TIMEOUT',
@@ -91,20 +91,20 @@ class AppAuthException extends AppException {
 
 /// Data-related exceptions (parsing, validation, etc.)
 class AppDataException extends AppException {
-  new(super.message, {super.code, super.details});
+  AppDataException(super.message, {super.code, super.details});
 
-  factory invalidFormat() {
+  factory AppDataException.invalidFormat() {
     return AppDataException(
       'Data is in an invalid format',
       code: 'INVALID_FORMAT',
     );
   }
 
-  factory missingData() {
+  factory AppDataException.missingData() {
     return AppDataException('Required data is missing', code: 'MISSING_DATA');
   }
 
-  factory validationError(String field) {
+  factory AppDataException.validationError(String field) {
     return AppDataException(
       'Validation error for field: $field',
       code: 'VALIDATION_ERROR',
@@ -115,16 +115,16 @@ class AppDataException extends AppException {
 
 /// Feature-specific exceptions
 class AppFeatureException extends AppException {
-  new(super.message, {super.code, super.details});
+  AppFeatureException(super.message, {super.code, super.details});
 
-  factory notAvailable() {
+  factory AppFeatureException.notAvailable() {
     return AppFeatureException(
       'This feature is not available',
       code: 'FEATURE_UNAVAILABLE',
     );
   }
 
-  factory permissionDenied() {
+  factory AppFeatureException.permissionDenied() {
     return AppFeatureException(
       'Permission denied for this feature',
       code: 'PERMISSION_DENIED',
@@ -134,23 +134,23 @@ class AppFeatureException extends AppException {
 
 /// Video-session specific exceptions
 class VideoSessionException extends AppException {
-  new(super.message, {super.code, super.details});
+  VideoSessionException(super.message, {super.code, super.details});
 
-  factory connectionFailed() {
+  factory VideoSessionException.connectionFailed() {
     return VideoSessionException(
       'Failed to connect to video session',
       code: 'VIDEO_CONNECTION_FAILED',
     );
   }
 
-  factory mediaPermissionDenied() {
+  factory VideoSessionException.mediaPermissionDenied() {
     return VideoSessionException(
       'Media permission denied',
       code: 'MEDIA_PERMISSION_DENIED',
     );
   }
 
-  factory sessionEnded() {
+  factory VideoSessionException.sessionEnded() {
     return VideoSessionException(
       'Video session has ended',
       code: 'SESSION_ENDED',

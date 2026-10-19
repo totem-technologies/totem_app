@@ -94,7 +94,7 @@ void main() {
 }
 
 class _MovingIndicator extends ImplicitlyAnimatedWidget {
-  const new({required this.onTick, super.key})
+  const _MovingIndicator({required this.onTick, super.key})
     : super(duration: const Duration(seconds: 1));
 
   final VoidCallback onTick;

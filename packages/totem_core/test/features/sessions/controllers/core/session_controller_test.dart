@@ -61,8 +61,9 @@ SessionDetailSchema _createSessionEvent(String eventSlug) {
 ProviderContainer _createContainerWithEventOverride(String eventSlug) {
   return ProviderContainer(
     overrides: [
-      sessionProvider(eventSlug)
-          .overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+      sessionProvider(
+        eventSlug,
+      ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
     ],
   );
 }
@@ -113,7 +114,7 @@ class _CountingRoomEventsListener implements EventsListener<RoomEvent> {
 }
 
 class _CountingRoom implements Room {
-  new(
+  _CountingRoom(
     this.participant, {
     this.prepareConnectionError,
     this.connectError,
@@ -342,10 +343,12 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant();
-        when(() => localParticipant.setCameraEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
-        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
         final room = _CountingRoom(
           localParticipant,
           prepareConnectionError: StateError('prepare failed'),
@@ -438,10 +441,12 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant();
-        when(() => localParticipant.setCameraEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
-        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
         final room = _CountingRoom(localParticipant);
         controller.room = room;
 
@@ -473,10 +478,12 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant();
-        when(() => localParticipant.setCameraEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
-        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
         final disconnectGate = Completer<void>();
         final room = _CountingRoom(
           localParticipant,
@@ -523,10 +530,12 @@ void main() {
             sessionControllerProvider(options).notifier,
           );
           final localParticipant = MockLocalParticipant();
-          when(() => localParticipant.setCameraEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
-          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           final failedRoom = _CountingRoom(
             localParticipant,
             disconnectError: TimeoutException('disconnect timed out'),
@@ -554,8 +563,9 @@ void main() {
               authControllerProvider.overrideWith(
                 () => FakeAuthController(AuthState.unauthenticated()),
               ),
-              sessionProvider(eventSlug)
-                  .overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+              sessionProvider(
+                eventSlug,
+              ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
             ],
           );
           addTearDown(container.dispose);
@@ -577,10 +587,12 @@ void main() {
             sessionControllerProvider(options).notifier,
           );
           final localParticipant = MockLocalParticipant();
-          when(() => localParticipant.setCameraEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
-          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           final disconnectGate = Completer<void>();
           final room = _CountingRoom(
             localParticipant,
@@ -638,10 +650,12 @@ void main() {
             sessionControllerProvider(options).notifier,
           );
           final localParticipant = MockLocalParticipant();
-          when(() => localParticipant.setCameraEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
-          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           final room = _CountingRoom(
             localParticipant,
             emitDisconnectedOnDisconnect: true,
@@ -680,10 +694,12 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant();
-        when(() => localParticipant.setCameraEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
-        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
 
         final firstRoom = _CountingRoom(localParticipant);
         controller.room = firstRoom;
@@ -725,10 +741,12 @@ void main() {
           );
 
           final localParticipant = MockLocalParticipant();
-          when(() => localParticipant.setCameraEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
-          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
 
           final room = _CountingRoom(localParticipant);
           controller.room = room;
@@ -752,8 +770,9 @@ void main() {
           check(controller.room).identicalTo(room);
           check(room.disposeCount).equals(0);
           check(room.disconnectCount).equals(0);
-          check(controller.state.connectionState)
-              .equals(RoomConnectionState.disconnected);
+          check(
+            controller.state.connectionState,
+          ).equals(RoomConnectionState.disconnected);
         },
       );
 
@@ -793,8 +812,9 @@ void main() {
         await room.listener.trigger(
           RoomConnectedEvent(room: room, metadata: null),
         );
-        check(controller.state.participantsList.map((p) => p.name))
-            .deepEquals(['Before']);
+        check(
+          controller.state.participantsList.map((p) => p.name),
+        ).deepEquals(['Before']);
 
         localParticipant.participantName = 'After';
         await room.listener.trigger(
@@ -804,67 +824,74 @@ void main() {
           ),
         );
 
-        check(controller.state.participantsList.map((p) => p.name))
-            .deepEquals(['After']);
+        check(
+          controller.state.participantsList.map((p) => p.name),
+        ).deepEquals(['After']);
       });
 
-      test('RoomConnected never duplicates initial camera or microphone enablement', () async {
-        const eventSlug = 'test-session';
-        final container = _createContainerWithEventOverride(eventSlug);
-        addTearDown(container.dispose);
+      test(
+        'RoomConnected never duplicates initial camera or microphone enablement',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
 
-        const options = SessionOptions(
-          sessionSlug: eventSlug,
-          token: 'test-token',
-          cameraEnabled: true,
-          microphoneEnabled: true,
-          cameraOptions: SessionController.defaultCameraCaptureOptions,
-          speakerEnabled: true,
-        );
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
 
-        final sub = container.listen(
-          sessionControllerProvider(options),
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(sub.close);
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
 
-        final controller = container.read(
-          sessionControllerProvider(options).notifier,
-        );
-        final localParticipant = MockLocalParticipant();
-        when(localParticipant.isMicrophoneEnabled).thenReturn(false);
-        when(() => localParticipant.setCameraEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
-        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          when(localParticipant.isMicrophoneEnabled).thenReturn(false);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
 
-        final room = _CountingRoom(localParticipant);
-        controller.room = room;
-        await controller.initializeConnection(
-          roomOptions: RoomOptions(
-            defaultCameraCaptureOptions: options.cameraOptions,
-            defaultAudioCaptureOptions: const AudioCaptureOptions(),
-            defaultAudioOutputOptions: AudioOutputOptions(
-              speakerOn: options.speakerEnabled,
+          final room = _CountingRoom(localParticipant);
+          controller.room = room;
+          await controller.initializeConnection(
+            roomOptions: RoomOptions(
+              defaultCameraCaptureOptions: options.cameraOptions,
+              defaultAudioCaptureOptions: const AudioCaptureOptions(),
+              defaultAudioOutputOptions: AudioOutputOptions(
+                speakerOn: options.speakerEnabled,
+              ),
             ),
-          ),
-          url: 'wss://example.livekit.cloud',
-          token: options.token,
-        );
+            url: 'wss://example.livekit.cloud',
+            token: options.token,
+          );
 
-        check(room.listener.listenerTypes.contains(RoomEvent)).isFalse();
-        check(room.listener.listenerTypes.contains(RoomMetadataChangedEvent))
-            .isTrue();
+          check(room.listener.listenerTypes.contains(RoomEvent)).isFalse();
+          check(
+            room.listener.listenerTypes.contains(RoomMetadataChangedEvent),
+          ).isTrue();
 
-        await room.listener.trigger(
-          RoomConnectedEvent(room: room, metadata: null),
-        );
-        await pumpEventQueue();
+          await room.listener.trigger(
+            RoomConnectedEvent(room: room, metadata: null),
+          );
+          await pumpEventQueue();
 
-        verifyNever(() => localParticipant.setCameraEnabled(any<bool>()));
-        verifyNever(() => localParticipant.setMicrophoneEnabled(any<bool>()));
-      });
+          verifyNever(() => localParticipant.setCameraEnabled(any<bool>()));
+          verifyNever(() => localParticipant.setMicrophoneEnabled(any<bool>()));
+        },
+      );
 
       test(
         'mutes restricted microphone media before explicit publication',
@@ -896,21 +923,24 @@ void main() {
           final cameraTrack = MockLocalVideoTrack();
           final microphoneTrack = MockLocalAudioTrack();
           var microphoneEnabled = false;
-          when(() => localParticipant.setCameraEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
-          when(localParticipant.isMicrophoneEnabled)
-              .thenAnswer((_) => microphoneEnabled);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            localParticipant.isMicrophoneEnabled,
+          ).thenAnswer((_) => microphoneEnabled);
           when(
             () => localParticipant.publishVideoTrack(
               cameraTrack,
               publishOptions: SessionController.defaultVideoPublishOptions,
             ),
           ).thenAnswer((_) async => MockLocalTrackPublication());
-          when(() => localParticipant.publishAudioTrack(microphoneTrack))
-              .thenAnswer((_) async {
-                microphoneEnabled = true;
-                return MockLocalAudioTrackPublication();
-              });
+          when(
+            () => localParticipant.publishAudioTrack(microphoneTrack),
+          ).thenAnswer((_) async {
+            microphoneEnabled = true;
+            return MockLocalAudioTrackPublication();
+          });
           when(
             () => localParticipant.setMicrophoneEnabled(
               false,
@@ -993,10 +1023,12 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant();
-        when(() => localParticipant.setCameraEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
-        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
 
         final room = _CountingRoom(localParticipant);
         controller.room = room;
@@ -1033,10 +1065,12 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant();
-        when(() => localParticipant.setCameraEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
-        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
         when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
         final room = _CountingRoom(
           localParticipant,
@@ -1066,10 +1100,12 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
-            sessionProvider(eventSlug)
-                .overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
-            sessionControllerProvider(options)
-                .overrideWith(_DelayedInitializeSessionController.new),
+            sessionProvider(
+              eventSlug,
+            ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+            sessionControllerProvider(
+              options,
+            ).overrideWith(_DelayedInitializeSessionController.new),
           ],
         );
         addTearDown(container.dispose);
@@ -1110,10 +1146,12 @@ void main() {
           );
           final container = ProviderContainer(
             overrides: [
-              sessionProvider(eventSlug)
-                  .overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
-              sessionControllerProvider(options)
-                  .overrideWith(_DelayedInitializeSessionController.new),
+              sessionProvider(
+                eventSlug,
+              ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+              sessionControllerProvider(
+                options,
+              ).overrideWith(_DelayedInitializeSessionController.new),
             ],
           );
           addTearDown(container.dispose);
@@ -1125,14 +1163,18 @@ void main() {
           );
           addTearDown(sub.close);
 
-          final controller = container.read(
-            sessionControllerProvider(options).notifier,
-          ) as _DelayedInitializeSessionController;
+          final controller =
+              container.read(
+                    sessionControllerProvider(options).notifier,
+                  )
+                  as _DelayedInitializeSessionController;
           final localParticipant = MockLocalParticipant();
-          when(() => localParticipant.setCameraEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
-          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           final room = _CountingRoom(localParticipant);
           controller.initializedRoom = room;
 
@@ -1144,8 +1186,9 @@ void main() {
               publishOptions: SessionController.defaultVideoPublishOptions,
             ),
           ).thenAnswer((_) async => MockLocalTrackPublication());
-          when(() => localParticipant.publishAudioTrack(firstMicrophoneTrack))
-              .thenAnswer((_) async => MockLocalAudioTrackPublication());
+          when(
+            () => localParticipant.publishAudioTrack(firstMicrophoneTrack),
+          ).thenAnswer((_) async => MockLocalAudioTrackPublication());
           final firstJoin = controller.join(
             joinMedia: SessionJoinMedia(
               cameraTrack: firstCameraTrack,
@@ -1155,8 +1198,9 @@ void main() {
           await controller.initializationStarted.future;
 
           check(controller.room).isNull();
-          check(controller.state.connectionState)
-              .equals(RoomConnectionState.connecting);
+          check(
+            controller.state.connectionState,
+          ).equals(RoomConnectionState.connecting);
 
           final secondCameraTrack = MockLocalVideoTrack();
           final secondMicrophoneTrack = MockLocalAudioTrack();
@@ -1185,8 +1229,9 @@ void main() {
               publishOptions: SessionController.defaultVideoPublishOptions,
             ),
           ).called(1);
-          verify(() => localParticipant.publishAudioTrack(firstMicrophoneTrack))
-              .called(1);
+          verify(
+            () => localParticipant.publishAudioTrack(firstMicrophoneTrack),
+          ).called(1);
           verifyNever(firstCameraTrack.stop);
           verifyNever(firstCameraTrack.dispose);
           verifyNever(firstMicrophoneTrack.stop);
@@ -1221,10 +1266,12 @@ void main() {
             sessionControllerProvider(options).notifier,
           );
           final localParticipant = MockLocalParticipant();
-          when(() => localParticipant.setCameraEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
-          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           final room = _CountingRoom(localParticipant);
           controller.room = room;
 
@@ -1278,10 +1325,12 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant();
-        when(() => localParticipant.setCameraEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
-        when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-            .thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setCameraEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localParticipant.setMicrophoneEnabled(any<bool>()),
+        ).thenAnswer((_) async => null);
         final cameraTrack = MockLocalVideoTrack();
         final microphoneTrack = MockLocalAudioTrack();
         final cameraPublication =
@@ -1294,8 +1343,9 @@ void main() {
             publishOptions: SessionController.defaultVideoPublishOptions,
           ),
         ).thenAnswer((_) => cameraPublication.future);
-        when(() => localParticipant.publishAudioTrack(microphoneTrack))
-            .thenAnswer((_) => microphonePublication.future);
+        when(
+          () => localParticipant.publishAudioTrack(microphoneTrack),
+        ).thenAnswer((_) => microphonePublication.future);
 
         final room = _CountingRoom(
           localParticipant,
@@ -1334,8 +1384,9 @@ void main() {
         await pumpEventQueue();
 
         check(joinCompleted).isFalse();
-        verify(() => localParticipant.publishAudioTrack(microphoneTrack))
-            .called(1);
+        verify(
+          () => localParticipant.publishAudioTrack(microphoneTrack),
+        ).called(1);
 
         microphonePublication.complete(MockLocalAudioTrackPublication());
         check(await joinResult).equals(SessionJoinResult.success);
@@ -1386,10 +1437,12 @@ void main() {
           final microphoneTrack = MockLocalAudioTrack();
           final cameraPublication =
               Completer<LocalTrackPublication<LocalVideoTrack>>();
-          when(() => localParticipant.setCameraEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
-          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           when(
             () => localParticipant.publishVideoTrack(
               cameraTrack,
@@ -1447,10 +1500,12 @@ void main() {
           final localParticipant = MockLocalParticipant();
           final cameraTrack = MockLocalVideoTrack();
           final microphoneTrack = MockLocalAudioTrack();
-          when(() => localParticipant.setCameraEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
-          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           when(
             () => localParticipant.publishVideoTrack(
               cameraTrack,
@@ -1477,8 +1532,9 @@ void main() {
           verifyNever(cameraTrack.dispose);
           verify(microphoneTrack.stop).called(1);
           verify(microphoneTrack.dispose).called(1);
-          verify(() => localParticipant.publishAudioTrack(microphoneTrack))
-              .called(1);
+          verify(
+            () => localParticipant.publishAudioTrack(microphoneTrack),
+          ).called(1);
 
           await controller.resetAfterFailedJoin();
 
@@ -1516,10 +1572,12 @@ void main() {
           final cameraTrack = MockLocalVideoTrack();
           final microphoneTrack = MockLocalAudioTrack();
           final localParticipant = MockLocalParticipant();
-          when(() => localParticipant.setCameraEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
-          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           final room = _CountingRoom(
             localParticipant,
             prepareConnectionError: StateError('prepare failed'),
@@ -1608,10 +1666,12 @@ void main() {
             return true;
           });
           final localParticipant = MockLocalParticipant();
-          when(() => localParticipant.setCameraEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
-          when(() => localParticipant.setMicrophoneEnabled(any<bool>()))
-              .thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
           final room = _CountingRoom(
             localParticipant,
             connectError: testCase.error,
@@ -1861,8 +1921,9 @@ void main() {
     test(
       'default media settings preserve the native capture and codec budget',
       () {
-        check(SessionController.syncTimerDuration)
-            .equals(const Duration(seconds: 20));
+        check(
+          SessionController.syncTimerDuration,
+        ).equals(const Duration(seconds: 20));
         final capture = SessionController.defaultCameraCaptureOptions.params;
         check(capture.dimensions).equals(VideoDimensionsPresets.h720_43);
         check(capture.encoding?.maxFramerate).equals(24);

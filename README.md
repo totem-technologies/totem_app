@@ -5,16 +5,7 @@ guided group introspection. It supports iOS, Android, and web.
 
 ## Install
 
-Install [Flutter](https://docs.flutter.dev/get-started/install). iOS development
-also requires macOS and Xcode.
-
-```sh
-git clone https://github.com/totem-technologies/totem_app.git
-cd totem_app
-flutter config --enable-swift-package-manager
-make install
-make githooks
-```
+Install [Flutter](https://docs.flutter.dev/get-started/install) **3.44.9**.
 
 Configure [Firebase](https://firebase.google.com/docs/flutter/setup) locally:
 

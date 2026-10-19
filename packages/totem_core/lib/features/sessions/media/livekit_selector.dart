@@ -8,7 +8,7 @@ import 'package:material_ui/material_ui.dart';
 /// [read] should look objects up fresh, such as a participant by identity,
 /// so the widget follows them when they are replaced.
 class LiveKitSelector<T> extends StatefulWidget {
-  const new({
+  const LiveKitSelector({
     required this.changes,
     required this.read,
     required this.builder,

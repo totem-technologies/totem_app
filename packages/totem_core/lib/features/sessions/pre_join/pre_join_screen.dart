@@ -34,7 +34,8 @@ Future<bool> showAlreadyPresentDialog(BuildContext context) async {
           context: context,
           builder: (context) => ConfirmationDialog(
             title: "You're already in this session",
-            content: 'You are already in this session on another device. Do you want to leave the other session and join on this device?',
+            content:
+                'You are already in this session on another device. Do you want to leave the other session and join on this device?',
             icon: TotemIcons.questionMarkCircle,
             iconSize: 60,
             confirmButtonText: 'Join Here',
@@ -49,7 +50,7 @@ Future<bool> showAlreadyPresentDialog(BuildContext context) async {
 }
 
 class PreJoinScreen extends ConsumerStatefulWidget {
-  const new({required this.sessionSlug, super.key});
+  const PreJoinScreen({required this.sessionSlug, super.key});
 
   final String sessionSlug;
 

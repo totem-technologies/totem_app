@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 
 class SessionTitle extends ConsumerWidget {
-  const new({super.key});
+  const SessionTitle({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +43,7 @@ class SessionTitle extends ConsumerWidget {
 }
 
 class SessionElapsedTimer extends ConsumerStatefulWidget {
-  const new({super.key});
+  const SessionElapsedTimer({super.key});
 
   @override
   ConsumerState<SessionElapsedTimer> createState() =>

@@ -3,7 +3,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_state.dart
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
 
 class SessionStateReducer {
-  const new();
+  const SessionStateReducer();
 
   SessionRoomState reduceState(SessionRoomState current, SessionEvent event) {
     switch (event) {
