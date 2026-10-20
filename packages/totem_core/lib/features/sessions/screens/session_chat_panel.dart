@@ -155,38 +155,37 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(sessionChatOpenProvider, (previous, next) {
-      if (next || widget.embedded || !mounted) return;
-      final route = ModalRoute.of(context);
-      final navigator = Navigator.of(context);
-      if (route == null || !route.isActive) return;
-      if (route.isCurrent) {
-        navigator.pop();
-      } else {
-        navigator.removeRoute(route);
-      }
-    });
-
-    // Scroll on arrival rather than on a length change during build: a thread
-    // switch no longer counts as an arrival, and two threads of equal length
-    // no longer mask one.
-    ref.listen(sessionMessagesProvider, (previous, next) {
-      if (next.length <= (previous?.length ?? 0)) return;
-      final message = next.last;
-      final belongs = message.belongsToThread(
-        localIdentity: _localIdentity(),
-        threadTarget: ref.read(sessionChatThreadTargetProvider),
-      );
-      if (belongs && _isNearBottom) unawaited(_scrollToBottom());
-    });
-
-    // A newly selected thread should open at its most recent message.
-    ref.listen(sessionChatThreadTargetProvider, (previous, next) {
-      unawaited(_scrollToBottom());
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _markVisibleThreadRead();
+    ref
+      ..listen(sessionChatOpenProvider, (previous, next) {
+        if (next || widget.embedded || !mounted) return;
+        final route = ModalRoute.of(context);
+        final navigator = Navigator.of(context);
+        if (route == null || !route.isActive) return;
+        if (route.isCurrent) {
+          navigator.pop();
+        } else {
+          navigator.removeRoute(route);
+        }
+      })
+      // Scroll on arrival rather than on a length change during build: a thread
+      // switch no longer counts as an arrival, and two threads of equal length
+      // no longer mask one.
+      ..listen(sessionMessagesProvider, (previous, next) {
+        if (next.length <= (previous?.length ?? 0)) return;
+        final message = next.last;
+        final belongs = message.belongsToThread(
+          localIdentity: _localIdentity(),
+          threadTarget: ref.read(sessionChatThreadTargetProvider),
+        );
+        if (belongs && _isNearBottom) unawaited(_scrollToBottom());
+      })
+      // A newly selected thread should open at its most recent message.
+      ..listen(sessionChatThreadTargetProvider, (previous, next) {
+        unawaited(_scrollToBottom());
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _markVisibleThreadRead();
+        });
       });
-    });
 
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
     final threadTarget = ref.watch(sessionChatThreadTargetProvider);
