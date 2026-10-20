@@ -380,7 +380,8 @@ class LiveKitLocalMedia implements LocalMedia {
 
   /// Captures a camera, then publishes it. LiveKit's own `setCameraEnabled`
   /// leaves the capture running when publishing fails, so the camera stays
-  /// on with nothing sent; here a failed publish stops it.
+  /// on with nothing sent; here a failed publish stops and disposes it, since
+  /// nothing else owns an unpublished track.
   Future<void> _publishNewCamera(
     LocalParticipant participant,
     CameraCaptureOptions options,
@@ -389,14 +390,21 @@ class LiveKitLocalMedia implements LocalMedia {
     try {
       await _publishing(() => participant.publishVideoTrack(track));
     } catch (_) {
-      try {
-        await track.stop();
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to stop a camera that could not be published',
-        );
+      // Stopped first on its own, so a failed stop still lets dispose free
+      // the track's events.
+      for (final (step, cleanUp) in [
+        ('stop', track.stop),
+        ('dispose', track.dispose),
+      ]) {
+        try {
+          await cleanUp();
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Failed to $step a camera that could not be published',
+          );
+        }
       }
       rethrow;
     }

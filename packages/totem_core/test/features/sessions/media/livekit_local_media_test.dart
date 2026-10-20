@@ -11,6 +11,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
 
+import '../../../setup.dart';
 import '../livekit_mocks.dart';
 
 class _MockRoom extends Mock implements Room;
@@ -23,6 +24,7 @@ void main() {
   tearDownAll(() => restoreWebRtcChannels());
 
   setUpAll(() {
+    setupAppConfig();
     restoreWebRtcChannels = stubFlutterWebRtcChannels();
     registerFallbackValue(const AudioCaptureOptions());
     registerFallbackValue(MockLocalVideoTrack());
@@ -305,6 +307,7 @@ void main() {
       setUp(() {
         captured = MockLocalVideoTrack();
         when(captured.stop).thenAnswer((_) async => true);
+        when(captured.dispose).thenAnswer((_) async => true);
         when(() => participant.getTrackPublicationBySource(TrackSource.camera))
             .thenReturn(null);
         cameraMedia = LiveKitLocalMedia(
@@ -324,15 +327,30 @@ void main() {
 
         verify(() => participant.publishVideoTrack(captured)).called(1);
         verifyNever(captured.stop);
+        verifyNever(captured.dispose);
       });
 
-      test("X14: is stopped when the room can't take it", () async {
+      test(
+        "X14: is stopped and disposed when the room can't take it",
+        () async {
+          when(() => participant.publishVideoTrack(captured))
+              .thenThrow(TrackPublishException());
+
+          await check(cameraMedia.setCameraEnabled(true))
+              .throws<MediaPublishException>();
+          verify(captured.stop).called(1);
+          verify(captured.dispose).called(1);
+        },
+      );
+
+      test('is disposed even when stopping it fails', () async {
         when(() => participant.publishVideoTrack(captured))
             .thenThrow(TrackPublishException());
+        when(captured.stop).thenThrow(StateError('stop failed'));
 
         await check(cameraMedia.setCameraEnabled(true))
             .throws<MediaPublishException>();
-        verify(captured.stop).called(1);
+        verify(captured.dispose).called(1);
       });
 
       test('a capture failure is not a publish failure', () async {

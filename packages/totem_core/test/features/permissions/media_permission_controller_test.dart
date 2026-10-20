@@ -8,6 +8,7 @@ import 'package:totem_core/features/permissions/adapters/media_permission_adapte
 import 'package:totem_core/features/permissions/media_permission_controller.dart';
 import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/platform_info.dart';
+import 'package:totem_core/features/permissions/policy.dart';
 
 import '../../setup.dart';
 import 'fake_media_permission_adapter.dart';
@@ -234,6 +235,38 @@ void main() {
       check(container.read(mediaPermissionControllerProvider)!.camera)
           .equals(MediaPermission.granted);
     });
+
+    test(
+      'WS1: a device failure clears a refusal the platform dropped',
+      () async {
+        // Allowed in site settings, but the stale query still says blocked.
+        final container = _container(
+          FakeMediaPermissionAdapter(camera: MediaPermission.blocked),
+          platform: _chrome,
+        );
+        await _loaded(container);
+
+        check(
+          await fail(
+            container,
+            MediaKind.camera,
+            'NotReadableError: Could not start video source',
+          ),
+        ).equals(const DeviceFailed(DeviceProblem.inUse));
+        check(container.read(mediaPermissionControllerProvider)!.camera)
+            .equals(MediaPermission.unknown);
+        check(
+          recoveryFor(MediaPermission.unknown, DeviceProblem.inUse, _chrome),
+        ).equals(RecoveryAction.retry);
+
+        // The unchanged stale query doesn't bring the refusal back.
+        await container
+            .read(mediaPermissionControllerProvider.notifier)
+            .refresh();
+        check(container.read(mediaPermissionControllerProvider)!.camera)
+            .equals(MediaPermission.unknown);
+      },
+    );
 
     test('WF4: Firefox NotFoundError checks for a listed device', () async {
       final container = _container(

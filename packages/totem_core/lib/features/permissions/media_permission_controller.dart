@@ -167,11 +167,26 @@ class MediaPermissionController extends Notifier<MediaPermissions?> {
           ? ErrorDisposition.unexpected
           : ErrorDisposition.expected,
     );
-    if (failure case PermissionRefused(:final permission)) {
-      _set(kind, permission);
+    switch (failure) {
+      case PermissionRefused(:final permission):
+        _set(kind, permission);
+      // The platform didn't refuse this time, so an earlier refusal no longer
+      // holds and mustn't outrank the device's problem in recovery. Some
+      // device failures come before the permission check, so it's unknown
+      // rather than granted.
+      case DeviceFailed() when _refusals.contains(_current[kind]):
+        _set(kind, MediaPermission.unknown);
+      case DeviceFailed() || null:
+        break;
     }
     return failure ?? const DeviceFailed(DeviceProblem.failed);
   }
+
+  static const Set<MediaPermission> _refusals = {
+    MediaPermission.denied,
+    MediaPermission.blocked,
+    MediaPermission.blockedBySystem,
+  };
 
   void _set(MediaKind kind, MediaPermission permission) {
     if (ref.mounted) state = _current.withPermission(kind, permission);
