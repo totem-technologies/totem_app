@@ -122,6 +122,7 @@ class _CountingRoom implements Room {
     this.disconnectGate,
     this.disconnectError,
     this.emitDisconnectedOnDisconnect = false,
+    this.disconnectedReason,
   });
 
   final MockLocalParticipant participant;
@@ -131,6 +132,7 @@ class _CountingRoom implements Room {
   final Completer<void>? disconnectGate;
   final Exception? disconnectError;
   final bool emitDisconnectedOnDisconnect;
+  final DisconnectReason? disconnectedReason;
   final _CountingRoomEventsListener listener = _CountingRoomEventsListener();
 
   int prepareConnectionCount = 0;
@@ -182,7 +184,7 @@ class _CountingRoom implements Room {
   Future<void> disconnect() async {
     disconnectCount++;
     if (emitDisconnectedOnDisconnect) {
-      await listener.trigger(RoomDisconnectedEvent());
+      await listener.trigger(RoomDisconnectedEvent(reason: disconnectedReason));
     }
     await disconnectGate?.future;
     if (disconnectError case final error?) throw error;
@@ -673,6 +675,7 @@ void main() {
             localParticipant,
             emitConnectedOnConnect: true,
             emitDisconnectedOnDisconnect: true,
+            disconnectedReason: DisconnectReason.duplicateIdentity,
           );
           controller.room = room;
 
@@ -689,6 +692,9 @@ void main() {
             RoomConnectionState.disconnected,
           );
           check(controller.state.phase).equals(SessionPhase.disconnected);
+          check(controller.state.disconnectReason).equals(
+            DisconnectReason.duplicateIdentity,
+          );
         },
       );
 

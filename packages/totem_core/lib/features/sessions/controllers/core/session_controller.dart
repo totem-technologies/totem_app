@@ -785,14 +785,17 @@ class SessionController extends _$SessionController {
     try {
       await _disconnect();
     } finally {
-      await _cleanUp();
-      if (ref.mounted) {
-        _dispatch(
-          const ConnectionChanged(
-            RoomConnectionState.disconnected,
-            SessionPhase.disconnected,
-          ),
-        );
+      try {
+        await _cleanUp();
+      } finally {
+        if (ref.mounted) {
+          _dispatch(
+            const ConnectionChanged(
+              RoomConnectionState.disconnected,
+              SessionPhase.disconnected,
+            ),
+          );
+        }
       }
     }
   }
@@ -836,7 +839,15 @@ class SessionController extends _$SessionController {
     _pendingReconcile = false;
 
     if (ref.mounted) {
-      await ref.read(sessionInfraControllerProvider.notifier).deactivate();
+      try {
+        await ref.read(sessionInfraControllerProvider.notifier).deactivate();
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to deactivate session infrastructure',
+        );
+      }
     }
 
     if (ref.mounted) {
@@ -887,6 +898,9 @@ class SessionController extends _$SessionController {
       ..on<RoomConnectedEvent>((_) => _onConnected())
       ..on<RoomDisconnectedEvent>((event) {
         logger.d('Disconnected from session. Reason: ${event.reason}');
+        if (event.reason != null) {
+          _dispatch(SessionErrorChanged(RoomDisconnectionError(event.reason!)));
+        }
         if (_leaveFuture != null) return;
 
         // Handles transient disconnects that can occur during the joining process,
@@ -908,9 +922,6 @@ class SessionController extends _$SessionController {
           return;
         }
 
-        if (event.reason != null) {
-          _dispatch(SessionErrorChanged(RoomDisconnectionError(event.reason!)));
-        }
         _onDisconnected();
       })
       ..on<DataReceivedEvent>((data) {
