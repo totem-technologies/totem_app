@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' hide SessionOptions;
+import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
 enum PreJoinCapturePhase {
@@ -12,10 +13,11 @@ enum PreJoinCapturePhase {
   permissionDenied,
 }
 
-enum PreJoinFlowPhase { idle, joining, joined }
+enum PreJoinFlowPhase { idle, joining, pending, joined }
 
 enum PreJoinJoinOutcome {
   confirmationRequired,
+  pending,
   joined,
   retryableFailure,
   permissionsDenied,
@@ -121,17 +123,29 @@ class PreJoinFlowState {
     this.phase = PreJoinFlowPhase.idle,
     this.sessionOptions,
     this.nativePermissionsGranted = false,
+    this.admissionStatus,
+    this.expiresAt,
+    this.error,
   });
 
   final PreJoinFlowPhase phase;
   final SessionOptions? sessionOptions;
   final bool nativePermissionsGranted;
+  final AdmissionStatus? admissionStatus;
+  final DateTime? expiresAt;
+  final Object? error;
 
   PreJoinFlowState copyWith({
     PreJoinFlowPhase? phase,
     SessionOptions? sessionOptions,
     bool clearSessionOptions = false,
     bool? nativePermissionsGranted,
+    AdmissionStatus? admissionStatus,
+    bool clearAdmissionStatus = false,
+    DateTime? expiresAt,
+    bool clearExpiresAt = false,
+    Object? error,
+    bool clearError = false,
   }) {
     return PreJoinFlowState(
       phase: phase ?? this.phase,
@@ -140,6 +154,11 @@ class PreJoinFlowState {
           : sessionOptions ?? this.sessionOptions,
       nativePermissionsGranted:
           nativePermissionsGranted ?? this.nativePermissionsGranted,
+      admissionStatus: clearAdmissionStatus
+          ? null
+          : admissionStatus ?? this.admissionStatus,
+      expiresAt: clearExpiresAt ? null : expiresAt ?? this.expiresAt,
+      error: clearError ? null : error ?? this.error,
     );
   }
 }

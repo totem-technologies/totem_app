@@ -14,6 +14,10 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/core/services/screen_protection_service.dart';
+import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
+import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
+import 'package:totem_core/features/sessions/admission/admission_transport.dart';
+import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
@@ -39,12 +43,14 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
   const new({
     required this.sessionSlug,
     required this.loadingScreen,
+    this.showAdmissionOrientation = false,
     this.now = DateTime.now,
     super.key,
   });
 
   final String sessionSlug;
   final Widget loadingScreen;
+  final bool showAdmissionOrientation;
   final ValueGetter<DateTime> now;
 
   @override
@@ -115,6 +121,13 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   bool? _lastKeeperDisconnectedState;
   RoomStatus? _lastKeeperDisconnectedRoomStatus;
   bool _hasDismissedChatForDisconnect = false;
+  LiveKitAdmissionTransport? _admissionTransport;
+  KeeperAdmissionController? _keeperAdmission;
+  StreamSubscription<void>? _admissionChanges;
+  String? _admissionKeeperIdentity;
+  bool _admissionDismissed = false;
+  bool _admissionBusy = false;
+  bool _admissionOrientationDismissed = false;
 
   @override
   void initState() {
@@ -138,6 +151,13 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       TotemRouter.instance.setPageExitHandler(handler);
     }, fireImmediately: true);
 
+    ref.listenManual(currentSessionStateProvider, (_, next) {
+      _syncKeeperAdmission(next);
+    }, fireImmediately: true);
+    ref.listenManual(currentSessionEventProvider, (_, _) {
+      _syncKeeperAdmission(ref.read(currentSessionStateProvider));
+    });
+
     _listenToBatteryChanges();
     _warmEmojiGlyphs();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -147,6 +167,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
   @override
   void dispose() {
+    unawaited(_detachKeeperAdmission());
     _notificationController.dispose();
     _clearTimeRemainingWarningTimer();
     _setScreenProtection(false);
@@ -157,6 +178,174 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       TotemRouter.instance.clearPageExitHandler(handler);
     }
     super.dispose();
+  }
+
+  void _syncKeeperAdmission(SessionRoomState? state) {
+    final room = ref.read(currentSessionProvider)?.room;
+    final keeperIdentity = state?.roomState.keeper;
+    final canManage =
+        state?.connection.state == RoomConnectionState.connected &&
+        state?.roomState.status != RoomStatus.ended &&
+        ref.read(currentSessionEventProvider)?.ended != true &&
+        room?.localParticipant?.identity == keeperIdentity &&
+        keeperIdentity != null &&
+        keeperIdentity.isNotEmpty;
+    if (!canManage || room == null) {
+      if (_keeperAdmission != null) {
+        unawaited(_detachKeeperAdmission());
+        if (mounted) setState(() {});
+      }
+      return;
+    }
+    if (identical(_admissionTransport?.room, room) &&
+        _admissionKeeperIdentity == keeperIdentity) {
+      return;
+    }
+    unawaited(_detachKeeperAdmission());
+    final transport = LiveKitAdmissionTransport(room);
+    final controller = KeeperAdmissionController(
+      channel: transport,
+      keeperIdentity: () => mounted
+          ? ref.read(currentSessionStateProvider)?.roomState.keeper ?? ''
+          : '',
+    );
+    _admissionTransport = transport;
+    _keeperAdmission = controller;
+    _admissionKeeperIdentity = keeperIdentity;
+    _admissionDismissed = false;
+    _admissionChanges = controller.changes.listen((_) {
+      if (!mounted || !identical(_keeperAdmission, controller)) return;
+      setState(() {
+        if (controller.requests.isEmpty) _admissionDismissed = false;
+      });
+    });
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _detachKeeperAdmission() async {
+    final controller = _keeperAdmission;
+    final transport = _admissionTransport;
+    unawaited(_admissionChanges?.cancel());
+    _admissionChanges = null;
+    _keeperAdmission = null;
+    _admissionTransport = null;
+    _admissionKeeperIdentity = null;
+    _admissionBusy = false;
+    await controller?.dispose();
+    await transport?.dispose();
+  }
+
+  Future<void> _decideAdmission(AdmissionRequest request, bool approve) async {
+    final controller = _keeperAdmission;
+    if (controller == null || _admissionBusy) return;
+    setState(() => _admissionBusy = true);
+    try {
+      await _sendAdmissionDecision(controller, request, approve);
+    } finally {
+      if (mounted && identical(_keeperAdmission, controller)) {
+        setState(() => _admissionBusy = false);
+      }
+    }
+  }
+
+  Future<void> _admitAll() async {
+    final controller = _keeperAdmission;
+    if (controller == null || _admissionBusy) return;
+    setState(() => _admissionBusy = true);
+    try {
+      for (final request in controller.requests) {
+        if (!identical(_keeperAdmission, controller)) break;
+        await _sendAdmissionDecision(controller, request, true);
+      }
+    } finally {
+      if (mounted && identical(_keeperAdmission, controller)) {
+        setState(() => _admissionBusy = false);
+      }
+    }
+  }
+
+  Future<void> _sendAdmissionDecision(
+    KeeperAdmissionController controller,
+    AdmissionRequest request,
+    bool approve,
+  ) async {
+    try {
+      if (approve) {
+        await controller.approve(request.id, request.senderIdentity);
+      } else {
+        await controller.deny(request.id, request.senderIdentity);
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Could not send admission decision',
+      );
+      if (!mounted || !identical(_keeperAdmission, controller)) return;
+      _notificationController.showError(
+        context,
+        icon: TotemIcons.errorOutlined,
+        title: 'Could not update the queue',
+        message: 'Please check your connection and try again.',
+      );
+    }
+  }
+
+  Widget _buildAdmissionOrientation(String? prompt, {required bool desktop}) {
+    final size = MediaQuery.sizeOf(context);
+    final content = ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: 420,
+        maxHeight: size.height * (desktop ? 0.65 : 0.4),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Welcome to the session',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            const Text('The conversation is already in progress.'),
+            if (prompt case final text? when text.trim().isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text('Current prompt: $text'),
+            ],
+            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: () =>
+                    setState(() => _admissionOrientationDismissed = true),
+                child: const Text('Got it'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (desktop) {
+      return Positioned.fill(
+        child: Stack(
+          children: [
+            const ModalBarrier(dismissible: false, color: Colors.black54),
+            Center(child: Dialog(child: content)),
+          ],
+        ),
+      );
+    }
+    return Positioned(
+      left: 16,
+      right: 16,
+      bottom: 16,
+      child: SafeArea(
+        child: Center(child: Card(elevation: 8, child: content)),
+      ),
+    );
   }
 
   void _setScreenProtection(bool enabled) {
@@ -586,57 +775,123 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     // Keep the rail mounted on wide windows even while closed so the
     // close animation has a widget to slide out.
     final dockChatSlot = shouldDockSessionChat(context);
+    final showOrientation =
+        widget.showAdmissionOrientation &&
+        !_admissionOrientationDismissed &&
+        connectionState == RoomConnectionState.connected &&
+        roomStatus == RoomStatus.active &&
+        !showingDisconnectedScreen &&
+        currentRoomScreen != RoomScreen.loading;
+    final admissionPrompt = showOrientation
+        ? ref.watch(currentSessionPromptProvider)
+        : null;
 
     return SessionKeyboardShortcuts(
       navigatorKey: _roomNavigatorKey,
       enableEmojiReactions: currentRoomScreen == RoomScreen.listening,
       child: RoomBackground(
         status: roomStatus,
-        child: Row(
+        child: Stack(
           children: [
-            Expanded(
-              child: Navigator(
-                key: _roomNavigatorKey,
-                observers: [_roomNavigatorObserver],
-                clipBehavior: Clip.none,
-                onDidRemovePage: (page) => {},
-                pages: [
-                  MaterialPage(
+            Positioned.fill(
+              child: Row(
+                children: [
+                  Expanded(
                     child: Stack(
                       children: [
                         Positioned.fill(
-                          child: RepaintBoundary(
-                            child: PopScope(
-                              canPop: false,
-                              onPopInvokedWithResult: (didPop, result) async {
-                                await _handleBackNavigation(
-                                  currentSession,
-                                  connectionState,
-                                );
-                              },
-                              child: _buildBody(
-                                currentSession,
-                                currentRoomScreen,
-                                currentSessionEvent,
-                                disconnectReason,
-                                isOffline: isOffline ?? false,
+                          child: Navigator(
+                            key: _roomNavigatorKey,
+                            observers: [_roomNavigatorObserver],
+                            clipBehavior: Clip.none,
+                            onDidRemovePage: (page) => {},
+                            pages: [
+                              MaterialPage(
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: RepaintBoundary(
+                                        child: PopScope(
+                                          canPop: false,
+                                          onPopInvokedWithResult:
+                                              (didPop, result) async {
+                                                await _handleBackNavigation(
+                                                  currentSession,
+                                                  connectionState,
+                                                );
+                                              },
+                                          child: _buildBody(
+                                            currentSession,
+                                            currentRoomScreen,
+                                            currentSessionEvent,
+                                            disconnectReason,
+                                            isOffline: isOffline ?? false,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned.fill(
+                                      child: IgnorePointer(
+                                        child: Overlay(
+                                          key: EmojiReactions.emojiOverlayKey,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_keeperAdmission case final controller?
+                            when controller.requests.isNotEmpty)
+                          Positioned(
+                            top: dockChatSlot ? 16 : null,
+                            right: 16,
+                            left: dockChatSlot ? null : 16,
+                            bottom: dockChatSlot ? null : 16,
+                            child: SafeArea(
+                              child: Align(
+                                alignment: dockChatSlot
+                                    ? Alignment.topRight
+                                    : Alignment.bottomCenter,
+                                child: _admissionDismissed
+                                    ? FilledButton.icon(
+                                        onPressed: () => setState(
+                                          () => _admissionDismissed = false,
+                                        ),
+                                        icon: const Icon(Icons.people_outline),
+                                        label: Text(
+                                          'Waiting to join (${controller.requests.length})',
+                                        ),
+                                      )
+                                    : KeeperAdmissionPanel(
+                                        requests: controller.requests,
+                                        busy: _admissionBusy,
+                                        desktop: dockChatSlot,
+                                        onDecision: _decideAdmission,
+                                        onAdmitAll: () =>
+                                            unawaited(_admitAll()),
+                                        onClose: () => setState(
+                                          () => _admissionDismissed = true,
+                                        ),
+                                      ),
                               ),
                             ),
                           ),
-                        ),
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: Overlay(key: EmojiReactions.emojiOverlayKey),
-                          ),
-                        ),
                       ],
                     ),
                   ),
+                  if (dockChatSlot)
+                    _DockedSessionPanelsRail(sessionSlug: widget.sessionSlug),
                 ],
               ),
             ),
-            if (dockChatSlot)
-              _DockedSessionPanelsRail(sessionSlug: widget.sessionSlug),
+            if (showOrientation)
+              _buildAdmissionOrientation(
+                admissionPrompt,
+                desktop: dockChatSlot,
+              ),
           ],
         ),
       ),
