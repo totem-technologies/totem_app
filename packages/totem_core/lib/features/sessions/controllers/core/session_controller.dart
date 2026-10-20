@@ -158,8 +158,16 @@ class SessionController extends _$SessionController {
     return ref.read(sessionDeviceControllerProvider(this).notifier);
   }
 
+  SessionMessagingController? _messaging;
+
   SessionMessagingController get messaging {
-    return ref.read(sessionMessagingControllerProvider(this).notifier);
+    final existing = _messaging;
+    if (existing != null) return existing;
+    final controller = ref.read(
+      sessionMessagingControllerProvider(this).notifier,
+    );
+    _messaging = controller;
+    return controller;
   }
 
   SessionKeeperController get keeper {
@@ -880,6 +888,7 @@ class SessionController extends _$SessionController {
 
   @visibleForTesting
   Future<void> disposeConnection() async {
+    await _messaging?.disposeAdmissionTransport();
     await _disableLocalMediaTracks();
 
     try {

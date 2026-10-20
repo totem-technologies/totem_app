@@ -608,12 +608,155 @@ final class ResolveCurrentScreenProvider
 String _$resolveCurrentScreenHash() =>
     r'19618a6f7fc74e6783f0e95d937321d23edc37c0';
 
-/// The list of participants in the session.
+/// Identities still requesting admission or joining, scoped to the room.
+/// The room owner removes identities once they have joined.
+
+@ProviderFor(PendingSessionParticipantIdentities)
+final pendingSessionParticipantIdentitiesProvider =
+    PendingSessionParticipantIdentitiesProvider._();
+
+/// Identities still requesting admission or joining, scoped to the room.
+/// The room owner removes identities once they have joined.
+final class PendingSessionParticipantIdentitiesProvider
+    extends
+        $NotifierProvider<PendingSessionParticipantIdentities, Set<String>> {
+  /// Identities still requesting admission or joining, scoped to the room.
+  /// The room owner removes identities once they have joined.
+  PendingSessionParticipantIdentitiesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'pendingSessionParticipantIdentitiesProvider',
+        isAutoDispose: false,
+        dependencies: <ProviderOrFamily>[sessionScopeProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          PendingSessionParticipantIdentitiesProvider
+              .$allTransitiveDependencies0,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = sessionScopeProvider;
+
+  @override
+  String debugGetCreateSourceHash() =>
+      _$pendingSessionParticipantIdentitiesHash();
+
+  @$internal
+  @override
+  PendingSessionParticipantIdentities create() =>
+      PendingSessionParticipantIdentities();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Set<String> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Set<String>>(value),
+    );
+  }
+}
+
+String _$pendingSessionParticipantIdentitiesHash() =>
+    r'3394bf5a4592d1d8ea62c9266b7db49521b85454';
+
+/// Identities still requesting admission or joining, scoped to the room.
+/// The room owner removes identities once they have joined.
+
+abstract class _$PendingSessionParticipantIdentities
+    extends $Notifier<Set<String>> {
+  Set<String> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<Set<String>, Set<String>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<Set<String>, Set<String>>,
+              Set<String>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Only the participant tiles are filtered; turn order and speaker state stay
+/// authoritative in the session state.
+
+@ProviderFor(visibleSessionParticipantLayout)
+final visibleSessionParticipantLayoutProvider =
+    VisibleSessionParticipantLayoutProvider._();
+
+/// Only the participant tiles are filtered; turn order and speaker state stay
+/// authoritative in the session state.
+
+final class VisibleSessionParticipantLayoutProvider
+    extends
+        $FunctionalProvider<
+          SessionParticipantLayout,
+          SessionParticipantLayout,
+          SessionParticipantLayout
+        >
+    with $Provider<SessionParticipantLayout> {
+  /// Only the participant tiles are filtered; turn order and speaker state stay
+  /// authoritative in the session state.
+  VisibleSessionParticipantLayoutProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'visibleSessionParticipantLayoutProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[
+          currentSessionStateProvider,
+          pendingSessionParticipantIdentitiesProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies0,
+          VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies1,
+          VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      pendingSessionParticipantIdentitiesProvider;
+
+  @override
+  String debugGetCreateSourceHash() => _$visibleSessionParticipantLayoutHash();
+
+  @$internal
+  @override
+  $ProviderElement<SessionParticipantLayout> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SessionParticipantLayout create(Ref ref) {
+    return visibleSessionParticipantLayout(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SessionParticipantLayout value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SessionParticipantLayout>(value),
+    );
+  }
+}
+
+String _$visibleSessionParticipantLayoutHash() =>
+    r'af915b9313a346331283e88db1f99c6e26a06825';
+
+/// The list of participants shown in the session.
 
 @ProviderFor(sessionParticipants)
 final sessionParticipantsProvider = SessionParticipantsProvider._();
 
-/// The list of participants in the session.
+/// The list of participants shown in the session.
 
 final class SessionParticipantsProvider
     extends
@@ -623,7 +766,7 @@ final class SessionParticipantsProvider
           List<ParticipantInfo>
         >
     with $Provider<List<ParticipantInfo>> {
-  /// The list of participants in the session.
+  /// The list of participants shown in the session.
   SessionParticipantsProvider._()
     : super(
         from: null,
@@ -631,16 +774,25 @@ final class SessionParticipantsProvider
         retry: null,
         name: r'sessionParticipantsProvider',
         isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
-        $allTransitiveDependencies: <ProviderOrFamily>[
+        dependencies: <ProviderOrFamily>[
+          visibleSessionParticipantLayoutProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>{
           SessionParticipantsProvider.$allTransitiveDependencies0,
           SessionParticipantsProvider.$allTransitiveDependencies1,
-        ],
+          SessionParticipantsProvider.$allTransitiveDependencies2,
+          SessionParticipantsProvider.$allTransitiveDependencies3,
+        },
       );
 
-  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies0 =
+      visibleSessionParticipantLayoutProvider;
   static final $allTransitiveDependencies1 =
-      CurrentSessionStateProvider.$allTransitiveDependencies0;
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies1;
+  static final $allTransitiveDependencies3 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2;
 
   @override
   String debugGetCreateSourceHash() => _$sessionParticipantsHash();
@@ -666,7 +818,7 @@ final class SessionParticipantsProvider
 }
 
 String _$sessionParticipantsHash() =>
-    r'4386563bda81e6f5498526920e70deb1ebda9fc3';
+    r'a5d27ffc1caa1eeaa06c95c5a5bcb2e11df8f252';
 
 /// The local participant, once connected.
 

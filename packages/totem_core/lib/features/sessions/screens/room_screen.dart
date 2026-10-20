@@ -32,9 +32,11 @@ import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
+import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -123,6 +125,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   bool _hasDismissedChatForDisconnect = false;
   LiveKitAdmissionTransport? _admissionTransport;
   KeeperAdmissionController? _keeperAdmission;
+  late final PendingSessionParticipantIdentities _pendingIdentities;
   StreamSubscription<void>? _admissionChanges;
   String? _admissionKeeperIdentity;
   bool _admissionDismissed = false;
@@ -132,6 +135,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   @override
   void initState() {
     super.initState();
+    _pendingIdentities = ref.read(
+      pendingSessionParticipantIdentitiesProvider.notifier,
+    );
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     // In-call chat UI state is per-session. Clearing it on entry keeps a
@@ -167,7 +173,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
   @override
   void dispose() {
-    unawaited(_detachKeeperAdmission());
+    _pendingIdentities.update({});
+    unawaited(_detachKeeperAdmission(clearPending: false));
     _notificationController.dispose();
     _clearTimeRemainingWarningTimer();
     _setScreenProtection(false);
@@ -213,8 +220,10 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _keeperAdmission = controller;
     _admissionKeeperIdentity = keeperIdentity;
     _admissionDismissed = false;
+    _syncPendingParticipants(controller);
     _admissionChanges = controller.changes.listen((_) {
       if (!mounted || !identical(_keeperAdmission, controller)) return;
+      _syncPendingParticipants(controller);
       setState(() {
         if (controller.requests.isEmpty) _admissionDismissed = false;
       });
@@ -222,8 +231,19 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _detachKeeperAdmission() async {
+  void _syncPendingParticipants(KeeperAdmissionController? controller) {
+    if (!mounted) return;
+    _pendingIdentities.update({
+      for (final attempt in controller?.attempts ?? <KeeperAdmissionAttempt>[])
+        if (attempt.status == KeeperAdmissionStatus.requested ||
+            attempt.status == KeeperAdmissionStatus.joining)
+          attempt.request.senderIdentity,
+    });
+  }
+
+  Future<void> _detachKeeperAdmission({bool clearPending = true}) async {
     final controller = _keeperAdmission;
+    if (clearPending) _syncPendingParticipants(null);
     final transport = _admissionTransport;
     unawaited(_admissionChanges?.cancel());
     _admissionChanges = null;
@@ -298,32 +318,11 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         maxWidth: 420,
         maxHeight: size.height * (desktop ? 0.65 : 0.4),
       ),
-      child: SingleChildScrollView(
+      child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome to the session',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            const Text('The conversation is already in progress.'),
-            if (prompt case final text? when text.trim().isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text('Current prompt: $text'),
-            ],
-            const SizedBox(height: 20),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton(
-                onPressed: () =>
-                    setState(() => _admissionOrientationDismissed = true),
-                child: const Text('Got it'),
-              ),
-            ),
-          ],
+        child: SessionOrientationNotice(
+          prompt: prompt,
+          onDone: () => setState(() => _admissionOrientationDismissed = true),
         ),
       ),
     );
@@ -844,7 +843,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
                           ),
                         ),
                         if (_keeperAdmission case final controller?
-                            when controller.requests.isNotEmpty)
+                            when controller.attempts.isNotEmpty)
                           Positioned(
                             top: dockChatSlot ? 16 : null,
                             right: 16,
@@ -856,17 +855,25 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
                                     ? Alignment.topRight
                                     : Alignment.bottomCenter,
                                 child: _admissionDismissed
-                                    ? FilledButton.icon(
+                                    ? SessionWaitingQueueButton(
+                                        count: controller.requests.length,
+                                        label:
+                                            controller.requests.isEmpty &&
+                                                controller.attempts.any(
+                                                  (attempt) =>
+                                                      attempt.status ==
+                                                      KeeperAdmissionStatus
+                                                          .joining,
+                                                )
+                                            ? 'Admission in progress'
+                                            : null,
                                         onPressed: () => setState(
                                           () => _admissionDismissed = false,
-                                        ),
-                                        icon: const Icon(Icons.people_outline),
-                                        label: Text(
-                                          'Waiting to join (${controller.requests.length})',
                                         ),
                                       )
                                     : KeeperAdmissionPanel(
                                         requests: controller.requests,
+                                        attempts: controller.attempts,
                                         busy: _admissionBusy,
                                         desktop: dockChatSlot,
                                         onDecision: _decideAdmission,

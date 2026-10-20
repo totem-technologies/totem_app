@@ -44,10 +44,13 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byTooltip('Admit Alice'));
-    await tester.tap(find.byTooltip('Decline Bob'));
+    await tester.ensureVisible(find.text('Admit').first);
+    await tester.tap(find.text('Admit').first);
+    await tester.ensureVisible(find.text('Decline').last);
+    await tester.tap(find.text('Decline').last);
+    await tester.ensureVisible(find.text('Admit all'));
     await tester.tap(find.text('Admit all'));
-    await tester.tap(find.byTooltip('Close admission queue'));
+    await tester.tap(find.byTooltip('Close admission'));
     check(decisions).deepEquals(['one:true', 'two:false']);
     check(admittedAll).isTrue();
     check(dismissed).isTrue();

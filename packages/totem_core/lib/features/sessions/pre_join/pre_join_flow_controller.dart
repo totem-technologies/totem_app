@@ -11,6 +11,7 @@ import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
+import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/admission_transport.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -126,7 +127,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
             admission.status == AdmissionStatus.failed) {
           await _handleAdmissionStatus(
             admission.status,
-            response.token,
             _admissionAttempt,
             admission,
           );
@@ -191,7 +191,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     _admission = admission;
     _admissionSubscription = admission.changes.listen((status) {
       if (status != AdmissionStatus.pending) {
-        unawaited(_handleAdmissionStatus(status, token, attempt, admission));
+        unawaited(_handleAdmissionStatus(status, attempt, admission));
       }
     });
     if (admission.status == AdmissionStatus.ended) return;
@@ -208,7 +208,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
 
   Future<void> _handleAdmissionStatus(
     AdmissionStatus status,
-    String token,
     int attempt,
     PendingAdmissionController admission,
   ) async {
@@ -227,6 +226,8 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     }
     try {
       if (status == AdmissionStatus.approved) {
+        final request = admission.request;
+        if (request == null) return;
         state = state.copyWith(
           phase: PreJoinFlowPhase.joining,
           admissionStatus: status,
@@ -234,7 +235,49 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         );
         await _cleanupAdmission();
         if (ref.mounted && !_cancelRequested && attempt == _admissionAttempt) {
-          await _joinWithToken(token, fromAdmission: true);
+          try {
+            // Authorization can change while waiting; a fresh backend join
+            // check must succeed before opening the normal Session connection.
+            final response = await ref.refresh(
+              sessionTokenProvider(sessionSlug).future,
+            );
+            if (ref.mounted &&
+                !_cancelRequested &&
+                attempt == _admissionAttempt) {
+              await _joinWithToken(response.token, admissionRequest: request);
+            }
+          } catch (error, stackTrace) {
+            if (ref.mounted &&
+                attempt == _admissionAttempt &&
+                isTerminalSessionJoinError(error)) {
+              try {
+                await ref
+                    .read(preJoinMediaControllerProvider(sessionSlug).notifier)
+                    .releaseForTerminalOutcome();
+              } catch (releaseError, releaseStackTrace) {
+                ErrorHandler.logError(
+                  releaseError,
+                  stackTrace: releaseStackTrace,
+                  message:
+                      'Failed to release preview after terminal join error',
+                );
+              }
+            }
+            if (ref.mounted && attempt == _admissionAttempt) {
+              state = state.copyWith(
+                phase: PreJoinFlowPhase.idle,
+                error: error,
+                clearSessionOptions: true,
+              );
+            }
+            if (!isTerminalSessionJoinError(error)) {
+              ErrorHandler.logError(
+                error,
+                stackTrace: stackTrace,
+                message: 'Approved Session join was refused',
+              );
+            }
+          }
         }
       } else if (status == AdmissionStatus.denied ||
           status == AdmissionStatus.expired ||
@@ -361,7 +404,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
 
   Future<PreJoinJoinOutcome> _joinWithToken(
     String token, {
-    bool fromAdmission = false,
+    AdmissionRequest? admissionRequest,
   }) async {
     if (!ref.mounted || _cancelRequested) return PreJoinJoinOutcome.ignored;
     SessionController? session;
@@ -420,7 +463,8 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       joinStarted = true;
       final result = await currentSession.join(joinMedia: joinMedia);
       if (result == SessionJoinResult.retryableFailure ||
-          (fromAdmission && result == SessionJoinResult.fatalFailure)) {
+          (admissionRequest != null &&
+              result == SessionJoinResult.fatalFailure)) {
         await _resetAfterFailedJoin(currentSession);
         if (ref.mounted && result == SessionJoinResult.fatalFailure) {
           state = state.copyWith(
@@ -430,6 +474,20 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         return PreJoinJoinOutcome.retryableFailure;
       }
 
+      // Only acknowledge after the normal Session connection and initial
+      // publication have succeeded. Receipt delivery is best-effort and can
+      // recover on Keeper presence without disconnecting the joined user.
+      if (admissionRequest != null && ref.mounted) {
+        try {
+          await currentSession.messaging.sendAdmissionJoined(admissionRequest);
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Could not confirm Session admission to Keeper',
+          );
+        }
+      }
       // Keep the Keeper's existing fatal-error screen behavior.
       if (ref.mounted) state = state.copyWith(phase: PreJoinFlowPhase.joined);
       return PreJoinJoinOutcome.joined;

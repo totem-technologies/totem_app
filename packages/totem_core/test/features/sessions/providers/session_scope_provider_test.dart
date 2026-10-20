@@ -22,6 +22,7 @@ RoomState _roomState({
   String? currentSpeaker,
   String? nextSpeaker,
   String? roundMessage,
+  List<String> talkingOrder = const [],
 }) {
   return RoomState(
     keeper: keeper,
@@ -31,7 +32,7 @@ RoomState _roomState({
     turnState: turnState,
     sessionSlug: 'session-1',
     statusDetail: const RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
-    talkingOrder: const [],
+    talkingOrder: talkingOrder,
     version: 1,
     roundNumber: 1,
     roundMessage: roundMessage == null
@@ -53,6 +54,7 @@ SessionRoomState _state({
   String? nextSpeaker,
   String? roundMessage,
   bool wasJoining = false,
+  List<String> talkingOrder = const [],
 }) {
   return SessionRoomState(
     connection: ConnectionState(
@@ -71,6 +73,7 @@ SessionRoomState _state({
         currentSpeaker: currentSpeaker,
         nextSpeaker: nextSpeaker,
         roundMessage: roundMessage,
+        talkingOrder: talkingOrder,
       ),
     ),
   );
@@ -155,6 +158,87 @@ void main() {
   });
 
   group('session scope selectors', () {
+    test('pending identities hide only presentation until joined', () {
+      final state = _state(
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        turnState: TurnState.passing,
+        currentSpeaker: 'keeper',
+        nextSpeaker: 'alice',
+        talkingOrder: const ['keeper', 'alice', 'bob'],
+        participants: [
+          testParticipant('keeper'),
+          testParticipant('alice'),
+          testParticipant('bob'),
+        ],
+      );
+      final container = ProviderContainer(
+        overrides: [currentSessionStateProvider.overrideWithValue(state)],
+      );
+      addTearDown(container.dispose);
+      final pending = container.read(
+        pendingSessionParticipantIdentitiesProvider.notifier,
+      );
+      final identities = <String>{'alice'};
+      pending.update(identities);
+      identities.clear();
+
+      check(container.read(sessionParticipantsProvider).map((p) => p.identity))
+          .deepEquals(['keeper', 'bob']);
+      final layout = container.read(visibleSessionParticipantLayoutProvider);
+      check(layout.participants.map((p) => p.identity))
+          .deepEquals(['keeper', 'bob']);
+      check(layout.talkingOrder).deepEquals(['keeper', 'alice', 'bob']);
+      check(layout.nextSpeaker).equals('alice');
+      check(layout.speakingNow).equals('keeper');
+      check(container.read(turnStateProvider)).equals(TurnState.passing);
+      check(state.roomState.talkingOrder)
+          .deepEquals(['keeper', 'alice', 'bob']);
+      check(state.participants.participants.map((p) => p.identity))
+          .deepEquals(['keeper', 'alice', 'bob']);
+
+      // The owner reports only requested/joining identities; joined users
+      // remain in the canonical session and return to the presentation.
+      pending.update(<String>{});
+      check(container.read(sessionParticipantsProvider).map((p) => p.identity))
+          .deepEquals(['keeper', 'alice', 'bob']);
+      check(
+        container
+            .read(visibleSessionParticipantLayoutProvider)
+            .participants
+            .map((p) => p.identity),
+      ).deepEquals(['keeper', 'alice', 'bob']);
+      check(container.read(turnStateProvider)).equals(TurnState.passing);
+    });
+
+    test('pending identities do not carry between room scopes', () {
+      ProviderContainer room(String slug) => ProviderContainer(
+        overrides: [
+          sessionScopeProvider.overrideWithValue(
+            SessionOptions(
+              sessionSlug: slug,
+              token: 'token',
+              cameraEnabled: true,
+              microphoneEnabled: true,
+              speakerEnabled: true,
+              cameraOptions: const CameraCaptureOptions(),
+            ),
+          ),
+        ],
+      );
+      final first = room('first');
+      final second = room('second');
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+      first.read(pendingSessionParticipantIdentitiesProvider.notifier).update({
+        'alice',
+      });
+
+      check(first.read(pendingSessionParticipantIdentitiesProvider))
+          .contains('alice');
+      check(second.read(pendingSessionParticipantIdentitiesProvider)).isEmpty();
+    });
+
     test('participant projections ignore chat-only changes', () {
       final participant = testParticipant('alice', name: 'Alice');
       final before = _state(participants: [participant]);

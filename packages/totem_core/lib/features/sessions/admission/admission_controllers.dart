@@ -206,6 +206,26 @@ class PendingAdmissionController {
   }
 }
 
+enum KeeperAdmissionStatus {
+  requested,
+  joining,
+  joined,
+  joinFailed,
+  timedOut,
+  denied,
+  cancelled,
+  expired,
+}
+
+/// A snapshot of one participant's latest admission attempt.
+final class KeeperAdmissionAttempt {
+  const new(this.request, this.status, {this.joinDeadline});
+
+  final AdmissionRequest request;
+  final KeeperAdmissionStatus status;
+  final DateTime? joinDeadline;
+}
+
 /// Keeper-side queue with one decision per sender + request ID. Decisions are
 /// retained until their request expires so reconnect resends get the same reply.
 class KeeperAdmissionController {
@@ -228,37 +248,46 @@ class KeeperAdmissionController {
   final _latest = <String, AdmissionPacket>{};
   final _pending = <String, AdmissionRequest>{};
   final _decisions = <String, AdmissionDecision>{};
+  final _attempts = <String, KeeperAdmissionAttempt>{};
+  final _earlyOutcomes = <String, AdmissionPacket>{};
   final _expirations = <String, Timer>{};
   final _inFlight = <String>{};
+  final _approving = <String>{};
   late final StreamSubscription<AdmissionEvent> _subscription;
   bool _disposed = false;
   bool _ended;
 
   Stream<void> get changes => _changes.stream;
   List<AdmissionRequest> get requests => List.unmodifiable(_pending.values);
+  List<KeeperAdmissionAttempt> get attempts =>
+      List.unmodifiable(_attempts.values);
 
   String _key(String sender, String id) => '$sender\u0000$id';
 
-  void _advertise() {
+  void _advertise() => channel.remoteIdentities.forEach(_advertiseTo);
+
+  void _advertiseTo(String identity) {
     final keeper = channel.localIdentity;
-    if (_disposed || _ended || keeper.isEmpty || keeperIdentity() != keeper) {
+    if (_disposed ||
+        _ended ||
+        keeper.isEmpty ||
+        keeperIdentity() != keeper ||
+        identity.isEmpty ||
+        identity == keeper) {
       return;
     }
-    for (final identity in channel.remoteIdentities) {
-      if (identity.isEmpty || identity == keeper) continue;
-      unawaited(
-        channel
-            .send(
-              AdmissionHello(
-                id: const Uuid().v4(),
-                senderIdentity: keeper,
-                recipientIdentity: identity,
-                expiresAt: _now().add(AdmissionProtocol.lifetime),
-              ),
-            )
-            .catchError((Object _) {}),
-      );
-    }
+    unawaited(
+      channel
+          .send(
+            AdmissionHello(
+              id: const Uuid().v4(),
+              senderIdentity: keeper,
+              recipientIdentity: identity,
+              expiresAt: _now().add(AdmissionProtocol.lifetime),
+            ),
+          )
+          .catchError((Object _) {}),
+    );
   }
 
   void _onEvent(AdmissionEvent event) {
@@ -272,15 +301,27 @@ class KeeperAdmissionController {
       _latest.clear();
       _pending.clear();
       _decisions.clear();
+      _attempts.clear();
+      _earlyOutcomes.clear();
       _changes.add(null);
       return;
     }
     switch (event) {
       case AdmissionConnectionRestored():
         _advertise();
+      case AdmissionPresenceChanged(:final identity, present: true):
+        _advertiseTo(identity);
       case AdmissionPresenceChanged(:final identity, present: false):
         // A reconnecting participant can re-advertise this same request.
-        if (_pending.remove(identity) != null) _changes.add(null);
+        if (_pending.remove(identity) case final request?) {
+          if (!_inFlight.contains(_key(identity, request.id))) {
+            _attempts.remove(identity);
+          }
+          _changes.add(null);
+        }
+      case AdmissionPacketReceived(:final packet)
+          when packet is AdmissionJoined || packet is AdmissionJoinFailed:
+        _receiveOutcome(packet);
       case AdmissionPacketReceived(:final packet)
           when packet is AdmissionRequest || packet is AdmissionCancel:
         if (keeperIdentity() != channel.localIdentity ||
@@ -301,15 +342,25 @@ class KeeperAdmissionController {
         }
         if (packet.expiresAt != latest.expiresAt) return;
         if (packet is AdmissionCancel) {
-          if (latest is! AdmissionCancel) _record(packet);
+          if (latest is! AdmissionCancel &&
+              _attempts[sender]?.status != KeeperAdmissionStatus.joined) {
+            _record(packet);
+          }
         } else if (packet is AdmissionRequest &&
             latest is AdmissionRequest &&
             latest.displayName == packet.displayName) {
           final decision = _decisions[sender];
           if (decision != null) {
             unawaited(channel.send(decision).catchError((Object _) {}));
-          } else if (_pending[sender] == null) {
+          } else if (_pending[sender] == null &&
+              (_attempts[sender] == null ||
+                  _attempts[sender]?.status ==
+                      KeeperAdmissionStatus.requested)) {
             _pending[sender] = latest;
+            _attempts[sender] = KeeperAdmissionAttempt(
+              latest,
+              KeeperAdmissionStatus.requested,
+            );
             _changes.add(null);
           }
         }
@@ -323,20 +374,77 @@ class KeeperAdmissionController {
     _expirations.remove(sender)?.cancel();
     _latest[sender] = packet;
     _decisions.remove(sender);
+    _earlyOutcomes.remove(sender);
     if (packet is AdmissionRequest) {
       _pending[sender] = packet;
+      _attempts[sender] = KeeperAdmissionAttempt(
+        packet,
+        KeeperAdmissionStatus.requested,
+      );
     } else {
       _pending.remove(sender);
+      final attempt = _attempts[sender];
+      if (attempt != null && attempt.request.id == packet.id) {
+        _attempts[sender] = KeeperAdmissionAttempt(
+          attempt.request,
+          KeeperAdmissionStatus.cancelled,
+        );
+      } else {
+        _attempts.remove(sender);
+      }
     }
     _expirations[sender] = Timer(packet.expiresAt.difference(_now()), () {
       if (!identical(_latest[sender], packet)) return;
-      _latest.remove(sender);
       _pending.remove(sender);
       _decisions.remove(sender);
       _expirations.remove(sender);
+      final attempt = _attempts[sender];
+      if (attempt != null) {
+        final status = switch (attempt.status) {
+          KeeperAdmissionStatus.requested => KeeperAdmissionStatus.expired,
+          KeeperAdmissionStatus.joining => KeeperAdmissionStatus.timedOut,
+          _ => attempt.status,
+        };
+        _attempts[sender] = KeeperAdmissionAttempt(
+          attempt.request,
+          status,
+          joinDeadline: attempt.joinDeadline,
+        );
+      }
       if (!_disposed) _changes.add(null);
     });
     _changes.add(null);
+  }
+
+  void _receiveOutcome(AdmissionPacket packet) {
+    if (keeperIdentity() != channel.localIdentity ||
+        packet.senderIdentity == channel.localIdentity ||
+        packet.recipientIdentity != channel.localIdentity ||
+        !_now().isBefore(packet.expiresAt)) {
+      return;
+    }
+    final sender = packet.senderIdentity;
+    final request = _attempts[sender]?.request;
+    if (request == null ||
+        request.id != packet.id ||
+        request.expiresAt != packet.expiresAt ||
+        _latest[sender] is! AdmissionRequest) {
+      return;
+    }
+    final attempt = _attempts[sender]!;
+    if (attempt.status == KeeperAdmissionStatus.joining &&
+        _now().isBefore(attempt.joinDeadline!)) {
+      _attempts[sender] = KeeperAdmissionAttempt(
+        request,
+        packet is AdmissionJoined
+            ? KeeperAdmissionStatus.joined
+            : KeeperAdmissionStatus.joinFailed,
+        joinDeadline: attempt.joinDeadline,
+      );
+      _changes.add(null);
+    } else if (_approving.contains(_key(sender, packet.id))) {
+      _earlyOutcomes[sender] = packet;
+    }
   }
 
   Future<void> approve(String requestId, String participantIdentity) =>
@@ -357,6 +465,7 @@ class KeeperAdmissionController {
     }
     final key = _key(sender, id);
     if (!_inFlight.add(key)) throw StateError('Decision already in progress');
+    if (approved) _approving.add(key);
     try {
       final decision = AdmissionDecision(
         id: id,
@@ -370,14 +479,31 @@ class KeeperAdmissionController {
           _ended ||
           keeperIdentity() != channel.localIdentity ||
           !identical(_latest[sender], request) ||
-          !identical(_pending[sender], request) ||
+          !(identical(_pending[sender], request) ||
+              (_pending[sender] == null &&
+                  identical(_attempts[sender]?.request, request))) ||
           !_now().isBefore(request.expiresAt)) {
         throw StateError('Request changed while deciding');
       }
       _pending.remove(sender);
       _decisions[sender] = decision;
+      _attempts[sender] = KeeperAdmissionAttempt(
+        request,
+        approved ? KeeperAdmissionStatus.joining : KeeperAdmissionStatus.denied,
+        joinDeadline: approved ? request.expiresAt : null,
+      );
       _changes.add(null);
+      final early = _earlyOutcomes.remove(sender);
+      if (early != null && approved) _receiveOutcome(early);
     } finally {
+      if (_pending[sender] == null &&
+          identical(_attempts[sender]?.request, request) &&
+          _attempts[sender]?.status == KeeperAdmissionStatus.requested) {
+        _attempts.remove(sender);
+        if (!_disposed && !_ended) _changes.add(null);
+      }
+      _earlyOutcomes.remove(sender);
+      _approving.remove(key);
       _inFlight.remove(key);
     }
   }
@@ -392,6 +518,9 @@ class KeeperAdmissionController {
     _latest.clear();
     _pending.clear();
     _decisions.clear();
+    _attempts.clear();
+    _earlyOutcomes.clear();
+    _approving.clear();
     _inFlight.clear();
     await _subscription.cancel();
     await _changes.close();

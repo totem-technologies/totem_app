@@ -51,9 +51,9 @@ Components/
   Feedback/    EmptyIndicator, ErrorScreen, InfoText, LoadingIndicator, LoadingScreen
   Navigation/  PageIndicator, SheetDragHandle
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
-  Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard
+  Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard, SessionWaitingQueueButton
 Screens/
-  session/:slug   SessionEntry (one story; args are the states)
+  session/:slug   SessionEntry (one story; args are the states; browsing, waiting, declined, queue and orientation content use core views)
 ```
 
 ### Rules

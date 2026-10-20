@@ -19,6 +19,8 @@ abstract final class AdmissionProtocol {
         AdmissionDecision() => 'decision',
         AdmissionCancel() => 'cancel',
         AdmissionHello() => 'hello',
+        AdmissionJoined() => 'admission.joined',
+        AdmissionJoinFailed() => 'admission.joinFailed',
       },
       'id': packet.id,
       'from': packet.senderIdentity,
@@ -28,6 +30,24 @@ abstract final class AdmissionProtocol {
       if (packet case AdmissionDecision(:final approved)) 'approved': approved,
     }),
   );
+
+  /// Build a receipt for the original attempt, to send on the NEW, normally
+  /// connected room after SessionController.join succeeds.
+  static AdmissionJoined joined(AdmissionRequest request) => AdmissionJoined(
+    id: request.id,
+    senderIdentity: request.senderIdentity,
+    recipientIdentity: request.recipientIdentity,
+    expiresAt: request.expiresAt,
+  );
+
+  /// Optional failure receipt, only when a connected room can send it.
+  static AdmissionJoinFailed joinFailed(AdmissionRequest request) =>
+      AdmissionJoinFailed(
+        id: request.id,
+        senderIdentity: request.senderIdentity,
+        recipientIdentity: request.recipientIdentity,
+        expiresAt: request.expiresAt,
+      );
 
   /// Rejects malformed, expired, unsupported, and implausibly long-lived packets.
   /// [senderIdentity] must come from LiveKit's participant event, not the JSON.
@@ -93,6 +113,25 @@ abstract final class AdmissionProtocol {
           displayName: name,
         );
       }
+      if (value['kind'] == 'admission.joined' ||
+          value['kind'] == 'admission.joinFailed') {
+        if (value.containsKey('name') || value.containsKey('approved')) {
+          return null;
+        }
+        return value['kind'] == 'admission.joined'
+            ? AdmissionJoined(
+                id: id,
+                senderIdentity: from as String,
+                recipientIdentity: to,
+                expiresAt: expiration,
+              )
+            : AdmissionJoinFailed(
+                id: id,
+                senderIdentity: from as String,
+                recipientIdentity: to,
+                expiresAt: expiration,
+              );
+      }
       if (value['kind'] == 'cancel') {
         return AdmissionCancel(
           id: id,
@@ -154,6 +193,25 @@ final class AdmissionCancel extends AdmissionPacket {
 
 /// Keeper presence advertisement; it does not grant admission.
 final class AdmissionHello extends AdmissionPacket {
+  const new({
+    required super.id,
+    required super.senderIdentity,
+    required super.recipientIdentity,
+    required super.expiresAt,
+  });
+}
+
+/// Receipt sent only from the participant's new normal room connection.
+final class AdmissionJoined extends AdmissionPacket {
+  const new({
+    required super.id,
+    required super.senderIdentity,
+    required super.recipientIdentity,
+    required super.expiresAt,
+  });
+}
+
+final class AdmissionJoinFailed extends AdmissionPacket {
   const new({
     required super.id,
     required super.senderIdentity,

@@ -26,6 +26,11 @@ import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/permissions_popups.dart';
+import 'package:totem_core/features/sessions/widgets/session_browsing_view.dart';
+import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
+import 'package:totem_core/features/sessions/widgets/session_entry_info_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
+import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -76,6 +81,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   bool _terminalMediaReleaseRequested = false;
   Timer? _joinWindowTimer;
   DateTime? _joinWindowStart;
+  bool _earlyNoticeDismissed = false;
 
   @override
   void initState() {
@@ -266,151 +272,168 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     context.go(RouteNames.space(session.space.slug));
   }
 
-  Widget _entryCard(SessionDetailSchema session, PreJoinFlowState flow) {
-    final nextSessions = session.space.nextEvents.where(
+  Widget _buildBrowsing(
+    SessionDetailSchema session,
+    PreJoinFlowState flow, {
+    required bool early,
+  }) {
+    final starts = session.start.toLocal();
+    final keeper = session.space.author;
+    final next = session.space.nextEvents.where(
       (event) =>
           !event.cancelled &&
           event.slug != session.slug &&
           event.start.isAfter(widget.now()),
     );
-    final nextSession = nextSessions.isEmpty ? null : nextSessions.first;
-    final pending = flow.phase == PreJoinFlowPhase.pending;
-    final expiration = flow.expiresAt;
-    final terminal = isTerminalSessionJoinError(flow.error);
-    final unavailable =
-        terminal ||
-        flow.admissionStatus == AdmissionStatus.denied ||
-        flow.admissionStatus == AdmissionStatus.expired ||
-        flow.admissionStatus == AdmissionStatus.ended;
-    final early = widget.now().isBefore(
-      session.start.subtract(const Duration(minutes: 10)),
-    );
-    final schedule = DateFormat('EEEE, MMMM d • h:mm a')
-        .format(session.start.toLocal());
-    final joinTime = DateFormat('h:mm a')
-        .format(session.start.toLocal().subtract(const Duration(minutes: 10)));
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 560),
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                session.space.title,
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                session.title,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '$schedule · ${session.space.author.name.value ?? 'Keeper'}',
-              ),
-              const SizedBox(height: 16),
-              Text(
-                unavailable
-                    ? terminal
-                          ? 'This Session is no longer available for joining.'
-                          : flow.admissionStatus == AdmissionStatus.ended
-                          ? 'This Session has ended.'
-                          : flow.admissionStatus == AdmissionStatus.expired
-                          ? 'Your admission request expired.'
-                          : 'The Keeper could not admit you to this Session.'
-                    : pending
-                    ? session.started || widget.now().isAfter(session.start)
-                          ? 'This Session may be in progress. Waiting for the Keeper to admit you.'
-                          : 'Waiting for the Keeper to admit you. Your camera and microphone are only a local preview.'
-                    : early
-                    ? 'You can join at $joinTime.'
-                    : 'Check your camera and microphone before joining.',
-              ),
-              if (pending && expiration != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Request expires at ${DateFormat('h:mm a').format(expiration.toLocal())}',
+    final nextSession = next.isEmpty ? null : next.first;
+    final keeperImage = keeper.profileImage.value;
+    final image = session.space.imageLink;
+    final notice = early && !_earlyNoticeDismissed;
+    return Material(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: SessionBrowsingView(
+              spaceName: session.space.title,
+              sessionName: session.title,
+              keeperName: keeper.name.value ?? 'Keeper',
+              dateLabel: DateFormat('EEEE, MMMM d').format(starts),
+              timeLabel: DateFormat('h:mm a').format(starts),
+              facts: [
+                SessionEntryFact(
+                  icon: const Icon(Icons.timer_outlined, size: 16),
+                  value: '${session.duration}',
+                  label: 'minutes',
+                ),
+                SessionEntryFact(
+                  icon: const Icon(Icons.people_outline, size: 16),
+                  value: '${session.seatsLeft}',
+                  label: 'seats left',
                 ),
               ],
-              if (flow.error != null && !terminal) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Could not join the Session: ${flow.error}',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
-              if (unavailable && nextSession != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'Next Session: ${nextSession.title ?? session.space.title}',
-                ),
-                Text(
-                  DateFormat('EEEE, MMMM d • h:mm a')
-                      .format(nextSession.start.toLocal()),
-                ),
-                TextButton(
-                  onPressed: () => context.go(
-                    RouteNames.spaceSession(
-                      session.space.slug,
-                      nextSession.slug,
+              heroPhoto: image == null || image.isEmpty
+                  ? null
+                  : NetworkImage(image),
+              keeperPhoto: keeperImage == null || keeperImage.isEmpty
+                  ? null
+                  : NetworkImage(keeperImage),
+              about: session.content.isEmpty ? null : session.content,
+              similarSession: nextSession == null
+                  ? null
+                  : Text(
+                      '${nextSession.title ?? session.space.title} · ${DateFormat('MMM d, h:mm a').format(nextSession.start.toLocal())}',
+                    ),
+              onJoin: early || flow.phase != PreJoinFlowPhase.idle
+                  ? null
+                  : () => unawaited(_requestJoin()),
+              onBack: () => _backToSpace(session),
+            ),
+          ),
+          if (flow.error != null && !early)
+            Positioned(
+              bottom: 16,
+              left: 16,
+              right: 16,
+              child: SafeArea(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Material(
+                      borderRadius: BorderRadius.circular(20),
+                      elevation: 6,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: SessionEntryNotice(
+                          kicker: 'Unable to join',
+                          title: 'Please try again',
+                          onDone: () => unawaited(_requestJoin()),
+                          doneLabel: 'Try again',
+                          children: [Text('${flow.error}')],
+                        ),
+                      ),
                     ),
                   ),
-                  child: const Text('View next Session'),
                 ),
-              ],
-              const SizedBox(height: 16),
-              if (pending)
-                OutlinedButton(
-                  onPressed: () async {
-                    await ref
-                        .read(
-                          preJoinFlowControllerProvider(widget.sessionSlug)
-                              .notifier,
-                        )
-                        .cancelAdmission();
-                    if (mounted) _backToSpace(session);
-                  },
-                  child: const Text('Leave waiting room'),
-                )
-              else if (unavailable)
-                TextButton(
-                  onPressed: () => _backToSpace(session),
-                  child: const Text('Back to Space'),
-                )
-              else
-                FilledButton(
-                  onPressed: early || flow.phase != PreJoinFlowPhase.idle
-                      ? null
-                      : () => unawaited(_requestJoin()),
-                  child: const Text('Join Session'),
-                ),
-            ],
-          ),
-        ),
+              ),
+            ),
+          if (notice)
+            Positioned.fill(
+              child: Stack(
+                children: [
+                  const ModalBarrier(dismissible: false, color: Colors.black54),
+                  Align(
+                    alignment: MediaQuery.sizeOf(context).width >= 640
+                        ? Alignment.center
+                        : Alignment.bottomCenter,
+                    child: SafeArea(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: Material(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: SessionEntryNotice(
+                              kicker: 'A little early',
+                              title: 'Your Session is coming up',
+                              onDone: () =>
+                                  setState(() => _earlyNoticeDismissed = true),
+                              children: [
+                                Text(
+                                  'Join Session opens at ${DateFormat('h:mm a').format(starts.subtract(const Duration(minutes: 10)))}.',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _buildEarlyEntry(SessionDetailSchema session, PreJoinFlowState flow) {
-    return RoomBackground(
+  Widget _buildDeclined(SessionDetailSchema session, PreJoinFlowState flow) {
+    final next = session.space.nextEvents.where(
+      (event) =>
+          !event.cancelled &&
+          event.slug != session.slug &&
+          event.start.isAfter(widget.now()),
+    );
+    final offer = next.isEmpty ? null : next.first;
+    final message = isTerminalSessionJoinError(flow.error)
+        ? 'The server is no longer allowing this Session to be joined.'
+        : switch (flow.admissionStatus) {
+            AdmissionStatus.denied => 'The Keeper was unable to admit you.',
+            AdmissionStatus.ended => 'The Session has ended.',
+            _ => 'Your admission request has expired.',
+          };
+    return Material(
+      color: const Color(0xFFFCEFE4),
       child: SafeArea(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            leading: IconButton(
-              onPressed: () => TotemRouter.instance.popOrHome(context),
-              icon: const Icon(Icons.arrow_back),
-            ),
-          ),
-          body: Center(
-            child: SingleChildScrollView(child: _entryCard(session, flow)),
-          ),
+        child: SessionDeclinedView(
+          message: message,
+          actionLabel: 'View Session',
+          offer: offer == null
+              ? null
+              : Text(
+                  '${offer.title ?? session.space.title} · ${DateFormat('EEEE, MMMM d · h:mm a').format(offer.start.toLocal())}',
+                ),
+          onOffer: offer == null
+              ? null
+              : () => context.go(
+                  RouteNames.spaceSession(session.space.slug, offer.slug),
+                ),
+          onSignUp: offer == null
+              ? null
+              : () => context.go(
+                  RouteNames.spaceSession(session.space.slug, offer.slug),
+                ),
+          onBackToSpace: () => _backToSpace(session),
         ),
       ),
     );
@@ -479,9 +502,21 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     final permissionsGranted = (kIsWeb || kIsWasm)
         ? media.canJoinOnWeb
         : flow.nativePermissionsGranted;
+    final pending = flow.phase == PreJoinFlowPhase.pending;
+    void leaveWaiting() {
+      unawaited(() async {
+        await ref
+            .read(preJoinFlowControllerProvider(widget.sessionSlug).notifier)
+            .cancelAdmission();
+        if (mounted) _backToSpace(session);
+      }());
+    }
+
     return PreJoinView(
       key: _preJoinViewKey,
       mediaState: media,
+      waiting: pending,
+      onLeave: pending ? leaveWaiting : null,
       locked:
           (flow.phase != PreJoinFlowPhase.idle &&
               flow.phase != PreJoinFlowPhase.pending) ||
@@ -491,13 +526,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       onToggleSpeaker: mediaController.toggleSpeaker,
       onCameraFacingChanged: mediaController.setCameraFacing,
       onCameraDeviceSelected: mediaController.selectCameraDevice,
-      joinCard:
-          flow.phase == PreJoinFlowPhase.pending ||
-              flow.admissionStatus == AdmissionStatus.denied ||
-              flow.admissionStatus == AdmissionStatus.expired ||
-              flow.admissionStatus == AdmissionStatus.ended ||
-              flow.error != null
-          ? _entryCard(session, flow)
+      joinCard: pending
+          ? SessionWaitingCard(
+              title: 'Waiting to join',
+              body: Text(
+                'The Keeper will let you in. Your camera and microphone are only a local preview.\n'
+                'Request expires at ${flow.expiresAt == null ? 'soon' : DateFormat('h:mm a').format(flow.expiresAt!.toLocal())}.',
+              ),
+              actionLabel: 'Leave waiting room',
+              onAction: leaveWaiting,
+            )
           : JoinTransitionCard(
               margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
               keepActionLoadingOnSuccess: true,
@@ -531,18 +569,24 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     final isKeeper =
         keeperIdentity != null &&
         keeperIdentity == ref.watch(authControllerProvider).user?.slug.value;
+    final early =
+        !isKeeper &&
+        widget.now().isBefore(
+          session.start.subtract(const Duration(minutes: 10)),
+        );
     if (isTerminalSessionJoinError(flow.error) ||
         flow.admissionStatus == AdmissionStatus.denied ||
         flow.admissionStatus == AdmissionStatus.expired ||
-        flow.admissionStatus == AdmissionStatus.ended ||
-        (!isKeeper &&
-            flow.phase == PreJoinFlowPhase.idle &&
-            widget.now().isBefore(
-              session.start.subtract(const Duration(minutes: 10)),
-            ))) {
-      return _buildEarlyEntry(session, flow);
+        flow.admissionStatus == AdmissionStatus.ended) {
+      return _buildDeclined(session, flow);
+    }
+    if (early && flow.phase == PreJoinFlowPhase.idle) {
+      return _buildBrowsing(session, flow, early: true);
     }
     final media = ref.watch(preJoinMediaControllerProvider(widget.sessionSlug));
+    if (flow.phase == PreJoinFlowPhase.idle) {
+      return _buildBrowsing(session, flow, early: false);
+    }
     _joined = flow.phase == PreJoinFlowPhase.joined;
 
     ref.listen(preJoinMediaControllerProvider(widget.sessionSlug), (_, next) {

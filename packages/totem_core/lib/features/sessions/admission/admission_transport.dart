@@ -58,13 +58,21 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
           senderIdentity: event.participant?.identity,
           now: DateTime.now(),
         );
-        if (packet != null) _events.add(AdmissionPacketReceived(packet));
+        if (packet != null) {
+          _events.add(AdmissionPacketReceived(packet));
+          if (packet is AdmissionHello &&
+              packet.senderIdentity == _joinReceipt?.recipientIdentity &&
+              packet.recipientIdentity == localIdentity) {
+            _retryJoinReceipt();
+          }
+        }
       })
-      ..on<ParticipantConnectedEvent>(
-        (event) => _events.add(
-          AdmissionPresenceChanged(event.participant.identity, true),
-        ),
-      )
+      ..on<ParticipantConnectedEvent>((event) {
+        _events.add(AdmissionPresenceChanged(event.participant.identity, true));
+        if (event.participant.identity == _joinReceipt?.recipientIdentity) {
+          _retryJoinReceipt();
+        }
+      })
       ..on<ParticipantDisconnectedEvent>(
         (event) => _events.add(
           AdmissionPresenceChanged(event.participant.identity, false),
@@ -73,13 +81,20 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
       ..on<RoomMetadataChangedEvent>((event) => _checkRoomEnded(event.metadata))
       ..on<RoomConnectedEvent>((event) {
         _checkRoomEnded(event.metadata);
-        if (!_ended) _events.add(const AdmissionConnectionRestored());
+        if (!_ended) {
+          _events.add(const AdmissionConnectionRestored());
+          _retryJoinReceipt();
+        }
       })
       ..on<RoomReconnectedEvent>((_) {
         _checkRoomEnded(room.metadata);
-        if (!_ended) _events.add(const AdmissionConnectionRestored());
+        if (!_ended) {
+          _events.add(const AdmissionConnectionRestored());
+          _retryJoinReceipt();
+        }
       })
       ..on<RoomDisconnectedEvent>((event) {
+        _joinReceipt = null;
         if (!_ended) _events.add(AdmissionRoomDisconnected(event.reason));
       });
   }
@@ -90,6 +105,7 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
   final _events = StreamController<AdmissionEvent>.broadcast(sync: true);
   late final EventsListener<RoomEvent> _listener;
   bool _disposed = false;
+  AdmissionPacket? _joinReceipt;
 
   bool _ended = false;
 
@@ -107,6 +123,7 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
     }
     if (state.status == RoomStatus.ended) {
       _ended = true;
+      _joinReceipt = null;
       _events.add(const AdmissionRoomEnded());
     }
   }
@@ -138,6 +155,16 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
     if (data.length > AdmissionProtocol.maxPayloadBytes) {
       throw ArgumentError('Admission packet exceeds size limit');
     }
+    if ((packet is AdmissionJoined || packet is AdmissionJoinFailed) &&
+        (packet.recipientIdentity == local.identity ||
+            AdmissionProtocol.decode(
+                  data,
+                  senderIdentity: local.identity,
+                  now: DateTime.now(),
+                ) ==
+                null)) {
+      throw ArgumentError('Invalid or expired admission receipt');
+    }
     await local.publishData(
       data,
       reliable: true,
@@ -146,9 +173,48 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
     );
   }
 
+  /// Call on a NEW normal room connection, after SessionController.join has
+  /// succeeded. Retain this transport until room teardown so keeper presence,
+  /// hello, or reconnect can trigger a one-shot receipt retry before expiry.
+  Future<void> sendJoinOutcome(
+    AdmissionRequest request, {
+    bool joined = true,
+  }) async {
+    if (_disposed || _ended) {
+      throw StateError('Admission transport unavailable');
+    }
+    if (_joinReceipt != null) throw StateError('Join outcome already sent');
+    final receipt = joined
+        ? AdmissionProtocol.joined(request)
+        : AdmissionProtocol.joinFailed(request);
+    if (receipt.senderIdentity != localIdentity ||
+        receipt.recipientIdentity == localIdentity ||
+        AdmissionProtocol.decode(
+              AdmissionProtocol.encode(receipt),
+              senderIdentity: localIdentity,
+              now: DateTime.now(),
+            ) ==
+            null) {
+      throw ArgumentError('Invalid or expired admission receipt');
+    }
+    _joinReceipt = receipt;
+    await send(receipt);
+  }
+
+  void _retryJoinReceipt() {
+    final receipt = _joinReceipt;
+    if (_disposed || _ended || receipt == null) return;
+    if (!DateTime.now().isBefore(receipt.expiresAt)) {
+      _joinReceipt = null;
+      return;
+    }
+    unawaited(send(receipt).catchError((Object _) {}));
+  }
+
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _joinReceipt = null;
     await _listener.dispose();
     await _events.close();
   }

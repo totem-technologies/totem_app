@@ -278,9 +278,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final layout = ref.watch(
-      currentSessionStateProvider.select(sessionParticipantLayout),
-    );
+    final layout = ref.watch(visibleSessionParticipantLayoutProvider);
     final sortedParticipants = participantsSorting(
       originalParticipants: layout.participants,
       talkingOrder: layout.talkingOrder,
