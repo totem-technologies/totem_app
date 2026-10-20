@@ -507,7 +507,7 @@ void main() {
       });
 
       test(
-        'disconnect failure still cleans up and permits a later leave',
+        'disconnect failure still cleans up and permits a later join',
         () async {
           const eventSlug = 'test-session';
           final container = _createContainerWithEventOverride(eventSlug);
@@ -515,8 +515,8 @@ void main() {
           const options = SessionOptions(
             sessionSlug: eventSlug,
             token: 'test-token',
-            cameraEnabled: true,
-            microphoneEnabled: true,
+            cameraEnabled: false,
+            microphoneEnabled: false,
             cameraOptions: SessionController.defaultCameraCaptureOptions,
             speakerEnabled: true,
           );
@@ -536,6 +536,7 @@ void main() {
           when(
             () => localParticipant.setMicrophoneEnabled(any<bool>()),
           ).thenAnswer((_) async => null);
+          when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
           final failedRoom = _CountingRoom(
             localParticipant,
             disconnectError: TimeoutException('disconnect timed out'),
@@ -546,11 +547,22 @@ void main() {
           check(failedRoom.disposeCount).equals(1);
           check(controller.room).isNull();
 
-          final nextRoom = _CountingRoom(localParticipant);
+          final disconnectRoom = _CountingRoom(
+            localParticipant,
+            disconnectError: TimeoutException('disconnect timed out'),
+          );
+          controller.room = disconnectRoom;
+          await controller.disconnectFromRoom();
+          check(disconnectRoom.disposeCount).equals(1);
+          check(controller.room).isNull();
+
+          final nextRoom = _CountingRoom(
+            localParticipant,
+            emitConnectedOnConnect: true,
+          );
           controller.room = nextRoom;
-          await controller.leave();
-          check(nextRoom.disconnectCount).equals(1);
-          check(nextRoom.disposeCount).equals(1);
+          check(await controller.join()).equals(SessionJoinResult.success);
+          check(nextRoom.connectCount).equals(1);
         },
       );
 
@@ -635,8 +647,8 @@ void main() {
           const options = SessionOptions(
             sessionSlug: eventSlug,
             token: 'test-token',
-            cameraEnabled: true,
-            microphoneEnabled: true,
+            cameraEnabled: false,
+            microphoneEnabled: false,
             cameraOptions: SessionController.defaultCameraCaptureOptions,
             speakerEnabled: true,
           );
@@ -656,17 +668,27 @@ void main() {
           when(
             () => localParticipant.setMicrophoneEnabled(any<bool>()),
           ).thenAnswer((_) async => null);
+          when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
           final room = _CountingRoom(
             localParticipant,
+            emitConnectedOnConnect: true,
             emitDisconnectedOnDisconnect: true,
           );
           controller.room = room;
+
+          check(await controller.join()).equals(SessionJoinResult.success);
+          check(controller.state.connectionState).equals(
+            RoomConnectionState.connected,
+          );
 
           await controller.leave();
 
           check(room.disconnectCount).equals(1);
           check(room.disposeCount).equals(1);
-          check(controller.state.phase).equals(SessionPhase.idle);
+          check(controller.state.connectionState).equals(
+            RoomConnectionState.disconnected,
+          );
+          check(controller.state.phase).equals(SessionPhase.disconnected);
         },
       );
 

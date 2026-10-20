@@ -190,8 +190,16 @@ class SessionController extends _$SessionController {
     _updateRoomState(roomState);
   }
 
-  Future<void> disconnectFromRoom() {
-    return leave();
+  Future<void> disconnectFromRoom() async {
+    try {
+      await leave();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to disconnect from session',
+      );
+    }
   }
 
   void _dispatch(SessionEvent event) {
@@ -508,7 +516,17 @@ class SessionController extends _$SessionController {
 
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
     final previousLeave = _leaveFuture;
-    if (previousLeave != null) await previousLeave;
+    if (previousLeave != null) {
+      try {
+        await previousLeave;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to leave previous session connection',
+        );
+      }
+    }
     final previousCleanup = _cleanupFuture;
     if (previousCleanup != null) await previousCleanup;
 
@@ -768,6 +786,14 @@ class SessionController extends _$SessionController {
       await _disconnect();
     } finally {
       await _cleanUp();
+      if (ref.mounted) {
+        _dispatch(
+          const ConnectionChanged(
+            RoomConnectionState.disconnected,
+            SessionPhase.disconnected,
+          ),
+        );
+      }
     }
   }
 
