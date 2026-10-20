@@ -288,6 +288,18 @@ class MockLocalAudioTrack extends Mock implements LocalAudioTrack {
 
   bool _muted;
   bool _isActive;
+  final _defaultMediaStreamTrack = MockMediaStreamTrack();
+
+  /// Every local track has a media stream track. Tests may stub their own,
+  /// and subclasses may override it.
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    final result = super.noSuchMethod(invocation);
+    if (result == null && invocation.memberName == #mediaStreamTrack) {
+      return _defaultMediaStreamTrack;
+    }
+    return result;
+  }
 }
 
 class MockPreJoinLocalVideoTrack extends MockLocalVideoTrack {

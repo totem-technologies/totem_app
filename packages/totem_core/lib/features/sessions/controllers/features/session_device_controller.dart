@@ -5,9 +5,13 @@ import 'dart:io';
 
 import 'package:audio_session/audio_session.dart' as audio;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/media_permission_controller.dart';
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
 import 'package:totem_core/shared/logger.dart';
@@ -26,6 +30,8 @@ class SessionDeviceState {
     this.isCameraOn = false,
     this.hasMicrophoneTrack = false,
     this.cameraFacing,
+    this.microphoneProblem,
+    this.cameraProblem,
   });
 
   final String? selectedCameraDeviceId;
@@ -45,6 +51,15 @@ class SessionDeviceState {
   /// The facing of the active camera, or null while the camera is off.
   final CameraFacing? cameraFacing;
 
+  /// Why each device isn't working, when its permission is fine.
+  final DeviceProblem? microphoneProblem;
+  final DeviceProblem? cameraProblem;
+
+  DeviceProblem? problemOf(MediaKind kind) => switch (kind) {
+    MediaKind.camera => cameraProblem,
+    MediaKind.microphone => microphoneProblem,
+  };
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -57,7 +72,9 @@ class SessionDeviceState {
         other.isMicrophoneOn == isMicrophoneOn &&
         other.isCameraOn == isCameraOn &&
         other.hasMicrophoneTrack == hasMicrophoneTrack &&
-        other.cameraFacing == cameraFacing;
+        other.cameraFacing == cameraFacing &&
+        other.microphoneProblem == microphoneProblem &&
+        other.cameraProblem == cameraProblem;
   }
 
   @override
@@ -71,7 +88,20 @@ class SessionDeviceState {
     isCameraOn,
     hasMicrophoneTrack,
     cameraFacing,
+    microphoneProblem,
+    cameraProblem,
   );
+}
+
+/// Why the session didn't turn a device on. Nothing changes until the user
+/// tries again.
+enum TurnOnBlocker {
+  /// Nobody may speak while the keeper is away.
+  keeperAway,
+
+  /// There's no room to take the device's track, or the room couldn't take
+  /// it, such as while the connection is down.
+  connection,
 }
 
 @riverpod
@@ -98,6 +128,8 @@ class SessionDeviceController extends _$SessionDeviceController {
           : session.options.cameraEnabled,
       hasMicrophoneTrack: media.hasMicrophoneTrack,
       cameraFacing: media.cameraFacing,
+      microphoneProblem: _problems[MediaKind.microphone],
+      cameraProblem: _problems[MediaKind.camera],
     );
   }
 
@@ -118,8 +150,12 @@ class SessionDeviceController extends _$SessionDeviceController {
   @override
   SessionDeviceState build(SessionController session) {
     final mediaChanges = _media.changes.listen((_) => _emitState());
+    final captureLost = _media.captureLost.listen(_onCaptureLost);
     ref
       ..onDispose(mediaChanges.cancel)
+      ..onDispose(captureLost.cancel)
+      ..onDispose(_deviceNeedsAttention.close)
+      ..onDispose(_turnOnBlocked.close)
       ..onDispose(dispose);
     _notePublishedTracks();
     return _currentState();
@@ -127,14 +163,189 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   LocalMedia get _media => session.localMedia;
 
+  MediaPermissionController get _permissions =>
+      ref.read(mediaPermissionControllerProvider.notifier);
+
+  /// Why each device isn't working, when its permission is fine: set from
+  /// a failed capture or a capture that stopped on its own, and cleared when
+  /// the device comes on or the user turns it off.
+  final _problems = <MediaKind, DeviceProblem?>{};
+
+  /// Each device's commands run one at a time, in order.
+  final Map<MediaKind, Future<void>> _queues = {};
+
+  /// Counts each device's turn-on and turn-off requests. A request still
+  /// waiting when a later one arrives is dropped, so rapid toggles end in
+  /// the latest choice without a burst of captures, and a failure that lands
+  /// after the user changed their mind isn't shown.
+  final Map<MediaKind, int> _requests = {
+    for (final kind in MediaKind.values) kind: 0,
+  };
+
+  int _request(MediaKind kind) => _requests[kind] = _requests[kind]! + 1;
+
+  bool _isLatest(MediaKind kind, int request) => request == _requests[kind];
+
+  /// Runs [command] after the device's earlier commands, or straight away
+  /// when there are none.
+  Future<T> _enqueue<T>(MediaKind kind, Future<T> Function() command) {
+    final previous = _queues[kind];
+    final result = previous == null
+        ? command()
+        : previous.then((_) => command());
+    final done = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    _queues[kind] = done;
+    unawaited(
+      done.whenComplete(() {
+        if (identical(_queues[kind], done)) _queues.remove(kind);
+      }),
+    );
+    return result;
+  }
+
+  void _setProblem(MediaKind kind, DeviceProblem? problem) {
+    _problems[kind] = problem;
+    if (!_disposed) _emitState();
+  }
+
+  bool _isOn(MediaKind kind) => switch (kind) {
+    MediaKind.camera => _media.isCameraEnabled,
+    MediaKind.microphone => _media.isMicrophoneEnabled,
+  };
+
+  Future<void> _setEnabled(MediaKind kind, bool enabled) => switch (kind) {
+    MediaKind.camera => _media.setCameraEnabled(enabled),
+    MediaKind.microphone => _media.setMicrophoneEnabled(enabled),
+  };
+
+  /// The session's [kind], for the shared turn-on and recovery flow.
+  MediaControl control(MediaKind kind) => MediaControl(
+    kind: kind,
+    problem: sessionDeviceControllerProvider(session)
+        .select((state) => state.problemOf(kind)),
+    turnOn: () => turnOn(kind),
+  );
+
+  /// Turns [kind] on. A capture failure is recorded with the permission
+  /// state, which explains its fix; anything the session itself stands in
+  /// the way of is announced through [turnOnBlocked].
+  Future<TurnOnOutcome> turnOn(MediaKind kind) {
+    final request = _request(kind);
+    return _enqueue(kind, () => _turnOn(kind, request));
+  }
+
+  Future<TurnOnOutcome> _turnOn(MediaKind kind, int request) async {
+    if (_disposed || !_isLatest(kind, request)) return const TurnOnSkipped();
+    if (!_media.isAvailable) {
+      _turnOnBlocked.add((kind, TurnOnBlocker.connection));
+      return const TurnOnSkipped();
+    }
+    if (_isOn(kind)) {
+      // Already capturing, so any earlier problem no longer holds.
+      _setProblem(kind, null);
+      return const TurnedOn();
+    }
+    if (kind == MediaKind.microphone &&
+        session.state.roomState.status == RoomStatus.active &&
+        !session.state.hasKeeper) {
+      _turnOnBlocked.add((kind, TurnOnBlocker.keeperAway));
+      return const TurnOnSkipped();
+    }
+    try {
+      await _setEnabled(kind, true);
+    } on MediaPublishException catch (error) {
+      if (_disposed) return const TurnOnSkipped();
+      logger.w('The room could not take the ${kind.name}', error: error);
+      // The device was captured, which proves its permission (WS1).
+      _permissions.recordCaptureSuccess(kind);
+      _turnOnBlocked.add((kind, TurnOnBlocker.connection));
+      _emitState();
+      return const TurnOnSkipped();
+    } catch (error, stackTrace) {
+      if (_disposed) return const TurnOnSkipped();
+      final failure = await _permissions.recordCaptureFailure(
+        kind,
+        error,
+        stackTrace,
+      );
+      // The user changed their mind while it started: the failure is moot.
+      if (!_isLatest(kind, request)) return const TurnOnSkipped();
+      _setProblem(kind, failure.problem);
+      return TurnOnFailed(failure);
+    }
+    if (_disposed) return const TurnOnSkipped();
+    // The room went away meanwhile, so nothing was captured.
+    if (!_isOn(kind)) {
+      _turnOnBlocked.add((kind, TurnOnBlocker.connection));
+      return const TurnOnSkipped();
+    }
+    _permissions.recordCaptureSuccess(kind);
+    _setProblem(kind, null);
+    return const TurnedOn();
+  }
+
+  Future<void> _turnOff(MediaKind kind) {
+    final request = _request(kind);
+    return _enqueue(kind, () async {
+      if (_disposed || !_isLatest(kind, request)) return;
+      _problems[kind] = null;
+      if (_isOn(kind)) {
+        try {
+          await _setEnabled(kind, false);
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Failed to turn off the ${kind.name}',
+          );
+        }
+      }
+      if (!_disposed) _emitState();
+    });
+  }
+
+  final _turnOnBlocked =
+      StreamController<(MediaKind, TurnOnBlocker)>.broadcast();
+
+  /// Emits a device the user tried to turn on that can't be turned on right
+  /// now, and why, so they can be told instead of the tap doing nothing.
+  Stream<(MediaKind, TurnOnBlocker)> get turnOnBlocked => _turnOnBlocked.stream;
+
+  final _deviceNeedsAttention = StreamController<MediaKind>.broadcast();
+
+  /// Emits a device the user was relying on that isn't working, so they can
+  /// be told: it stopped on its own while it was on, such as when its
+  /// permission was revoked mid-call, or it was flagged with
+  /// [flagNeedsAttention].
+  Stream<MediaKind> get deviceNeedsAttention => _deviceNeedsAttention.stream;
+
+  /// Tells the user [kind] isn't working when they need it, such as the
+  /// microphone not coming on with the totem.
+  void flagNeedsAttention(MediaKind kind) {
+    if (!_disposed && !_deviceNeedsAttention.isClosed) {
+      _deviceNeedsAttention.add(kind);
+    }
+  }
+
+  /// Permissions can change at any time, not just before joining (X13).
+  /// The device stays off with a problem until the user turns it on, and a
+  /// refresh learns whether its permission was revoked.
+  void _onCaptureLost(CaptureLost lost) {
+    if (_disposed) return;
+    _setProblem(lost.kind, DeviceProblem.lost);
+    unawaited(_permissions.refresh());
+    if (lost.wasOn) flagNeedsAttention(lost.kind);
+  }
+
   StreamSubscription<void>? _becomingNoisySubscription;
   StreamSubscription<audio.AudioDevicesChangedEvent>?
   _devicesChangedSubscription;
   Future<void>? _deviceListenerSetup;
   int _deviceListenerGeneration = 0;
   bool _disposed = false;
-  Future<void>? _cameraTransition;
-  bool? _desiredCameraEnabled;
   bool _userSpeakerPreference = true;
   bool _hasExternalOutput = false;
   bool _audioRouteNotificationsEnabled = false;
@@ -260,19 +471,8 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   String? get selectedCameraDeviceId => _media.cameraDeviceId;
 
-  Future<void> switchCameraPosition() async {
-    try {
-      await _media.switchCameraFacing();
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to switch camera position',
-      );
-    } finally {
-      _emitState();
-    }
-  }
+  Future<void> switchCameraPosition() =>
+      _switchCamera(_media.switchCameraFacing);
 
   bool get isSpeakerphoneEnabled =>
       _systemSpeakerphoneEnabled ?? _media.isSpeakerOutputPreferred;
@@ -333,103 +533,53 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   bool get isMicrophoneEnabled => _media.isMicrophoneEnabled;
 
-  Future<void> enableMicrophone() async {
-    if (_media.isMicrophoneEnabled) return;
-    if (session.state.roomState.status == RoomStatus.active &&
-        !session.state.hasKeeper) {
-      return;
-    }
-
-    if (_media.isAvailable) {
-      await _media.setMicrophoneEnabled(true);
-    }
-    _emitState();
-  }
-
-  Future<void> disableMicrophone() async {
-    if (!_media.isMicrophoneEnabled) return;
-    try {
-      await _media.setMicrophoneEnabled(false);
-      _emitState();
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to disable microphone',
-      );
-    }
-  }
+  Future<void> disableMicrophone() => _turnOff(MediaKind.microphone);
 
   bool get isCameraEnabled => _media.isCameraEnabled;
 
-  Future<void> enableCamera() => _requestCameraState(true);
-
-  Future<void> disableCamera() => _requestCameraState(false);
-
-  Future<void> toggleCamera() {
-    return _requestCameraState(!(_desiredCameraEnabled ?? isCameraEnabled));
-  }
-
-  Future<void> _requestCameraState(bool enabled) {
-    if (_disposed) return Future.value();
-
-    _desiredCameraEnabled = enabled;
-    return _cameraTransition ??= _drainCameraState();
-  }
-
-  Future<void> _drainCameraState() async {
-    try {
-      while (!_disposed) {
-        final desiredState = _desiredCameraEnabled;
-        if (desiredState == null ||
-            !_media.isAvailable ||
-            session.state.connection.state != RoomConnectionState.connected) {
-          _desiredCameraEnabled = null;
-          return;
-        }
-
-        if (_media.isCameraEnabled == desiredState) {
-          _desiredCameraEnabled = null;
-          _emitState();
-          return;
-        }
-
-        try {
-          await _media.setCameraEnabled(desiredState);
-        } catch (error, stackTrace) {
-          logger.e(
-            'Failed to change camera state',
-            error: error,
-            stackTrace: stackTrace,
-          );
-          if (_desiredCameraEnabled == desiredState) {
-            _desiredCameraEnabled = null;
-            return;
-          }
-        }
-
-        if (_disposed ||
-            session.state.connection.state != RoomConnectionState.connected) {
-          _desiredCameraEnabled = null;
-          return;
-        }
-        if (_desiredCameraEnabled == desiredState) {
-          _desiredCameraEnabled = null;
-          _emitState();
-          return;
-        }
-        _emitState();
-      }
-    } finally {
-      _cameraTransition = null;
-      if (_disposed) _desiredCameraEnabled = null;
-    }
-  }
+  Future<void> disableCamera() => _turnOff(MediaKind.camera);
 
   Future<void> selectCameraDevice(MediaDeviceInfo device) async {
     if (!_media.isAvailable) return;
-    await _media.selectCamera(device);
-    _emitState();
+    await _switchCamera(() => _media.selectCamera(device));
+  }
+
+  /// Switching cameras captures again, so it can fail like turning the
+  /// camera on, and a failure is recorded and shown the same way (X9, X13).
+  Future<void> _switchCamera(Future<void> Function() change) {
+    const kind = MediaKind.camera;
+    final request = _requests[kind]!;
+    return _enqueue(kind, () async {
+      if (_disposed) return;
+      final wasOn = _isOn(kind);
+      try {
+        await change();
+      } catch (error, stackTrace) {
+        if (_disposed) return;
+        final failure = await _permissions.recordCaptureFailure(
+          kind,
+          error,
+          stackTrace,
+        );
+        if (_isLatest(kind, request)) {
+          _problems[kind] = failure.problem;
+          // The user was on camera and it dropped, so tell them (X13).
+          if (wasOn) flagNeedsAttention(kind);
+        }
+        // The old capture is gone; show the camera off, with its problem.
+        try {
+          await _media.setCameraEnabled(false);
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Failed to turn off the camera after a failed switch',
+          );
+        }
+      } finally {
+        if (!_disposed) _emitState();
+      }
+    });
   }
 
   Future<void> stopDeviceChangeListener() async {
@@ -447,7 +597,6 @@ class SessionDeviceController extends _$SessionDeviceController {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
-    _desiredCameraEnabled = null;
     await stopDeviceChangeListener();
   }
 }

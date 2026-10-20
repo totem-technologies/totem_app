@@ -2,6 +2,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/permissions/media_permission_controller.dart';
+import 'package:totem_core/features/permissions/policy.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
@@ -13,10 +15,6 @@ part 'pre_join_flow_controller.g.dart';
 class PreJoinFlowController extends _$PreJoinFlowController {
   @override
   PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState();
-
-  void setNativePermissionsGranted(bool granted) {
-    state = state.copyWith(nativePermissionsGranted: granted);
-  }
 
   Future<PreJoinJoinOutcome> requestJoin({
     bool replaceExistingSession = false,
@@ -41,22 +39,25 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       final mediaController = ref.read(
         preJoinMediaControllerProvider(sessionSlug).notifier,
       );
-      final currentMedia = ref.read(
-        preJoinMediaControllerProvider(sessionSlug),
+      // Decide on the settled preview, so a capture that's still starting
+      // or a track that just ended is accounted for (X4, W9).
+      await mediaController.settled();
+      final media = ref.read(preJoinMediaControllerProvider(sessionSlug));
+      final readiness = joinReadiness(
+        permissions: ref.read(mediaPermissionControllerProvider),
+        microphoneProblem: media.microphone.problem,
+        mediaSettled: media.initializationComplete,
       );
-      final requireUsableMedia = ref.read(preJoinRequiresUsableMediaProvider);
-      if (requireUsableMedia && !currentMedia.canJoinOnWeb) {
+      if (readiness != JoinReadiness.ready) {
         state = state.copyWith(phase: PreJoinFlowPhase.idle);
-        return PreJoinJoinOutcome.permissionsDenied;
+        return PreJoinJoinOutcome.microphoneNeeded;
       }
 
       // Precache event data before transferring preview tracks so a failed
       // request leaves them owned by the pre-join controller and retryable.
       await ref.read(sessionProvider(sessionSlug).future);
 
-      final joinMedia = await mediaController.takeForJoin(
-        requireUsableMedia: requireUsableMedia,
-      );
+      final joinMedia = await mediaController.takeForJoin();
       mediaTransferred = true;
 
       // Capture preferences after media initialization has settled. A failed or
@@ -92,14 +93,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       // Fatal failures are rendered by the session error UI, as before.
       state = state.copyWith(phase: PreJoinFlowPhase.joined);
       return PreJoinJoinOutcome.joined;
-    } on PreJoinMediaPermissionDeniedException {
-      if (ref.mounted) {
-        state = state.copyWith(
-          phase: PreJoinFlowPhase.idle,
-          clearSessionOptions: true,
-        );
-      }
-      return PreJoinJoinOutcome.permissionsDenied;
     } catch (error, stackTrace) {
       if (mediaTransferred && session != null) {
         try {

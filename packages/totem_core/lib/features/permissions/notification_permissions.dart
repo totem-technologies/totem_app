@@ -1,0 +1,25 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// The single place notification permission is requested from.
+///
+/// Notifications never block joining, and the session flow never asks for
+/// them (N1, N3 in `specs/permissions.md`). The mobile app overrides
+/// [notificationPermissionsProvider] with a Firebase-backed implementation in
+/// its `main.dart`. Everything else, web included, uses
+/// [NoNotificationPermissions], so `totem_core` and `totem_web` never depend
+/// on Firebase: Flutter web registers every web plugin in the dependency
+/// graph, so tree shaking couldn't remove it.
+abstract interface class NotificationPermissions {
+  Future<void> request();
+}
+
+class NoNotificationPermissions implements NotificationPermissions {
+  const new();
+
+  @override
+  Future<void> request() async {}
+}
+
+final notificationPermissionsProvider = Provider<NotificationPermissions>(
+  (_) => const NoNotificationPermissions(),
+);

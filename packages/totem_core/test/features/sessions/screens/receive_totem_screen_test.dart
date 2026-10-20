@@ -14,6 +14,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -25,6 +27,7 @@ import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
+import '../../permissions/fake_media_permission_adapter.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
@@ -120,11 +123,12 @@ void main() {
     when(() => devices.selectedCameraDeviceId).thenReturn(null);
     when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
 
-    when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+    when(() => devices.turnOn(MediaKind.microphone))
+        .thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
-    when(() => devices.enableCamera()).thenAnswer((_) async {});
+    when(() => devices.turnOn(MediaKind.camera))
+        .thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableCamera()).thenAnswer((_) async {});
-    when(() => devices.toggleCamera()).thenAnswer((_) async {});
     when(() => keeper.acceptTotem()).thenAnswer((_) async {});
 
     when(
@@ -158,6 +162,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          ...grantedMediaPermissionOverrides(),
           authControllerProvider.overrideWith(
             () => FakeAuthController(testAuthenticatedState(isStaff: isStaff)),
           ),
@@ -258,11 +263,11 @@ void main() {
 
         await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
         await tester.pump();
-        verify(() => devices.enableMicrophone()).called(1);
+        verify(() => devices.turnOn(MediaKind.microphone)).called(1);
 
         await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
         await tester.pump();
-        verify(() => devices.toggleCamera()).called(1);
+        verify(() => devices.turnOn(MediaKind.camera)).called(1);
       });
     });
 

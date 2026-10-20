@@ -12,6 +12,8 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -256,9 +258,11 @@ void main() {
         ),
       ).thenAnswer((_) async => true);
       when(() => messaging.sendReaction(any())).thenAnswer((_) async {});
-      when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+      when(() => devices.turnOn(MediaKind.microphone))
+          .thenAnswer((_) async => const TurnedOn());
       when(() => devices.disableMicrophone()).thenAnswer((_) async {});
-      when(() => devices.enableCamera()).thenAnswer((_) async {});
+      when(() => devices.turnOn(MediaKind.camera))
+          .thenAnswer((_) async => const TurnedOn());
       when(() => devices.disableCamera()).thenAnswer((_) async {});
       when(() => devices.isMicrophoneEnabled).thenReturn(false);
       when(() => devices.isCameraEnabled).thenReturn(false);
@@ -980,7 +984,7 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
         await tester.pump();
 
-        verifyNever(() => devices.enableMicrophone());
+        verifyNever(() => devices.turnOn(MediaKind.microphone));
         verifyNever(() => messaging.sendReaction(any()));
       });
     });
@@ -1008,7 +1012,7 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
         await tester.pump();
 
-        verifyNever(() => devices.enableMicrophone());
+        verifyNever(() => devices.turnOn(MediaKind.microphone));
       });
     });
   });

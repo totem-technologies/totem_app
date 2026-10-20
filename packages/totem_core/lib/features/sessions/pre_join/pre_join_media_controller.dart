@@ -6,10 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/media_permission_controller.dart';
+import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
+import 'package:totem_core/features/sessions/media/livekit_support.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/pre_join/capture.dart';
+import 'package:totem_core/features/sessions/pre_join/capture_loop.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_foreground.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 
@@ -39,20 +46,6 @@ final preJoinPreviewTrackFactoryProvider = Provider<PreJoinPreviewTrackFactory>(
   (_) => const LiveKitPreJoinPreviewTrackFactory(),
 );
 
-// TODO(totem): Investigate whether this is still required.
-/// Whether the current platform requires a usable media provider for pre-join.
-///
-///   On web and wasm, the user shouldn't be able to join if they denied permissions.
-///
-///   On mobile, the user can join without media, for example, the iPhone simulator.
-final preJoinRequiresUsableMediaProvider = Provider<bool>(
-  (_) => kIsWeb || kIsWasm,
-);
-
-class PreJoinMediaPermissionDeniedException implements Exception {
-  const new();
-}
-
 /// A serial operation queue whose tail is guaranteed not to throw.
 ///
 /// Capture APIs must not overlap on cold-start Safari. Keeping failures out of
@@ -81,17 +74,25 @@ class PreJoinMediaOperationQueue {
   }
 }
 
+/// The pre-join preview's camera and microphone.
+///
+/// Both devices start wanted. A [CaptureLoop] decides when each is captured:
+/// on native once its permission is granted, so the OS prompt only follows
+/// the user (X2); on web straight away, since capture is the request (WS2).
+/// A permission change, the tab's visibility and the user's toggles all just
+/// re-run the loop. Every capture goes through one queue, because cold-start
+/// Safari can't take overlapping requests.
 @riverpod
 class PreJoinMediaController extends _$PreJoinMediaController {
   final _captureOperations = PreJoinMediaOperationQueue();
+  late CaptureLoop _loop;
 
   Future<void>? _initialization;
+  bool _started = false;
   LocalVideoTrack? _cameraTrack;
   LocalAudioTrack? _microphoneTrack;
   LocalVideoTrack? _transferredVideoTrack;
   LocalAudioTrack? _transferredAudioTrack;
-  bool _togglingCamera = false;
-  bool _togglingMicrophone = false;
   bool _terminal = false;
   int _captureGeneration = 0;
   Future<void>? _terminalRelease;
@@ -104,128 +105,237 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     _foregroundSubscription = _foregroundMonitor.changes.listen(
       _onForegroundChanged,
     );
-    ref.onDispose(() {
-      _foregroundSubscription?.cancel();
-      unawaited(releaseForTerminalOutcome());
-    });
-    _initialization = Future<void>.microtask(
-      () => _guardInitialization(initialize),
+    _loop = CaptureLoop(
+      start: _start,
+      stop: _stop,
+      isOn: _isOn,
+      permissionOf: (kind) => _permissions.permissionOf(kind),
+      platform: () => ref.read(platformInfoProvider),
+      available: _available,
+      onChanged: _emit,
     );
+    for (final kind in MediaKind.values) {
+      _loop.setIntent(kind, const DeviceIntent(wanted: true));
+    }
+    ref
+      ..onDispose(() {
+        _foregroundSubscription?.cancel();
+        unawaited(releaseForTerminalOutcome());
+      })
+      // A grant from the priming sheet, Settings or site settings starts a
+      // device that was waiting for it (X1, X5, X12).
+      ..listen<MediaPermissions?>(mediaPermissionControllerProvider, (_, _) {
+        // Before the first run, that run sees the latest permission anyway.
+        if (!_started) return;
+        _emit();
+        unawaited(_loop.run());
+      });
+    _initialization = Future<void>.microtask(() {
+      _started = true;
+      return _loop.run();
+    });
     unawaited(_detectHeadphones());
     return const PreJoinMediaState();
   }
 
-  bool get _canStartCamera =>
+  MediaPermissionController get _permissions =>
+      ref.read(mediaPermissionControllerProvider.notifier);
+
+  bool get _foregroundAllows =>
+      !_foregroundMonitor.requiresForegroundGate ||
+      _foregroundMonitor.isForeground;
+
+  bool _isOn(MediaKind kind) => switch (kind) {
+    MediaKind.camera => _cameraTrack != null,
+    MediaKind.microphone => _microphoneTrack != null,
+  };
+
+  bool _available(MediaKind kind) =>
+      ref.mounted &&
       !_terminal &&
       !state.transferred &&
-      (!_foregroundMonitor.requiresForegroundGate ||
-          _foregroundMonitor.isForeground);
+      (kind != MediaKind.camera || _foregroundAllows);
+
+  /// Wants [kind] on and resolves with its outcome once capture settles.
+  /// A camera waiting for the tab to come back is skipped: its phase says so.
+  Future<TurnOnOutcome> turnOn(MediaKind kind) async {
+    if (_terminal || state.transferred) return const TurnOnSkipped();
+    final intent = await _loop.turnOn(kind);
+    if (_isOn(kind)) return const TurnedOn();
+    if (intent.problem case final problem?) {
+      return TurnOnFailed(DeviceFailed(problem));
+    }
+    if (intent.refusedAs case final permission?) {
+      return TurnOnFailed(PermissionRefused(permission));
+    }
+    return const TurnOnSkipped();
+  }
+
+  /// Turns [kind] off and releases its preview capture.
+  Future<void> turnOff(MediaKind kind) async {
+    if (_terminal || state.transferred) return;
+    await _loop.turnOff(kind);
+  }
+
+  /// Completes once every capture due has run.
+  Future<void> settled() async {
+    await _initialization;
+    await _loop.run();
+    await _captureOperations.pending;
+  }
 
   void _onForegroundChanged(bool isForeground) {
-    if (!isForeground) {
-      _captureGeneration++;
-      if (state.camera.phase == PreJoinCapturePhase.initializing) {
-        _setCamera(
-          const PreJoinCaptureState(
-            phase: PreJoinCapturePhase.waitingForForeground,
-          ),
-        );
-      }
-      return;
-    }
-    unawaited(_resumeDeferredCamera());
+    // A camera start in flight while the tab hides is abandoned, and the
+    // camera waits for the tab to come back (W6).
+    if (!isForeground) _captureGeneration++;
+    _emit();
+    if (isForeground) unawaited(_loop.run());
   }
 
-  Future<void> _resumeDeferredCamera() async {
-    if (!_canStartCamera ||
-        !state.preferences.isCameraOn ||
-        state.camera.isReady ||
-        state.camera.phase == PreJoinCapturePhase.initializing) {
-      return;
+  /// Whether the preview still owns its capture.
+  bool get _isLive => ref.mounted && !_terminal && !state.transferred;
+
+  /// Whether a camera start begun at [generation] still counts: hiding the
+  /// tab abandons it, unlike a microphone start (W6).
+  bool _isCurrent(int generation) =>
+      _isLive && generation == _captureGeneration;
+
+  Future<CaptureFailure?> _start(MediaKind kind) => switch (kind) {
+    MediaKind.camera => _captureOperations.schedule(_startCamera),
+    MediaKind.microphone => _captureOperations.schedule(_startMicrophone),
+  };
+
+  Future<CaptureFailure?> _startCamera() async {
+    final generation = _captureGeneration;
+    await _disposeCameraTrack();
+    if (!_isCurrent(generation) || !_foregroundAllows) return null;
+    LocalVideoTrack? track;
+    try {
+      track = await ref
+          .read(preJoinPreviewTrackFactoryProvider)
+          .createVideoTrack(state.preferences.cameraOptions);
+      if (_isCurrent(generation) && _foregroundAllows) await track?.start();
+    } catch (error, stackTrace) {
+      await _disposeTrack(track, 'camera');
+      // Abandoned by a hidden tab, not failed: it starts again when visible.
+      if (!_isCurrent(generation)) return null;
+      return await _permissions.recordCaptureFailure(
+        MediaKind.camera,
+        error,
+        stackTrace,
+      );
     }
-    _setCamera(
-      const PreJoinCaptureState(phase: PreJoinCapturePhase.initializing),
-    );
-    await _captureOperations.schedule(_initializeCamera);
+    if (!_isCurrent(generation) || !_foregroundAllows) {
+      await _disposeTrack(track, 'camera');
+      return null;
+    }
+    if (track == null) return const DeviceFailed(DeviceProblem.notFound);
+    _cameraTrack = track;
+    _observeUnexpectedTrackEnd(track, MediaKind.camera);
+    _permissions.recordCaptureSuccess(MediaKind.camera);
+    return null;
   }
 
-  void _setCameraWaitingForForeground() {
-    if (!ref.mounted ||
-        _terminal ||
-        state.transferred ||
-        !state.preferences.isCameraOn ||
-        state.camera.isReady) {
-      return;
+  Future<CaptureFailure?> _startMicrophone() async {
+    await _disposeMicrophoneTrack();
+    if (!_isLive) return null;
+    LocalAudioTrack? track;
+    try {
+      track = await ref
+          .read(preJoinPreviewTrackFactoryProvider)
+          .createAudioTrack();
+      await track?.enable();
+      await track?.start();
+      await track?.unmute(stopOnMute: false);
+    } catch (error, stackTrace) {
+      await _disposeTrack(track, 'microphone');
+      if (!_isLive) return null;
+      return await _permissions.recordCaptureFailure(
+        MediaKind.microphone,
+        error,
+        stackTrace,
+      );
     }
-    _setCamera(
-      const PreJoinCaptureState(
-        phase: PreJoinCapturePhase.waitingForForeground,
+    if (!_isLive) {
+      await _disposeTrack(track, 'microphone');
+      return null;
+    }
+    if (track == null) return const DeviceFailed(DeviceProblem.notFound);
+    _microphoneTrack = track;
+    _observeUnexpectedTrackEnd(track, MediaKind.microphone);
+    _permissions.recordCaptureSuccess(MediaKind.microphone);
+    return null;
+  }
+
+  Future<void> _stop(MediaKind kind) =>
+      _captureOperations.schedule(switch (kind) {
+        MediaKind.camera => _disposeCameraTrack,
+        MediaKind.microphone => _disposeMicrophoneTrack,
+      });
+
+  /// Publishes what the loop, the tracks and the permissions say.
+  void _emit() {
+    // Before the first run, the initial state already says uninitialized.
+    if (!ref.mounted || !_started) return;
+    final cameraPhase = _phaseOf(MediaKind.camera);
+    final microphonePhase = _phaseOf(MediaKind.microphone);
+    state = state.copyWith(
+      preferences: state.preferences.copyWith(
+        isCameraOn: _showsOn(MediaKind.camera, cameraPhase),
+        isMicOn: _showsOn(MediaKind.microphone, microphonePhase),
+      ),
+      camera: PreJoinCaptureState(
+        phase: cameraPhase,
+        track: cameraPhase == PreJoinCapturePhase.ready ? _cameraTrack : null,
+        problem: _loop.intentOf(MediaKind.camera).problem,
+      ),
+      microphone: PreJoinCaptureState(
+        phase: microphonePhase,
+        track: microphonePhase == PreJoinCapturePhase.ready
+            ? _microphoneTrack
+            : null,
+        problem: _loop.intentOf(MediaKind.microphone).problem,
       ),
     );
   }
 
-  Future<void> _guardInitialization(AsyncCallback operation) async {
-    try {
-      await operation();
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to initialize pre-join media',
-      );
-      if (!ref.mounted) return;
+  /// A device shows as on while it's wanted and capturing or starting, so a
+  /// device waiting for permission shows off and never joins on (X2).
+  bool _showsOn(MediaKind kind, PreJoinCapturePhase phase) =>
+      _loop.intentOf(kind).wanted &&
+      (phase == PreJoinCapturePhase.ready ||
+          phase == PreJoinCapturePhase.initializing);
 
-      final cameraIncomplete = !state.camera.initializationComplete;
-      final microphoneIncomplete = !state.microphone.initializationComplete;
-      state = state.copyWith(
-        preferences: state.preferences.copyWith(
-          isCameraOn: !cameraIncomplete && state.preferences.isCameraOn,
-          isMicOn: !microphoneIncomplete && state.preferences.isMicOn,
-        ),
-        camera: cameraIncomplete
-            ? PreJoinCaptureState(
-                phase: PreJoinCapturePhase.unavailable,
-                error: error,
-              )
-            : state.camera,
-        microphone: microphoneIncomplete
-            ? PreJoinCaptureState(
-                phase: PreJoinCapturePhase.unavailable,
-                error: error,
-              )
-            : state.microphone,
-      );
+  PreJoinCapturePhase _phaseOf(MediaKind kind) {
+    if (!_started) return PreJoinCapturePhase.uninitialized;
+    final intent = _loop.intentOf(kind);
+    if (state.transferred) {
+      // Handed to the session; once the session lets go after a failed
+      // join, a wanted device is captured afresh.
+      if (_isOn(kind)) return PreJoinCapturePhase.ready;
+      return intent.wanted
+          ? PreJoinCapturePhase.uninitialized
+          : PreJoinCapturePhase.disabled;
     }
-  }
-
-  Future<void> initialize() async {
-    if (_terminal || state.transferred) return;
-    // Serialize every getUserMedia path. Safari is sensitive to overlapping
-    // capture requests during a cold browser start, including user toggles.
-    if (state.preferences.isCameraOn) {
-      if (_canStartCamera) {
-        await _captureOperations.schedule(_initializeCamera);
-      } else {
-        _setCameraWaitingForForeground();
-      }
-    } else {
-      _setCamera(
-        const PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
-      );
-    }
-
-    // Preferences may change while camera initialization is in flight.
-    if (!ref.mounted || _terminal || state.transferred) return;
-    if (state.preferences.isMicOn) {
-      if (!state.microphone.isReady) {
-        await _captureOperations.schedule(_initializeMicrophone);
-      }
-    } else if (state.microphone.phase == PreJoinCapturePhase.uninitialized ||
-        state.microphone.phase == PreJoinCapturePhase.initializing) {
-      _setMicrophone(
-        const PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
-      );
-    }
+    if (_loop.isStarting(kind)) return PreJoinCapturePhase.initializing;
+    // A device that stopped on its own stays visibly broken, not just off.
+    if (intent.problem != null) return PreJoinCapturePhase.unavailable;
+    if (!intent.wanted) return PreJoinCapturePhase.disabled;
+    if (_isOn(kind)) return PreJoinCapturePhase.ready;
+    final permission = _permissions.permissionOf(kind);
+    if (intent.refusedAs == permission) return PreJoinCapturePhase.unavailable;
+    if (!_available(kind)) return PreJoinCapturePhase.waitingForForeground;
+    // The loop's own decision, so a device never shows as starting while the
+    // loop is waiting, or the other way round.
+    final effect = nextEffect(
+      intent,
+      isOn: false,
+      permission: () => permission,
+      platform: ref.read(platformInfoProvider),
+    );
+    return effect == CaptureEffect.start
+        ? PreJoinCapturePhase.initializing
+        : PreJoinCapturePhase.waitingForAccess;
   }
 
   Future<void> _detectHeadphones() async {
@@ -249,240 +359,6 @@ class PreJoinMediaController extends _$PreJoinMediaController {
         stackTrace: stackTrace,
         message: 'Failed to detect audio output devices',
       );
-    }
-  }
-
-  Future<void> _initializeCamera() async {
-    if (!_canStartCamera || !state.preferences.isCameraOn) {
-      _setCameraWaitingForForeground();
-      return;
-    }
-    final captureGeneration = _captureGeneration;
-    await _disposeCameraTrack();
-    if (!ref.mounted ||
-        !_canStartCamera ||
-        captureGeneration != _captureGeneration ||
-        !state.preferences.isCameraOn) {
-      _setCameraWaitingForForeground();
-      return;
-    }
-
-    _setCamera(
-      const PreJoinCaptureState(phase: PreJoinCapturePhase.initializing),
-    );
-    LocalVideoTrack? track;
-    try {
-      track = await ref
-          .read(preJoinPreviewTrackFactoryProvider)
-          .createVideoTrack(state.preferences.cameraOptions);
-      if (!ref.mounted ||
-          !_canStartCamera ||
-          captureGeneration != _captureGeneration) {
-        await _disposeTrack(track, 'camera');
-        _setCameraWaitingForForeground();
-        return;
-      }
-      if (!state.preferences.isCameraOn) {
-        await _disposeTrack(track, 'camera');
-        _setCamera(
-          const PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
-        );
-        return;
-      }
-      await track?.start();
-      if (!ref.mounted ||
-          !_canStartCamera ||
-          captureGeneration != _captureGeneration ||
-          !state.preferences.isCameraOn) {
-        await _disposeTrack(track, 'camera');
-        if (ref.mounted) {
-          if (state.preferences.isCameraOn) {
-            _setCameraWaitingForForeground();
-          } else {
-            _setCamera(
-              const PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
-            );
-          }
-        }
-        return;
-      }
-      if (track == null) {
-        state = state.copyWith(
-          preferences: state.preferences.copyWith(isCameraOn: false),
-          camera: const PreJoinCaptureState(
-            phase: PreJoinCapturePhase.unavailable,
-          ),
-        );
-      } else {
-        _cameraTrack = track;
-        _observeUnexpectedTrackEnd(track, isCamera: true);
-        _setCamera(
-          PreJoinCaptureState(phase: PreJoinCapturePhase.ready, track: track),
-        );
-      }
-    } catch (error, stackTrace) {
-      await _disposeTrack(track, 'camera');
-      if (!ref.mounted || _terminal) return;
-      if (!_canStartCamera || captureGeneration != _captureGeneration) {
-        _setCameraWaitingForForeground();
-        return;
-      }
-      state = state.copyWith(
-        preferences: state.preferences.copyWith(isCameraOn: false),
-        camera: PreJoinCaptureState(
-          phase: _isWebMediaPermissionDenied(error)
-              ? PreJoinCapturePhase.permissionDenied
-              : PreJoinCapturePhase.unavailable,
-          error: error,
-        ),
-      );
-      ErrorHandler.report(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to create local video track',
-        disposition: _isWebMediaPermissionDenied(error)
-            ? ErrorDisposition.expected
-            : ErrorDisposition.unexpected,
-      );
-    }
-  }
-
-  Future<LocalAudioTrack?> _initializeMicrophone() async {
-    await _disposeMicrophoneTrack();
-    if (!ref.mounted ||
-        _terminal ||
-        state.transferred ||
-        !state.preferences.isMicOn) {
-      return null;
-    }
-
-    _setMicrophone(
-      const PreJoinCaptureState(phase: PreJoinCapturePhase.initializing),
-    );
-    LocalAudioTrack? track;
-    try {
-      track = await ref
-          .read(preJoinPreviewTrackFactoryProvider)
-          .createAudioTrack();
-      if (!ref.mounted) {
-        await _disposeTrack(track, 'microphone');
-        return null;
-      }
-      if (!state.preferences.isMicOn) {
-        await _disposeTrack(track, 'microphone');
-        _setMicrophone(
-          const PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
-        );
-        return null;
-      }
-      await track?.enable();
-      await track?.start();
-      if (!ref.mounted || !state.preferences.isMicOn) {
-        await _disposeTrack(track, 'microphone');
-        if (ref.mounted) {
-          _setMicrophone(
-            const PreJoinCaptureState(phase: PreJoinCapturePhase.disabled),
-          );
-        }
-        return null;
-      }
-      if (track == null) {
-        state = state.copyWith(
-          preferences: state.preferences.copyWith(isMicOn: false),
-          microphone: const PreJoinCaptureState(
-            phase: PreJoinCapturePhase.unavailable,
-          ),
-        );
-        return null;
-      }
-      _setMicrophone(
-        PreJoinCaptureState(phase: PreJoinCapturePhase.ready, track: track),
-      );
-      _microphoneTrack = track;
-      _observeUnexpectedTrackEnd(track, isCamera: false);
-      return track;
-    } catch (error, stackTrace) {
-      await _disposeTrack(track, 'microphone');
-      if (!ref.mounted) return null;
-      state = state.copyWith(
-        preferences: state.preferences.copyWith(isMicOn: false),
-        microphone: PreJoinCaptureState(
-          phase: _isWebMediaPermissionDenied(error)
-              ? PreJoinCapturePhase.permissionDenied
-              : PreJoinCapturePhase.unavailable,
-          error: error,
-        ),
-      );
-      ErrorHandler.report(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to create local audio track',
-        disposition: _isWebMediaPermissionDenied(error)
-            ? ErrorDisposition.expected
-            : ErrorDisposition.unexpected,
-      );
-      return null;
-    }
-  }
-
-  Future<void> toggleCamera() async {
-    if (_terminal || _togglingCamera || state.transferred) return;
-    _togglingCamera = true;
-    try {
-      if (state.preferences.isCameraOn) {
-        final track = _cameraTrack;
-        _cameraTrack = null;
-        state = state.copyWith(
-          preferences: state.preferences.copyWith(isCameraOn: false),
-          camera: const PreJoinCaptureState(
-            phase: PreJoinCapturePhase.disabled,
-          ),
-        );
-        await _captureOperations.schedule(
-          () => identical(track, _transferredVideoTrack)
-              ? Future<void>.value()
-              : _disposeTrack(track, 'camera'),
-        );
-      } else {
-        state = state.copyWith(
-          preferences: state.preferences.copyWith(isCameraOn: true),
-        );
-        await _captureOperations.schedule(_initializeCamera);
-      }
-    } finally {
-      _togglingCamera = false;
-    }
-  }
-
-  Future<void> toggleMicrophone() async {
-    if (_terminal || _togglingMicrophone || state.transferred) return;
-    _togglingMicrophone = true;
-    try {
-      if (state.preferences.isMicOn) {
-        final track = _microphoneTrack;
-        _microphoneTrack = null;
-        state = state.copyWith(
-          preferences: state.preferences.copyWith(isMicOn: false),
-          microphone: const PreJoinCaptureState(
-            phase: PreJoinCapturePhase.disabled,
-          ),
-        );
-        await _captureOperations.schedule(
-          () => identical(track, _transferredAudioTrack)
-              ? Future<void>.value()
-              : _disposeTrack(track, 'microphone'),
-        );
-      } else {
-        state = state.copyWith(
-          preferences: state.preferences.copyWith(isMicOn: true),
-        );
-        await _captureOperations.schedule(() async {
-          final track = await _initializeMicrophone();
-          await track?.unmute(stopOnMute: false);
-        });
-      }
-    } finally {
-      _togglingMicrophone = false;
     }
   }
 
@@ -514,35 +390,14 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     state = state.copyWith(
       preferences: state.preferences.copyWith(cameraOptions: options),
     );
-    if (state.preferences.isCameraOn) {
-      unawaited(_captureOperations.schedule(_initializeCamera));
-    }
+    if (_isOn(MediaKind.camera)) unawaited(_restartCamera());
   }
 
-  Future<PreJoinMediaState> retryFailedMedia() async {
-    await _initialization;
-    if (_terminal || state.transferred) return state;
-
-    Future<void> retry() async {
-      if (state.camera.phase == PreJoinCapturePhase.unavailable ||
-          state.camera.phase == PreJoinCapturePhase.permissionDenied) {
-        state = state.copyWith(
-          preferences: state.preferences.copyWith(isCameraOn: true),
-        );
-        await _captureOperations.schedule(_initializeCamera);
-      }
-      if (state.microphone.phase == PreJoinCapturePhase.unavailable ||
-          state.microphone.phase == PreJoinCapturePhase.permissionDenied) {
-        state = state.copyWith(
-          preferences: state.preferences.copyWith(isMicOn: true),
-        );
-        await _captureOperations.schedule(_initializeMicrophone);
-      }
-    }
-
-    _initialization = _guardInitialization(retry);
-    await _initialization;
-    return state;
+  /// Captures the camera again with new options.
+  Future<void> _restartCamera() async {
+    await _captureOperations.schedule(_disposeCameraTrack);
+    _emit();
+    await _loop.run();
   }
 
   Future<PreJoinMediaState> resetAfterFailedJoin() async {
@@ -557,21 +412,9 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     _transferredAudioTrack = null;
     _cameraTrack = null;
     _microphoneTrack = null;
-    state = PreJoinMediaState(
-      preferences: state.preferences,
-      camera: PreJoinCaptureState(
-        phase: state.preferences.isCameraOn
-            ? PreJoinCapturePhase.uninitialized
-            : PreJoinCapturePhase.disabled,
-      ),
-      microphone: PreJoinCaptureState(
-        phase: state.preferences.isMicOn
-            ? PreJoinCapturePhase.uninitialized
-            : PreJoinCapturePhase.disabled,
-      ),
-    );
-    _initialization = _guardInitialization(initialize);
-    await _initialization;
+    state = state.copyWith(transferred: false);
+    _emit();
+    await _loop.run();
     return state;
   }
 
@@ -587,6 +430,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   Future<void> _releaseForTerminalOutcome() async {
     _terminal = true;
     _captureGeneration++;
+    _loop.close();
     await _initialization;
     await _captureOperations.pending;
     await _disposeOwnedTracks();
@@ -598,48 +442,28 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   /// lets it stop failed media without a renderer observing that teardown.
   void detachTransferredTracks() {
     if (!ref.mounted || !state.transferred) return;
-
     _cameraTrack = null;
     _microphoneTrack = null;
-    state = state.copyWith(
-      camera: PreJoinCaptureState(
-        phase: state.preferences.isCameraOn
-            ? PreJoinCapturePhase.uninitialized
-            : PreJoinCapturePhase.disabled,
-      ),
-      microphone: PreJoinCaptureState(
-        phase: state.preferences.isMicOn
-            ? PreJoinCapturePhase.uninitialized
-            : PreJoinCapturePhase.disabled,
-      ),
-    );
+    _emit();
   }
 
-  Future<SessionJoinMedia> takeForJoin({
-    bool requireUsableMedia = false,
-  }) async {
+  Future<SessionJoinMedia> takeForJoin() async {
     if (_terminal) {
       throw StateError('Pre-join media has been released');
     }
     if (state.transferred) {
       throw StateError('Pre-join media has already been transferred');
     }
-    await _initialization;
-    await _captureOperations.pending;
-    if (requireUsableMedia && !state.canJoinOnWeb) {
-      throw const PreJoinMediaPermissionDeniedException();
-    }
+    await settled();
 
-    final cameraTrack = state.preferences.isCameraOn && state.camera.isReady
-        ? state.camera.track
-        : null;
-    final microphoneTrack =
-        state.preferences.isMicOn && state.microphone.isReady
+    final cameraTrack = state.camera.isReady ? state.camera.track : null;
+    final microphoneTrack = state.microphone.isReady
         ? state.microphone.track
         : null;
     _transferredVideoTrack = cameraTrack;
     _transferredAudioTrack = microphoneTrack;
     state = state.copyWith(transferred: true);
+    _emit();
     return SessionJoinMedia(
       cameraTrack: cameraTrack,
       microphoneTrack: microphoneTrack,
@@ -647,22 +471,9 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     );
   }
 
-  void _setCamera(PreJoinCaptureState<LocalVideoTrack> camera) {
-    if (ref.mounted) state = state.copyWith(camera: camera);
-  }
-
-  void _setMicrophone(PreJoinCaptureState<LocalAudioTrack> microphone) {
-    if (ref.mounted) state = state.copyWith(microphone: microphone);
-  }
-
-  void _observeUnexpectedTrackEnd(LocalTrack track, {required bool isCamera}) {
+  void _observeUnexpectedTrackEnd(LocalTrack track, MediaKind kind) {
     try {
-      final mediaStreamTrack = track.mediaStreamTrack;
-      final liveKitOnEnded = mediaStreamTrack.onEnded;
-      mediaStreamTrack.onEnded = () {
-        liveKitOnEnded?.call();
-        _handleUnexpectedTrackEnd(track, isCamera: isCamera);
-      };
+      observeCaptureEnd(track, () => _handleUnexpectedTrackEnd(track, kind));
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -672,54 +483,39 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     }
   }
 
-  void _handleUnexpectedTrackEnd(LocalTrack track, {required bool isCamera}) {
+  /// A revoked permission or an unplugged device (W9). The device stays off
+  /// with a problem, which disables Join for the microphone, and a refresh
+  /// learns whether the permission changed.
+  void _handleUnexpectedTrackEnd(LocalTrack track, MediaKind kind) {
     if (!ref.mounted || state.transferred) return;
-
-    if (isCamera) {
-      if (!identical(_cameraTrack, track) || !state.preferences.isCameraOn) {
-        return;
-      }
-      _cameraTrack = null;
-      state = state.copyWith(
-        preferences: state.preferences.copyWith(isCameraOn: false),
-        camera: const PreJoinCaptureState(
-          phase: PreJoinCapturePhase.permissionDenied,
-        ),
-      );
-    } else {
-      if (!identical(_microphoneTrack, track) || !state.preferences.isMicOn) {
-        return;
-      }
-      _microphoneTrack = null;
-      state = state.copyWith(
-        preferences: state.preferences.copyWith(isMicOn: false),
-        microphone: const PreJoinCaptureState(
-          phase: PreJoinCapturePhase.permissionDenied,
-        ),
-      );
+    switch (kind) {
+      case MediaKind.camera:
+        if (!identical(_cameraTrack, track)) return;
+        _cameraTrack = null;
+      case MediaKind.microphone:
+        if (!identical(_microphoneTrack, track)) return;
+        _microphoneTrack = null;
     }
-
+    _loop.lose(kind);
+    unawaited(_permissions.refresh());
     // The browser has already ended capture. Dispose the LiveKit wrapper on
-    // the same queue as every other media operation without delaying the state
-    // update that disables Join.
+    // the same queue as every other media operation.
     unawaited(
-      _captureOperations.schedule(
-        () => _disposeTrack(track, isCamera ? 'camera' : 'microphone'),
-      ),
+      _captureOperations.schedule(() => _disposeTrack(track, kind.name)),
     );
   }
 
   Future<void> _disposeCameraTrack() async {
     final track = _cameraTrack;
-    if (identical(track, _transferredVideoTrack)) return;
     _cameraTrack = null;
+    if (identical(track, _transferredVideoTrack)) return;
     if (track != null) await _disposeTrack(track, 'camera');
   }
 
   Future<void> _disposeMicrophoneTrack() async {
     final track = _microphoneTrack;
-    if (identical(track, _transferredAudioTrack)) return;
     _microphoneTrack = null;
+    if (identical(track, _transferredAudioTrack)) return;
     if (track != null) await _disposeTrack(track, 'microphone');
   }
 
@@ -757,17 +553,4 @@ class PreJoinMediaController extends _$PreJoinMediaController {
       );
     }
   }
-}
-
-bool _isWebMediaPermissionDenied(Object? error) {
-  if (error == null) return false;
-  final description = switch (error) {
-    TrackCreateException(:final message) => message.toLowerCase(),
-    _ => error.toString().toLowerCase(),
-  };
-  return description.contains('notallowederror') ||
-      description.contains('permissiondeniederror') ||
-      description.contains('permissiondismissederror') ||
-      description.contains('permission denied') ||
-      description.contains('securityerror');
 }

@@ -15,20 +15,6 @@ class SessionInfraPlatform {
   bool get canUseForegroundTask =>
       !kIsWeb && !kIsWasm && (Platform.isAndroid || Platform.isIOS);
 
-  bool get isAndroid => !kIsWeb && !kIsWasm && Platform.isAndroid;
-
-  Future<NotificationPermission> checkNotificationPermission() =>
-      FlutterForegroundTask.checkNotificationPermission();
-
-  Future<NotificationPermission> requestNotificationPermission() =>
-      FlutterForegroundTask.requestNotificationPermission();
-
-  Future<bool> get isIgnoringBatteryOptimizations =>
-      FlutterForegroundTask.isIgnoringBatteryOptimizations;
-
-  Future<bool> requestIgnoreBatteryOptimization() =>
-      FlutterForegroundTask.requestIgnoreBatteryOptimization();
-
   Future<bool> get isRunningService => FlutterForegroundTask.isRunningService;
 
   void initialize() {
@@ -100,16 +86,19 @@ class SessionInfraController extends _$SessionInfraController {
   Future<void> _enqueue(AsyncCallback operation) =>
       _operation = _operation.catchError((_) {}).then((_) => operation());
 
+  /// Starts the foreground service that keeps the microphone alive through
+  /// brief app switches.
+  ///
+  /// Asks for nothing: the service runs without notification permission (its
+  /// notification is just hidden), and its only requirement is the
+  /// microphone, which joining already needs. See N2 and N5 in
+  /// specs/permissions.md.
   Future<void> _setupBackgroundMode(SessionDetailSchema? event) async {
-    if (_disposed) return;
+    if (_disposed || !_platform.canUseForegroundTask) return;
     try {
-      if (!await requestPermissions() || _disposed) return;
-
-      if (_platform.canUseForegroundTask) {
-        _platform.initialize();
-        await _startBackgroundService(event);
-        if (_disposed) await _endBackgroundMode();
-      }
+      _platform.initialize();
+      await _startBackgroundService(event);
+      if (_disposed) await _endBackgroundMode();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -121,9 +110,10 @@ class SessionInfraController extends _$SessionInfraController {
 
   Future<void> _startBackgroundService(SessionDetailSchema? event) async {
     if (!_platform.canUseForegroundTask) return;
-    if (!await _platform.isRunningService) {
-      await _platform.startService();
-    }
+    final running = await _platform.isRunningService;
+    // Disposed while checking: never start a service nothing will stop.
+    if (_disposed) return;
+    if (!running) await _platform.startService();
 
     _notificationTimer?.cancel();
     _notificationTimer = Timer.periodic(_notificationPeriod, (_) {
@@ -169,38 +159,6 @@ class SessionInfraController extends _$SessionInfraController {
           message: 'Error stopping background service',
         );
       }
-    }
-  }
-
-  Future<bool> requestPermissions() async {
-    if (!_platform.canUseForegroundTask) {
-      // Infra permissions aren't relevant on web, so we can skip requesting them.
-      return true;
-    }
-    try {
-      var notificationPermission = await _platform
-          .checkNotificationPermission();
-      if (notificationPermission != NotificationPermission.granted) {
-        notificationPermission = await _platform
-            .requestNotificationPermission();
-      }
-
-      if (notificationPermission != NotificationPermission.granted) {
-        return false;
-      }
-
-      if (_platform.isAndroid &&
-          !await _platform.isIgnoringBatteryOptimizations) {
-        return await _platform.requestIgnoreBatteryOptimization();
-      }
-      return true;
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error requesting notification permission',
-      );
-      return false;
     }
   }
 

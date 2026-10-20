@@ -10,6 +10,11 @@ import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/features/permissions/adapters/media_permission_adapter.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/permissions/platform_info.dart';
+import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -20,6 +25,7 @@ import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
+import '../../permissions/fake_media_permission_adapter.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
@@ -181,11 +187,12 @@ void main() {
     when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
     when(() => devices.selectedCameraDeviceId).thenReturn(null);
     when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
-    when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+    when(() => devices.turnOn(MediaKind.microphone))
+        .thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
-    when(() => devices.enableCamera()).thenAnswer((_) async {});
+    when(() => devices.turnOn(MediaKind.camera))
+        .thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableCamera()).thenAnswer((_) async {});
-    when(() => devices.toggleCamera()).thenAnswer((_) async {});
     when(() => messaging.sendReaction(any())).thenAnswer((_) async {});
 
     when(
@@ -203,6 +210,7 @@ void main() {
     String currentUserSlug = 'user-1',
     bool isKeeper = false,
     RoomScreen currentScreen = RoomScreen.listening,
+    FakeMediaPermissionAdapter? adapter,
   }) async {
     when(() => session.state).thenReturn(sessionState);
     tester.view
@@ -218,6 +226,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          platformInfoProvider.overrideWithValue(const IosApp()),
+          mediaPermissionAdapterProvider.overrideWithValue(
+            adapter ?? FakeMediaPermissionAdapter(),
+          ),
           authControllerProvider.overrideWith(
             () => FakeAuthController(
               testAuthenticatedState(slug: currentUserSlug),
@@ -435,6 +447,49 @@ void main() {
         check(session.mockLocalMedia.cameraCommands).deepEquals([true]);
       });
 
+      testWidgets('X13: a refused unmute explains the fix', (tester) async {
+        final state = _buildState(status: RoomStatus.active);
+        session.mockLocalMedia.onMicrophoneCommand = (enabled) async {
+          if (enabled) throw Exception('NotAllowedError');
+        };
+
+        await pumpListeningTurn(tester, sessionState: state);
+        await tester.tap(find.bySemanticsLabel('Microphone off'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Unmute Anyway'));
+        await tester.pumpAndSettle();
+
+        check(find.byType(MediaRecoveryDialog).evaluate()).length.equals(1);
+        await tester.tap(find.text('Close'));
+        await tester.pumpAndSettle();
+        check(
+          tester.widgetList(
+            find.bySemanticsLabel('Microphone off, needs attention'),
+          ),
+        ).length.equals(1);
+      });
+
+      testWidgets('X7: the camera shortcut explains a refused camera', (
+        tester,
+      ) async {
+        await runOnDesktop(() async {
+          await pumpListeningTurn(
+            tester,
+            sessionState: _buildState(status: RoomStatus.active),
+            adapter: FakeMediaPermissionAdapter(
+              camera: MediaPermission.blocked,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
+          await tester.pumpAndSettle();
+
+          verifyNever(() => devices.turnOn(MediaKind.camera));
+          check(find.byType(MediaRecoveryDialog).evaluate()).length.equals(1);
+        });
+      });
+
       testWidgets('responds to desktop keyboard shortcuts', (tester) async {
         await runOnDesktop(() async {
           final state = _buildState(status: RoomStatus.active);
@@ -443,11 +498,11 @@ void main() {
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
           await tester.pump();
-          verify(() => devices.enableMicrophone()).called(1);
+          verify(() => devices.turnOn(MediaKind.microphone)).called(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
           await tester.pump();
-          verify(() => devices.toggleCamera()).called(1);
+          verify(() => devices.turnOn(MediaKind.camera)).called(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
           await tester.pump();
@@ -498,9 +553,9 @@ void main() {
           await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
           await tester.pump();
 
-          verifyNever(() => devices.enableMicrophone());
-          verifyNever(() => devices.enableCamera());
-          verifyNever(() => devices.toggleCamera());
+          verifyNever(() => devices.turnOn(MediaKind.microphone));
+          verifyNever(() => devices.turnOn(MediaKind.camera));
+          verifyNever(() => devices.turnOn(MediaKind.camera));
           verifyNever(() => messaging.sendReaction(any()));
         });
       });
@@ -522,7 +577,7 @@ void main() {
           await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
           await tester.pump();
 
-          verifyNever(() => devices.enableMicrophone());
+          verifyNever(() => devices.turnOn(MediaKind.microphone));
           verifyNever(() => messaging.sendReaction(any()));
         });
       });

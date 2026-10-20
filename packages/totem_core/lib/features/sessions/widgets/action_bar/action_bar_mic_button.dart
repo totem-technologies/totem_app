@@ -19,6 +19,7 @@ class ActionBarMicButton extends StatefulWidget {
     required this.onToggle,
     this.microphoneLevel,
     this.requiresUnmuteConfirmation = false,
+    this.needsAttention = false,
     super.key,
   });
 
@@ -30,6 +31,9 @@ class ActionBarMicButton extends StatefulWidget {
   final MicrophoneLevelBuilder? microphoneLevel;
 
   final bool requiresUnmuteConfirmation;
+
+  /// Whether the microphone can't turn on until the user fixes its access.
+  final bool needsAttention;
 
   @override
   State<ActionBarMicButton> createState() => _ActionBarMicButtonState();
@@ -79,7 +83,9 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
     final isEnabled = widget.isMicOn;
 
     return ActionBarButton(
-      semanticsLabel: 'Microphone ${isEnabled ? 'on' : 'off'}',
+      semanticsLabel:
+          'Microphone ${isEnabled ? 'on' : 'off'}'
+          '${widget.needsAttention ? ', needs attention' : ''}',
       role: ActionBarButtonRole.media(enabled: isEnabled),
       onPressed: _busy ? null : _toggleMicrophone,
       child: isEnabled
@@ -98,7 +104,11 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
                 );
               },
             )
-          : const TotemIcon(TotemIcons.microphoneOff),
+          : Badge(
+              isLabelVisible: widget.needsAttention,
+              smallSize: 8,
+              child: const TotemIcon(TotemIcons.microphoneOff),
+            ),
     );
   }
 }
