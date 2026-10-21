@@ -1489,7 +1489,8 @@ class _EarlyArrival extends StatelessWidget {
                 const TextSpan(text: 'You can join beginning at '),
                 TextSpan(text: _joinTime, style: strong),
                 const TextSpan(
-                  text: '. In the meantime, grab some water, get comfortable, or review our ',
+                  text:
+                      '. In the meantime, grab some water, get comfortable, or review our ',
                 ),
                 Button.inlineSpan(
                   text: 'Community Guidelines',
@@ -1777,7 +1778,9 @@ class _DeclinedState extends State<_Declined> {
                         ),
                       ),
                       Text(
-                        next ? 'The next one is open.' : 'Nothing else is on the calendar yet. This one sits close to what you came for.',
+                        next
+                            ? 'The next one is open.'
+                            : 'Nothing else is on the calendar yet. This one sits close to what you came for.',
                         style: _muted(context),
                       ),
                       SessionCard(

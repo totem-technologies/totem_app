@@ -3,7 +3,7 @@ description: Local, deterministic room rendering benchmark.
 publish_to: none
 resolution: workspace
 environment:
-  sdk: ^3.13.5
+  sdk: ^3.12.2
 dependencies:
   flutter:
     sdk: flutter

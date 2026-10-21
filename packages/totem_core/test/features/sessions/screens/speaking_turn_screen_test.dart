@@ -204,8 +204,9 @@ void main() {
       () =>
           localParticipant.getTrackPublicationBySource(TrackSource.microphone),
     ).thenReturn(null);
-    when(() => localParticipant.getTrackPublicationBySource(TrackSource.camera))
-        .thenReturn(null);
+    when(
+      () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
+    ).thenReturn(null);
     when(() => localParticipant.isCameraEnabled()).thenReturn(false);
   });
 
@@ -214,6 +215,7 @@ void main() {
     required SessionRoomState sessionState,
     required bool isKeeper,
     SessionCuesService? cuesService,
+    String? currentPrompt,
   }) async {
     when(() => session.isCurrentUserKeeper()).thenReturn(isKeeper);
     when(() => session.state).thenReturn(sessionState);
@@ -227,6 +229,7 @@ void main() {
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
           currentSessionProvider.overrideWith((ref) => session),
+          currentSessionPromptProvider.overrideWith((ref) => currentPrompt),
           sessionPromptsControllerProvider('test-session').overrideWithValue(
             const SessionPromptsState(
               snapshot: SessionPromptsSchema(revision: 0, prompts: []),
@@ -282,10 +285,12 @@ void main() {
 
         await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
-        check(tester.widgetList(find.byType(ParticipantCard))).length
-            .equals(participantCount);
-        check(tester.widgetList(find.byType(SpeakingTurnScreen))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(ParticipantCard)),
+        ).length.equals(participantCount);
+        check(
+          tester.widgetList(find.byType(SpeakingTurnScreen)),
+        ).length.equals(1);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       }
@@ -303,14 +308,17 @@ void main() {
       await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
       check(tester.widgetList(find.byType(TextField))).length.equals(1);
-      check(tester.widgetList(find.byType(ActionSliderButton))).length
-          .equals(1);
-      check(tester.widgetList(find.text('Your prompt for this round'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.text('Your prompt for this round')),
+      ).length.equals(1);
       check(tester.widgetList(find.text('Pass to User Two'))).length.equals(1);
       check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
-      check(tester.widgetList(find.byType(ParticipantCard))).length
-          .isGreaterOrEqual(1);
+      check(
+        tester.widgetList(find.byType(ParticipantCard)),
+      ).length.isGreaterOrEqual(1);
     });
 
     testWidgets('action bar exposes controls and toggles mic/camera', (
@@ -324,13 +332,16 @@ void main() {
 
       await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
-      check(tester.widgetList(find.bySemanticsLabel('Microphone off'))).length
-          .equals(1);
-      check(tester.widgetList(find.bySemanticsLabel('Camera off'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Microphone off')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera off')),
+      ).length.equals(1);
       check(tester.widgetList(find.bySemanticsLabel('Chat'))).length.equals(1);
-      check(tester.widgetList(find.bySemanticsLabel('Send reaction'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Send reaction')),
+      ).length.equals(0);
 
       await tester.tap(find.bySemanticsLabel('Microphone off'));
       await tester.pump();
@@ -381,8 +392,9 @@ void main() {
       );
       final cuesService = _TestSessionCuesService();
 
-      when(() => keeper.passTotem(customPrompt: 'A round message'))
-          .thenAnswer((_) async {});
+      when(
+        () => keeper.passTotem(customPrompt: 'A round message'),
+      ).thenAnswer((_) async {});
 
       await pumpSpeakingTurn(
         tester,
@@ -520,8 +532,9 @@ void main() {
       check(newOffset.dx).equals(16.0); // _padding is 16
 
       final prefs = await SharedPreferences.getInstance();
-      check(prefs.getString(AppConsts.storageSelfViewPositionKey))
-          .equals('start');
+      check(
+        prefs.getString(AppConsts.storageSelfViewPositionKey),
+      ).equals('start');
 
       // Drag back past the midpoint
       await tester.drag(cardFinder, const Offset(500, 0));
@@ -529,8 +542,9 @@ void main() {
 
       final backOffset = tester.getTopLeft(cardFinder);
       check(backOffset.dx).equals(714.0); // Should snap back to end
-      check(prefs.getString(AppConsts.storageSelfViewPositionKey))
-          .equals('end');
+      check(
+        prefs.getString(AppConsts.storageSelfViewPositionKey),
+      ).equals('end');
     });
   });
 }

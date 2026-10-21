@@ -69,8 +69,9 @@ void main() {
 
       await tester.tap(find.text('Submit Feedback'));
       await tester.pumpAndSettle();
-      check(tester.widgetList(find.text('Please enter your feedback'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Please enter your feedback')),
+      ).length.equals(1);
       check(submissionCount).equals(0);
 
       await tester.enterText(find.byType(TextFormField), 'short');
@@ -169,8 +170,9 @@ void main() {
           .maybePop();
       await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(ConfirmationDialog))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(ConfirmationDialog)),
+      ).length.equals(1);
       await tester.tap(find.text('Discard'));
       await tester.pumpAndSettle();
 
@@ -187,8 +189,9 @@ void main() {
           .maybePop();
       await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(ConfirmationDialog))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(ConfirmationDialog)),
+      ).length.equals(0);
       check(tester.widgetList(find.byType(UserFeedback))).length.equals(0);
     });
   });

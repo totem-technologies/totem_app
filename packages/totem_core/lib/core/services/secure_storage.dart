@@ -11,7 +11,7 @@ final secureStorageProvider = Provider<SecureStorage>((ref) {
 /// storage
 class SecureStorage {
   /// Constructor with optional storage instance for testing
-  new([FlutterSecureStorage? storage])
+  SecureStorage([FlutterSecureStorage? storage])
     : _storage =
           storage ??
           const FlutterSecureStorage(

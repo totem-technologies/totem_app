@@ -39,8 +39,9 @@ void main() {
     check(tester.widgetList(find.byType(IntrinsicWidth))).length.equals(1);
     check(tester.getSize(find.byType(MessageBubble)).width).equals(400);
     check(tester.getSize(bubble).width).isLessThan(336);
-    check(tester.getTopRight(find.text('10:25 AM')).dx)
-        .isCloseTo(tester.getTopRight(bubble).dx - 14, 0.1);
+    check(
+      tester.getTopRight(find.text('10:25 AM')).dx,
+    ).isCloseTo(tester.getTopRight(bubble).dx - 14, 0.1);
   });
 
   testWidgets('highlights URLs, emails, and phone numbers as actions', (
@@ -50,7 +51,8 @@ void main() {
       const MaterialApp(
         home: Scaffold(
           body: MessageBubble(
-            text: 'Visit https://example.com, email hello@example.com, or call +1 (415) 555-2671.',
+            text:
+                'Visit https://example.com, email hello@example.com, or call +1 (415) 555-2671.',
             timestamp: '10:25 AM',
             isOwn: false,
           ),
@@ -61,16 +63,19 @@ void main() {
     final messageText = tester.widget<SelectableText>(
       find.byType(SelectableText),
     );
-    final actionableSpans = _textSpans(messageText.textSpan!)
-        .where((span) => span.recognizer is TapGestureRecognizer)
-        .toList();
+    final actionableSpans = _textSpans(
+      messageText.textSpan!,
+    ).where((span) => span.recognizer is TapGestureRecognizer).toList();
 
-    check(actionableSpans.map((span) => span.text))
-        .contains('https://example.com');
-    check(actionableSpans.map((span) => span.text))
-        .contains('hello@example.com');
-    check(actionableSpans.map((span) => span.text))
-        .contains('+1 (415) 555-2671');
+    check(
+      actionableSpans.map((span) => span.text),
+    ).contains('https://example.com');
+    check(
+      actionableSpans.map((span) => span.text),
+    ).contains('hello@example.com');
+    check(
+      actionableSpans.map((span) => span.text),
+    ).contains('+1 (415) 555-2671');
     for (final span in actionableSpans) {
       check(span.style?.decoration).equals(TextDecoration.underline);
     }

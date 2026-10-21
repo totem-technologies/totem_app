@@ -234,16 +234,20 @@ void main() {
                 Future.value(_event().copyWith(ended: sessionEnded)),
           ),
           if (successfulJoin) ...[
-            preJoinFlowControllerProvider(_slug)
-                .overrideWith(_PermissionsGrantedFlowController.new),
-            sessionControllerProvider(_options)
-                .overrideWith(_SuccessfulSessionController.new),
+            preJoinFlowControllerProvider(
+              _slug,
+            ).overrideWith(_PermissionsGrantedFlowController.new),
+            sessionControllerProvider(
+              _options,
+            ).overrideWith(_SuccessfulSessionController.new),
           ],
           if (pendingJoin) ...[
-            preJoinFlowControllerProvider(_slug)
-                .overrideWith(_PermissionsGrantedFlowController.new),
-            sessionControllerProvider(_options)
-                .overrideWith(_PendingSessionController.new),
+            preJoinFlowControllerProvider(
+              _slug,
+            ).overrideWith(_PermissionsGrantedFlowController.new),
+            sessionControllerProvider(
+              _options,
+            ).overrideWith(_PendingSessionController.new),
           ],
         ],
         child: const SentryDisplayWidget(
@@ -302,8 +306,9 @@ void main() {
 
     check(factory.videoTracks).isEmpty();
     check(factory.audioTracks).isEmpty();
-    check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.byType(SessionDisconnectedScreen)),
+    ).length.equals(1);
   });
 
   testWidgets('terminal token errors do not create preview tracks', (
@@ -324,8 +329,9 @@ void main() {
 
     check(factory.videoTracks).isEmpty();
     check(factory.audioTracks).isEmpty();
-    check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.byType(SessionDisconnectedScreen)),
+    ).length.equals(1);
   });
 
   testWidgets('terminal token error releases active preview tracks', (
@@ -355,13 +361,15 @@ void main() {
         message: 'Session already ended',
       ),
     );
-    ProviderScope.containerOf(tester.element(find.byType(PreJoinScreen)))
-        .invalidate(sessionTokenProvider(_slug));
+    ProviderScope.containerOf(
+      tester.element(find.byType(PreJoinScreen)),
+    ).invalidate(sessionTokenProvider(_slug));
     await tester.pump();
     await tester.pump();
 
-    check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.byType(SessionDisconnectedScreen)),
+    ).length.equals(1);
     verify(factory.videoTracks.single.stop).called(1);
     verify(factory.videoTracks.single.dispose).called(1);
     verify(factory.audioTracks.single.stop).called(1);
@@ -483,8 +491,9 @@ void main() {
     await tester.pump();
 
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
-    check(tester.element(find.byType(VideoTrackRenderer)))
-        .identicalTo(previewRenderer);
+    check(
+      tester.element(find.byType(VideoTrackRenderer)),
+    ).identicalTo(previewRenderer);
 
     _PendingSessionController.joinCompleter!.complete(
       SessionJoinResult.success,
@@ -498,8 +507,9 @@ void main() {
     await pumpScreen(tester, alreadyPresent: true, successfulJoin: true);
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(tester.widgetList(find.text("You're already in this session"))).length
-        .equals(0);
+    check(
+      tester.widgetList(find.text("You're already in this session")),
+    ).length.equals(0);
 
     final join = tester.widget<ActionSliderButton>(
       find.byType(ActionSliderButton),
@@ -508,8 +518,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(tester.widgetList(find.text("You're already in this session"))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text("You're already in this session")),
+    ).length.equals(1);
     check(tester.widgetList(find.text('Join Here'))).length.equals(1);
 
     await tester.tap(find.text('Join Here'));
@@ -517,8 +528,9 @@ void main() {
     check(await joinFuture).equals(true);
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(tester.widgetList(find.text("You're already in this session"))).length
-        .equals(0);
+    check(
+      tester.widgetList(find.text("You're already in this session")),
+    ).length.equals(0);
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
   });
 

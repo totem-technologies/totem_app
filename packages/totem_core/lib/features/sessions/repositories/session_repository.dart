@@ -82,7 +82,7 @@ Future<RoomState> _postEvent({
           diagnostics: {'session_slug': sessionSlug},
         );
 
-        return await RepositoryUtils.handleApiCall<RoomState>(
+        return RepositoryUtils.handleApiCall<RoomState>(
           apiCall: () => apiService.rooms.totemRoomsApiPostEvent(
             sessionSlug: sessionSlug,
             body: EventRequest(

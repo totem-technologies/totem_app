@@ -16,7 +16,7 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 part 'pre_join_media_controller.g.dart';
 
 abstract class PreJoinPreviewTrackFactory {
-  const new();
+  const PreJoinPreviewTrackFactory();
 
   Future<LocalVideoTrack?> createVideoTrack(CameraCaptureOptions cameraOptions);
 
@@ -24,7 +24,7 @@ abstract class PreJoinPreviewTrackFactory {
 }
 
 class LiveKitPreJoinPreviewTrackFactory extends PreJoinPreviewTrackFactory {
-  const new();
+  const LiveKitPreJoinPreviewTrackFactory();
 
   @override
   Future<LocalVideoTrack?> createVideoTrack(
@@ -50,7 +50,7 @@ final preJoinRequiresUsableMediaProvider = Provider<bool>(
 );
 
 class PreJoinMediaPermissionDeniedException implements Exception {
-  const new();
+  const PreJoinMediaPermissionDeniedException();
 }
 
 /// A serial operation queue whose tail is guaranteed not to throw.
@@ -73,7 +73,7 @@ class PreJoinMediaOperationQueue {
         // A tail created by this class is non-throwing. This additionally
         // protects callers if the implementation changes in the future.
       }
-      return await operation();
+      return operation();
     }();
 
     _tail = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});

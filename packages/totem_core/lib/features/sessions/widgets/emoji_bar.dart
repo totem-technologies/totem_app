@@ -10,7 +10,7 @@ import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 typedef Emoji = String;
 
 class EmojiBarOverlay extends StatefulWidget {
-  const new({
+  const EmojiBarOverlay({
     required this.buttonKey,
     required this.onEmojiSelected,
     required this.onDismissed,
@@ -106,7 +106,11 @@ class EmojiBarOverlayState extends State<EmojiBarOverlay>
 }
 
 class EmojiBar extends StatelessWidget {
-  const new({required this.emojis, required this.onEmojiSelected, super.key});
+  const EmojiBar({
+    required this.emojis,
+    required this.onEmojiSelected,
+    super.key,
+  });
 
   final List<Emoji> emojis;
   final ValueChanged<Emoji> onEmojiSelected;
@@ -247,7 +251,7 @@ Future<void> presentEmojiReaction(
 
 @visibleForTesting
 class RisingEmoji extends StatefulWidget {
-  const new({
+  const RisingEmoji({
     required this.emoji,
     required this.startX,
     required this.startY,

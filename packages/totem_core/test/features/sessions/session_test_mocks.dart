@@ -5,11 +5,11 @@ import 'package:totem_core/features/sessions/controllers/features/session_keeper
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 
 class MockSessionKeeperController extends Mock
-    implements SessionKeeperController;
+    implements SessionKeeperController {}
 
 class MockSessionMessagingController extends Mock
-    implements SessionMessagingController;
+    implements SessionMessagingController {}
 
-class MockSessionRoomState extends Mock implements SessionRoomState;
+class MockSessionRoomState extends Mock implements SessionRoomState {}
 
-class MockParticipant extends Mock implements Participant;
+class MockParticipant extends Mock implements Participant {}

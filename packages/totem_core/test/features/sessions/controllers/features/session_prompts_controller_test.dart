@@ -10,7 +10,7 @@ import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_prompts_controller.dart';
 
 class _PromptApiClient implements ApiClient {
-  new(this.onRequest);
+  _PromptApiClient(this.onRequest);
 
   final Future<ApiResponse> Function(ApiRequest request) onRequest;
   final requests = <ApiRequest>[];
@@ -151,8 +151,9 @@ void main() {
     final state = await _runMutationFailure(500);
 
     check(state.failure).equals(SessionPromptsFailure.network);
-    check(state.message)
-        .equals('Could not save prompts. Check your connection and try again.');
+    check(
+      state.message,
+    ).equals('Could not save prompts. Check your connection and try again.');
     check(state.revision).equals(2);
     check(state.mutating).isFalse();
   });

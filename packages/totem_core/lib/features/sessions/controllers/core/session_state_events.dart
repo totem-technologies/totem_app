@@ -4,11 +4,15 @@ import 'package:totem_core/features/sessions/controllers/features/session_messag
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 
 sealed class SessionEvent {
-  const new();
+  const SessionEvent();
 }
 
 class ConnectionChanged extends SessionEvent {
-  const new(this.connectionState, this.phase, {this.wasJoining = false});
+  const ConnectionChanged(
+    this.connectionState,
+    this.phase, {
+    this.wasJoining = false,
+  });
 
   final RoomConnectionState connectionState;
   final SessionPhase phase;
@@ -16,31 +20,31 @@ class ConnectionChanged extends SessionEvent {
 }
 
 class RoomStateChanged extends SessionEvent {
-  const new(this.roomState);
+  const RoomStateChanged(this.roomState);
 
   final RoomState roomState;
 }
 
 class ParticipantsChanged extends SessionEvent {
-  const new(this.participants);
+  const ParticipantsChanged(this.participants);
 
   final List<ParticipantInfo> participants;
 }
 
 class ParticipantRemoved extends SessionEvent {
-  const new(this.reason);
+  const ParticipantRemoved(this.reason);
 
   final RemoveReason reason;
 }
 
 class SessionErrorChanged extends SessionEvent {
-  const new(this.error);
+  const SessionErrorChanged(this.error);
 
   final RoomError? error;
 }
 
 class SessionChatMessageAdded extends SessionEvent {
-  const new(this.message);
+  const SessionChatMessageAdded(this.message);
 
   final SessionChatMessage message;
 }

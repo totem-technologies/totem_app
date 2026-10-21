@@ -8,7 +8,11 @@ import 'package:totem_core/core/config/theme.dart';
 /// treatment mirrors the session title so it reads the same on mobile and
 /// desktop.
 class SessionStatusNotice extends StatelessWidget {
-  const new({required this.label, required this.message, super.key});
+  const SessionStatusNotice({
+    required this.label,
+    required this.message,
+    super.key,
+  });
 
   /// Short uppercase eyebrow, e.g. `STARTING SOON`.
   final String label;

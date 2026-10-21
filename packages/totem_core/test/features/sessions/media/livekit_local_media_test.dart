@@ -11,7 +11,7 @@ import 'package:totem_core/features/sessions/media/local_media.dart';
 
 import '../livekit_mocks.dart';
 
-class _MockRoom extends Mock implements Room;
+class _MockRoom extends Mock implements Room {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -86,8 +86,9 @@ void main() {
         const RoomOptions(adaptiveStream: true),
       );
 
-      check(options.defaultAudioCaptureOptions.stopAudioCaptureOnMute)
-          .isFalse();
+      check(
+        options.defaultAudioCaptureOptions.stopAudioCaptureOnMute,
+      ).isFalse();
       check(options.adaptiveStream).isTrue();
     });
 
@@ -126,8 +127,9 @@ void main() {
 
     test('joining muted mutes the microphone before publishing it', () async {
       final track = MockLocalAudioTrack();
-      when(() => participant.publishAudioTrack(track))
-          .thenAnswer((_) async => MockLocalAudioTrackPublication());
+      when(
+        () => participant.publishAudioTrack(track),
+      ).thenAnswer((_) async => MockLocalAudioTrackPublication());
 
       await media.publishJoinMicrophone(track, muted: true);
 
@@ -212,8 +214,9 @@ void main() {
         camera = MockLocalVideoTrack();
         when(() => camera.muted).thenAnswer((_) => cameraMuted);
         final publication = MockLocalTrackPublication(videoTrack: camera);
-        when(() => participant.getTrackPublicationBySource(TrackSource.camera))
-            .thenReturn(publication);
+        when(
+          () => participant.getTrackPublicationBySource(TrackSource.camera),
+        ).thenReturn(publication);
         when(
           () => participant.setCameraEnabled(
             any(),
