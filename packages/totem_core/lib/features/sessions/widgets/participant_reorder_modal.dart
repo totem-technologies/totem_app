@@ -399,7 +399,7 @@ class _ParticipantInfo extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '${user.circleCount}',
+                    '${user.circleCount.value ?? 0}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.black,

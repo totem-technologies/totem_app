@@ -26,7 +26,7 @@ packages:
     source: hosted
     version: "0.3.24"
   analyzer:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: analyzer
       sha256: "6d377901d198536b648172974d9d4f277910502cad92193466869cac0ff34990"
@@ -274,7 +274,7 @@ packages:
     source: hosted
     version: "2.0.4"
   checks:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: checks
       sha256: "9c360a078576950976c9045fe28392dfb5f3b0b648ae897e8c1fe307a6ffbed2"

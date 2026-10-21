@@ -76,7 +76,7 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                           await SharePlus.instance.share(
                             ShareParams(
                               uri: Uri.parse(AppConfig.instance.apiUrl)
-                                  .resolve('/blog/${blog.slug}')
+                                  .resolve('/blog/${blog.slug.value ?? ''}')
                                   .resolve('?utm_source=app&utm_medium=share'),
                               sharePositionOrigin: box != null
                                   ? box.localToGlobal(Offset.zero) & box.size
