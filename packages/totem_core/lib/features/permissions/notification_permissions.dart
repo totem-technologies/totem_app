@@ -9,12 +9,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// [NoNotificationPermissions], so `totem_core` and `totem_web` never depend
 /// on Firebase: Flutter web registers every web plugin in the dependency
 /// graph, so tree shaking couldn't remove it.
+// An interface, not a function, so the app can override the provider with
+// its Firebase implementation and tests with a fake.
+// ignore: one_member_abstracts
 abstract interface class NotificationPermissions {
   Future<void> request();
 }
 
 class NoNotificationPermissions implements NotificationPermissions {
-  const new();
+  const NoNotificationPermissions();
 
   @override
   Future<void> request() async {}

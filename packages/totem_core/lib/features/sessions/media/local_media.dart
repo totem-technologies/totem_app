@@ -11,7 +11,7 @@ enum MediaDeviceKind { audioInput, audioOutput, videoInput }
 
 @immutable
 class MediaDeviceInfo {
-  const new({
+  const MediaDeviceInfo({
     required this.id,
     required this.label,
     required this.kind,
@@ -74,7 +74,7 @@ abstract interface class MediaDeviceCatalog {
 /// own, such as when its permission was revoked or the device was unplugged.
 @immutable
 class CaptureLost {
-  const new(this.kind, {required this.wasOn});
+  const CaptureLost(this.kind, {required this.wasOn});
 
   final MediaKind kind;
 
@@ -87,7 +87,7 @@ class CaptureLost {
 /// such as while its connection is down. The device and its permission are
 /// fine, so this isn't a capture failure.
 class MediaPublishException implements Exception {
-  const new(this.cause);
+  const MediaPublishException(this.cause);
 
   final Object cause;
 

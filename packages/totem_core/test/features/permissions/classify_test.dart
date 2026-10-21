@@ -25,35 +25,40 @@ void main() {
     });
 
     test('I1: iOS reports never-asked as denied, which is unknown', () {
-      check(permissionFromStatus(PermissionStatus.denied))
-          .equals(MediaPermission.unknown);
+      check(
+        permissionFromStatus(PermissionStatus.denied),
+      ).equals(MediaPermission.unknown);
     });
 
     test(
       'I2: iOS reports a refusal as permanentlyDenied, which is blocked',
       () {
-        check(permissionFromStatus(PermissionStatus.permanentlyDenied))
-            .equals(MediaPermission.blocked);
+        check(
+          permissionFromStatus(PermissionStatus.permanentlyDenied),
+        ).equals(MediaPermission.blocked);
       },
     );
 
     test('I3: restricted by Screen Time or MDM', () {
-      check(permissionFromStatus(PermissionStatus.restricted))
-          .equals(MediaPermission.restricted);
+      check(
+        permissionFromStatus(PermissionStatus.restricted),
+      ).equals(MediaPermission.restricted);
     });
 
     test('A2: Android status says denied even after two refusals', () {
       // Only request results carry the refusal; the status is a hint that
       // reconcileQuery keeps from overriding it.
-      check(permissionFromStatus(PermissionStatus.denied))
-          .equals(MediaPermission.unknown);
+      check(
+        permissionFromStatus(PermissionStatus.denied),
+      ).equals(MediaPermission.unknown);
     });
   });
 
   group('permissionFromRequestResult', () {
     test('A1/A3: Android refusal or dismissal can be asked again', () {
-      check(permissionFromRequestResult(PermissionStatus.denied, android))
-          .equals(MediaPermission.denied);
+      check(
+        permissionFromRequestResult(PermissionStatus.denied, android),
+      ).equals(MediaPermission.denied);
     });
 
     test('A2: Android second refusal is blocked', () {
@@ -72,13 +77,15 @@ void main() {
     });
 
     test('I1: iOS request that shows no prompt stays unknown', () {
-      check(permissionFromRequestResult(PermissionStatus.denied, ios))
-          .equals(MediaPermission.unknown);
+      check(
+        permissionFromRequestResult(PermissionStatus.denied, ios),
+      ).equals(MediaPermission.unknown);
     });
 
     test('granted', () {
-      check(permissionFromRequestResult(PermissionStatus.granted, android))
-          .equals(MediaPermission.granted);
+      check(
+        permissionFromRequestResult(PermissionStatus.granted, android),
+      ).equals(MediaPermission.granted);
     });
   });
 
@@ -96,8 +103,9 @@ void main() {
 
   group('captureErrorName', () {
     test('finds the DOMException name anywhere in the message', () {
-      check(captureErrorName('TrackCreateException: NotAllowedError: denied'))
-          .equals('NotAllowedError');
+      check(
+        captureErrorName('TrackCreateException: NotAllowedError: denied'),
+      ).equals('NotAllowedError');
       check(
         captureErrorName(
           PlatformException(
@@ -106,17 +114,20 @@ void main() {
           ),
         ),
       ).equals('NotAllowedError');
-      check(captureErrorName('Unable to getUserMedia: NotFoundError'))
-          .equals('NotFoundError');
+      check(
+        captureErrorName('Unable to getUserMedia: NotFoundError'),
+      ).equals('NotFoundError');
     });
 
     test('maps legacy Chrome names to the standard ones', () {
-      check(captureErrorName('PermissionDeniedError'))
-          .equals('NotAllowedError');
+      check(
+        captureErrorName('PermissionDeniedError'),
+      ).equals('NotAllowedError');
       check(captureErrorName('DevicesNotFoundError')).equals('NotFoundError');
       check(captureErrorName('TrackStartError')).equals('NotReadableError');
-      check(captureErrorName('ConstraintNotSatisfiedError'))
-          .equals('OverconstrainedError');
+      check(
+        captureErrorName('ConstraintNotSatisfiedError'),
+      ).equals('OverconstrainedError');
     });
 
     test('returns null for unrelated errors', () {
@@ -141,8 +152,9 @@ void main() {
     });
 
     test('X10: NotFoundError is notFound', () {
-      check(classifyCaptureError('NotFoundError', ios))
-          .equals(const DeviceFailed(DeviceProblem.notFound));
+      check(
+        classifyCaptureError('NotFoundError', ios),
+      ).equals(const DeviceFailed(DeviceProblem.notFound));
     });
 
     test('unrecognized errors are unclassified', () {
@@ -176,8 +188,9 @@ void main() {
         'TrackCreateException: Microphone permission is not granted',
         'TrackCreateException: Microphone permission was denied.',
       ]) {
-        check(classifyCaptureError(message, ios))
-            .equals(const PermissionRefused(MediaPermission.blocked));
+        check(
+          classifyCaptureError(message, ios),
+        ).equals(const PermissionRefused(MediaPermission.blocked));
       }
     });
   });
@@ -190,8 +203,9 @@ void main() {
     test('every iOS browser reports errors like Safari', () {
       for (final browser in WebBrowser.values) {
         final platform = web(browser, os: HostOs.ios);
-        check(classifyCaptureError('NotReadableError', platform))
-            .equals(const DeviceFailed(DeviceProblem.inUse));
+        check(
+          classifyCaptureError('NotReadableError', platform),
+        ).equals(const DeviceFailed(DeviceProblem.inUse));
         check(
           classifyCaptureError('NotFoundError', platform, deviceListed: true),
         ).equals(const DeviceFailed(DeviceProblem.notFound));
@@ -210,8 +224,9 @@ void main() {
       check(
         classifyCaptureError('NotAllowedError: Permission dismissed', chrome),
       ).equals(const PermissionRefused(MediaPermission.unknown));
-      check(classifyCaptureError('PermissionDismissedError', chrome))
-          .equals(const PermissionRefused(MediaPermission.unknown));
+      check(
+        classifyCaptureError('PermissionDismissedError', chrome),
+      ).equals(const PermissionRefused(MediaPermission.unknown));
     });
 
     test('WC3: Chrome on macOS blocked by the OS', () {
@@ -233,15 +248,18 @@ void main() {
     });
 
     test('WF4: Firefox NotFoundError with a listed device is an OS block', () {
-      check(classifyCaptureError('NotFoundError', firefox, deviceListed: true))
-          .equals(const PermissionRefused(MediaPermission.blockedBySystem));
-      check(classifyCaptureError('NotFoundError', firefox))
-          .equals(const DeviceFailed(DeviceProblem.notFound));
+      check(
+        classifyCaptureError('NotFoundError', firefox, deviceListed: true),
+      ).equals(const PermissionRefused(MediaPermission.blockedBySystem));
+      check(
+        classifyCaptureError('NotFoundError', firefox),
+      ).equals(const DeviceFailed(DeviceProblem.notFound));
     });
 
     test('WF4: Chrome NotFoundError is notFound even with a listed device', () {
-      check(classifyCaptureError('NotFoundError', chrome, deviceListed: true))
-          .equals(const DeviceFailed(DeviceProblem.notFound));
+      check(
+        classifyCaptureError('NotFoundError', chrome, deviceListed: true),
+      ).equals(const DeviceFailed(DeviceProblem.notFound));
     });
 
     test('WF4: Firefox NotReadableError is an OS block', () {
@@ -260,13 +278,15 @@ void main() {
     });
 
     test('OverconstrainedError means the chosen device is gone', () {
-      check(classifyCaptureError('OverconstrainedError', chrome))
-          .equals(const DeviceFailed(DeviceProblem.notFound));
+      check(
+        classifyCaptureError('OverconstrainedError', chrome),
+      ).equals(const DeviceFailed(DeviceProblem.notFound));
     });
 
     test('W1: SecurityError and missing mediaDevices are unsupported', () {
-      check(classifyCaptureError('SecurityError', chrome))
-          .equals(const PermissionRefused(MediaPermission.unsupported));
+      check(
+        classifyCaptureError('SecurityError', chrome),
+      ).equals(const PermissionRefused(MediaPermission.unsupported));
       check(
         classifyCaptureError(
           "TypeError: Cannot read properties of undefined (reading 'getUserMedia')",
@@ -281,8 +301,9 @@ void main() {
         os: HostOs.ios,
         inAppBrowser: true,
       );
-      check(classifyCaptureError('NotAllowedError', inApp))
-          .equals(const PermissionRefused(MediaPermission.unsupported));
+      check(
+        classifyCaptureError('NotAllowedError', inApp),
+      ).equals(const PermissionRefused(MediaPermission.unsupported));
     });
 
     test('unrecognized errors are unclassified', () {

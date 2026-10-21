@@ -6,7 +6,7 @@ import 'package:totem_core/features/permissions/platform_info.dart';
 
 /// iOS and Android, through `permission_handler`.
 class NativeMediaPermissions implements MediaPermissionAdapter {
-  const new(this.platform);
+  const NativeMediaPermissions(this.platform);
 
   final PlatformInfo platform;
 

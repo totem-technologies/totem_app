@@ -109,8 +109,9 @@ void main() {
         null,
         _web(WebBrowser.safari),
       );
-      check(content.sections.map((s) => s.heading))
-          .deepEquals(['On a Mac', 'On an iPad']);
+      check(
+        content.sections.map((s) => s.heading),
+      ).deepEquals(['On a Mac', 'On an iPad']);
     });
 
     test('touch only puts the iPad steps first', () {
@@ -120,8 +121,9 @@ void main() {
         null,
         _web(WebBrowser.safari, touch: true),
       );
-      check(content.sections.map((s) => s.heading))
-          .deepEquals(['On an iPad', 'On a Mac']);
+      check(
+        content.sections.map((s) => s.heading),
+      ).deepEquals(['On an iPad', 'On a Mac']);
     });
 
     test('Safari on iPhone shows one set of steps', () {
@@ -141,8 +143,9 @@ void main() {
         null,
         _web(WebBrowser.firefox),
       );
-      check(content.sections.single.steps.last.toLowerCase())
-          .contains('reload');
+      check(
+        content.sections.single.steps.last.toLowerCase(),
+      ).contains('reload');
     });
 
     test('W8: Chrome on Android mentions the Android app permission', () {
@@ -186,8 +189,9 @@ void main() {
         null,
         _web(WebBrowser.edge, os: HostOs.windows),
       );
-      check(content.sections.single.steps.join(' '))
-          .contains('Privacy & security');
+      check(
+        content.sections.single.steps.join(' '),
+      ).contains('Privacy & security');
     });
   });
 
@@ -256,8 +260,9 @@ void main() {
         _ios,
       );
       check(content.actionLabel).equals('Try again');
-      check(content.message.toLowerCase())
-          .not((it) => it.contains('try again'));
+      check(
+        content.message.toLowerCase(),
+      ).not((it) => it.contains('try again'));
     }
   });
 

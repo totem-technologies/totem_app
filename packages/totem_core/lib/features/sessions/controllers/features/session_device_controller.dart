@@ -20,7 +20,7 @@ part 'session_device_controller.g.dart';
 
 @immutable
 class SessionDeviceState {
-  const new({
+  const SessionDeviceState({
     required this.selectedCameraDeviceId,
     required this.selectedAudioOutputDeviceId,
     required this.isSpeakerphoneEnabled,
@@ -224,8 +224,9 @@ class SessionDeviceController extends _$SessionDeviceController {
   /// The session's [kind], for the shared turn-on and recovery flow.
   MediaControl control(MediaKind kind) => MediaControl(
     kind: kind,
-    problem: sessionDeviceControllerProvider(session)
-        .select((state) => state.problemOf(kind)),
+    problem: sessionDeviceControllerProvider(
+      session,
+    ).select((state) => state.problemOf(kind)),
     turnOn: () => turnOn(kind),
   );
 

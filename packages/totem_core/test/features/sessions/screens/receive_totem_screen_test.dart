@@ -123,11 +123,13 @@ void main() {
     when(() => devices.selectedCameraDeviceId).thenReturn(null);
     when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
 
-    when(() => devices.turnOn(MediaKind.microphone))
-        .thenAnswer((_) async => const TurnedOn());
+    when(
+      () => devices.turnOn(MediaKind.microphone),
+    ).thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
-    when(() => devices.turnOn(MediaKind.camera))
-        .thenAnswer((_) async => const TurnedOn());
+    when(
+      () => devices.turnOn(MediaKind.camera),
+    ).thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableCamera()).thenAnswer((_) async {});
     when(() => keeper.acceptTotem()).thenAnswer((_) async {});
 
@@ -135,8 +137,9 @@ void main() {
       () =>
           localParticipant.getTrackPublicationBySource(TrackSource.microphone),
     ).thenReturn(null);
-    when(() => localParticipant.getTrackPublicationBySource(TrackSource.camera))
-        .thenReturn(null);
+    when(
+      () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
+    ).thenReturn(null);
     when(() => localParticipant.isCameraEnabled()).thenReturn(false);
   });
 
@@ -216,15 +219,19 @@ void main() {
       );
 
       check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
-      check(tester.widgetList(find.bySemanticsLabel('Microphone off'))).length
-          .equals(1);
-      check(tester.widgetList(find.bySemanticsLabel('Camera off'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Microphone off')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera off')),
+      ).length.equals(1);
       check(tester.widgetList(find.bySemanticsLabel('Chat'))).length.equals(1);
-      check(tester.widgetList(find.bySemanticsLabel('Send reaction'))).length
-          .equals(0);
-      check(tester.widgetList(find.byType(ActionSliderButton))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Send reaction')),
+      ).length.equals(0);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
       check(tester.widgetList(find.text('Receive'))).length.equals(1);
       check(tester.widgetList(find.text('"Take your time"'))).length.equals(1);
     });
@@ -234,8 +241,9 @@ void main() {
     ) async {
       await pumpReceiveTotem(tester, roundMessage: null);
 
-      check(tester.widgetList(find.byType(ActionSliderButton))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
       check(tester.widgetList(find.text('Receive'))).length.equals(1);
       check(tester.widgetList(find.text('"Take your time"'))).length.equals(0);
     });
@@ -305,8 +313,9 @@ void main() {
     testWidgets('shows error notification when accept totem fails', (
       tester,
     ) async {
-      when(() => keeper.acceptTotem())
-          .thenAnswer((_) async => throw Exception('accept failed'));
+      when(
+        () => keeper.acceptTotem(),
+      ).thenAnswer((_) async => throw Exception('accept failed'));
 
       final feedbackService = _TestSessionCuesService();
 
@@ -319,8 +328,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       verify(() => keeper.acceptTotem()).called(1);
-      check(tester.widgetList(find.text('Something went wrong'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Something went wrong')),
+      ).length.equals(1);
       check(
         tester.widgetList(
           find.text('We were unable to accept the totem. Please try again.'),
@@ -340,11 +350,13 @@ void main() {
       await pumpReceiveTotem(tester, roundMessage: 'Breathe and share');
 
       check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
-      check(tester.widgetList(find.byType(ActionSliderButton))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
       check(tester.widgetList(find.text('Receive'))).length.equals(1);
-      check(tester.widgetList(find.text('"Breathe and share"'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('"Breathe and share"')),
+      ).length.equals(1);
     });
 
     testWidgets('shows the local participant card', (tester) async {
@@ -370,8 +382,9 @@ void main() {
       await actionSlider.widget.onActionCompleted();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      check(tester.widgetList(find.text('Something went wrong'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Something went wrong')),
+      ).length.equals(1);
 
       await actionSlider.widget.onActionCompleted();
       await tester.pump();

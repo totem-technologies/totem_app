@@ -27,7 +27,7 @@ import 'package:flutter/widgets.dart';
 /// survives the breakpoint and the speaker toggle automatically — keys on the
 /// [participants] are enough to keep state attached across reorders.
 class AdaptiveCallLayout extends StatelessWidget {
-  const new({
+  const AdaptiveCallLayout({
     required this.participants,
     super.key,
     this.speaker,
@@ -118,7 +118,7 @@ const Object _speakerSlot = #speaker;
 /// Positions the speaker + participant tiles. All geometry comes from [_solve];
 /// this delegate only maps the resolved spec onto child offsets.
 class _CallLayoutDelegate extends MultiChildLayoutDelegate {
-  new({
+  _CallLayoutDelegate({
     required this.hasSpeaker,
     required this.participantCount,
     required this.spacing,
@@ -357,7 +357,7 @@ class _CallLayoutDelegate extends MultiChildLayoutDelegate {
 /// Result of [_CallLayoutDelegate._bestGrid]: `cols` x `rows` tiles sized
 /// `tileW`/`tileH`.
 class _Grid {
-  const new(this.cols, this.rows, this.tileW, this.tileH);
+  const _Grid(this.cols, this.rows, this.tileW, this.tileH);
   final int cols;
   final int rows;
   final double tileW;
@@ -366,7 +366,7 @@ class _Grid {
 
 /// Fully-resolved layout for one set of constraints.
 class _LayoutSpec {
-  const new({
+  const _LayoutSpec({
     required this.isRow,
     required this.padding,
     required this.speakerW,

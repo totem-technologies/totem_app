@@ -145,11 +145,11 @@ lint:
 	@echo "Running linter..."
 	dart run scripts/check_media_boundary.dart
 	dart run scripts/check_omittable_interpolation.dart
-	cd $(APP_DIR) && flutter analyze
-	cd $(CORE_DIR) && flutter analyze
-	cd $(WEB_DIR) && flutter analyze
-	cd $(BENCHMARK_DIR) && flutter analyze
-	cd $(WIDGETBOOK_DIR) && flutter analyze
+	cd $(APP_DIR) && flutter analyze --no-pub
+	cd $(CORE_DIR) && flutter analyze --no-pub
+	cd $(WEB_DIR) && flutter analyze --no-pub
+	cd $(BENCHMARK_DIR) && flutter analyze --no-pub
+	cd $(WIDGETBOOK_DIR) && flutter analyze --no-pub
 
 format:
 	@echo "Formatting code..."

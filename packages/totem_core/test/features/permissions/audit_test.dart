@@ -82,8 +82,9 @@ bool _leavesModule(String path, String uri) {
 
 void main() {
   test('sources were found', () {
-    check(_sources().keys.where((path) => path.startsWith(_module)))
-        .isNotEmpty();
+    check(
+      _sources().keys.where((path) => path.startsWith(_module)),
+    ).isNotEmpty();
   });
 
   test('1: only the native adapter and classify use permission_handler', () {
@@ -126,8 +127,9 @@ void main() {
       '../totem_app/android/app/src/main/AndroidManifest.xml',
     );
     if (manifest.existsSync()) {
-      check(manifest.readAsStringSync())
-          .not((it) => it.contains('IGNORE_BATTERY_OPTIMIZATIONS'));
+      check(
+        manifest.readAsStringSync(),
+      ).not((it) => it.contains('IGNORE_BATTERY_OPTIMIZATIONS'));
     }
   });
 
@@ -174,9 +176,9 @@ void main() {
   test('5: shared code the module uses never imports sessions', () {
     final offenders = [
       for (final import in _sharedImports)
-        if (File(import.replaceFirst('package:totem_core/', 'lib/'))
-            .readAsStringSync()
-            .contains('features/sessions/'))
+        if (File(
+          import.replaceFirst('package:totem_core/', 'lib/'),
+        ).readAsStringSync().contains('features/sessions/'))
           import,
     ];
     check(offenders).isEmpty();
@@ -187,8 +189,9 @@ void main() {
     check(_leavesModule(file, '../model.dart')).isFalse();
     check(_leavesModule(file, 'recovery_content.dart')).isFalse();
     check(_leavesModule(file, '../../sessions/room.dart')).isTrue();
-    check(_leavesModule(file, 'package:totem_core/features/sessions/x.dart'))
-        .isTrue();
+    check(
+      _leavesModule(file, 'package:totem_core/features/sessions/x.dart'),
+    ).isTrue();
     check(_leavesModule(file, 'package:livekit_client/livekit.dart')).isTrue();
     check(_leavesModule(file, 'package:flutter/widgets.dart')).isFalse();
     // Conditional imports name every alternative.
@@ -198,8 +201,9 @@ void main() {
           "'../../sessions/a_web.dart';",
         )
         .map((match) => match.group(1)!);
-    check(conditional.where((uri) => _leavesModule(file, uri)))
-        .deepEquals(['../../sessions/a_web.dart']);
+    check(
+      conditional.where((uri) => _leavesModule(file, uri)),
+    ).deepEquals(['../../sessions/a_web.dart']);
   });
 
   test('5: the import check does catch session code', () {

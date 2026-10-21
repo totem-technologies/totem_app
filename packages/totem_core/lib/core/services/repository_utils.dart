@@ -7,12 +7,13 @@ import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/logger.dart';
 
-typedef ErrorReporter = void Function(
-  Object error, {
-  StackTrace? stackTrace,
-  String? message,
-  Map<String, Object?>? diagnostics,
-});
+typedef ErrorReporter =
+    void Function(
+      Object error, {
+      StackTrace? stackTrace,
+      String? message,
+      Map<String, Object?>? diagnostics,
+    });
 
 typedef ShouldReportError = bool Function(Object error);
 
@@ -20,7 +21,7 @@ typedef ShouldReportError = bool Function(Object error);
 ///
 /// Provides consistent error handling patterns across all repositories.
 class RepositoryUtils {
-  const new _();
+  const RepositoryUtils._();
 
   /// Handles API calls with consistent error handling and optional retry logic.
   ///

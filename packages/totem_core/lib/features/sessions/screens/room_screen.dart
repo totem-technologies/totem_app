@@ -39,7 +39,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
 class VideoSessionScreen extends ConsumerStatefulWidget {
-  const new({
+  const VideoSessionScreen({
     required this.sessionSlug,
     required this.loadingScreen,
     this.now = DateTime.now,
@@ -76,7 +76,7 @@ class _SessionChatRouteObserver extends NavigatorObserver {
 }
 
 class _DockedSessionPanelsRail extends ConsumerWidget {
-  const new({required this.sessionSlug});
+  const _DockedSessionPanelsRail({required this.sessionSlug});
 
   final String sessionSlug;
 
@@ -127,11 +127,14 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     // In-call chat UI state is per-session. Clearing it on entry keeps a
     // docked sidebar, or a private thread aimed at the previous circle's
     // keeper, from carrying into this one.
-    ref
-      ..invalidate(sessionChatOpenProvider)
-      ..invalidate(sessionPromptsOpenProvider)
-      ..invalidate(sessionChatThreadTargetProvider)
-      ..invalidate(sessionChatUnreadThreadsProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref
+        ..invalidate(sessionChatOpenProvider)
+        ..invalidate(sessionPromptsOpenProvider)
+        ..invalidate(sessionChatThreadTargetProvider)
+        ..invalidate(sessionChatUnreadThreadsProvider);
+    });
 
     ref.listenManual(currentSessionProvider, (_, session) {
       // Permissions can change mid-call; tell the user when a device stops.

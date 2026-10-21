@@ -5,19 +5,19 @@ import 'package:totem_core/features/permissions/model.dart';
 /// What turning a device on came to.
 @immutable
 sealed class TurnOnOutcome {
-  const new();
+  const TurnOnOutcome();
 }
 
 /// The device is capturing.
 final class TurnedOn extends TurnOnOutcome {
-  const new();
+  const TurnedOn();
 }
 
 /// Capture failed: the permission was refused or the device has a problem.
 /// The permission state has already learned from it, and recovery explains
 /// the fix.
 final class TurnOnFailed extends TurnOnOutcome {
-  const new(this.failure);
+  const TurnOnFailed(this.failure);
 
   final CaptureFailure failure;
 
@@ -33,14 +33,18 @@ final class TurnOnFailed extends TurnOnOutcome {
 /// shows the user itself, such as a hidden browser tab or a room that isn't
 /// connected. There's nothing for recovery to explain.
 final class TurnOnSkipped extends TurnOnOutcome {
-  const new();
+  const TurnOnSkipped();
 }
 
 /// A device the user can turn on, wherever it's captured: the pre-join
 /// preview or the session.
 @immutable
 class MediaControl {
-  const new({required this.kind, required this.problem, required this.turnOn});
+  const MediaControl({
+    required this.kind,
+    required this.problem,
+    required this.turnOn,
+  });
 
   final MediaKind kind;
 

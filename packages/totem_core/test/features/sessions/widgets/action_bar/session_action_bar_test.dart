@@ -40,7 +40,7 @@ class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   }
 }
 
-class _MockRoom extends Mock implements Room;
+class _MockRoom extends Mock implements Room {}
 
 SessionRoomState _createSessionState() {
   return SessionRoomState(
@@ -178,16 +178,19 @@ void main() {
       );
       when(() => deviceController.isCameraEnabled).thenReturn(false);
       when(() => deviceController.selectedCameraDeviceId).thenReturn(null);
-      when(() => deviceController.turnOn(MediaKind.camera))
-          .thenAnswer((_) async => const TurnedOn());
-      when(() => deviceController.disableCamera())
-          .thenAnswer((_) => Future<void>.value());
+      when(
+        () => deviceController.turnOn(MediaKind.camera),
+      ).thenAnswer((_) async => const TurnedOn());
+      when(
+        () => deviceController.disableCamera(),
+      ).thenAnswer((_) => Future<void>.value());
 
       when(
         () => participant.getTrackPublicationBySource(TrackSource.microphone),
       ).thenReturn(null);
-      when(() => participant.getTrackPublicationBySource(TrackSource.camera))
-          .thenReturn(null);
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(null);
       when(() => participant.isMicrophoneEnabled()).thenReturn(false);
       when(() => participant.isCameraEnabled()).thenReturn(false);
 
@@ -343,9 +346,9 @@ void main() {
             isStaff: isStaff,
           );
 
-          check(tester.widgetList(find.bySemanticsLabel('Microphone on')))
-              .length
-              .equals(isStaff ? 1 : 0);
+          check(
+            tester.widgetList(find.bySemanticsLabel('Microphone on')),
+          ).length.equals(isStaff ? 1 : 0);
 
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
@@ -363,8 +366,9 @@ void main() {
         await pumpSessionActionBar(tester, screen: scenario.screen);
         await tester.pumpAndSettle();
 
-        check(tester.widgetList(find.byType(ActionBarEmojiButton))).length
-            .equals(scenario.showsReactions ? 1 : 0);
+        check(
+          tester.widgetList(find.byType(ActionBarEmojiButton)),
+        ).length.equals(scenario.showsReactions ? 1 : 0);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       }
@@ -444,8 +448,9 @@ void main() {
       await tester.pump();
 
       check(tester.widgetList(findPendingBadge())).length.equals(1);
-      check(tester.widgetList(find.text('New message from Keeper'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('New message from Keeper')),
+      ).length.equals(1);
       check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
     });
 

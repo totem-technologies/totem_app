@@ -5,7 +5,7 @@ import 'package:totem_core/features/permissions/notification_permissions.dart';
 /// Notification permission through Firebase Messaging, which covers iOS and
 /// Android 13+. The only call to `requestPermission` in the app.
 class FirebaseNotificationPermissions implements NotificationPermissions {
-  const new();
+  const FirebaseNotificationPermissions();
 
   @override
   Future<void> request() async {

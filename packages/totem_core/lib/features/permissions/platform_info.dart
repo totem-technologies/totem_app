@@ -61,22 +61,22 @@ const _inAppBrowserTokens = [
 
 @immutable
 sealed class PlatformInfo {
-  const new();
+  const PlatformInfo();
 }
 
 /// The native iOS or iPadOS app.
 final class IosApp extends PlatformInfo {
-  const new();
+  const IosApp();
 }
 
 /// The native Android app.
 final class AndroidApp extends PlatformInfo {
-  const new();
+  const AndroidApp();
 }
 
 /// The web app, in some browser.
 final class WebPlatform extends PlatformInfo {
-  const new({
+  const WebPlatform({
     required this.browser,
     required this.os,
     this.inAppBrowser = false,
@@ -85,7 +85,10 @@ final class WebPlatform extends PlatformInfo {
 
   /// Parses a browser's user agent. [maxTouchPoints] is
   /// `navigator.maxTouchPoints`.
-  factory fromUserAgent(String userAgent, {int maxTouchPoints = 0}) {
+  factory WebPlatform.fromUserAgent(
+    String userAgent, {
+    int maxTouchPoints = 0,
+  }) {
     final os = _osFromUserAgent(userAgent);
     return WebPlatform(
       browser: _browserFromUserAgent(userAgent),
@@ -168,5 +171,5 @@ final class WebPlatform extends PlatformInfo {
 /// Anything else, such as desktop builds or the test host. Treated as having
 /// no capture permission model of its own.
 final class OtherPlatform extends PlatformInfo {
-  const new();
+  const OtherPlatform();
 }

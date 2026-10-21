@@ -459,8 +459,9 @@ void main() {
         await pumpEventQueue();
 
         check(outcome).isA<TurnOnSkipped>();
-        check(blocked)
-            .deepEquals([(MediaKind.microphone, TurnOnBlocker.connection)]);
+        check(
+          blocked,
+        ).deepEquals([(MediaKind.microphone, TurnOnBlocker.connection)]);
         check(devices().microphoneProblem).isNull();
         // The microphone was captured, so its permission is known (WS1).
         check(permission(MediaKind.microphone)).equals(MediaPermission.granted);
@@ -472,8 +473,9 @@ void main() {
 
       final outcome = await controller().turnOn(MediaKind.camera);
 
-      check(outcome)
-          .equals(const TurnOnFailed(DeviceFailed(DeviceProblem.inUse)));
+      check(
+        outcome,
+      ).equals(const TurnOnFailed(DeviceFailed(DeviceProblem.inUse)));
       check(devices().cameraProblem).equals(DeviceProblem.inUse);
     });
 
@@ -548,8 +550,9 @@ void main() {
       await pumpEventQueue();
 
       check(media.microphoneCommands).isEmpty();
-      check(blocked)
-          .deepEquals([(MediaKind.microphone, TurnOnBlocker.keeperAway)]);
+      check(
+        blocked,
+      ).deepEquals([(MediaKind.microphone, TurnOnBlocker.keeperAway)]);
     });
 
     test('X9: a camera switch that fails is recorded and shown', () async {
@@ -584,8 +587,9 @@ void main() {
       first.completeError(Exception('NotFoundError'));
 
       check(await firstTurnOn).isA<TurnOnSkipped>();
-      check(await secondTurnOn)
-          .equals(const TurnOnFailed(DeviceFailed(DeviceProblem.inUse)));
+      check(
+        await secondTurnOn,
+      ).equals(const TurnOnFailed(DeviceFailed(DeviceProblem.inUse)));
       check(devices().cameraProblem).equals(DeviceProblem.inUse);
     });
 

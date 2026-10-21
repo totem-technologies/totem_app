@@ -17,7 +17,7 @@ List<Override> grantedMediaPermissionOverrides() => [
 /// A scriptable [MediaPermissionAdapter]: [queries] is what the platform
 /// reports, and [requestResults] what its prompt returns.
 class FakeMediaPermissionAdapter implements MediaPermissionAdapter {
-  new({
+  FakeMediaPermissionAdapter({
     MediaPermission? camera = MediaPermission.granted,
     MediaPermission? microphone = MediaPermission.granted,
     Map<MediaKind, MediaPermission?>? requestResults,

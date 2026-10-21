@@ -12,7 +12,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 
 class SessionKeyboardShortcuts extends ConsumerStatefulWidget {
-  const new({
+  const SessionKeyboardShortcuts({
     required this.child,
     this.navigatorKey,
     this.enableEmojiReactions = true,

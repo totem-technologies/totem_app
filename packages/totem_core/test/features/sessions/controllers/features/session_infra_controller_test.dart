@@ -8,7 +8,7 @@ import 'package:totem_core/features/sessions/controllers/features/session_infra_
 import '../../../../setup.dart';
 
 class _FakeSessionInfraPlatform extends SessionInfraPlatform {
-  new({this.canUse = true});
+  _FakeSessionInfraPlatform({this.canUse = true});
 
   final bool canUse;
   bool running = false;
@@ -60,8 +60,9 @@ void main() {
 
   test('desktop sessions do not start a foreground service', () async {
     final platform = _FakeSessionInfraPlatform(canUse: false);
-    final controller = createContainer(platform)
-        .read(sessionInfraControllerProvider.notifier);
+    final controller = createContainer(
+      platform,
+    ).read(sessionInfraControllerProvider.notifier);
 
     await controller.activate();
     await controller.deactivate();
@@ -75,8 +76,9 @@ void main() {
     'N5: starts the foreground service without asking for anything',
     () async {
       final platform = _FakeSessionInfraPlatform();
-      final controller = createContainer(platform)
-          .read(sessionInfraControllerProvider.notifier);
+      final controller = createContainer(
+        platform,
+      ).read(sessionInfraControllerProvider.notifier);
 
       await controller.activate();
 
@@ -90,8 +92,9 @@ void main() {
     'activation and deactivation are serialized around service ownership',
     () async {
       final platform = _FakeSessionInfraPlatform();
-      final controller = createContainer(platform)
-          .read(sessionInfraControllerProvider.notifier);
+      final controller = createContainer(
+        platform,
+      ).read(sessionInfraControllerProvider.notifier);
 
       await Future.wait([controller.activate(), controller.deactivate()]);
 
@@ -107,8 +110,9 @@ void main() {
     () async {
       final platform = _FakeSessionInfraPlatform()
         ..startError = Exception('boom');
-      final controller = createContainer(platform)
-          .read(sessionInfraControllerProvider.notifier);
+      final controller = createContainer(
+        platform,
+      ).read(sessionInfraControllerProvider.notifier);
 
       await controller.activate();
       await controller.deactivate();
@@ -134,7 +138,7 @@ void main() {
 }
 
 class _DelayedRunningCheckPlatform extends _FakeSessionInfraPlatform {
-  new(this.completer);
+  _DelayedRunningCheckPlatform(this.completer);
 
   final Completer<bool> completer;
 

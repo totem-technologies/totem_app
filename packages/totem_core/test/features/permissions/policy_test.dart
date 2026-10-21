@@ -85,34 +85,41 @@ void main() {
 
   group('recoveryFor', () {
     test('granted with no problem needs nothing', () {
-      check(recoveryFor(MediaPermission.granted, null, ios))
-          .equals(RecoveryAction.none);
+      check(
+        recoveryFor(MediaPermission.granted, null, ios),
+      ).equals(RecoveryAction.none);
     });
 
     test('X11/A1: unknown and denied can be asked again', () {
       for (final platform in [ios, android, chrome]) {
-        check(recoveryFor(MediaPermission.unknown, null, platform))
-            .equals(RecoveryAction.request);
-        check(recoveryFor(MediaPermission.denied, null, platform))
-            .equals(RecoveryAction.request);
+        check(
+          recoveryFor(MediaPermission.unknown, null, platform),
+        ).equals(RecoveryAction.request);
+        check(
+          recoveryFor(MediaPermission.denied, null, platform),
+        ).equals(RecoveryAction.request);
       }
     });
 
     test('I2/A2: blocked on native opens app Settings', () {
-      check(recoveryFor(MediaPermission.blocked, null, ios))
-          .equals(RecoveryAction.openAppSettings);
-      check(recoveryFor(MediaPermission.blocked, null, android))
-          .equals(RecoveryAction.openAppSettings);
+      check(
+        recoveryFor(MediaPermission.blocked, null, ios),
+      ).equals(RecoveryAction.openAppSettings);
+      check(
+        recoveryFor(MediaPermission.blocked, null, android),
+      ).equals(RecoveryAction.openAppSettings);
     });
 
     test('W3/WF2: blocked on web shows browser site settings', () {
-      check(recoveryFor(MediaPermission.blocked, null, chrome))
-          .equals(RecoveryAction.showBrowserSiteSettings);
+      check(
+        recoveryFor(MediaPermission.blocked, null, chrome),
+      ).equals(RecoveryAction.showBrowserSiteSettings);
     });
 
     test('WC3/WF4: blocked by the OS shows system privacy settings', () {
-      check(recoveryFor(MediaPermission.blockedBySystem, null, chrome))
-          .equals(RecoveryAction.showSystemPrivacySettings);
+      check(
+        recoveryFor(MediaPermission.blockedBySystem, null, chrome),
+      ).equals(RecoveryAction.showSystemPrivacySettings);
     });
 
     test('browser and OS settings steps are only offered on web', () {
@@ -131,27 +138,32 @@ void main() {
     });
 
     test('I3: restricted is explained, not fixable here', () {
-      check(recoveryFor(MediaPermission.restricted, null, ios))
-          .equals(RecoveryAction.explainRestricted);
+      check(
+        recoveryFor(MediaPermission.restricted, null, ios),
+      ).equals(RecoveryAction.explainRestricted);
     });
 
     test('X9/X10: a device problem with the permission fine is retried', () {
       for (final problem in DeviceProblem.values) {
-        check(recoveryFor(MediaPermission.granted, problem, chrome))
-            .equals(RecoveryAction.retry);
+        check(
+          recoveryFor(MediaPermission.granted, problem, chrome),
+        ).equals(RecoveryAction.retry);
       }
     });
 
     test('a device problem beats an unknown permission on web', () {
-      check(recoveryFor(MediaPermission.unknown, DeviceProblem.inUse, chrome))
-          .equals(RecoveryAction.retry);
+      check(
+        recoveryFor(MediaPermission.unknown, DeviceProblem.inUse, chrome),
+      ).equals(RecoveryAction.retry);
     });
 
     test('X13: a refusal beats a device problem', () {
-      check(recoveryFor(MediaPermission.blocked, DeviceProblem.lost, chrome))
-          .equals(RecoveryAction.showBrowserSiteSettings);
-      check(recoveryFor(MediaPermission.denied, DeviceProblem.lost, android))
-          .equals(RecoveryAction.request);
+      check(
+        recoveryFor(MediaPermission.blocked, DeviceProblem.lost, chrome),
+      ).equals(RecoveryAction.showBrowserSiteSettings);
+      check(
+        recoveryFor(MediaPermission.denied, DeviceProblem.lost, android),
+      ).equals(RecoveryAction.request);
     });
 
     test('WS5: unsupported in an in-app browser suggests a real browser', () {
@@ -160,13 +172,15 @@ void main() {
         os: HostOs.ios,
         inAppBrowser: true,
       );
-      check(recoveryFor(MediaPermission.unsupported, null, inApp))
-          .equals(RecoveryAction.openInBrowser);
+      check(
+        recoveryFor(MediaPermission.unsupported, null, inApp),
+      ).equals(RecoveryAction.openInBrowser);
     });
 
     test('W1: unsupported elsewhere is explained', () {
-      check(recoveryFor(MediaPermission.unsupported, null, chrome))
-          .equals(RecoveryAction.explainUnsupported);
+      check(
+        recoveryFor(MediaPermission.unsupported, null, chrome),
+      ).equals(RecoveryAction.explainUnsupported);
     });
   });
 
@@ -193,8 +207,9 @@ void main() {
     test('X2: native waits for a grant, so only the user prompts', () {
       for (final platform in [ios, android]) {
         for (final permission in MediaPermission.values) {
-          check(capturesAllowed(permission, platform))
-              .equals(permission == MediaPermission.granted);
+          check(
+            capturesAllowed(permission, platform),
+          ).equals(permission == MediaPermission.granted);
         }
       }
     });
@@ -207,8 +222,9 @@ void main() {
         MediaPermission.unsupported,
       };
       for (final permission in MediaPermission.values) {
-        check(capturesAllowed(permission, chrome))
-            .equals(!failing.contains(permission));
+        check(
+          capturesAllowed(permission, chrome),
+        ).equals(!failing.contains(permission));
       }
     });
   });
@@ -224,12 +240,15 @@ void main() {
   group('userCaptureStep', () {
     test('X6: native asks before capturing when it may ask', () {
       for (final platform in [ios, android]) {
-        check(userCaptureStep(MediaPermission.granted, platform))
-            .equals(UserCaptureStep.capture);
-        check(userCaptureStep(MediaPermission.unknown, platform))
-            .equals(UserCaptureStep.requestFirst);
-        check(userCaptureStep(MediaPermission.denied, platform))
-            .equals(UserCaptureStep.requestFirst);
+        check(
+          userCaptureStep(MediaPermission.granted, platform),
+        ).equals(UserCaptureStep.capture);
+        check(
+          userCaptureStep(MediaPermission.unknown, platform),
+        ).equals(UserCaptureStep.requestFirst);
+        check(
+          userCaptureStep(MediaPermission.denied, platform),
+        ).equals(UserCaptureStep.requestFirst);
       }
     });
 
@@ -245,8 +264,9 @@ void main() {
 
     test('WS1/WF2: web always tries, since queries may be stale', () {
       for (final permission in MediaPermission.values) {
-        check(userCaptureStep(permission, chrome))
-            .equals(UserCaptureStep.capture);
+        check(
+          userCaptureStep(permission, chrome),
+        ).equals(UserCaptureStep.capture);
       }
     });
   });

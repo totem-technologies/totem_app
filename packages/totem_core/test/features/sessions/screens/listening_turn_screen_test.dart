@@ -187,11 +187,13 @@ void main() {
     when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
     when(() => devices.selectedCameraDeviceId).thenReturn(null);
     when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
-    when(() => devices.turnOn(MediaKind.microphone))
-        .thenAnswer((_) async => const TurnedOn());
+    when(
+      () => devices.turnOn(MediaKind.microphone),
+    ).thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
-    when(() => devices.turnOn(MediaKind.camera))
-        .thenAnswer((_) async => const TurnedOn());
+    when(
+      () => devices.turnOn(MediaKind.camera),
+    ).thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableCamera()).thenAnswer((_) async {});
     when(() => messaging.sendReaction(any())).thenAnswer((_) async {});
 
@@ -199,8 +201,9 @@ void main() {
       () =>
           localParticipant.getTrackPublicationBySource(TrackSource.microphone),
     ).thenReturn(null);
-    when(() => localParticipant.getTrackPublicationBySource(TrackSource.camera))
-        .thenReturn(null);
+    when(
+      () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
+    ).thenReturn(null);
     when(() => localParticipant.isCameraEnabled()).thenReturn(false);
   });
 
@@ -305,10 +308,12 @@ void main() {
 
           await pumpListeningTurn(tester, sessionState: state);
 
-          check(tester.widgetList(find.byType(ParticipantCard))).length
-              .equals(participantCount);
-          check(tester.widgetList(find.byType(ListeningTurnScreen))).length
-              .equals(1);
+          check(
+            tester.widgetList(find.byType(ParticipantCard)),
+          ).length.equals(participantCount);
+          check(
+            tester.widgetList(find.byType(ListeningTurnScreen)),
+          ).length.equals(1);
 
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
@@ -335,8 +340,9 @@ void main() {
         );
 
         await pumpListeningTurn(tester, sessionState: initialState);
-        check(_participantGridIdentities(tester))
-            .deepEquals(const ['user-2', 'user-3', 'user-1']);
+        check(
+          _participantGridIdentities(tester),
+        ).deepEquals(const ['user-2', 'user-3', 'user-1']);
 
         final reorderedState = _buildState(
           status: RoomStatus.active,
@@ -348,8 +354,9 @@ void main() {
         );
 
         await pumpListeningTurn(tester, sessionState: reorderedState);
-        check(_participantGridIdentities(tester))
-            .deepEquals(const ['user-3', 'user-1', 'user-2']);
+        check(
+          _participantGridIdentities(tester),
+        ).deepEquals(const ['user-3', 'user-1', 'user-2']);
       });
 
       testWidgets('places late-joining participant first when they are next', (
@@ -379,8 +386,9 @@ void main() {
         // Gianni should appear first because nextSpeaker points to him,
         // even though talkingOrder's next-in-line after keeper-1 is user-1.
         // The remaining participants follow in talking order (user-1, user-2).
-        check(_participantGridIdentities(tester))
-            .deepEquals(const ['gianni', 'user-1', 'user-2']);
+        check(
+          _participantGridIdentities(tester),
+        ).deepEquals(const ['gianni', 'user-1', 'user-2']);
       });
     });
 
@@ -397,11 +405,12 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        check(tester.widgetList(find.text('Waiting for the Keeper to join')))
-            .length
-            .equals(1);
-        check(tester.widgetList(find.byType(GroundingMarquee))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.text('Waiting for the Keeper to join')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.byType(GroundingMarquee)),
+        ).length.equals(1);
       });
     });
 
@@ -411,9 +420,9 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state, isKeeper: true);
 
-        check(tester.widgetList(find.text('Your session is about to start')))
-            .length
-            .equals(1);
+        check(
+          tester.widgetList(find.text('Your session is about to start')),
+        ).length.equals(1);
         check(tester.widgetList(find.text('STARTING SOON'))).length.equals(1);
       });
     });
@@ -426,14 +435,18 @@ void main() {
 
         await pumpListeningTurn(tester, sessionState: state);
 
-        check(tester.widgetList(find.bySemanticsLabel('Microphone off'))).length
-            .equals(1);
-        check(tester.widgetList(find.bySemanticsLabel('Camera off'))).length
-            .equals(1);
-        check(tester.widgetList(find.bySemanticsLabel('Chat'))).length
-            .equals(1);
-        check(tester.widgetList(find.bySemanticsLabel('Send reaction'))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.bySemanticsLabel('Microphone off')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.bySemanticsLabel('Camera off')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.bySemanticsLabel('Chat')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.bySemanticsLabel('Send reaction')),
+        ).length.equals(1);
 
         await tester.tap(find.bySemanticsLabel('Microphone off'));
         await tester.pumpAndSettle();
@@ -506,23 +519,27 @@ void main() {
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
           await tester.pump();
-          verify(() => messaging.sendReaction(EmojiBar.defaultEmojis[0]))
-              .called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[0]),
+          ).called(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
           await tester.pump();
-          verify(() => messaging.sendReaction(EmojiBar.defaultEmojis[1]))
-              .called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[1]),
+          ).called(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
           await tester.pump();
-          verify(() => messaging.sendReaction(EmojiBar.defaultEmojis[2]))
-              .called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[2]),
+          ).called(1);
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
           await tester.pump();
-          verify(() => messaging.sendReaction(EmojiBar.defaultEmojis[3]))
-              .called(1);
+          verify(
+            () => messaging.sendReaction(EmojiBar.defaultEmojis[3]),
+          ).called(1);
         });
       });
 

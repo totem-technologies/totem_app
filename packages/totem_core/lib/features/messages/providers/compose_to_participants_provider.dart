@@ -3,7 +3,10 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'compose_to_participants_provider.g.dart';
 
 class ComposeToParticipantsState {
-  const new({required this.selected, this.isSending = false});
+  const ComposeToParticipantsState({
+    required this.selected,
+    this.isSending = false,
+  });
 
   /// Recipient ids currently checked on the compose screen.
   ///

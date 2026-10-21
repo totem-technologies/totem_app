@@ -13,7 +13,7 @@ import 'package:totem_core/features/sessions/pre_join/capture.dart';
 /// two steps at once, so a permission change and a user action arriving
 /// together share one capture instead of racing.
 class CaptureLoop {
-  new({
+  CaptureLoop({
     required this.start,
     required this.stop,
     required this.isOn,

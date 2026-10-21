@@ -54,7 +54,7 @@ Stream<void> trackChanges(Track track) =>
 /// [changes] survive reconnects. [register] adds the room events that should
 /// report a change; handlers call the `notify` callback it receives.
 class LiveKitRoomBinding {
-  new(this.register);
+  LiveKitRoomBinding(this.register);
 
   final void Function(
     EventsListener<RoomEvent> listener,

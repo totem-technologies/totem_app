@@ -63,7 +63,7 @@ final config = Config(
 /// is still the first one. The slot below is what the page actually
 /// reads, so a new child replaces the old one in place.
 class _CatalogFrame extends StatefulWidget {
-  const new({required this.child});
+  const _CatalogFrame({required this.child});
 
   final Widget child;
 

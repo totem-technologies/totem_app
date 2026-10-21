@@ -6,7 +6,7 @@ import 'package:totem_core/features/sessions/media/local_media.dart';
 /// In-memory [LocalMedia] whose commands update its own state, like a real
 /// backend would after the SDK applies them.
 class FakeLocalMedia implements LocalMedia {
-  new({
+  FakeLocalMedia({
     this.isAvailable = true,
     this.hasMicrophoneTrack = false,
     this.hasCameraTrack = false,
@@ -146,7 +146,7 @@ class FakeLocalMedia implements LocalMedia {
 }
 
 class FakeMediaDeviceCatalog implements MediaDeviceCatalog {
-  new([this.current = const []]);
+  FakeMediaDeviceCatalog([this.current = const []]);
 
   List<MediaDeviceInfo> current;
   final _changes = StreamController<List<MediaDeviceInfo>>.broadcast();

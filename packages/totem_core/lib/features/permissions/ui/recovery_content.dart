@@ -13,7 +13,7 @@ import 'package:totem_core/features/permissions/policy.dart';
 
 @immutable
 class RecoverySection {
-  const new(this.steps, {this.heading});
+  const RecoverySection(this.steps, {this.heading});
 
   final String? heading;
   final List<String> steps;
@@ -21,7 +21,7 @@ class RecoverySection {
 
 @immutable
 class RecoveryContent {
-  const new({
+  const RecoveryContent({
     required this.action,
     required this.title,
     required this.message,
@@ -166,7 +166,7 @@ String mediaPurpose(MediaKind kind) => _Device(kind).why;
 }
 
 class _Device {
-  const new(this.kind);
+  const _Device(this.kind);
 
   final MediaKind kind;
 

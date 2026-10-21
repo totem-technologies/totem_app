@@ -220,8 +220,9 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      check(router.state.uri.path)
-          .equals('/messages/session/session-1/participants');
+      check(
+        router.state.uri.path,
+      ).equals('/messages/session/session-1/participants');
     },
   );
 }

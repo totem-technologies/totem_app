@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:totem_core/core/config/theme.dart';
 
 class GroundingMarquee extends StatefulWidget {
-  const new({super.key});
+  const GroundingMarquee({super.key});
 
   @override
   State<GroundingMarquee> createState() => _GroundingMarqueeState();
@@ -91,7 +91,7 @@ class _GroundingMarqueeState extends State<GroundingMarquee>
 }
 
 class _Tip extends StatelessWidget {
-  const new({required this.text, super.key});
+  const _Tip({required this.text, super.key});
 
   final String text;
 

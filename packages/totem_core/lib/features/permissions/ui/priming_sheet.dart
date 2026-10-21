@@ -43,7 +43,7 @@ Future<void> showMediaPrimingSheet(BuildContext context) =>
     );
 
 class MediaPrimingSheet extends ConsumerWidget {
-  const new({super.key});
+  const MediaPrimingSheet({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -161,7 +161,7 @@ class MediaPrimingSheet extends ConsumerWidget {
 }
 
 class _MediaPermissionTile extends StatelessWidget {
-  const new({
+  const _MediaPermissionTile({
     required this.icon,
     required this.title,
     required this.description,
@@ -240,7 +240,7 @@ class _MediaPermissionTile extends StatelessWidget {
 }
 
 class _CircleCheckbox extends StatelessWidget {
-  const new({required this.isChecked});
+  const _CircleCheckbox({required this.isChecked});
 
   final bool isChecked;
 

@@ -14,7 +14,7 @@ import 'package:totem_core/features/permissions/policy.dart';
 
 @immutable
 class DeviceIntent {
-  const new({
+  const DeviceIntent({
     this.wanted = false,
     this.problem,
     this.refusedAs,

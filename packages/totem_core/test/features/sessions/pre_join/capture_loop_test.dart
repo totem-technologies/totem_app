@@ -124,8 +124,9 @@ void main() {
     await devices.loop.run();
 
     check(devices.starts).length.equals(1);
-    check(devices.loop.intentOf(MediaKind.camera).problem)
-        .equals(DeviceProblem.lost);
+    check(
+      devices.loop.intentOf(MediaKind.camera).problem,
+    ).equals(DeviceProblem.lost);
   });
 
   test('an unavailable device waits, then starts when run again', () async {

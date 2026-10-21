@@ -153,8 +153,9 @@ void main() {
         ),
       );
 
-      check(tester.widgetList(find.bySemanticsLabel('Choose camera'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Choose camera')),
+      ).length.equals(1);
       final caret = tester.widget<Semantics>(
         find.byWidgetPredicate(
           (widget) =>
@@ -203,8 +204,9 @@ void main() {
       check(tester.widgetList(cluster)).length.equals(1);
       check(tester.widgetList(camera)).length.equals(1);
       check(tester.widgetList(caret)).length.equals(1);
-      check(tester.getCenter(caret).dx)
-          .isGreaterThan(tester.getCenter(camera).dx);
+      check(
+        tester.getCenter(caret).dx,
+      ).isGreaterThan(tester.getCenter(camera).dx);
     });
 
     testWidgets('mobile web shows front/back camera options', (tester) async {
@@ -424,8 +426,9 @@ void main() {
       await tester.tap(find.text('Back'));
       await tester.pump();
 
-      check(selectedPositions)
-          .deepEquals([CameraFacing.back, CameraFacing.front]);
+      check(
+        selectedPositions,
+      ).deepEquals([CameraFacing.back, CameraFacing.front]);
     });
   });
 
@@ -473,8 +476,9 @@ void main() {
 
       await pumpCameraButton(tester);
 
-      check(tester.widgetList(find.bySemanticsLabel('Camera on'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera on')),
+      ).length.equals(1);
     });
 
     testWidgets('toggles the camera on and off', (tester) async {
@@ -485,15 +489,17 @@ void main() {
       await tester.pumpAndSettle();
 
       check(media.cameraCommands).deepEquals([true]);
-      check(tester.widgetList(find.bySemanticsLabel('Camera on'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera on')),
+      ).length.equals(1);
 
       await tester.tap(find.byType(ActionBarButton));
       await tester.pumpAndSettle();
 
       check(media.cameraCommands).deepEquals([true, false]);
-      check(tester.widgetList(find.bySemanticsLabel('Camera off'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera off')),
+      ).length.equals(1);
     });
 
     testWidgets('X6: asks for access first, then turns the camera on', (
@@ -605,9 +611,9 @@ void main() {
       await pumpCameraButton(tester);
       await tester.pump();
 
-      check(tester.widgetList(find.byType(ActionBarCameraSwitcherButton)))
-          .length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(ActionBarCameraSwitcherButton)),
+      ).length.equals(1);
 
       await tester.tap(find.byType(ActionBarButton));
       await tester.pump();

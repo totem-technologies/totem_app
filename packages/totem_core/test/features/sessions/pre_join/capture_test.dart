@@ -13,7 +13,7 @@ const _chrome = WebPlatform(browser: WebBrowser.chrome, os: HostOs.macos);
 /// One device's capture over time: the intent, whether it's capturing, and
 /// the permission, stepped through events the way a capture owner would.
 class _Device {
-  new(this.platform, {this.permission = MediaPermission.unknown});
+  _Device(this.platform, {this.permission = MediaPermission.unknown});
 
   final PlatformInfo platform;
   MediaPermission permission;

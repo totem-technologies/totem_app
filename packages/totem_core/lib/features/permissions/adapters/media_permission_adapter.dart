@@ -47,7 +47,7 @@ final mediaPermissionAdapterProvider = Provider<MediaPermissionAdapter>((ref) {
 /// Platforms without a permission model of their own, such as desktop builds
 /// and the test host. Access is assumed, and capture outcomes decide.
 class UnmanagedMediaPermissions implements MediaPermissionAdapter {
-  const new();
+  const UnmanagedMediaPermissions();
 
   @override
   Future<MediaPermission?> query(MediaKind kind) async =>

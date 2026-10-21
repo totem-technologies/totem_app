@@ -10,7 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 /// Own messages use the mauve fill + tail on the trailing corner; received
 /// messages use a bordered cream card with the tail on the leading corner.
 class MessageBubble extends StatefulWidget {
-  const new({
+  const MessageBubble({
     required this.text,
     required this.timestamp,
     required this.isOwn,
@@ -234,7 +234,11 @@ class _MessageBubbleState extends State<MessageBubble> {
 }
 
 class _MessageAction {
-  const new({required this.start, required this.text, required this.uri});
+  const _MessageAction({
+    required this.start,
+    required this.text,
+    required this.uri,
+  });
 
   final int start;
   final String text;

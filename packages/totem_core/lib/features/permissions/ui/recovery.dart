@@ -110,7 +110,7 @@ Future<void> showMediaRecoveryDialog(
 /// opening another dialog. While an action started here runs, it stays open
 /// so the action's outcome can be shown.
 class MediaRecoveryDialog extends ConsumerStatefulWidget {
-  const new({required this.control, super.key});
+  const MediaRecoveryDialog({required this.control, super.key});
 
   final MediaControl control;
 
@@ -260,7 +260,7 @@ class _MediaRecoveryDialogState extends ConsumerState<MediaRecoveryDialog> {
 }
 
 class RecoverySectionView extends StatelessWidget {
-  const new({required this.section, super.key});
+  const RecoverySectionView({required this.section, super.key});
 
   final RecoverySection section;
 
@@ -305,7 +305,7 @@ class RecoverySectionView extends StatelessWidget {
 /// Copies the page link for opening in a real browser (WS5), and says so
 /// for a moment, since copying shows nothing by itself.
 class _CopyLinkButton extends StatefulWidget {
-  const new({required this.label});
+  const _CopyLinkButton({required this.label});
 
   final String label;
 
@@ -346,7 +346,7 @@ class _CopyLinkButtonState extends State<_CopyLinkButton> {
 ///
 /// Renders nothing while there's nothing to fix.
 class MediaRecoveryBanner extends ConsumerWidget {
-  const new({required this.control, super.key});
+  const MediaRecoveryBanner({required this.control, super.key});
 
   final MediaControl control;
 

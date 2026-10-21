@@ -35,7 +35,7 @@ enum MediaPermission {
 
 @immutable
 class MediaPermissions {
-  const new({
+  const MediaPermissions({
     this.camera = MediaPermission.unknown,
     this.microphone = MediaPermission.unknown,
   });
@@ -94,7 +94,7 @@ enum DeviceProblem {
 /// Why starting a capture failed.
 @immutable
 sealed class CaptureFailure {
-  const new();
+  const CaptureFailure();
 
   /// The device's problem, or null when the permission explains the failure.
   DeviceProblem? get problem;
@@ -102,7 +102,7 @@ sealed class CaptureFailure {
 
 /// The platform refused: the permission explains it.
 final class PermissionRefused extends CaptureFailure {
-  const new(this.permission);
+  const PermissionRefused(this.permission);
 
   final MediaPermission permission;
 
@@ -122,7 +122,7 @@ final class PermissionRefused extends CaptureFailure {
 
 /// The permission was fine, but the device didn't work.
 final class DeviceFailed extends CaptureFailure {
-  const new(this.problem);
+  const DeviceFailed(this.problem);
 
   @override
   final DeviceProblem problem;

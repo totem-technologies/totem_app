@@ -15,8 +15,9 @@ void main() {
     });
 
     test('does not infer internet loss from a closed signaling connection', () {
-      check(isInternetDisconnectReason(DisconnectReason.disconnected))
-          .equals(false);
+      check(
+        isInternetDisconnectReason(DisconnectReason.disconnected),
+      ).equals(false);
     });
   });
 

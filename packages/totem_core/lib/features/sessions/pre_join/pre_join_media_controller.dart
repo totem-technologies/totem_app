@@ -23,7 +23,7 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 part 'pre_join_media_controller.g.dart';
 
 abstract class PreJoinPreviewTrackFactory {
-  const new();
+  const PreJoinPreviewTrackFactory();
 
   Future<LocalVideoTrack?> createVideoTrack(CameraCaptureOptions cameraOptions);
 
@@ -31,7 +31,7 @@ abstract class PreJoinPreviewTrackFactory {
 }
 
 class LiveKitPreJoinPreviewTrackFactory extends PreJoinPreviewTrackFactory {
-  const new();
+  const LiveKitPreJoinPreviewTrackFactory();
 
   @override
   Future<LocalVideoTrack?> createVideoTrack(
@@ -66,7 +66,7 @@ class PreJoinMediaOperationQueue {
         // A tail created by this class is non-throwing. This additionally
         // protects callers if the implementation changes in the future.
       }
-      return await operation();
+      return operation();
     }();
 
     _tail = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
@@ -219,7 +219,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
       await _disposeTrack(track, 'camera');
       // Abandoned by a hidden tab, not failed: it starts again when visible.
       if (!_isCurrent(generation)) return null;
-      return await _permissions.recordCaptureFailure(
+      return _permissions.recordCaptureFailure(
         MediaKind.camera,
         error,
         stackTrace,
@@ -250,7 +250,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     } catch (error, stackTrace) {
       await _disposeTrack(track, 'microphone');
       if (!_isLive) return null;
-      return await _permissions.recordCaptureFailure(
+      return _permissions.recordCaptureFailure(
         MediaKind.microphone,
         error,
         stackTrace,

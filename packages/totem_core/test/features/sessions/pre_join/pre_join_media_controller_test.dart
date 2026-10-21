@@ -44,7 +44,6 @@ class _PreviewTrackFactory extends PreJoinPreviewTrackFactory {
 }
 
 class _ForegroundMonitor implements PreJoinForegroundMonitor {
-  // ignore: unnecessary_type_name_in_constructor
   _ForegroundMonitor.create({required this.isForeground});
 
   final changesController = StreamController<bool>.broadcast();
@@ -77,7 +76,7 @@ class _DelayedCameraFactory extends _PreviewTrackFactory {
   ) async {
     cameraRequested = true;
     await gate.future;
-    return await super.createVideoTrack(cameraOptions);
+    return super.createVideoTrack(cameraOptions);
   }
 }
 
@@ -89,7 +88,7 @@ class _DelayedMicrophoneFactory extends _PreviewTrackFactory {
   Future<LocalAudioTrack?> createAudioTrack() async {
     microphoneRequested = true;
     await gate.future;
-    return await super.createAudioTrack();
+    return super.createAudioTrack();
   }
 }
 
@@ -223,8 +222,9 @@ void main() {
 
       final state = await _waitUntilInitialized(container);
       check(state.camera.phase).equals(PreJoinCapturePhase.waitingForAccess);
-      check(state.microphone.phase)
-          .equals(PreJoinCapturePhase.waitingForAccess);
+      check(
+        state.microphone.phase,
+      ).equals(PreJoinCapturePhase.waitingForAccess);
       check(state.preferences.isCameraOn).isFalse();
       check(state.preferences.isMicOn).isFalse();
       check(factory.videoTracks).isEmpty();
@@ -335,8 +335,9 @@ void main() {
 
       final failed = await _waitUntilInitialized(container);
       check(failed.microphone.phase).equals(PreJoinCapturePhase.unavailable);
-      check(_permission(container, MediaKind.microphone))
-          .equals(MediaPermission.blocked);
+      check(
+        _permission(container, MediaKind.microphone),
+      ).equals(MediaPermission.blocked);
 
       // Allowed in the browser's site settings, without a reload.
       factory.allowed = true;
@@ -398,8 +399,9 @@ void main() {
         preJoinMediaControllerProvider(_sessionSlug),
       );
       check(state.camera.track).identicalTo(factory.videoTracks.last);
-      check(state.preferences.cameraOptions.cameraPosition)
-          .equals(CameraPosition.back);
+      check(
+        state.preferences.cameraOptions.cameraPosition,
+      ).equals(CameraPosition.back);
     },
   );
 
@@ -448,8 +450,9 @@ void main() {
     check(state.camera.phase).equals(PreJoinCapturePhase.unavailable);
     check(state.microphone.phase).equals(PreJoinCapturePhase.ready);
     check(state.camera.problem).equals(DeviceProblem.notFound);
-    check(_permission(container, MediaKind.microphone))
-        .equals(MediaPermission.granted);
+    check(
+      _permission(container, MediaKind.microphone),
+    ).equals(MediaPermission.granted);
 
     final media = await container
         .read(preJoinMediaControllerProvider(_sessionSlug).notifier)
@@ -465,8 +468,9 @@ void main() {
     final state = await _waitUntilInitialized(container);
 
     check(state.camera.phase).equals(PreJoinCapturePhase.unavailable);
-    check(_permission(container, MediaKind.camera))
-        .equals(MediaPermission.blocked);
+    check(
+      _permission(container, MediaKind.camera),
+    ).equals(MediaPermission.blocked);
   });
 
   test(
@@ -771,8 +775,9 @@ void main() {
       check(detached.camera.track).isNull();
       check(detached.camera.phase).equals(PreJoinCapturePhase.uninitialized);
       check(detached.microphone.track).isNull();
-      check(detached.microphone.phase)
-          .equals(PreJoinCapturePhase.uninitialized);
+      check(
+        detached.microphone.phase,
+      ).equals(PreJoinCapturePhase.uninitialized);
 
       container.dispose();
       await Future<void>.delayed(Duration.zero);
@@ -814,8 +819,9 @@ void main() {
     check(factory.videoTracks).length.equals(2);
     check(factory.audioTracks).length.equals(2);
     check(second.cameraTrack).not((it) => it.identicalTo(first.cameraTrack));
-    check(second.microphoneTrack)
-        .not((it) => it.identicalTo(first.microphoneTrack));
+    check(
+      second.microphoneTrack,
+    ).not((it) => it.identicalTo(first.microphoneTrack));
     verifyNever(first.cameraTrack!.stop);
     verifyNever(first.microphoneTrack!.stop);
   });

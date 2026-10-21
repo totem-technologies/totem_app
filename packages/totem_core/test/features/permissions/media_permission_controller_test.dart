@@ -85,13 +85,15 @@ void main() {
     await _loaded(container);
     final notifier = container.read(mediaPermissionControllerProvider.notifier);
 
-    check(await notifier.request(MediaKind.microphone))
-        .equals(MediaPermission.blocked);
+    check(
+      await notifier.request(MediaKind.microphone),
+    ).equals(MediaPermission.blocked);
     // Android's status keeps saying denied, which is unknown.
     adapter.queries[MediaKind.microphone] = MediaPermission.unknown;
     await notifier.refresh();
-    check(container.read(mediaPermissionControllerProvider)!.microphone)
-        .equals(MediaPermission.blocked);
+    check(
+      container.read(mediaPermissionControllerProvider)!.microphone,
+    ).equals(MediaPermission.blocked);
   });
 
   test('X5: a grant made in Settings is picked up on resume', () async {
@@ -115,8 +117,9 @@ void main() {
     );
     await pumpEventQueue();
 
-    check(container.read(mediaPermissionControllerProvider)!.microphone)
-        .equals(MediaPermission.granted);
+    check(
+      container.read(mediaPermissionControllerProvider)!.microphone,
+    ).equals(MediaPermission.granted);
   });
 
   test('X12/WC1: a platform change event refreshes', () async {
@@ -129,8 +132,9 @@ void main() {
       ..emitChange();
     await pumpEventQueue();
 
-    check(container.read(mediaPermissionControllerProvider)!.camera)
-        .equals(MediaPermission.granted);
+    check(
+      container.read(mediaPermissionControllerProvider)!.camera,
+    ).equals(MediaPermission.granted);
   });
 
   test('I8: overlapping refreshes end on the latest answer', () async {
@@ -146,8 +150,9 @@ void main() {
     adapter.queryGate!.complete();
     await Future.wait([first, second]);
 
-    check(container.read(mediaPermissionControllerProvider)!.camera)
-        .equals(MediaPermission.granted);
+    check(
+      container.read(mediaPermissionControllerProvider)!.camera,
+    ).equals(MediaPermission.granted);
   });
 
   test('concurrent requests for one device share one prompt', () async {
@@ -198,8 +203,9 @@ void main() {
         mediaPermissionControllerProvider.notifier,
       )..recordCaptureSuccess(MediaKind.camera);
       await notifier.refresh();
-      check(container.read(mediaPermissionControllerProvider)!.camera)
-          .equals(MediaPermission.granted);
+      check(
+        container.read(mediaPermissionControllerProvider)!.camera,
+      ).equals(MediaPermission.granted);
     });
 
     test('W3: a refused capture records the permission', () async {
@@ -215,8 +221,9 @@ void main() {
           'NotAllowedError: Permission denied',
         ),
       ).equals(const PermissionRefused(MediaPermission.blocked));
-      check(container.read(mediaPermissionControllerProvider)!.camera)
-          .equals(MediaPermission.blocked);
+      check(
+        container.read(mediaPermissionControllerProvider)!.camera,
+      ).equals(MediaPermission.blocked);
     });
 
     test('X9: a device failure leaves the permission alone', () async {
@@ -232,8 +239,9 @@ void main() {
           'NotReadableError: Could not start video source',
         ),
       ).equals(const DeviceFailed(DeviceProblem.inUse));
-      check(container.read(mediaPermissionControllerProvider)!.camera)
-          .equals(MediaPermission.granted);
+      check(
+        container.read(mediaPermissionControllerProvider)!.camera,
+      ).equals(MediaPermission.granted);
     });
 
     test(
@@ -253,8 +261,9 @@ void main() {
             'NotReadableError: Could not start video source',
           ),
         ).equals(const DeviceFailed(DeviceProblem.inUse));
-        check(container.read(mediaPermissionControllerProvider)!.camera)
-            .equals(MediaPermission.unknown);
+        check(
+          container.read(mediaPermissionControllerProvider)!.camera,
+        ).equals(MediaPermission.unknown);
         check(
           recoveryFor(MediaPermission.unknown, DeviceProblem.inUse, _chrome),
         ).equals(RecoveryAction.retry);
@@ -263,8 +272,9 @@ void main() {
         await container
             .read(mediaPermissionControllerProvider.notifier)
             .refresh();
-        check(container.read(mediaPermissionControllerProvider)!.camera)
-            .equals(MediaPermission.unknown);
+        check(
+          container.read(mediaPermissionControllerProvider)!.camera,
+        ).equals(MediaPermission.unknown);
       },
     );
 
@@ -274,17 +284,20 @@ void main() {
         platform: _firefox,
       );
       await _loaded(container);
-      check(await fail(container, MediaKind.camera, 'NotFoundError'))
-          .equals(const PermissionRefused(MediaPermission.blockedBySystem));
+      check(
+        await fail(container, MediaKind.camera, 'NotFoundError'),
+      ).equals(const PermissionRefused(MediaPermission.blockedBySystem));
     });
 
     test('X4: an unrecognized failure is a failed device', () async {
       final container = _container(FakeMediaPermissionAdapter());
       await _loaded(container);
-      check(await fail(container, MediaKind.camera, StateError('boom')))
-          .equals(const DeviceFailed(DeviceProblem.failed));
-      check(container.read(mediaPermissionControllerProvider)!.camera)
-          .equals(MediaPermission.granted);
+      check(
+        await fail(container, MediaKind.camera, StateError('boom')),
+      ).equals(const DeviceFailed(DeviceProblem.failed));
+      check(
+        container.read(mediaPermissionControllerProvider)!.camera,
+      ).equals(MediaPermission.granted);
     });
   });
 
