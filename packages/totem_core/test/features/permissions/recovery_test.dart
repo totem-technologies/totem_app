@@ -379,6 +379,9 @@ void main() {
     await tester.tap(find.text('Go'));
     await tester.pumpAndSettle();
     check(find.text('Check again').evaluate()).length.equals(1);
+    // The fix is the dialog's one prominent action.
+    check(find.widgetWithText(ElevatedButton, 'Check again').evaluate()).length
+        .equals(1);
 
     // Still blocked: the dialog stays.
     await tester.tap(find.text('Check again'));

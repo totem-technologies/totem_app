@@ -106,6 +106,7 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
             )
           : Badge(
               isLabelVisible: widget.needsAttention,
+              backgroundColor: AppTheme.attention,
               smallSize: 8,
               child: const TotemIcon(TotemIcons.microphoneOff),
             ),

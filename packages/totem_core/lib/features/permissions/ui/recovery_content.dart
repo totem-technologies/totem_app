@@ -260,12 +260,13 @@ RecoveryContent _browserSiteSettings(_Device device, WebPlatform platform) {
       'Firefox forgets temporary blocks on reload, so a refresh is often '
           'all it takes.',
     ),
+    // Chrome and Edge report the change to the page, so Check again works
+    // without a reload.
     (WebBrowser.chrome || WebBrowser.edge, HostOs.android) => (
       [
         RecoverySection([
           'Tap the icon to the left of the address bar.',
           'Tap Permissions, then turn on ${device.title}.',
-          reload,
         ]),
       ],
       // The site can be allowed while Android blocks the browser (W8).
@@ -278,7 +279,6 @@ RecoveryContent _browserSiteSettings(_Device device, WebPlatform platform) {
         RecoverySection([
           'Click the icon to the left of the address bar.',
           'Turn on ${device.title}, or set it to Allow.',
-          reload,
         ]),
       ],
       null,

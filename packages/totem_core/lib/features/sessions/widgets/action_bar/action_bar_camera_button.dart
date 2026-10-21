@@ -677,6 +677,7 @@ class _CameraIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return Badge(
       isLabelVisible: needsAttention && !isOn,
+      backgroundColor: AppTheme.attention,
       smallSize: 8,
       child: TotemIcon(isOn ? TotemIcons.cameraOn : TotemIcons.cameraOff),
     );

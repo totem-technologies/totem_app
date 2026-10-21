@@ -88,6 +88,20 @@ void main() {
   });
 
   group('browser site settings', () {
+    test('WS1: Chrome and Edge pick the change up without a reload', () {
+      for (final browser in [WebBrowser.chrome, WebBrowser.edge]) {
+        for (final os in [HostOs.macos, HostOs.android]) {
+          final steps = recoveryContent(
+            MediaKind.camera,
+            MediaPermission.blocked,
+            null,
+            _web(browser, os: os),
+          ).sections.expand((section) => section.steps);
+          check(steps.any((step) => step.contains('Reload'))).isFalse();
+        }
+      }
+    });
+
     test('Safari with a macOS user agent shows Mac and iPad steps', () {
       final content = recoveryContent(
         MediaKind.camera,

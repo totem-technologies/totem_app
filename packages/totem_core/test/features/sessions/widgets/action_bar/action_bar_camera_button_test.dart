@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/permissions/adapters/media_permission_adapter.dart';
 import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/platform_info.dart';
@@ -526,6 +527,10 @@ void main() {
       check(
         tester.widgetList(find.bySemanticsLabel('Camera off, needs attention')),
       ).length.equals(1);
+      // Visible against the muted button, which uses the theme's error color.
+      final badge = tester.widget<Badge>(find.byType(Badge));
+      check(badge.isLabelVisible).isTrue();
+      check(badge.backgroundColor).equals(AppTheme.attention);
 
       await tester.tap(find.byType(ActionBarButton));
       await tester.pumpAndSettle();

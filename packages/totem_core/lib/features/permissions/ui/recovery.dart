@@ -174,7 +174,17 @@ class _MediaRecoveryDialogState extends ConsumerState<MediaRecoveryDialog> {
       ..listen(mediaPermissionControllerProvider, (_, _) => _closeIfFixed())
       ..listen(_control.problem, (_, _) => _closeIfFixed());
 
-    final primary = _primaryAction(content);
+    final checkAgain = content.canCheckAgain
+        ? () => unawaited(_act(() => _control.turnOn()))
+        : null;
+    final primary =
+        _primaryAction(content) ??
+        (checkAgain == null
+            ? null
+            : ElevatedButton(
+                onPressed: _acting ? null : checkAgain,
+                child: const Text('Check again'),
+              ));
     return AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -200,20 +210,29 @@ class _MediaRecoveryDialogState extends ConsumerState<MediaRecoveryDialog> {
           ),
         ),
       ),
-      actionsAlignment: MainAxisAlignment.center,
+      // The fix is the one prominent action; closing is secondary.
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
-        if (content.canCheckAgain)
-          TextButton(
-            onPressed: _acting
-                ? null
-                : () => unawaited(_act(() => _control.turnOn())),
-            child: const Text('Check again'),
+        SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 4,
+            children: [
+              ?primary,
+              // Both offered when the content has its own primary action.
+              if (checkAgain != null && content.actionLabel != null)
+                TextButton(
+                  onPressed: _acting ? null : checkAgain,
+                  child: const Text('Check again'),
+                ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-        ?primary,
+        ),
       ],
     );
   }
@@ -265,8 +284,13 @@ class RecoverySectionView extends StatelessWidget {
               CircleAvatar(
                 radius: 11,
                 backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-                child: Text('${index + 1}', style: theme.textTheme.labelSmall),
+                child: Text(
+                  '${index + 1}',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppTheme.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               Expanded(child: Text(step)),
             ],
