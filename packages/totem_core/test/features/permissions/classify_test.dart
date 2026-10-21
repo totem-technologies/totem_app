@@ -149,6 +149,18 @@ void main() {
       check(classifyCaptureError(StateError('boom'), ios)).isNull();
     });
 
+    test('X10: a native capture with no device is notFound', () {
+      for (final platform in [ios, android]) {
+        check(
+          classifyCaptureError(
+            'LiveKit Exception: [TrackCreateException] Failed to create '
+            'stream, at least 1 video or audio track should exist',
+            platform,
+          ),
+        ).equals(const DeviceFailed(DeviceProblem.notFound));
+      }
+    });
+
     test('I7: a mic asked for while in the background is a device failure', () {
       check(
         classifyCaptureError(

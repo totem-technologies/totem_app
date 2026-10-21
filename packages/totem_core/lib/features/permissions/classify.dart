@@ -95,6 +95,9 @@ CaptureFailure? classifyCaptureError(
     IosApp() => switch (name) {
       'NotAllowedError' => const PermissionRefused(MediaPermission.blocked),
       'NotFoundError' => const DeviceFailed(DeviceProblem.notFound),
+      null when _isEmptyStream(_describe(error)) => const DeviceFailed(
+        DeviceProblem.notFound,
+      ),
       // The audio session checks microphone access before capture, and says
       // so in words rather than a DOMException name.
       null when _isMicrophoneAccessRefusal(_describe(error)) =>
@@ -108,6 +111,9 @@ CaptureFailure? classifyCaptureError(
     AndroidApp() => switch (name) {
       'NotAllowedError' => const PermissionRefused(MediaPermission.denied),
       'NotFoundError' => const DeviceFailed(DeviceProblem.notFound),
+      null when _isEmptyStream(_describe(error)) => const DeviceFailed(
+        DeviceProblem.notFound,
+      ),
       _ => null,
     },
     WebPlatform() => _classifyWebError(
@@ -164,6 +170,11 @@ CaptureFailure? _classifyWebError(
     _ => null,
   };
 }
+
+/// Native capture of a device that doesn't exist, such as the camera on a
+/// simulator, returns a stream with no tracks rather than an error name.
+bool _isEmptyStream(String message) =>
+    message.contains('at least 1 video or audio track should exist');
 
 bool _isMicrophoneAccessRefusal(String message) =>
     message.contains('Microphone permission is not granted') ||

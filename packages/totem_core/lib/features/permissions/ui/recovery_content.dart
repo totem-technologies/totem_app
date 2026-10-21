@@ -94,7 +94,7 @@ RecoveryContent recoveryContent(
         title: 'Your ${device.name} is busy',
         message:
             'Another app or browser tab is using your ${device.name}. Close '
-            'it, then try again.',
+            'it first.',
         // Chrome and Edge report a Windows privacy block the same way (WC4).
         helper: _isWindows(platform)
             ? 'Still busy? Check Windows Settings → Privacy & security → '
@@ -105,21 +105,19 @@ RecoveryContent recoveryContent(
       DeviceProblem.failed => RecoveryContent(
         action: action,
         title: "Your ${device.name} didn't start",
-        message:
-            'Something went wrong starting your ${device.name}. Try again.',
+        message: 'Something went wrong starting your ${device.name}.',
         actionLabel: 'Try again',
       ),
       DeviceProblem.lost => RecoveryContent(
         action: action,
         title: 'Your ${device.name} stopped',
-        message:
-            "It stopped working. Check that it's connected, then try again.",
+        message: "It stopped working. Check that it's connected.",
         actionLabel: 'Try again',
       ),
       DeviceProblem.notFound => RecoveryContent(
         action: action,
         title: 'No ${device.name} found',
-        message: 'Connect a ${device.name}, then try again.',
+        message: 'Connect a ${device.name}.',
         actionLabel: 'Try again',
       ),
     },

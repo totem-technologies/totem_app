@@ -217,16 +217,18 @@ class _MediaRecoveryDialogState extends ConsumerState<MediaRecoveryDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 4,
+            spacing: 10,
             children: [
               ?primary,
               // Both offered when the content has its own primary action.
               if (checkAgain != null && content.actionLabel != null)
-                TextButton(
+                OutlinedButton(
+                  style: _secondaryActionStyle(theme),
                   onPressed: _acting ? null : checkAgain,
                   child: const Text('Check again'),
                 ),
-              TextButton(
+              OutlinedButton(
+                style: _secondaryActionStyle(theme),
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Close'),
               ),
@@ -236,6 +238,16 @@ class _MediaRecoveryDialogState extends ConsumerState<MediaRecoveryDialog> {
       ],
     );
   }
+
+  /// Matches `ConfirmationDialog`'s Cancel, so every modal's secondary
+  /// actions look the same.
+  static ButtonStyle _secondaryActionStyle(ThemeData theme) =>
+      OutlinedButton.styleFrom(
+        side: BorderSide(color: theme.colorScheme.primary),
+        foregroundColor: theme.colorScheme.primary,
+        maximumSize: const Size(double.infinity, 52),
+        minimumSize: const Size(20, 52),
+      );
 
   Widget? _primaryAction(RecoveryContent content) {
     final label = content.actionLabel;

@@ -247,6 +247,20 @@ void main() {
     check(content.helper).isNotNull().contains('Apps → Firefox');
   });
 
+  test('retry messages leave the action to the Try again button', () {
+    for (final problem in DeviceProblem.values) {
+      final content = recoveryContent(
+        MediaKind.camera,
+        MediaPermission.granted,
+        problem,
+        _ios,
+      );
+      check(content.actionLabel).equals('Try again');
+      check(content.message.toLowerCase())
+          .not((it) => it.contains('try again'));
+    }
+  });
+
   test('X9: in use and not found read differently', () {
     final inUse = recoveryContent(
       MediaKind.camera,
