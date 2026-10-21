@@ -10,6 +10,7 @@ import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/permissions/policy.dart';
 import 'package:totem_core/features/permissions/ui/recovery_content.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 /// Turns a device on at the user's request, asking for permission first
 /// where the platform needs it, and explaining what to do when it can't work.
@@ -223,13 +224,12 @@ class _MediaRecoveryDialogState extends ConsumerState<MediaRecoveryDialog> {
               // Both offered when the content has its own primary action.
               if (checkAgain != null && content.actionLabel != null)
                 OutlinedButton(
-                  style: _secondaryActionStyle(theme),
                   onPressed: _acting ? null : checkAgain,
                   child: const Text('Check again'),
                 ),
-              OutlinedButton(
-                style: _secondaryActionStyle(theme),
-                onPressed: () => Navigator.of(context).pop(),
+              // The app's modal button, the same as every dialog's Cancel.
+              ConfirmationDialogButton.outlined(
+                onConfirm: () async => Navigator.of(context).pop(),
                 child: const Text('Close'),
               ),
             ],
@@ -238,16 +238,6 @@ class _MediaRecoveryDialogState extends ConsumerState<MediaRecoveryDialog> {
       ],
     );
   }
-
-  /// Matches `ConfirmationDialog`'s Cancel, so every modal's secondary
-  /// actions look the same.
-  static ButtonStyle _secondaryActionStyle(ThemeData theme) =>
-      OutlinedButton.styleFrom(
-        side: BorderSide(color: theme.colorScheme.primary),
-        foregroundColor: theme.colorScheme.primary,
-        maximumSize: const Size(double.infinity, 52),
-        minimumSize: const Size(20, 52),
-      );
 
   Widget? _primaryAction(RecoveryContent content) {
     final label = content.actionLabel;

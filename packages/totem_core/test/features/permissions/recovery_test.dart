@@ -9,6 +9,7 @@ import 'package:totem_core/features/permissions/media_permission_controller.dart
 import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/permissions/ui/recovery.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 import '../../setup.dart';
 import 'fake_media_permission_adapter.dart';
@@ -381,6 +382,10 @@ void main() {
     check(find.text('Check again').evaluate()).length.equals(1);
     // The fix is the dialog's one prominent action.
     check(find.widgetWithText(ElevatedButton, 'Check again').evaluate()).length
+        .equals(1);
+    // Closing uses the app's shared modal button.
+    check(find.widgetWithText(ConfirmationDialogButton, 'Close').evaluate())
+        .length
         .equals(1);
 
     // Still blocked: the dialog stays.

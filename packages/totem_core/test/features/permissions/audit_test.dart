@@ -43,6 +43,7 @@ const _sharedImports = {
   'package:totem_core/core/config/theme.dart',
   'package:totem_core/core/errors/error_handler.dart',
   'package:totem_core/shared/totem_icons.dart',
+  'package:totem_core/shared/widgets/confirmation_dialog.dart',
   'package:totem_core/shared/widgets/sheet_drag_handle.dart',
 };
 
