@@ -3,7 +3,11 @@ import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
 
 /// A display fact supplied by the session owner; [icon] may be any host icon.
 class SessionEntryFact {
-  const new({required this.icon, required this.label, this.value = ''});
+  const SessionEntryFact({
+    required this.icon,
+    required this.label,
+    this.value = '',
+  });
   final Widget icon;
   final String label;
   final String value;
@@ -12,7 +16,7 @@ class SessionEntryFact {
 /// Session timing, facts, and join action shown before entering the lobby.
 /// No session, admission, or availability state is inferred here.
 class SessionEntryInfoCard extends StatelessWidget {
-  const new({
+  const SessionEntryInfoCard({
     required this.facts,
     required this.dateLabel,
     required this.timeLabel,

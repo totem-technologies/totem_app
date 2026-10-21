@@ -126,8 +126,9 @@ final _fakeUser = UserSchema(
 List<dynamic> _sessionRouteOverrides(String slug) => [
   sessionTokenProvider(slug).overrideWith((_) async => throw Exception('test')),
   sessionProvider(slug).overrideWith((_) async => throw Exception('test')),
-  preJoinMediaControllerProvider(slug)
-      .overrideWith(_FakePreJoinMediaController.new),
+  preJoinMediaControllerProvider(
+    slug,
+  ).overrideWith(_FakePreJoinMediaController.new),
 ];
 
 /// Creates a test widget tree with a [ProviderScope] and [GoRouter].
@@ -202,14 +203,18 @@ void main() {
   group('buildHomeUrl', () {
     final router = WebTotemRouter(browser: _FakeBrowserEnvironment());
     test('returns correct URLs for each HomeRoute', () {
-      check(router.buildHomeUrl(HomeRoutes.home))
-          .equals('https://totem.org/users/dashboard/');
-      check(router.buildHomeUrl(HomeRoutes.spaces))
-          .equals('https://totem.org/spaces/');
-      check(router.buildHomeUrl(HomeRoutes.blog))
-          .equals('https://totem.org/blog/');
-      check(router.buildHomeUrl(HomeRoutes.profile))
-          .equals('https://totem.org/users/profile/');
+      check(
+        router.buildHomeUrl(HomeRoutes.home),
+      ).equals('https://totem.org/users/dashboard/');
+      check(
+        router.buildHomeUrl(HomeRoutes.spaces),
+      ).equals('https://totem.org/spaces/');
+      check(
+        router.buildHomeUrl(HomeRoutes.blog),
+      ).equals('https://totem.org/blog/');
+      check(
+        router.buildHomeUrl(HomeRoutes.profile),
+      ).equals('https://totem.org/users/profile/');
     });
   });
 
@@ -341,8 +346,9 @@ void main() {
 
       // Root always redirects to origin via the redirect screen.
       check(tester.widgetList(find.byType(Scaffold))).length.equals(1);
-      check(urlLauncher.launches)
-          .deepEquals([(url: 'https://totem.org/', window: '_self')]);
+      check(
+        urlLauncher.launches,
+      ).deepEquals([(url: 'https://totem.org/', window: '_self')]);
     });
   });
 }

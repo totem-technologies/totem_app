@@ -18,7 +18,7 @@ final analyticsProvider = Provider<AnalyticsService>((ref) {
 /// This service provides a centralized way to track events, screen views,
 /// user properties, and other analytics data across the app.
 class AnalyticsService {
-  new _();
+  AnalyticsService._();
   static final AnalyticsService instance = AnalyticsService._();
 
   var _isInitialized = false;

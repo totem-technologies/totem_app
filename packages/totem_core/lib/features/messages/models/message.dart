@@ -4,7 +4,7 @@ enum MessageStatus { sent, delivered, read }
 
 @immutable
 class Message {
-  const new({
+  const Message({
     required this.id,
     required this.conversationId,
     required this.senderId,

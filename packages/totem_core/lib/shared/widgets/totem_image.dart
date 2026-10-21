@@ -4,7 +4,7 @@ import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/network.dart';
 
 class TotemImage extends StatelessWidget {
-  const new({
+  const TotemImage({
     super.key,
     this.imageUrl,
     this.loadingPlaceholder,

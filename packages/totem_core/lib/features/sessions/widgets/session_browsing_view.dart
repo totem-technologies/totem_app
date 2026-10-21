@@ -5,7 +5,7 @@ import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
 /// Session details before joining. All imagery, descriptions, offers and
 /// navigation come from the host; this view does not load a session.
 class SessionBrowsingView extends StatelessWidget {
-  const new({
+  const SessionBrowsingView({
     required this.spaceName,
     required this.sessionName,
     required this.keeperName,

@@ -4,7 +4,7 @@ import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
 
 /// Contents of an entry sheet or modal; the caller owns its visibility.
 class SessionEntryNotice extends StatelessWidget {
-  const new({
+  const SessionEntryNotice({
     required this.kicker,
     required this.title,
     required this.children,
@@ -64,7 +64,11 @@ class SessionEntryNotice extends StatelessWidget {
 /// Late-join orientation content. [prompt] is supplied by the live Session;
 /// an absent prompt is not replaced with a fixture.
 class SessionOrientationNotice extends StatelessWidget {
-  const new({required this.onDone, super.key, this.prompt});
+  const SessionOrientationNotice({
+    required this.onDone,
+    super.key,
+    this.prompt,
+  });
 
   final String? prompt;
   final VoidCallback? onDone;

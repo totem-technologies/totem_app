@@ -5,7 +5,7 @@ import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
 /// The declined entry state. The offer is supplied by the caller (or omitted);
 /// selecting it and signing up are separate actions owned by the host.
 class SessionDeclinedView extends StatelessWidget {
-  const new({
+  const SessionDeclinedView({
     required this.message,
     required this.actionLabel,
     super.key,

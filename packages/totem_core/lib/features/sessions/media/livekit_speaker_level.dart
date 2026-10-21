@@ -11,7 +11,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 /// only when the microphone state or the level changes, so a quiet room
 /// costs no frames.
 class LiveKitSpeakerLevel extends StatelessWidget {
-  const new({
+  const LiveKitSpeakerLevel({
     required this.participant,
     required this.changes,
     required this.meter,

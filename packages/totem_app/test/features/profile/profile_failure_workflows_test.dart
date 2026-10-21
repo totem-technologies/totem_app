@@ -56,8 +56,9 @@ void main() {
       ],
     );
     when(() => auth.isAuthenticated).thenReturn(true);
-    when(() => auth.user)
-        .thenReturn(testUserSchema(slug: 'user', name: 'Alex'));
+    when(
+      () => auth.user,
+    ).thenReturn(testUserSchema(slug: 'user', name: 'Alex'));
   });
 
   tearDown(() => container.dispose());
@@ -74,19 +75,23 @@ void main() {
         name: 'Alex',
         profileAvatarSeed: 'new-seed',
       );
-      when(() => repository.updateCurrentUserProfilePicture(file))
-          .thenThrow(StateError('upload failed'));
+      when(
+        () => repository.updateCurrentUserProfilePicture(file),
+      ).thenThrow(StateError('upload failed'));
 
-      check(await controller().updateUserProfile(profileImage: file))
-          .equals(false);
+      check(
+        await controller().updateUserProfile(profileImage: file),
+      ).equals(false);
 
       reset(repository);
-      when(() => repository.updateCurrentUserProfilePicture(file))
-          .thenAnswer((_) async => true);
+      when(
+        () => repository.updateCurrentUserProfilePicture(file),
+      ).thenAnswer((_) async => true);
       when(() => repository.currentUser).thenAnswer((_) async => refreshed);
 
-      check(await controller().updateUserProfile(profileImage: file))
-          .equals(true);
+      check(
+        await controller().updateUserProfile(profileImage: file),
+      ).equals(true);
       verify(() => auth.syncUser(refreshed)).called(1);
     },
   );
@@ -104,8 +109,9 @@ void main() {
         ),
       ).thenThrow(StateError('save failed'));
 
-      check(await controller().updateUserProfile(name: 'New name'))
-          .equals(false);
+      check(
+        await controller().updateUserProfile(name: 'New name'),
+      ).equals(false);
 
       reset(repository);
       when(
@@ -117,8 +123,9 @@ void main() {
         ),
       ).thenAnswer((_) async => updated);
 
-      check(await controller().updateUserProfile(name: 'New name'))
-          .equals(true);
+      check(
+        await controller().updateUserProfile(name: 'New name'),
+      ).equals(true);
       verify(() => auth.syncUser(updated)).called(1);
     },
   );
@@ -127,13 +134,16 @@ void main() {
     'refresh failure after an image update is surfaced as a failed save',
     () async {
       final file = _MockFile();
-      when(() => repository.updateCurrentUserProfilePicture(file))
-          .thenAnswer((_) async => true);
-      when(() => repository.currentUser)
-          .thenThrow(StateError('refresh failed'));
+      when(
+        () => repository.updateCurrentUserProfilePicture(file),
+      ).thenAnswer((_) async => true);
+      when(
+        () => repository.currentUser,
+      ).thenThrow(StateError('refresh failed'));
 
-      check(await controller().updateUserProfile(profileImage: file))
-          .equals(false);
+      check(
+        await controller().updateUserProfile(profileImage: file),
+      ).equals(false);
     },
   );
 }

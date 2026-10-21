@@ -22,7 +22,8 @@ final SessionWaitingQueueButtonComponent =
       name: component.name ?? 'SessionWaitingQueueButton',
       path: component.path ?? 'components/sessions',
       docsBuilder: component.docsBuilder,
-      docComment: r'''Keeper's queue indicator. The host supplies the current waiting count and
+      docComment:
+          r'''Keeper's queue indicator. The host supplies the current waiting count and
 opens the admission surface; this control never owns the queue.''',
       stories: [
         $Default..$generatedName = 'Default',

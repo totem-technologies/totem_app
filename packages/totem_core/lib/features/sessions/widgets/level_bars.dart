@@ -8,11 +8,11 @@ import 'package:totem_core/core/utils/frame_paced_ticker.dart';
 /// They animate only when [levels] change, so a quiet microphone costs no
 /// frames.
 class LevelBars extends StatelessWidget {
-  const new({required this.levels, required this.color, super.key});
+  const LevelBars({required this.levels, required this.color, super.key});
 
   /// Bars shaped from a single [level] between 0 and 1: tallest in the
   /// middle, tapering to the sides.
-  factory fromLevel(
+  factory LevelBars.fromLevel(
     double level, {
     required int barCount,
     required Color color,
@@ -66,7 +66,7 @@ class LevelBars extends StatelessWidget {
 }
 
 class _AnimatedBars extends StatefulWidget {
-  const new({
+  const _AnimatedBars({
     required this.duration,
     required this.heights,
     required this.color,
@@ -155,7 +155,7 @@ class _AnimatedBarsState extends State<_AnimatedBars>
 
 /// Animation ticks repaint the bars without rebuilding or laying out widgets.
 class _BarsPainter extends CustomPainter {
-  new({
+  _BarsPainter({
     required this.animation,
     required this.heights,
     required this.color,

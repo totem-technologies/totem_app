@@ -18,7 +18,7 @@ enum AdmissionStatus {
 /// The caller owns [channel] and must dispose this controller before the room.
 /// Changes are emitted for UI consumers; read [status] after subscribing.
 class PendingAdmissionController {
-  new({
+  PendingAdmissionController({
     required this.channel,
     required this.keeperIdentity,
     DateTime Function()? now,
@@ -219,7 +219,7 @@ enum KeeperAdmissionStatus {
 
 /// A snapshot of one participant's latest admission attempt.
 final class KeeperAdmissionAttempt {
-  const new(this.request, this.status, {this.joinDeadline});
+  const KeeperAdmissionAttempt(this.request, this.status, {this.joinDeadline});
 
   final AdmissionRequest request;
   final KeeperAdmissionStatus status;
@@ -229,7 +229,7 @@ final class KeeperAdmissionAttempt {
 /// Keeper-side queue with one decision per sender + request ID. Decisions are
 /// retained until their request expires so reconnect resends get the same reply.
 class KeeperAdmissionController {
-  new({
+  KeeperAdmissionController({
     required this.channel,
     required this.keeperIdentity,
     DateTime Function()? now,

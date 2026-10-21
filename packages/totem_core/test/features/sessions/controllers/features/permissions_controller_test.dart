@@ -116,10 +116,12 @@ void main() {
         .requestPermissions();
 
     final permissions = container.read(permissionsControllerProvider);
-    check(permissions.asData?.value.cameraStatus)
-        .equals(PermissionStatus.granted);
-    check(permissions.asData?.value.microphoneStatus)
-        .equals(PermissionStatus.granted);
+    check(
+      permissions.asData?.value.cameraStatus,
+    ).equals(PermissionStatus.granted);
+    check(
+      permissions.asData?.value.microphoneStatus,
+    ).equals(PermissionStatus.granted);
     check(permissions.asData?.value)
         .has((state) => state!.notificationStatus, 'notificationStatus')
         .equals(PermissionStatus.granted);
@@ -170,7 +172,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (methodCall) async {
             if (methodCall.method == 'requestPermissions') {
-              return await requestCompleter.future;
+              return requestCompleter.future;
             }
 
             if (methodCall.method == 'checkPermissionStatus') {

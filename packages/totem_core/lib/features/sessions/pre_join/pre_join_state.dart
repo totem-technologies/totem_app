@@ -26,7 +26,7 @@ enum PreJoinJoinOutcome {
 
 @immutable
 class PreJoinMediaPreferences {
-  const new({
+  const PreJoinMediaPreferences({
     this.isSpeakerOn = true,
     this.isCameraOn = true,
     this.isMicOn = true,
@@ -55,9 +55,9 @@ class PreJoinMediaPreferences {
 
 @immutable
 class PreJoinCaptureState<T extends LocalTrack> {
-  const new({required this.phase, this.track, this.error});
+  const PreJoinCaptureState({required this.phase, this.track, this.error});
 
-  const new uninitialized()
+  const PreJoinCaptureState.uninitialized()
     : phase = PreJoinCapturePhase.uninitialized,
       track = null,
       error = null;
@@ -78,7 +78,7 @@ class PreJoinCaptureState<T extends LocalTrack> {
 
 @immutable
 class PreJoinMediaState {
-  const new({
+  const PreJoinMediaState({
     this.preferences = const PreJoinMediaPreferences(),
     this.camera = const PreJoinCaptureState<LocalVideoTrack>.uninitialized(),
     this.microphone =
@@ -119,7 +119,7 @@ class PreJoinMediaState {
 
 @immutable
 class PreJoinFlowState {
-  const new({
+  const PreJoinFlowState({
     this.phase = PreJoinFlowPhase.idle,
     this.sessionOptions,
     this.nativePermissionsGranted = false,

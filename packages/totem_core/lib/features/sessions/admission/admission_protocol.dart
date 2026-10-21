@@ -157,7 +157,7 @@ abstract final class AdmissionProtocol {
 }
 
 sealed class AdmissionPacket {
-  const new({
+  const AdmissionPacket({
     required this.id,
     required this.senderIdentity,
     required this.recipientIdentity,
@@ -171,7 +171,7 @@ sealed class AdmissionPacket {
 }
 
 final class AdmissionRequest extends AdmissionPacket {
-  const new({
+  const AdmissionRequest({
     required super.id,
     required super.senderIdentity,
     required super.recipientIdentity,
@@ -183,7 +183,7 @@ final class AdmissionRequest extends AdmissionPacket {
 }
 
 final class AdmissionCancel extends AdmissionPacket {
-  const new({
+  const AdmissionCancel({
     required super.id,
     required super.senderIdentity,
     required super.recipientIdentity,
@@ -193,7 +193,7 @@ final class AdmissionCancel extends AdmissionPacket {
 
 /// Keeper presence advertisement; it does not grant admission.
 final class AdmissionHello extends AdmissionPacket {
-  const new({
+  const AdmissionHello({
     required super.id,
     required super.senderIdentity,
     required super.recipientIdentity,
@@ -203,7 +203,7 @@ final class AdmissionHello extends AdmissionPacket {
 
 /// Receipt sent only from the participant's new normal room connection.
 final class AdmissionJoined extends AdmissionPacket {
-  const new({
+  const AdmissionJoined({
     required super.id,
     required super.senderIdentity,
     required super.recipientIdentity,
@@ -212,7 +212,7 @@ final class AdmissionJoined extends AdmissionPacket {
 }
 
 final class AdmissionJoinFailed extends AdmissionPacket {
-  const new({
+  const AdmissionJoinFailed({
     required super.id,
     required super.senderIdentity,
     required super.recipientIdentity,
@@ -221,7 +221,7 @@ final class AdmissionJoinFailed extends AdmissionPacket {
 }
 
 final class AdmissionDecision extends AdmissionPacket {
-  const new({
+  const AdmissionDecision({
     required super.id,
     required super.senderIdentity,
     required super.recipientIdentity,

@@ -8,7 +8,7 @@ import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
 
 /// The Widgetbook admission list hosted above the existing live Session UI.
 class KeeperAdmissionPanel extends StatefulWidget {
-  const new({
+  const KeeperAdmissionPanel({
     required this.requests,
     required this.onDecision,
     required this.onAdmitAll,

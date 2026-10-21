@@ -4,7 +4,12 @@ import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
 /// Keeper's queue indicator. The host supplies the current waiting count and
 /// opens the admission surface; this control never owns the queue.
 class SessionWaitingQueueButton extends StatelessWidget {
-  const new({required this.count, super.key, this.label, this.onPressed});
+  const SessionWaitingQueueButton({
+    required this.count,
+    super.key,
+    this.label,
+    this.onPressed,
+  });
 
   final int count;
   final String? label;

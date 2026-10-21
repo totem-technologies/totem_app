@@ -199,7 +199,7 @@ class _FatalSessionController extends _RetryableSessionController {
 }
 
 class _AdmissionTransport extends LiveKitAdmissionTransport {
-  new(super.room);
+  _AdmissionTransport(super.room);
 
   final eventsController = StreamController<AdmissionEvent>.broadcast(
     sync: true,
@@ -326,8 +326,9 @@ ProviderContainer _container({
         preJoinRequiresUsableMediaProvider.overrideWithValue(
           requireUsableMedia,
         ),
-        sessionTokenProvider(_slug)
-            .overrideWith((_) => getToken?.call() ?? Future.value(response)),
+        sessionTokenProvider(
+          _slug,
+        ).overrideWith((_) => getToken?.call() ?? Future.value(response)),
         sessionProvider(_slug).overrideWith((_) async {
           if (shouldFailPrecache?.call() ?? false) {
             throw StateError('Precache failed');
@@ -396,10 +397,12 @@ void main() {
           .requestJoin();
 
       check(outcome).equals(PreJoinJoinOutcome.confirmationRequired);
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.idle);
-      check(container.read(preJoinFlowControllerProvider(_slug)).sessionOptions)
-          .isNull();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).sessionOptions,
+      ).isNull();
     },
   );
 
@@ -431,12 +434,15 @@ void main() {
       final flow = container.read(
         preJoinFlowControllerProvider(_slug).notifier,
       );
-      check(await flow.requestJoin())
-          .equals(PreJoinJoinOutcome.retryableFailure);
-      check(container.read(preJoinFlowControllerProvider(_slug)).error)
-          .equals(terminalError);
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.idle);
+      check(
+        await flow.requestJoin(),
+      ).equals(PreJoinJoinOutcome.retryableFailure);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).error,
+      ).equals(terminalError);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
       verify(factory.videoTracks.single.stop).called(1);
       verify(factory.videoTracks.single.dispose).called(1);
       verify(factory.audioTracks.single.stop).called(1);
@@ -447,50 +453,62 @@ void main() {
     },
   );
 
-  test('guest waits without transferring media, then joins after admission room teardown', () async {
-    final factory = _TrackFactory();
-    _AdmissionFlow.connections = 0;
-    _AdmissionFlow.failConnection = false;
-    _AdmissionFlow.transport = null;
-    _SuccessfulSessionController.receivedMedia = null;
-    final container = _container(
-      factory: factory,
-      response: const JoinResponse(token: 'token', isAlreadyPresent: false),
-      sessionController: _SuccessfulSessionController.new,
-      keeperSlug: 'keeper',
-      flowController: _AdmissionFlow.new,
-    );
-    addTearDown(container.dispose);
-    await _waitForMedia(container);
+  test(
+    'guest waits without transferring media, then joins after admission room teardown',
+    () async {
+      final factory = _TrackFactory();
+      _AdmissionFlow.connections = 0;
+      _AdmissionFlow.failConnection = false;
+      _AdmissionFlow.transport = null;
+      _SuccessfulSessionController.receivedMedia = null;
+      final container = _container(
+        factory: factory,
+        response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+        sessionController: _SuccessfulSessionController.new,
+        keeperSlug: 'keeper',
+        flowController: _AdmissionFlow.new,
+      );
+      addTearDown(container.dispose);
+      await _waitForMedia(container);
 
-    final flow = container.read(preJoinFlowControllerProvider(_slug).notifier);
-    check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
-    check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-        .equals(PreJoinFlowPhase.pending);
-    check(container.read(preJoinFlowControllerProvider(_slug)).admissionStatus)
-        .equals(AdmissionStatus.pending);
-    check(_AdmissionFlow.transport!.request!.displayName).equals('Guest');
-    check(_AdmissionFlow.transport!.request!.recipientIdentity)
-        .equals('keeper');
-    check(_AdmissionFlow.connections).equals(1);
-    check(await flow.requestJoin()).equals(PreJoinJoinOutcome.ignored);
-    check(_AdmissionFlow.connections).equals(1);
-    check(_SuccessfulSessionController.receivedMedia).isNull();
-    check(container.read(preJoinMediaControllerProvider(_slug)).transferred)
-        .equals(false);
+      final flow = container.read(
+        preJoinFlowControllerProvider(_slug).notifier,
+      );
+      check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.pending);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
+      ).equals(AdmissionStatus.pending);
+      check(_AdmissionFlow.transport!.request!.displayName).equals('Guest');
+      check(
+        _AdmissionFlow.transport!.request!.recipientIdentity,
+      ).equals('keeper');
+      check(_AdmissionFlow.connections).equals(1);
+      check(await flow.requestJoin()).equals(PreJoinJoinOutcome.ignored);
+      check(_AdmissionFlow.connections).equals(1);
+      check(_SuccessfulSessionController.receivedMedia).isNull();
+      check(
+        container.read(preJoinMediaControllerProvider(_slug)).transferred,
+      ).equals(false);
 
-    _AdmissionFlow.transport!.decide(true);
-    await pumpEventQueue();
-    check(_SuccessfulSessionController.admissionDisposedAtJoin).equals(true);
-    check(_AdmissionFlow.room!.disconnected).equals(true);
-    check(_AdmissionFlow.room!.disposed).equals(true);
-    check(_SuccessfulSessionController.receivedMedia?.cameraTrack)
-        .equals(factory.videoTracks.single);
-    check(_SuccessfulSessionController.receivedMedia?.microphoneTrack)
-        .equals(factory.audioTracks.single);
-    check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-        .equals(PreJoinFlowPhase.joined);
-  });
+      _AdmissionFlow.transport!.decide(true);
+      await pumpEventQueue();
+      check(_SuccessfulSessionController.admissionDisposedAtJoin).equals(true);
+      check(_AdmissionFlow.room!.disconnected).equals(true);
+      check(_AdmissionFlow.room!.disposed).equals(true);
+      check(
+        _SuccessfulSessionController.receivedMedia?.cameraTrack,
+      ).equals(factory.videoTracks.single);
+      check(
+        _SuccessfulSessionController.receivedMedia?.microphoneTrack,
+      ).equals(factory.audioTracks.single);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.joined);
+    },
+  );
 
   test(
     'leaving during approved-room teardown prevents the session join',
@@ -523,20 +541,23 @@ void main() {
 
       _AdmissionFlow.transport!.decide(true);
       await disconnectStarted.future;
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.joining);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.joining);
       final leaving = flow.cancelAdmission();
       disconnectGate.complete();
       await leaving;
       await pumpEventQueue();
       check(room.disposed).equals(true);
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
       check(
         container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
       ).equals(AdmissionStatus.cancelled);
-      check(container.read(preJoinMediaControllerProvider(_slug)).transferred)
-          .equals(false);
+      check(
+        container.read(preJoinMediaControllerProvider(_slug)).transferred,
+      ).equals(false);
       check(_SuccessfulSessionController.receivedMedia).isNull();
       check(factory.videoTracks).length.equals(1);
     },
@@ -574,8 +595,9 @@ void main() {
       check(
         container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
       ).equals(AdmissionStatus.denied);
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
       check(_SuccessfulSessionController.receivedMedia).isNull();
       verify(factory.videoTracks.single.stop).called(1);
       verify(factory.videoTracks.single.dispose).called(1);
@@ -602,8 +624,9 @@ void main() {
     check(await flow.requestJoin()).equals(PreJoinJoinOutcome.ignored);
     check(_AdmissionFlow.transport!.request).isNull();
     check(_AdmissionFlow.room!.disposed).equals(true);
-    check(container.read(preJoinFlowControllerProvider(_slug)).admissionStatus)
-        .equals(AdmissionStatus.ended);
+    check(
+      container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
+    ).equals(AdmissionStatus.ended);
     verify(factory.videoTracks.single.dispose).called(1);
     verify(factory.audioTracks.single.dispose).called(1);
   });
@@ -633,8 +656,9 @@ void main() {
       check(
         container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
       ).equals(AdmissionStatus.ended);
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
       verify(factory.videoTracks.single.stop).called(1);
       verify(factory.videoTracks.single.dispose).called(1);
       verify(factory.audioTracks.single.stop).called(1);
@@ -669,16 +693,18 @@ void main() {
       first.fail();
       await pumpEventQueue();
       check(first.disposed).equals(true);
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
       check(
         container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
       ).equals(AdmissionStatus.failed);
       check(
         container.read(preJoinFlowControllerProvider(_slug)).error.toString(),
       ).contains('try again');
-      check(container.read(preJoinMediaControllerProvider(_slug)).transferred)
-          .equals(false);
+      check(
+        container.read(preJoinMediaControllerProvider(_slug)).transferred,
+      ).equals(false);
       verifyNever(factory.videoTracks.single.stop);
       verifyNever(factory.audioTracks.single.stop);
 
@@ -687,13 +713,15 @@ void main() {
       check(identical(first, second)).equals(false);
       first.end();
       await pumpEventQueue();
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.pending);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.pending);
       check(
         container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
       ).equals(AdmissionStatus.pending);
-      check(container.read(preJoinFlowControllerProvider(_slug)).error)
-          .isNull();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).error,
+      ).isNull();
       check(factory.videoTracks).length.equals(1);
       check(factory.audioTracks).length.equals(1);
       check(_SuccessfulSessionController.receivedMedia).isNull();
@@ -716,8 +744,9 @@ void main() {
     final transport = _AdmissionFlow.transport!;
     await flow.cancelAdmission();
     check(transport.disposed).equals(true);
-    check(container.read(preJoinFlowControllerProvider(_slug)).admissionStatus)
-        .equals(AdmissionStatus.cancelled);
+    check(
+      container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
+    ).equals(AdmissionStatus.cancelled);
     check(_SuccessfulSessionController.receivedMedia).isNull();
   });
 
@@ -742,12 +771,15 @@ void main() {
       check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
       _AdmissionFlow.transport!.decide(true);
       await pumpEventQueue();
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.idle);
-      check(container.read(preJoinFlowControllerProvider(_slug)).error)
-          .isA<StateError>();
-      check(container.read(preJoinFlowControllerProvider(_slug)).sessionOptions)
-          .isNull();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).error,
+      ).isA<StateError>();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).sessionOptions,
+      ).isNull();
       check(_RetryableSessionController.resets).equals(1);
       verify(factory.videoTracks.first.dispose).called(1);
       check(factory.videoTracks).length.equals(2);
@@ -807,17 +839,20 @@ void main() {
       final flow = container.read(
         preJoinFlowControllerProvider(_slug).notifier,
       );
-      check(await flow.requestJoin())
-          .equals(PreJoinJoinOutcome.retryableFailure);
-      check(container.read(preJoinFlowControllerProvider(_slug)).error)
-          .isA<StateError>();
+      check(
+        await flow.requestJoin(),
+      ).equals(PreJoinJoinOutcome.retryableFailure);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).error,
+      ).isA<StateError>();
       check(_AdmissionFlow.room!.disposed).equals(true);
       check(_SuccessfulSessionController.receivedMedia).isNull();
 
       _AdmissionFlow.failConnection = false;
       check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
-      check(container.read(preJoinFlowControllerProvider(_slug)).error)
-          .isNull();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).error,
+      ).isNull();
       final transport = _AdmissionFlow.transport!;
       container.dispose();
       await pumpEventQueue();
@@ -860,10 +895,12 @@ void main() {
         .requestJoin();
 
     check(outcome).equals(PreJoinJoinOutcome.joined);
-    check(_SuccessfulSessionController.receivedMedia?.cameraTrack)
-        .equals(factory.videoTracks.single);
-    check(_SuccessfulSessionController.receivedMedia?.microphoneTrack)
-        .equals(factory.audioTracks.single);
+    check(
+      _SuccessfulSessionController.receivedMedia?.cameraTrack,
+    ).equals(factory.videoTracks.single);
+    check(
+      _SuccessfulSessionController.receivedMedia?.microphoneTrack,
+    ).equals(factory.audioTracks.single);
   });
 
   test(
@@ -887,10 +924,12 @@ void main() {
       verify(factory.audioTracks.first.dispose).called(1);
       check(factory.videoTracks).length.equals(2);
       check(factory.audioTracks).length.equals(2);
-      check(container.read(preJoinMediaControllerProvider(_slug)).transferred)
-          .equals(false);
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinMediaControllerProvider(_slug)).transferred,
+      ).equals(false);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
     },
   );
 
@@ -913,8 +952,9 @@ void main() {
 
     check(outcome).equals(PreJoinJoinOutcome.permissionsDenied);
     check(_SuccessfulSessionController.receivedMedia).isNull();
-    check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-        .equals(PreJoinFlowPhase.idle);
+    check(
+      container.read(preJoinFlowControllerProvider(_slug)).phase,
+    ).equals(PreJoinFlowPhase.idle);
   });
 
   test('native join succeeds when no camera or microphone exists', () async {
@@ -957,8 +997,9 @@ void main() {
           .requestJoin();
       await factory.cameraStarted.future;
 
-      check(container.read(preJoinFlowControllerProvider(_slug)).sessionOptions)
-          .isNull();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).sessionOptions,
+      ).isNull();
 
       factory.cameraGate.complete();
       check(await join).equals(PreJoinJoinOutcome.joined);
@@ -987,8 +1028,9 @@ void main() {
 
     final flow = container.read(preJoinFlowControllerProvider(_slug).notifier);
     check(await flow.requestJoin()).equals(PreJoinJoinOutcome.retryableFailure);
-    check(container.read(preJoinMediaControllerProvider(_slug)).transferred)
-        .equals(false);
+    check(
+      container.read(preJoinMediaControllerProvider(_slug)).transferred,
+    ).equals(false);
 
     failPrecache = false;
     container.invalidate(sessionProvider(_slug));
@@ -1032,8 +1074,9 @@ void main() {
       check(_RetryableSessionController.resets).equals(1);
       check(factory.videoTracks).length.equals(2);
       check(factory.audioTracks).length.equals(2);
-      check(container.read(preJoinFlowControllerProvider(_slug)).phase)
-          .equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
       _RetryableSessionController.resetStarted = null;
       _RetryableSessionController.resetGate = null;
     },

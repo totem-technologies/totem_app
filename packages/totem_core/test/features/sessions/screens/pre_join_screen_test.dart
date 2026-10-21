@@ -125,7 +125,7 @@ class _WaitingAdmissionFlowController extends PreJoinFlowController {
 }
 
 class _TerminalAdmissionFlowController extends PreJoinFlowController {
-  new(this.status);
+  _TerminalAdmissionFlowController(this.status);
 
   final AdmissionStatus status;
 
@@ -282,23 +282,28 @@ void main() {
                 ),
           ),
           if (waitingForAdmission)
-            preJoinFlowControllerProvider(_slug)
-                .overrideWith(_WaitingAdmissionFlowController.new),
+            preJoinFlowControllerProvider(
+              _slug,
+            ).overrideWith(_WaitingAdmissionFlowController.new),
           if (terminalAdmissionStatus != null)
             preJoinFlowControllerProvider(_slug).overrideWith(
               () => _TerminalAdmissionFlowController(terminalAdmissionStatus),
             ),
           if (permissionsGranted || successfulJoin)
-            preJoinFlowControllerProvider(_slug)
-                .overrideWith(_PermissionsGrantedFlowController.new),
+            preJoinFlowControllerProvider(
+              _slug,
+            ).overrideWith(_PermissionsGrantedFlowController.new),
           if (successfulJoin)
-            sessionControllerProvider(_options)
-                .overrideWith(_SuccessfulSessionController.new),
+            sessionControllerProvider(
+              _options,
+            ).overrideWith(_SuccessfulSessionController.new),
           if (pendingJoin) ...[
-            preJoinFlowControllerProvider(_slug)
-                .overrideWith(_PermissionsGrantedFlowController.new),
-            sessionControllerProvider(_options)
-                .overrideWith(_PendingSessionController.new),
+            preJoinFlowControllerProvider(
+              _slug,
+            ).overrideWith(_PermissionsGrantedFlowController.new),
+            sessionControllerProvider(
+              _options,
+            ).overrideWith(_PendingSessionController.new),
           ],
         ],
         child: SentryDisplayWidget(
@@ -365,8 +370,9 @@ void main() {
 
     check(factory.videoTracks).isEmpty();
     check(factory.audioTracks).isEmpty();
-    check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.byType(SessionDisconnectedScreen)),
+    ).length.equals(1);
   });
 
   testWidgets('terminal session errors do not create preview tracks', (
@@ -388,8 +394,9 @@ void main() {
 
     check(factory.videoTracks).isEmpty();
     check(factory.audioTracks).isEmpty();
-    check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.byType(SessionDisconnectedScreen)),
+    ).length.equals(1);
   });
 
   testWidgets('terminal session error releases active preview tracks', (
@@ -419,13 +426,15 @@ void main() {
         message: 'Session already ended',
       ),
     );
-    ProviderScope.containerOf(tester.element(find.byType(PreJoinScreen)))
-        .invalidate(sessionProvider(_slug));
+    ProviderScope.containerOf(
+      tester.element(find.byType(PreJoinScreen)),
+    ).invalidate(sessionProvider(_slug));
     await tester.pump();
     await tester.pump();
 
-    check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.byType(SessionDisconnectedScreen)),
+    ).length.equals(1);
     verify(factory.videoTracks.single.stop).called(1);
     verify(factory.videoTracks.single.dispose).called(1);
     verify(factory.audioTracks.single.stop).called(1);
@@ -522,9 +531,9 @@ void main() {
     ).isNotEmpty();
     check(find.byType(VideoSessionScreen).evaluate()).isEmpty();
     check(tester.widgetList(find.text('Leave waiting room'))).length.equals(1);
-    check(tester.widgetList(find.textContaining('The Keeper will let you in.')))
-        .length
-        .equals(1);
+    check(
+      tester.widgetList(find.textContaining('The Keeper will let you in.')),
+    ).length.equals(1);
     check(tester.widgetList(find.byType(ActionSliderButton))).isEmpty();
   });
 
@@ -598,8 +607,9 @@ void main() {
     check(find.text('Test session').evaluate()).isNotEmpty();
     check(find.text('Space').evaluate()).isNotEmpty();
     check(find.text('Morgan Keeper').evaluate()).isNotEmpty();
-    check(find.text('A quiet space to connect and reflect.').evaluate())
-        .isNotEmpty();
+    check(
+      find.text('A quiet space to connect and reflect.').evaluate(),
+    ).isNotEmpty();
     check(find.textContaining('4 seats left').evaluate()).isNotEmpty();
     check(tokenRequests).equals(0);
     check(factory.videoTracks).length.equals(1);
@@ -747,23 +757,26 @@ void main() {
     await pumpScreen(tester, alreadyPresent: true, successfulJoin: true);
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(tester.widgetList(find.text("You're already in this session"))).length
-        .equals(0);
+    check(
+      tester.widgetList(find.text("You're already in this session")),
+    ).length.equals(0);
 
     await tester.tap(find.text('Join session'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(tester.widgetList(find.text("You're already in this session"))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text("You're already in this session")),
+    ).length.equals(1);
     check(tester.widgetList(find.text('Join Here'))).length.equals(1);
 
     await tester.tap(find.text('Join Here'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(tester.widgetList(find.text("You're already in this session"))).length
-        .equals(0);
+    check(
+      tester.widgetList(find.text("You're already in this session")),
+    ).length.equals(0);
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
   });
 

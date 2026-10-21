@@ -16,7 +16,7 @@ const component = ComponentMeta(path: 'Screens/session/:slug');
 const meta = Meta(SessionEntry.new, argsType: SessionEntryInput.new);
 
 class SessionEntryInput {
-  const new({
+  const SessionEntryInput({
     this.role = EntryRole.participant,
     this.phase = DetailsPhase.tooEarly,
     this.status = EntryStatus.browsing,
@@ -108,7 +108,8 @@ final defaults = _Defaults(
       ),
       heroPhoto: const AssetImage('$_details/hero.jpg'),
       keeperPhoto: const AssetImage('$_details/avatar-vanessa.png'),
-      about: "Shame is loud, and it lies. This circle is where you turn the volume down. Nobody fixes you, nobody gives advice, and nobody performs. You share when the talking piece reaches you and listen when it doesn't.\n\nCome as you are. Camera on is lovely. Camera off is fine. You can pass on any turn — that counts as a full turn.",
+      about:
+          "Shame is loud, and it lies. This circle is where you turn the volume down. Nobody fixes you, nobody gives advice, and nobody performs. You share when the talking piece reaches you and listen when it doesn't.\n\nCome as you are. Camera on is lovely. Camera off is fine. You can pass on any turn — that counts as a full turn.",
       similarSession: const SessionCard(
         photo: AssetImage('$_details/similar.jpg'),
         spaceName: 'What is Love?',
@@ -120,7 +121,8 @@ final defaults = _Defaults(
         seatsLeft: 2,
       ),
       keeperLocation: 'Earth',
-      keeperBio: "Vanessa is a Los Angeles-based artist and recovering hot mess. She's battled many challenges, from undiagnosed depression to struggling with alcohol abuse, and knows first hand how hard it is to face complex emotions alone.",
+      keeperBio:
+          "Vanessa is a Los Angeles-based artist and recovering hot mess. She's battled many challenges, from undiagnosed depression to struggling with alcohol abuse, and knows first hand how hard it is to face complex emotions alone.",
       onShare: () {},
       onKeeperProfile: () {},
       prompt: 'What are you ready to set down?',

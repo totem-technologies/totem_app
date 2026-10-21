@@ -6,31 +6,31 @@ import 'package:totem_core/core/api/api_client/models/room_state.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 
 sealed class AdmissionEvent {
-  const new();
+  const AdmissionEvent();
 }
 
 final class AdmissionPacketReceived extends AdmissionEvent {
-  const new(this.packet);
+  const AdmissionPacketReceived(this.packet);
   final AdmissionPacket packet;
 }
 
 final class AdmissionPresenceChanged extends AdmissionEvent {
-  const new(this.identity, this.present);
+  const AdmissionPresenceChanged(this.identity, this.present);
   final String identity;
   final bool present;
 }
 
 final class AdmissionConnectionRestored extends AdmissionEvent {
-  const new();
+  const AdmissionConnectionRestored();
 }
 
 final class AdmissionRoomEnded extends AdmissionEvent {
-  const new();
+  const AdmissionRoomEnded();
 }
 
 /// A terminal SDK disconnection, not RoomReconnectingEvent/RoomResumingEvent.
 final class AdmissionRoomDisconnected extends AdmissionEvent {
-  const new(this.reason);
+  const AdmissionRoomDisconnected(this.reason);
   final DisconnectReason? reason;
 }
 
@@ -48,7 +48,7 @@ abstract class AdmissionChannel {
 /// Data packets remain available when remote media auto-subscription is off.
 /// Own this transport until admission ends and call [dispose] before room teardown.
 class LiveKitAdmissionTransport implements AdmissionChannel {
-  new(this.room) {
+  LiveKitAdmissionTransport(this.room) {
     _checkRoomEnded(room.metadata);
     _listener = room.createListener()
       ..on<DataReceivedEvent>((event) {

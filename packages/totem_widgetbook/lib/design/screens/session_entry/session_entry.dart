@@ -1261,7 +1261,8 @@ class _EarlyArrival extends StatelessWidget {
                 const TextSpan(text: 'You can join beginning at '),
                 TextSpan(text: joinTime, style: strong),
                 const TextSpan(
-                  text: '. In the meantime, grab some water, get comfortable, or review our ',
+                  text:
+                      '. In the meantime, grab some water, get comfortable, or review our ',
                 ),
                 Button.inlineSpan(
                   text: 'Community Guidelines',
@@ -1423,7 +1424,9 @@ class _DeclinedState extends State<_Declined> {
     final next = widget.variant == DeclineVariant.nextSession;
 
     return SessionDeclinedView(
-      message: next ? "The next one is open." : "Nothing else is on the calendar yet. This one sits close to what you came for.",
+      message: next
+          ? "The next one is open."
+          : "Nothing else is on the calendar yet. This one sits close to what you came for.",
       offer: widget.offer,
       actionLabel: next ? "Join the next session" : "Sign up for this session",
       signedUp: _signedUp,

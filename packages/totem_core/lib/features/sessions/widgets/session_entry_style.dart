@@ -26,7 +26,7 @@ const entryMuted = TextStyle(
 );
 
 class SessionEntryAction extends StatelessWidget {
-  const new({
+  const SessionEntryAction({
     required this.label,
     required this.onPressed,
     super.key,

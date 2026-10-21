@@ -255,8 +255,9 @@ void main() {
           await room.listener.trigger(const RoomReconnectedEvent());
           await Future<void>.value();
           check(published).length.equals(3);
-          await check(controller.sendAdmissionJoined(attempt))
-              .throws<StateError>();
+          await check(
+            controller.sendAdmissionJoined(attempt),
+          ).throws<StateError>();
           check(room.listenerCount).equals(1);
 
           await controller.disposeAdmissionTransport();
@@ -284,8 +285,9 @@ void main() {
           turn: session.state.turn,
         );
 
-        await check(controller.sendAdmissionJoined(request()))
-            .throws<StateError>();
+        await check(
+          controller.sendAdmissionJoined(request()),
+        ).throws<StateError>();
         check(room.listenerCount).equals(0);
         session.mockState = SessionRoomState(
           connection: session.state.connection.copyWith(
@@ -295,8 +297,9 @@ void main() {
           chat: session.state.chat,
           turn: session.state.turn,
         );
-        await check(controller.sendAdmissionJoined(request(sender: 'other')))
-            .throws<StateError>();
+        await check(
+          controller.sendAdmissionJoined(request(sender: 'other')),
+        ).throws<StateError>();
         check(room.listenerCount).equals(0);
       });
 
@@ -321,8 +324,9 @@ void main() {
         container.dispose();
         await room.listener.disposed.future;
         check(room.listener.disposeCount).equals(1);
-        await check(controller.sendAdmissionJoined(request()))
-            .throws<StateError>();
+        await check(
+          controller.sendAdmissionJoined(request()),
+        ).throws<StateError>();
         check(room.listenerCount).equals(1);
       });
     });
@@ -351,8 +355,9 @@ void main() {
 
         check(accepted).isTrue();
         check(mockSession.addedChatMessages).isNotEmpty();
-        check(mockSession.addedChatMessages.first.message)
-            .equals('Hello everyone!');
+        check(
+          mockSession.addedChatMessages.first.message,
+        ).equals('Hello everyone!');
         check(mockSession.addedChatMessages.first.recipientIdentity).isNull();
       });
 
@@ -745,7 +750,7 @@ void main() {
 }
 
 class _ReceiptRoom extends FakeRoom {
-  new(super.participant);
+  _ReceiptRoom(super.participant);
 
   final listener = _ReceiptEvents();
   int listenerCount = 0;

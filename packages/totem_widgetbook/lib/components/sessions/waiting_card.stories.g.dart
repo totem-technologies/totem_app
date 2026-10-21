@@ -22,7 +22,8 @@ final SessionWaitingCardComponent =
       name: component.name ?? 'SessionWaitingCard',
       path: component.path ?? 'components/sessions',
       docsBuilder: component.docsBuilder,
-      docComment: r'''Data and action for the lobby, or a passive admitted-before-start card.''',
+      docComment:
+          r'''Data and action for the lobby, or a passive admitted-before-start card.''',
       stories: [
         $Reviewing..$generatedName = 'Reviewing',
         $Admitted..$generatedName = 'Admitted',

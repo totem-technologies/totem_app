@@ -47,7 +47,11 @@ Future<void> showSessionPromptsModal(
 }
 
 class SessionPromptsModal extends ConsumerStatefulWidget {
-  const new({required this.sessionSlug, this.embedded = false, super.key});
+  const SessionPromptsModal({
+    required this.sessionSlug,
+    this.embedded = false,
+    super.key,
+  });
 
   final String sessionSlug;
   final bool embedded;
@@ -129,8 +133,9 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
       sessionPromptsControllerProvider(widget.sessionSlug),
       (previous, next) {
         if (next.message != null && next.message != previous?.message) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(next.message!)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(next.message!)));
         }
       },
     );
@@ -358,7 +363,7 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
 }
 
 class _PromptTile extends StatelessWidget {
-  const new({
+  const _PromptTile({
     required this.prompt,
     super.key,
     this.current = false,

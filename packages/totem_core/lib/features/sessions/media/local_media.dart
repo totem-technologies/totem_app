@@ -10,7 +10,7 @@ enum MediaDeviceKind { audioInput, audioOutput, videoInput }
 
 @immutable
 class MediaDeviceInfo {
-  const new({
+  const MediaDeviceInfo({
     required this.id,
     required this.label,
     required this.kind,

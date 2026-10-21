@@ -10,7 +10,8 @@ import 'dart:typed_data';
 /// slowly, so one loud moment stops dominating after a few seconds.
 class SpeechLevelMeter {
   /// [now] reads the time; it defaults to a stopwatch started here.
-  new({Duration Function()? now}) : _now = now ?? _startStopwatch();
+  SpeechLevelMeter({Duration Function()? now})
+    : _now = now ?? _startStopwatch();
 
   static Duration Function() _startStopwatch() {
     final stopwatch = Stopwatch()..start();

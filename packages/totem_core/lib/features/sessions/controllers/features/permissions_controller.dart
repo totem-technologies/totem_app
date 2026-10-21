@@ -8,7 +8,7 @@ part 'permissions_controller.g.dart';
 
 @immutable
 class PermissionsState {
-  const new({
+  const PermissionsState({
     this.cameraStatus = PermissionStatus.denied,
     this.microphoneStatus = PermissionStatus.denied,
     this.notificationStatus = PermissionStatus.denied,

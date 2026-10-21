@@ -5,7 +5,7 @@ import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 class MeetKeeperCard extends StatelessWidget {
-  const new({
+  const MeetKeeperCard({
     required this.user,
     super.key,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 16),

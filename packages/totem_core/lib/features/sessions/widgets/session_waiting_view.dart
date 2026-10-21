@@ -4,7 +4,7 @@ import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
 
 /// Data and action for the lobby, or a passive admitted-before-start card.
 class SessionWaitingCard extends StatelessWidget {
-  const new({
+  const SessionWaitingCard({
     required this.title,
     required this.body,
     super.key,
@@ -57,7 +57,7 @@ class SessionWaitingCard extends StatelessWidget {
 /// Presentational waiting shell. Supply a real local preview and media controls;
 /// this widget never creates a room, camera track, or admission request.
 class SessionWaitingView extends StatelessWidget {
-  const new({
+  const SessionWaitingView({
     required this.preview,
     required this.controls,
     required this.card,

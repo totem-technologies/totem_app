@@ -4,7 +4,11 @@ import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
 
 /// Display-only admission data. IDs and expiration labels come from the owner.
 class SessionAdmissionGuest {
-  const new({required this.id, required this.name, required this.expiresLabel});
+  const SessionAdmissionGuest({
+    required this.id,
+    required this.name,
+    required this.expiresLabel,
+  });
   final String id;
   final String name;
   final String expiresLabel;
@@ -13,7 +17,7 @@ class SessionAdmissionGuest {
 /// Contents of the keeper's admission sheet or side panel. The caller owns
 /// the queue, decisions, busy state, and the surface that presents this list.
 class SessionAdmissionList extends StatelessWidget {
-  const new({
+  const SessionAdmissionList({
     required this.guests,
     super.key,
     this.onAdmit,

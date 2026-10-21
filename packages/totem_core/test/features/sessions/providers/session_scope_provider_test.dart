@@ -147,8 +147,9 @@ void main() {
       controller.markRead(null);
 
       check(container.read(sessionChatUnreadThreadsProvider)).contains('lucas');
-      check(container.read(sessionChatUnreadThreadsProvider).contains(null))
-          .isFalse();
+      check(
+        container.read(sessionChatUnreadThreadsProvider).contains(null),
+      ).isFalse();
       check(controller.latestUnreadThread?.thread).equals('lucas');
 
       controller.markRead('lucas');
@@ -183,25 +184,30 @@ void main() {
       pending.update(identities);
       identities.clear();
 
-      check(container.read(sessionParticipantsProvider).map((p) => p.identity))
-          .deepEquals(['keeper', 'bob']);
+      check(
+        container.read(sessionParticipantsProvider).map((p) => p.identity),
+      ).deepEquals(['keeper', 'bob']);
       final layout = container.read(visibleSessionParticipantLayoutProvider);
-      check(layout.participants.map((p) => p.identity))
-          .deepEquals(['keeper', 'bob']);
+      check(
+        layout.participants.map((p) => p.identity),
+      ).deepEquals(['keeper', 'bob']);
       check(layout.talkingOrder).deepEquals(['keeper', 'alice', 'bob']);
       check(layout.nextSpeaker).equals('alice');
       check(layout.speakingNow).equals('keeper');
       check(container.read(turnStateProvider)).equals(TurnState.passing);
-      check(state.roomState.talkingOrder)
-          .deepEquals(['keeper', 'alice', 'bob']);
-      check(state.participants.participants.map((p) => p.identity))
-          .deepEquals(['keeper', 'alice', 'bob']);
+      check(
+        state.roomState.talkingOrder,
+      ).deepEquals(['keeper', 'alice', 'bob']);
+      check(
+        state.participants.participants.map((p) => p.identity),
+      ).deepEquals(['keeper', 'alice', 'bob']);
 
       // The owner reports only requested/joining identities; joined users
       // remain in the canonical session and return to the presentation.
       pending.update(<String>{});
-      check(container.read(sessionParticipantsProvider).map((p) => p.identity))
-          .deepEquals(['keeper', 'alice', 'bob']);
+      check(
+        container.read(sessionParticipantsProvider).map((p) => p.identity),
+      ).deepEquals(['keeper', 'alice', 'bob']);
       check(
         container
             .read(visibleSessionParticipantLayoutProvider)
@@ -234,8 +240,9 @@ void main() {
         'alice',
       });
 
-      check(first.read(pendingSessionParticipantIdentitiesProvider))
-          .contains('alice');
+      check(
+        first.read(pendingSessionParticipantIdentitiesProvider),
+      ).contains('alice');
       check(second.read(pendingSessionParticipantIdentitiesProvider)).isEmpty();
     });
 
@@ -258,10 +265,12 @@ void main() {
         ),
       );
 
-      check(sessionParticipantPresentation(before, participant.identity))
-          .equals(sessionParticipantPresentation(after, participant.identity));
-      check(sessionParticipantLayout(before))
-          .equals(sessionParticipantLayout(after));
+      check(
+        sessionParticipantPresentation(before, participant.identity),
+      ).equals(sessionParticipantPresentation(after, participant.identity));
+      check(
+        sessionParticipantLayout(before),
+      ).equals(sessionParticipantLayout(after));
     });
 
     test('defaults when scope is not overridden', () {
@@ -270,10 +279,12 @@ void main() {
 
       check(container.read(currentSessionProvider)).isNull();
       check(container.read(currentSessionStateProvider)).isNull();
-      check(container.read(connectionStateProvider))
-          .equals(RoomConnectionState.connecting);
-      check(container.read(sessionPhaseProvider))
-          .equals(SessionPhase.connecting);
+      check(
+        container.read(connectionStateProvider),
+      ).equals(RoomConnectionState.connecting);
+      check(
+        container.read(sessionPhaseProvider),
+      ).equals(SessionPhase.connecting);
       check(container.read(sessionErrorProvider)).isNull();
       check(container.read(roomStatusProvider)).equals(RoomStatus.waitingRoom);
       check(container.read(turnStateProvider)).equals(TurnState.idle);
@@ -321,11 +332,13 @@ void main() {
       );
       addTearDown(disconnectContainer.dispose);
 
-      check(disconnectContainer.read(sessionErrorProvider))
-          .equals(disconnectError);
+      check(
+        disconnectContainer.read(sessionErrorProvider),
+      ).equals(disconnectError);
       check(disconnectContainer.read(sessionLivekitErrorProvider)).isNull();
-      check(disconnectContainer.read(disconnectionReasonProvider))
-          .equals(DisconnectReason.unknown);
+      check(
+        disconnectContainer.read(disconnectionReasonProvider),
+      ).equals(DisconnectReason.unknown);
     });
 
     test('computes selectors from state', () {
@@ -358,10 +371,12 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      check(container.read(connectionStateProvider))
-          .equals(RoomConnectionState.connected);
-      check(container.read(sessionPhaseProvider))
-          .equals(SessionPhase.connected);
+      check(
+        container.read(connectionStateProvider),
+      ).equals(RoomConnectionState.connected);
+      check(
+        container.read(sessionPhaseProvider),
+      ).equals(SessionPhase.connected);
       check(container.read(roomStatusProvider)).equals(RoomStatus.active);
       check(container.read(turnStateProvider)).equals(TurnState.passing);
       check(container.read(sessionParticipantsProvider)).isEmpty();
@@ -407,16 +422,19 @@ void main() {
       addTearDown(container.dispose);
 
       check(container.read(hasKeeperProvider)).equals(true);
-      check(container.read(featuredParticipantProvider)?.identity)
-          .equals('keeper');
-      check(container.read(speakingNextParticipantProvider)?.identity)
-          .equals('alice');
+      check(
+        container.read(featuredParticipantProvider)?.identity,
+      ).equals('keeper');
+      check(
+        container.read(speakingNextParticipantProvider)?.identity,
+      ).equals('alice');
 
       check(container.read(isCurrentUserKeeperProvider)).equals(true);
       check(container.read(isMyTurnProvider)).equals(false);
       check(container.read(amNextSpeakerProvider)).equals(true);
-      check(container.read(resolveCurrentScreenProvider))
-          .equals(RoomScreen.listening);
+      check(
+        container.read(resolveCurrentScreenProvider),
+      ).equals(RoomScreen.listening);
     });
 
     test('resolveCurrentScreen resolves different states', () {

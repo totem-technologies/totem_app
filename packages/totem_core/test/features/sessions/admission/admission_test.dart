@@ -38,7 +38,7 @@ class _RoomEvents implements EventsListener<RoomEvent> {
 }
 
 class _Participant implements LocalParticipant {
-  new(this.identity);
+  _Participant(this.identity);
 
   @override
   final String identity;
@@ -56,7 +56,7 @@ class _Participant implements LocalParticipant {
 }
 
 class _RemoteParticipant implements RemoteParticipant {
-  new(this.identity);
+  _RemoteParticipant(this.identity);
 
   @override
   final String identity;
@@ -66,7 +66,7 @@ class _RemoteParticipant implements RemoteParticipant {
 }
 
 class _AdmissionRoom implements Room {
-  new(this.metadata);
+  _AdmissionRoom(this.metadata);
 
   @override
   String? metadata;
@@ -85,7 +85,7 @@ class _AdmissionRoom implements Room {
 }
 
 class _Channel implements AdmissionChannel {
-  new(this.localIdentity);
+  _Channel(this.localIdentity);
 
   @override
   final String localIdentity;
@@ -149,112 +149,119 @@ String _roomMetadata(String status) => jsonEncode({
 });
 
 void main() {
-  test('protocol rejects unknown version, spoofed sender and expired packets', () {
-    final now = DateTime.utc(2026);
-    final request = AdmissionRequest(
-      id: 'id',
-      senderIdentity: 'alice',
-      recipientIdentity: 'keeper',
-      expiresAt: now.add(const Duration(minutes: 2)),
-      displayName: 'Alice',
-    );
-    final payload = AdmissionProtocol.encode(request);
-    check(AdmissionProtocol.decode(payload, senderIdentity: 'alice', now: now))
-        .isA<AdmissionRequest>();
-    check(
-      AdmissionProtocol.decode(payload, senderIdentity: 'mallory', now: now),
-    ).isNull();
-    check(AdmissionProtocol.decode(payload, senderIdentity: null, now: now))
-        .isNull();
-    check(
-      AdmissionProtocol.decode(
-        payload,
+  test(
+    'protocol rejects unknown version, spoofed sender and expired packets',
+    () {
+      final now = DateTime.utc(2026);
+      final request = AdmissionRequest(
+        id: 'id',
         senderIdentity: 'alice',
-        now: now.add(const Duration(minutes: 2)),
-      ),
-    ).isNull();
-    final cancel = AdmissionCancel(
-      id: request.id,
-      senderIdentity: request.senderIdentity,
-      recipientIdentity: request.recipientIdentity,
-      expiresAt: request.expiresAt,
-    );
-    check(
-      AdmissionProtocol.decode(
-        AdmissionProtocol.encode(cancel),
-        senderIdentity: 'alice',
-        now: now,
-      ),
-    ).isA<AdmissionCancel>();
-    check(
-      AdmissionProtocol.decode(
-        AdmissionProtocol.encode(cancel),
-        senderIdentity: 'mallory',
-        now: now,
-      ),
-    ).isNull();
-    final hello = AdmissionHello(
-      id: 'hello',
-      senderIdentity: 'keeper',
-      recipientIdentity: 'alice',
-      expiresAt: now.subtract(const Duration(days: 1)),
-    );
-    check(
-      AdmissionProtocol.decode(
-        AdmissionProtocol.encode(hello),
-        senderIdentity: 'keeper',
-        now: now,
-      ),
-    ).isA<AdmissionHello>();
-    check(
-      AdmissionProtocol.decode(
-        AdmissionProtocol.encode(hello),
-        senderIdentity: 'mallory',
-        now: now,
-      ),
-    ).isNull();
-    final decoded = jsonDecode(utf8.decode(payload)) as Map<String, dynamic>;
-    check(
-      AdmissionProtocol.decode(
-        utf8.encode(jsonEncode({...decoded, 'to': 'x' * 257})),
-        senderIdentity: 'alice',
-        now: now,
-      ),
-    ).isNull();
-    final oversizedSender = 's' * 257;
-    check(
-      AdmissionProtocol.decode(
-        utf8.encode(jsonEncode({...decoded, 'from': oversizedSender})),
-        senderIdentity: oversizedSender,
-        now: now,
-      ),
-    ).isNull();
-    check(
-      AdmissionProtocol.decode(
-        utf8.encode(jsonEncode({...decoded, 'expiresAt': 9223372036854775807})),
-        senderIdentity: 'alice',
-        now: now,
-      ),
-    ).isNull();
-    check(
-      AdmissionProtocol.decode(
-        List<int>.filled(AdmissionProtocol.maxPayloadBytes + 1, 97),
-        senderIdentity: 'alice',
-        now: now,
-      ),
-    ).isNull();
-    check(
-      AdmissionProtocol.decode(
-        utf8.encode(
-          '{"v":2,"kind":"request","id":"id","from":"alice",'
-          '"to":"keeper","expiresAt":${request.expiresAt.millisecondsSinceEpoch},'
-          '"name":"Alice"}',
+        recipientIdentity: 'keeper',
+        expiresAt: now.add(const Duration(minutes: 2)),
+        displayName: 'Alice',
+      );
+      final payload = AdmissionProtocol.encode(request);
+      check(
+        AdmissionProtocol.decode(payload, senderIdentity: 'alice', now: now),
+      ).isA<AdmissionRequest>();
+      check(
+        AdmissionProtocol.decode(payload, senderIdentity: 'mallory', now: now),
+      ).isNull();
+      check(
+        AdmissionProtocol.decode(payload, senderIdentity: null, now: now),
+      ).isNull();
+      check(
+        AdmissionProtocol.decode(
+          payload,
+          senderIdentity: 'alice',
+          now: now.add(const Duration(minutes: 2)),
         ),
-        senderIdentity: 'alice',
-        now: now,
-      ),
-    ).isNull();
-  });
+      ).isNull();
+      final cancel = AdmissionCancel(
+        id: request.id,
+        senderIdentity: request.senderIdentity,
+        recipientIdentity: request.recipientIdentity,
+        expiresAt: request.expiresAt,
+      );
+      check(
+        AdmissionProtocol.decode(
+          AdmissionProtocol.encode(cancel),
+          senderIdentity: 'alice',
+          now: now,
+        ),
+      ).isA<AdmissionCancel>();
+      check(
+        AdmissionProtocol.decode(
+          AdmissionProtocol.encode(cancel),
+          senderIdentity: 'mallory',
+          now: now,
+        ),
+      ).isNull();
+      final hello = AdmissionHello(
+        id: 'hello',
+        senderIdentity: 'keeper',
+        recipientIdentity: 'alice',
+        expiresAt: now.subtract(const Duration(days: 1)),
+      );
+      check(
+        AdmissionProtocol.decode(
+          AdmissionProtocol.encode(hello),
+          senderIdentity: 'keeper',
+          now: now,
+        ),
+      ).isA<AdmissionHello>();
+      check(
+        AdmissionProtocol.decode(
+          AdmissionProtocol.encode(hello),
+          senderIdentity: 'mallory',
+          now: now,
+        ),
+      ).isNull();
+      final decoded = jsonDecode(utf8.decode(payload)) as Map<String, dynamic>;
+      check(
+        AdmissionProtocol.decode(
+          utf8.encode(jsonEncode({...decoded, 'to': 'x' * 257})),
+          senderIdentity: 'alice',
+          now: now,
+        ),
+      ).isNull();
+      final oversizedSender = 's' * 257;
+      check(
+        AdmissionProtocol.decode(
+          utf8.encode(jsonEncode({...decoded, 'from': oversizedSender})),
+          senderIdentity: oversizedSender,
+          now: now,
+        ),
+      ).isNull();
+      check(
+        AdmissionProtocol.decode(
+          utf8.encode(
+            jsonEncode({...decoded, 'expiresAt': 9223372036854775807}),
+          ),
+          senderIdentity: 'alice',
+          now: now,
+        ),
+      ).isNull();
+      check(
+        AdmissionProtocol.decode(
+          List<int>.filled(AdmissionProtocol.maxPayloadBytes + 1, 97),
+          senderIdentity: 'alice',
+          now: now,
+        ),
+      ).isNull();
+      check(
+        AdmissionProtocol.decode(
+          utf8.encode(
+            '{"v":2,"kind":"request","id":"id","from":"alice",'
+            '"to":"keeper","expiresAt":${request.expiresAt.millisecondsSinceEpoch},'
+            '"name":"Alice"}',
+          ),
+          senderIdentity: 'alice',
+          now: now,
+        ),
+      ).isNull();
+    },
+  );
 
   test(
     'transport reads canonical room metadata and emits ended once',
@@ -306,9 +313,9 @@ void main() {
       check(room.participant!.published).length.equals(1);
       final publication = room.participant!.published.single;
       check(publication.namedArguments[#topic]).equals(AdmissionProtocol.topic);
-      check(publication.namedArguments[#destinationIdentities] as List<String>)
-          .single
-          .equals('keeper');
+      check(
+        publication.namedArguments[#destinationIdentities] as List<String>,
+      ).single.equals('keeper');
       check(
         AdmissionProtocol.decode(
           publication.positionalArguments.single as List<int>,
@@ -435,8 +442,9 @@ void main() {
       RoomDisconnectedEvent(reason: DisconnectReason.reconnectAttemptsExceeded),
     );
     check(received).length.equals(2);
-    check((received.last as AdmissionRoomDisconnected).reason)
-        .equals(DisconnectReason.reconnectAttemptsExceeded);
+    check(
+      (received.last as AdmissionRoomDisconnected).reason,
+    ).equals(DisconnectReason.reconnectAttemptsExceeded);
   });
 
   test('pending fails on terminal disconnect and ends on metadata', () async {
@@ -461,8 +469,9 @@ void main() {
     check(guest.status).equals(AdmissionStatus.failed);
     channel.controller.add(const AdmissionPresenceChanged('keeper', true));
     check(channel.sent).length.equals(sentBeforeFailure);
-    await check(guest.requestAdmission(displayName: 'Guest'))
-        .throws<StateError>();
+    await check(
+      guest.requestAdmission(displayName: 'Guest'),
+    ).throws<StateError>();
     channel.controller.add(const AdmissionRoomEnded());
     check(guest.status).equals(AdmissionStatus.ended);
   });
@@ -488,8 +497,9 @@ void main() {
         const AdmissionRoomDisconnected(DisconnectReason.roomDeleted),
       );
       check(guest.status).equals(AdmissionStatus.ended);
-      await check(guest.requestAdmission(displayName: 'Guest'))
-          .throws<StateError>();
+      await check(
+        guest.requestAdmission(displayName: 'Guest'),
+      ).throws<StateError>();
     },
   );
 
@@ -539,46 +549,50 @@ void main() {
       });
       check(endedChannel.sent).isEmpty();
       check(endedGuest.status).equals(AdmissionStatus.ended);
-      await check(endedGuest.requestAdmission(displayName: 'Guest'))
-          .throws<StateError>();
+      await check(
+        endedGuest.requestAdmission(displayName: 'Guest'),
+      ).throws<StateError>();
     },
   );
 
-  test('keeper attach advertises to already waiting participant after lost request', () async {
-    final guestChannel = _Channel('guest');
-    final keeperChannel = _Channel('keeper');
-    guestChannel.peer = keeperChannel;
-    keeperChannel.peer = guestChannel;
-    guestChannel.present.add('keeper');
-    keeperChannel.present.add('guest');
-    final guest = PendingAdmissionController(
-      channel: guestChannel,
-      keeperIdentity: () => 'keeper',
-      newId: () => 'r1',
-    );
-    final request = await guest.requestAdmission(displayName: 'Guest');
-    // No keeper listener existed when the first request was delivered.
-    final keeper = KeeperAdmissionController(
-      channel: keeperChannel,
-      keeperIdentity: () => 'keeper',
-    );
-    addTearDown(() async {
-      await guest.dispose();
-      await keeper.dispose();
-      await guestChannel.dispose();
-      await keeperChannel.dispose();
-    });
-    await keeper.changes.first;
-    check(keeper.requests.single.id).equals(request.id);
-    check(guestChannel.sent).length.equals(2);
-    check(identical(guestChannel.sent.last, request)).isTrue();
-    check(keeperChannel.sent.single).isA<AdmissionHello>();
-    check(keeperChannel.sent.single.recipientIdentity).equals('guest');
-    keeperChannel.controller.add(const AdmissionConnectionRestored());
-    await Future<void>.value();
-    check(keeperChannel.sent).length.equals(2);
-    check(keeper.requests).length.equals(1);
-  });
+  test(
+    'keeper attach advertises to already waiting participant after lost request',
+    () async {
+      final guestChannel = _Channel('guest');
+      final keeperChannel = _Channel('keeper');
+      guestChannel.peer = keeperChannel;
+      keeperChannel.peer = guestChannel;
+      guestChannel.present.add('keeper');
+      keeperChannel.present.add('guest');
+      final guest = PendingAdmissionController(
+        channel: guestChannel,
+        keeperIdentity: () => 'keeper',
+        newId: () => 'r1',
+      );
+      final request = await guest.requestAdmission(displayName: 'Guest');
+      // No keeper listener existed when the first request was delivered.
+      final keeper = KeeperAdmissionController(
+        channel: keeperChannel,
+        keeperIdentity: () => 'keeper',
+      );
+      addTearDown(() async {
+        await guest.dispose();
+        await keeper.dispose();
+        await guestChannel.dispose();
+        await keeperChannel.dispose();
+      });
+      await keeper.changes.first;
+      check(keeper.requests.single.id).equals(request.id);
+      check(guestChannel.sent).length.equals(2);
+      check(identical(guestChannel.sent.last, request)).isTrue();
+      check(keeperChannel.sent.single).isA<AdmissionHello>();
+      check(keeperChannel.sent.single.recipientIdentity).equals('guest');
+      keeperChannel.controller.add(const AdmissionConnectionRestored());
+      await Future<void>.value();
+      check(keeperChannel.sent).length.equals(2);
+      check(keeper.requests).length.equals(1);
+    },
+  );
 
   test('untrusted keeper hello cannot trigger resend', () async {
     final channel = _Channel('guest');
@@ -614,69 +628,74 @@ void main() {
     check(guest.status).equals(AdmissionStatus.pending);
   });
 
-  test('presence resend recovers a dropped request, decision is targeted and deduped', () async {
-    final guestChannel = _Channel('guest');
-    final keeperChannel = _Channel('keeper');
-    guestChannel.peer = keeperChannel;
-    keeperChannel.peer = guestChannel;
-    guestChannel.present.add('keeper');
-    final guest = PendingAdmissionController(
-      channel: guestChannel,
-      keeperIdentity: () => 'keeper',
-      newId: () => 'r1',
-    );
-    final keeper = KeeperAdmissionController(
-      channel: keeperChannel,
-      keeperIdentity: () => 'keeper',
-    );
-    keeperChannel.present.add('guest');
-    addTearDown(() async {
-      await guest.dispose();
-      await keeper.dispose();
-      await guestChannel.dispose();
-      await keeperChannel.dispose();
-    });
+  test(
+    'presence resend recovers a dropped request, decision is targeted and deduped',
+    () async {
+      final guestChannel = _Channel('guest');
+      final keeperChannel = _Channel('keeper');
+      guestChannel.peer = keeperChannel;
+      keeperChannel.peer = guestChannel;
+      guestChannel.present.add('keeper');
+      final guest = PendingAdmissionController(
+        channel: guestChannel,
+        keeperIdentity: () => 'keeper',
+        newId: () => 'r1',
+      );
+      final keeper = KeeperAdmissionController(
+        channel: keeperChannel,
+        keeperIdentity: () => 'keeper',
+      );
+      keeperChannel.present.add('guest');
+      addTearDown(() async {
+        await guest.dispose();
+        await keeper.dispose();
+        await guestChannel.dispose();
+        await keeperChannel.dispose();
+      });
 
-    guestChannel.dropNext = true;
-    final request = await guest.requestAdmission(displayName: 'Guest');
-    check(guest.status).equals(AdmissionStatus.pending);
-    check(keeper.requests).isEmpty();
+      guestChannel.dropNext = true;
+      final request = await guest.requestAdmission(displayName: 'Guest');
+      check(guest.status).equals(AdmissionStatus.pending);
+      check(keeper.requests).isEmpty();
 
-    final requestArrived = keeper.changes.first;
-    guestChannel.controller.add(const AdmissionConnectionRestored());
-    await requestArrived;
-    check(keeper.requests).length.equals(1);
-    check(guestChannel.sent).length.equals(2);
-    check(identical(guestChannel.sent.last, request)).isTrue();
+      final requestArrived = keeper.changes.first;
+      guestChannel.controller.add(const AdmissionConnectionRestored());
+      await requestArrived;
+      check(keeper.requests).length.equals(1);
+      check(guestChannel.sent).length.equals(2);
+      check(identical(guestChannel.sent.last, request)).isTrue();
 
-    keeperChannel.dropNext = true;
-    await keeper.approve(request.id, 'guest');
-    check(guest.status).equals(AdmissionStatus.pending);
-    check(keeper.requests).isEmpty();
-    final approved = guest.changes.firstWhere(
-      (status) => status == AdmissionStatus.approved,
-    );
-    guestChannel.controller.add(const AdmissionPresenceChanged('keeper', true));
-    await approved;
-    check(guestChannel.sent).length.equals(3);
-    check(keeperChannel.sent).length.equals(2);
-    check(guest.status).equals(AdmissionStatus.approved);
-    check((keeperChannel.sent.last as AdmissionDecision).approved).isTrue();
-    check(keeperChannel.sent.last.recipientIdentity).equals('guest');
+      keeperChannel.dropNext = true;
+      await keeper.approve(request.id, 'guest');
+      check(guest.status).equals(AdmissionStatus.pending);
+      check(keeper.requests).isEmpty();
+      final approved = guest.changes.firstWhere(
+        (status) => status == AdmissionStatus.approved,
+      );
+      guestChannel.controller.add(
+        const AdmissionPresenceChanged('keeper', true),
+      );
+      await approved;
+      check(guestChannel.sent).length.equals(3);
+      check(keeperChannel.sent).length.equals(2);
+      check(guest.status).equals(AdmissionStatus.approved);
+      check((keeperChannel.sent.last as AdmissionDecision).approved).isTrue();
+      check(keeperChannel.sent.last.recipientIdentity).equals('guest');
 
-    guestChannel.controller.add(
-      AdmissionPacketReceived(
-        AdmissionDecision(
-          id: request.id,
-          senderIdentity: 'keeper',
-          recipientIdentity: 'guest',
-          expiresAt: request.expiresAt,
-          approved: false,
+      guestChannel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionDecision(
+            id: request.id,
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: request.expiresAt,
+            approved: false,
+          ),
         ),
-      ),
-    );
-    check(guest.status).equals(AdmissionStatus.approved);
-  });
+      );
+      check(guest.status).equals(AdmissionStatus.approved);
+    },
+  );
 
   test(
     'keeper rejects non-keeper authority and expired or changed requests',
@@ -1116,15 +1135,18 @@ void main() {
       channel.controller.add(AdmissionPacketReceived(receipt));
       check(keeper.attempts).isEmpty();
       channel.controller.add(AdmissionPacketReceived(request));
-      check(keeper.attempts.single.status)
-          .equals(KeeperAdmissionStatus.requested);
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.requested);
       channel.controller.add(AdmissionPacketReceived(receipt));
-      check(keeper.attempts.single.status)
-          .equals(KeeperAdmissionStatus.requested);
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.requested);
       await keeper.approve(request.id, 'guest');
       check(keeper.requests).isEmpty();
-      check(keeper.attempts.single.status)
-          .equals(KeeperAdmissionStatus.joining);
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.joining);
       check(keeper.attempts.single.joinDeadline).equals(request.expiresAt);
       channel.controller.add(AdmissionPacketReceived(request));
       await Future<void>.value();
@@ -1159,8 +1181,9 @@ void main() {
           ),
         ),
       );
-      check(keeper.attempts.single.status)
-          .equals(KeeperAdmissionStatus.joining);
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.joining);
       channel.controller.add(AdmissionPacketReceived(receipt));
       check(keeper.attempts.single.status).equals(KeeperAdmissionStatus.joined);
       channel.controller.add(
@@ -1304,28 +1327,33 @@ void main() {
       channel.controller.add(
         AdmissionPacketReceived(AdmissionProtocol.joinFailed(first)),
       );
-      check(keeper.attempts.single.status)
-          .equals(KeeperAdmissionStatus.joinFailed);
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.joinFailed);
       final second = request('second', start.add(const Duration(seconds: 31)));
       channel.controller.add(AdmissionPacketReceived(second));
       unawaited(keeper.approve(second.id, 'guest'));
       async.flushMicrotasks();
-      check(keeper.attempts.single.status)
-          .equals(KeeperAdmissionStatus.joining);
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.joining);
       channel.controller.add(
         AdmissionPacketReceived(AdmissionProtocol.joined(first)),
       );
       check(keeper.attempts.single.request.id).equals(second.id);
-      check(keeper.attempts.single.status)
-          .equals(KeeperAdmissionStatus.joining);
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.joining);
       async.elapse(const Duration(seconds: 31));
-      check(keeper.attempts.single.status)
-          .equals(KeeperAdmissionStatus.timedOut);
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.timedOut);
       channel.controller.add(
         AdmissionPacketReceived(AdmissionProtocol.joined(second)),
       );
-      check(keeper.attempts.single.status)
-          .equals(KeeperAdmissionStatus.timedOut);
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.timedOut);
       final third = request('third', start.add(const Duration(seconds: 90)));
       channel.controller.add(AdmissionPacketReceived(third));
       channel.controller.add(
@@ -1338,8 +1366,9 @@ void main() {
           ),
         ),
       );
-      check(keeper.attempts.single.status)
-          .equals(KeeperAdmissionStatus.cancelled);
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.cancelled);
       channel.controller.add(AdmissionPacketReceived(third));
       check(keeper.requests).isEmpty();
       channel.controller.add(const AdmissionRoomEnded());

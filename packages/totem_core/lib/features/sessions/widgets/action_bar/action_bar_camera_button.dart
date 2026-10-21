@@ -15,7 +15,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/shared/totem_icons.dart';
 
 class ActionBarCameraSwitcherButton extends StatefulWidget {
-  const new({
+  const ActionBarCameraSwitcherButton({
     required this.isCameraOn,
     required this.onToggle,
     required this.cameraFacing,
@@ -144,7 +144,7 @@ class _ActionBarCameraSwitcherButtonState
 /// The caret stays smaller than the camera glyph so it reads as an accessory
 /// that opens device selection.
 class _CameraDeviceCluster extends StatefulWidget {
-  const new({
+  const _CameraDeviceCluster({
     required this.camera,
     required this.isDesktopPicker,
     required this.menuOpen,
@@ -259,7 +259,7 @@ class _CameraDeviceClusterState extends State<_CameraDeviceCluster> {
 }
 
 class ActionBarCameraSwitcherButtonOverlay extends StatefulWidget {
-  const new({
+  const ActionBarCameraSwitcherButtonOverlay({
     required this.buttonKey,
     required this.isDesktopPicker,
     required this.initialCameraFacing,
@@ -477,7 +477,10 @@ class _ActionBarCameraSwitcherButtonOverlayState
 }
 
 class _CameraOverlayPositionDelegate extends SingleChildLayoutDelegate {
-  new({required this.preferredOffset, required this.overlaySize});
+  _CameraOverlayPositionDelegate({
+    required this.preferredOffset,
+    required this.overlaySize,
+  });
 
   final Offset preferredOffset;
   final Size overlaySize;
@@ -519,7 +522,7 @@ class _CameraOverlayPositionDelegate extends SingleChildLayoutDelegate {
 }
 
 class _CameraDeviceTile extends StatelessWidget {
-  const new({
+  const _CameraDeviceTile({
     required this.device,
     required this.isSelected,
     required this.onTap,
@@ -571,7 +574,7 @@ class _CameraDeviceTile extends StatelessWidget {
 }
 
 class SessionActionBarCameraButton extends ConsumerStatefulWidget {
-  const new({required this.session, super.key});
+  const SessionActionBarCameraButton({required this.session, super.key});
 
   final SessionController session;
 
