@@ -120,12 +120,25 @@ UserCaptureStep userCaptureStep(
   MediaPermission permission,
   PlatformInfo platform,
 ) => switch (platform) {
-  IosApp() || AndroidApp() => switch (permission) {
+  IosApp() => switch (permission) {
     MediaPermission.unknown ||
     MediaPermission.denied => UserCaptureStep.requestFirst,
     MediaPermission.granted => UserCaptureStep.capture,
     // The OS won't prompt again (X7).
     MediaPermission.blocked ||
+    MediaPermission.blockedBySystem ||
+    MediaPermission.restricted ||
+    MediaPermission.unsupported => UserCaptureStep.recover,
+  },
+  AndroidApp() => switch (permission) {
+    // Android's status reads the same before and after the user picks "Ask
+    // every time" in Settings, so a remembered refusal may be out of date.
+    // Asking costs nothing: while it's still refused, the request returns
+    // at once without a prompt and the refusal is explained (A2).
+    MediaPermission.unknown ||
+    MediaPermission.denied ||
+    MediaPermission.blocked => UserCaptureStep.requestFirst,
+    MediaPermission.granted => UserCaptureStep.capture,
     MediaPermission.blockedBySystem ||
     MediaPermission.restricted ||
     MediaPermission.unsupported => UserCaptureStep.recover,

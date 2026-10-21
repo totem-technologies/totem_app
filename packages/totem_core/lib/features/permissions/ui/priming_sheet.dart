@@ -12,15 +12,20 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
 /// Whether the priming sheet has anything to ask: the microphone, which
-/// joining needs, can still be prompted for (X2). The optional camera alone
-/// doesn't bring it back on every visit; turning the camera on asks for it
-/// (X6).
+/// joining needs, can still be prompted for (X2). A refusal the OS
+/// remembers keeps it away (A2), and the pre-join screen shows the fix. The
+/// optional camera alone doesn't bring it back on every visit; turning the
+/// camera on asks for it (X6).
 bool shouldShowPrimingSheet(
   MediaPermissions permissions,
   PlatformInfo platform,
-) =>
-    userCaptureStep(permissions.microphone, platform) ==
-    UserCaptureStep.requestFirst;
+) => switch (platform) {
+  IosApp() || AndroidApp() => switch (permissions.microphone) {
+    MediaPermission.unknown || MediaPermission.denied => true,
+    _ => false,
+  },
+  WebPlatform() || OtherPlatform() => false,
+};
 
 /// Explains the camera and microphone before the OS prompts for them.
 ///

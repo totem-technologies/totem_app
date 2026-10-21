@@ -262,6 +262,8 @@ class SessionDeviceController extends _$SessionDeviceController {
       logger.w('The room could not take the ${kind.name}', error: error);
       // The device was captured, which proves its permission (WS1).
       _permissions.recordCaptureSuccess(kind);
+      // The user changed their mind while it started: the failure is moot.
+      if (!_isLatest(kind, request)) return const TurnOnSkipped();
       _turnOnBlocked.add((kind, TurnOnBlocker.connection));
       _emitState();
       return const TurnOnSkipped();
@@ -293,7 +295,11 @@ class SessionDeviceController extends _$SessionDeviceController {
     return _enqueue(kind, () async {
       if (_disposed || !_isLatest(kind, request)) return;
       _problems[kind] = null;
-      if (_isOn(kind)) {
+      // Sent even when the device reads off: the join publishes it on the
+      // media's own queue, so it can read off while a publish is in flight.
+      // The media runs this after that publish, and does nothing when
+      // there's nothing published.
+      if (_media.isAvailable) {
         try {
           await _setEnabled(kind, false);
         } catch (error, stackTrace) {

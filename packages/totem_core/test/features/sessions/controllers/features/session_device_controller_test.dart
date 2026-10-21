@@ -70,7 +70,19 @@ void main() {
       check(deviceState().isMicrophoneEnabled).isFalse();
     });
 
-    test('disableMicrophone does nothing if already disabled', () async {
+    test('a turn-off is sent even while the device reads off', () async {
+      // The join publishes on media's own queue, so a device can read off
+      // while its publish is in flight. Media orders the turn-off after it.
+      await controller().disableMicrophone();
+      await controller().disableCamera();
+
+      check(media.microphoneCommands).deepEquals([false]);
+      check(media.cameraCommands).deepEquals([false]);
+    });
+
+    test('a turn-off with no room sends nothing', () async {
+      media.isAvailable = false;
+
       await controller().disableMicrophone();
 
       check(media.microphoneCommands).isEmpty();
@@ -248,8 +260,10 @@ void main() {
         check(media.cameraCommands).deepEquals([false]);
         command.complete();
         await request;
+        await pumpEventQueue();
 
-        check(media.cameraCommands).deepEquals([false]);
+        // The stale turn-on is never sent; the latest turn-off is.
+        check(media.cameraCommands).deepEquals([false, false]);
         check(media.isCameraEnabled).isFalse();
       },
     );
@@ -493,6 +507,27 @@ void main() {
 
       check(outcome).isA<TurnOnSkipped>();
       check(devices().cameraProblem).isNull();
+    });
+
+    test('a publish failure after a newer turn-off says nothing', () async {
+      final blocked = <(MediaKind, TurnOnBlocker)>[];
+      controller().turnOnBlocked.listen(blocked.add);
+      final publishing = Completer<void>();
+      media.onCameraCommand = (enabled) =>
+          enabled ? publishing.future : Future<void>.value();
+
+      final turningOn = controller().turnOn(MediaKind.camera);
+      await pumpEventQueue();
+      final turningOff = controller().disableCamera();
+      publishing.completeError(
+        MediaPublishException(TimeoutException('publish')),
+      );
+      final outcome = await turningOn;
+      await turningOff;
+      await pumpEventQueue();
+
+      check(outcome).isA<TurnOnSkipped>();
+      check(blocked).isEmpty();
     });
 
     test('X14: turning a device on with no room says so', () async {

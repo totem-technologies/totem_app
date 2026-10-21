@@ -42,6 +42,26 @@ void main() {
     return adapter;
   }
 
+  test('A2: a refusal the OS remembers keeps the sheet away', () {
+    for (final microphone in [
+      MediaPermission.unknown,
+      MediaPermission.denied,
+    ]) {
+      check(
+        shouldShowPrimingSheet(
+          MediaPermissions(microphone: microphone),
+          const AndroidApp(),
+        ),
+      ).isTrue();
+    }
+    check(
+      shouldShowPrimingSheet(
+        const MediaPermissions(microphone: MediaPermission.blocked),
+        const AndroidApp(),
+      ),
+    ).isFalse();
+  });
+
   testWidgets("X2: the sheet's main action asks for the microphone", (
     tester,
   ) async {

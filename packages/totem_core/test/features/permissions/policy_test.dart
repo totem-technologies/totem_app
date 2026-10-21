@@ -260,6 +260,20 @@ void main() {
       ]) {
         check(userCaptureStep(permission, ios)).equals(UserCaptureStep.recover);
       }
+      for (final permission in [
+        MediaPermission.restricted,
+        MediaPermission.unsupported,
+      ]) {
+        check(
+          userCaptureStep(permission, android),
+        ).equals(UserCaptureStep.recover);
+      }
+    });
+
+    test('A2: Android asks again after a refusal it remembers', () {
+      check(
+        userCaptureStep(MediaPermission.blocked, android),
+      ).equals(UserCaptureStep.requestFirst);
     });
 
     test('WS1/WF2: web always tries, since queries may be stale', () {

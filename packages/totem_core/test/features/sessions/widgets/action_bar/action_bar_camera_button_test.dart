@@ -562,7 +562,7 @@ void main() {
       await pumpCameraButton(
         tester,
         adapter: adapter,
-        platform: const AndroidApp(),
+        platform: const IosApp(),
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byType(ActionBarButton));

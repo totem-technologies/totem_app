@@ -171,6 +171,24 @@ void main() {
       verifyNever(track.restartTrack);
     });
 
+    test('the microphone reads on once its track unmutes', () {
+      // LiveKit updates the publication's mute flag from an async event, so
+      // right after an unmute it still says muted.
+      final publication = MockLocalAudioTrackPublication();
+      final unmuted = MockLocalAudioTrack();
+      final muted = MockLocalAudioTrack(muted: true);
+      when(() => publication.muted).thenReturn(true);
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.microphone),
+      ).thenReturn(publication);
+
+      when(() => publication.track).thenReturn(unmuted);
+      check(media.isMicrophoneEnabled).isTrue();
+
+      when(() => publication.track).thenReturn(muted);
+      check(media.isMicrophoneEnabled).isFalse();
+    });
+
     test('joining muted mutes the microphone before publishing it', () async {
       final track = MockLocalAudioTrack();
       when(

@@ -114,6 +114,21 @@ void main() {
       ).deepEquals(['On a Mac', 'On an iPad']);
     });
 
+    test("Mac Safari's steps go through the Websites settings", () {
+      final content = recoveryContent(
+        MediaKind.microphone,
+        MediaPermission.blocked,
+        null,
+        _web(WebBrowser.safari),
+      );
+      check(content.sections.first.steps).deepEquals([
+        'Choose Safari → Settings, then click Websites.',
+        'Click Microphone in the sidebar.',
+        'Next to this website, choose Allow.',
+        'Reload the page.',
+      ]);
+    });
+
     test('touch only puts the iPad steps first', () {
       final content = recoveryContent(
         MediaKind.camera,

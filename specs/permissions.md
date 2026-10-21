@@ -101,10 +101,10 @@ needs a device test before the behaviour is trusted.
 | I1 | The permission API reports never-asked the same way as refused | Treated as never asked: the user is asked | Done |
 | I2 | User refused | "Open Settings" | Done |
 | I3 | Restricted by Screen Time or MDM | Explained as managed by device restrictions | Done |
-| I4 | Granting in Settings doesn't relaunch the app; revoking ends it | Noticed on return (X5); nothing to do on revoke (X8) | Done |
-| I5 | App backgrounded mid-session | The camera pauses (no `voip` background mode); the mic continues. The camera resumes on return | VERIFY |
+| I4 | Changing a permission in Settings ends the app on iOS 27, granting as well as revoking | Relaunch shows the session to rejoin; pre-join starts the newly allowed device (X5); nothing to do on revoke (X8) | Done |
+| I5 | App backgrounded mid-session | The camera pauses (no `voip` background mode); the mic continues. The camera resumes on return. The track stays published, so others see a frozen frame | Done |
 | I6 | iPad Split View / Slide Over / Stage Manager | The camera is interrupted; tell the user it's paused while multitasking. iPadOS 16+ can allow multitasking camera access | Open, VERIFY |
-| I7 | Phone call or Siri interrupts the mic | Treated as an interruption, not a permission change | VERIFY |
+| I7 | Phone call or Siri interrupts the mic | Treated as an interruption, not a permission change; the mic resumes when the app is active again | Done |
 | I8 | The system prompt appears over the app | Returning from the prompt doesn't confuse the outcome; the device starts once | Done |
 | I9 | Missing `NS*UsageDescription` | The OS ends the app on capture. The keys are present | OK; keep the keys |
 | I10 | `permission_handler_apple` under Swift Package Manager derives its permission support from `Info.plist` at build time | All builds go through `flutter build`, which includes camera and microphone support | OK |
@@ -114,14 +114,14 @@ needs a device test before the behaviour is trusted.
 | ID | Scenario | Expected outcome | Status |
 |---|---|---|---|
 | A1 | First refusal | Can ask again | Done |
-| A2 | Second refusal (Android 11+) | The system stops prompting and its status still says "may ask". The app offers Settings instead of a prompt that never shows. After a relaunch the first request returns refused without a prompt, so a refusal on Android always explains how to allow it in Settings, including a second refusal just made | Done |
-| A3 | Back or tap-outside on the dialog | Same as a first refusal: can ask again | Done; VERIFY that a dismissed first prompt isn't reported as a permanent refusal, which would show Settings while the OS can still ask |
-| A4 | "Only this time" grant, app backgrounded mid-session | The grant is revoked shortly after backgrounding unless a foreground service started while visible keeps it. Our service covers the microphone but not the camera, so a one-time camera grant may be revoked, which may end the app | VERIFY — high priority |
+| A2 | Second refusal (Android 11+) | The system stops prompting and its status still says "may ask". The app offers Settings instead of a prompt that never shows. After a relaunch the first request returns refused without a prompt, so a refusal on Android always explains how to allow it in Settings, including a second refusal just made. Choosing "Ask every time" in Settings doesn't change the status the app can read, so turning a device on always asks first: a refusal still in place returns at once and is explained | Done |
+| A3 | Back or tap-outside on the dialog | Same as a first refusal: can ask again. The OS records nothing, so it isn't reported as a permanent refusal | Done |
+| A4 | "Only this time" grant, app backgrounded mid-session | Any running foreground service keeps a one-time grant, so ours keeps the camera's too. The service has no camera type, so the camera stops capturing in the background and others see a frozen frame; it resumes on return | Done |
 | A5 | Quick Settings camera/mic privacy toggle off (Android 12+) | The permission reads allowed, but capture gives black frames or silence; the system shows an unblock dialog. Not detectable | Open: mention in help copy |
 | A6 | Android 14: microphone foreground service | Needs microphone permission while the app is visible; joining guarantees both | OK |
 | A7 | Permissions auto-reset for unused apps | Rechecked on every launch and return | Done |
 | A8 | Revoking in Settings | The OS ends the app (X8) | OK |
-| A9 | Camera in use by another app / multi-window | "Didn't start" with a retry | Done; VERIFY the platform's error text |
+| A9 | Camera in use by another app / multi-window | Before capture: "Didn't start" with a retry. Taken mid-session: the plugin reopens the camera on return and the UI never shows a problem | Done; VERIFY the platform's error text before capture |
 | A10 | Android 13+ notification permission | Separate; see N rows | OK |
 
 ### Web, all browsers (W)
@@ -132,7 +132,7 @@ needs a device test before the behaviour is trusted.
 | W2 | Embedded without `allow="camera; microphone"` | Looks like a refusal. Not embedded today | OK; note for embedders |
 | W3 | Browsers report failures differently | See [Browser errors](#browser-errors) | Done |
 | W4 | The browser's permission status is unreliable (missing in Firefox < 132, stale in Safari, per-device in Firefox) | Never trusted over what capture shows; rechecked on return to the tab and on browser change events | Done |
-| W5 | Device list before a grant | Default devices with empty labels; the device picker must refresh after the first grant | VERIFY |
+| W5 | Device list before a grant | Default devices with empty labels; the device picker must refresh after the first grant | Done |
 | W6 | Hidden or unfocused tab | The camera waits for the tab to be visible, then starts | OK |
 | W7 | Private / Incognito | Nothing persists; every visit is a first visit | OK |
 | W8 | Chrome / Firefox on Android: the OS refused the browser app | The site looks allowed but capture is refused; the steps mention Android's app settings for the browser | Done |
@@ -165,10 +165,12 @@ needs a device test before the behaviour is trusted.
 |---|---|---|---|
 | WS1 | Grants last only until reload or user navigation; change events are unreliable | Expect a prompt every visit; capture outcomes win over the stale status | Done |
 | WS2 | A second capture of the same device mutes the first | Each device is captured once, and the preview hands its capture to the session | Done |
-| WS3 | Backgrounding, an interruption or another tab capturing | Capture is muted rather than ended, so the preview may show a frozen frame | VERIFY |
+| WS3 | Backgrounding, an interruption or another tab capturing | iOS: switching tabs or backgrounding stops the camera at once, so others see it black; the mic keeps going. macOS Safari keeps capturing in a background tab or a minimised window | Done |
 | WS4 | Overlapping capture requests on a cold start | Captures never overlap | OK |
 | WS5 | All iOS browsers are WebKit; in-app browsers (Instagram, TikTok, Gmail, SFSafariViewController) may refuse silently | In-app browsers that identify themselves are detected; a refusal there suggests opening the page in Safari, with copy link. SFSafariViewController identifies as Safari and can't be told apart, so it gets Safari's help | Done; VERIFY per app |
 | WS6 | iOS 17.4 paused capture on navigation (fixed later) | Avoid navigating while capturing on old iOS | VERIFY |
+| WS7 | A lasting refusal: macOS Safari's prompt has "Never for This Website"; iOS Safari's prompt has none, and the only lasting refusal is in Safari's settings, for every site | Rare, mostly technical users; the same steps fix it | OK |
+| WS8 | iOS Safari's address-bar control stops the camera or microphone outside the app | The control can still show the microphone on while nothing is sent; turning it off and on fixes it | Open: watch the media track's mute events so the control follows |
 
 ### Notifications and background (N)
 

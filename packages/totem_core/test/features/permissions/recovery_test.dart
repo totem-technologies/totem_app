@@ -425,6 +425,29 @@ void main() {
     check(find.byType(MediaRecoveryDialog).evaluate()).length.equals(1);
   });
 
+  testWidgets('A2: Android asks again after "Ask every time" in Settings', (
+    tester,
+  ) async {
+    final adapter = FakeMediaPermissionAdapter(
+      microphone: MediaPermission.blocked,
+      requestResults: {MediaKind.microphone: MediaPermission.granted},
+    );
+    await pumpHarness(
+      tester,
+      adapter,
+      (context, ref) => turnOnMedia(context, ref, control()),
+      platform: const AndroidApp(),
+    );
+    _FakeMicrophone.works = true;
+
+    await tester.tap(find.text('Go'));
+    await tester.pumpAndSettle();
+
+    check(adapter.requested).deepEquals([MediaKind.microphone]);
+    check(_FakeMicrophone.captures).equals(1);
+    check(find.byType(MediaRecoveryDialog).evaluate()).isEmpty();
+  });
+
   testWidgets('a refusal at the OS prompt is the answer: no dialog', (
     tester,
   ) async {

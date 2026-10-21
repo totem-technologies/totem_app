@@ -182,7 +182,15 @@ class LiveKitLocalMedia implements LocalMedia {
       _participant?.getTrackPublicationBySource(TrackSource.camera) != null;
 
   @override
-  bool get isMicrophoneEnabled => _participant?.isMicrophoneEnabled() ?? false;
+  bool get isMicrophoneEnabled {
+    // Not the participant's isMicrophoneEnabled(): it reads the
+    // publication's mute flag, which LiveKit updates from an async event, so
+    // just after an unmute it still says muted.
+    final publication = _participant?.getTrackPublicationBySource(
+      TrackSource.microphone,
+    );
+    return publication != null && isTrackLive(publication);
+  }
 
   @override
   bool get isCameraEnabled {

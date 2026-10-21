@@ -227,10 +227,10 @@ RecoveryContent _browserSiteSettings(_Device device, WebPlatform platform) {
       platform.hasTouchScreen
           ? [
               _iosSafariSteps(allow, reload, heading: 'On an iPad'),
-              _macSafariSteps(allow, reload),
+              _macSafariSteps(device, reload),
             ]
           : [
-              _macSafariSteps(allow, reload),
+              _macSafariSteps(device, reload),
               _iosSafariSteps(allow, reload, heading: 'On an iPad'),
             ],
       null,
@@ -306,10 +306,15 @@ RecoveryContent _browserSiteSettings(_Device device, WebPlatform platform) {
   );
 }
 
-RecoverySection _macSafariSteps(String allow, String reload) => RecoverySection(
-  heading: 'On a Mac',
-  ['Choose Safari → Settings for This Website.', allow, reload],
-);
+/// The Settings for This Website panel doesn't always list the camera and
+/// microphone, so these go through Safari's settings window instead.
+RecoverySection _macSafariSteps(_Device device, String reload) =>
+    RecoverySection(heading: 'On a Mac', [
+      'Choose Safari → Settings, then click Websites.',
+      'Click ${device.title} in the sidebar.',
+      'Next to this website, choose Allow.',
+      reload,
+    ]);
 
 RecoverySection _iosSafariSteps(
   String allow,
