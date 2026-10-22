@@ -1,4 +1,6 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'notification_permissions.g.dart';
 
 /// The single place notification permission is requested from.
 ///
@@ -23,6 +25,6 @@ class NoNotificationPermissions implements NotificationPermissions {
   Future<void> request() async {}
 }
 
-final notificationPermissionsProvider = Provider<NotificationPermissions>(
-  (_) => const NoNotificationPermissions(),
-);
+@Riverpod(keepAlive: true)
+NotificationPermissions notificationPermissions(Ref ref) =>
+    const NoNotificationPermissions();

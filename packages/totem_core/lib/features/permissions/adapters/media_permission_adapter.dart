@@ -1,11 +1,13 @@
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/features/permissions/adapters/native_media_permissions.dart';
 import 'package:totem_core/features/permissions/adapters/web_media_permissions_stub.dart'
     if (dart.library.js_interop) 'package:totem_core/features/permissions/adapters/web_media_permissions.dart';
 import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/platform_info.dart';
+
+part 'media_permission_adapter.g.dart';
 
 /// A platform's camera and microphone permission APIs.
 ///
@@ -33,7 +35,8 @@ abstract interface class MediaPermissionAdapter {
   void dispose();
 }
 
-final mediaPermissionAdapterProvider = Provider<MediaPermissionAdapter>((ref) {
+@Riverpod(keepAlive: true)
+MediaPermissionAdapter mediaPermissionAdapter(Ref ref) {
   final platform = ref.watch(platformInfoProvider);
   final adapter = switch (platform) {
     IosApp() || AndroidApp() => NativeMediaPermissions(platform),
@@ -42,7 +45,7 @@ final mediaPermissionAdapterProvider = Provider<MediaPermissionAdapter>((ref) {
   };
   ref.onDispose(adapter.dispose);
   return adapter;
-});
+}
 
 /// Platforms without a permission model of their own, such as desktop builds
 /// and the test host. Access is assumed, and capture outcomes decide.

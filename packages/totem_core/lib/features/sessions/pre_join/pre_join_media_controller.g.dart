@@ -8,12 +8,36 @@ part of 'pre_join_media_controller.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// The pre-join preview's camera and microphone.
+///
+/// Both devices start wanted. A [CaptureLoop] decides when each is captured:
+/// on native once its permission is granted, so the OS prompt only follows
+/// the user (X2); on web straight away, since capture is the request (WS2).
+/// A permission change, the tab's visibility and the user's toggles all just
+/// re-run the loop. Every capture goes through one queue, because cold-start
+/// Safari can't take overlapping requests.
 
 @ProviderFor(PreJoinMediaController)
 final preJoinMediaControllerProvider = PreJoinMediaControllerFamily._();
 
+/// The pre-join preview's camera and microphone.
+///
+/// Both devices start wanted. A [CaptureLoop] decides when each is captured:
+/// on native once its permission is granted, so the OS prompt only follows
+/// the user (X2); on web straight away, since capture is the request (WS2).
+/// A permission change, the tab's visibility and the user's toggles all just
+/// re-run the loop. Every capture goes through one queue, because cold-start
+/// Safari can't take overlapping requests.
 final class PreJoinMediaControllerProvider
     extends $NotifierProvider<PreJoinMediaController, PreJoinMediaState> {
+  /// The pre-join preview's camera and microphone.
+  ///
+  /// Both devices start wanted. A [CaptureLoop] decides when each is captured:
+  /// on native once its permission is granted, so the OS prompt only follows
+  /// the user (X2); on web straight away, since capture is the request (WS2).
+  /// A permission change, the tab's visibility and the user's toggles all just
+  /// re-run the loop. Every capture goes through one queue, because cold-start
+  /// Safari can't take overlapping requests.
   PreJoinMediaControllerProvider._({
     required PreJoinMediaControllerFamily super.from,
     required String super.argument,
@@ -60,7 +84,16 @@ final class PreJoinMediaControllerProvider
 }
 
 String _$preJoinMediaControllerHash() =>
-    r'727284fa22b59d74aa5046fb4af57fdff8c81bd4';
+    r'f0e0a022d570959632ec6bb6975052e56fb70521';
+
+/// The pre-join preview's camera and microphone.
+///
+/// Both devices start wanted. A [CaptureLoop] decides when each is captured:
+/// on native once its permission is granted, so the OS prompt only follows
+/// the user (X2); on web straight away, since capture is the request (WS2).
+/// A permission change, the tab's visibility and the user's toggles all just
+/// re-run the loop. Every capture goes through one queue, because cold-start
+/// Safari can't take overlapping requests.
 
 final class PreJoinMediaControllerFamily extends $Family
     with
@@ -80,12 +113,30 @@ final class PreJoinMediaControllerFamily extends $Family
         isAutoDispose: true,
       );
 
+  /// The pre-join preview's camera and microphone.
+  ///
+  /// Both devices start wanted. A [CaptureLoop] decides when each is captured:
+  /// on native once its permission is granted, so the OS prompt only follows
+  /// the user (X2); on web straight away, since capture is the request (WS2).
+  /// A permission change, the tab's visibility and the user's toggles all just
+  /// re-run the loop. Every capture goes through one queue, because cold-start
+  /// Safari can't take overlapping requests.
+
   PreJoinMediaControllerProvider call(String sessionSlug) =>
       PreJoinMediaControllerProvider._(argument: sessionSlug, from: this);
 
   @override
   String toString() => r'preJoinMediaControllerProvider';
 }
+
+/// The pre-join preview's camera and microphone.
+///
+/// Both devices start wanted. A [CaptureLoop] decides when each is captured:
+/// on native once its permission is granted, so the OS prompt only follows
+/// the user (X2); on web straight away, since capture is the request (WS2).
+/// A permission change, the tab's visibility and the user's toggles all just
+/// re-run the loop. Every capture goes through one queue, because cold-start
+/// Safari can't take overlapping requests.
 
 abstract class _$PreJoinMediaController extends $Notifier<PreJoinMediaState> {
   late final _$args = ref.$arg as String;

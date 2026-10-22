@@ -7,14 +7,15 @@
 library;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/features/permissions/platform_info_stub.dart'
     if (dart.library.js_interop) 'package:totem_core/features/permissions/platform_info_web.dart';
 
+part 'platform_info.g.dart';
+
 /// The platform this build is running on.
-final platformInfoProvider = Provider<PlatformInfo>(
-  (_) => currentPlatformInfo(),
-);
+@Riverpod(keepAlive: true)
+PlatformInfo platformInfo(Ref ref) => currentPlatformInfo();
 
 PlatformInfo currentPlatformInfo() {
   if (kIsWeb || kIsWasm) {

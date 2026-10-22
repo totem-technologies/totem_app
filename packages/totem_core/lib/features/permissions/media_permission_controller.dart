@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/permissions/adapters/media_permission_adapter.dart';
 import 'package:totem_core/features/permissions/classify.dart';
@@ -9,17 +9,14 @@ import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/permissions/policy.dart';
 
-/// The single source of truth for camera and microphone permission.
+part 'media_permission_controller.g.dart';
+
+/// The single source of truth for camera and microphone permission. Holds
+/// [MediaPermissions], or null until the first query completes.
 ///
 /// Kept alive for the life of the app, so a permission learned while nothing
-/// is watching (such as a grant made before pre-join renders) is never lost
-/// (X1).
-final mediaPermissionControllerProvider =
-    NotifierProvider<MediaPermissionController, MediaPermissions?>(
-      MediaPermissionController.new,
-    );
-
-/// Holds [MediaPermissions], or null until the first query completes.
+/// is watching (such as a grant made before pre-join renders, or an Android
+/// refusal its status no longer shows) is never lost (X1, A2).
 ///
 /// Only permission: whether a device works is kept by whoever captures it.
 /// Inputs are permission queries (on start, on app resume, and on platform
@@ -27,7 +24,8 @@ final mediaPermissionControllerProvider =
 /// grant or reveal a refusal. Queries are only hints and never override a
 /// request or capture outcome unless the platform's answer changed; see
 /// `reconcileQuery`.
-class MediaPermissionController extends Notifier<MediaPermissions?> {
+@Riverpod(keepAlive: true)
+class MediaPermissionController extends _$MediaPermissionController {
   late MediaPermissionAdapter _adapter;
   final _lastQuery = <MediaKind, MediaPermission>{};
   final _requests = <MediaKind, Future<MediaPermission>>{};
