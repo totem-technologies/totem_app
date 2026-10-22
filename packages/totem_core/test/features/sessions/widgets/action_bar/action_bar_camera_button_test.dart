@@ -5,6 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/permissions/adapters/media_permission_adapter.dart';
+import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/permissions/platform_info.dart';
+import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
 import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
@@ -12,6 +17,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
+import '../../../permissions/fake_media_permission_adapter.dart';
 import '../../controllers/core/session_controller_mock.dart';
 import '../../media/fake_local_media.dart';
 
@@ -431,10 +437,18 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
-    Future<void> pumpCameraButton(WidgetTester tester) {
+    Future<void> pumpCameraButton(
+      WidgetTester tester, {
+      FakeMediaPermissionAdapter? adapter,
+      PlatformInfo platform = const IosApp(),
+    }) {
       return tester.pumpWidget(
         ProviderScope(
           overrides: [
+            platformInfoProvider.overrideWithValue(platform),
+            mediaPermissionAdapterProvider.overrideWithValue(
+              adapter ?? FakeMediaPermissionAdapter(),
+            ),
             mediaDeviceCatalogProvider.overrideWithValue(
               FakeMediaDeviceCatalog(),
             ),
@@ -486,6 +500,103 @@ void main() {
       check(
         tester.widgetList(find.bySemanticsLabel('Camera off')),
       ).length.equals(1);
+    });
+
+    testWidgets('X6: asks for access first, then turns the camera on', (
+      tester,
+    ) async {
+      final media = sessionController.mockLocalMedia;
+      final adapter = FakeMediaPermissionAdapter(
+        camera: MediaPermission.unknown,
+        requestResults: {MediaKind.camera: MediaPermission.granted},
+      );
+      await pumpCameraButton(tester, adapter: adapter);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(ActionBarButton));
+      await tester.pumpAndSettle();
+
+      check(adapter.requested).deepEquals([MediaKind.camera]);
+      check(media.cameraCommands).deepEquals([true]);
+    });
+
+    testWidgets('X7: a refused camera explains the fix instead of capturing', (
+      tester,
+    ) async {
+      final media = sessionController.mockLocalMedia;
+      final adapter = FakeMediaPermissionAdapter(
+        camera: MediaPermission.blocked,
+      );
+      await pumpCameraButton(tester, adapter: adapter);
+      await tester.pumpAndSettle();
+
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera off, needs attention')),
+      ).length.equals(1);
+      // Visible against the muted button, which uses the theme's error color.
+      final badge = tester.widget<Badge>(find.byType(Badge));
+      check(badge.isLabelVisible).isTrue();
+      check(badge.backgroundColor).equals(AppTheme.attention);
+
+      await tester.tap(find.byType(ActionBarButton));
+      await tester.pumpAndSettle();
+
+      check(media.cameraCommands).isEmpty();
+      check(find.byType(MediaRecoveryDialog).evaluate()).length.equals(1);
+      await tester.tap(find.text('Open Settings'));
+      await tester.pumpAndSettle();
+      check(adapter.settingsOpened).equals(1);
+    });
+
+    testWidgets("the dialog's Allow button never stacks another dialog", (
+      tester,
+    ) async {
+      final media = sessionController.mockLocalMedia
+        ..onCameraCommand = (enabled) async {
+          if (enabled) throw Exception('NotFoundError');
+        };
+      final adapter = FakeMediaPermissionAdapter(
+        camera: MediaPermission.blocked,
+        requestResults: {MediaKind.camera: MediaPermission.granted},
+      );
+      await pumpCameraButton(
+        tester,
+        adapter: adapter,
+        platform: const IosApp(),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(ActionBarButton));
+      await tester.pumpAndSettle();
+      check(find.byType(MediaRecoveryDialog).evaluate()).length.equals(1);
+
+      // Reset in Settings while the dialog is open: the OS may prompt again.
+      adapter
+        ..queries[MediaKind.camera] = MediaPermission.unknown
+        ..emitChange();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Allow camera'));
+      await tester.pumpAndSettle();
+
+      check(media.cameraCommands).deepEquals([true]);
+      check(find.byType(MediaRecoveryDialog).evaluate()).length.equals(1);
+      check(find.text('No camera found').evaluate()).length.equals(1);
+    });
+
+    testWidgets('X7: a capture refused by the OS explains the fix', (
+      tester,
+    ) async {
+      final media = sessionController.mockLocalMedia
+        ..onCameraCommand = (enabled) async {
+          if (enabled) throw Exception('NotAllowedError');
+        };
+      await pumpCameraButton(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(ActionBarButton));
+      await tester.pumpAndSettle();
+
+      check(media.cameraCommands).deepEquals([true]);
+      check(find.byType(MediaRecoveryDialog).evaluate()).length.equals(1);
     });
 
     testWidgets('web camera action ignores overlapping presses and recovers', (

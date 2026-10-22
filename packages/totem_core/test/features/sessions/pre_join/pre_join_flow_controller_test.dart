@@ -8,6 +8,8 @@ import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/permissions/adapters/media_permission_adapter.dart';
+import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
@@ -15,6 +17,7 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 
 import '../../../setup.dart';
+import '../../permissions/fake_media_permission_adapter.dart';
 import '../livekit_mocks.dart';
 
 const _slug = 'pre-join-flow-test';
@@ -176,17 +179,21 @@ ProviderContainer _container({
   required PreJoinPreviewTrackFactory factory,
   required JoinResponse response,
   required ValueGetter<SessionController> sessionController,
-  bool requireUsableMedia = false,
   bool Function()? shouldFailPrecache,
+  Future<void>? precacheGate,
 }) {
   return ProviderContainer(
       overrides: [
-        preJoinPreviewTrackFactoryProvider.overrideWithValue(factory),
-        preJoinRequiresUsableMediaProvider.overrideWithValue(
-          requireUsableMedia,
+        platformInfoProvider.overrideWithValue(
+          const WebPlatform(browser: WebBrowser.chrome, os: HostOs.macos),
         ),
+        mediaPermissionAdapterProvider.overrideWithValue(
+          FakeMediaPermissionAdapter(),
+        ),
+        preJoinPreviewTrackFactoryProvider.overrideWithValue(factory),
         sessionTokenProvider(_slug).overrideWith((_) async => response),
         sessionProvider(_slug).overrideWith((_) async {
+          await precacheGate;
           if (shouldFailPrecache?.call() ?? false) {
             throw StateError('Precache failed');
           }
@@ -271,14 +278,13 @@ void main() {
     ).equals(factory.audioTracks.single);
   });
 
-  test('permission revocation prevents joining with stale tracks', () async {
+  test('X3: a lost camera still joins, without it', () async {
     final factory = _TrackFactory();
     _SuccessfulSessionController.receivedMedia = null;
     final container = _container(
       factory: factory,
       response: const JoinResponse(token: 'token', isAlreadyPresent: false),
       sessionController: _SuccessfulSessionController.new,
-      requireUsableMedia: true,
     );
     addTearDown(container.dispose);
     await _waitForMedia(container);
@@ -288,14 +294,62 @@ void main() {
         .read(preJoinFlowControllerProvider(_slug).notifier)
         .requestJoin();
 
-    check(outcome).equals(PreJoinJoinOutcome.permissionsDenied);
+    check(outcome).equals(PreJoinJoinOutcome.joined);
+    check(_SuccessfulSessionController.receivedMedia?.cameraTrack).isNull();
+    check(
+      _SuccessfulSessionController.receivedMedia?.microphoneTrack,
+    ).equals(factory.audioTracks.single);
+  });
+
+  test('W9: a lost microphone prevents joining with stale tracks', () async {
+    final factory = _TrackFactory();
+    _SuccessfulSessionController.receivedMedia = null;
+    final container = _container(
+      factory: factory,
+      response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+      sessionController: _SuccessfulSessionController.new,
+    );
+    addTearDown(container.dispose);
+    await _waitForMedia(container);
+
+    factory.audioTracks.single.mockMediaStreamTrack.onEnded?.call();
+    final outcome = await container
+        .read(preJoinFlowControllerProvider(_slug).notifier)
+        .requestJoin();
+
+    check(outcome).equals(PreJoinJoinOutcome.microphoneNeeded);
     check(_SuccessfulSessionController.receivedMedia).isNull();
     check(
       container.read(preJoinFlowControllerProvider(_slug)).phase,
     ).equals(PreJoinFlowPhase.idle);
   });
 
-  test('native join succeeds when no camera or microphone exists', () async {
+  test('W9: a microphone lost while the session loads still blocks', () async {
+    final factory = _TrackFactory();
+    _SuccessfulSessionController.receivedMedia = null;
+    final precache = Completer<void>();
+    final container = _container(
+      factory: factory,
+      response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+      sessionController: _SuccessfulSessionController.new,
+      precacheGate: precache.future,
+    );
+    addTearDown(container.dispose);
+    await _waitForMedia(container);
+
+    final joining = container
+        .read(preJoinFlowControllerProvider(_slug).notifier)
+        .requestJoin();
+    await pumpEventQueue();
+    factory.audioTracks.single.mockMediaStreamTrack.onEnded?.call();
+    precache.complete();
+    final outcome = await joining;
+
+    check(outcome).equals(PreJoinJoinOutcome.microphoneNeeded);
+    check(_SuccessfulSessionController.receivedMedia).isNull();
+  });
+
+  test('X4: no microphone prevents joining', () async {
     _SuccessfulSessionController.receivedMedia = null;
     final container = _container(
       factory: _UnavailableTrackFactory(),
@@ -313,9 +367,8 @@ void main() {
         .read(preJoinFlowControllerProvider(_slug).notifier)
         .requestJoin();
 
-    check(outcome).equals(PreJoinJoinOutcome.joined);
-    check(_SuccessfulSessionController.receivedMedia?.cameraTrack).isNull();
-    check(_SuccessfulSessionController.receivedMedia?.microphoneTrack).isNull();
+    check(outcome).equals(PreJoinJoinOutcome.microphoneNeeded);
+    check(_SuccessfulSessionController.receivedMedia).isNull();
   });
 
   test(

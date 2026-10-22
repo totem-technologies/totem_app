@@ -950,34 +950,37 @@ void main() {
           final localParticipant = MockLocalParticipant();
           final cameraTrack = MockLocalVideoTrack();
           final microphoneTrack = MockLocalAudioTrack();
-          var microphoneEnabled = false;
+          final microphonePublication = MockLocalAudioTrackPublication();
+          when(() => microphonePublication.track).thenReturn(microphoneTrack);
           when(
             () => localParticipant.setCameraEnabled(any<bool>()),
           ).thenAnswer((_) async => null);
-          when(
-            localParticipant.isMicrophoneEnabled,
-          ).thenAnswer((_) => microphoneEnabled);
           when(
             () => localParticipant.publishVideoTrack(
               cameraTrack,
               publishOptions: SessionController.defaultVideoPublishOptions,
             ),
           ).thenAnswer((_) async => MockLocalTrackPublication());
+          var microphonePublished = false;
           when(
             () => localParticipant.publishAudioTrack(microphoneTrack),
           ).thenAnswer((_) async {
-            microphoneEnabled = true;
-            return MockLocalAudioTrackPublication();
+            microphonePublished = true;
+            return microphonePublication;
           });
+          when(
+            () => localParticipant.getTrackPublicationBySource(
+              TrackSource.microphone,
+            ),
+          ).thenAnswer(
+            (_) => microphonePublished ? microphonePublication : null,
+          );
           when(
             () => localParticipant.setMicrophoneEnabled(
               false,
               audioCaptureOptions: any(named: 'audioCaptureOptions'),
             ),
-          ).thenAnswer((_) async {
-            microphoneEnabled = false;
-            return null;
-          });
+          ).thenAnswer((_) async => null);
 
           final room = _CountingRoom(localParticipant);
           controller
@@ -1010,6 +1013,8 @@ void main() {
             () => microphoneTrack.mute(stopOnMute: false),
             () => localParticipant.publishAudioTrack(microphoneTrack),
           ]);
+          // Published muted, then muted again in case anything unmuted it
+          // while it published; never unmuted.
           verify(
             () => localParticipant.setMicrophoneEnabled(
               false,
