@@ -34,6 +34,10 @@ class FakeMediaPermissionAdapter implements MediaPermissionAdapter {
   /// Holds queries until completed, to test what happens before they finish.
   Completer<void>? queryGate;
 
+  /// Holds requests until completed, like an OS prompt the user hasn't
+  /// answered yet.
+  Completer<void>? requestGate;
+
   final _changes = StreamController<void>.broadcast();
 
   /// Simulates the platform reporting a permission change on its own.
@@ -48,6 +52,7 @@ class FakeMediaPermissionAdapter implements MediaPermissionAdapter {
   @override
   Future<MediaPermission?> request(MediaKind kind) async {
     requested.add(kind);
+    await requestGate?.future;
     final result = requestResults[kind];
     if (result != null) queries[kind] = result;
     return result;

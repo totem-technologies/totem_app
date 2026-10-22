@@ -180,6 +180,7 @@ ProviderContainer _container({
   required JoinResponse response,
   required ValueGetter<SessionController> sessionController,
   bool Function()? shouldFailPrecache,
+  Future<void>? precacheGate,
 }) {
   return ProviderContainer(
       overrides: [
@@ -192,6 +193,7 @@ ProviderContainer _container({
         preJoinPreviewTrackFactoryProvider.overrideWithValue(factory),
         sessionTokenProvider(_slug).overrideWith((_) async => response),
         sessionProvider(_slug).overrideWith((_) async {
+          await precacheGate;
           if (shouldFailPrecache?.call() ?? false) {
             throw StateError('Precache failed');
           }
@@ -320,6 +322,31 @@ void main() {
     check(
       container.read(preJoinFlowControllerProvider(_slug)).phase,
     ).equals(PreJoinFlowPhase.idle);
+  });
+
+  test('W9: a microphone lost while the session loads still blocks', () async {
+    final factory = _TrackFactory();
+    _SuccessfulSessionController.receivedMedia = null;
+    final precache = Completer<void>();
+    final container = _container(
+      factory: factory,
+      response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+      sessionController: _SuccessfulSessionController.new,
+      precacheGate: precache.future,
+    );
+    addTearDown(container.dispose);
+    await _waitForMedia(container);
+
+    final joining = container
+        .read(preJoinFlowControllerProvider(_slug).notifier)
+        .requestJoin();
+    await pumpEventQueue();
+    factory.audioTracks.single.mockMediaStreamTrack.onEnded?.call();
+    precache.complete();
+    final outcome = await joining;
+
+    check(outcome).equals(PreJoinJoinOutcome.microphoneNeeded);
+    check(_SuccessfulSessionController.receivedMedia).isNull();
   });
 
   test('X4: no microphone prevents joining', () async {

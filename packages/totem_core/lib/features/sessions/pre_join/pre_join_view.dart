@@ -123,15 +123,29 @@ class PreJoinView extends StatelessWidget {
                     ],
                   ),
 
-                  _ => Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: 18,
-                    children: [
-                      Expanded(child: cameraPreview),
-                      ?notice,
-                      joinCard,
-                      actionBar,
-                    ],
+                  _ => LayoutBuilder(
+                    builder: (context, constraints) => Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      spacing: 18,
+                      children: [
+                        Expanded(child: cameraPreview),
+                        // The preview gives up its space first, down to a
+                        // third of the screen; past that, as when a notice
+                        // shows on a small phone, the controls scroll.
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: constraints.maxHeight * 2 / 3,
+                          ),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: 18,
+                              children: [?notice, joinCard, actionBar],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 };
               },

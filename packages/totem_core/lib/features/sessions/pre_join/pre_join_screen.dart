@@ -258,7 +258,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           MediaKind.microphone => media.microphone.problem,
         },
       ),
-      turnOn: () => ref.read(provider.notifier).turnOn(kind),
+      // A permission prompt can be answered after the screen is gone, with
+      // nothing left to turn on.
+      turnOn: () async => mounted
+          ? ref.read(provider.notifier).turnOn(kind)
+          : const TurnOnSkipped(),
     );
   }
 

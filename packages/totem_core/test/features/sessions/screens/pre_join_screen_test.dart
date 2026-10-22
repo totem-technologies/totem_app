@@ -572,6 +572,44 @@ void main() {
       check(find.byType(MediaRecoveryBanner).evaluate()).length.equals(1);
     });
 
+    testWidgets('X4: the microphone fix fits a small phone', (tester) async {
+      tester.view
+        ..physicalSize = const Size(320, 568)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await pumpScreen(
+        tester,
+        adapter: FakeMediaPermissionAdapter(
+          microphone: MediaPermission.blocked,
+        ),
+      );
+      await settle(tester);
+
+      check(find.byType(MediaRecoveryBanner).evaluate()).length.equals(1);
+      check(tester.takeException()).isNull();
+    });
+
+    testWidgets('a prompt answered after leaving pre-join is ignored', (
+      tester,
+    ) async {
+      final adapter = FakeMediaPermissionAdapter(
+        camera: MediaPermission.unknown,
+        requestResults: {MediaKind.camera: MediaPermission.granted},
+      )..requestGate = Completer();
+      await pumpScreen(tester, adapter: adapter);
+      await settle(tester);
+
+      await tester.tap(find.bySemanticsLabel(RegExp('^Camera off')));
+      await tester.pump();
+      check(adapter.requested).deepEquals([MediaKind.camera]);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      adapter.requestGate!.complete();
+      await tester.pump();
+
+      check(tester.takeException()).isNull();
+    });
+
     testWidgets('X7: a blocked camera toggle explains the fix', (tester) async {
       await pumpScreen(
         tester,

@@ -36,11 +36,16 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         return PreJoinJoinOutcome.confirmationRequired;
       }
 
+      // Precache event data before transferring preview tracks so a failed
+      // request leaves them owned by the pre-join controller and retryable.
+      await ref.read(sessionProvider(sessionSlug).future);
+
       final mediaController = ref.read(
         preJoinMediaControllerProvider(sessionSlug).notifier,
       );
-      // Decide on the settled preview, so a capture that's still starting
-      // or a track that just ended is accounted for (X4, W9).
+      // Decide on the settled preview right before taking it, so a capture
+      // that's still starting or a track that just ended is accounted for
+      // (X4, W9).
       await mediaController.settled();
       final media = ref.read(preJoinMediaControllerProvider(sessionSlug));
       final readiness = joinReadiness(
@@ -52,10 +57,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         state = state.copyWith(phase: PreJoinFlowPhase.idle);
         return PreJoinJoinOutcome.microphoneNeeded;
       }
-
-      // Precache event data before transferring preview tracks so a failed
-      // request leaves them owned by the pre-join controller and retryable.
-      await ref.read(sessionProvider(sessionSlug).future);
 
       final joinMedia = await mediaController.takeForJoin();
       mediaTransferred = true;
