@@ -132,7 +132,7 @@ needs a device test before the behaviour is trusted.
 | W2 | Embedded without `allow="camera; microphone"` | Looks like a refusal. Not embedded today | OK; note for embedders |
 | W3 | Browsers report failures differently | See [Browser errors](#browser-errors) | Done |
 | W4 | The browser's permission status is unreliable (missing in Firefox < 132, stale in Safari, per-device in Firefox) | Never trusted over what capture shows; rechecked on return to the tab and on browser change events | Done |
-| W5 | Device list before a grant | Default devices with empty labels; the device picker must refresh after the first grant | Done |
+| W5 | Device list before a grant | Default devices with empty labels; the device picker must refresh after the first grant | Done: relies on the browser's `devicechange` event, verified in macOS Safari |
 | W6 | Hidden or unfocused tab | The camera waits for the tab to be visible, then starts | OK |
 | W7 | Private / Incognito | Nothing persists; every visit is a first visit | OK |
 | W8 | Chrome / Firefox on Android: the OS refused the browser app | The site looks allowed but capture is refused; the steps mention Android's app settings for the browser | Done |

@@ -48,13 +48,6 @@ class CaptureLoop {
 
   bool isStarting(MediaKind kind) => _starting.contains(kind);
 
-  /// Whether no step is running or queued.
-  bool get isSettled => _running == null;
-
-  /// Completes once the steps running now have finished, without taking any
-  /// new ones.
-  Future<void> get idle => _running ?? Future<void>.value();
-
   void setIntent(MediaKind kind, DeviceIntent intent) {
     if (_intents[kind] == intent) return;
     _intents[kind] = intent;
@@ -94,10 +87,18 @@ class CaptureLoop {
   /// Stops taking steps, such as once the devices are handed over.
   void close() => _closed = true;
 
+  /// The order devices are settled in. On web each start is a browser
+  /// prompt, so the microphone, which joining needs, is asked for first: an
+  /// unanswered prompt for the optional camera never holds it up (X3).
+  static const List<MediaKind> _order = [
+    MediaKind.microphone,
+    MediaKind.camera,
+  ];
+
   Future<void> _runUntilSettled() async {
     do {
       _again = false;
-      for (final kind in MediaKind.values) {
+      for (final kind in _order) {
         await _settle(kind);
       }
     } while (_again && !_closed);

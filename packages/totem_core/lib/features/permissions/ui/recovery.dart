@@ -176,7 +176,14 @@ class _MediaRecoveryDialogState extends ConsumerState<MediaRecoveryDialog> {
       ..listen(_control.problem, (_, _) => _closeIfFixed());
 
     final checkAgain = content.canCheckAgain
-        ? () => unawaited(_act(() => _control.turnOn()))
+        ? () => unawaited(
+            _act(
+              () => _attemptTurnOn(
+                ref.read(mediaPermissionControllerProvider.notifier),
+                _control,
+              ),
+            ),
+          )
         : null;
     final primary =
         _primaryAction(content) ??

@@ -166,32 +166,8 @@ void main() {
     final turnOn = devices.loop.turnOn(MediaKind.camera);
     await pumpEventQueue();
     check(devices.loop.isStarting(MediaKind.camera)).isTrue();
-    check(devices.loop.isSettled).isFalse();
     devices.finish(MediaKind.camera);
     await turnOn;
     check(devices.loop.isStarting(MediaKind.camera)).isFalse();
-    check(devices.loop.isSettled).isTrue();
-  });
-
-  test('idle waits for running steps without taking new ones', () async {
-    final devices = _Devices();
-    final turnOn = devices.loop.turnOn(MediaKind.camera);
-    await pumpEventQueue();
-    var idle = false;
-    final waiting = devices.loop.idle.whenComplete(() => idle = true);
-    await pumpEventQueue();
-    check(idle).isFalse();
-
-    devices.finish(MediaKind.camera);
-    await Future.wait([turnOn, waiting]);
-    check(devices.starts).length.equals(1);
-
-    // Nothing running: idle doesn't start the microphone that's wanted.
-    devices.loop.setIntent(
-      MediaKind.microphone,
-      const DeviceIntent(wanted: true),
-    );
-    await devices.loop.idle;
-    check(devices.starts).length.equals(1);
   });
 }

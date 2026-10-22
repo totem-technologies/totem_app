@@ -565,7 +565,7 @@ void main() {
         foreground.dispose();
         container.dispose();
       });
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       check(factory.cameraRequested).isTrue();
 
       foreground.emit(false);
@@ -644,64 +644,73 @@ void main() {
     check(factory.videoTracks).length.equals(1);
   });
 
-  test('camera and microphone capture are initialized sequentially', () async {
-    final factory = _DelayedCameraFactory();
+  test(
+    'X3: an unanswered camera prompt never holds up the microphone',
+    () async {
+      // On web each capture is a browser prompt, so the order decides which
+      // one the user sees first. The microphone, which joining needs, goes
+      // first; the optional camera waits.
+      final factory = _DelayedMicrophoneFactory();
+      final container = _createContainer(factory);
+      addTearDown(container.dispose);
+      await pumpEventQueue();
+
+      check(factory.microphoneRequested).isTrue();
+      check(factory.videoTracks).isEmpty();
+      factory.gate.complete();
+      await _waitUntilInitialized(container);
+      check(factory.audioTracks).length.equals(1);
+      check(factory.videoTracks).length.equals(1);
+    },
+  );
+
+  test(
+    'camera turned off while the microphone starts is never acquired',
+    () async {
+      final factory = _DelayedMicrophoneFactory();
+      final container = _createContainer(factory);
+      addTearDown(container.dispose);
+      await pumpEventQueue();
+
+      final controller = container.read(
+        preJoinMediaControllerProvider(_sessionSlug).notifier,
+      );
+      final toggle = controller.turnOff(MediaKind.camera);
+      factory.gate.complete();
+      await toggle;
+      final state = await _waitUntilInitialized(container);
+
+      check(factory.videoTracks).isEmpty();
+      check(state.camera.phase).equals(PreJoinCapturePhase.disabled);
+    },
+  );
+
+  test('camera toggles wait for the microphone capture in flight', () async {
+    final factory = _DelayedMicrophoneFactory();
     final container = _createContainer(factory);
     addTearDown(container.dispose);
-    await Future<void>.delayed(Duration.zero);
-
-    check(factory.cameraRequested).equals(true);
-    check(factory.audioTracks).isEmpty();
-    factory.gate.complete();
-    await _waitUntilInitialized(container);
-    check(factory.videoTracks).length.equals(1);
-    check(factory.audioTracks).length.equals(1);
-  });
-
-  test('microphone disabled during camera capture is never acquired', () async {
-    final factory = _DelayedCameraFactory();
-    final container = _createContainer(factory);
-    addTearDown(container.dispose);
-    await Future<void>.delayed(Duration.zero);
-
-    final controller = container.read(
-      preJoinMediaControllerProvider(_sessionSlug).notifier,
-    );
-    final toggle = controller.turnOff(MediaKind.microphone);
-    factory.gate.complete();
-    await toggle;
-    final state = await _waitUntilInitialized(container);
-
-    check(factory.audioTracks).isEmpty();
-    check(state.microphone.phase).equals(PreJoinCapturePhase.disabled);
-  });
-
-  test('microphone toggles share the in-flight camera capture queue', () async {
-    final factory = _DelayedCameraFactory();
-    final container = _createContainer(factory);
-    addTearDown(container.dispose);
-    await Future<void>.delayed(Duration.zero);
+    await pumpEventQueue();
 
     final controller = container.read(
       preJoinMediaControllerProvider(_sessionSlug).notifier,
     );
     var toggleCompleted = false;
     final toggleOff = controller
-        .turnOff(MediaKind.microphone)
+        .turnOff(MediaKind.camera)
         .whenComplete(() => toggleCompleted = true);
-    await Future<void>.delayed(Duration.zero);
+    await pumpEventQueue();
 
-    check(toggleCompleted).equals(false);
-    check(factory.audioTracks).isEmpty();
+    check(toggleCompleted).isFalse();
+    check(factory.videoTracks).isEmpty();
 
     factory.gate.complete();
     await toggleOff;
-    await controller.turnOn(MediaKind.microphone);
+    await controller.turnOn(MediaKind.camera);
     final state = await _waitUntilInitialized(container);
 
-    check(factory.videoTracks).length.equals(1);
     check(factory.audioTracks).length.equals(1);
-    check(state.microphone.isReady).equals(true);
+    check(factory.videoTracks).length.equals(1);
+    check(state.camera.isReady).isTrue();
   });
 
   test('microphone stop waits for in-flight initialization', () async {
