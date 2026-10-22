@@ -3,7 +3,7 @@ description: "Guided introspection groups."
 publish_to: "none"
 version: 0.0.90+90
 environment:
-  sdk: ^3.13.5
+  sdk: ^3.12.2
 resolution: workspace
 
 dependencies:
@@ -43,10 +43,7 @@ dependencies:
   auto_size_text: ^3.0.0
   flutter_html: ^3.0.0
   # flutter_native_splash: ^2.4.6
-  pinput:
-    git:
-      url: https://github.com/qeepcologne/Flutter_Pinput/
-      ref: material-ui
+  pinput: ^7.0.0
   flutter_svg: ^2.2.4
   image_picker: ^1.2.2
   timeago: ^3.7.1
@@ -65,7 +62,7 @@ dev_dependencies:
 
   # Linting
   flutter_lints: ^6.0.0
-  very_good_analysis: ^11.0.0
+  very_good_analysis: ^10.3.0
   riverpod_lint: ^3.1.4
 
   # Generators

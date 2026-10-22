@@ -23,7 +23,7 @@ Future<void> showBackgroundActivityDialog(BuildContext context) async {
     return;
   }
 
-  return await showDialog<void>(
+  return showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (context) => const BackgroundActivityDialog(),
@@ -31,7 +31,7 @@ Future<void> showBackgroundActivityDialog(BuildContext context) async {
 }
 
 class BackgroundActivityDialog extends StatelessWidget {
-  const new({super.key});
+  const BackgroundActivityDialog({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +111,7 @@ Future<bool> showWebPermissionsDeniedDialog(
     builder: (context) => _WebPermissionsDeniedDialog(
       instructions: _permissionsInstructions(),
       onCheckAgain: () async {
-        if (retryPermissions != null) return await retryPermissions();
+        if (retryPermissions != null) return retryPermissions();
 
         // Legacy callers use the permissions controller. The session pre-join
         // flow supplies [retryPermissions] to refresh the real preview tracks.
@@ -132,7 +132,11 @@ Future<bool> showWebPermissionsDeniedDialog(
 }
 
 class _PermissionInstructions {
-  const new({required this.browser, required this.steps, required this.helper});
+  const _PermissionInstructions({
+    required this.browser,
+    required this.steps,
+    required this.helper,
+  });
 
   final String browser;
   final List<String> steps;
@@ -174,7 +178,8 @@ _PermissionInstructions _permissionsInstructions() {
         'Click the ✕ beside “Blocked Temporarily”.',
         'Reload the page and choose Allow when asked.',
       ],
-      helper: 'Firefox forgets temporary blocks on reload, a refresh is often all it takes.',
+      helper:
+          'Firefox forgets temporary blocks on reload, a refresh is often all it takes.',
     );
   }
   // Safari
@@ -221,7 +226,10 @@ _PermissionInstructions _permissionsInstructions() {
 }
 
 class _WebPermissionsDeniedDialog extends StatefulWidget {
-  const new({required this.instructions, required this.onCheckAgain});
+  const _WebPermissionsDeniedDialog({
+    required this.instructions,
+    required this.onCheckAgain,
+  });
 
   final _PermissionInstructions instructions;
   final AsyncValueGetter<bool> onCheckAgain;
@@ -316,7 +324,7 @@ class _WebPermissionsDeniedDialogState
 }
 
 class _PermissionStep extends StatelessWidget {
-  const new({required this.number, required this.text});
+  const _PermissionStep({required this.number, required this.text});
 
   final int number;
   final String text;
@@ -394,7 +402,7 @@ Future<bool> showPermissionsRequestSheet(BuildContext context) async {
 }
 
 class PermissionsRequestSheet extends ConsumerStatefulWidget {
-  const new({super.key});
+  const PermissionsRequestSheet({super.key});
 
   @override
   ConsumerState<PermissionsRequestSheet> createState() =>
@@ -519,7 +527,7 @@ class _PermissionsRequestSheetState
 }
 
 class PermissionItemTile extends StatelessWidget {
-  const new({
+  const PermissionItemTile({
     required this.icon,
     required this.title,
     required this.description,
@@ -597,7 +605,7 @@ class PermissionItemTile extends StatelessWidget {
 }
 
 class _CircleCheckbox extends StatelessWidget {
-  const new({required this.isChecked});
+  const _CircleCheckbox({required this.isChecked});
 
   final bool isChecked;
 

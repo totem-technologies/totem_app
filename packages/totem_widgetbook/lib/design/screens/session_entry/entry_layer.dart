@@ -70,10 +70,7 @@ class _EntryLayerState extends State<EntryLayer>
     with SingleTickerProviderStateMixin {
   /// Pixels off the resting spot for the sheet and panel. Progress for the
   /// modal, where 1 is fully in.
-  late final AnimationController _motion = AnimationController.unbounded(
-    vsync: this,
-    value: widget.kind == LayerKind.modal ? 0 : 900,
-  );
+  late final AnimationController _motion;
   final _slideKey = GlobalKey();
 
   bool _present = false;
@@ -103,6 +100,10 @@ class _EntryLayerState extends State<EntryLayer>
   @override
   void initState() {
     super.initState();
+    _motion = AnimationController.unbounded(
+      vsync: this,
+      value: widget.kind == LayerKind.modal ? 0 : 900,
+    );
     if (widget.open) _show();
   }
 
@@ -257,8 +258,9 @@ class _EntryLayerState extends State<EntryLayer>
 
   Widget _placed(double offset) {
     final theme = TotemTheme.of(context);
-    final ink = DefaultTextStyle.of(context).style
-        .copyWith(color: theme.textPrimary);
+    final ink = DefaultTextStyle.of(
+      context,
+    ).style.copyWith(color: theme.textPrimary);
 
     switch (widget.kind) {
       case LayerKind.sheet:

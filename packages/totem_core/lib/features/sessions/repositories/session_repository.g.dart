@@ -64,7 +64,7 @@ final class SessionTokenProvider
   }
 }
 
-String _$sessionTokenHash() => r'721fccf5ca10967ff60a7d1dcbbe6a9c374c4c96';
+String _$sessionTokenHash() => r'5db8d397fac32c6ca86c55d2e030ea8f70defbb1';
 
 final class SessionTokenFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<JoinResponse>, String> {
@@ -142,7 +142,7 @@ final class RoomStateProvider
   }
 }
 
-String _$roomStateHash() => r'43c7ac9c835bf63b70e0b8dd580c53b9bff98a27';
+String _$roomStateHash() => r'0bb534966702c9c9eba1d2c851148ec62f51c5d8';
 
 final class RoomStateFamily extends $Family
     with

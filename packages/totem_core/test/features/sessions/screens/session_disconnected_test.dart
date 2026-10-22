@@ -8,9 +8,9 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 
-class MockSharedPreferences extends Mock implements SharedPreferences;
+class MockSharedPreferences extends Mock implements SharedPreferences {}
 
-class MockInAppReview extends Mock implements InAppReview;
+class MockInAppReview extends Mock implements InAppReview {}
 
 SessionRoomState _createEndedState({
   RoomStatus status = RoomStatus.ended,
@@ -180,8 +180,9 @@ void main() {
       });
 
       test('does nothing if review already requested', () async {
-        when(() => prefs.getBool(SessionDisconnectedScreen.reviewRequestedKey))
-            .thenReturn(true);
+        when(
+          () => prefs.getBool(SessionDisconnectedScreen.reviewRequestedKey),
+        ).thenReturn(true);
 
         await SessionDisconnectedScreen.incrementSessionLikedCount(
           prefs: prefs,
@@ -225,10 +226,12 @@ void main() {
       );
 
       test('requests review and sets key when count reaches 5', () async {
-        when(() => prefs.getBool(SessionDisconnectedScreen.reviewRequestedKey))
-            .thenReturn(false);
-        when(() => prefs.getInt(SessionDisconnectedScreen.sessionLikedCountKey))
-            .thenReturn(4);
+        when(
+          () => prefs.getBool(SessionDisconnectedScreen.reviewRequestedKey),
+        ).thenReturn(false);
+        when(
+          () => prefs.getInt(SessionDisconnectedScreen.sessionLikedCountKey),
+        ).thenReturn(4);
         when(
           () => prefs.setInt(SessionDisconnectedScreen.sessionLikedCountKey, 5),
         ).thenAnswer((_) async => true);
@@ -238,8 +241,9 @@ void main() {
         ).thenAnswer((_) async => true);
 
         when(() => inAppReview.isAvailable()).thenAnswer((_) async => true);
-        when(() => inAppReview.requestReview())
-            .thenAnswer((_) async => await Future.value());
+        when(
+          () => inAppReview.requestReview(),
+        ).thenAnswer((_) async => Future.value());
 
         await SessionDisconnectedScreen.incrementSessionLikedCount(
           prefs: prefs,
@@ -258,10 +262,12 @@ void main() {
       });
 
       test('does not request review if not available', () async {
-        when(() => prefs.getBool(SessionDisconnectedScreen.reviewRequestedKey))
-            .thenReturn(false);
-        when(() => prefs.getInt(SessionDisconnectedScreen.sessionLikedCountKey))
-            .thenReturn(4);
+        when(
+          () => prefs.getBool(SessionDisconnectedScreen.reviewRequestedKey),
+        ).thenReturn(false);
+        when(
+          () => prefs.getInt(SessionDisconnectedScreen.sessionLikedCountKey),
+        ).thenReturn(4);
         when(
           () => prefs.setInt(SessionDisconnectedScreen.sessionLikedCountKey, 5),
         ).thenAnswer((_) async => true);
@@ -285,17 +291,20 @@ void main() {
       });
 
       test('handles errors silently', () async {
-        when(() => prefs.getBool(SessionDisconnectedScreen.reviewRequestedKey))
-            .thenReturn(false);
-        when(() => prefs.getInt(SessionDisconnectedScreen.sessionLikedCountKey))
-            .thenReturn(4);
+        when(
+          () => prefs.getBool(SessionDisconnectedScreen.reviewRequestedKey),
+        ).thenReturn(false);
+        when(
+          () => prefs.getInt(SessionDisconnectedScreen.sessionLikedCountKey),
+        ).thenReturn(4);
         when(
           () => prefs.setInt(SessionDisconnectedScreen.sessionLikedCountKey, 5),
         ).thenAnswer((_) async => true);
 
         when(() => inAppReview.isAvailable()).thenAnswer((_) async => true);
-        when(() => inAppReview.requestReview())
-            .thenThrow(Exception('Simulated error'));
+        when(
+          () => inAppReview.requestReview(),
+        ).thenThrow(Exception('Simulated error'));
 
         // Should not throw
         await SessionDisconnectedScreen.incrementSessionLikedCount(

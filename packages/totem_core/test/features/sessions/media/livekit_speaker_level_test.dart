@@ -10,7 +10,7 @@ import 'package:totem_core/features/sessions/media/speech_level.dart';
 import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
-class _MockParticipant extends Mock implements RemoteParticipant;
+class _MockParticipant extends Mock implements RemoteParticipant {}
 
 void main() {
   late _MockParticipant participant;

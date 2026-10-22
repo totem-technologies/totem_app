@@ -17,7 +17,7 @@ import '../media/test_participants.dart';
 import '../session_test_mocks.dart';
 
 class _ReorderTestHarness {
-  new({
+  _ReorderTestHarness({
     required this.session,
     required this.keeper,
     required this.sessionState,
@@ -116,8 +116,9 @@ void main() {
       ),
     );
 
-    check(tester.widgetList(find.text('Reorder Participants'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
 
     final handle = find.byType(ReorderableDragStartListener).at(2);
     final gesture = await tester.startGesture(tester.getCenter(handle));
@@ -135,10 +136,12 @@ void main() {
             as List<String>;
 
     check(captured.first).equals('keeper-1');
-    check(captured.toSet())
-        .deepEquals({'keeper-1', 'user-1', 'user-2', 'user-3'});
-    check(captured)
-        .not((it) => it.equals(['keeper-1', 'user-1', 'user-2', 'user-3']));
+    check(
+      captured.toSet(),
+    ).deepEquals({'keeper-1', 'user-1', 'user-2', 'user-3'});
+    check(
+      captured,
+    ).not((it) => it.equals(['keeper-1', 'user-1', 'user-2', 'user-3']));
   });
 
   testWidgets('keeps the keeper visually pinned above reordered items', (
@@ -286,8 +289,9 @@ void main() {
     await tester.tap(find.text('Open reorder modal'));
     await tester.pumpAndSettle();
 
-    check(tester.widgetList(find.text('Reorder Participants'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
 
     await tester.tap(find.text('Save'));
     await tester.pump();
@@ -297,8 +301,9 @@ void main() {
     reorderCompleter.complete();
     await tester.pumpAndSettle();
 
-    check(tester.widgetList(find.text('Reorder Participants'))).length
-        .equals(0);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(0);
     verify(() => harness.keeper.reorder(any())).called(1);
   });
 
@@ -357,14 +362,16 @@ void main() {
     await tester.tap(find.text('Open reorder modal'));
     await tester.pumpAndSettle();
 
-    check(tester.widgetList(find.text('Reorder Participants'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
 
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    check(tester.widgetList(find.text('Reorder Participants'))).length
-        .equals(0);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(0);
     verifyNever(() => harness.keeper.reorder(any()));
   });
 
@@ -428,26 +435,31 @@ void main() {
     await tester.tap(find.text('Open reorder modal'));
     await tester.pumpAndSettle();
 
-    check(tester.widgetList(find.text('Reorder Participants'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
 
     await tester.tap(find.text('Save'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(tester.widgetList(find.text('Error Reordering Participants'))).length
-        .equals(1);
-    check(tester.widgetList(find.text('Reorder Participants'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('Error Reordering Participants')),
+    ).length.equals(1);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
 
     await tester.tap(find.text('OK'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    check(tester.widgetList(find.text('Error Reordering Participants'))).length
-        .equals(0);
-    check(tester.widgetList(find.text('Reorder Participants'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('Error Reordering Participants')),
+    ).length.equals(0);
+    check(
+      tester.widgetList(find.text('Reorder Participants')),
+    ).length.equals(1);
     verify(() => harness.keeper.reorder(any())).called(1);
   });
 }

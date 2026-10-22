@@ -5,7 +5,11 @@ import 'package:totem_core/features/sessions/media/livekit_selector.dart';
 
 @immutable
 class _ParticipantVideoRenderState {
-  const new({required this.isLocal, required this.publication, this.track});
+  const _ParticipantVideoRenderState({
+    required this.isLocal,
+    required this.publication,
+    this.track,
+  });
 
   /// Whether the participant is local, or null when there is no participant.
   final bool? isLocal;
@@ -30,7 +34,7 @@ class _ParticipantVideoRenderState {
 /// camera is unpublished or unsubscribed. A muted camera keeps its renderer
 /// mounted so unmuting doesn't flash.
 class LiveKitParticipantVideo extends StatelessWidget {
-  const new({
+  const LiveKitParticipantVideo({
     required this.participant,
     required this.changes,
     this.showStats = false,
@@ -103,7 +107,10 @@ class LiveKitParticipantVideo extends StatelessWidget {
 }
 
 class _ParticipantVideoStatistics extends StatefulWidget {
-  const new({required this.isLocal, required this.track});
+  const _ParticipantVideoStatistics({
+    required this.isLocal,
+    required this.track,
+  });
 
   final bool isLocal;
   final VideoTrack? track;

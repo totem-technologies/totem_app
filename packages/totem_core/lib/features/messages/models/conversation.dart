@@ -5,7 +5,7 @@ import 'package:totem_core/features/messages/models/message.dart';
 
 @immutable
 class Conversation {
-  const new({
+  const Conversation({
     required this.id,
     required this.peer,
     required this.updatedAt,

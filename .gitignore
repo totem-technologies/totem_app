@@ -61,7 +61,7 @@ app.*.map.json
 
 # FVM Version Cache
 .fvm/
-.fvmrc
+!.fvmrc
 
 # Xcode
 **/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/

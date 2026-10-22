@@ -36,8 +36,9 @@ void main() {
 
       check(await CalendarService.addToCalendar(event)).equals(true);
       check(receivedCall!.method).equals('addToCalendar');
-      check(jsonEncode(receivedCall!.arguments))
-          .equals(jsonEncode(event.toMap()));
+      check(
+        jsonEncode(receivedCall!.arguments),
+      ).equals(jsonEncode(event.toMap()));
     },
   );
 

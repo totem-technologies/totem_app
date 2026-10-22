@@ -197,8 +197,9 @@ void main() {
 
         check(accepted).isTrue();
         check(mockSession.addedChatMessages).isNotEmpty();
-        check(mockSession.addedChatMessages.first.message)
-            .equals('Hello everyone!');
+        check(
+          mockSession.addedChatMessages.first.message,
+        ).equals('Hello everyone!');
         check(mockSession.addedChatMessages.first.recipientIdentity).isNull();
       });
 

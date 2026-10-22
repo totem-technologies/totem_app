@@ -1,5 +1,5 @@
 class AppConsts {
-  const new _();
+  const AppConsts._();
 
   static const tokenValidationTimeout = Duration(seconds: 10);
   static const accessTokenKey = 'access_token';

@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
 class InfoText extends StatelessWidget {
-  const new(this.text, {super.key});
+  const InfoText(this.text, {super.key});
 
   final String text;
 

@@ -106,8 +106,9 @@ void main() {
         });
 
         check(reportedError).isA<AppDataException>();
-        check(reportContext!['response_content_type'])
-            .equals('text/html; charset=utf-8');
+        check(
+          reportContext!['response_content_type'],
+        ).equals('text/html; charset=utf-8');
         check(reportContext!.containsKey('response_data')).isFalse();
       },
     );

@@ -13,7 +13,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
 class ActionBarChatButton extends ConsumerStatefulWidget {
-  const new({super.key});
+  const ActionBarChatButton({super.key});
 
   @override
   ConsumerState<ActionBarChatButton> createState() =>
@@ -107,30 +107,31 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       sessionChatUnreadThreadsProvider.select((threads) => threads.isNotEmpty),
     );
 
-    ref.listen(sessionChatOpenProvider, (previous, next) {
-      if (!next || shouldDockSessionChat(context) || _chatSheetOpen) return;
-      unawaited(_openChat(fromUnread: false));
-    });
+    ref
+      ..listen(sessionChatOpenProvider, (previous, next) {
+        if (!next || shouldDockSessionChat(context) || _chatSheetOpen) return;
+        unawaited(_openChat(fromUnread: false));
+      })
+      ..listen(lastSessionMessageProvider, (previous, next) {
+        if (next == null || identical(previous, next)) return;
+        if (!mounted || next.sender) return;
+        final thread = next.threadTargetFor(_localIdentity());
+        // Only the thread on screen is already "read"; anything else still
+        // needs to be announced even while the panel is open.
+        if (isChatOpen && thread == visibleThread) return;
+        _notification?.dismissActive();
+        _notification = _notificationController.showTimed(
+          context,
+          icon: TotemIcons.chat,
+          title: _notificationTitle(next),
+          message: next.message,
+          onTap: () {
+            unawaited(_openChat(thread: thread, fromUnread: true));
+          },
+        );
+        ref.read(sessionChatUnreadThreadsProvider.notifier).markUnread(thread);
+      });
 
-    ref.listen(lastSessionMessageProvider, (previous, next) {
-      if (next == null || identical(previous, next)) return;
-      if (!mounted || next.sender) return;
-      final thread = next.threadTargetFor(_localIdentity());
-      // Only the thread on screen is already "read"; anything else still
-      // needs to be announced even while the panel is open.
-      if (isChatOpen && thread == visibleThread) return;
-      _notification?.dismissActive();
-      _notification = _notificationController.showTimed(
-        context,
-        icon: TotemIcons.chat,
-        title: _notificationTitle(next),
-        message: next.message,
-        onTap: () {
-          unawaited(_openChat(thread: thread, fromUnread: true));
-        },
-      );
-      ref.read(sessionChatUnreadThreadsProvider.notifier).markUnread(thread);
-    });
     return ActionBarTooltip(
       message: '${isChatOpen ? 'Close' : 'Open'} chat (C)',
       child: ActionBarButton(

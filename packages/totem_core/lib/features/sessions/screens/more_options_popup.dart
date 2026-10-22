@@ -68,7 +68,7 @@ Future<void> showOptionsSheet(
 }
 
 class MoreOptions extends ConsumerWidget {
-  const new({required this.session, this.isDialog = false, super.key});
+  const MoreOptions({required this.session, this.isDialog = false, super.key});
 
   final mobile_api.SessionDetailSchema session;
   final bool isDialog;
@@ -496,7 +496,7 @@ class MoreOptions extends ConsumerWidget {
 enum MoreOptionsTileType { destructive, normal }
 
 class MoreOptionsTile<T> extends StatelessWidget {
-  new({
+  MoreOptionsTile({
     required this.title,
     required this.icon,
     this.onTap,
@@ -705,7 +705,10 @@ class MoreOptionsTile<T> extends StatelessWidget {
 }
 
 class _DesktopAudioOutputTile extends ConsumerWidget {
-  const new({required this.selectedDeviceId, required this.onDeviceSelect});
+  const _DesktopAudioOutputTile({
+    required this.selectedDeviceId,
+    required this.onDeviceSelect,
+  });
 
   final String? selectedDeviceId;
   final ValueChanged<MediaDeviceInfo> onDeviceSelect;

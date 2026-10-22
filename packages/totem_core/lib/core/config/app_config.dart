@@ -8,7 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// points should let it crash the process (e.g. `exit(1)`) so CI smoke
 /// tests can detect it.
 class ConfigError extends Error {
-  new(this.message);
+  ConfigError(this.message);
 
   final String message;
 
@@ -42,7 +42,7 @@ enum Environment {
 /// string.
 @immutable
 class AppConfig {
-  const new({
+  const AppConfig({
     required this.environment,
     required this.apiUrl,
     required this.liveKitUrl,
@@ -59,12 +59,12 @@ class AppConfig {
 
   /// Parses an `.env`-formatted string and builds a validated config.
   /// Uses a local [DotEnv] instance — does not touch the global singleton.
-  factory parse(String envString) {
+  factory AppConfig.parse(String envString) {
     final env = DotEnv()..loadFromString(envString: envString);
     return AppConfig._fromMap(env.env);
   }
 
-  factory _fromMap(Map<String, String> env) {
+  factory AppConfig._fromMap(Map<String, String> env) {
     final environment = Environment.parse(env['ENVIRONMENT']);
 
     final apiUrl = env['API_URL'];

@@ -51,12 +51,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  // Email validation
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter your email';
     }
-    // Simple email regex validation
     final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
     if (!emailRegex.hasMatch(value)) {
       return 'Please enter a valid email address';
@@ -64,7 +62,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return null;
   }
 
-  // Request magic link
   Future<void> _requestPin() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -80,7 +77,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .requestPin(_emailController.text.trim());
 
       if (mounted) {
-        // Navigate to PIN entry screen
         context.go(
           RouteNames.pinEntry,
           extra: {
@@ -110,7 +106,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen for auth state changes
     ref.listen<AuthState>(authControllerProvider, (previous, current) {
       if (current.status == AuthStatus.error && current.error != null) {
         ErrorHandler.showErrorSnackBar(
@@ -143,7 +138,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         const SizedBox(height: 32),
 
-        // Email input
         TextFormField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,

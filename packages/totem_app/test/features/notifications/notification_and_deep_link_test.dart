@@ -61,7 +61,8 @@ void main() {
           notificationResponseType:
               NotificationResponseType.selectedNotification,
           id: 1,
-          payload: '{"type":"circle_starting","space_slug":"space","event_slug":"event"}',
+          payload:
+              '{"type":"circle_starting","space_slug":"space","event_slug":"event"}',
         ),
       );
 

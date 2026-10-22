@@ -60,8 +60,9 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                     leading: CircleIconButton(
                       margin: const EdgeInsetsDirectional.only(start: 20),
                       icon: TotemIcons.arrowBack,
-                      tooltip: MaterialLocalizations.of(context)
-                          .backButtonTooltip,
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).backButtonTooltip,
                       onPressed: () => TotemRouter.instance.popOrHome(context),
                     ),
                     leadingWidth: 50,
@@ -69,8 +70,9 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                     actions: [
                       CircleIconButton(
                         icon: TotemIcons.share,
-                        tooltip: MaterialLocalizations.of(context)
-                            .shareButtonLabel,
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).shareButtonLabel,
                         onPressed: () async {
                           final box = context.findRenderObject() as RenderBox?;
                           await SharePlus.instance.share(
@@ -147,8 +149,9 @@ class _BlogScreenState extends ConsumerState<BlogScreen> {
                                     ),
                                     if (blog.datePublished != null)
                                       Text(
-                                        DateFormat('MMM d, yyyy')
-                                            .format(blog.datePublished!),
+                                        DateFormat(
+                                          'MMM d, yyyy',
+                                        ).format(blog.datePublished!),
                                         style: theme.textTheme.bodyMedium,
                                       ),
                                   ],
