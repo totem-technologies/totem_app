@@ -197,13 +197,45 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
   }
 }
 
-/// The list of participants in the session.
-@Riverpod(dependencies: [currentSessionState])
+/// Identities still requesting admission or joining, scoped to the room.
+/// The room owner removes identities once they have joined.
+@Riverpod(keepAlive: true, dependencies: [sessionScope])
+class PendingSessionParticipantIdentities
+    extends _$PendingSessionParticipantIdentities {
+  @override
+  Set<String> build() {
+    ref.watch(sessionScopeProvider);
+    return const {};
+  }
+
+  void update(Set<String> identities) => state = Set.unmodifiable(identities);
+}
+
+/// Only the participant tiles are filtered; turn order and speaker state stay
+/// authoritative in the session state.
+@Riverpod(
+  dependencies: [currentSessionState, PendingSessionParticipantIdentities],
+)
+SessionParticipantLayout visibleSessionParticipantLayout(Ref ref) {
+  final layout = ref.watch(
+    currentSessionStateProvider.select(sessionParticipantLayout),
+  );
+  final pending = ref.watch(pendingSessionParticipantIdentitiesProvider);
+  if (pending.isEmpty) return layout;
+  return (
+    participants: layout.participants
+        .where((participant) => !pending.contains(participant.identity))
+        .toList(),
+    talkingOrder: layout.talkingOrder,
+    speakingNow: layout.speakingNow,
+    nextSpeaker: layout.nextSpeaker,
+  );
+}
+
+/// The list of participants shown in the session.
+@Riverpod(dependencies: [visibleSessionParticipantLayout])
 List<ParticipantInfo> sessionParticipants(Ref ref) {
-  return ref.watch(
-        currentSessionStateProvider.select((s) => s?.participants.participants),
-      ) ??
-      [];
+  return ref.watch(visibleSessionParticipantLayoutProvider).participants;
 }
 
 /// The local participant, once connected.

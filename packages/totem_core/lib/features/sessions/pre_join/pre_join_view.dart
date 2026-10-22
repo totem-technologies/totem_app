@@ -9,6 +9,7 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
+import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
@@ -24,12 +25,16 @@ class PreJoinView extends StatelessWidget {
     required this.onCameraFacingChanged,
     required this.onCameraDeviceSelected,
     required this.joinCard,
+    this.waiting = false,
+    this.onLeave,
     super.key,
   });
 
   final PreJoinMediaState mediaState;
   final bool locked;
   final Widget joinCard;
+  final bool waiting;
+  final VoidCallback? onLeave;
   final AsyncCallback onToggleCamera;
   final AsyncCallback onToggleMicrophone;
   final VoidCallback onToggleSpeaker;
@@ -79,6 +84,16 @@ class PreJoinView extends StatelessWidget {
         onCameraDeviceSelected: onCameraDeviceSelected,
       ),
     );
+    if (waiting) {
+      return SafeArea(
+        child: SessionWaitingView(
+          preview: cameraPreview,
+          controls: actionBar,
+          card: joinCard,
+          onLeave: onLeave,
+        ),
+      );
+    }
     return RoomBackground(
       overlayStyle: SystemUiOverlayStyle.dark,
       child: SafeArea(

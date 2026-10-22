@@ -1,4 +1,6 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:totem_core/features/sessions/widgets/session_entry_info_card.dart';
 import 'package:totem_widgetbook/design/design.dart';
 import 'package:totem_widgetbook/figma.dart';
 import 'package:totem_widgetbook/viewports.dart';
@@ -39,6 +41,38 @@ class SessionEntryInput {
   final String? expiresLabel;
 }
 
+const _spaceName = 'Shame & Self-Worth';
+const _sessionName = 'Letting Shame Fall Away';
+const _details = 'assets/design/session_entry';
+
+const _nextOffer = SessionCard(
+  photo: AssetImage('assets/design/session_card/photo.jpg'),
+  spaceName: _spaceName,
+  sessionName: 'After the Storm',
+  keeperName: 'Vanessa',
+  keeperPhoto: AssetImage('$_details/avatar-vanessa.png'),
+  time: '6:30',
+  meridiem: 'PM',
+  seatsLeft: 5,
+);
+const _relatedOffer = SessionCard(
+  photo: AssetImage('$_details/similar.jpg'),
+  spaceName: _spaceName,
+  sessionName: 'Holding the Hard Thing',
+  keeperName: 'Jonah',
+  time: '7:00',
+  meridiem: 'PM',
+  seatsLeft: 3,
+);
+
+const _facts = [
+  (icon: 'icon-subscribers', value: '9', label: 'subscribers'),
+  (icon: 'icon-duration', value: '60', label: 'min'),
+  (icon: 'icon-seats', value: '9', label: 'seats left'),
+  (icon: 'icon-repeat', value: '', label: 'Twice a month'),
+  (icon: 'icon-cost', value: '', label: 'No Cost'),
+];
+
 const _guests = ['Sara', 'Omar', 'Lina', 'Noah', 'Maya'];
 const _expiries = ['1:47', '3:12', '4:05', '4:40', '5:15'];
 
@@ -62,6 +96,50 @@ final defaults = _Defaults(
       role: args.role,
       phase: args.phase,
       status: args.status,
+      spaceName: _spaceName,
+      sessionName: _sessionName,
+      keeperName: 'Vanessa',
+      startDateLabel: 'Wednesday, February 11th',
+      startTime: '6:30 PM GMT',
+      joinTime: '6:20 PM GMT',
+      participantName: 'Alex',
+      previewPhoto: const AssetImage(
+        'assets/design/participant_card/preview.jpg',
+      ),
+      heroPhoto: const AssetImage('$_details/hero.jpg'),
+      keeperPhoto: const AssetImage('$_details/avatar-vanessa.png'),
+      about:
+          "Shame is loud, and it lies. This circle is where you turn the volume down. Nobody fixes you, nobody gives advice, and nobody performs. You share when the talking piece reaches you and listen when it doesn't.\n\nCome as you are. Camera on is lovely. Camera off is fine. You can pass on any turn — that counts as a full turn.",
+      similarSession: const SessionCard(
+        photo: AssetImage('$_details/similar.jpg'),
+        spaceName: 'What is Love?',
+        sessionName: 'The Fear of Being Loved',
+        keeperName: 'Heather',
+        keeperPhoto: AssetImage('$_details/avatar-heather.png'),
+        time: '8:30',
+        meridiem: 'PM',
+        seatsLeft: 2,
+      ),
+      keeperLocation: 'Earth',
+      keeperBio:
+          "Vanessa is a Los Angeles-based artist and recovering hot mess. She's battled many challenges, from undiagnosed depression to struggling with alcohol abuse, and knows first hand how hard it is to face complex emotions alone.",
+      onShare: () {},
+      onKeeperProfile: () {},
+      prompt: 'What are you ready to set down?',
+      facts: [
+        for (final fact in _facts)
+          SessionEntryFact(
+            icon: SvgPicture.asset(
+              '$_details/${fact.icon}.svg',
+              width: 16.4646,
+              height: 16.4646,
+            ),
+            value: fact.value,
+            label: fact.label,
+          ),
+      ],
+      nextOffer: _nextOffer,
+      relatedOffer: _relatedOffer,
       requests: [
         for (var i = 0; i < waiting; i++)
           AdmissionRequest(
@@ -76,6 +154,7 @@ final defaults = _Defaults(
       expiresLabel: args.expiresLabel,
       onJoin: () => args.statusArg.update(context, EntryStatus.lobby),
       onLeaveLobby: () => args.statusArg.update(context, EntryStatus.browsing),
+      onSignUp: () {},
       onBackToSpace: () => args.statusArg.update(context, EntryStatus.browsing),
       onAdmit: (_) => shrinkQueue(),
       onDeclineRequest: (_) => shrinkQueue(),

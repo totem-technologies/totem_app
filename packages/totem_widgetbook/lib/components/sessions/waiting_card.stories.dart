@@ -1,13 +1,17 @@
 import 'package:flutter/widgets.dart';
+import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 import 'package:totem_widgetbook/design/design.dart';
 import 'package:totem_widgetbook/figma.dart';
 import 'package:widgetbook/widgetbook.dart';
 
 part 'waiting_card.stories.g.dart';
 
-const meta = Meta(WaitingCard.new);
+const meta = Meta(SessionWaitingCard.new);
 
-const component = ComponentMeta(path: 'Components/Sessions');
+const component = ComponentMeta(
+  name: 'WaitingCard',
+  path: 'Components/Sessions',
+);
 
 final defaults = _Defaults(
   setup: (context, child, args) =>
@@ -33,14 +37,8 @@ final $Reviewing = _Story(
         ),
       ),
     ),
-    action: Arg.fixed(
-      Button(
-        onPressed: () {},
-        variant: ButtonVariant.secondary,
-        block: true,
-        child: const Text('Cancel request and leave'),
-      ),
-    ),
+    actionLabel: StringArg('Cancel request and leave'),
+    onAction: Arg.fixed(() {}),
   ),
 );
 

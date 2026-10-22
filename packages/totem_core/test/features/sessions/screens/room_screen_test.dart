@@ -157,6 +157,8 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   RoomConnectionState connectionState = RoomConnectionState.connected,
   RoomStatus roomStatus = RoomStatus.active,
   DisconnectReason? disconnectReason,
+  bool showAdmissionOrientation = false,
+  String? admissionPrompt,
   List<Object?> extraOverrides = const [],
 }) async {
   final p1 = testParticipant('user-1');
@@ -203,7 +205,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         connectionStateProvider.overrideWith((ref) => connectionState),
         roomStatusProvider.overrideWith((ref) => roomStatus),
         isCurrentUserKeeperProvider.overrideWith((ref) => false),
-        currentSessionPromptProvider.overrideWith((ref) => null),
+        currentSessionPromptProvider.overrideWith((ref) => admissionPrompt),
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
         userProfileProvider('user-1').overrideWith(
@@ -235,6 +237,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
           child: VideoSessionScreen(
             sessionSlug: 'test-session',
             loadingScreen: const SizedBox(key: ValueKey('loading-screen')),
+            showAdmissionOrientation: showAdmissionOrientation,
             now: tester.binding.clock.now,
           ),
         ),
@@ -955,6 +958,53 @@ void main() {
 
       expect(find.byType(SessionChatPanel), findsOneWidget);
     });
+
+    testWidgets(
+      'orients a late arrival once connected and lets them enter the room',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final screenProvider =
+            NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+              () => _RoomScreenOverrideNotifier(RoomScreen.loading),
+            );
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.loading,
+          roomScreenProvider: screenProvider,
+          showAdmissionOrientation: true,
+          admissionPrompt: 'What brought you here?',
+        );
+
+        check(tester.widgetList(find.text('What brought you here?'))).isEmpty();
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container.read(screenProvider.notifier).set(RoomScreen.listening);
+        await tester.pumpAndSettle();
+
+        check(
+          tester.widgetList(find.text('What brought you here?')),
+        ).length.equals(1);
+        await tester.tap(find.text('Got it'));
+        await tester.pump();
+
+        check(tester.widgetList(find.text('What brought you here?'))).isEmpty();
+        check(
+          tester.widgetList(find.byType(ListeningTurnScreen)),
+        ).length.equals(1);
+        await _unmountRoomScreen(tester);
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        PaintingBinding.instance.imageCache.clear();
+      },
+    );
 
     testWidgets('renders not my turn screen for RoomScreen.listening', (
       tester,
