@@ -22,7 +22,12 @@ const _railBandInk = Color(0xFF444444);
 /// Unmapped: Figma "Black" style, used for the home indicator.
 const _homeBar = Color(0xFF232327);
 
+/// Unmapped: Figma drop shadow under the Sessions tab disc.
+const _navDiscShadow = Color(0x14000000);
+
 /// The phone status bar is drawn by the device, not the screen.
+/// Fixed for the iPhone 13 catalog frame. In the app, take this and the
+/// home indicator inset from MediaQuery.padding / SafeArea instead.
 const _statusBarHeight = 44.0;
 
 /// The quick filters in the chip row, in Figma order.
@@ -181,7 +186,11 @@ class SessionsScreen extends StatelessWidget {
                 _FilterBar(selected: filter, onSelect: onFilter),
                 const SizedBox(height: Spacing.s24),
                 if (days.isEmpty)
-                  _Empty(filter: filter, onShowAll: onShowAll)
+                  _Empty(
+                    filter: filter,
+                    mySessions: mySessions,
+                    onShowAll: onShowAll,
+                  )
                 else
                   Column(
                     spacing: Spacing.s24,
@@ -406,20 +415,20 @@ class _DayGroup extends StatelessWidget {
             spacing: Spacing.s20,
             children: [
               for (final listing in listings)
-                SizedBox(
+                SessionCard(
                   height: 250,
-                  child: SessionCard(
-                    photo: AssetImage(listing.photo),
-                    photoAlignment: Alignment.center,
-                    spaceName: listing.spaceName,
-                    sessionName: listing.sessionName,
-                    keeperName: listing.keeper,
-                    keeperPhoto: AssetImage(listing.avatar),
-                    time: listing.time,
-                    meridiem: 'PM',
-                    seatsLeft: listing.seatsLeft,
-                    onAddToCalendar: () => onAddToCalendar?.call(listing.id),
-                  ),
+                  photo: AssetImage(listing.photo),
+                  photoAlignment: Alignment.center,
+                  spaceName: listing.spaceName,
+                  sessionName: listing.sessionName,
+                  keeperName: listing.keeper,
+                  keeperPhoto: AssetImage(listing.avatar),
+                  time: listing.time,
+                  meridiem: 'PM',
+                  seatsLeft: listing.seatsLeft,
+                  onAddToCalendar: onAddToCalendar == null
+                      ? null
+                      : () => onAddToCalendar!(listing.id),
                 ),
             ],
           ),
@@ -512,14 +521,31 @@ class _DateRail extends StatelessWidget {
 
 /// Not in Figma: what the list shows when the filters leave nothing.
 class _Empty extends StatelessWidget {
-  const _Empty({required this.filter, required this.onShowAll});
+  const _Empty({
+    required this.filter,
+    required this.mySessions,
+    required this.onShowAll,
+  });
 
   final SessionsFilter filter;
+  final bool mySessions;
   final VoidCallback? onShowAll;
 
   @override
   Widget build(BuildContext context) {
     final where = filter == SessionsFilter.all ? '' : ' in ${filter.label}';
+    // With My Sessions on, there may be Sessions here — the member just
+    // hasn't joined one.
+    final (title, body) = mySessions
+        ? (
+            "You haven't joined any sessions$where yet",
+            'Sessions you join show up here. Find one in the full list.',
+          )
+        : (
+            'No sessions$where yet',
+            'New Sessions open every week. Have a look at the others in '
+                'the meantime.',
+          );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Spacing.s48),
@@ -527,13 +553,12 @@ class _Empty extends StatelessWidget {
         spacing: Spacing.s12,
         children: [
           Text(
-            'No sessions$where yet',
+            title,
             textAlign: TextAlign.center,
             style: TotemText.h3.copyWith(color: TotemColors.coreSlate),
           ),
           Text(
-            'New Sessions open every week. Have a look at the others in '
-            'the meantime.',
+            body,
             textAlign: TextAlign.center,
             style: TotemText.bodySmall.copyWith(color: TotemColors.coreGray),
           ),
@@ -590,21 +615,19 @@ class _BottomNav extends StatelessWidget {
                   _NavItem(
                     label: 'Sessions',
                     selected: true,
-                    // The filled disc is drawn with room for its shadow.
-                    // This offset puts the 25px circle on the icon slot.
-                    icon: SizedBox.square(
-                      dimension: 25,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned(
-                            left: -8,
-                            top: -6,
-                            child: SvgPicture.asset(
-                              '$_assets/nav-sessions.svg',
-                              width: 41,
-                              height: 41,
-                            ),
+                    // Drawn here, not as SVG: flutter_svg drops the Figma
+                    // export's <filter> shadow.
+                    icon: Container(
+                      width: 25,
+                      height: 25,
+                      decoration: const BoxDecoration(
+                        color: TotemColors.coreMauve,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            offset: Offset(0, 2),
+                            blurRadius: 6,
+                            color: _navDiscShadow,
                           ),
                         ],
                       ),
