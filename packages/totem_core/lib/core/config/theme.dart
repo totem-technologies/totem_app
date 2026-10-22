@@ -7,7 +7,7 @@ class AppTheme {
 
   // --- Colors ---
   // Extracted from the @theme block in styles.css
-  static const Color cream = Color(0xFFF3F1E9);
+  static const Color cream = Color(0xFFFAEFE5);
   static const Color yellow = Color(0x80FFD000);
   static const Color mauve = Color(0xFF987AA5);
 
