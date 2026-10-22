@@ -9,6 +9,7 @@ import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/auth/services/notifications_service.dart';
 import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
+import 'package:totem_app/widgets/update_alert.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/config/theme.dart';
@@ -99,11 +100,15 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
       builder: (context, child) {
-        return MediaQuery.withClampedTextScaling(
+        final app = MediaQuery.withClampedTextScaling(
           minScaleFactor: 0.8,
           maxScaleFactor: 1.5,
           child: child!,
         );
+        if (Platform.isAndroid || Platform.isIOS) {
+          return TotemUpgradeAlert(child: app);
+        }
+        return app;
       },
     );
   }
