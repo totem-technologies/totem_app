@@ -182,7 +182,7 @@ class _AndroidPrompt extends StatelessWidget {
                           text: 'Totem',
                           style: body.copyWith(fontWeight: FontWeight.w700),
                         ),
-                        const TextSpan(text: ' to send you notification?'),
+                        const TextSpan(text: ' to send you notifications?'),
                       ],
                     ),
                     textAlign: TextAlign.center,

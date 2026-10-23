@@ -57,6 +57,13 @@ final defaults = _Defaults(
   builder: (context, args) {
     void go(AuthStep step) => args.stepArg.update(context, step);
 
+    // Nothing in the catalog types digits, so arrive with a full code
+    // and Verify is enabled.
+    void toVerifyCode() {
+      args.codeArg.update(context, '482913');
+      go(AuthStep.verifyCode);
+    }
+
     return AuthFlow(
       step: args.step,
       welcomePage: args.welcomePage,
@@ -76,16 +83,18 @@ final defaults = _Defaults(
         AuthStep.welcome when args.welcomePage < 2 =>
           args.welcomePageArg.update(context, args.welcomePage + 1),
         AuthStep.welcome => go(AuthStep.getStarted),
-        AuthStep.getStarted => go(AuthStep.verifyCode),
+        AuthStep.getStarted => toVerifyCode(),
         AuthStep.verifyCode => go(AuthStep.guidelines),
         AuthStep.guidelines => go(AuthStep.notifications),
+        // Always the iOS prompt; the Android one is on its knob.
         AuthStep.notifications => args.notificationPromptArg.update(
           context,
           NotificationPrompt.ios,
         ),
         AuthStep.profile => go(AuthStep.communities),
         AuthStep.communities => go(AuthStep.spaces),
-        AuthStep.spaces => null,
+        // "See More" loops back to the start.
+        AuthStep.spaces => go(AuthStep.welcome),
       },
       onSkip: () => go(
         args.step == AuthStep.welcome ? AuthStep.getStarted : AuthStep.profile,

@@ -35,7 +35,10 @@ class _CardPage extends StatelessWidget {
         ),
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            minHeight: constraints.maxHeight - _statusBarHeight - 44,
+            minHeight: math.max(
+              0,
+              constraints.maxHeight - _statusBarHeight - 44,
+            ),
           ),
           child: Center(
             child: ConstrainedBox(

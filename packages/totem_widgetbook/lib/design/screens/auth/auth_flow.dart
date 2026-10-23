@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -276,7 +278,7 @@ class AuthFlow extends StatelessWidget {
                 onAnswer: onPromptAnswer,
               ),
             },
-          // Phone home indicator. White over the photos, slate elsewhere,
+          // Phone home indicator. White over the photos, black elsewhere,
           // and hidden while a sheet owns the bottom edge.
           if (!(step == AuthStep.profile && sheet != AuthSheet.none))
             Positioned(

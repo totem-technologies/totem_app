@@ -318,13 +318,13 @@ class _Notifications extends StatelessWidget {
       children: [
         SvgPicture.asset('$_assets/icon-bell.svg', width: 60, height: 60),
         Text(
-          'Want to stay update to date?',
+          'Want to stay up to date?',
           textAlign: TextAlign.center,
           style: TotemText.h2.copyWith(color: _ink),
         ),
         Text(
-          'Allow Totem to send you notification about session, new blog and '
-          'more.',
+          'Allow Totem to send you notifications about sessions, new blog posts '
+          'and more.',
           textAlign: TextAlign.center,
           style: TotemText.body1.copyWith(color: _ink),
         ),
@@ -429,7 +429,7 @@ class _Profile extends StatelessWidget {
         const _Heading(
           title: 'Let’s get to know you',
           subtitle:
-              'We just to know more about you. some final question and '
+              'We just want to know more about you. A few final questions and '
               'you’ll be good to go.',
         ),
         _Avatar(
@@ -451,7 +451,7 @@ class _Profile extends StatelessWidget {
           placeholder: 'Enter name',
           hint:
               'Other people will see this, but you don’t have to use your '
-              'real name. Add any pronounce is parentheses if you’d like.',
+              'real name. Add any pronouns in parentheses if you’d like.',
         ),
         _LabeledField(
           label: 'How old are you?',
