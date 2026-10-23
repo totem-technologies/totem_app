@@ -33,6 +33,7 @@ flutter:
     - assets/design/session_card/
     - assets/design/session_controls/
     - assets/design/session_entry/
+    - assets/design/sessions/
 
   fonts:
     - family: Montserrat

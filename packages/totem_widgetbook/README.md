@@ -54,6 +54,7 @@ Components/
   Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard
 Screens/
   session/:slug   SessionEntry (one story; args are the states)
+  spaces          SessionsScreen (4 states)
 ```
 
 ### Rules
