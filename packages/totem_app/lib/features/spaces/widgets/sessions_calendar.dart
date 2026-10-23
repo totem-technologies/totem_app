@@ -117,12 +117,10 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     return day.year == _currentMonth.year && day.month == _currentMonth.month;
   }
 
-  // Normalize a DateTime to just year/month/day, removing time components
   DateTime _normalizeDate(DateTime date) {
     return DateTime(date.year, date.month, date.day);
   }
 
-  // Compares only year/month/day (ignoring time) to determine if it's an session day
   bool _isSessionDay(DateTime? day) {
     if (day == null) return false;
 
@@ -134,7 +132,6 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     });
   }
 
-  // Compares only year/month/day (ignoring time) to determine if it's an open session day
   bool _isSessionOpen(DateTime? day) {
     if (day == null) return false;
 
@@ -146,7 +143,6 @@ class _SessionsCalendarState extends State<SessionsCalendar> {
     });
   }
 
-  // Compares only year/month/day (ignoring time) to determine if it's an attended session day
   bool _isUserAttending(DateTime? day) {
     if (day == null) return false;
 

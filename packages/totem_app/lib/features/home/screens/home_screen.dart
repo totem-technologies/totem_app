@@ -28,7 +28,6 @@ class HomeScreen extends ConsumerWidget {
     final summary = ref.watch(spacesSummaryProvider);
     ref.sentryReportFullyDisplayed(spacesSummaryProvider);
 
-    // Get the user's circle count to determine if they're a new user
     final circleCount = ref.watch(
       authControllerProvider.select((auth) => auth.user?.circleCount ?? 0),
     );

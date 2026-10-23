@@ -61,8 +61,9 @@ void main() {
     check(paintedBars(tester).single.rect).equals(halfway.rect);
     await tester.pump(const Duration(milliseconds: 510));
     check(paintedBars(tester).single.rect.height).equals(7.5);
-    check(paintedBars(tester).single.color.toARGB32())
-        .equals(Colors.red.toARGB32());
+    check(
+      paintedBars(tester).single.color.toARGB32(),
+    ).equals(Colors.red.toARGB32());
     check(tester.binding.hasScheduledFrame).isFalse();
 
     await pumpBars(tester, const [0], size: size);

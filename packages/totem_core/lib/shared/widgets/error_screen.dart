@@ -9,7 +9,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
 class ErrorScreen extends StatefulWidget {
-  const new({
+  const ErrorScreen({
     this.title,
     this.error,
     this.showHomeButton,
@@ -158,7 +158,7 @@ Future<void> showErrorDialog(BuildContext context, [String? error]) {
 }
 
 class ErrorDialog extends StatelessWidget {
-  const new({
+  const ErrorDialog({
     super.key,
     this.title = 'Something went wrong!\nPlease try again later',
     this.message,

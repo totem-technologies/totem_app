@@ -92,6 +92,16 @@ class FakeSessionController implements SessionController {
   SessionRoomState get state => mockState;
 
   @override
+  void applyRoomState(RoomState roomState) {
+    mockState = SessionRoomState(
+      connection: mockState.connection,
+      participants: mockState.participants,
+      chat: mockState.chat,
+      turn: SessionTurnState(roomState: roomState),
+    );
+  }
+
+  @override
   SessionDeviceController get devices => mockDevices;
 
   @override

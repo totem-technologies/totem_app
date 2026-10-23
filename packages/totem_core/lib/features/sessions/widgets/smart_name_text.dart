@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 class SmartNameText extends StatelessWidget {
-  const new({
+  const SmartNameText({
     required this.name,
     required this.style,
     this.abbreviationThreshold = 10.0,

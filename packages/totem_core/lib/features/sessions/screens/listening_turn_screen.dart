@@ -18,7 +18,7 @@ import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 // TODO(totem): Refactor this screen declaration
 //              A lot of the code is redundant and a lot of this could be suggared
 class ListeningTurnScreen extends ConsumerWidget {
-  const new({required this.session, super.key});
+  const ListeningTurnScreen({required this.session, super.key});
 
   final SessionDetailSchema session;
 
@@ -217,7 +217,7 @@ class ListeningTurnScreen extends ConsumerWidget {
 }
 
 class _ListeningTurnGrid extends ConsumerWidget {
-  const new({
+  const _ListeningTurnGrid({
     required this.session,
     required this.speakingNow,
     this.showSpeakingNowParticipant = false,

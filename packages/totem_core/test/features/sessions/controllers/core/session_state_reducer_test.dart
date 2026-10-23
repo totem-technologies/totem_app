@@ -142,8 +142,9 @@ void main() {
       group('RoomStateChanged event', () {
         test('updates room state', () {
           final current = _initialState();
-          final nextRoomState = _roomState(status: RoomStatus.active)
-              .copyWith(version: 2, talkingOrder: ['user-1', 'user-2']);
+          final nextRoomState = _roomState(
+            status: RoomStatus.active,
+          ).copyWith(version: 2, talkingOrder: ['user-1', 'user-2']);
 
           final next = reducer.reduceState(
             current,
@@ -173,8 +174,9 @@ void main() {
             check(current.turnStartedAt).isNull();
 
             // Room goes active — speakerOf falls back to keeper.
-            final active = _roomState(status: RoomStatus.active)
-                .copyWith(currentSpeaker: const Omittable(''));
+            final active = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: const Omittable(''));
 
             final next = reducer.reduceState(current, RoomStateChanged(active));
 
@@ -184,8 +186,9 @@ void main() {
           test('stamps when speaker changes', () {
             final current = _initialState();
 
-            final withSpeaker = _roomState(status: RoomStatus.active)
-                .copyWith(currentSpeaker: const Omittable('user-1'));
+            final withSpeaker = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: const Omittable('user-1'));
 
             final next = reducer.reduceState(
               current,
@@ -198,8 +201,9 @@ void main() {
           test('keeps existing stamp when same speaker continues', () {
             final current = _initialState();
 
-            final active = _roomState(status: RoomStatus.active)
-                .copyWith(currentSpeaker: const Omittable('user-1'));
+            final active = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: const Omittable('user-1'));
 
             final first = reducer.reduceState(
               current,
@@ -217,8 +221,9 @@ void main() {
           test('carries forward through non-room-state events', () {
             final current = _initialState();
 
-            final active = _roomState(status: RoomStatus.active)
-                .copyWith(currentSpeaker: const Omittable('user-1'));
+            final active = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: const Omittable('user-1'));
 
             final afterRoom = reducer.reduceState(
               current,

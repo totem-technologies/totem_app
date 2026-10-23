@@ -15,7 +15,7 @@ const component = ComponentMeta(path: 'Screens/auth');
 const meta = Meta(AuthFlow.new, argsType: AuthInput.new);
 
 class AuthInput {
-  const new({
+  const AuthInput({
     this.step = AuthStep.welcome,
     this.welcomePage = 0,
     this.email = '',

@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 /// media SDK. Media state (tracks, mute, audio levels) is not part of it.
 @immutable
 class ParticipantInfo {
-  const new({
+  const ParticipantInfo({
     required this.sid,
     required this.identity,
     required this.name,
