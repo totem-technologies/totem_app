@@ -90,9 +90,9 @@
 		<key>com.posthog.posthog.AUTO_INIT</key>
 		<false/>
 		<key>NSCameraUsageDescription</key>
-		<string>$(PRODUCT_NAME) uses your camera</string>
+		<string>Turn on your camera so others can see you. It's optional, and you can turn it off any time.</string>
 		<key>NSMicrophoneUsageDescription</key>
-		<string>$(PRODUCT_NAME) uses your microphone</string>
+		<string>Totem needs your microphone so others can hear you when it's your turn.</string>
 		<key>NSCalendarsUsageDescription</key>
 		<string>This app would like to add events to your calendar so you don’t miss sessions.</string>
 		<key>NSRemindersUsageDescription</key>

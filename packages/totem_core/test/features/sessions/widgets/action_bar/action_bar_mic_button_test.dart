@@ -75,8 +75,9 @@ void main() {
     await tester.pumpAndSettle();
 
     check(callCount).equals(1);
-    check(tester.widgetList(find.bySemanticsLabel('Microphone on'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.bySemanticsLabel('Microphone on')),
+    ).length.equals(1);
   });
 
   testWidgets('controlled isMicOn drives the displayed microphone state', (
@@ -91,12 +92,14 @@ void main() {
     );
 
     await pumpMic(true);
-    check(tester.widgetList(find.bySemanticsLabel('Microphone on'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.bySemanticsLabel('Microphone on')),
+    ).length.equals(1);
 
     await pumpMic(false);
-    check(tester.widgetList(find.bySemanticsLabel('Microphone off'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.bySemanticsLabel('Microphone off')),
+    ).length.equals(1);
   });
 
   testWidgets('ActionBarMicButton ignores re-entry while busy', (tester) async {

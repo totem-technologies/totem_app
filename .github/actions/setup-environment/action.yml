@@ -37,11 +37,14 @@ runs:
       uses: subosito/flutter-action@v2.23.0
       with:
         channel: "stable"
+        flutter-version: "3.44.9"
         cache: true
 
-    - name: Flutter version
+    - name: Verify Flutter and Dart versions
       shell: bash
-      run: flutter --version
+      run: |
+        flutter --version
+        dart --version
 
     # Compose packages/*/.env from the layered sources in config/ (the single
     # source of truth, shared with the Makefile env-* targets). setup_env.dart

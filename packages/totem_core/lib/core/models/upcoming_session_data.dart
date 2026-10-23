@@ -2,7 +2,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 
 /// Data holder for upcoming session card display.
 class UpcomingSessionData {
-  const new({
+  const UpcomingSessionData({
     required this.sessionSlug,
     required this.sessionTitle,
     required this.spaceSlug,
@@ -15,7 +15,7 @@ class UpcomingSessionData {
     required this.attending,
   });
 
-  factory fromSpaceAndSession(
+  factory UpcomingSessionData.fromSpaceAndSession(
     MobileSpaceDetailSchema space,
     NextSessionSchema session,
   ) {
@@ -33,7 +33,7 @@ class UpcomingSessionData {
     );
   }
 
-  factory fromSessionDetail(SessionDetailSchema session) {
+  factory UpcomingSessionData.fromSessionDetail(SessionDetailSchema session) {
     return UpcomingSessionData(
       sessionSlug: session.slug,
       sessionTitle: session.title,

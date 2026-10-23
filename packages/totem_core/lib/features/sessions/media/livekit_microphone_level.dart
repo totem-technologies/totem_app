@@ -17,7 +17,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 /// speakers' bars, and redraw only when the level changes. Native platforms
 /// use the SDK visualizer.
 class LiveKitMicrophoneLevel extends StatelessWidget {
-  const new({
+  const LiveKitMicrophoneLevel({
     required this.track,
     required this.changes,
     required this.color,
@@ -27,7 +27,7 @@ class LiveKitMicrophoneLevel extends StatelessWidget {
   });
 
   /// Bars for a standalone [track], such as the pre-join preview.
-  new preview(
+  LiveKitMicrophoneLevel.preview(
     AudioTrack track, {
     required Color color,
     required int barCount,
@@ -85,7 +85,11 @@ class LiveKitMicrophoneLevel extends StatelessWidget {
 }
 
 class _WebLevelBars extends StatefulWidget {
-  const new({required this.track, required this.barCount, required this.color});
+  const _WebLevelBars({
+    required this.track,
+    required this.barCount,
+    required this.color,
+  });
 
   final AudioTrack track;
   final int barCount;
@@ -102,8 +106,9 @@ class _WebLevelBarsState extends State<_WebLevelBars> {
   void _listen() {
     unawaited(_subscription?.cancel());
     _level = 0;
-    _subscription = localAudioLevel(widget.track)
-        .listen((level) => setState(() => _level = level));
+    _subscription = localAudioLevel(
+      widget.track,
+    ).listen((level) => setState(() => _level = level));
   }
 
   @override

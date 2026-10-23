@@ -16,7 +16,7 @@ const component = ComponentMeta(path: 'Screens/spaces/event/:slug');
 const meta = Meta(SessionDetailsPage.new, argsType: SessionDetailsInput.new);
 
 class SessionDetailsInput {
-  const new({
+  const SessionDetailsInput({
     this.status = SessionDetailsStatus.open,
     this.seatsLeft = 9,
     this.recurring = true,

@@ -182,8 +182,9 @@ class FeaturedBlogPost extends StatelessWidget {
                             ),
                             if (publishedDate != null)
                               Text(
-                                DateFormat.yMMMd('en_US')
-                                    .format(publishedDate!),
+                                DateFormat.yMMMd(
+                                  'en_US',
+                                ).format(publishedDate!),
                                 style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 10,

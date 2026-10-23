@@ -64,8 +64,9 @@ Future<void> _pumpMoreOptions(
         ),
         currentSessionProvider.overrideWith((ref) => session),
         currentSessionStateProvider.overrideWithValue(state),
-        sessionDeviceControllerProvider(session)
-            .overrideWith(() => deviceController),
+        sessionDeviceControllerProvider(
+          session,
+        ).overrideWith(() => deviceController),
         userProfileProvider.overrideWith(
           (ref, slug) => Future.value(
             PublicUserSchema(
@@ -182,14 +183,16 @@ void main() {
       );
 
       // Tile is rendered but with null onTap
-      check(tester.widgetList(find.textContaining('Force pass'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.textContaining('Force pass')),
+      ).length.equals(1);
 
       // Tapping does nothing — no dialog appears
       await tester.tap(find.textContaining('Force pass'));
       await tester.pumpAndSettle();
-      check(tester.widgetList(find.byType(ConfirmationDialog))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(ConfirmationDialog)),
+      ).length.equals(0);
     });
 
     testWidgets('force pass tile is not shown when not keeper', (tester) async {
@@ -217,8 +220,9 @@ void main() {
         deviceController: deviceController,
       );
 
-      check(tester.widgetList(find.textContaining('Force pass'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.textContaining('Force pass')),
+      ).length.equals(0);
     });
 
     testWidgets('force pass tile is not shown when not active', (tester) async {
@@ -244,8 +248,9 @@ void main() {
         deviceController: deviceController,
       );
 
-      check(tester.widgetList(find.textContaining('Force pass'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.textContaining('Force pass')),
+      ).length.equals(0);
     });
 
     // ── Dialog content: normal speaking turn ───────────────────────
@@ -330,8 +335,9 @@ void main() {
 
       verify(() => keeper.forcePassTotem()).called(1);
       // Dialog should be closed
-      check(tester.widgetList(find.byType(ConfirmationDialog))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(ConfirmationDialog)),
+      ).length.equals(0);
     });
 
     // ── Early return ───────────────────────────────────────────────
@@ -367,8 +373,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // No dialog should appear because nextParticipantIdentity is null
-      check(tester.widgetList(find.byType(ConfirmationDialog))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(ConfirmationDialog)),
+      ).length.equals(0);
       verifyNever(() => keeper.forcePassTotem());
     });
   });

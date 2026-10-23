@@ -30,7 +30,7 @@ Future<void> showUserFeedbackPopup(
 }
 
 class UserFeedback extends ConsumerStatefulWidget {
-  const new({required this.onFeedbackSubmitted, super.key});
+  const UserFeedback({required this.onFeedbackSubmitted, super.key});
 
   final OnFeedbackSubmitted? onFeedbackSubmitted;
 
@@ -124,12 +124,13 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         if (_feedbackController.text.isNotEmpty) {
-          return await showDialog(
+          return showDialog(
             context: context,
             builder: (context) {
               return ConfirmationDialog(
                 title: 'Discard Feedback?',
-                content: 'You have unsent feedback. Are you sure you want to discard it?',
+                content:
+                    'You have unsent feedback. Are you sure you want to discard it?',
                 confirmButtonText: 'Discard',
                 onConfirm: () async {
                   _feedbackController.clear();
@@ -201,7 +202,8 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
                         minLines: 4,
                         enabled: !_loading,
                         decoration: const InputDecoration(
-                          hintText: 'Share your thoughts, suggestions, or report issues...',
+                          hintText:
+                              'Share your thoughts, suggestions, or report issues...',
                         ),
                         style: TextStyle(
                           color: theme.colorScheme.onSurfaceVariant,

@@ -72,7 +72,7 @@ final class SessionPromptsControllerProvider
 }
 
 String _$sessionPromptsControllerHash() =>
-    r'715515712fc78331e438bdea92876807e18e1f63';
+    r'f51254e8ea3a245dabcc8dae6f148f0ebd2b80f6';
 
 /// The sole client-side owner of a session's prepared-prompt collection.
 ///

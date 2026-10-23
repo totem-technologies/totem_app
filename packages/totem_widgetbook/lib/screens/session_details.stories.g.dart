@@ -22,7 +22,8 @@ final SessionDetailsPageComponent =
       name: component.name ?? 'SessionDetailsPage',
       path: component.path ?? 'screens',
       docsBuilder: component.docsBuilder,
-      docComment: r'''Figma "Session Details (Latest)" (2379:2497): one Session of a Space.
+      docComment:
+          r'''Figma "Session Details (Latest)" (2379:2497): one Session of a Space.
 
 Hero photo with back and share, the Space and Session names, a card of
 facts with the date and Attend, the description, a similar Session, and
