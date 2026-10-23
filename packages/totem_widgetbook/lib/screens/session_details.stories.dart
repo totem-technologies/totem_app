@@ -36,14 +36,46 @@ class SessionDetailsInput {
   final bool showSimilar;
 }
 
+const _similar = SimilarSession(
+  spaceName: 'What is Love?',
+  sessionName: 'The Fear of Being Loved',
+  keeperName: 'Heather',
+  dateLabel: '5 Feb',
+  time: '8:30',
+  period: 'PM',
+  seatsLeft: 2,
+);
+
 final defaults = _Defaults(
   setup: (context, child, args) => SizedBox.expand(child: child),
   builder: (context, args) => SessionDetailsPage(
+    spaceName:
+        'Transition: Panic. Pause. Pivot. Repeat — a Space for the moments '
+        'everything shifts at once',
+    sessionName: 'Learning to Witness Yourself When the Ground Moves Under You',
+    keeperName: 'Vanessa',
+    keeperBio:
+        'Vanessa is a Los Angeles-based artist and recovering hot mess. '
+        "She's battled many challenges, from undiagnosed depression to "
+        'struggling with alcohol abuse, and knows first hand how hard it is '
+        'to face complex emotions alone.',
+    dateLabel: 'Wednesday, February 11th',
+    timeLabel: '12:30 AM GMT+1',
+    description:
+        'Change rarely arrives one piece at a time. A move, a loss, a new '
+        'role, a body that feels different — they tend to land together, '
+        'and the mind starts narrating before we have had a chance to feel '
+        'anything.\n\n'
+        'In this Session we practice noticing that narration. We will share '
+        'one moment from the past month when things shifted, and listen '
+        'without fixing, advising or comparing.\n\n'
+        'You can keep your camera off and pass whenever you like. Come as '
+        'you are; there is nothing to prepare.',
     status: args.status,
     seatsLeft: args.seatsLeft,
     recurring: args.recurring,
     free: args.free,
-    showSimilar: args.showSimilar,
+    similar: args.showSimilar ? _similar : null,
     onBack: () {},
     onShare: () {},
     onAttend: () =>
@@ -53,6 +85,7 @@ final defaults = _Defaults(
         args.statusArg.update(context, SessionDetailsStatus.open),
     onReturnHome: () {},
     onViewKeeper: () {},
+    onAttendSimilar: () {},
   ),
 );
 
@@ -85,7 +118,8 @@ final $Attending = _state(
   seatsLeft: 8,
 );
 
-/// Not in Figma. No seats, so Attend is disabled.
+/// Not in Figma. No seats, so Attend is disabled. An open Session with
+/// the seats knob at 0 looks the same.
 final $Full = _state('Full', status: SessionDetailsStatus.full);
 
 final $Ended = _state(
