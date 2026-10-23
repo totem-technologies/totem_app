@@ -11,11 +11,11 @@ enum RoomConnectionState { connecting, connected, disconnected, error }
 enum SessionPhase { idle, connecting, connected, disconnected, error, ended }
 
 sealed class RoomError {
-  const new();
+  const RoomError();
 }
 
 class RoomLiveKitError extends RoomError {
-  const new(this.exception);
+  const RoomLiveKitError(this.exception);
   final LiveKitException exception;
 
   @override
@@ -23,7 +23,7 @@ class RoomLiveKitError extends RoomError {
 }
 
 class RoomDisconnectionError extends RoomError {
-  const new(this.reason);
+  const RoomDisconnectionError(this.reason);
   final DisconnectReason reason;
 
   @override
@@ -32,7 +32,7 @@ class RoomDisconnectionError extends RoomError {
 
 @immutable
 class ConnectionState {
-  const new({
+  const ConnectionState({
     required this.phase,
     required this.state,
     this.error,
@@ -79,7 +79,7 @@ class ConnectionState {
 
 @immutable
 class ParticipantsState {
-  const new({
+  const ParticipantsState({
     this.participants = const [],
     this.removed = false,
     this.removeReason,
@@ -122,7 +122,7 @@ class ParticipantsState {
 
 @immutable
 class ChatState {
-  const new({this.messages = const []});
+  const ChatState({this.messages = const []});
 
   final List<SessionChatMessage> messages;
 
@@ -147,7 +147,7 @@ class ChatState {
 
 @immutable
 class SessionTurnState {
-  const new({required this.roomState});
+  const SessionTurnState({required this.roomState});
 
   final RoomState roomState;
 
@@ -167,7 +167,7 @@ class SessionTurnState {
 
 @immutable
 class SessionOptions {
-  const new({
+  const SessionOptions({
     required this.sessionSlug,
     required this.token,
     required this.cameraEnabled,
@@ -206,7 +206,11 @@ class SessionOptions {
 /// disposed with the room.
 @immutable
 class SessionJoinMedia {
-  const new({this.cameraTrack, this.microphoneTrack, this.onBeforeDispose});
+  const SessionJoinMedia({
+    this.cameraTrack,
+    this.microphoneTrack,
+    this.onBeforeDispose,
+  });
 
   final LocalVideoTrack? cameraTrack;
   final LocalAudioTrack? microphoneTrack;
@@ -219,7 +223,7 @@ class SessionJoinMedia {
 
 @immutable
 class SessionRoomState {
-  const new({
+  const SessionRoomState({
     required this.connection,
     required this.participants,
     required this.chat,

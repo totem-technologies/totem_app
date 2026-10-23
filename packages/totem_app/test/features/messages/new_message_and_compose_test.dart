@@ -46,8 +46,9 @@ void main() {
     );
 
     check(tester.widgetList(find.text('Search participants'))).length.equals(1);
-    check(tester.widgetList(find.text('YOUR SESSION PARTICIPANTS'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('YOUR SESSION PARTICIPANTS')),
+    ).length.equals(1);
     check(tester.widgetList(find.text('OTHER PARTICIPANTS'))).length.equals(1);
     check(tester.widgetList(find.text('Emily'))).length.equals(1);
   });
@@ -87,8 +88,9 @@ void main() {
       await tester.tap(find.text('Vanessa'));
       await tester.pumpAndSettle();
 
-      check(router.routeInformationProvider.value.uri.path)
-          .equals(RouteNames.messageThread('conv_1'));
+      check(
+        router.routeInformationProvider.value.uri.path,
+      ).equals(RouteNames.messageThread('conv_1'));
       check(tester.widgetList(find.text('conv_1'))).length.equals(1);
     },
   );

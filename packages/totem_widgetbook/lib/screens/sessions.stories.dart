@@ -14,7 +14,10 @@ const component = ComponentMeta(path: 'Screens/spaces');
 const meta = Meta(SessionsScreen.new, argsType: SessionsInput.new);
 
 class SessionsInput {
-  const new({this.filter = SessionsFilter.all, this.mySessions = false});
+  const SessionsInput({
+    this.filter = SessionsFilter.all,
+    this.mySessions = false,
+  });
 
   final SessionsFilter filter;
 

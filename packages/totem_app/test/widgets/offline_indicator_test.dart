@@ -96,11 +96,13 @@ void main() {
     final contentTopBeforeCollapse = tester.getTopLeft(find.byKey(contentKey));
     await tester.pump(const Duration(seconds: 3));
 
-    check(tester.getTopLeft(find.byKey(contentKey)))
-        .equals(contentTopBeforeCollapse);
+    check(
+      tester.getTopLeft(find.byKey(contentKey)),
+    ).equals(contentTopBeforeCollapse);
 
     await tester.pump(const Duration(milliseconds: 175));
-    check(tester.getTopLeft(find.byKey(contentKey)).dy)
-        .isLessThan(contentTopBeforeCollapse.dy);
+    check(
+      tester.getTopLeft(find.byKey(contentKey)).dy,
+    ).isLessThan(contentTopBeforeCollapse.dy);
   });
 }

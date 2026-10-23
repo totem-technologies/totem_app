@@ -15,7 +15,7 @@ import 'package:totem_core/core/services/secure_storage.dart';
 import '../../setup.dart';
 
 class _FakeCache extends CacheService {
-  new({this.spaces, this.subscribed}) : super(SecureStorage());
+  _FakeCache({this.spaces, this.subscribed}) : super(SecureStorage());
 
   List<MobileSpaceDetailSchema>? spaces;
   List<SpaceSchema>? subscribed;
@@ -117,10 +117,12 @@ void main() {
         check(client.requests).length.equals(2);
         check(client.requests[0].method).equals('POST');
         check(client.requests[1].method).equals('DELETE');
-        check(client.requests[0].path)
-            .equals('/api/mobile/protected/spaces/subscribe/wellbeing');
-        check(client.requests[1].path)
-            .equals('/api/mobile/protected/spaces/subscribe/wellbeing');
+        check(
+          client.requests[0].path,
+        ).equals('/api/mobile/protected/spaces/subscribe/wellbeing');
+        check(
+          client.requests[1].path,
+        ).equals('/api/mobile/protected/spaces/subscribe/wellbeing');
       },
     );
   });
@@ -149,8 +151,9 @@ void main() {
         caught = error;
       }
       check(caught).isNotNull();
-      check(caught!.conflict.conflictingSessions.single.slug)
-          .equals('existing');
+      check(
+        caught!.conflict.conflictingSessions.single.slug,
+      ).equals('existing');
     },
   );
 }

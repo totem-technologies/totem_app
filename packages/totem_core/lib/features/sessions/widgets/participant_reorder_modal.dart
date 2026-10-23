@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -18,8 +19,8 @@ Future<void> showParticipantReorderModals(BuildContext context) {
   return showResponsiveModal<void>(
     context: context,
     useRootNavigator: false,
-    bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
-    dialogBackgroundColor: const Color(0xFFF3F1E9),
+    bottomSheetBackgroundColor: AppTheme.cream,
+    dialogBackgroundColor: AppTheme.cream,
     bottomSheetBuilder: (context) => const ParticipantReorderWidget(),
     largeScreenBuilder: (context) =>
         const SizedBox(width: 600, child: ParticipantReorderWidget()),
@@ -27,7 +28,7 @@ Future<void> showParticipantReorderModals(BuildContext context) {
 }
 
 class ParticipantReorderWidget extends ConsumerStatefulWidget {
-  const new({super.key});
+  const ParticipantReorderWidget({super.key});
 
   @override
   ConsumerState<ParticipantReorderWidget> createState() =>
@@ -362,7 +363,7 @@ class _ParticipantReorderWidgetState
 }
 
 class _ParticipantInfo extends ConsumerWidget {
-  const new({required this.participant});
+  const _ParticipantInfo({required this.participant});
 
   final String participant;
 
@@ -399,7 +400,7 @@ class _ParticipantInfo extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '${user.circleCount}',
+                    '${user.circleCount.value ?? 0}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
@@ -435,7 +436,7 @@ class _ParticipantInfo extends ConsumerWidget {
 }
 
 class _ParticipantReorderItem extends ConsumerWidget {
-  const new({
+  const _ParticipantReorderItem({
     required this.participantIdentity,
     required this.participant,
     required this.index,

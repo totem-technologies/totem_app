@@ -26,7 +26,7 @@ abstract class SessionCuesAudioPlayer {
 
 // For now, we disabled audio player.
 class _SilentAudioPlayer implements SessionCuesAudioPlayer {
-  new();
+  _SilentAudioPlayer();
 
   @override
   Future<void> setAudioContext(AudioContext context) async {}
@@ -80,8 +80,10 @@ class _SilentAudioPlayer implements SessionCuesAudioPlayer {
 // }
 
 class SessionCuesService {
-  new({this._audioPlayer, SessionCuesHapticPulseCallback? pulseHaptic})
-    : _pulseHaptic = pulseHaptic ?? defaultHapticPulse;
+  SessionCuesService({
+    this._audioPlayer,
+    SessionCuesHapticPulseCallback? pulseHaptic,
+  }) : _pulseHaptic = pulseHaptic ?? defaultHapticPulse;
 
   static Future<void> defaultHapticPulse() {
     // https://github.com/flutter/flutter/issues/157442
@@ -113,7 +115,7 @@ class SessionCuesService {
         }
       });
     });
-    return await completer.future;
+    return completer.future;
   }
 
   Future<void> playTotemReceivedCue() {

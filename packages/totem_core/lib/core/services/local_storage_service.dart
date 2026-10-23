@@ -11,7 +11,7 @@ final localStorageServiceProvider = Provider<LocalStorageService>((ref) {
 }, name: 'Local Storage Service Provider');
 
 class LocalStorageService {
-  const new(this._secureStorage);
+  const LocalStorageService(this._secureStorage);
 
   final SecureStorage _secureStorage;
 
@@ -52,8 +52,7 @@ class LocalStorageService {
     return hasSeenString == 'true';
   }
 
-  /// Mark that the user has completed the welcome onboarding screens
-  /// This ensures they won't see the welcome screens again
+  /// Mark that the user has completed the welcome onboarding screens.
   Future<void> markWelcomeOnboardingCompleted() async {
     await _secureStorage.write(
       key: AppConsts.hasSeenWelcomeOnboarding,

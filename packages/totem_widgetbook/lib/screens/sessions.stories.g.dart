@@ -21,7 +21,8 @@ final SessionsScreenComponent =
       name: component.name ?? 'SessionsScreen',
       path: component.path ?? 'screens',
       docsBuilder: component.docsBuilder,
-      docComment: r'''Figma "Sessions" (2315:8056): every upcoming Session, grouped by day.
+      docComment:
+          r'''Figma "Sessions" (2315:8056): every upcoming Session, grouped by day.
 
 The chip row narrows the list to one kind of Space. "My Sessions"
 narrows it to the ones the member is attending. When both leave

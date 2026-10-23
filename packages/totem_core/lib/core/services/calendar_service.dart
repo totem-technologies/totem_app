@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 
 final class AppCalendarEvent {
-  const new({
+  const AppCalendarEvent({
     required this.title,
     required this.description,
     required this.location,

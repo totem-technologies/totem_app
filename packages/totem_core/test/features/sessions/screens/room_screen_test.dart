@@ -15,6 +15,9 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/media_permission_controller.dart';
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
@@ -33,6 +36,7 @@ import 'package:totem_core/shared/widgets/notifications.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
+import '../../permissions/fake_media_permission_adapter.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
@@ -249,7 +253,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
 }
 
 class _MutableRoomScreenHarness {
-  const new({
+  const _MutableRoomScreenHarness({
     required this.container,
     required this.sessionProvider,
     required this.roomScreenProvider,
@@ -272,7 +276,7 @@ class _MutableRoomScreenHarness {
 }
 
 class _SessionEventOverrideNotifier extends Notifier<SessionDetailSchema?> {
-  new(this._initial);
+  _SessionEventOverrideNotifier(this._initial);
 
   final SessionDetailSchema? _initial;
 
@@ -286,7 +290,7 @@ class _SessionEventOverrideNotifier extends Notifier<SessionDetailSchema?> {
 }
 
 class _ConnectionStateOverrideNotifier extends Notifier<RoomConnectionState> {
-  new(this._initial);
+  _ConnectionStateOverrideNotifier(this._initial);
 
   final RoomConnectionState _initial;
 
@@ -300,7 +304,7 @@ class _ConnectionStateOverrideNotifier extends Notifier<RoomConnectionState> {
 }
 
 class _RoomScreenOverrideNotifier extends Notifier<RoomScreen> {
-  new(this._initial);
+  _RoomScreenOverrideNotifier(this._initial);
 
   final RoomScreen _initial;
 
@@ -314,7 +318,7 @@ class _RoomScreenOverrideNotifier extends Notifier<RoomScreen> {
 }
 
 class _RoomStatusOverrideNotifier extends Notifier<RoomStatus> {
-  new(this._initial);
+  _RoomStatusOverrideNotifier(this._initial);
 
   final RoomStatus _initial;
 
@@ -328,7 +332,7 @@ class _RoomStatusOverrideNotifier extends Notifier<RoomStatus> {
 }
 
 class _KeeperDisconnectedOverrideNotifier extends Notifier<bool> {
-  new(this._initial);
+  _KeeperDisconnectedOverrideNotifier(this._initial);
 
   final bool _initial;
 
@@ -518,18 +522,16 @@ void main() {
     );
   });
 
+  // Every group shares these, so none depends on another running first.
   setUpAll(() {
     TotemRouter.instance = FakeTotemRouter();
+    registerFallbackValue(TrackSource.camera);
+    setupAppConfig();
   });
 
   group('VideoRoomScreen - screen rendering', () {
     late MockSessionController session;
     late MockSessionDeviceController devices;
-
-    setUpAll(() async {
-      registerFallbackValue(TrackSource.camera);
-      setupAppConfig();
-    });
 
     setUp(() {
       session = MockSessionController();
@@ -537,12 +539,15 @@ void main() {
       final localParticipant = _buildMockParticipant('user-1');
 
       when(() => session.room).thenReturn(FakeRoom(localParticipant));
-      when(() => localParticipant.setCameraEnabled(false))
-          .thenAnswer((_) async => null);
-      when(() => localParticipant.setCameraEnabled(false))
-          .thenAnswer((_) async => null);
-      when(() => localParticipant.setMicrophoneEnabled(false))
-          .thenAnswer((_) async => null);
+      when(
+        () => localParticipant.setCameraEnabled(false),
+      ).thenAnswer((_) async => null);
+      when(
+        () => localParticipant.setCameraEnabled(false),
+      ).thenAnswer((_) async => null);
+      when(
+        () => localParticipant.setMicrophoneEnabled(false),
+      ).thenAnswer((_) async => null);
       when(() => session.devices).thenReturn(devices);
       when(() => session.options).thenReturn(testSessionOptions);
       when(() => devices.isCameraEnabled).thenReturn(false);
@@ -550,9 +555,13 @@ void main() {
       when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
       when(() => devices.selectedCameraDeviceId).thenReturn(null);
       when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
-      when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+      when(
+        () => devices.turnOn(MediaKind.microphone),
+      ).thenAnswer((_) async => const TurnedOn());
       when(() => devices.disableMicrophone()).thenAnswer((_) async {});
-      when(() => devices.enableCamera()).thenAnswer((_) async {});
+      when(
+        () => devices.turnOn(MediaKind.camera),
+      ).thenAnswer((_) async => const TurnedOn());
       when(() => devices.disableCamera()).thenAnswer((_) async {});
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
       when(() => session.session).thenReturn(
@@ -624,9 +633,9 @@ void main() {
         screen: RoomScreen.loading,
       );
 
-      check(tester.widgetList(find.byKey(const ValueKey('loading-screen'))))
-          .length
-          .equals(1);
+      check(
+        tester.widgetList(find.byKey(const ValueKey('loading-screen'))),
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -647,11 +656,12 @@ void main() {
           disconnectReason: DisconnectReason.joinFailure,
         );
 
-        check(tester.widgetList(find.byKey(const ValueKey('loading-screen'))))
-            .length
-            .equals(1);
-        check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.byKey(const ValueKey('loading-screen'))),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.byType(SessionDisconnectedScreen)),
+        ).length.equals(0);
       },
     );
 
@@ -668,8 +678,9 @@ void main() {
         screen: RoomScreen.error,
       );
 
-      check(tester.widgetList(find.byType(SessionErrorScreen))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(SessionErrorScreen)),
+      ).length.equals(1);
     });
 
     testWidgets('closes only the chat sheet when the user is disconnected', (
@@ -719,8 +730,9 @@ void main() {
 
       check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
       check(tester.widgetList(find.text('Keeper profile'))).length.equals(1);
-      check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(SessionDisconnectedScreen)),
+      ).length.equals(1);
       await tester.pump(const Duration(milliseconds: 2750));
       Navigator.of(tester.element(find.text('Keeper profile'))).pop();
       await tester.pumpAndSettle();
@@ -744,10 +756,12 @@ void main() {
         disconnectReason: DisconnectReason.reconnectAttemptsExceeded,
       );
 
-      check(tester.widgetList(find.byType(SessionErrorScreen))).length
-          .equals(1);
-      check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(SessionErrorScreen)),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.byType(SessionDisconnectedScreen)),
+      ).length.equals(0);
       check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
       check(
         tester.widgetList(
@@ -779,10 +793,12 @@ void main() {
           ],
         );
 
-        check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
-            .equals(1);
-        check(tester.widgetList(find.byType(SessionErrorScreen))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.byType(SessionDisconnectedScreen)),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.byType(SessionErrorScreen)),
+        ).length.equals(0);
         check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
         await tester.pump(const Duration(seconds: 3));
         await _unmountRoomScreen(tester);
@@ -815,10 +831,12 @@ void main() {
           ],
         );
 
-        check(tester.widgetList(find.byType(SessionDisconnectedScreen))).length
-            .equals(1);
-        check(tester.widgetList(find.byType(SessionErrorScreen))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.byType(SessionDisconnectedScreen)),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.byType(SessionErrorScreen)),
+        ).length.equals(0);
         await tester.pump(const Duration(seconds: 3));
         await _unmountRoomScreen(tester);
       });
@@ -839,8 +857,9 @@ void main() {
         screen: RoomScreen.receiving,
       );
 
-      check(tester.widgetList(find.byType(ReceiveTotemScreen))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(ReceiveTotemScreen)),
+      ).length.equals(1);
       check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
     });
 
@@ -857,8 +876,9 @@ void main() {
         screen: RoomScreen.speaking,
       );
 
-      check(tester.widgetList(find.byType(SpeakingTurnScreen))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(SpeakingTurnScreen)),
+      ).length.equals(1);
       check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
     });
 
@@ -877,8 +897,9 @@ void main() {
         screen: RoomScreen.passing,
       );
 
-      check(tester.widgetList(find.byType(SpeakingTurnScreen))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(SpeakingTurnScreen)),
+      ).length.equals(1);
       check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
     });
 
@@ -956,8 +977,9 @@ void main() {
         screen: RoomScreen.listening,
       );
 
-      check(tester.widgetList(find.byType(ListeningTurnScreen))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(ListeningTurnScreen)),
+      ).length.equals(1);
       check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
     });
 
@@ -966,9 +988,12 @@ void main() {
       (tester) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
         try {
-          var enableMicrophoneCallCount = 0;
-          when(() => devices.enableMicrophone()).thenAnswer((_) async {
-            enableMicrophoneCallCount += 1;
+          var microphoneTurnOnCount = 0;
+          when(() => devices.turnOn(MediaKind.microphone)).thenAnswer((
+            _,
+          ) async {
+            microphoneTurnOnCount += 1;
+            return const TurnedOn();
           });
 
           final event = _createSessionEventWithElapsed(
@@ -985,7 +1010,7 @@ void main() {
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
           await tester.pump();
-          check(enableMicrophoneCallCount).equals(1);
+          check(microphoneTurnOnCount).equals(1);
 
           final context = tester.element(find.byType(ListeningTurnScreen));
 
@@ -1004,7 +1029,7 @@ void main() {
           await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
           await tester.pump();
 
-          check(enableMicrophoneCallCount).equals(1);
+          check(microphoneTurnOnCount).equals(1);
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }
@@ -1031,8 +1056,9 @@ void main() {
 
       await tester.pump(const Duration(seconds: 1));
 
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
       check(
         tester.widgetList(
           find.text('Thanks for your participation in this session today'),
@@ -1058,8 +1084,9 @@ void main() {
 
       await tester.pump(const Duration(seconds: 1));
 
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
       check(
         tester.widgetList(
           find.text('Thanks for your participation in this session today'),
@@ -1084,17 +1111,20 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 1));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
 
       await tester.pump(const Duration(seconds: 8));
       await tester.pumpAndSettle();
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
 
       await tester.pump(const Duration(seconds: 1));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets(
@@ -1117,13 +1147,15 @@ void main() {
         );
 
         await tester.pump(const Duration(seconds: 1));
-        check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.text('Time Remaining 5 min')),
+        ).length.equals(1);
 
         await tester.pump(const Duration(seconds: 8));
         await tester.pumpAndSettle();
-        check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.text('Time Remaining 5 min')),
+        ).length.equals(0);
 
         harness.container
             .read(harness.roomStatusProvider.notifier)
@@ -1134,8 +1166,9 @@ void main() {
             .set(RoomStatus.active);
         await tester.pump(const Duration(seconds: 2));
 
-        check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.text('Time Remaining 5 min')),
+        ).length.equals(0);
       },
     );
 
@@ -1156,12 +1189,14 @@ void main() {
       );
 
       await tester.pump(const Duration(minutes: 2, seconds: 50));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
 
       await tester.pump(const Duration(seconds: 15));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
     });
 
     testWidgets('shows warning immediately when threshold already passed', (
@@ -1181,8 +1216,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 1));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
     });
 
     testWidgets('does not show warning when event has ended', (tester) async {
@@ -1201,8 +1237,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 2));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets('cancels scheduled warning when connection disconnects', (
@@ -1224,8 +1261,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 30));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
 
       harness.container
           .read(harness.connectionStateProvider.notifier)
@@ -1233,8 +1271,9 @@ void main() {
       await tester.pump();
 
       await tester.pump(const Duration(seconds: 45));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets('cancels scheduled warning when room ends before threshold', (
@@ -1256,8 +1295,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 30));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
 
       harness.container
           .read(harness.roomStatusProvider.notifier)
@@ -1265,8 +1305,9 @@ void main() {
       await tester.pump();
 
       await tester.pump(const Duration(seconds: 45));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets('resets one-shot guard when session slug changes', (
@@ -1289,13 +1330,15 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 1));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
 
       await tester.pump(const Duration(seconds: 8));
       await tester.pumpAndSettle();
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
 
       final eventB = _createSessionEvent(
         slug: 'session-b',
@@ -1307,8 +1350,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -1328,16 +1372,19 @@ void main() {
         );
 
         await tester.pump(const Duration(seconds: 1));
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(1);
-        check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.text('Time Remaining 5 min')),
+        ).length.equals(1);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
 
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
       },
     );
   });
@@ -1388,13 +1435,15 @@ void main() {
         event: event,
         screen: RoomScreen.listening,
         extraOverrides: [
-          sessionDeviceControllerProvider(session)
-              .overrideWith(_TestSessionDeviceController.new),
+          sessionDeviceControllerProvider(
+            session,
+          ).overrideWith(_TestSessionDeviceController.new),
         ],
       );
 
-      check(tester.widgetList(find.text('Audio route changed'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Audio route changed')),
+      ).length.equals(0);
 
       final controller = _TestSessionDeviceController.lastInstance;
       check(controller).isNotNull();
@@ -1410,13 +1459,126 @@ void main() {
       );
       await tester.pump(const Duration(seconds: 1));
 
-      check(tester.widgetList(find.text('Audio route changed'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Audio route changed')),
+      ).length.equals(1);
       check(
         tester.widgetList(
           find.text('Audio is now routed to another output device.'),
         ),
       ).length.equals(1);
+    });
+
+    for (final (kind, problem, title) in [
+      (MediaKind.microphone, DeviceProblem.lost, 'Your microphone stopped'),
+      (MediaKind.camera, DeviceProblem.lost, 'Your camera stopped'),
+      (MediaKind.microphone, null, "Your microphone isn't on"),
+    ]) {
+      testWidgets('X13: tells the user when the ${kind.name} needs attention '
+          '(${problem?.name ?? 'not on'})', (tester) async {
+        final notices = StreamController<MediaKind>.broadcast();
+        addTearDown(notices.close);
+        devices.deviceNeedsAttentionStream = notices.stream;
+        _TestSessionDeviceController.initialState = SessionDeviceState(
+          selectedCameraDeviceId: null,
+          selectedAudioOutputDeviceId: null,
+          isSpeakerphoneEnabled: true,
+          isMicrophoneEnabled: false,
+          isCameraEnabled: false,
+          microphoneProblem: kind == MediaKind.microphone ? problem : null,
+          cameraProblem: kind == MediaKind.camera ? problem : null,
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 5),
+          ),
+          screen: RoomScreen.listening,
+          extraOverrides: [
+            sessionDeviceControllerProvider(
+              session,
+            ).overrideWith(_TestSessionDeviceController.new),
+          ],
+        );
+        notices.add(kind);
+        await tester.pump(const Duration(seconds: 1));
+
+        check(tester.widgetList(find.text(title))).length.equals(1);
+      });
+    }
+
+    for (final (blocker, title) in [
+      (TurnOnBlocker.keeperAway, "You can't unmute right now"),
+      (TurnOnBlocker.connection, "Couldn't turn on your microphone"),
+    ]) {
+      testWidgets('explains a turn-on blocked by ${blocker.name}', (
+        tester,
+      ) async {
+        final blocked =
+            StreamController<(MediaKind, TurnOnBlocker)>.broadcast();
+        addTearDown(blocked.close);
+        devices.turnOnBlockedStream = blocked.stream;
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 5),
+          ),
+          screen: RoomScreen.listening,
+        );
+        blocked.add((MediaKind.microphone, blocker));
+        await tester.pump(const Duration(seconds: 1));
+
+        check(tester.widgetList(find.text(title))).length.equals(1);
+      });
+    }
+
+    testWidgets('X13: tapping the notice turns the device on again', (
+      tester,
+    ) async {
+      final notices = StreamController<MediaKind>.broadcast();
+      addTearDown(notices.close);
+      devices.deviceNeedsAttentionStream = notices.stream;
+      when(
+        () => devices.turnOn(MediaKind.microphone),
+      ).thenAnswer((_) async => const TurnedOn());
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        ),
+        screen: RoomScreen.listening,
+        extraOverrides: grantedMediaPermissionOverrides(),
+      );
+      await tester.runAsync(
+        () => ProviderScope.containerOf(
+          tester.element(find.byType(ListeningTurnScreen)),
+        ).read(mediaPermissionControllerProvider.notifier).refresh(),
+      );
+      notices.add(MediaKind.microphone);
+      await tester.pump(const Duration(seconds: 1));
+      // The banner slides in off-screen here, so tap it through its handler.
+      tester
+          .widget<GestureDetector>(
+            find
+                .ancestor(
+                  of: find.text("Your microphone isn't on"),
+                  matching: find.byType(GestureDetector),
+                )
+                .first,
+          )
+          .onTap!();
+      await tester.pump(const Duration(seconds: 1));
+
+      verify(() => devices.turnOn(MediaKind.microphone)).called(1);
     });
 
     testWidgets('does not show notification while disconnected', (
@@ -1434,8 +1596,9 @@ void main() {
         screen: RoomScreen.listening,
         connectionState: RoomConnectionState.disconnected,
         extraOverrides: [
-          sessionDeviceControllerProvider(session)
-              .overrideWith(_TestSessionDeviceController.new),
+          sessionDeviceControllerProvider(
+            session,
+          ).overrideWith(_TestSessionDeviceController.new),
         ],
       );
 
@@ -1453,8 +1616,9 @@ void main() {
       );
       await tester.pump(const Duration(seconds: 1));
 
-      check(tester.widgetList(find.text('Audio route changed'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Audio route changed')),
+      ).length.equals(0);
     });
   });
 
@@ -1496,8 +1660,9 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
 
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
         check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
       },
     );
@@ -1529,8 +1694,9 @@ void main() {
         connectivityChanges.add(true);
         await tester.pumpAndSettle();
 
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
         check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
         check(
           tester.widgetList(
@@ -1547,23 +1713,27 @@ void main() {
         ).length.equals(1);
 
         await tester.pump(const Duration(seconds: 5));
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
 
         connectivityChanges.add(true);
         await tester.pumpAndSettle();
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
 
         connectivityChanges.add(false);
         await tester.pumpAndSettle();
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
 
         connectivityChanges.add(true);
         await tester.pumpAndSettle();
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
       },
     );
 
@@ -1591,8 +1761,9 @@ void main() {
       connectivityChanges.add(true);
       await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
 
       connectivityChanges.add(false);
       await tester.pump();
@@ -1670,8 +1841,9 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
 
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
         check(tester.widgetList(find.text("You're Offline"))).length.equals(0);
       },
     );
@@ -1695,13 +1867,15 @@ void main() {
         mountSession: true,
       );
 
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(1);
-      check(tester.widgetList(find.text('The session has been paused.'))).length
-          .equals(1);
-      check(tester.widgetList(find.text('The keeper will be right back.')))
-          .length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.text('The session has been paused.')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.text('The keeper will be right back.')),
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -1725,14 +1899,15 @@ void main() {
             .set(true);
         await tester.pumpAndSettle();
 
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(1);
-        check(tester.widgetList(find.text('The session has been paused.')))
-            .length
-            .equals(1);
-        check(tester.widgetList(find.text('The keeper will be right back.')))
-            .length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.text('The session has been paused.')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.text('The keeper will be right back.')),
+        ).length.equals(1);
       },
     );
 
@@ -1756,16 +1931,18 @@ void main() {
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(true);
       await tester.pumpAndSettle();
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
 
       harness.container
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(false);
       await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
     });
 
     testWidgets('clears keeper paused notification when room ends', (
@@ -1788,16 +1965,18 @@ void main() {
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(true);
       await tester.pumpAndSettle();
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
 
       harness.container
           .read(harness.roomStatusProvider.notifier)
           .set(RoomStatus.ended);
       await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
     });
 
     testWidgets(
@@ -1820,16 +1999,18 @@ void main() {
             .read(harness.hasKeeperDisconnectedProvider.notifier)
             .set(true);
         await tester.pumpAndSettle();
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
 
         harness.container
             .read(harness.connectionStateProvider.notifier)
             .set(RoomConnectionState.disconnected);
         await tester.pumpAndSettle();
 
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
       },
     );
 
@@ -1853,16 +2034,18 @@ void main() {
             .read(harness.hasKeeperDisconnectedProvider.notifier)
             .set(true);
         await tester.pumpAndSettle();
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
 
         harness.container
             .read(harness.roomScreenProvider.notifier)
             .set(RoomScreen.disconnected);
         await tester.pumpAndSettle();
 
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
       },
     );
 
@@ -1886,16 +2069,18 @@ void main() {
             .read(harness.hasKeeperDisconnectedProvider.notifier)
             .set(true);
         await tester.pumpAndSettle();
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(1);
 
         harness.container
             .read(harness.roomScreenProvider.notifier)
             .set(RoomScreen.error);
         await tester.pumpAndSettle();
 
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
       },
     );
 
@@ -1919,14 +2104,16 @@ void main() {
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(true);
       await tester.pumpAndSettle();
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
     });
   });
 
@@ -1952,16 +2139,18 @@ void main() {
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(true);
       await tester.pumpAndSettle();
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
 
       // Transition to disconnected screen
       harness.container
           .read(harness.roomScreenProvider.notifier)
           .set(RoomScreen.disconnected);
       await tester.pumpAndSettle();
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
 
       // Toggle keeper disconnect off/on while on disconnected screen
       harness.container
@@ -1974,8 +2163,9 @@ void main() {
           .set(true);
       await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
     });
 
     testWidgets('blocks keeper paused notification on error screen', (
@@ -1998,15 +2188,17 @@ void main() {
           .read(harness.hasKeeperDisconnectedProvider.notifier)
           .set(true);
       await tester.pumpAndSettle();
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(1);
 
       harness.container
           .read(harness.roomScreenProvider.notifier)
           .set(RoomScreen.error);
       await tester.pumpAndSettle();
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
 
       harness.container
           .read(harness.hasKeeperDisconnectedProvider.notifier)
@@ -2018,8 +2210,9 @@ void main() {
           .set(true);
       await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(NotificationBanner))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.byType(NotificationBanner)),
+      ).length.equals(0);
     });
 
     testWidgets('blocks 5 minute warning on disconnected screen', (
@@ -2041,8 +2234,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 1));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets('blocks 5 minute warning on error screen', (tester) async {
@@ -2062,8 +2256,9 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 1));
-      check(tester.widgetList(find.text('Time Remaining 5 min'))).length
-          .equals(0);
+      check(
+        tester.widgetList(find.text('Time Remaining 5 min')),
+      ).length.equals(0);
     });
 
     testWidgets(
@@ -2088,8 +2283,9 @@ void main() {
         );
 
         await tester.pumpAndSettle();
-        check(tester.widgetList(find.byType(NotificationBanner))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.byType(NotificationBanner)),
+        ).length.equals(0);
       },
     );
   });

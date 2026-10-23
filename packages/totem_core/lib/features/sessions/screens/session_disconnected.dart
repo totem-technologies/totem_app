@@ -63,7 +63,7 @@ SessionDisconnectedReason resolveDisconnectedReason({
 }
 
 class SessionDisconnectedScreen extends ConsumerStatefulWidget {
-  const new({
+  const SessionDisconnectedScreen({
     this.session,
     this.disconnectReason,
     this.sessionDisconnectedReason,
@@ -230,7 +230,7 @@ class _SessionDisconnectedScreenState
 // -----------------------------------------------------------------------------
 
 class _PortraitLayout extends StatelessWidget {
-  const new({
+  const _PortraitLayout({
     required this.session,
     required this.reason,
     required this.isBanned,
@@ -280,7 +280,7 @@ class _PortraitLayout extends StatelessWidget {
 }
 
 class _LandscapeLayout extends StatelessWidget {
-  const new({
+  const _LandscapeLayout({
     required this.session,
     required this.reason,
     required this.isBanned,
@@ -336,7 +336,7 @@ class _LandscapeLayout extends StatelessWidget {
 }
 
 class _MediumSmallLayout extends StatelessWidget {
-  const new({
+  const _MediumSmallLayout({
     required this.session,
     required this.reason,
     required this.isBanned,
@@ -412,7 +412,7 @@ class _MediumSmallLayout extends StatelessWidget {
 }
 
 class _MediumPlusLayout extends StatelessWidget {
-  const new({
+  const _MediumPlusLayout({
     required this.session,
     required this.reason,
     required this.isBanned,
@@ -478,7 +478,7 @@ class _MediumPlusLayout extends StatelessWidget {
 // -----------------------------------------------------------------------------
 
 class _SessionHeader extends StatelessWidget {
-  const new({required this.reason});
+  const _SessionHeader({required this.reason});
 
   final SessionDisconnectedReason reason;
 
@@ -507,7 +507,7 @@ class _SessionHeader extends StatelessWidget {
 }
 
 class _SessionSubheader extends StatefulWidget {
-  const new({required this.reason});
+  const _SessionSubheader({required this.reason});
   final SessionDisconnectedReason reason;
 
   @override
@@ -567,10 +567,12 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
     );
     return Text.rich(switch (widget.reason) {
       SessionDisconnectedReason.keeperAbsent => const TextSpan(
-        text: 'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
+        text:
+            'The session ended due to technical difficulties and couldn’t continue. We’ll notify you when it’s rescheduled.',
       ),
       SessionDisconnectedReason.movedToAnotherDevice => const TextSpan(
-        text: 'This account joined the same session on another device. Continue there or rejoin from this device.',
+        text:
+            'This account joined the same session on another device. Continue there or rejoin from this device.',
       ),
       SessionDisconnectedReason.removed => removedSpan,
       SessionDisconnectedReason.keeperEnded ||
@@ -579,7 +581,8 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
             'Thank you for joining!\nWe hope you found the session enjoyable.',
       ),
       SessionDisconnectedReason.banned => TextSpan(
-        text: 'You have been removed from this session due to a violation of our community guidelines.',
+        text:
+            'You have been removed from this session due to a violation of our community guidelines.',
         children: [
           const TextSpan(text: '\n'),
           removedSpan,
@@ -591,7 +594,7 @@ class _SessionSubheaderState extends State<_SessionSubheader> {
 }
 
 class _InteractiveFeedbackWidget extends ConsumerStatefulWidget {
-  const new({required this.session});
+  const _InteractiveFeedbackWidget({required this.session});
   final SessionDetailSchema session;
 
   @override
@@ -639,7 +642,7 @@ class _InteractiveFeedbackWidgetState
 }
 
 class _NextSessionsSection extends ConsumerWidget {
-  const new({
+  const _NextSessionsSection({
     required this.session,
     required this.isBanned,
     required this.onRefreshHome,
@@ -731,7 +734,7 @@ class _NextSessionsSection extends ConsumerWidget {
 }
 
 class _ActionButtons extends StatelessWidget {
-  const new({required this.onRefreshHome});
+  const _ActionButtons({required this.onRefreshHome});
 
   final VoidCallback onRefreshHome;
 
@@ -758,7 +761,7 @@ class _ActionButtons extends StatelessWidget {
 }
 
 class _MediumStatusIcon extends StatelessWidget {
-  const new({required this.reason});
+  const _MediumStatusIcon({required this.reason});
   final SessionDisconnectedReason reason;
 
   @override
@@ -803,7 +806,7 @@ class _MediumStatusIcon extends StatelessWidget {
 enum ThumbState { up, down, none }
 
 class _SessionFeedbackWidget extends StatelessWidget {
-  const new({
+  const _SessionFeedbackWidget({
     required this.state,
     required this.onThumbUpPressed,
     required this.onThumbDownPressed,
@@ -868,7 +871,7 @@ class _SessionFeedbackWidget extends StatelessWidget {
 }
 
 class _SessionFeedbackButton extends StatelessWidget {
-  const new({
+  const _SessionFeedbackButton({
     required this.icon,
     required this.onPressed,
     this.selected = false,

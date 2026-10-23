@@ -433,7 +433,7 @@ bool amNextSpeaker(Ref ref) {
 enum SelfViewPosition { start, end }
 
 class SelfViewState {
-  const new({required this.enabled, required this.position});
+  const SelfViewState({required this.enabled, required this.position});
 
   final bool enabled;
   final SelfViewPosition position;

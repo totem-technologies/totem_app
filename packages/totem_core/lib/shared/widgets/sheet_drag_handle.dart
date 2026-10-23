@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class SheetDragHandle extends StatelessWidget {
-  const new({
+  const SheetDragHandle({
     super.key,
     this.margin = const EdgeInsetsDirectional.only(top: 20, bottom: 20),
   });

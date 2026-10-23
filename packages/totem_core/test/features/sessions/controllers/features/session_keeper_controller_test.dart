@@ -6,8 +6,11 @@ import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
+import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 
+import '../../livekit_mocks.dart';
 import '../core/session_controller_mock.dart';
 import 'session_device_controller_mock.dart';
 
@@ -245,6 +248,48 @@ void main() {
         await controller.onKeeperDisconnectedTimeout();
         check(mockSession.disconnectFromRoomCalled).equals(true);
         check(controller.keeperDisconnectedTimer).isNull();
+      });
+    });
+    group('acceptTotem', () {
+      Future<FakeSessionDeviceController> accept({
+        required bool microphoneStarts,
+      }) async {
+        final session = FakeSessionController()
+          ..mockRoom = FakeRoom(MockLocalParticipant('user-2'));
+        final devices = FakeSessionDeviceController()
+          ..microphoneOn = false
+          ..microphoneStarts = microphoneStarts;
+        session.mockDevices = devices;
+        final container = ProviderContainer(
+          overrides: [
+            acceptTotemProvider(
+              session.options.sessionSlug,
+              session.state.roomState.version,
+            ).overrideWith((_) async => session.state.roomState),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container
+            .read(sessionKeeperControllerProvider(session).notifier)
+            .acceptTotem();
+        return devices;
+      }
+
+      test(
+        'X13: a mic that does not come on is flagged, not a failure',
+        () async {
+          final devices = await accept(microphoneStarts: false);
+
+          check(devices.turnedOn).deepEquals([MediaKind.microphone]);
+          check(devices.flagged).deepEquals([MediaKind.microphone]);
+        },
+      );
+
+      test('a mic that comes on is not flagged', () async {
+        final devices = await accept(microphoneStarts: true);
+
+        check(devices.flagged).isEmpty();
       });
     });
   });

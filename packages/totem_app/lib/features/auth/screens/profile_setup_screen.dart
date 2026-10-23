@@ -207,7 +207,8 @@ class _GuidelinesTabState extends State<_GuidelinesTab> {
             style: theme.textTheme.bodyMedium,
             children: [
               const TextSpan(
-                text: 'In order to keep Totem safe, we require everyone adhere to ',
+                text:
+                    'In order to keep Totem safe, we require everyone adhere to ',
               ),
               TextSpan(
                 text: 'confidentiality',
@@ -216,7 +217,8 @@ class _GuidelinesTabState extends State<_GuidelinesTab> {
                 ),
               ),
               const TextSpan(
-                text: '. Breaking confidentiality can be grounds for account removal.',
+                text:
+                    '. Breaking confidentiality can be grounds for account removal.',
               ),
             ],
           ),
@@ -511,10 +513,8 @@ class _ProfileTabState extends State<_ProfileTab>
   bool get wantKeepAlive => true;
 }
 
-typedef _TopicSelectionChanged = void Function(
-  SpaceCategories topic,
-  bool isSelected,
-);
+typedef _TopicSelectionChanged =
+    void Function(SpaceCategories topic, bool isSelected);
 
 /// Third tab: Topics selection.
 class _TopicsTab extends StatelessWidget {

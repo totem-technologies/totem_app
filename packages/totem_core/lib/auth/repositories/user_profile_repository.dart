@@ -11,7 +11,7 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
 }, name: 'User Repository Provider');
 
 class UserRepository {
-  const new({required this.apiService});
+  const UserRepository({required this.apiService});
 
   final ClientApi apiService;
 
@@ -24,7 +24,7 @@ class UserRepository {
 
   Future<bool> updateCurrentUserProfilePicture(File file) async {
     final bytes = await file.readAsBytes();
-    return await RepositoryUtils.handleApiCall<bool>(
+    return RepositoryUtils.handleApiCall<bool>(
       apiCall: () => apiService.users.totemUsersMobileApiUpdateCurrentUserImage(
         body: UpdateCurrentUserImageRequest(profileImage: bytes),
       ),
