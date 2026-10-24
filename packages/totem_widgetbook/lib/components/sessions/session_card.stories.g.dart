@@ -28,8 +28,8 @@ The calendar / Attend slot stays off — that variant hides it.
 Native size is the Figma frame: 362 × 253, split evenly between the
 photo and the white body. Width follows the parent; height keeps that
 ratio so a narrower column doesn't squash the type against the picture.
-A tight parent height wins over the ratio — the Sessions list pins
-cards at 250 (Figma 2315:8056).
+[height] pins the height instead of the ratio — the Sessions list
+pins cards at 250 (Figma 2315:8056).
 
 [onAddToCalendar] turns on the calendar slot: a round mauve button at
 the end of the Keeper row (Figma 2253:1859).''',
@@ -66,6 +66,7 @@ class SessionCardStory extends Story<SessionCard, SessionCardArgs> {
                meridiem: args.meridiem,
                seatsLeft: args.seatsLeft,
                photoAlignment: args.photoAlignment,
+               height: args.height,
                onSelect: args.onSelect,
                onAddToCalendar: args.onAddToCalendar,
              ),
@@ -85,6 +86,7 @@ class SessionCardArgs extends StoryArgs<SessionCard> {
     Arg<String>? meridiem,
     Arg<int>? seatsLeft,
     Arg<Alignment>? photoAlignment,
+    Arg<double?>? height,
     Arg<void Function()?>? onSelect,
     Arg<void Function()?>? onAddToCalendar,
   }) : this.keyArg = $initArg('key', key, null),
@@ -105,6 +107,7 @@ class SessionCardArgs extends StoryArgs<SessionCard> {
          photoAlignment,
          ConstArg(const Alignment(0, -0.44)),
        )!,
+       this.heightArg = $initArg('height', height, NullableDoubleArg(null))!,
        this.onSelectArg = $initArg('onSelect', onSelect, null),
        this.onAddToCalendarArg = $initArg(
          'onAddToCalendar',
@@ -123,6 +126,7 @@ class SessionCardArgs extends StoryArgs<SessionCard> {
     String meridiem = '',
     int seatsLeft = 0,
     Alignment photoAlignment = const Alignment(0, -0.44),
+    double? height = null,
     void Function()? onSelect,
     void Function()? onAddToCalendar,
   }) : this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
@@ -151,6 +155,11 @@ class SessionCardArgs extends StoryArgs<SessionCard> {
          Arg.fixed(photoAlignment),
          null,
        )!,
+       this.heightArg = $initArg(
+         'height',
+         height == null ? null : Arg.fixed(height),
+         null,
+       ),
        this.onSelectArg = $initArg(
          'onSelect',
          onSelect == null ? null : Arg.fixed(onSelect),
@@ -182,6 +191,8 @@ class SessionCardArgs extends StoryArgs<SessionCard> {
 
   final Arg<Alignment> photoAlignmentArg;
 
+  final Arg<double?>? heightArg;
+
   final Arg<void Function()?>? onSelectArg;
 
   final Arg<void Function()?>? onAddToCalendarArg;
@@ -206,6 +217,8 @@ class SessionCardArgs extends StoryArgs<SessionCard> {
 
   Alignment get photoAlignment => photoAlignmentArg.value;
 
+  double? get height => heightArg?.value;
+
   void Function()? get onSelect => onSelectArg?.value;
 
   void Function()? get onAddToCalendar => onAddToCalendarArg?.value;
@@ -222,6 +235,7 @@ class SessionCardArgs extends StoryArgs<SessionCard> {
     meridiemArg,
     seatsLeftArg,
     photoAlignmentArg,
+    heightArg,
     onSelectArg,
     onAddToCalendarArg,
   ];

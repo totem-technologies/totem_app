@@ -33,6 +33,7 @@ flutter:
     - assets/design/participant_card/
     - assets/design/session_card/
     - assets/design/session_controls/
+    - assets/design/session_details/
     - assets/design/session_entry/
     - assets/design/sessions/
 
