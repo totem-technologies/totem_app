@@ -12,6 +12,7 @@ export 'components/waiting_card/waiting_card.dart';
 export 'package.dart';
 export 'paint.dart';
 export 'pressable.dart';
+export 'screens/auth/auth_flow.dart';
 export 'screens/session_details_page/session_details_page.dart';
 export 'screens/session_entry/entry_layer.dart';
 export 'screens/session_entry/session_details.dart';
