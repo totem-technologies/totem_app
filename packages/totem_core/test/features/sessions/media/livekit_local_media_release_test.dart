@@ -13,16 +13,16 @@ import 'package:livekit_client/src/proto/livekit_rtc.pb.dart' as rtc_proto;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
 
-class _Room extends Mock implements Room;
+class _Room extends Mock implements Room {}
 
-class _Engine extends Mock implements Engine;
+class _Engine extends Mock implements Engine {}
 
-class _Stream extends Mock implements rtc.MediaStream;
+class _Stream extends Mock implements rtc.MediaStream {}
 
-class _DeviceTrack extends Mock implements rtc.MediaStreamTrack;
+class _DeviceTrack extends Mock implements rtc.MediaStreamTrack {}
 
 class _AudioTrack extends LocalAudioTrack {
-  new(rtc.MediaStream stream, rtc.MediaStreamTrack track)
+  _AudioTrack(rtc.MediaStream stream, rtc.MediaStreamTrack track)
     : super(TrackSource.microphone, stream, track, const AudioCaptureOptions());
 
   @override

@@ -14,7 +14,7 @@ import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class ReceiveTotemScreen extends ConsumerStatefulWidget {
-  const new({super.key});
+  const ReceiveTotemScreen({super.key});
 
   @override
   ConsumerState<ReceiveTotemScreen> createState() => _ReceiveTotemScreenState();

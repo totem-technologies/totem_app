@@ -59,8 +59,9 @@ void main() {
           ),
         );
 
-        check(tester.widgetList(find.byType(Tooltip))).length
-            .equals(kIsWeb ? 1 : 0);
+        check(
+          tester.widgetList(find.byType(Tooltip)),
+        ).length.equals(kIsWeb ? 1 : 0);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }

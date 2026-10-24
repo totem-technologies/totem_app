@@ -31,114 +31,14 @@
 
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
 
-
-
-
-
-  <!-- Splash assets are prefixed with {{ASSET_BASE}} (a --web-define Flutter
-       substitutes into this HTML at build time) so they load from the CDN. The
-       page is served by Django under /room/, so a relative "splash/img/..." URL
-       would resolve to /room/splash/img/... and hit Django, not the CDN. When
-       ASSET_BASE is empty (dev) the prefix collapses to a relative URL. -->
-  <style id="splash-screen-style">
-    html {
-      height: 100%
-    }
-
-    body {
-      margin: 0;
-      min-height: 100%;
-      background-color: #ffffff;
-      background-image: url("{{ASSET_BASE}}splash/img/light-background.png");
-      background-size: 100% 100%;
-    }
-
-    .center {
-      margin: 0;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
-    }
-
-    .contain {
-      display:block;
-      width:100%; height:100%;
-      object-fit: contain;
-    }
-
-    .stretch {
-      display:block;
-      width:100%; height:100%;
-    }
-
-    .cover {
-      display:block;
-      width:100%; height:100%;
-      object-fit: cover;
-    }
-
-    .bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      -ms-transform: translate(-50%, 0);
-      transform: translate(-50%, 0);
-    }
-
-    .bottomLeft {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-    }
-
-    .bottomRight {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-    }
-
-    /* Totem-branded indeterminate loading bar at the top during load.
-       Positioned like the splash logo (absolute, no z-index) so the Flutter
-       view paints over it once the first frame renders. */
-    #splash-loader {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 4px;
-      overflow: hidden;
-      background-color: rgba(38, 47, 55, 0.10); /* faint slate track */
-    }
-
-    #splash-loader::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
-      width: 45%;
-      border-radius: 3px;
-      background: linear-gradient(
-        90deg,
-        #987aa5, /* mauve  */
-        #9bc0dd, /* blue   */
-        #d999aa, /* pink   */
-        #8b5cf6  /* purple */
-      );
-      animation: splash-loader-slide 1.4s ease-in-out infinite;
-    }
-
-    @keyframes splash-loader-slide {
-      0%   { transform: translateX(-110%); }
-      100% { transform: translateX(330%); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      #splash-loader::before { animation-duration: 3s; }
-    }
-  </style>
+    <style>
+      body {
+        margin: 0;
+        /* AppTheme.cream: anything the Flutter view doesn't cover (e.g. mobile
+           browser chrome resizing) would otherwise be white. */
+        background: #F3F1E9;
+      }
+    </style>
   <style id="video-clip-style">
     /* Firefox skips the clip-path Flutter puts on a platform view's wrapper
        when the child is a <video>, so rounded video tiles render square. Any
@@ -150,27 +50,9 @@
       }
     }
   </style>
-  <script id="splash-screen-script">
-    function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
-      document.getElementById("splash-branding")?.remove();
-      document.getElementById("splash-loader")?.remove();
-      // AppTheme.cream, not transparent: anything the Flutter view doesn't
-      // cover (e.g. mobile browser chrome resizing) would otherwise be white.
-      document.body.style.background = "#F3F1E9";
-    }
-  </script>
+
 </head>
   <body>
-  <div id="splash-loader" aria-hidden="true"></div>
-  <picture id="splash">
-      <source srcset="{{ASSET_BASE}}splash/img/light-1x.png 1x, {{ASSET_BASE}}splash/img/light-2x.png 2x, {{ASSET_BASE}}splash/img/light-3x.png 3x, {{ASSET_BASE}}splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="{{ASSET_BASE}}splash/img/dark-1x.png 1x, {{ASSET_BASE}}splash/img/dark-2x.png 2x, {{ASSET_BASE}}splash/img/dark-3x.png 3x, {{ASSET_BASE}}splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="{{ASSET_BASE}}splash/img/light-1x.png" alt="">
-  </picture>
-
-
-
 
     <!-- Inline the bootstrap (incl. our custom flutter_bootstrap.js with
          ASSET_BASE) so no separate /room/flutter_bootstrap.js request is needed:

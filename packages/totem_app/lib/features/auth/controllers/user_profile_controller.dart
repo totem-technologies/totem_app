@@ -16,9 +16,7 @@ part 'user_profile_controller.g.dart';
 @Riverpod(keepAlive: true)
 class UserProfileController extends _$UserProfileController {
   @override
-  FutureOr<void> build() {
-    // Initial state is void, we just use this controller for mutations
-  }
+  FutureOr<void> build() {}
 
   UserRepository get _userRepository => ref.read(userRepositoryProvider);
   AnalyticsService get _analyticsService => ref.read(analyticsProvider);

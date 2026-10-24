@@ -6,7 +6,7 @@ import 'package:totem_core/shared/router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class RoutingUtils {
-  const new _();
+  const RoutingUtils._();
 
   /// Parses a URL and converts it to an app route if it's a Totem deep link.
   ///

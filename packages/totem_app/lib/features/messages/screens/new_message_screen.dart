@@ -167,8 +167,10 @@ class _SearchField extends StatelessWidget {
       ),
       child: Text(
         hint,
-        style: Theme.of(context).textTheme.bodyMedium
-            ?.copyWith(color: AppTheme.textMuted, fontWeight: FontWeight.w400),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: AppTheme.textMuted,
+          fontWeight: FontWeight.w400,
+        ),
       ),
     );
   }

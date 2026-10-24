@@ -94,8 +94,9 @@ void main() {
       );
       await tester.pump();
 
-      check(tester.widgetList(find.byType(AnimatedBoringAvatar))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(AnimatedBoringAvatar)),
+      ).length.equals(1);
     },
   );
 
@@ -154,8 +155,9 @@ void main() {
       );
       await tester.pump();
 
-      check(tester.widgetList(find.byType(AnimatedBoringAvatar))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(AnimatedBoringAvatar)),
+      ).length.equals(1);
     },
   );
 }

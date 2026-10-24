@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class RouteNames {
-  const new _();
+  const RouteNames._();
 
   static const welcome = '/';
 
@@ -70,7 +70,7 @@ enum HomeRoutes {
   messages(RouteNames.messages),
   profile(RouteNames.profile);
 
-  new(this.path);
+  const HomeRoutes(this.path);
 
   final String path;
 
@@ -115,7 +115,7 @@ abstract class TotemRouter {
 
 /// A class to wrap a Stream as a Listenable for GoRouter refreshes
 class GoRouterRefreshStream extends ChangeNotifier {
-  new(Stream<dynamic> stream) {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
     _subscription = stream.asBroadcastStream().listen((dynamic _) {
       notifyListeners();
     });

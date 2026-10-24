@@ -60,15 +60,17 @@ void main() {
       cameraOn.value = false;
       await tester.pump();
 
-      check(tester.element(find.byType(VideoTrackRenderer)))
-          .identicalTo(renderer);
+      check(
+        tester.element(find.byType(VideoTrackRenderer)),
+      ).identicalTo(renderer);
       check(tester.widgetList(find.byType(UserAvatar))).length.equals(2);
 
       cameraOn.value = true;
       await tester.pump();
 
-      check(tester.element(find.byType(VideoTrackRenderer)))
-          .identicalTo(renderer);
+      check(
+        tester.element(find.byType(VideoTrackRenderer)),
+      ).identicalTo(renderer);
       check(tester.widgetList(find.byType(UserAvatar))).length.equals(1);
 
       await tester.pumpWidget(const SizedBox.shrink());

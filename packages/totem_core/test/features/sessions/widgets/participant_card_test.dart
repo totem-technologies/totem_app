@@ -89,8 +89,9 @@ void main() {
       );
 
       check(tester.widgetList(find.text('John Doe'))).length.equals(1);
-      check(tester.widgetList(find.byType(SpeakingIndicatorOrEmoji))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(SpeakingIndicatorOrEmoji)),
+      ).length.equals(1);
     });
 
     testWidgets(
@@ -117,8 +118,9 @@ void main() {
           child: ParticipantCard(participant: remoteParticipant),
         );
 
-        check(tester.widgetList(find.byType(ParticipantControlButton))).length
-            .equals(0);
+        check(
+          tester.widgetList(find.byType(ParticipantControlButton)),
+        ).length.equals(0);
       },
     );
 
@@ -201,8 +203,9 @@ void main() {
       );
 
       check(tester.widgetList(find.text('Waiting room'))).length.equals(1);
-      check(tester.widgetList(find.byType(TotemIcon))).length
-          .equals(1); // clock icon
+      check(
+        tester.widgetList(find.byType(TotemIcon)),
+      ).length.equals(1); // clock icon
     });
 
     testWidgets('sizes overlay badges from the card on phone-sized windows', (
@@ -241,8 +244,9 @@ void main() {
         child: const FeaturedParticipantCard(),
       );
 
-      check(tester.getSize(find.byType(SpeakingIndicatorOrEmoji)))
-          .equals(const Size(28, 28));
+      check(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+      ).equals(const Size(28, 28));
       final decoration = tester
           .widget<Container>(
             find.descendant(
@@ -252,8 +256,9 @@ void main() {
           )
           .decoration;
       check(decoration).isA<BoxDecoration>();
-      check((decoration! as BoxDecoration).boxShadow!)
-          .deepEquals(kElevationToShadow[6]!);
+      check(
+        (decoration! as BoxDecoration).boxShadow!,
+      ).deepEquals(kElevationToShadow[6]!);
     });
 
     testWidgets('caps overlay badges on desktop-class windows', (tester) async {
@@ -290,8 +295,9 @@ void main() {
         child: const FeaturedParticipantCard(),
       );
 
-      check(tester.getSize(find.byType(SpeakingIndicatorOrEmoji)))
-          .equals(const Size(28, 28));
+      check(
+        tester.getSize(find.byType(SpeakingIndicatorOrEmoji)),
+      ).equals(const Size(28, 28));
     });
   });
 
@@ -430,7 +436,7 @@ void main() {
 }
 
 class _MenuCloseTestWrapper extends StatefulWidget {
-  const new({required this.participant});
+  const _MenuCloseTestWrapper({required this.participant});
 
   final ParticipantInfo participant;
 

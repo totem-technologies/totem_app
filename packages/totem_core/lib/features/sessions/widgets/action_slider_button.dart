@@ -10,7 +10,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 typedef OnActionPerformed = AsyncValueGetter<bool>;
 
 class ActionSliderButton extends StatefulWidget {
-  const new({
+  const ActionSliderButton({
     required this.text,
     required this.onActionCompleted,
     this.keepLoadingOnSuccess = false,
@@ -75,7 +75,7 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
 
 @visibleForTesting
 class ActionButton extends StatefulWidget {
-  const new({
+  const ActionButton({
     required this.text,
     required this.onActionCompleted,
     this.keepLoadingOnSuccess = false,
@@ -197,7 +197,7 @@ class _ActionButtonState extends State<ActionButton> {
 
 @visibleForTesting
 class ActionSlider extends StatefulWidget {
-  const new({
+  const ActionSlider({
     required this.text,
     required this.onActionCompleted,
     this.keepLoadingOnSuccess = false,

@@ -194,18 +194,6 @@ class MobileAuthController extends AuthController {
     }
   }
 
-  /// Checks for existing authentication tokens and validates them.
-  ///
-  /// If valid, updates the auth state to authenticated.
-  ///
-  /// If the user is offline, relies on cached user data if available.
-  /// If no valid tokens or cached data, sets state to unauthenticated.
-  ///
-  /// If the user is online, attempts to validate or refresh the token with the
-  /// backend. Token refresh happens automatically in a middleware in the
-  /// repository layer if needed.
-  ///
-  /// Prevents concurrent executions using [_isCheckingExistingAuth] flag.
   var _isCheckingExistingAuth = false;
 
   Future<void> _checkExistingAuth() async {
@@ -259,11 +247,7 @@ class MobileAuthController extends AuthController {
       await (() async {
         final user = await _userRepository.currentUser;
 
-        // If we timed out while waiting for this, DO NOT update state to avoid
-        // overwriting with potentially stale data.
-        //
-        // This is necessary because time [timeout] helper doesn't cancel the
-        // operation.
+        // The timeout does not cancel the operation, so ignore late results.
         if (timedOut) return;
 
         await ref.read(localStorageServiceProvider).saveUser(user);
@@ -304,7 +288,6 @@ class MobileAuthController extends AuthController {
         stackTrace: stackTrace,
         message: '🔑 Failed to store tokens locally',
       );
-      // Optionally rethrow or handle the error as needed
       throw AppAuthException('Failed to store tokens');
     }
   }
@@ -335,9 +318,7 @@ class MobileAuthController extends AuthController {
         if (user != null) await _authRepository.unregisterFcmToken(token);
         await FirebaseMessaging.instance.deleteToken();
       }
-    } catch (_) {
-      // can ignore
-    }
+    } catch (_) {}
   }
 
   Future<void> _clearAllLocalStorage() async {

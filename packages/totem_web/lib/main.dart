@@ -1,5 +1,3 @@
-import 'dart:js_interop';
-
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +5,7 @@ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/services/api_service.dart';
-import 'package:totem_core/core/utils/first_frame.dart';
+
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared_main.dart';
@@ -16,18 +14,10 @@ import 'package:totem_web/core/navigation/web_router.dart';
 import 'package:totem_web/core/services/web_api_service.dart';
 import 'package:web/web.dart' as web;
 
-@JS('removeSplashFromWeb')
-external void _removeSplashFromWeb();
-
-/// The last room background applied to the page, re-applied once the splash
-/// is removed (removing it resets the body background).
-BoxDecoration? _pageBackground;
-
 /// Mirrors the room background onto the page body so any area the Flutter
 /// view doesn't cover (e.g. when mobile browser chrome resizes the viewport)
 /// matches the session instead of showing the default white page.
 void _applyPageBackground(BoxDecoration decoration) {
-  _pageBackground = decoration;
   final style = web.document.body?.style;
   if (style == null) return;
 
@@ -78,16 +68,6 @@ Future<void> main() async {
       apiServiceProvider.overrideWith((ref) => ref.read(webApiServiceProvider)),
     ],
   );
-
-  // Keep the splash until the renderer finishes its first frame.
-  await waitForFirstRasterizedFrame(
-    rasterized: WidgetsBinding.instance.waitUntilFirstFrameRasterized,
-    scheduleFrame: WidgetsBinding.instance.scheduleForcedFrame,
-  );
-  _removeSplashFromWeb();
-  if (_pageBackground case final background?) {
-    _applyPageBackground(background);
-  }
 }
 
 class TotemWebApp extends ConsumerStatefulWidget {

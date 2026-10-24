@@ -122,8 +122,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.text('No sessions available yet.'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('No sessions available yet.')),
+      ).length.equals(1);
     },
   );
 
@@ -144,9 +145,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    check(tester.widgetList(find.text('You have not joined any sessions yet.')))
-        .length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('You have not joined any sessions yet.')),
+    ).length.equals(1);
     check(tester.widgetList(find.text('Browse Spaces'))).length.equals(1);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -165,9 +166,9 @@ void main() {
     );
     await tester.pump();
     await tester.pumpAndSettle();
-    check(tester.widgetList(find.text('You are not subscribed to any Spaces.')))
-        .length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('You are not subscribed to any Spaces.')),
+    ).length.equals(1);
   });
 
   testWidgets('session deep link resolves to the session route after loading', (

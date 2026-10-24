@@ -7,7 +7,11 @@ import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics
 import 'package:totem_core/shared/totem_icons.dart';
 
 class SpeakingIndicator extends ConsumerWidget {
-  const new({required this.participant, this.iconSize = 20, super.key});
+  const SpeakingIndicator({
+    required this.participant,
+    this.iconSize = 20,
+    super.key,
+  });
 
   final ParticipantInfo participant;
 
@@ -33,7 +37,7 @@ class SpeakingIndicator extends ConsumerWidget {
 }
 
 class SpeakingIndicatorOrEmoji extends StatelessWidget {
-  const new({
+  const SpeakingIndicatorOrEmoji({
     required this.participant,
     required this.metrics,
     this.backgroundColor = Colors.black54,

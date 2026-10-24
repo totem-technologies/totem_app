@@ -67,20 +67,25 @@ class _FakeMessagesRepository implements MessagesRepository {
 }
 
 void main() {
-  test('conversations provider exposes repository failures and recovers on refresh', () async {
-    final repository = _FakeMessagesRepository(failReads: true);
-    final container = ProviderContainer(
-      overrides: [messagesRepositoryProvider.overrideWithValue(repository)],
-    );
-    addTearDown(container.dispose);
+  test(
+    'conversations provider exposes repository failures and recovers on refresh',
+    () async {
+      final repository = _FakeMessagesRepository(failReads: true);
+      final container = ProviderContainer(
+        overrides: [messagesRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
 
-    await check(container.read(conversationsProvider.future))
-        .throws<StateError>();
+      await check(
+        container.read(conversationsProvider.future),
+      ).throws<StateError>();
 
-    repository.failReads = false;
-    check(await container.refresh(conversationsProvider.future)).length
-        .equals(1);
-  });
+      repository.failReads = false;
+      check(
+        await container.refresh(conversationsProvider.future),
+      ).length.equals(1);
+    },
+  );
 
   test(
     'thread provider prepends a sent message and preserves loaded history',
@@ -98,8 +103,9 @@ void main() {
       await container.read(provider.notifier).send('A reply');
 
       final messages = container.read(provider).requireValue;
-      check(messages.map((message) => message.text).toList())
-          .deepEquals(['A reply', 'Earlier message']);
+      check(
+        messages.map((message) => message.text).toList(),
+      ).deepEquals(['A reply', 'Earlier message']);
       check(repository.sent).deepEquals(['A reply']);
     },
   );
@@ -120,7 +126,8 @@ void main() {
       await tester.pump();
     });
 
-    check(tester.widgetList(find.text('Could not load messages.'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('Could not load messages.')),
+    ).length.equals(1);
   });
 }

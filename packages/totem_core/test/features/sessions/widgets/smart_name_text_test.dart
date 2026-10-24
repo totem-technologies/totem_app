@@ -41,8 +41,9 @@ void main() {
     (tester) async {
       await pumpName(tester, 'John Smith', width: 100);
       check(renderedName(tester)).equals('John Smith');
-      check(tester.widget<Text>(find.byType(Text)).textAlign)
-          .equals(TextAlign.center);
+      check(
+        tester.widget<Text>(find.byType(Text)).textAlign,
+      ).equals(TextAlign.center);
 
       await pumpName(tester, 'John Smith', width: 99);
       check(renderedName(tester)).equals('John S.');

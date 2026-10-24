@@ -181,8 +181,7 @@ class _SessionCard extends StatelessWidget {
             SizedBox(
               width: compact ? 60 : 100,
               height: double.infinity,
-              // TODO(totem): Create a TotemSpaceImage widget.
-              // This code is reflected in a lot of places in the codebase. This can be extracted and remove boilerplates
+              // TODO(totem): Extract a shared TotemSpaceImage widget.
               child: imageUrl != null && imageUrl.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: getFullUrl(imageUrl),

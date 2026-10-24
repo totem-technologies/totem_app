@@ -53,7 +53,10 @@ Components/
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
   Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard
 Screens/
+  auth            AuthFlow (18 states)
   session/:slug   SessionEntry (one story; args are the states)
+  spaces          SessionsScreen (4 states)
+  spaces/event/:slug  SessionDetailsPage (4 states)
 ```
 
 ### Rules

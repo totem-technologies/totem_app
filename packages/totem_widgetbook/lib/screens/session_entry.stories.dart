@@ -14,7 +14,7 @@ const component = ComponentMeta(path: 'Screens/session/:slug');
 const meta = Meta(SessionEntry.new, argsType: SessionEntryInput.new);
 
 class SessionEntryInput {
-  const new({
+  const SessionEntryInput({
     this.role = EntryRole.participant,
     this.phase = DetailsPhase.tooEarly,
     this.status = EntryStatus.browsing,

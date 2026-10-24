@@ -42,7 +42,10 @@ export 'package:totem_core/features/sessions/controllers/utils.dart';
 part 'session_controller.g.dart';
 
 class SessionRoomMetadataResult {
-  const new({required this.roomState, required this.lastMetadata});
+  const SessionRoomMetadataResult({
+    required this.roomState,
+    required this.lastMetadata,
+  });
 
   final RoomState? roomState;
   final String? lastMetadata;
@@ -116,6 +119,7 @@ class SessionController extends _$SessionController {
   KeepAliveLink? _keepAliveLink;
   Timer? _syncTimer;
   Timer? _statePollTimer;
+  Future<void>? _leaveFuture;
   Future<void>? _cleanupFuture;
   Future<void>? _statePollFuture;
   bool _pollPending = false;
@@ -186,8 +190,16 @@ class SessionController extends _$SessionController {
     _updateRoomState(roomState);
   }
 
-  Future<void> disconnectFromRoom() {
-    return _disconnect();
+  Future<void> disconnectFromRoom() async {
+    try {
+      await leave();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to disconnect from session',
+      );
+    }
   }
 
   void _dispatch(SessionEvent event) {
@@ -208,7 +220,7 @@ class SessionController extends _$SessionController {
         .watch(sessionProvider(options.sessionSlug))
         .whenData((event) => session = event);
 
-    ref.onDispose(() => unawaited(_cleanUp()));
+    ref.onDispose(() => _cleanUpInBackground('Failed to clean up session'));
 
     final initialRoomState = RoomState(
       keeper: session?.space.author.slug.value ?? '',
@@ -316,14 +328,15 @@ class SessionController extends _$SessionController {
   }
 
   void _onDisconnected() {
-    _disableLocalMediaTracks();
+    if (_leaveFuture != null) return;
+
     _dispatch(
       const ConnectionChanged(
         RoomConnectionState.disconnected,
         SessionPhase.disconnected,
       ),
     );
-    _cleanUp();
+    _cleanUpInBackground('Failed to clean up disconnected session');
   }
 
   void preventAutoDispose() {
@@ -342,31 +355,36 @@ class SessionController extends _$SessionController {
   }
 
   void _updateRoomState([RoomState? newSessionState]) {
-    void handleStateChange(RoomState state) {
-      if (state.version <= this.state.roomState.version) return;
-
-      if (state.status == RoomStatus.ended) {
-        _disableLocalMediaTracks();
+    bool handleStateChange(RoomState nextState) {
+      final currentState = state.roomState;
+      final isEnding =
+          currentState.status != RoomStatus.ended &&
+          nextState.status == RoomStatus.ended;
+      if (nextState.version < currentState.version ||
+          (nextState.version == currentState.version && !isEnding)) {
+        return false;
       }
 
-      _dispatch(RoomStateChanged(state));
+      _dispatch(RoomStateChanged(nextState));
+      return isEnding;
     }
 
+    var sessionEnded = false;
     if (newSessionState != null) {
-      handleStateChange(newSessionState);
+      sessionEnded = handleStateChange(newSessionState);
     } else {
       final metadataResult = resolveMetadataState(
         metadata: room?.metadata,
         lastMetadata: _lastMetadata,
       );
       _lastMetadata = metadataResult.lastMetadata;
-      if (metadataResult.roomState != null) {
-        handleStateChange(metadataResult.roomState!);
+      if (metadataResult.roomState case final roomState?) {
+        sessionEnded = handleStateChange(roomState);
       }
     }
 
-    if (state.roomState.status == RoomStatus.ended) {
-      _onSessionEnd();
+    if (sessionEnded) {
+      unawaited(_onSessionEnd());
     }
   }
 
@@ -477,7 +495,15 @@ class SessionController extends _$SessionController {
 
   Future<void> _onSessionEnd() async {
     logger.d('Session has ended. Cleaning up and disconnecting.');
-    await leave();
+    try {
+      await leave();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to disconnect after session ended',
+      );
+    }
   }
 
   bool get _canPublishInitialMedia =>
@@ -489,6 +515,18 @@ class SessionController extends _$SessionController {
       };
 
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
+    final previousLeave = _leaveFuture;
+    if (previousLeave != null) {
+      try {
+        await previousLeave;
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to leave previous session connection',
+        );
+      }
+    }
     final previousCleanup = _cleanupFuture;
     if (previousCleanup != null) await previousCleanup;
 
@@ -729,11 +767,36 @@ class SessionController extends _$SessionController {
     }
   }
 
-  Future<void> leave() async {
+  Future<void> leave() {
+    final leave = _leaveFuture;
+    if (leave != null) return leave;
+
+    late final Future<void> newLeave;
+    newLeave = _leaveAndCleanUp().whenComplete(() {
+      if (identical(_leaveFuture, newLeave)) {
+        _leaveFuture = null;
+      }
+    });
+    _leaveFuture = newLeave;
+    return newLeave;
+  }
+
+  Future<void> _leaveAndCleanUp() async {
     try {
       await _disconnect();
     } finally {
-      await _cleanUp();
+      try {
+        await _cleanUp();
+      } finally {
+        if (ref.mounted) {
+          _dispatch(
+            const ConnectionChanged(
+              RoomConnectionState.disconnected,
+              SessionPhase.disconnected,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -744,6 +807,14 @@ class SessionController extends _$SessionController {
   /// after its connection timeout. Capture stops with the page.
   void leaveOnPageExit() {
     unawaited(_room?.disconnect());
+  }
+
+  void _cleanUpInBackground(String message) {
+    unawaited(
+      _cleanUp().catchError((Object error, StackTrace stackTrace) {
+        ErrorHandler.logError(error, stackTrace: stackTrace, message: message);
+      }),
+    );
   }
 
   Future<void> _cleanUp() {
@@ -768,7 +839,15 @@ class SessionController extends _$SessionController {
     _pendingReconcile = false;
 
     if (ref.mounted) {
-      await ref.read(sessionInfraControllerProvider.notifier).deactivate();
+      try {
+        await ref.read(sessionInfraControllerProvider.notifier).deactivate();
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to deactivate session infrastructure',
+        );
+      }
     }
 
     if (ref.mounted) {
@@ -819,6 +898,11 @@ class SessionController extends _$SessionController {
       ..on<RoomConnectedEvent>((_) => _onConnected())
       ..on<RoomDisconnectedEvent>((event) {
         logger.d('Disconnected from session. Reason: ${event.reason}');
+        if (event.reason != null) {
+          _dispatch(SessionErrorChanged(RoomDisconnectionError(event.reason!)));
+        }
+        if (_leaveFuture != null) return;
+
         // Handles transient disconnects that can occur during the joining process,
         // to avoid showing the disconnected screen in those cases.
         //
@@ -838,9 +922,6 @@ class SessionController extends _$SessionController {
           return;
         }
 
-        if (event.reason != null) {
-          _dispatch(SessionErrorChanged(RoomDisconnectionError(event.reason!)));
-        }
         _onDisconnected();
       })
       ..on<DataReceivedEvent>((data) {

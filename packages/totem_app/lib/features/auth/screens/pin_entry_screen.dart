@@ -43,7 +43,6 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
     super.dispose();
   }
 
-  // PIN validation
   String? _validatePin(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter the PIN from your email';
@@ -51,14 +50,12 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
     if (value.length != 6) {
       return 'PIN must be 6 digits';
     }
-    // Check if PIN contains only digits
     if (!RegExp(r'^\d+$').hasMatch(value)) {
       return 'PIN must contain only digits';
     }
     return null;
   }
 
-  // Verify PIN
   Future<void> _verifyPin() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -77,7 +74,6 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
           context.go(widget.nextRoute ?? '/');
         }
       });
-      // If we reach here, PIN verification was successful
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -98,7 +94,6 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
         ErrorHandler.showErrorSnackBar(context, errorMessage);
 
         if (_attempts >= _maxAttempts) {
-          // Navigate back to login screen after max attempts
           Future<void>.delayed(const Duration(seconds: 2), () {
             if (mounted) {
               context.go(
@@ -113,7 +108,6 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
     }
   }
 
-  // Request a new magic link
   void _requestNewPin() {
     context.go(
       widget.nextRoute == null
@@ -124,7 +118,6 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen for auth state changes
     ref.listen<AuthState>(authControllerProvider, (previous, current) {
       if (current.status == AuthStatus.error && current.error != null) {
         ErrorHandler.showErrorSnackBar(context, current.error!);

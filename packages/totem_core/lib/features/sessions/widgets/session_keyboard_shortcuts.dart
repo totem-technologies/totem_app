@@ -4,13 +4,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 
 class SessionKeyboardShortcuts extends ConsumerStatefulWidget {
-  const new({
+  const SessionKeyboardShortcuts({
     required this.child,
     this.navigatorKey,
     this.enableEmojiReactions = true,
@@ -165,7 +167,12 @@ class _SessionKeyboardShortcutsState
     if (_isTogglingCamera) return;
     _isTogglingCamera = true;
     try {
-      await session.devices.toggleCamera();
+      final devices = session.devices;
+      if (devices.isCameraEnabled) {
+        await devices.disableCamera();
+      } else {
+        await turnOnMedia(context, ref, devices.control(MediaKind.camera));
+      }
     } finally {
       _isTogglingCamera = false;
     }
@@ -177,10 +184,11 @@ class _SessionKeyboardShortcutsState
     if (_isTogglingMicrophone) return;
     _isTogglingMicrophone = true;
     try {
-      if (session.devices.isMicrophoneEnabled) {
-        await session.devices.disableMicrophone();
+      final devices = session.devices;
+      if (devices.isMicrophoneEnabled) {
+        await devices.disableMicrophone();
       } else {
-        await session.devices.enableMicrophone();
+        await turnOnMedia(context, ref, devices.control(MediaKind.microphone));
       }
     } finally {
       _isTogglingMicrophone = false;

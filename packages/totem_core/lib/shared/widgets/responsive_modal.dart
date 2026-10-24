@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 Future<T?> showResponsiveModal<T>({
@@ -10,8 +11,8 @@ Future<T?> showResponsiveModal<T>({
   bool showDragHandle = false,
   bool isScrollControlled = true,
   bool useSafeArea = true,
-  Color bottomSheetBackgroundColor = const Color(0xFFF3F1E9),
-  Color dialogBackgroundColor = const Color(0xFFF3F1E9),
+  Color bottomSheetBackgroundColor = AppTheme.cream,
+  Color dialogBackgroundColor = AppTheme.cream,
   Color? dialogBarrierColor,
   ShapeBorder? dialogShape,
   AlignmentGeometry dialogAlignment = Alignment.center,
