@@ -61,7 +61,7 @@ jobs:
         with:
           flutter-version: "3.47.7"
           dart-version: "3.13.5"
-          lockfile-snapshot: tool/lockfiles/flutter_3.47.7.lock
+          lockfile-snapshot: pubspec.web.lock
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           flavor: ${{ env.FLAVOR }}
 

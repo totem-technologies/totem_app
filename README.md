@@ -44,11 +44,9 @@ make lint
 make test
 ```
 
-`make prepare-native` and `make prepare-web` select the corresponding lockfile,
-clear the workspace `.dart_tool`, and run `flutter pub get --enforce-lockfile`
-with the matching FVM SDK. They do not modify `.fvmrc`. `make test` runs the
-native/shared suite first and the Web suite second so incompatible workspace
-metadata is never used concurrently.
+Web commands temporarily select the Web dependency resolution, then restore the
+native `pubspec.lock` and `.dart_tool`, including after failures. `make test`
+runs native/shared tests first and Web tests second.
 
 The [Makefile](Makefile) contains additional commands. The codebase has a
 [mobile app](packages/totem_app), [web client](packages/totem_web), and
@@ -117,10 +115,10 @@ upper bound. Shared and generated source must remain compatible with Dart 3.12
 and Flutter 3.44.9 APIs. Do not add Dart 3.13-only language features or Flutter
 3.47-only APIs to shared code.
 
-| Platform | Flutter | Bundled Dart | Lockfile selection |
+| Platform | Flutter | Bundled Dart | Resolution |
 | --- | --- | --- | --- |
-| iOS / Android | 3.44.9 | 3.12.2 | Root `pubspec.lock` |
-| Web | 3.47.7 | 3.13.5 | `tool/lockfiles/flutter_3.47.7.lock` copied to root while building |
+| iOS / Android | 3.44.9 | 3.12.2 | `pubspec.lock` |
+| Web | 3.47.7 | 3.13.5 | `pubspec.web.lock` |
 
 The Web pin includes the CanvasKit/Skwasm context-loss recovery change from
 [flutter/flutter#185116](https://github.com/flutter/flutter/pull/185116), which
@@ -131,28 +129,18 @@ It does **not** prove that Totem's Safari failure is resolved. Native remains on
 [flutter/flutter#193363](https://github.com/flutter/flutter/issues/193363),
 where video platform views can appear above Flutter dialogs and sheets.
 
-Pub supports only one workspace lockfile at a time. The committed root lockfile
-is the native baseline; the Web snapshot is copied to the root only for a Web
-command. CI and the Make targets clear `.dart_tool` before every selected
-resolution and use `flutter pub get --enforce-lockfile`, so one toolchain cannot
-silently rewrite the other. If a dependency change updates the root lockfile:
+Pub supports one active workspace lockfile. `pubspec.lock` is the native
+baseline; `pubspec.web.lock` is the Web snapshot. CI and Make targets copy the
+selected snapshot to `pubspec.lock`, clear `.dart_tool`, and use
+`flutter pub get --enforce-lockfile`.
 
-1. Run `make prepare-native`, update dependencies with `fvm flutter pub get`,
-   and stage the resulting root `pubspec.lock` as the native resolution.
-2. Run `make prepare-web`; it preserves the staged native lockfile, selects the
-   Web snapshot, and resolves with `fvm spawn 3.47.7 pub get`.
-3. Copy the resulting root lockfile to
-   `tool/lockfiles/flutter_3.47.7.lock`, then run `make prepare-native` to
-   restore the staged native root lockfile. Stage the Web snapshot too.
-4. Verify both with `make prepare-native` and `make prepare-web`, then return to
-   native with `make prepare-native` before committing.
-
-Upgrade either SDK only after checking the relevant upstream regression, update
-both lockfile resolutions, and keep the CI matrix and this table in sync. The
-`Flutter Analysis` workflow analyzes shared code under both SDKs, runs native
-and shared tests under 3.44.9, and runs Web tests under 3.47.7. Native build
-compilation remains covered by the iOS/Android build workflow; the Web workflow
-compiles every PR and `main` build under 3.47.7.
+After changing dependencies, update the native baseline with `fvm flutter pub
+get`, then run `make update-web-lockfile`. It refreshes and verifies the Web
+snapshot, restores the native state, and validates both resolutions. Before
+upgrading either SDK, check the relevant upstream issue and update both
+resolutions and the CI matrix. CI analyzes shared code under both SDKs, tests
+native/shared code under 3.44.9 and Web code under 3.47.7, and compiles Web on
+PRs and `main`.
 
 ## Web hosting
 

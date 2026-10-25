@@ -9,7 +9,7 @@ WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
 NATIVE_FLUTTER ?= fvm flutter
 NATIVE_DART ?= fvm dart
 WEB_FLUTTER ?= fvm spawn 3.47.7
-WEB_BUILD_DART ?= FVM_FLUTTER_VERSION=3.47.7 fvm dart
+WEB_DART ?= fvm dart
 
 # Each Flutter suite also runs test files concurrently. Bound package-level
 # parallelism to avoid starting four compilers and their workers at once.
@@ -42,15 +42,17 @@ env-staging:
 env-prod:
 	$(NATIVE_DART) scripts/setup_env.dart production
 
-# The workspace has one active pubspec.lock. These targets select the matching
-# resolution, clear incompatible .dart_tool metadata, and enforce the lockfile.
+# The workspace has one active pubspec.lock. Web commands switch resolution
+# temporarily and always restore the native lockfile and .dart_tool afterwards.
 prepare-native:
-	./scripts/select_flutter_lockfile.sh native
+	rm -rf .dart_tool
 	$(NATIVE_FLUTTER) pub get --enforce-lockfile
 
 prepare-web:
-	./scripts/select_flutter_lockfile.sh web
-	$(WEB_FLUTTER) pub get --enforce-lockfile
+	./scripts/with_web_lockfile.sh true
+
+update-web-lockfile:
+	./scripts/with_web_lockfile.sh --update-lockfile
 
 run: prepare-native env-dev
 	@echo "Running app..."
@@ -60,20 +62,20 @@ run: prepare-native env-dev
 # {{ASSET_BASE}} placeholder, so define it (to "") here or the token leaks into
 # the splash <img>/background URLs. Empty means relative, which resolves fine
 # against the dev server's "/" base href.
-run-chrome: prepare-web env-dev
+run-chrome: env-dev
 	@echo "Running app in Chrome..."
-	cd $(WEB_DIR) && $(WEB_FLUTTER) run -d chrome $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
+	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) run -d chrome $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"'
 
-run-web: prepare-web env-dev
+run-web: env-dev
 	@echo "Running app in Web Server..."
-	cd $(WEB_DIR) && $(WEB_FLUTTER) run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
+	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release'
 
 # Build the web app the way it deploys: mounted at /room/, assets fetched from
 # a separate origin (here the local serve-web "CDN" on :5173). The `development`
 # flavor maps to that local CDN and composes the development .env.
-build-web-release: prepare-web env-dev
+build-web-release: env-dev
 	@echo "Building web app..."
-	$(WEB_BUILD_DART) scripts/web_build.dart
+	./scripts/with_web_lockfile.sh env FVM_FLUTTER_VERSION=3.47.7 $(WEB_DART) scripts/web_build.dart
 	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
 
 # Serve the built bundle with CORS headers so an HTML document on another origin
@@ -85,15 +87,13 @@ serve-web:
 # Build with the staging worker as ASSET_BASE and deploy it to Cloudflare.
 # Requires wrangler auth (bunx wrangler login, or CLOUDFLARE_API_TOKEN +
 # CLOUDFLARE_ACCOUNT_ID).
-deploy-web-staging: prepare-web env-staging
+deploy-web-staging: env-staging
 	@echo "Building web app (staging)"
-	$(WEB_BUILD_DART) scripts/web_build.dart
-	cd $(WEB_DIR) && bunx wrangler deploy --env staging
+	./scripts/with_web_lockfile.sh sh -c 'FVM_FLUTTER_VERSION=3.47.7 $(WEB_DART) scripts/web_build.dart && cd $(WEB_DIR) && bunx wrangler deploy --env staging'
 
-deploy-web-production: prepare-web env-prod
+deploy-web-production: env-prod
 	@echo "Building web app (production)"
-	$(WEB_BUILD_DART) scripts/web_build.dart
-	cd $(WEB_DIR) && bunx wrangler deploy --env production
+	./scripts/with_web_lockfile.sh sh -c 'FVM_FLUTTER_VERSION=3.47.7 $(WEB_DART) scripts/web_build.dart && cd $(WEB_DIR) && bunx wrangler deploy --env production'
 
 build-runner:
 	@echo "Running build_runner for code generation..."
@@ -115,9 +115,9 @@ test-native: prepare-native
 	@echo "Running native/shared tests..."
 	$(MAKE) --jobs=$(TEST_JOBS) test-core test-app test-benchmark test-widgetbook test-scripts TEST_PUB=--no-pub
 
-test-web: prepare-web
+test-web:
 	@echo "Running web tests..."
-	cd $(WEB_DIR) && $(WEB_FLUTTER) test --no-pub --platform=chrome
+	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) test --no-pub --platform=chrome'
 
 test-benchmark:
 	cd $(BENCHMARK_DIR) && $(NATIVE_FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
@@ -170,9 +170,9 @@ lint-native: prepare-native
 	cd $(BENCHMARK_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
 	cd $(WIDGETBOOK_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
 
-lint-web: prepare-web
+lint-web:
 	@echo "Running Web linter..."
-	cd $(WEB_DIR) && $(WEB_FLUTTER) analyze --no-pub
+	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) analyze --no-pub'
 
 format:
 	@echo "Formatting code..."

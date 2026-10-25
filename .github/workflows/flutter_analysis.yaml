@@ -22,7 +22,7 @@ jobs:
           - name: Web compatibility (Flutter 3.47.7)
             flutter-version: "3.47.7"
             dart-version: "3.13.5"
-            lockfile-snapshot: tool/lockfiles/flutter_3.47.7.lock
+            lockfile-snapshot: pubspec.web.lock
             test-target: web
 
     steps:
