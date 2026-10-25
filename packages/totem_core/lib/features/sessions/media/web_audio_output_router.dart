@@ -88,21 +88,23 @@ class WebAudioOutputRouter {
         UnsupportedError('Browser audio-output selection is unavailable.'),
       );
     }
-    return _enqueue(() async {
-      final outputs = await _gateway.audioOutputs();
-      if (!outputs.any(
-        (output) =>
-            output.kind == MediaDeviceKind.audioOutput &&
-            output.id == device.id,
-      )) {
-        throw StateError('The selected audio output is no longer available.');
-      }
+    return _enqueueLifecycle(
+      () => _enqueue(() async {
+        final outputs = await _gateway.audioOutputs();
+        if (!outputs.any(
+          (output) =>
+              output.kind == MediaDeviceKind.audioOutput &&
+              output.id == device.id,
+        )) {
+          throw StateError('The selected audio output is no longer available.');
+        }
 
-      final selectedDeviceId = device.id == 'default' ? null : device.id;
-      await _gateway.setSinkId(selectedDeviceId ?? '');
-      _selectedDeviceId = selectedDeviceId;
-      _onChanged?.call();
-    });
+        final selectedDeviceId = device.id == 'default' ? null : device.id;
+        await _gateway.setSinkId(selectedDeviceId ?? '');
+        _selectedDeviceId = selectedDeviceId;
+        _onChanged?.call();
+      }),
+    );
   }
 
   Future<void> _restoreDefaultIfSelectionDisappeared() async {

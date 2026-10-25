@@ -168,6 +168,7 @@ class _BrowserWebAudioOutputGateway implements WebAudioOutputGateway {
         unawaited(_applyToNewAudioElements());
       }).toJS,
     )..observe(container, web.MutationObserverInit(childList: true));
+    unawaited(_applyToNewAudioElements());
   }
 
   Future<void> _applyToNewAudioElements() async {

@@ -142,6 +142,30 @@ void main() {
       },
     );
 
+    test(
+      'does not restore a delayed selection after teardown and restart',
+      () async {
+        final pendingAudioOutputs = Completer<List<MediaDeviceInfo>>();
+        final gateway = _FakeGateway(
+          outputs: [fakeOutput('default'), fakeOutput('headphones')],
+          pendingAudioOutputs: pendingAudioOutputs,
+        );
+        final router = WebAudioOutputRouter(gateway: gateway);
+        await router.start(() {});
+
+        final selecting = router.select(fakeOutput('headphones'));
+        await gateway.audioOutputsStarted.future;
+        final stopping = router.stop();
+        final restarting = router.start(() {});
+        pendingAudioOutputs.complete(gateway.outputs);
+        await Future.wait([selecting, stopping, restarting]);
+
+        check(router.selectedDeviceId).isNull();
+        check(gateway.startCount).equals(2);
+        check(gateway.stopCount).equals(1);
+      },
+    );
+
     test('restarts browser listeners after a queued teardown', () async {
       final gateway = _FakeGateway();
       final router = WebAudioOutputRouter(gateway: gateway);
@@ -179,6 +203,7 @@ class _FakeGateway implements WebAudioOutputGateway {
     this.supportsSelection = true,
     this.supportsOutputChooser = false,
     this.outputs = const [],
+    this.pendingAudioOutputs,
     this.setSinkIdError,
     this.outputChooserResult,
   });
@@ -188,6 +213,8 @@ class _FakeGateway implements WebAudioOutputGateway {
   @override
   final bool supportsOutputChooser;
   List<MediaDeviceInfo> outputs;
+  Completer<List<MediaDeviceInfo>>? pendingAudioOutputs;
+  final audioOutputsStarted = Completer<void>();
   Error? setSinkIdError;
   MediaDeviceInfo? outputChooserResult;
   Error? outputChooserError;
@@ -208,7 +235,9 @@ class _FakeGateway implements WebAudioOutputGateway {
   @override
   Future<List<MediaDeviceInfo>> audioOutputs() async {
     audioOutputRequests++;
-    return outputs;
+    if (!audioOutputsStarted.isCompleted) audioOutputsStarted.complete();
+    final pendingAudioOutputs = this.pendingAudioOutputs;
+    return pendingAudioOutputs?.future ?? outputs;
   }
 
   @override
