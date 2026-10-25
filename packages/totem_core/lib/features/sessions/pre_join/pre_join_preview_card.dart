@@ -8,7 +8,11 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 /// The pre-join camera preview, rendered from the preview track before the
 /// session's media backend exists.
 class LocalParticipantCard extends ConsumerWidget {
-  const new({this.isCameraOn = true, this.videoTrack, super.key});
+  const LocalParticipantCard({
+    this.isCameraOn = true,
+    this.videoTrack,
+    super.key,
+  });
 
   final bool isCameraOn;
   final VideoTrack? videoTrack;

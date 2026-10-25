@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart'
     as mobile_api
     show RoomStatus, SessionDetailSchema, TurnState;
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
@@ -43,9 +44,9 @@ Future<void> showOptionsSheet(
     context: context,
     showDragHandle: false,
     useRootNavigator: false,
-    bottomSheetBackgroundColor: const Color(0xFFF3F1E9),
+    bottomSheetBackgroundColor: AppTheme.cream,
     dialogBarrierColor: Colors.black12,
-    dialogBackgroundColor: const Color(0xFFF3F1E9),
+    dialogBackgroundColor: AppTheme.cream,
     dialogAlignment: Alignment.bottomCenter,
     dialogInsetPadding: EdgeInsetsDirectional.only(
       bottom: bottomInset,
@@ -67,7 +68,7 @@ Future<void> showOptionsSheet(
 }
 
 class MoreOptions extends ConsumerWidget {
-  const new({required this.session, this.isDialog = false, super.key});
+  const MoreOptions({required this.session, this.isDialog = false, super.key});
 
   final mobile_api.SessionDetailSchema session;
   final bool isDialog;
@@ -499,7 +500,7 @@ class MoreOptions extends ConsumerWidget {
 enum MoreOptionsTileType { destructive, normal }
 
 class MoreOptionsTile<T> extends StatelessWidget {
-  new({
+  MoreOptionsTile({
     required this.title,
     required this.icon,
     this.onTap,
@@ -695,7 +696,7 @@ class MoreOptionsTile<T> extends StatelessWidget {
 }
 
 class _AudioOutputTile extends ConsumerWidget {
-  const new({
+  const _AudioOutputTile({
     required this.selectedDeviceId,
     required this.supportsSelection,
     required this.supportsOutputChooser,

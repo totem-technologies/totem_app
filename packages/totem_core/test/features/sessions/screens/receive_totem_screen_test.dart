@@ -14,6 +14,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -25,6 +27,7 @@ import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
+import '../../permissions/fake_media_permission_adapter.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
@@ -120,19 +123,23 @@ void main() {
     when(() => devices.selectedCameraDeviceId).thenReturn(null);
     when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
 
-    when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+    when(
+      () => devices.turnOn(MediaKind.microphone),
+    ).thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
-    when(() => devices.enableCamera()).thenAnswer((_) async {});
+    when(
+      () => devices.turnOn(MediaKind.camera),
+    ).thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableCamera()).thenAnswer((_) async {});
-    when(() => devices.toggleCamera()).thenAnswer((_) async {});
     when(() => keeper.acceptTotem()).thenAnswer((_) async {});
 
     when(
       () =>
           localParticipant.getTrackPublicationBySource(TrackSource.microphone),
     ).thenReturn(null);
-    when(() => localParticipant.getTrackPublicationBySource(TrackSource.camera))
-        .thenReturn(null);
+    when(
+      () => localParticipant.getTrackPublicationBySource(TrackSource.camera),
+    ).thenReturn(null);
     when(() => localParticipant.isCameraEnabled()).thenReturn(false);
   });
 
@@ -158,6 +165,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          ...grantedMediaPermissionOverrides(),
           authControllerProvider.overrideWith(
             () => FakeAuthController(testAuthenticatedState(isStaff: isStaff)),
           ),
@@ -211,15 +219,19 @@ void main() {
       );
 
       check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
-      check(tester.widgetList(find.bySemanticsLabel('Microphone off'))).length
-          .equals(1);
-      check(tester.widgetList(find.bySemanticsLabel('Camera off'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Microphone off')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Camera off')),
+      ).length.equals(1);
       check(tester.widgetList(find.bySemanticsLabel('Chat'))).length.equals(1);
-      check(tester.widgetList(find.bySemanticsLabel('Send reaction'))).length
-          .equals(0);
-      check(tester.widgetList(find.byType(ActionSliderButton))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.bySemanticsLabel('Send reaction')),
+      ).length.equals(0);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
       check(tester.widgetList(find.text('Receive'))).length.equals(1);
       check(tester.widgetList(find.text('"Take your time"'))).length.equals(1);
     });
@@ -229,8 +241,9 @@ void main() {
     ) async {
       await pumpReceiveTotem(tester, roundMessage: null);
 
-      check(tester.widgetList(find.byType(ActionSliderButton))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
       check(tester.widgetList(find.text('Receive'))).length.equals(1);
       check(tester.widgetList(find.text('"Take your time"'))).length.equals(0);
     });
@@ -258,11 +271,11 @@ void main() {
 
         await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
         await tester.pump();
-        verify(() => devices.enableMicrophone()).called(1);
+        verify(() => devices.turnOn(MediaKind.microphone)).called(1);
 
         await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
         await tester.pump();
-        verify(() => devices.toggleCamera()).called(1);
+        verify(() => devices.turnOn(MediaKind.camera)).called(1);
       });
     });
 
@@ -300,8 +313,9 @@ void main() {
     testWidgets('shows error notification when accept totem fails', (
       tester,
     ) async {
-      when(() => keeper.acceptTotem())
-          .thenAnswer((_) async => throw Exception('accept failed'));
+      when(
+        () => keeper.acceptTotem(),
+      ).thenAnswer((_) async => throw Exception('accept failed'));
 
       final feedbackService = _TestSessionCuesService();
 
@@ -314,8 +328,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       verify(() => keeper.acceptTotem()).called(1);
-      check(tester.widgetList(find.text('Something went wrong'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Something went wrong')),
+      ).length.equals(1);
       check(
         tester.widgetList(
           find.text('We were unable to accept the totem. Please try again.'),
@@ -335,11 +350,13 @@ void main() {
       await pumpReceiveTotem(tester, roundMessage: 'Breathe and share');
 
       check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
-      check(tester.widgetList(find.byType(ActionSliderButton))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.byType(ActionSliderButton)),
+      ).length.equals(1);
       check(tester.widgetList(find.text('Receive'))).length.equals(1);
-      check(tester.widgetList(find.text('"Breathe and share"'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('"Breathe and share"')),
+      ).length.equals(1);
     });
 
     testWidgets('shows the local participant card', (tester) async {
@@ -365,8 +382,9 @@ void main() {
       await actionSlider.widget.onActionCompleted();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      check(tester.widgetList(find.text('Something went wrong'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('Something went wrong')),
+      ).length.equals(1);
 
       await actionSlider.widget.onActionCompleted();
       await tester.pump();

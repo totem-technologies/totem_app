@@ -31,7 +31,7 @@ WebAudioOutputGateway createWebAudioOutputGateway() =>
 /// avoids pinning mobile web playback to a device id which can become stale
 /// after a headset is connected or disconnected.
 class WebAudioOutputRouter {
-  new({WebAudioOutputGateway? gateway})
+  WebAudioOutputRouter({WebAudioOutputGateway? gateway})
     : _gateway = gateway ?? createWebAudioOutputGateway();
 
   final WebAudioOutputGateway _gateway;

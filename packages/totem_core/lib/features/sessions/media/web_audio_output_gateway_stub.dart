@@ -7,7 +7,7 @@ WebAudioOutputGateway createWebAudioOutputGatewayImplementation() =>
     const _UnsupportedWebAudioOutputGateway();
 
 class _UnsupportedWebAudioOutputGateway implements WebAudioOutputGateway {
-  const new();
+  const _UnsupportedWebAudioOutputGateway();
 
   @override
   bool get supportsSelection => false;

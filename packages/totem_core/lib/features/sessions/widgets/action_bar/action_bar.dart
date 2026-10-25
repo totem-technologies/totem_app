@@ -5,6 +5,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/permissions/media_permission_controller.dart';
+import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/permissions/platform_info.dart';
+import 'package:totem_core/features/permissions/policy.dart';
+import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -41,7 +46,7 @@ enum ActionBarButtonRole {
 // Two named layouts plus a derived width; not a closed token set.
 // ignore: use_enums
 class _ActionBarMetrics {
-  const new({
+  const _ActionBarMetrics({
     required this.buttonSize,
     required this.iconSize,
     required this.gap,
@@ -81,7 +86,7 @@ class _ActionBarMetrics {
 }
 
 class _ActionBarScope extends InheritedWidget {
-  const new({
+  const _ActionBarScope({
     required this.metrics,
     required this.onLightBackground,
     required super.child,
@@ -121,7 +126,7 @@ bool _onLightBackground(BuildContext context) {
 }
 
 class ActionBarButton extends StatefulWidget {
-  const new({
+  const ActionBarButton({
     required this.child,
     required this.onPressed,
     this.semanticsLabel,
@@ -251,7 +256,7 @@ class _ActionBarButtonState extends State<ActionBarButton> {
 }
 
 class ActionBarShortcut {
-  const new({required this.label, required this.logicalKeys});
+  const ActionBarShortcut({required this.label, required this.logicalKeys});
 
   static const LogicalKeyboardKey microphoneKey = LogicalKeyboardKey.keyZ;
   static const LogicalKeyboardKey cameraKey = LogicalKeyboardKey.keyX;
@@ -287,7 +292,11 @@ class ActionBarShortcut {
 }
 
 class ActionBarTooltip extends StatelessWidget {
-  const new({required this.message, required this.child, super.key});
+  const ActionBarTooltip({
+    required this.message,
+    required this.child,
+    super.key,
+  });
 
   final String message;
   final Widget child;
@@ -317,7 +326,11 @@ class ActionBarTooltip extends StatelessWidget {
 }
 
 class ActionBarShortcutTooltip extends StatelessWidget {
-  const new({required this.shortcut, required this.child, super.key});
+  const ActionBarShortcutTooltip({
+    required this.shortcut,
+    required this.child,
+    super.key,
+  });
 
   final ActionBarShortcut shortcut;
   final Widget child;
@@ -332,7 +345,7 @@ class ActionBarShortcutTooltip extends StatelessWidget {
 }
 
 class ActionBar extends StatelessWidget {
-  const new({required this.children, super.key});
+  const ActionBar({required this.children, super.key});
 
   final List<Widget> children;
 
@@ -427,7 +440,7 @@ class ActionBar extends StatelessWidget {
 
 /// The action bar displayed in the pre join screen.
 class PrejoinActionBar extends ConsumerWidget {
-  const new({
+  const PrejoinActionBar({
     required this.locked,
     required this.microphoneLevel,
     required this.isMicOn,
@@ -440,11 +453,17 @@ class PrejoinActionBar extends ConsumerWidget {
     required this.selectedCameraDeviceId,
     required this.onCameraFacingChanged,
     required this.onCameraDeviceSelected,
+    this.microphoneProblem,
+    this.cameraProblem,
     super.key,
   });
 
   final bool locked;
   final MicrophoneLevelBuilder? microphoneLevel;
+
+  /// Why each preview device isn't working, for its badge.
+  final DeviceProblem? microphoneProblem;
+  final DeviceProblem? cameraProblem;
   final bool isMicOn;
   final AsyncCallback onToggleMic;
   final bool isSpeakerOn;
@@ -459,12 +478,19 @@ class PrejoinActionBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cameraDevices = ref.watch(cameraDevicesProvider);
+    final permissions = ref.watch(mediaPermissionControllerProvider);
+    final platform = ref.watch(platformInfoProvider);
     final microphoneButton = ActionBarShortcutTooltip(
       shortcut: ActionBarShortcut.microphone,
       child: ActionBarMicButton(
         microphoneLevel: microphoneLevel,
         isMicOn: isMicOn,
         onToggle: !locked ? (v) => onToggleMic() : null,
+        needsAttention: needsAttention(
+          permissions?.microphone,
+          microphoneProblem,
+          platform,
+        ),
       ),
     );
     final cameraButton = ActionBarShortcutTooltip(
@@ -478,6 +504,11 @@ class PrejoinActionBar extends ConsumerWidget {
             selectedCameraDeviceId ?? cameraDevices.firstOrNull?.id,
         onCameraFacingChanged: onCameraFacingChanged,
         onCameraDeviceSelected: onCameraDeviceSelected,
+        needsAttention: needsAttention(
+          permissions?.camera,
+          cameraProblem,
+          platform,
+        ),
       ),
     );
 
@@ -498,7 +529,7 @@ class PrejoinActionBar extends ConsumerWidget {
 }
 
 class SessionActionBar extends ConsumerWidget {
-  const new({super.key});
+  const SessionActionBar({super.key});
 
   static final GlobalKey actionBarKey = GlobalKey();
 
@@ -540,12 +571,22 @@ class SessionActionBar extends ConsumerWidget {
         requiresUnmuteConfirmation:
             totemState?.status == RoomStatus.active &&
             totemState?.speaker != localIdentity,
+        needsAttention: needsAttention(
+          ref.watch(mediaPermissionControllerProvider)?.microphone,
+          deviceState.microphoneProblem,
+          ref.watch(platformInfoProvider),
+        ),
         onToggle: (shouldEnable) async {
-          final devices = ref.read(deviceProvider.notifier);
           if (shouldEnable) {
-            await devices.enableMicrophone();
+            // Asks for permission where needed and explains a failure, the
+            // same as the camera (X13).
+            await turnOnMedia(
+              context,
+              ref,
+              ref.read(deviceProvider.notifier).control(MediaKind.microphone),
+            );
           } else {
-            await devices.disableMicrophone();
+            await ref.read(deviceProvider.notifier).disableMicrophone();
           }
         },
       ),
@@ -605,7 +646,7 @@ class SessionActionBar extends ConsumerWidget {
 }
 
 class _ActionBarMoreButton extends ConsumerStatefulWidget {
-  const new();
+  const _ActionBarMoreButton();
 
   @override
   ConsumerState<_ActionBarMoreButton> createState() =>

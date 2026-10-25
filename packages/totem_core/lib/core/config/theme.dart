@@ -3,11 +3,11 @@ import 'package:material_ui/material_ui.dart';
 
 /// This was generated based on the css.
 class AppTheme {
-  const new _();
+  const AppTheme._();
 
   // --- Colors ---
   // Extracted from the @theme block in styles.css
-  static const Color cream = Color(0xFFF3F1E9);
+  static const Color cream = Color(0xFFFAEFE5);
   static const Color yellow = Color(0x80FFD000);
   static const Color mauve = Color(0xFF987AA5);
 
@@ -28,6 +28,11 @@ class AppTheme {
   static const Color paleGreen = Color(0xFF98BD44);
 
   static const Color errorColor = Color(0xFFFF545C);
+
+  /// Marks a control that needs the user's attention. The theme's error
+  /// color is [pinkTint], the same as a muted control, so badges on those
+  /// would disappear.
+  static const Color attention = Color(0xFFF4DC92);
   static const Color successColor = paleGreen;
 
   // --- Shadows ---

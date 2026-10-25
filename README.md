@@ -5,7 +5,7 @@ guided group introspection. It supports iOS, Android, and web.
 
 ## Install
 
-Install [Flutter](https://docs.flutter.dev/get-started/install). iOS development
+Install [Flutter](https://docs.flutter.dev/get-started/install) **3.44.9**. iOS development
 also requires macOS and Xcode.
 
 ```sh

@@ -1,11 +1,12 @@
 import 'dart:async';
 
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
 
 /// In-memory [LocalMedia] whose commands update its own state, like a real
 /// backend would after the SDK applies them.
 class FakeLocalMedia implements LocalMedia {
-  new({
+  FakeLocalMedia({
     this.isAvailable = true,
     this.hasMicrophoneTrack = false,
     this.hasCameraTrack = false,
@@ -20,6 +21,7 @@ class FakeLocalMedia implements LocalMedia {
   });
 
   final _changes = StreamController<void>.broadcast(sync: true);
+  final _captureLost = StreamController<CaptureLost>.broadcast(sync: true);
 
   @override
   bool isAvailable;
@@ -48,6 +50,16 @@ class FakeLocalMedia implements LocalMedia {
   /// flight or make it fail by throwing.
   Future<void> Function(bool enabled)? onCameraCommand;
 
+  /// Runs before a microphone command applies, so tests can make it fail.
+  Future<void> Function(bool enabled)? onMicrophoneCommand;
+
+  /// Runs before a camera switch applies, so tests can make it fail.
+  Future<void> Function()? onCameraSwitch;
+
+  /// False drops device commands without an error, as the real media does
+  /// once its room is released.
+  bool appliesCommands = true;
+
   final List<bool> microphoneCommands = [];
   int releaseCount = 0;
   final List<bool> cameraCommands = [];
@@ -60,8 +72,30 @@ class FakeLocalMedia implements LocalMedia {
   Stream<void> get changes => _changes.stream;
 
   @override
+  Stream<CaptureLost> get captureLost => _captureLost.stream;
+
+  /// Simulates capture stopping outside the app, such as a revoked
+  /// permission. Like the real media, the device ends up off.
+  void loseCapture(MediaKind kind) {
+    final wasOn = switch (kind) {
+      MediaKind.camera => isCameraEnabled,
+      MediaKind.microphone => isMicrophoneEnabled,
+    };
+    switch (kind) {
+      case MediaKind.camera:
+        isCameraEnabled = false;
+      case MediaKind.microphone:
+        isMicrophoneEnabled = false;
+    }
+    _captureLost.add(CaptureLost(kind, wasOn: wasOn));
+    emitChange();
+  }
+
+  @override
   Future<void> setMicrophoneEnabled(bool enabled) async {
     microphoneCommands.add(enabled);
+    await onMicrophoneCommand?.call(enabled);
+    if (!appliesCommands) return;
     hasMicrophoneTrack = true;
     isMicrophoneEnabled = enabled;
     emitChange();
@@ -71,6 +105,7 @@ class FakeLocalMedia implements LocalMedia {
   Future<void> setCameraEnabled(bool enabled) async {
     cameraCommands.add(enabled);
     await onCameraCommand?.call(enabled);
+    if (!appliesCommands) return;
     hasCameraTrack = true;
     isCameraEnabled = enabled;
     cameraFacing = enabled ? (cameraFacing ?? CameraFacing.front) : null;
@@ -85,14 +120,16 @@ class FakeLocalMedia implements LocalMedia {
 
   @override
   Future<void> switchCameraFacing() async {
-    cameraFacing = cameraFacing?.switched ?? CameraFacing.front;
-    hasCameraTrack = true;
-    isCameraEnabled = true;
+    await onCameraSwitch?.call();
+    // Like the real media, a camera that's off only remembers the facing
+    // to start with.
+    cameraFacing = cameraFacing?.switched ?? CameraFacing.back;
     emitChange();
   }
 
   @override
   Future<void> selectCamera(MediaDeviceInfo device) async {
+    await onCameraSwitch?.call();
     cameraDeviceId = device.id;
     emitChange();
   }
@@ -124,7 +161,7 @@ class FakeLocalMedia implements LocalMedia {
 }
 
 class FakeMediaDeviceCatalog implements MediaDeviceCatalog {
-  new([this.current = const []]);
+  FakeMediaDeviceCatalog([this.current = const []]);
 
   List<MediaDeviceInfo> current;
   final _changes = StreamController<List<MediaDeviceInfo>>.broadcast();

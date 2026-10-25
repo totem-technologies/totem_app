@@ -1,7 +1,7 @@
 name: _
 publish_to: none
 environment:
-  sdk: ^3.13.5
+  sdk: ^3.12.2
 workspace:
   - packages/totem_core
   - packages/totem_app
@@ -10,11 +10,12 @@ workspace:
   - packages/totem_widgetbook
 
 dev_dependencies:
+  analyzer: any
+  checks: any
   meta: any
   flutter_test:
     sdk: flutter
 
-  checks: any
 dependency_overrides:
   livekit_client:
     git:

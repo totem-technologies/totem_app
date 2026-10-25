@@ -153,7 +153,8 @@ class OngoingSessionSheet extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             Text(
-              'Your space "${session.title}" with ${session.space.author.name} is happening now!',
+              'Your space "${session.title}" with '
+              '${session.space.author.name.value ?? 'your Keeper'} is happening now!',
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),

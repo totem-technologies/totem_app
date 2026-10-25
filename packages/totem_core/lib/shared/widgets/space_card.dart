@@ -53,7 +53,7 @@ MobileSpaceDetailSchema _spaceDetailFromSessionDetailSchema(
 }
 
 class SpaceCard extends StatelessWidget {
-  const new({
+  const SpaceCard({
     required this.space,
     super.key,
     this.compact = false,
@@ -61,7 +61,7 @@ class SpaceCard extends StatelessWidget {
     this.aspectRatio = 1.38,
   });
 
-  factory fromSessionDetailSchema(
+  factory SpaceCard.fromSessionDetailSchema(
     SessionDetailSchema session, {
     bool compact = false,
     VoidCallback? onTap,
@@ -110,7 +110,7 @@ class SpaceCard extends StatelessWidget {
         if (nextSession.seatsLeft > 0)
           '${nextSession.seatsLeft} ${nextSession.seatsLeft == 1 ? 'spot' : 'spots'} left',
       ],
-      'with keeper ${space.author.name}',
+      if (space.author.name.value case final keeper?) 'with keeper $keeper',
     ];
     final semanticLabel = semanticParts.join(', ');
 
@@ -288,9 +288,9 @@ class SpaceCard extends StatelessWidget {
 }
 
 class SmallSpaceCard extends StatelessWidget {
-  const new({required this.space, this.onTap, super.key});
+  const SmallSpaceCard({required this.space, this.onTap, super.key});
 
-  factory fromSessionDetailSchema(
+  factory SmallSpaceCard.fromSessionDetailSchema(
     SessionDetailSchema session, {
     VoidCallback? onTap,
   }) {

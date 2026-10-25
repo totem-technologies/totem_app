@@ -11,7 +11,7 @@ const component = ComponentMeta(path: 'Components/Sessions');
 const meta = Meta(SessionControls.new, argsType: SessionControlsInput.new);
 
 class SessionControlsInput {
-  const new({
+  const SessionControlsInput({
     this.micOn = true,
     this.cameraOn = true,
     this.showSessionActions = true,

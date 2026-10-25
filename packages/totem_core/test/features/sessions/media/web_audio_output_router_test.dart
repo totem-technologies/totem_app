@@ -7,32 +7,38 @@ import 'package:totem_core/features/sessions/media/web_audio_output_router.dart'
 
 void main() {
   group('WebAudioOutputRouter', () {
-    test('leaves a browser with only default output and no selection API controlled by the system', () async {
-      final gateway = _FakeGateway(supportsSelection: false);
-      final router = WebAudioOutputRouter(gateway: gateway);
+    test(
+      'leaves a browser with only default output and no selection API controlled by the system',
+      () async {
+        final gateway = _FakeGateway(supportsSelection: false);
+        final router = WebAudioOutputRouter(gateway: gateway);
 
-      await router.start(() {});
+        await router.start(() {});
 
-      check(router.selectedDeviceId).isNull();
-      check(gateway.startCount).equals(0);
-      check(gateway.sinkIds).isEmpty();
-    });
+        check(router.selectedDeviceId).isNull();
+        check(gateway.startCount).equals(0);
+        check(gateway.sinkIds).isEmpty();
+      },
+    );
 
-    test('selects a mobile or desktop output after validating its current availability', () async {
-      final gateway = _FakeGateway(
-        outputs: [fakeOutput('default'), fakeOutput('headphones')],
-      );
-      final router = WebAudioOutputRouter(gateway: gateway);
-      var changes = 0;
-      await router.start(() => changes++);
+    test(
+      'selects a mobile or desktop output after validating its current availability',
+      () async {
+        final gateway = _FakeGateway(
+          outputs: [fakeOutput('default'), fakeOutput('headphones')],
+        );
+        final router = WebAudioOutputRouter(gateway: gateway);
+        var changes = 0;
+        await router.start(() => changes++);
 
-      await router.select(fakeOutput('headphones'));
+        await router.select(fakeOutput('headphones'));
 
-      check(router.selectedDeviceId).equals('headphones');
-      check(gateway.sinkIds).deepEquals(['headphones']);
-      check(gateway.futureTrackSinkId).equals('headphones');
-      check(changes).equals(1);
-    });
+        check(router.selectedDeviceId).equals('headphones');
+        check(gateway.sinkIds).deepEquals(['headphones']);
+        check(gateway.futureTrackSinkId).equals('headphones');
+        check(changes).equals(1);
+      },
+    );
 
     test(
       'falls back to the browser default when the selected output disappears',
@@ -169,7 +175,7 @@ MediaDeviceInfo fakeOutput(String id) =>
     MediaDeviceInfo(id: id, label: id, kind: MediaDeviceKind.audioOutput);
 
 class _FakeGateway implements WebAudioOutputGateway {
-  new({
+  _FakeGateway({
     this.supportsSelection = true,
     this.supportsOutputChooser = false,
     this.outputs = const [],

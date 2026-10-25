@@ -14,6 +14,9 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/core/services/screen_protection_service.dart';
+import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/permissions/ui/recovery.dart';
+import 'package:totem_core/features/permissions/ui/recovery_content.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
@@ -36,7 +39,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
 class VideoSessionScreen extends ConsumerStatefulWidget {
-  const new({
+  const VideoSessionScreen({
     required this.sessionSlug,
     required this.loadingScreen,
     this.now = DateTime.now,
@@ -73,7 +76,7 @@ class _SessionChatRouteObserver extends NavigatorObserver {
 }
 
 class _DockedSessionPanelsRail extends ConsumerWidget {
-  const new({required this.sessionSlug});
+  const _DockedSessionPanelsRail({required this.sessionSlug});
 
   final String sessionSlug;
 
@@ -124,14 +127,27 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     // In-call chat UI state is per-session. Clearing it on entry keeps a
     // docked sidebar, or a private thread aimed at the previous circle's
     // keeper, from carrying into this one.
-    ref
-      ..invalidate(sessionChatOpenProvider)
-      ..invalidate(sessionPromptsOpenProvider)
-      ..invalidate(sessionChatThreadTargetProvider)
-      ..invalidate(sessionChatUnreadThreadsProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref
+        ..invalidate(sessionChatOpenProvider)
+        ..invalidate(sessionPromptsOpenProvider)
+        ..invalidate(sessionChatThreadTargetProvider)
+        ..invalidate(sessionChatUnreadThreadsProvider);
+    });
 
-    // Closing the tab skips the leave flow, so leave as the page unloads.
     ref.listenManual(currentSessionProvider, (_, session) {
+      // Permissions can change mid-call; tell the user when a device stops.
+      unawaited(_deviceNoticeSubscription?.cancel());
+      _deviceNoticeSubscription = session?.devices.deviceNeedsAttention.listen(
+        _showDeviceNotice,
+      );
+      unawaited(_turnOnBlockedSubscription?.cancel());
+      _turnOnBlockedSubscription = session?.devices.turnOnBlocked.listen(
+        _showTurnOnBlocked,
+      );
+
+      // Closing the tab skips the leave flow, so leave as the page unloads.
       final handler = session?.leaveOnPageExit;
       if (handler == _pageExitHandler) return;
       _pageExitHandler = handler;
@@ -145,8 +161,66 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     });
   }
 
+  StreamSubscription<MediaKind>? _deviceNoticeSubscription;
+
+  /// Tells the user a device they rely on isn't working, such as one that
+  /// stopped mid-call (X13). Tapping it turns the device on, explaining the
+  /// fix first where the user has to leave the app, as the controls do.
+  void _showDeviceNotice(MediaKind kind) {
+    final session = ref.read(currentSessionProvider);
+    if (!mounted || session == null) return;
+    final notice = deviceNotice(
+      kind,
+      ref.read(sessionDeviceControllerProvider(session)).problemOf(kind),
+    );
+    _notificationController.showTimed(
+      context,
+      icon: switch (kind) {
+        MediaKind.microphone => TotemIcons.microphoneOff,
+        MediaKind.camera => TotemIcons.cameraOff,
+      },
+      title: notice.title,
+      message: notice.message,
+      onTap: () =>
+          unawaited(turnOnMedia(context, ref, session.devices.control(kind))),
+    );
+  }
+
+  StreamSubscription<(MediaKind, TurnOnBlocker)>? _turnOnBlockedSubscription;
+
+  /// Explains why a device the user tried to turn on stayed off.
+  void _showTurnOnBlocked((MediaKind, TurnOnBlocker) blocked) {
+    if (!mounted) return;
+    final (kind, blocker) = blocked;
+    final device = switch (kind) {
+      MediaKind.microphone => 'microphone',
+      MediaKind.camera => 'camera',
+    };
+    final (title, message) = switch (blocker) {
+      TurnOnBlocker.keeperAway => (
+        "You can't unmute right now",
+        "The keeper is away. You can unmute once they're back.",
+      ),
+      TurnOnBlocker.connection => (
+        "Couldn't turn on your $device",
+        'Check your connection and try again.',
+      ),
+    };
+    _notificationController.showTimed(
+      context,
+      icon: switch (kind) {
+        MediaKind.microphone => TotemIcons.microphoneOff,
+        MediaKind.camera => TotemIcons.cameraOff,
+      },
+      title: title,
+      message: message,
+    );
+  }
+
   @override
   void dispose() {
+    unawaited(_deviceNoticeSubscription?.cancel());
+    unawaited(_turnOnBlockedSubscription?.cancel());
     _notificationController.dispose();
     _clearTimeRemainingWarningTimer();
     _setScreenProtection(false);

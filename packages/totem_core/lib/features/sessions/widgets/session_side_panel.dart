@@ -37,7 +37,7 @@ Future<void> showSessionSidePanelDrawer(
 }
 
 class _SessionSidePanelDrawerRoute extends RawDialogRoute<void> {
-  new({
+  _SessionSidePanelDrawerRoute({
     required String barrierLabel,
     required RouteSettings settings,
     required Widget child,
@@ -100,7 +100,11 @@ Widget _slideFromTrailing({
 
 /// A controlled trailing rail that makes room for a video-session panel.
 class DockedSessionSidePanel extends StatefulWidget {
-  const new({required this.open, required this.child, super.key});
+  const DockedSessionSidePanel({
+    required this.open,
+    required this.child,
+    super.key,
+  });
 
   final bool open;
   final Widget? child;
