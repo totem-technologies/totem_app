@@ -28,8 +28,9 @@ void main() {
     await tester.pump();
 
     check(profile.completeOnboardingCalls).equals(0);
-    check(tester.widgetList(find.text('Please enter your age'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('Please enter your age')),
+    ).length.equals(1);
     await disposeAuthScreenTest(tester, router);
   });
 

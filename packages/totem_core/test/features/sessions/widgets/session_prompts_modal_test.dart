@@ -84,8 +84,9 @@ void main() {
     await tester.tap(find.text('Use now'));
     await tester.pump();
 
-    check(tester.widgetList(find.text('Oops! Something went wrong.'))).length
-        .equals(1);
+    check(
+      tester.widgetList(find.text('Oops! Something went wrong.')),
+    ).length.equals(1);
     verify(
       () => keeper.setPrompt(
         customPrompt: null,

@@ -78,8 +78,9 @@ void main() {
     ) async {
       final participant = MockRemoteParticipant('user-2', 'John Doe');
       final camera = _camera('1');
-      when(() => participant.getTrackPublicationBySource(TrackSource.camera))
-          .thenReturn(camera.publication);
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(camera.publication);
       await pumpVideo(tester, () => participant);
       await tester.pumpAndSettle();
 
@@ -90,8 +91,9 @@ void main() {
         when(() => camera.track.muted).thenReturn(muted);
         await change(tester);
 
-        check(tester.element(find.byType(VideoTrackRenderer)))
-            .identicalTo(renderer);
+        check(
+          tester.element(find.byType(VideoTrackRenderer)),
+        ).identicalTo(renderer);
       }
 
       await tester.pumpWidget(const SizedBox.shrink());
@@ -106,8 +108,9 @@ void main() {
       final second = _camera('second');
       RemoteTrackPublication<RemoteVideoTrack>? cameraPublication =
           first.publication;
-      when(() => participant.getTrackPublicationBySource(TrackSource.camera))
-          .thenAnswer((_) => cameraPublication);
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.camera),
+      ).thenAnswer((_) => cameraPublication);
       await pumpVideo(tester, () => participant);
       await tester.pumpAndSettle();
       final firstRenderer = tester.element(find.byType(VideoTrackRenderer));
@@ -115,10 +118,12 @@ void main() {
       cameraPublication = second.publication;
       await change(tester);
 
-      check(tester.widgetList(find.byType(VideoTrackRenderer))).length
-          .equals(1);
-      check(tester.element(find.byType(VideoTrackRenderer)))
-          .not((it) => it.identicalTo(firstRenderer));
+      check(
+        tester.widgetList(find.byType(VideoTrackRenderer)),
+      ).length.equals(1);
+      check(
+        tester.element(find.byType(VideoTrackRenderer)),
+      ).not((it) => it.identicalTo(firstRenderer));
 
       cameraPublication = null;
       await change(tester);
@@ -135,8 +140,9 @@ void main() {
         final participant = MockRemoteParticipant('user-2', 'John Doe');
         final camera = _camera('1');
         RemoteTrackPublication<RemoteVideoTrack>? cameraPublication;
-        when(() => participant.getTrackPublicationBySource(TrackSource.camera))
-            .thenAnswer((_) => cameraPublication);
+        when(
+          () => participant.getTrackPublicationBySource(TrackSource.camera),
+        ).thenAnswer((_) => cameraPublication);
         await pumpVideo(tester, () => participant);
 
         check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
@@ -144,8 +150,9 @@ void main() {
         cameraPublication = camera.publication;
         await change(tester);
 
-        check(tester.widgetList(find.byType(VideoTrackRenderer))).length
-            .equals(1);
+        check(
+          tester.widgetList(find.byType(VideoTrackRenderer)),
+        ).length.equals(1);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
@@ -157,8 +164,9 @@ void main() {
       tester,
     ) async {
       final participant = MockRemoteParticipant('user-2', 'John Doe');
-      when(() => participant.getTrackPublicationBySource(TrackSource.camera))
-          .thenReturn(null);
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(null);
       Participant? current;
       await pumpVideo(tester, () => current, showStats: true);
       check(find.textContaining('Bitrate').evaluate()).isEmpty();
@@ -174,10 +182,12 @@ void main() {
       final after = MockRemoteParticipant('user-2', 'John Doe');
       final camera = _camera('before');
       final rejoinedCamera = _camera('after');
-      when(() => before.getTrackPublicationBySource(TrackSource.camera))
-          .thenReturn(camera.publication);
-      when(() => after.getTrackPublicationBySource(TrackSource.camera))
-          .thenReturn(rejoinedCamera.publication);
+      when(
+        () => before.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(camera.publication);
+      when(
+        () => after.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(rejoinedCamera.publication);
       Participant? current = before;
       await pumpVideo(tester, () => current);
       await tester.pumpAndSettle();

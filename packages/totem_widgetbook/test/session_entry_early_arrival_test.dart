@@ -20,8 +20,9 @@ void main() {
     await tester.pump();
 
     // The card is just facts and Join. The note waits for the tap.
-    check(find.textContaining('You can join beginning at').evaluate())
-        .isEmpty();
+    check(
+      find.textContaining('You can join beginning at').evaluate(),
+    ).isEmpty();
 
     await tester.tap(find.text('Join session'));
     await _settleNotice(tester);
