@@ -20,6 +20,28 @@ void main() {
     });
   });
 
+  group('waveformIsActive', () {
+    test(
+      'ignores background noise until a sample crosses the activation gate',
+      () {
+        check(
+          waveformIsActive(const [0.01, 0.03, 0.02], wasActive: false),
+        ).isFalse();
+        check(
+          waveformIsActive(const [0.01, 0.04, 0.02], wasActive: false),
+        ).isTrue();
+      },
+    );
+
+    test(
+      'holds the waveform through small changes before settling to silence',
+      () {
+        check(waveformIsActive(const [0.025, 0.01], wasActive: true)).isTrue();
+        check(waveformIsActive(const [0.019, 0.01], wasActive: true)).isFalse();
+      },
+    );
+  });
+
   group('audioVisualizerSamplesChanged', () {
     test('ignores imperceptible changes and detects visible changes', () {
       check(

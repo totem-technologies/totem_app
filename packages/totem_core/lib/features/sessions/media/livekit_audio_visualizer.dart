@@ -27,7 +27,6 @@ class SoundWaveformWidget extends StatefulWidget {
   State<SoundWaveformWidget> createState() => _SoundWaveformWidgetState();
 }
 
-@visibleForTesting
 bool audioVisualizerSamplesChanged(List<double> current, List<double> next) {
   if (current.length != next.length) return true;
   for (var i = 0; i < current.length; i++) {
@@ -37,6 +36,15 @@ bool audioVisualizerSamplesChanged(List<double> current, List<double> next) {
     }
   }
   return false;
+}
+
+/// Ignores room noise while preserving an active waveform until speech falls
+/// below a lower release threshold.
+bool waveformIsActive(List<double> samples, {required bool wasActive}) {
+  const activationThreshold = 0.04;
+  const releaseThreshold = 0.02;
+  final threshold = wasActive ? releaseThreshold : activationThreshold;
+  return samples.any((sample) => sample >= threshold);
 }
 
 @visibleForTesting
@@ -76,6 +84,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
   DateTime? _lastRestartAttemptAt;
   int _consecutiveRestartAttempts = 0;
   bool _visualizerUnavailable = false;
+  bool _isSpeaking = false;
 
   Future<void> _safeAsyncAction(
     AsyncCallback action, {
@@ -160,6 +169,7 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
     if (!mounted) return;
     setState(() {
       samples = List.filled(widget.barCount, 0, growable: false);
+      _isSpeaking = false;
     });
   }
 
@@ -185,14 +195,22 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
   void _flushUiUpdate() {
     if (!mounted) return;
     _lastUiUpdateAt = DateTime.now();
-    if (!_samplesChanged()) return;
+    final isSpeaking = waveformIsActive(
+      _backgroundSamples,
+      wasActive: _isSpeaking,
+    );
+    final nextSamples = isSpeaking
+        ? _backgroundSamples
+        : List<double>.filled(widget.barCount, 0, growable: false);
+    if (!audioVisualizerSamplesChanged(samples, nextSamples) &&
+        isSpeaking == _isSpeaking) {
+      return;
+    }
     setState(() {
-      samples = List<double>.of(_backgroundSamples, growable: false);
+      samples = List<double>.of(nextSamples, growable: false);
+      _isSpeaking = isSpeaking;
     });
   }
-
-  bool _samplesChanged() =>
-      audioVisualizerSamplesChanged(samples, _backgroundSamples);
 
   @override
   void initState() {
