@@ -261,7 +261,22 @@ class PassTransitionCard extends StatelessWidget {
     return ViewportResolver(
       builder: (context, viewportKind) {
         return switch (viewportKind) {
-          ViewportKind.smallPortrait ||
+          // Portrait phones: keep Pass easy to hit but closer in scale to the
+          // enlarged ActionBar (48dp). Landscape keeps the prior full height.
+          ViewportKind.smallPortrait => Container(
+            margin: const EdgeInsetsDirectional.only(
+              start: 16,
+              end: 16,
+              bottom: 12,
+            ),
+            height: 48,
+            child: ActionSliderButton(
+              text: actionText,
+              onActionCompleted: onActionPressed,
+              keepLoadingOnSuccess: true,
+              isLoading: isSliderLoading,
+            ),
+          ),
           ViewportKind.smallLandscape => Container(
             margin: const EdgeInsetsDirectional.only(
               start: 20,

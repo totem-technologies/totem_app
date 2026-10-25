@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 typedef OnActionPerformed = AsyncValueGetter<bool>;
 
@@ -304,8 +305,14 @@ class ActionSliderState extends State<ActionSlider> {
         assert(trackWidth > 0, 'ActionSlider must have a positive width');
         assert(trackWidth.isFinite, 'ActionSlider width must be finite');
 
-        const thumbSize = 48.0;
-        const padding = 6.0;
+        // smallPortrait only: nudge thumb/track down so Pass does not dwarf
+        // the enlarged ActionBar. Other viewports keep the prior 48/50 sizes.
+        final isPhonePortrait =
+            ViewportResolver.getViewportKind(context) ==
+            ViewportKind.smallPortrait;
+        final thumbSize = isPhonePortrait ? 40.0 : 48.0;
+        final padding = isPhonePortrait ? 4.0 : 6.0;
+        final minTrackHeight = isPhonePortrait ? 48.0 : 50.0;
         maxSlideDistance = trackWidth - thumbSize - (padding * 2);
         final progress = widget.isLoading == true
             ? 1
@@ -352,7 +359,7 @@ class ActionSliderState extends State<ActionSlider> {
               child: Opacity(
                 opacity: widget.enabled ? 1.0 : 0.5,
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 50),
+                  constraints: BoxConstraints(minHeight: minTrackHeight),
                   decoration: BoxDecoration(
                     color: backgroundColor,
                     borderRadius: BorderRadius.circular(25),
@@ -363,7 +370,7 @@ class ActionSliderState extends State<ActionSlider> {
                     children: [
                       Center(
                         child: Padding(
-                          padding: const EdgeInsetsDirectional.symmetric(
+                          padding: EdgeInsetsDirectional.symmetric(
                             horizontal: thumbSize * 1.25,
                           ),
                           child: AutoSizeText(

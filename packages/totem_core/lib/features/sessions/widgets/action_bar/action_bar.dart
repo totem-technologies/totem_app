@@ -62,6 +62,15 @@ class _ActionBarMetrics {
     verticalPadding: 6,
   );
 
+  /// Phones: Material minimum touch (48) with proportionally larger icons.
+  static const phone = _ActionBarMetrics(
+    buttonSize: 48,
+    iconSize: 24,
+    gap: 6,
+    horizontalPadding: 6,
+    verticalPadding: 6,
+  );
+
   static const compact = _ActionBarMetrics(
     buttonSize: 40,
     iconSize: 20,
@@ -414,9 +423,10 @@ class ActionBar extends StatelessWidget {
   /// LayoutBuilder reports incoming constraints. A non-flex Row child gets
   /// `maxWidth: infinity`, so we cannot key compact off that alone.
   ///
-  /// Phones always compact. Larger viewports use comfortable unless the
+  /// Phones prefer phone metrics (≥48dp touch targets). Tablets/desktop
+  /// prefer comfortable. Either falls back to compact only when the
   /// *finite* constraint (or the screen width, when unbounded) cannot fit
-  /// `children.length`.
+  /// `children.length` via widthFor.
   _ActionBarMetrics _resolveMetrics(
     BuildContext context,
     BoxConstraints constraints,
@@ -425,16 +435,17 @@ class ActionBar extends StatelessWidget {
     final isPhone =
         viewport == ViewportKind.smallPortrait ||
         viewport == ViewportKind.smallLandscape;
-    if (isPhone) return _ActionBarMetrics.compact;
+    final preferred = isPhone
+        ? _ActionBarMetrics.phone
+        : _ActionBarMetrics.comfortable;
 
     final availableWidth = constraints.maxWidth.isFinite
         ? constraints.maxWidth
         : MediaQuery.sizeOf(context).width;
-    if (availableWidth <
-        _ActionBarMetrics.comfortable.widthFor(children.length)) {
+    if (availableWidth < preferred.widthFor(children.length)) {
       return _ActionBarMetrics.compact;
     }
-    return _ActionBarMetrics.comfortable;
+    return preferred;
   }
 }
 
