@@ -10,5 +10,5 @@ set -u
 unset GIT_DIR
 
 # Check formatting before running the slower package analysis.
-dart scripts/check_format.dart
+fvm dart scripts/check_format.dart
 make lint

@@ -59,11 +59,16 @@ jobs:
       - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
+          flutter-version: "3.47.7"
+          dart-version: "3.13.5"
+          lockfile-snapshot: tool/lockfiles/flutter_3.47.7.lock
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           flavor: ${{ env.FLAVOR }}
 
       - name: Build web
         uses: ./.github/actions/build-web
+        with:
+          flutter-version: "3.47.7"
 
       - name: Upload Sentry source maps
         if: ${{ github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') }}

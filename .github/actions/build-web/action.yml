@@ -8,9 +8,25 @@ description: >-
   ASSET_BASE web-define); see scripts/web_build.dart and
   packages/totem_web/wrangler.toml.
 
+inputs:
+  flutter-version:
+    description: "Required Flutter SDK version for Web builds."
+    required: false
+    default: "3.47.7"
+
 runs:
   using: "composite"
   steps:
+    - name: Verify Web Flutter version
+      shell: bash
+      run: |
+        set -euo pipefail
+        installed_flutter="$(flutter --version --machine | sed -nE 's/.*"flutterVersion": "([^"]+)".*/\1/p')"
+        if [ "$installed_flutter" != "${{ inputs.flutter-version }}" ]; then
+          echo "::error::Web builds require Flutter ${{ inputs.flutter-version }}, but installed ${installed_flutter:-unknown}."
+          exit 1
+        fi
+
     - name: Build web
       shell: bash
       run: dart scripts/web_build.dart

@@ -33,6 +33,9 @@ jobs:
       - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
+          flutter-version: "3.47.7"
+          dart-version: "3.13.5"
+          lockfile-snapshot: tool/lockfiles/flutter_3.47.7.lock
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           flavor: staging
 
@@ -41,9 +44,11 @@ jobs:
         run: dart scripts/web_preview.dart
 
       - name: Build preview
+        uses: ./.github/actions/build-web
+        with:
+          flutter-version: "3.47.7"
         env:
           WEB_ASSET_BASE: ${{ steps.preview.outputs.asset_base }}
-        run: dart scripts/web_build.dart
 
       # A PR can close or advance while this build is queued or running.
       - name: Check PR status

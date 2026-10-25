@@ -3,12 +3,25 @@ description: >-
   One-stop build environment setup, run right after checkout by every Flutter CI
   job: installs Flutter and its bundled Dart SDK (optionally Java 17 for Android), composes
   the flavor's .env from config/, and decodes the Firebase/Google service
-  secrets. The Flutter/Java versions live here only — bump them in one place.
+  secrets. The Flutter/Dart versions are configured by inputs so Web and native
+  jobs can use their pinned toolchains without duplicating this setup.
 
 inputs:
   flavor:
     description: "Build flavor: 'development', 'staging' or 'production'."
     required: true
+  flutter-version:
+    description: "Flutter SDK version to install."
+    required: false
+    default: "3.44.9"
+  dart-version:
+    description: "Expected Dart SDK bundled with the selected Flutter SDK."
+    required: false
+    default: "3.12.2"
+  lockfile-snapshot:
+    description: "Optional Pub lockfile snapshot to copy to pubspec.lock before resolution."
+    required: false
+    default: ""
   java:
     description: "Also install Java 17 + Gradle cache (needed for Android builds)."
     default: "false"
@@ -37,14 +50,41 @@ runs:
       uses: subosito/flutter-action@v2.23.0
       with:
         channel: "stable"
-        flutter-version: "3.44.9"
+        flutter-version: ${{ inputs.flutter-version }}
         cache: true
 
     - name: Verify Flutter and Dart versions
       shell: bash
       run: |
+        set -euo pipefail
         flutter --version
         dart --version
+        installed_flutter="$(flutter --version --machine | sed -nE 's/.*"flutterVersion": "([^"]+)".*/\1/p')"
+        installed_dart="$(dart --version 2>&1 | sed -nE 's/.*version: ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')"
+        if [ "$installed_flutter" != "${{ inputs.flutter-version }}" ]; then
+          echo "::error::Configured Flutter ${{ inputs.flutter-version }}, but installed ${installed_flutter:-unknown}."
+          exit 1
+        fi
+        if [ "$installed_dart" != "${{ inputs.dart-version }}" ]; then
+          echo "::error::Flutter ${{ inputs.flutter-version }} must use bundled Dart ${{ inputs.dart-version }}, but installed ${installed_dart:-unknown}."
+          exit 1
+        fi
+
+    - name: Select lockfile and install dependencies
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        set -euo pipefail
+        snapshot="${{ inputs.lockfile-snapshot }}"
+        if [ -n "$snapshot" ]; then
+          if [ ! -f "$snapshot" ]; then
+            echo "::error::Configured lockfile snapshot does not exist: $snapshot"
+            exit 1
+          fi
+          cp "$snapshot" pubspec.lock
+        fi
+        rm -rf .dart_tool
+        flutter pub get --enforce-lockfile
 
     # Compose packages/*/.env from the layered sources in config/ (the single
     # source of truth, shared with the Makefile env-* targets). setup_env.dart
