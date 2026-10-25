@@ -14,6 +14,10 @@ inputs:
     description: "Flutter SDK version to install."
     required: false
     default: "3.44.9"
+  flutter-channel:
+    description: "Flutter channel containing the selected SDK."
+    required: false
+    default: "stable"
   dart-version:
     description: "Expected Dart SDK bundled with the selected Flutter SDK."
     required: false
@@ -49,7 +53,7 @@ runs:
     - name: Setup Flutter and Dart
       uses: subosito/flutter-action@v2.23.0
       with:
-        channel: "stable"
+        channel: ${{ inputs.flutter-channel }}
         flutter-version: ${{ inputs.flutter-version }}
         cache: true
 
@@ -59,8 +63,9 @@ runs:
         set -euo pipefail
         flutter --version
         dart --version
-        installed_flutter="$(flutter --version --machine | sed -nE 's/.*"flutterVersion": "([^"]+)".*/\1/p')"
-        installed_dart="$(dart --version 2>&1 | sed -nE 's/.*version: ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')"
+        version_json="$(flutter --version --machine)"
+        installed_flutter="$(printf '%s\n' "$version_json" | sed -nE 's/.*"flutterVersion": "([^"]+)".*/\1/p')"
+        installed_dart="$(printf '%s\n' "$version_json" | sed -nE 's/.*"dartSdkVersion": "([^"]+)".*/\1/p')"
         if [ "$installed_flutter" != "${{ inputs.flutter-version }}" ]; then
           echo "::error::Configured Flutter ${{ inputs.flutter-version }}, but installed ${installed_flutter:-unknown}."
           exit 1

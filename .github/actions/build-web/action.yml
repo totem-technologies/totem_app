@@ -29,4 +29,6 @@ runs:
 
     - name: Build web
       shell: bash
+      env:
+        WEB_FLUTTER_VERSION: ${{ inputs.flutter-version }}
       run: dart scripts/web_build.dart

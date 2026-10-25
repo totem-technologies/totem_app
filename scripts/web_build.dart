@@ -24,7 +24,7 @@ const _assetBase = {
 
 const _sourceMapMarker = '//# sourceMappingURL=flutter.js.map';
 const _cloudflareStaticAssetLimit = 25 * 1024 * 1024;
-const _flutterVersion = '3.47.7';
+const _defaultFlutterVersion = '3.47.7';
 
 Future<void> main() async {
   // scripts/web_build.dart -> repo root is two levels up.
@@ -67,10 +67,13 @@ Future<void> main() async {
     if (sentryDist != null && sentryDist.isNotEmpty)
       '--dart-define=SENTRY_DIST=$sentryDist',
   ];
+  final expectedFlutterVersion =
+      Platform.environment['WEB_FLUTTER_VERSION'] ?? _defaultFlutterVersion;
   final fvmFlutterVersion = Platform.environment['FVM_FLUTTER_VERSION'];
-  if (fvmFlutterVersion != null && fvmFlutterVersion != _flutterVersion) {
+  if (fvmFlutterVersion != null &&
+      fvmFlutterVersion != expectedFlutterVersion) {
     stderr.writeln(
-      'web_build: FVM_FLUTTER_VERSION must be $_flutterVersion, '
+      'web_build: FVM_FLUTTER_VERSION must be $expectedFlutterVersion, '
       'got $fvmFlutterVersion.',
     );
     exit(1);
@@ -80,7 +83,11 @@ Future<void> main() async {
     if (fvmFlutterVersion != null) ...['spawn', fvmFlutterVersion],
     ...arguments,
   ];
-  await _verifyFlutterVersion(flutterCommand, fvmFlutterVersion);
+  await _verifyFlutterVersion(
+    flutterCommand,
+    fvmFlutterVersion,
+    expectedFlutterVersion,
+  );
   final build = await Process.start(
     flutterCommand,
     flutterArguments,
@@ -98,6 +105,7 @@ Future<void> main() async {
 Future<void> _verifyFlutterVersion(
   String flutterCommand,
   String? fvmFlutterVersion,
+  String expectedFlutterVersion,
 ) async {
   final version = await Process.run(flutterCommand, [
     if (fvmFlutterVersion != null) ...['spawn', fvmFlutterVersion],
@@ -107,9 +115,9 @@ Future<void> _verifyFlutterVersion(
   final match = RegExp(
     r'"flutterVersion":\s*"([^"]+)"',
   ).firstMatch(version.stdout as String? ?? '');
-  if (version.exitCode != 0 || match?.group(1) != _flutterVersion) {
+  if (version.exitCode != 0 || match?.group(1) != expectedFlutterVersion) {
     stderr.writeln(
-      'web_build: requires Flutter $_flutterVersion; '
+      'web_build: requires Flutter $expectedFlutterVersion; '
       'found ${match?.group(1) ?? 'unknown'}.',
     );
     if (version.stderr.toString().isNotEmpty) {
