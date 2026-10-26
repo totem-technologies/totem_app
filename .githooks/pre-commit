@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-# Pre-commit hook for staged, non-mutating validation.
+# Pre-commit hook for staged incremental validation.
 # To use this hook, run: make githooks
 
 set -eu
@@ -9,4 +9,4 @@ set -eu
 # make it inspect this repository instead of the Flutter SDK repository.
 unset GIT_DIR
 
-dart scripts/git_checks.dart pre-commit
+fvm dart scripts/git_checks.dart pre-commit

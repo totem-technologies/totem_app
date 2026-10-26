@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:totem_core/features/sessions/media/local_audio_level.dart';
 import 'package:totem_core/features/sessions/media/speech_level.dart';
 
 void main() {
@@ -80,10 +81,30 @@ void main() {
     });
   });
 
-  test('amplitudeToDb converts LiveKit audio levels', () {
-    check(amplitudeToDb(1)).equals(0);
-    check(amplitudeToDb(0.1)).isCloseTo(-20, 0.0001);
-    check(amplitudeToDb(0)).equals(double.negativeInfinity);
+  test('frequency bands preserve the microphone spectrum', () {
+    final levels = frequencyBandLevels(
+      const [-20, -26, -30, -40, -50],
+      0.8,
+    );
+
+    check(levels[0]).equals(0.8);
+    check(levels[0]).isGreaterThan(levels[1]);
+    check(levels[1]).isGreaterThan(levels[2]);
+    check(levels[2]).isGreaterThan(levels[3]);
+    check(levels[3]).isGreaterThan(levels[4]);
+    check(frequencyBandLevels(const [-20, -30], 0)).deepEquals(const [0, 0]);
+  });
+
+  test('frequency bands smooth a dominant middle band into its neighbors', () {
+    final levels = frequencyBandLevels(
+      const [-80, -80, -20, -80, -80],
+      0.8,
+    );
+
+    check(levels[1]).isGreaterThan(0);
+    check(levels[1]).isLessThan(levels[2]);
+    check(levels[3]).isGreaterThan(0);
+    check(levels[3]).isLessThan(levels[2]);
   });
 
   test('rmsDb measures a sine wave', () {

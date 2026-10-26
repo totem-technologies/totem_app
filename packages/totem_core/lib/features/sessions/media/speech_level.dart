@@ -56,12 +56,6 @@ class SpeechLevelMeter {
   }
 }
 
-/// The level in dBFS of a linear amplitude between 0 and 1, such as the
-/// audio levels LiveKit reports for each speaker.
-double amplitudeToDb(double amplitude) => amplitude <= 0
-    ? double.negativeInfinity
-    : 20 * math.log(amplitude) / math.ln10;
-
 /// The RMS level in dBFS of audio samples between -1 and 1.
 double rmsDb(Float32List samples) {
   var sumOfSquares = 0.0;

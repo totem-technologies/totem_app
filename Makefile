@@ -6,6 +6,10 @@ WEB_DIR := packages/totem_web
 BENCHMARK_DIR := packages/totem_benchmark
 WIDGETBOOK_DIR := packages/totem_widgetbook
 WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
+NATIVE_FLUTTER ?= fvm flutter
+NATIVE_DART ?= fvm dart
+WEB_FLUTTER ?= fvm spawn 3.50.0-0.2.pre
+WEB_DART ?= fvm dart
 
 # Each Flutter suite also runs test files concurrently. Bound package-level
 # parallelism to avoid starting four compilers and their workers at once.
@@ -15,8 +19,8 @@ DART_FILES = git ls-files -z --cached --others --exclude-standard -- '*.dart' ':
 
 clean:
 	@echo "Cleaning build artifacts..."
-	cd $(CORE_DIR) && flutter clean
-	cd $(APP_DIR) && flutter clean
+	cd $(CORE_DIR) && $(NATIVE_FLUTTER) clean
+	cd $(APP_DIR) && $(NATIVE_FLUTTER) clean
 	rm -rf $(APP_DIR)/build/
 	rm -rf $(APP_DIR)/.dart_tool/build/
 	rm -rf ~/.gradle/caches/*
@@ -24,24 +28,36 @@ clean:
 	rm -rf $(APP_DIR)/ios/Flutter/Flutter.framework
 	rm -rf $(APP_DIR)/ios/Flutter/App.framework
 # 	rm -rf ~/Library/Developer/Xcode/DerivedData/*
-	cd $(WEB_DIR) && flutter clean
+	cd $(WEB_DIR) && $(WEB_FLUTTER) clean
 
 # Compose packages/*/.env from the layered sources in config/ for a flavor.
 # This is the single source of truth for runtime config; see config/README.md.
 # A deploy overwrites .env with the deployed flavor, so run `make env-dev` to
 # get back to your local development config.
 env-dev:
-	dart scripts/setup_env.dart development
+	$(NATIVE_DART) scripts/setup_env.dart development
 
 env-staging:
-	dart scripts/setup_env.dart staging
+	$(NATIVE_DART) scripts/setup_env.dart staging
 
 env-prod:
-	dart scripts/setup_env.dart production
+	$(NATIVE_DART) scripts/setup_env.dart production
 
-run: env-dev
+# The workspace has one active pubspec.lock. Web commands switch resolution
+# temporarily and always restore the native lockfile and .dart_tool afterwards.
+prepare-native:
+	rm -rf .dart_tool
+	$(NATIVE_FLUTTER) pub get --enforce-lockfile
+
+prepare-web:
+	./scripts/with_web_lockfile.sh true
+
+update-web-lockfile:
+	./scripts/with_web_lockfile.sh --update-lockfile
+
+run: prepare-native env-dev
 	@echo "Running app..."
-	cd $(APP_DIR) && flutter run
+	cd $(APP_DIR) && $(NATIVE_FLUTTER) run
 
 # ASSET_BASE is empty in dev: the splash assets in web/index.html use the
 # {{ASSET_BASE}} placeholder, so define it (to "") here or the token leaks into
@@ -49,59 +65,63 @@ run: env-dev
 # against the dev server's "/" base href.
 run-chrome: env-dev
 	@echo "Running app in Chrome..."
-	cd $(WEB_DIR) && flutter run -d chrome $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
+	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) run -d chrome $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"'
 
 run-web: env-dev
 	@echo "Running app in Web Server..."
-	cd $(WEB_DIR) && flutter run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
+	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release'
 
 # Build the web app the way it deploys: mounted at /room/, assets fetched from
 # a separate origin (here the local serve-web "CDN" on :5173). The `development`
 # flavor maps to that local CDN and composes the development .env.
 build-web-release: env-dev
 	@echo "Building web app..."
-	dart scripts/web_build.dart
+	./scripts/with_web_lockfile.sh env FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
 	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
 
 # Serve the built bundle with CORS headers so an HTML document on another origin
 # (e.g. Django at :8000) can fetch these assets via ASSET_BASE. Plain
 # `python3 -m http.server` can't set headers, so use the helper script.
 serve-web:
-	dart scripts/serve_web.dart 5173 $(WEB_DIR)/build/web
+	$(NATIVE_DART) scripts/serve_web.dart 5173 $(WEB_DIR)/build/web
 
 # Build with the staging worker as ASSET_BASE and deploy it to Cloudflare.
 # Requires wrangler auth (bunx wrangler login, or CLOUDFLARE_API_TOKEN +
 # CLOUDFLARE_ACCOUNT_ID).
 deploy-web-staging: env-staging
 	@echo "Building web app (staging)"
-	dart scripts/web_build.dart
-	cd $(WEB_DIR) && bunx wrangler deploy --env staging
+	./scripts/with_web_lockfile.sh sh -c 'FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart && cd $(WEB_DIR) && bunx wrangler deploy --env staging'
 
 deploy-web-production: env-prod
 	@echo "Building web app (production)"
-	dart scripts/web_build.dart
-	cd $(WEB_DIR) && bunx wrangler deploy --env production
+	./scripts/with_web_lockfile.sh sh -c 'FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart && cd $(WEB_DIR) && bunx wrangler deploy --env production'
 
 build-runner:
 	@echo "Running build_runner for code generation..."
-	cd $(CORE_DIR) && dart run build_runner build --delete-conflicting-outputs
-	cd $(APP_DIR) && dart run build_runner build --delete-conflicting-outputs
+	cd $(CORE_DIR) && $(NATIVE_DART) run build_runner build --delete-conflicting-outputs
+	cd $(APP_DIR) && $(NATIVE_DART) run build_runner build --delete-conflicting-outputs
 # 	cd $(WEB_DIR) && dart run build_runner build --delete-conflicting-outputs
 
 build-runner-watch:
 	@echo "Running build_runner in watch mode..."
-	cd $(APP_DIR) && dart run build_runner watch --delete-conflicting-outputs
+	cd $(APP_DIR) && $(NATIVE_DART) run build_runner watch --delete-conflicting-outputs
 
-install:
-	@echo "Getting dependencies..."
-	flutter pub get
+install: prepare-native
 
-test: install
-	@echo "Running tests..."
-	$(MAKE) --jobs=$(TEST_JOBS) test-core test-app test-web test-benchmark test-widgetbook test-scripts TEST_PUB=--no-pub
+test:
+	$(MAKE) test-native
+	$(MAKE) test-web
+
+test-native: prepare-native
+	@echo "Running native/shared tests..."
+	$(MAKE) --jobs=$(TEST_JOBS) test-core test-app test-benchmark test-widgetbook test-scripts TEST_PUB=--no-pub
+
+test-web:
+	@echo "Running web tests..."
+	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) test --no-pub --platform=chrome'
 
 test-benchmark:
-	cd $(BENCHMARK_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
+	cd $(BENCHMARK_DIR) && $(NATIVE_FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
 	node --test scripts/benchmark/metrics.test.mjs
 
 benchmark-build:
@@ -116,56 +136,58 @@ benchmark:
 # Widgetbook catalog of totem_core widgets. Run `make widgetbook-gen` after
 # adding or changing a *.stories.dart file to regenerate the story code.
 widgetbook:
-	cd $(WIDGETBOOK_DIR) && flutter run -d chrome --web-port=5174
+	cd $(WIDGETBOOK_DIR) && $(NATIVE_FLUTTER) run -d chrome --web-port=5174
 
 widgetbook-gen:
-	cd $(WIDGETBOOK_DIR) && dart run build_runner build
+	cd $(WIDGETBOOK_DIR) && $(NATIVE_DART) run build_runner build
 
 widgetbook-build:
-	cd $(WIDGETBOOK_DIR) && flutter build web --release
+	cd $(WIDGETBOOK_DIR) && $(NATIVE_FLUTTER) build web --release
 
 test-widgetbook:
-	cd $(WIDGETBOOK_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
+	cd $(WIDGETBOOK_DIR) && $(NATIVE_FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
 
 test-app:
 	@echo "Running app tests..."
-	cd $(APP_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
-
-test-web:
-	@echo "Running web tests..."
-	cd $(WEB_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS) --platform=chrome
+	cd $(APP_DIR) && $(NATIVE_FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
 
 test-core:
 	@echo "Running core tests..."
-	cd $(CORE_DIR) && flutter test $(TEST_PUB) $(TEST_ARGS)
+	cd $(CORE_DIR) && $(NATIVE_FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
 
 test-scripts:
-	flutter test scripts/test $(TEST_PUB) $(TEST_ARGS)
+	$(NATIVE_FLUTTER) test scripts/test $(TEST_PUB) $(TEST_ARGS)
 
 lint:
-	@echo "Running linter..."
-	dart run scripts/check_media_boundary.dart
-	dart run scripts/check_omittable_interpolation.dart
-	cd $(APP_DIR) && flutter analyze --no-pub
-	cd $(CORE_DIR) && flutter analyze --no-pub
-	cd $(WEB_DIR) && flutter analyze --no-pub
-	cd $(BENCHMARK_DIR) && flutter analyze --no-pub
-	cd $(WIDGETBOOK_DIR) && flutter analyze --no-pub
+	$(MAKE) lint-native
+	$(MAKE) lint-web
+
+lint-native: prepare-native
+	@echo "Running native/shared linter..."
+	$(NATIVE_DART) run scripts/check_media_boundary.dart
+	$(NATIVE_DART) run scripts/check_omittable_interpolation.dart
+	cd $(APP_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
+	cd $(CORE_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
+	cd $(BENCHMARK_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
+	cd $(WIDGETBOOK_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
+
+lint-web:
+	@echo "Running Web linter..."
+	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) analyze --no-pub'
 
 format:
 	@echo "Formatting code..."
 	# Skip generated output and dependency caches even if they are accidentally tracked.
-	$(DART_FILES) | xargs -0 dart format
-
+	$(DART_FILES) | xargs -0 $(NATIVE_DART) format
 
 lint-changed:
-	dart scripts/git_checks.dart pre-commit
+	fvm dart scripts/git_checks.dart pre-commit
 
 test-changed:
-	dart scripts/git_checks.dart pre-push
+	fvm dart scripts/git_checks.dart pre-push
 
 generate_api_models:
-	cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose --clean; dart format .
+	cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | $(NATIVE_DART) run degenerate -i - -o lib/core/api --verbose --clean; $(NATIVE_DART) format .
 	# cd $(CORE_DIR) && curl -L https://totem.org/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose --clean; dart format .
 
 githooks:
@@ -174,7 +196,7 @@ githooks:
 	@echo "Git hooks installed successfully!"
 
 flutterfire:
-	dart pub global activate flutterfire_cli
+	$(NATIVE_DART) pub global activate flutterfire_cli
 	@command -v flutterfire >/dev/null 2>&1 || { echo "Error: flutterfire CLI not found. Install with: dart pub global activate flutterfire_cli"; exit 1; }
 	@test -d $(APP_DIR) || { echo "Error: $(APP_DIR) not found."; exit 1; }
 	@test -d $(WEB_DIR) || { echo "Error: $(WEB_DIR) not found."; exit 1; }
@@ -185,4 +207,4 @@ flutterfire:
 
 release:
 	@echo "Creating release..."
-	dart scripts/release.dart
+	$(NATIVE_DART) scripts/release.dart
