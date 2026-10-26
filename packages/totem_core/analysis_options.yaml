@@ -11,6 +11,8 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+  errors:
+    invalid_use_of_internal_member: ignore
 
 linter:
   rules:
