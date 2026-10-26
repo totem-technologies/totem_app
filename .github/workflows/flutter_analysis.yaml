@@ -40,12 +40,13 @@ jobs:
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           flavor: staging
 
-      - name: Check formatting
+      - name: Run native lint
         if: matrix.test-target == 'native'
-        run: dart format --set-exit-if-changed .
+        run: make lint-native NATIVE_FLUTTER=flutter NATIVE_DART=dart
 
-      - name: Run analysis
-        run: flutter analyze --no-pub
+      - name: Run Web lint
+        if: matrix.test-target == 'web'
+        run: make lint-web WEB_FLUTTER=flutter
 
       - name: Run native tests
         if: matrix.test-target == 'native'

@@ -15,6 +15,7 @@ WEB_DART ?= fvm dart
 # parallelism to avoid starting four compilers and their workers at once.
 TEST_JOBS ?= 2
 TEST_ARGS ?=
+DART_FILES = git ls-files -z --cached --others --exclude-standard -- '*.dart' ':(exclude)**/build/**' ':(exclude)**/.dart_tool/**' ':(exclude)**/.pub/**' ':(exclude)**/.pub-cache/**' ':(exclude)**/node_modules/**'
 
 clean:
 	@echo "Cleaning build artifacts..."
@@ -176,8 +177,14 @@ lint-web:
 
 format:
 	@echo "Formatting code..."
-	# Only files git tracks or would track, so build output and scratch are skipped.
-	git ls-files -z --cached --others --exclude-standard '*.dart' | xargs -0 $(NATIVE_DART) format
+	# Skip generated output and dependency caches even if they are accidentally tracked.
+	$(DART_FILES) | xargs -0 $(NATIVE_DART) format
+
+lint-changed:
+	fvm dart scripts/git_checks.dart pre-commit
+
+test-changed:
+	fvm dart scripts/git_checks.dart pre-push
 
 generate_api_models:
 	cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | $(NATIVE_DART) run degenerate -i - -o lib/core/api --verbose --clean; $(NATIVE_DART) format .

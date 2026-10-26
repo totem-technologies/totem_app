@@ -24,15 +24,27 @@ const defaultRoots = [
 
 /// Returns `path:line: expression` for every interpolated `Omittable` in the
 /// Dart files under [roots].
-Future<List<String>> findOmittableInterpolations(List<String> roots) async {
+Future<List<String>> findOmittableInterpolations(
+  List<String> roots, {
+  List<String>? files,
+}) async {
   final collection = AnalysisContextCollection(
     includedPaths: [for (final root in roots) Directory(root).absolute.path],
     sdkPath: _dartSdkPath(),
   );
+  final requestedFiles = files == null
+      ? null
+      : files
+            .where((path) => path.endsWith('.dart') && File(path).existsSync())
+            .map((path) => File(path).absolute.path)
+            .toSet();
   final found = <String>[];
   for (final context in collection.contexts) {
-    for (final path in context.contextRoot.analyzedFiles()) {
-      if (!path.endsWith('.dart')) continue;
+    final analyzedFiles = requestedFiles ?? context.contextRoot.analyzedFiles();
+    for (final path in analyzedFiles) {
+      if (!path.endsWith('.dart') || !context.contextRoot.isAnalyzed(path)) {
+        continue;
+      }
       final result = await context.currentSession.getResolvedUnit(path);
       if (result is! ResolvedUnitResult) continue;
       final visitor = _OmittableInterpolations();
@@ -68,8 +80,28 @@ class _OmittableInterpolations extends RecursiveAstVisitor<void> {
 }
 
 Future<void> main(List<String> args) async {
+  var workspace = Directory.current.path;
+  final files = <String>[];
+  var readingFiles = false;
+  for (final arg in args) {
+    if (arg.startsWith('--workspace=')) {
+      workspace = arg.substring('--workspace='.length);
+    } else if (arg == '--files') {
+      readingFiles = true;
+    } else if (readingFiles) {
+      files.add(arg);
+    } else {
+      throw ArgumentError('Usage: [--workspace=<path>] [--files <path...>]');
+    }
+  }
+  final roots = args.isEmpty
+      ? defaultRoots
+      : defaultRoots.map((root) => '$workspace/$root').toList();
   final found = await findOmittableInterpolations(
-    args.isEmpty ? defaultRoots : args,
+    roots,
+    files: files.isEmpty
+        ? null
+        : files.map((path) => '$workspace/$path').toList(),
   );
   for (final message in found) {
     print('$message (read it with .value)');
