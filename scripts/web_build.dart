@@ -24,7 +24,7 @@ const _assetBase = {
 
 const _sourceMapMarker = '//# sourceMappingURL=flutter.js.map';
 const _cloudflareStaticAssetLimit = 25 * 1024 * 1024;
-const _defaultFlutterVersion = '3.47.7';
+const _defaultFlutterVersion = '3.50.0-0.2.pre';
 
 Future<void> main() async {
   // scripts/web_build.dart -> repo root is two levels up.

@@ -16,12 +16,14 @@ jobs:
         include:
           - name: Native compatibility (Flutter 3.44.9)
             flutter-version: "3.44.9"
+            flutter-channel: stable
             dart-version: "3.12.2"
             lockfile-snapshot: ""
             test-target: native
-          - name: Web compatibility (Flutter 3.47.7)
-            flutter-version: "3.47.7"
-            dart-version: "3.13.5"
+          - name: Web compatibility (Flutter 3.50.0-0.2.pre)
+            flutter-version: "3.50.0-0.2.pre"
+            flutter-channel: beta
+            dart-version: "3.14.0 (build 3.14.0-315.3.beta)"
             lockfile-snapshot: pubspec.web.lock
             test-target: web
 
@@ -32,6 +34,7 @@ jobs:
         uses: ./.github/actions/setup-environment
         with:
           flutter-version: ${{ matrix.flutter-version }}
+          flutter-channel: ${{ matrix.flutter-channel }}
           dart-version: ${{ matrix.dart-version }}
           lockfile-snapshot: ${{ matrix.lockfile-snapshot }}
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}

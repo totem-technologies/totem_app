@@ -6,14 +6,14 @@ guided group introspection. It supports iOS, Android, and web.
 ## Install
 
 Install [FVM](https://fvm.app/) and both pinned Flutter SDKs. Native development
-uses Flutter **3.44.9** (bundled Dart 3.12.2); Web uses Flutter **3.47.7**
-(bundled Dart 3.13.5). iOS development also requires macOS and Xcode.
+uses Flutter **3.44.9** (bundled Dart 3.12.2); Web uses Flutter
+**3.50.0-0.2.pre** (bundled Dart 3.14.0 beta). iOS development also requires macOS and Xcode.
 
 ```sh
 git clone https://github.com/totem-technologies/totem_app.git
 cd totem_app
 fvm install 3.44.9
-fvm install 3.47.7
+fvm install 3.50.0-0.2.pre
 fvm flutter config --enable-swift-package-manager
 make prepare-native
 make githooks
@@ -38,7 +38,7 @@ and set `MOBILE_API_URL`. Do not edit generated package `.env` files; see the
 
 ```sh
 make run          # iOS/Android with Flutter 3.44.9
-make run-chrome   # Web client with Flutter 3.47.7
+make run-chrome   # Web client with Flutter 3.50.0-0.2.pre
 make build-web-release
 make lint
 make test
@@ -112,13 +112,13 @@ information (read-only)** and **Release apps to testing tracks** permissions.
 Shared packages keep `environment: sdk: ^3.12.2`; this is the Dart language
 baseline, not an instruction to replace Flutter's bundled Dart SDK or cap its
 upper bound. Shared and generated source must remain compatible with Dart 3.12
-and Flutter 3.44.9 APIs. Do not add Dart 3.13-only language features or Flutter
-3.47-only APIs to shared code.
+and Flutter 3.44.9 APIs. Do not add newer Dart language features or Flutter APIs
+unavailable in 3.44.9 to shared code.
 
 | Platform | Flutter | Bundled Dart | Resolution |
 | --- | --- | --- | --- |
 | iOS / Android | 3.44.9 | 3.12.2 | `pubspec.lock` |
-| Web | 3.47.7 | 3.13.5 | `pubspec.web.lock` |
+| Web | 3.50.0-0.2.pre | 3.14.0 beta | `pubspec.web.lock` |
 
 The Web pin includes the CanvasKit/Skwasm context-loss recovery change from
 [flutter/flutter#185116](https://github.com/flutter/flutter/pull/185116), which
@@ -139,8 +139,8 @@ get`, then run `make update-web-lockfile`. It refreshes and verifies the Web
 snapshot, restores the native state, and validates both resolutions. Before
 upgrading either SDK, check the relevant upstream issue and update both
 resolutions and the CI matrix. CI analyzes shared code under both SDKs, tests
-native/shared code under 3.44.9 and Web code under 3.47.7, and compiles Web on
-PRs and `main`.
+native/shared code under 3.44.9 and Web code under 3.50.0-0.2.pre, and compiles
+Web on PRs and `main`.
 
 ## Web hosting
 
@@ -199,8 +199,8 @@ a deployment.
 
 ### Safari regression checklist
 
-The Flutter 3.47.7 upgrade is a targeted mitigation, not confirmation that the
-Safari incident is fixed. Before closing the incident, manually test Safari
+The Flutter 3.50.0-0.2.pre upgrade is a targeted mitigation, not confirmation
+that the Safari incident is fixed. Before closing the incident, manually test Safari
 26.2 on Mac M1, Safari 27 on Mac M4, and Chrome on Mac M1. For each browser:
 
 - enter a session and transition into an active session;

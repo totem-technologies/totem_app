@@ -30,32 +30,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
-      # Temporary TOT-1427 experiment. pubspec.web.beta.lock records only the
-      # beta's transitive resolution; no package constraints change. Remove this
-      # PR 206 branch after Safari testing; other previews retain the stable Web toolchain.
-      - name: Select preview Flutter SDK
-        id: sdk
-        shell: bash
-        run: |
-          if [ "$PR_NUMBER" = "206" ]; then
-            echo "flutter_version=3.50.0-0.2.pre" >> "$GITHUB_OUTPUT"
-            echo "flutter_channel=beta" >> "$GITHUB_OUTPUT"
-            echo "dart_version=3.14.0 (build 3.14.0-315.3.beta)" >> "$GITHUB_OUTPUT"
-            echo "lockfile_snapshot=pubspec.web.beta.lock" >> "$GITHUB_OUTPUT"
-          else
-            echo "flutter_version=3.47.7" >> "$GITHUB_OUTPUT"
-            echo "flutter_channel=stable" >> "$GITHUB_OUTPUT"
-            echo "dart_version=3.13.5" >> "$GITHUB_OUTPUT"
-            echo "lockfile_snapshot=pubspec.web.lock" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
-          flutter-version: ${{ steps.sdk.outputs.flutter_version }}
-          flutter-channel: ${{ steps.sdk.outputs.flutter_channel }}
-          dart-version: ${{ steps.sdk.outputs.dart_version }}
-          lockfile-snapshot: ${{ steps.sdk.outputs.lockfile_snapshot }}
+          flutter-version: "3.50.0-0.2.pre"
+          flutter-channel: beta
+          dart-version: "3.14.0 (build 3.14.0-315.3.beta)"
+          lockfile-snapshot: pubspec.web.lock
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           flavor: staging
 
@@ -66,7 +47,7 @@ jobs:
       - name: Build preview
         uses: ./.github/actions/build-web
         with:
-          flutter-version: ${{ steps.sdk.outputs.flutter_version }}
+          flutter-version: "3.50.0-0.2.pre"
         env:
           WEB_ASSET_BASE: ${{ steps.preview.outputs.asset_base }}
 
@@ -96,7 +77,7 @@ jobs:
 
             [Open preview](${{ steps.preview.outputs.url }}) · Backend: https://totem.kbl.io
 
-            Built from ${{ github.event.pull_request.head.sha }} with Flutter ${{ steps.sdk.outputs.flutter_version }} (${{ steps.sdk.outputs.flutter_channel }}).
+            Built from ${{ github.event.pull_request.head.sha }} with Flutter 3.50.0-0.2.pre (beta).
             Staging selects this build for two hours. Open a session to test it.
 
             [Return to normal staging](https://totem.kbl.io/?room_preview=off)

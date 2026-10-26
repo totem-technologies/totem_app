@@ -12,7 +12,7 @@ inputs:
   flutter-version:
     description: "Required Flutter SDK version for Web builds."
     required: false
-    default: "3.47.7"
+    default: "3.50.0-0.2.pre"
 
 runs:
   using: "composite"

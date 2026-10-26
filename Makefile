@@ -8,7 +8,7 @@ WIDGETBOOK_DIR := packages/totem_widgetbook
 WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
 NATIVE_FLUTTER ?= fvm flutter
 NATIVE_DART ?= fvm dart
-WEB_FLUTTER ?= fvm spawn 3.47.7
+WEB_FLUTTER ?= fvm spawn 3.50.0-0.2.pre
 WEB_DART ?= fvm dart
 
 # Each Flutter suite also runs test files concurrently. Bound package-level
@@ -75,7 +75,7 @@ run-web: env-dev
 # flavor maps to that local CDN and composes the development .env.
 build-web-release: env-dev
 	@echo "Building web app..."
-	./scripts/with_web_lockfile.sh env FVM_FLUTTER_VERSION=3.47.7 $(WEB_DART) scripts/web_build.dart
+	./scripts/with_web_lockfile.sh env FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
 	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
 
 # Serve the built bundle with CORS headers so an HTML document on another origin
@@ -89,11 +89,11 @@ serve-web:
 # CLOUDFLARE_ACCOUNT_ID).
 deploy-web-staging: env-staging
 	@echo "Building web app (staging)"
-	./scripts/with_web_lockfile.sh sh -c 'FVM_FLUTTER_VERSION=3.47.7 $(WEB_DART) scripts/web_build.dart && cd $(WEB_DIR) && bunx wrangler deploy --env staging'
+	./scripts/with_web_lockfile.sh sh -c 'FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart && cd $(WEB_DIR) && bunx wrangler deploy --env staging'
 
 deploy-web-production: env-prod
 	@echo "Building web app (production)"
-	./scripts/with_web_lockfile.sh sh -c 'FVM_FLUTTER_VERSION=3.47.7 $(WEB_DART) scripts/web_build.dart && cd $(WEB_DIR) && bunx wrangler deploy --env production'
+	./scripts/with_web_lockfile.sh sh -c 'FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart && cd $(WEB_DIR) && bunx wrangler deploy --env production'
 
 build-runner:
 	@echo "Running build_runner for code generation..."

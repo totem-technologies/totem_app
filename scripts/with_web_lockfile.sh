@@ -11,6 +11,14 @@ if [ ! -f "$web_lockfile" ]; then
   exit 1
 fi
 
+if command -v fvm >/dev/null 2>&1; then
+  web_flutter=(fvm spawn 3.50.0-0.2.pre)
+  native_flutter=(fvm flutter)
+else
+  web_flutter=(flutter)
+  native_flutter=(flutter)
+fi
+
 native_lockfile="$(mktemp)"
 cp "$root_lockfile" "$native_lockfile"
 
@@ -21,7 +29,7 @@ restore_native_workspace() {
   rm -rf "$repo_root/.dart_tool"
   if ! (
     cd "$repo_root"
-    fvm flutter pub get --enforce-lockfile
+    "${native_flutter[@]}" pub get --enforce-lockfile
   ); then
     status=1
   fi
@@ -40,14 +48,14 @@ if [ "${1:-}" = "--update-lockfile" ]; then
     echo "Usage: $0 --update-lockfile" >&2
     exit 64
   fi
-  fvm spawn 3.47.7 pub get
+  "${web_flutter[@]}" pub get
   cp pubspec.lock "$web_lockfile"
-  fvm spawn 3.47.7 pub get --enforce-lockfile
+  "${web_flutter[@]}" pub get --enforce-lockfile
 else
   if [ "$#" -eq 0 ]; then
     echo "Usage: $0 [--update-lockfile|command ...]" >&2
     exit 64
   fi
-  fvm spawn 3.47.7 pub get --enforce-lockfile
+  "${web_flutter[@]}" pub get --enforce-lockfile
   "$@"
 fi
