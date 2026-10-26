@@ -289,8 +289,8 @@ dependencies:
           workspaceResolved: true,
         );
 
-        check(runner.commands).length.equals(3);
-        check(runner.commands.first.arguments).deepEquals(['format-check']);
+        check(runner.commands).length.equals(2);
+        check(runner.commands.first.arguments).deepEquals(['lint']);
       },
     );
 

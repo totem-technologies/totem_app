@@ -22,8 +22,6 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Check formatting
-        run: make format-check
 
       - name: Run full lint
         run: make lint

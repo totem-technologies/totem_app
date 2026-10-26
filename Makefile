@@ -157,9 +157,6 @@ format:
 	# Skip generated output and dependency caches even if they are accidentally tracked.
 	$(DART_FILES) | xargs -0 dart format
 
-# Non-mutating full-repository formatting check for CI and conservative hook fallbacks.
-format-check:
-	$(DART_FILES) | xargs -0 dart scripts/check_format.dart --files
 
 lint-changed:
 	dart scripts/git_checks.dart pre-commit

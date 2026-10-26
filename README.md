@@ -44,10 +44,9 @@ conventions in [AGENTS.md](AGENTS.md).
 
 ### Git validation
 
-`make githooks` installs incremental local hooks. Pre-commit checks only staged
-Dart files: formatting is evaluated from the Git index (so partial staging is
-safe), followed by the applicable custom source checks. It does not run Flutter
-analysis.
+`make githooks` installs incremental local hooks. Pre-commit runs only the
+applicable custom source checks for staged Dart changes; it does not format or
+run Flutter analysis.
 
 Pre-push compares every pushed ref with its remote commit (or the merge base of
 the remote default branch for a new branch), then analyzes and tests only the
@@ -59,9 +58,9 @@ commands. Dependency resolution runs only when manifests change or the existing
 workspace resolution is missing.
 
 Run `make lint` and `make test` for complete local validation; they remain the
-full-repository commands used by CI. CI also runs `make format-check` before
-those commands. `make lint-changed` and `make test-changed` expose the same
-local hook behavior when needed.
+full-repository commands used by CI. Formatting is manual (`make format`) and
+is not part of hooks or CI. `make lint-changed` and `make test-changed` expose
+the same local hook behavior when needed.
 
 ### Useful development commands
 

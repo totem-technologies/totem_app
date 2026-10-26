@@ -378,7 +378,6 @@ List<CheckCommand> prePushCommands(
   }
   if (plan.full) {
     commands.addAll(const [
-      CheckCommand('make', ['format-check']),
       CheckCommand('make', ['lint']),
       CheckCommand('make', [
         '--jobs=2',
@@ -776,7 +775,6 @@ Future<void> _copyIndexConfiguration(
 Future<void> runPreCommit() async {
   final git = GitClient();
   final changes = await git.stagedChanges();
-  await checkStagedFormatting(changes, git);
 
   final sourceFiles = changes
       .map((change) => change.path)

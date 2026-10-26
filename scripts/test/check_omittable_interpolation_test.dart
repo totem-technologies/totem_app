@@ -39,10 +39,14 @@ final wrong = 'with \${ignored}';
     check(found.single).endsWith('sample.dart:7: name');
   });
 
-  test('the apps interpolate no Omittable fields', () async {
-    // Run from the repository root, as `make test-scripts` does.
-    final found = await findOmittableInterpolations(defaultRoots);
+  test(
+    'the apps interpolate no Omittable fields',
+    () async {
+      // Run from the repository root, as `make test-scripts` does.
+      final found = await findOmittableInterpolations(defaultRoots);
 
-    check(found).isEmpty();
-  }, timeout: const Timeout(Duration(minutes: 5)));
+      check(found).isEmpty();
+    },
+    timeout: const Timeout(Duration(minutes: 5)),
+  );
 }
