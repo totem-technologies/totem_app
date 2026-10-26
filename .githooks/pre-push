@@ -9,4 +9,4 @@ set -eu
 # make it inspect this repository instead of the Flutter SDK repository.
 unset GIT_DIR
 
-dart scripts/git_checks.dart pre-push
+fvm dart scripts/git_checks.dart pre-push

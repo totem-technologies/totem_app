@@ -374,7 +374,7 @@ List<CheckCommand> prePushCommands(
   if (!plan.hasWork) return const [];
   final commands = <CheckCommand>[];
   if (plan.needsPubGet || !workspaceResolved) {
-    commands.add(const CheckCommand('flutter', ['pub', 'get']));
+    commands.add(const CheckCommand('fvm', ['flutter', 'pub', 'get']));
   }
   if (plan.full) {
     commands.addAll(const [
@@ -395,7 +395,8 @@ List<CheckCommand> prePushCommands(
 
   if (plan.runMediaCheck) {
     commands.add(
-      CheckCommand('dart', [
+      CheckCommand('fvm', [
+        'dart',
         'scripts/check_media_boundary.dart',
         '--files',
         ...plan.sourceFiles,
@@ -404,7 +405,8 @@ List<CheckCommand> prePushCommands(
   }
   if (plan.runInterpolationCheck) {
     commands.add(
-      CheckCommand('dart', [
+      CheckCommand('fvm', [
+        'dart',
         'scripts/check_omittable_interpolation.dart',
         '--files',
         ...plan.sourceFiles,
@@ -414,7 +416,8 @@ List<CheckCommand> prePushCommands(
   for (final package in plan.workspace.packages) {
     if (plan.analyzePackages.contains(package.name)) {
       commands.add(
-        CheckCommand('flutter', [
+        CheckCommand('fvm', [
+          'flutter',
           'analyze',
           '--no-pub',
         ], workingDirectory: package.path),
@@ -783,7 +786,8 @@ Future<void> runPreCommit() async {
   if (sourceFiles.isEmpty) return;
 
   await runCommands([
-    CheckCommand('dart', [
+    CheckCommand('fvm', [
+      'dart',
       'scripts/check_media_boundary.dart',
       '--staged',
       ...sourceFiles,
@@ -815,7 +819,8 @@ Future<void> _runStagedInterpolationCheck(
       );
     }
     await runCommands([
-      CheckCommand('dart', [
+      CheckCommand('fvm', [
+        'dart',
         'scripts/check_omittable_interpolation.dart',
         '--workspace=${temporary.path}',
         '--files',
