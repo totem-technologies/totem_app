@@ -11,6 +11,7 @@ WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
 # parallelism to avoid starting four compilers and their workers at once.
 TEST_JOBS ?= 2
 TEST_ARGS ?=
+DART_FILES = git ls-files -z --cached --others --exclude-standard -- '*.dart' ':(exclude)**/build/**' ':(exclude)**/.dart_tool/**' ':(exclude)**/.pub/**' ':(exclude)**/.pub-cache/**' ':(exclude)**/node_modules/**'
 
 clean:
 	@echo "Cleaning build artifacts..."
@@ -153,8 +154,18 @@ lint:
 
 format:
 	@echo "Formatting code..."
-	# Only files git tracks or would track, so build output and scratch are skipped.
-	git ls-files -z --cached --others --exclude-standard '*.dart' | xargs -0 dart format
+	# Skip generated output and dependency caches even if they are accidentally tracked.
+	$(DART_FILES) | xargs -0 dart format
+
+# Non-mutating full-repository formatting check for CI and conservative hook fallbacks.
+format-check:
+	$(DART_FILES) | xargs -0 dart scripts/check_format.dart --files
+
+lint-changed:
+	dart scripts/git_checks.dart pre-commit
+
+test-changed:
+	dart scripts/git_checks.dart pre-push
 
 generate_api_models:
 	cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose --clean; dart format .

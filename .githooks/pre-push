@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-# Pre-push hook to run the test suite
+# Pre-push hook for dependency-aware package analysis and tests
 # To use this hook, run: make githooks
 
 set -eu
@@ -9,4 +9,4 @@ set -eu
 # make it inspect this repository instead of the Flutter SDK repository.
 unset GIT_DIR
 
-make test
+dart scripts/git_checks.dart pre-push

@@ -42,6 +42,27 @@ The [Makefile](Makefile) contains additional commands. The codebase has a
 [shared library](packages/totem_core). Follow the engineering and test
 conventions in [AGENTS.md](AGENTS.md).
 
+### Git validation
+
+`make githooks` installs incremental local hooks. Pre-commit checks only staged
+Dart files: formatting is evaluated from the Git index (so partial staging is
+safe), followed by the applicable custom source checks. It does not run Flutter
+analysis.
+
+Pre-push compares every pushed ref with its remote commit (or the merge base of
+the remote default branch for a new branch), then analyzes and tests only the
+affected workspace packages. A `totem_core` change analyzes its dependents but
+runs only core tests unless a dependent also changed. Package manifests,
+workspace/build configuration, hooks, and unknown build-affecting files use a
+conservative comprehensive fallback. Documentation-only changes run no Flutter
+commands. Dependency resolution runs only when manifests change or the existing
+workspace resolution is missing.
+
+Run `make lint` and `make test` for complete local validation; they remain the
+full-repository commands used by CI. CI also runs `make format-check` before
+those commands. `make lint-changed` and `make test-changed` expose the same
+local hook behavior when needed.
+
 ### Useful development commands
 
 Open a session deep link while the app is running:

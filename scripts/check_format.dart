@@ -1,55 +1,16 @@
-// Script to check code formatting using dart format
+// Compatibility entry point for staged, non-mutating formatting validation.
 
-// OK to use print
-// ignore_for_file: avoid_print
+import 'git_checks.dart';
 
-import 'dart:io';
-
-void main(List<String> args) async {
-  // Get list of staged .dart files
-  final gitResult = await Process.run('git', [
-    'diff',
-    '--cached',
-    '--name-only',
-    '--diff-filter=ACMR',
-  ]);
-
-  if (gitResult.exitCode != 0) {
-    print('Error: Failed to get staged files from git');
-    exit(1);
+Future<void> main(List<String> args) async {
+  if (args.isEmpty) {
+    const git = GitClient();
+    await checkStagedFormatting(await git.stagedChanges(), git);
+    return;
   }
-
-  // Parse and filter for .dart files
-  final stagedFiles = gitResult.stdout
-      .toString()
-      .split('\n')
-      .where(
-        (file) =>
-            file.isNotEmpty &&
-            file.endsWith('.dart') &&
-            File(file).existsSync(),
-      )
-      .toList();
-
-  if (stagedFiles.isEmpty) {
-    print('No .dart files to check');
-    exit(0);
+  if (args.first == '--files') {
+    await checkWorkingTreeFormatting(args.skip(1));
+    return;
   }
-
-  // Run dart format check on the files
-  final formatResult = await Process.run('dart', [
-    'format',
-    '--set-exit-if-changed',
-    ...stagedFiles,
-  ]);
-
-  if (formatResult.exitCode != 0) {
-    print('❌ Code formatting issues detected in staged files!');
-    print('Please stage changes and commit again.');
-    print('');
-    exit(1);
-  } else {
-    print('✅ Code formatting check passed');
-    exit(0);
-  }
+  throw ArgumentError('Usage: [--files <path...>]');
 }
