@@ -680,21 +680,21 @@ void main() {
           controller.room = room;
 
           check(await controller.join()).equals(SessionJoinResult.success);
-          check(controller.state.connectionState).equals(
-            RoomConnectionState.connected,
-          );
+          check(
+            controller.state.connectionState,
+          ).equals(RoomConnectionState.connected);
 
           await controller.leave();
 
           check(room.disconnectCount).equals(1);
           check(room.disposeCount).equals(1);
-          check(controller.state.connectionState).equals(
-            RoomConnectionState.disconnected,
-          );
+          check(
+            controller.state.connectionState,
+          ).equals(RoomConnectionState.disconnected);
           check(controller.state.phase).equals(SessionPhase.disconnected);
-          check(controller.state.disconnectReason).equals(
-            DisconnectReason.duplicateIdentity,
-          );
+          check(
+            controller.state.disconnectReason,
+          ).equals(DisconnectReason.duplicateIdentity);
         },
       );
 

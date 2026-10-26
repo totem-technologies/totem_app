@@ -89,11 +89,7 @@ class _ActionBarCameraSwitcherButtonState
   @override
   Widget build(BuildContext context) {
     final isDesktopPicker = usesMediaDevicePicker;
-    // If the user only has one camera, we show a simple
-    // toggle button without the option to switch cameras
-    final canChooseBetweenMultipleCameras =
-        isDesktopPicker && widget.availableCameraDevices.length > 1;
-    if (isDesktopPicker && !canChooseBetweenMultipleCameras) {
+    if (widget.availableCameraDevices.length <= 1) {
       return ActionBarButton(
         semanticsLabel: _cameraLabel(widget.isCameraOn, widget.needsAttention),
         // Off is pinkTint, not cream — that's the muted media treatment.
@@ -648,16 +644,15 @@ class _SessionActionBarCameraButtonState
         child: _CameraIcon(isOn: isCameraOn, needsAttention: needsFix),
       );
     }
-
     final cameraDevices = ref.watch(cameraDevicesProvider);
     return ActionBarCameraSwitcherButton(
       isCameraOn: isCameraOn,
       onToggle: onToggle,
-      cameraFacing: CameraFacing.front,
+      cameraFacing: deviceState.cameraFacing ?? CameraFacing.front,
       availableCameraDevices: cameraDevices,
       selectedCameraDeviceId:
           deviceState.selectedCameraDeviceId ?? cameraDevices.firstOrNull?.id,
-      onCameraFacingChanged: (_) {},
+      onCameraFacingChanged: ref.read(deviceProvider.notifier).setCameraFacing,
       onCameraDeviceSelected: ref
           .read(deviceProvider.notifier)
           .selectCameraDevice,

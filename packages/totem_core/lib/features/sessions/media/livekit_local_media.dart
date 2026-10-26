@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/media/livekit_support.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/web_audio_output_router.dart';
 
 /// [LocalMedia] backed by the LiveKit Flutter SDK.
 ///
@@ -27,10 +29,12 @@ class LiveKitLocalMedia implements LocalMedia {
   LiveKitLocalMedia({
     required this.cameraCaptureOptions,
     this.createCameraTrack = LocalVideoTrack.createCameraTrack,
-  });
+    WebAudioOutputRouter? webAudioOutputRouter,
+  }) : _webAudioOutputRouter = webAudioOutputRouter ?? WebAudioOutputRouter();
 
   /// Capture options used when this class creates a camera track.
   final CameraCaptureOptions cameraCaptureOptions;
+  final WebAudioOutputRouter _webAudioOutputRouter;
 
   /// Captures a new camera; replaceable in tests.
   final Future<LocalVideoTrack> Function(CameraCaptureOptions options)
@@ -66,6 +70,11 @@ class LiveKitLocalMedia implements LocalMedia {
     // Drop the reference to a released room once a different one replaces it.
     if (!identical(room, _releasedRoom)) _releasedRoom = null;
     _binding.attach(room);
+    if (room == null) {
+      unawaited(_webAudioOutputRouter.stop());
+    } else if (supportsAudioOutputSelection) {
+      unawaited(_webAudioOutputRouter.start(_binding.notify));
+    }
   }
 
   Room? get _room => _binding.room;
@@ -222,8 +231,17 @@ class LiveKitLocalMedia implements LocalMedia {
   }
 
   @override
-  String? get audioOutputDeviceId =>
-      _room?.roomOptions.defaultAudioOutputOptions.deviceId;
+  String? get audioOutputDeviceId => kIsWeb
+      ? _webAudioOutputRouter.selectedDeviceId
+      : _room?.roomOptions.defaultAudioOutputOptions.deviceId;
+
+  @override
+  bool get supportsAudioOutputSelection =>
+      !kIsWeb || _webAudioOutputRouter.supportsSelection;
+
+  @override
+  bool get supportsAudioOutputChooser =>
+      kIsWeb && _webAudioOutputRouter.supportsOutputChooser;
 
   /// The facing chosen while the camera was off, applied when it turns on.
   CameraPosition? _nextCameraPosition;
@@ -419,6 +437,22 @@ class LiveKitLocalMedia implements LocalMedia {
   }
 
   @override
+  Future<void> setCameraFacing(CameraFacing facing) => _serialize((_, _) async {
+    final position = facing.toLiveKit();
+    final track = _activeCameraTrack;
+    if (track != null) {
+      final options = track.currentOptions as CameraCaptureOptions;
+      if (options.cameraPosition != position) {
+        await track.setCameraPosition(position);
+      }
+      return;
+    }
+    if (_nextCameraPosition == position) return;
+    _nextCameraPosition = position;
+    _binding.notify();
+  });
+
+  @override
   Future<void> switchCameraFacing() => _serialize((_, _) async {
     final track = _activeCameraTrack;
     if (track != null) {
@@ -440,12 +474,30 @@ class LiveKitLocalMedia implements LocalMedia {
 
   @override
   Future<void> selectAudioOutput(MediaDeviceInfo device) async {
+    if (kIsWeb) {
+      if (!supportsAudioOutputSelection) {
+        throw UnsupportedError(
+          'Browser audio-output selection is unavailable.',
+        );
+      }
+      await _webAudioOutputRouter.select(device);
+      return;
+    }
     // See https://github.com/livekit/client-sdk-flutter/issues/858
     await _room?.setAudioOutputDevice(device.toLiveKit());
   }
 
   @override
+  Future<void> requestAudioOutput() async {
+    if (!kIsWeb || !supportsAudioOutputChooser) {
+      throw UnsupportedError('Browser audio-output selection is unavailable.');
+    }
+    await _webAudioOutputRouter.requestAudioOutput();
+  }
+
+  @override
   Future<void> setSpeakerOutputPreferred(bool preferred) async {
+    if (kIsWeb) return;
     // LiveKit does not reliably turn the speakerphone on when it is already
     // marked preferred, so reset it first.
     unawaited(AudioManager.instance.setSpeakerOutputPreferred(false));
