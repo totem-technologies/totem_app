@@ -82,7 +82,7 @@ void main() {
       }
 
       autoSizeTest(
-        'large viewport keeps the space shortcut inside the receive control',
+        'large viewport keeps the space shortcut caption under the receive control',
         (tester) async {
           var received = false;
           await pumpAtSize(
@@ -97,9 +97,9 @@ void main() {
           );
 
           check(
-            find.bySemanticsLabel('press space bar to receive').evaluate(),
+            find.text('press space bar to receive').evaluate(),
           ).isNotEmpty();
-          check(find.text('press space bar to receive').evaluate()).isEmpty();
+          check(find.text('Space').evaluate()).isEmpty();
 
           await tester.tap(find.text('Receive'));
           await tester.pump();

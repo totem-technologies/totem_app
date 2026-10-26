@@ -136,59 +136,15 @@ class _DockedInstructionText extends StatelessWidget {
   }
 }
 
-/// Inline replacement for the "press space bar to ..." line below the
-/// white card.
-class _ShortcutKeyCap extends StatelessWidget {
-  const _ShortcutKeyCap({required this.semanticLabel});
-
-  final String semanticLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Semantics(
-      label: semanticLabel,
-      excludeSemantics: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: AppTheme.cream.withValues(alpha: 0.3)),
-        ),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: 8,
-            vertical: 2,
-          ),
-          child: Text(
-            'Space',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: AppTheme.cream.withValues(alpha: 0.7),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _TransitionCardBase extends StatefulWidget {
   const _TransitionCardBase({
     required this.childBuilder,
     this.keyboardShortcutText,
-    this.inlineShortcut = false,
   });
 
-  final Widget Function(
-    BuildContext context,
-    bool hasMouseConnected,
-    bool showInlineShortcut,
-  )
+  final Widget Function(BuildContext context, bool hasMouseConnected)
   childBuilder;
   final String? keyboardShortcutText;
-
-  /// When true the card renders the shortcut itself (see [_ShortcutKeyCap])
-  /// instead of a caption below it.
-  final bool inlineShortcut;
 
   @override
   State<_TransitionCardBase> createState() => _TransitionCardBaseState();
@@ -219,13 +175,9 @@ class _TransitionCardBaseState extends State<_TransitionCardBase> {
     final theme = Theme.of(context);
     final showShortcut =
         _hasKeyboardConnected && widget.keyboardShortcutText != null;
-    final card = widget.childBuilder(
-      context,
-      _hasMouseConnected,
-      showShortcut && widget.inlineShortcut,
-    );
+    final card = widget.childBuilder(context, _hasMouseConnected);
 
-    if (showShortcut && !widget.inlineShortcut) {
+    if (showShortcut) {
       return Column(
         spacing: 6,
         children: [
@@ -271,8 +223,7 @@ class _GenericTransitionCard extends StatelessWidget {
     final docked = _isDockedViewport(context);
     return _TransitionCardBase(
       keyboardShortcutText: keyboardShortcutText,
-      inlineShortcut: docked,
-      childBuilder: (context, hasMouseConnected, showInlineShortcut) {
+      childBuilder: (context, hasMouseConnected) {
         final instruction = hasMouseConnected
             ? instructionTextClick
             : instructionTextSwipe;
@@ -292,9 +243,7 @@ class _GenericTransitionCard extends StatelessWidget {
                   ),
             children: [
               Flexible(child: _DockedInstructionText(instruction)),
-              if (onActionPressed != null) ...[
-                if (showInlineShortcut)
-                  _ShortcutKeyCap(semanticLabel: keyboardShortcutText!),
+              if (onActionPressed != null)
                 // Bounded, not flexible, so the instruction keeps the
                 // remaining width; the touch slider still needs a finite max.
                 ConstrainedBox(
@@ -310,7 +259,6 @@ class _GenericTransitionCard extends StatelessWidget {
                     height: _dockedActionHeight,
                   ),
                 ),
-              ],
             ],
           );
         }
@@ -362,7 +310,7 @@ class JoinTransitionCard extends StatelessWidget {
     final theme = Theme.of(context);
     return _TransitionCardBase(
       keyboardShortcutText: 'press space bar to join',
-      childBuilder: (context, _, _) {
+      childBuilder: (context, _) {
         return _TransitionCardContainer(
           margin: margin,
           constraints: const BoxConstraints(maxWidth: 366),
@@ -596,7 +544,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
     final docked = _isDockedViewport(context);
     return _TransitionCardBase(
       keyboardShortcutText: null,
-      childBuilder: (context, _, _) {
+      childBuilder: (context, _) {
         Future<bool> onPromptAction() {
           final prompt = customPromptController.text.trim();
           if (prompt == _lastInitialPrompt.trim()) {
