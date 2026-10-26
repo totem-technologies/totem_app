@@ -282,9 +282,60 @@ void main() {
       }
     }
 
-    testWidgets('shows the keeper hint and Message Keeper CTA for non-keeper', (
+    testWidgets(
+      'shows the Everyone hint and private Keeper CTA for participants',
+      (tester) async {
+        await pumpChatSheet(
+          tester,
+          isKeeper: false,
+          messages: const [],
+          session: session,
+          authState: AuthState.unauthenticated(),
+        );
+
+        check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
+        check(
+          tester.widgetList(
+            find.text('Messages to Everyone — only the Keeper can post'),
+          ),
+        ).length.equals(1);
+        check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
+        check(
+          tester.widgetList(find.byType(CustomScrollView)),
+        ).length.equals(1);
+        check(
+          tester
+              .widget<CustomScrollView>(find.byType(CustomScrollView))
+              .controller,
+        ).isNotNull();
+
+        check(
+          tester.widgetList(find.text('Message Keeper privately')),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(MessageInputBar))).length.equals(0);
+        check(
+          tester
+              .widget<Material>(
+                find
+                    .ancestor(
+                      of: find.text('Message Keeper privately'),
+                      matching: find.byType(Material),
+                    )
+                    .first,
+              )
+              .color,
+        ).equals(AppTheme.mauve);
+      },
+    );
+
+    testWidgets('keeps the private Keeper action inset on narrow phones', (
       tester,
     ) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await pumpChatSheet(
         tester,
         isKeeper: false,
@@ -293,32 +344,13 @@ void main() {
         authState: AuthState.unauthenticated(),
       );
 
-      check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
-      check(
-        tester.widgetList(find.text('Only the Keeper can post messages here')),
-      ).length.equals(1);
-      check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
-      check(tester.widgetList(find.byType(CustomScrollView))).length.equals(1);
-      check(
-        tester
-            .widget<CustomScrollView>(find.byType(CustomScrollView))
-            .controller,
-      ).isNotNull();
-
-      check(tester.widgetList(find.text('Message Keeper'))).length.equals(1);
-      check(tester.widgetList(find.byType(MessageInputBar))).length.equals(0);
-      check(
-        tester
-            .widget<Material>(
-              find
-                  .ancestor(
-                    of: find.text('Message Keeper'),
-                    matching: find.byType(Material),
-                  )
-                  .first,
-            )
-            .color,
-      ).equals(AppTheme.mauve);
+      final action = find
+          .ancestor(
+            of: find.text('Message Keeper privately'),
+            matching: find.byType(Material),
+          )
+          .first;
+      check(tester.getRect(action).right).isLessOrEqual(300);
     });
 
     testWidgets('shows the keeper composer for Everyone', (tester) async {
@@ -332,10 +364,12 @@ void main() {
 
       check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
       check(
-        tester.widgetList(find.text('Only you can post messages here')),
+        tester.widgetList(
+          find.text('Messages to Everyone — only you can post'),
+        ),
       ).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
-      check(tester.widgetList(find.text('Message everyone'))).length.equals(1);
+      check(tester.widgetList(find.text('Message Everyone'))).length.equals(1);
       check(tester.widgetList(find.byType(TextField))).length.equals(1);
       check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(0);
       check(
@@ -467,7 +501,9 @@ void main() {
         participants: [testParticipant('lucas', name: 'Lucas')],
       );
 
-      check(tester.widgetList(find.text('Message Keeper'))).length.equals(0);
+      check(
+        tester.widgetList(find.text('Message Keeper privately')),
+      ).length.equals(0);
 
       await tester.tap(find.text('Everyone').first);
       await tester.pumpAndSettle();
@@ -493,15 +529,20 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Message Keeper'));
+      await tester.tap(find.text('Message Keeper privately'));
       await tester.pumpAndSettle();
 
-      expect(find.text('View Group Messages'), findsOneWidget);
-      expect(
-        find.text('Only the keeper can see these messages'),
-        findsOneWidget,
-      );
-      expect(find.text('Message Heather'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('View Everyone messages')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(
+          find.text('Private messages — only the Keeper can see them'),
+        ),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.text('Message Keeper privately')),
+      ).length.equals(1);
 
       await tester.enterText(find.byType(TextField), 'I need help');
       await tester.pump();
@@ -513,10 +554,12 @@ void main() {
             messaging.sendMessage('I need help', recipientIdentity: 'keeper-1'),
       ).called(1);
 
-      await tester.tap(find.text('View Group Messages'));
+      await tester.tap(find.text('View Everyone messages'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Message Keeper'), findsOneWidget);
+      check(
+        tester.widgetList(find.text('Message Keeper privately')),
+      ).length.equals(1);
       expect(find.text('Everyone'), findsWidgets);
     });
 
@@ -658,7 +701,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Message Keeper'));
+      await tester.tap(find.text('Message Keeper privately'));
       await tester.pumpAndSettle();
 
       final scrollView = tester.widget<CustomScrollView>(
@@ -672,7 +715,7 @@ void main() {
       final pill = tester.getRect(
         find
             .ancestor(
-              of: find.text('Only the keeper can see these messages'),
+              of: find.text('Private messages — only the Keeper can see them'),
               matching: find.byType(Container),
             )
             .first,
@@ -680,7 +723,7 @@ void main() {
       final chip = tester.getRect(
         find
             .ancestor(
-              of: find.text('View Group Messages'),
+              of: find.text('View Everyone messages'),
               matching: find.byType(Material),
             )
             .first,
@@ -848,11 +891,11 @@ void main() {
       await tester.tap(find.text('Lucas').last);
       await tester.pumpAndSettle();
 
-      expect(find.text('Message Lucas'), findsOneWidget);
       check(
-        tester.widgetList(
-          find.text('Only you and Lucas can see these messages'),
-        ),
+        tester.widgetList(find.text('Message Lucas privately')),
+      ).length.equals(1);
+      check(
+        tester.widgetList(find.text('Private messages with Lucas')),
       ).length.equals(1);
     });
 
