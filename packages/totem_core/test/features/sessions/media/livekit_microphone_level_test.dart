@@ -7,6 +7,7 @@ import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, logger;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:totem_core/features/sessions/media/livekit_audio_visualizer.dart';
 import 'package:totem_core/features/sessions/media/livekit_microphone_level.dart';
 import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -44,7 +45,8 @@ void main() {
   }
 
   bool showsBars() => find.byType(LevelBars).evaluate().isNotEmpty;
-  bool showsMutedIcon() => find.byType(TotemIcon).evaluate().isNotEmpty;
+  TotemIcon microphoneIcon(WidgetTester tester) =>
+      tester.widget<TotemIcon>(find.byType(TotemIcon));
 
   Future<void> unmount(WidgetTester tester) async {
     await tester.pump(const Duration(milliseconds: 300));
@@ -61,15 +63,15 @@ void main() {
         LiveKitMicrophoneLevel.preview(
           _audioTrack(muted: true),
           color: Colors.white,
-          barCount: 3,
+          barCount: 5,
         ),
       );
 
-      check(showsMutedIcon()).isTrue();
+      check(microphoneIcon(tester).icon).equals(TotemIcons.microphoneOff);
       check(showsBars()).isFalse();
     });
 
-    testWidgets('switches between bars and icon on mute and unmute', (
+    testWidgets('switches between microphone states on mute and unmute', (
       tester,
     ) async {
       final listener = CapturingTrackEventsListener();
@@ -77,21 +79,22 @@ void main() {
 
       await pumpLevel(
         tester,
-        LiveKitMicrophoneLevel.preview(track, color: Colors.white, barCount: 3),
+        LiveKitMicrophoneLevel.preview(track, color: Colors.white, barCount: 5),
       );
       check(showsBars()).isTrue();
+      check(find.byType(TotemIcon).evaluate()).isEmpty();
 
       await track.mute(stopOnMute: false);
       listener.emit(MockTrackEvent());
       await tester.pump();
-      check(showsMutedIcon()).isTrue();
+      check(microphoneIcon(tester).icon).equals(TotemIcons.microphoneOff);
       check(showsBars()).isFalse();
 
       await track.unmute(stopOnMute: false);
       listener.emit(MockTrackEvent());
       await tester.pump();
       check(showsBars()).isTrue();
-      check(showsMutedIcon()).isFalse();
+      check(find.byType(TotemIcon).evaluate()).isEmpty();
 
       await unmount(tester);
     });
@@ -114,16 +117,46 @@ void main() {
           track: () => published,
           changes: changes.stream,
           color: Colors.white,
-          barCount: 3,
+          barCount: 5,
         ),
       );
-      check(showsMutedIcon()).isTrue();
+      check(microphoneIcon(tester).icon).equals(TotemIcons.microphoneOff);
 
       published = _audioTrack();
       changes.add(null);
       await tester.pump();
 
       check(showsBars()).isTrue();
+      check(find.byType(TotemIcon).evaluate()).isEmpty();
+      await unmount(tester);
+    });
+
+    testWidgets('replaces the waveform track without retaining the old one', (
+      tester,
+    ) async {
+      final first = _audioTrack();
+      final replacement = _audioTrack();
+      AudioTrack? published = first;
+
+      await pumpLevel(
+        tester,
+        LiveKitMicrophoneLevel(
+          track: () => published,
+          changes: changes.stream,
+          color: Colors.white,
+          barCount: 5,
+        ),
+      );
+
+      published = replacement;
+      changes.add(null);
+      await tester.pump();
+
+      final waveform = tester.widget<SoundWaveformWidget>(
+        find.byType(SoundWaveformWidget),
+      );
+      check(waveform.audioTrack).equals(replacement);
+      check(find.byType(SoundWaveformWidget).evaluate()).length.equals(1);
       await unmount(tester);
     });
   });

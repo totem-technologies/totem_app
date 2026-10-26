@@ -15,7 +15,7 @@ import 'package:flutter/widgets.dart';
 /// mid-size tiles such as a phone-landscape grid.
 @immutable
 class ParticipantOverlayMetrics {
-  const new({
+  const ParticipantOverlayMetrics({
     required this.badgeSize,
     required this.iconSize,
     required this.badgePadding,
@@ -30,7 +30,7 @@ class ParticipantOverlayMetrics {
   /// remaining values are derived from it, which keeps the
   /// `badgeSize - 2 * badgePadding == iconSize` invariant true by
   /// construction.
-  factory forCard(Size cardSize) {
+  factory ParticipantOverlayMetrics.forCard(Size cardSize) {
     final shortestSide = cardSize.shortestSide;
     // An unbounded card would otherwise clamp *up* to the ceiling. A zero-size
     // card needs no guard: the clamp already lifts it to the floor.

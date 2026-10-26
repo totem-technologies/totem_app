@@ -23,7 +23,6 @@ abstract class PreJoinForegroundMonitor {
 class AppLifecyclePreJoinForegroundMonitor
     with WidgetsBindingObserver
     implements PreJoinForegroundMonitor {
-  // ignore: unnecessary_type_name_in_constructor
   AppLifecyclePreJoinForegroundMonitor.create() {
     _isForeground = !(kIsWeb || kIsWasm) || !isAppHidden();
     if (kIsWeb || kIsWasm) WidgetsBinding.instance.addObserver(this);

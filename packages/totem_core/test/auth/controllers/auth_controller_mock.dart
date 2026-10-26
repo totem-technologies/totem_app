@@ -5,7 +5,7 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/models/user_schema.dart';
 
 class FakeAuthController extends AuthController {
-  new(this.fakeState);
+  FakeAuthController(this.fakeState);
 
   final AuthState fakeState;
   final StreamController<AuthState> _controller =

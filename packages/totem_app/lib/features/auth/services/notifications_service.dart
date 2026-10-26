@@ -278,17 +278,4 @@ class NotificationsService {
       vapidKey: AppConfig.instance.vapidKey,
     );
   }
-
-  Future<void> requestPermissions() async {
-    try {
-      await FirebaseMessaging.instance.requestPermission(provisional: true);
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to request notification permissions',
-      );
-      return;
-    }
-  }
 }

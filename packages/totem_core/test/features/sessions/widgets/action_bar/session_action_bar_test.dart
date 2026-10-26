@@ -11,6 +11,11 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/permissions/adapters/media_permission_adapter.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/permissions/platform_info.dart';
+import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
@@ -19,6 +24,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
+import '../../../permissions/fake_media_permission_adapter.dart';
 import '../../controllers/core/session_controller_mock.dart';
 import '../../controllers/features/session_device_controller_mock.dart';
 import '../../livekit_mocks.dart';
@@ -34,7 +40,7 @@ class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   }
 }
 
-class _MockRoom extends Mock implements Room;
+class _MockRoom extends Mock implements Room {}
 
 SessionRoomState _createSessionState() {
   return SessionRoomState(
@@ -172,16 +178,19 @@ void main() {
       );
       when(() => deviceController.isCameraEnabled).thenReturn(false);
       when(() => deviceController.selectedCameraDeviceId).thenReturn(null);
-      when(() => deviceController.enableCamera())
-          .thenAnswer((_) => Future<void>.value());
-      when(() => deviceController.disableCamera())
-          .thenAnswer((_) => Future<void>.value());
+      when(
+        () => deviceController.turnOn(MediaKind.camera),
+      ).thenAnswer((_) async => const TurnedOn());
+      when(
+        () => deviceController.disableCamera(),
+      ).thenAnswer((_) => Future<void>.value());
 
       when(
         () => participant.getTrackPublicationBySource(TrackSource.microphone),
       ).thenReturn(null);
-      when(() => participant.getTrackPublicationBySource(TrackSource.camera))
-          .thenReturn(null);
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(null);
       when(() => participant.isMicrophoneEnabled()).thenReturn(false);
       when(() => participant.isCameraEnabled()).thenReturn(false);
 
@@ -193,6 +202,7 @@ void main() {
       WidgetTester tester, {
       required RoomScreen screen,
       bool isStaff = false,
+      FakeMediaPermissionAdapter? adapter,
     }) async {
       final authState = isStaff
           ? AuthState.authenticated(
@@ -222,8 +232,23 @@ void main() {
           ),
           isCurrentUserKeeperProvider.overrideWith((ref) => false),
           resolveCurrentScreenProvider.overrideWith((ref) => screen),
+          platformInfoProvider.overrideWithValue(const IosApp()),
+          mediaPermissionAdapterProvider.overrideWithValue(
+            adapter ?? FakeMediaPermissionAdapter(),
+          ),
         ],
       );
+    }
+
+    /// Taps the microphone, confirming the unmute when another participant
+    /// has the totem.
+    Future<void> tapMicrophone(WidgetTester tester) async {
+      await tester.tap(find.byType(ActionBarButton).first);
+      await tester.pumpAndSettle();
+      if (find.text('Unmute Anyway').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Unmute Anyway'));
+        await tester.pumpAndSettle();
+      }
     }
 
     Finder findPendingBadge() {
@@ -268,9 +293,48 @@ void main() {
 
         await tester.tap(find.text('Stay Muted'));
         await tester.pumpAndSettle();
-        verifyNever(() => deviceController.enableMicrophone());
+        // Muted by the first tap, and never unmuted.
+        check(session.mockLocalMedia.microphoneCommands).deepEquals([false]);
       },
     );
+
+    autoSizeTest('X6: the microphone asks for access, then unmutes', (
+      tester,
+    ) async {
+      session.mockLocalMedia.hasMicrophoneTrack = true;
+      final adapter = FakeMediaPermissionAdapter(
+        microphone: MediaPermission.unknown,
+        requestResults: {MediaKind.microphone: MediaPermission.granted},
+      );
+      await pumpSessionActionBar(
+        tester,
+        screen: RoomScreen.listening,
+        adapter: adapter,
+      );
+      await tester.pumpAndSettle();
+
+      await tapMicrophone(tester);
+
+      check(adapter.requested).deepEquals([MediaKind.microphone]);
+      check(session.mockLocalMedia.microphoneCommands).deepEquals([true]);
+    });
+
+    autoSizeTest('X7: a blocked microphone explains the fix', (tester) async {
+      session.mockLocalMedia.hasMicrophoneTrack = true;
+      await pumpSessionActionBar(
+        tester,
+        screen: RoomScreen.listening,
+        adapter: FakeMediaPermissionAdapter(
+          microphone: MediaPermission.blocked,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tapMicrophone(tester);
+
+      check(session.mockLocalMedia.microphoneCommands).isEmpty();
+      check(find.byType(MediaRecoveryDialog).evaluate()).length.equals(1);
+    });
 
     autoSizeTest(
       'shows the microphone on the receiving screen only for staff',
@@ -282,9 +346,9 @@ void main() {
             isStaff: isStaff,
           );
 
-          check(tester.widgetList(find.bySemanticsLabel('Microphone on')))
-              .length
-              .equals(isStaff ? 1 : 0);
+          check(
+            tester.widgetList(find.bySemanticsLabel('Microphone on')),
+          ).length.equals(isStaff ? 1 : 0);
 
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
@@ -302,8 +366,9 @@ void main() {
         await pumpSessionActionBar(tester, screen: scenario.screen);
         await tester.pumpAndSettle();
 
-        check(tester.widgetList(find.byType(ActionBarEmojiButton))).length
-            .equals(scenario.showsReactions ? 1 : 0);
+        check(
+          tester.widgetList(find.byType(ActionBarEmojiButton)),
+        ).length.equals(scenario.showsReactions ? 1 : 0);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       }
@@ -383,8 +448,9 @@ void main() {
       await tester.pump();
 
       check(tester.widgetList(findPendingBadge())).length.equals(1);
-      check(tester.widgetList(find.text('New message from Keeper'))).length
-          .equals(1);
+      check(
+        tester.widgetList(find.text('New message from Keeper')),
+      ).length.equals(1);
       check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
     });
 

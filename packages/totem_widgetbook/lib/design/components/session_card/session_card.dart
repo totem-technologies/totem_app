@@ -14,6 +14,11 @@ const _assets = 'assets/design/session_card';
 /// Native size is the Figma frame: 362 × 253, split evenly between the
 /// photo and the white body. Width follows the parent; height keeps that
 /// ratio so a narrower column doesn't squash the type against the picture.
+/// [height] pins the height instead of the ratio — the Sessions list
+/// pins cards at 250 (Figma 2315:8056).
+///
+/// [onAddToCalendar] turns on the calendar slot: a round mauve button at
+/// the end of the Keeper row (Figma 2253:1859).
 class SessionCard extends StatelessWidget {
   const SessionCard({
     super.key,
@@ -25,7 +30,10 @@ class SessionCard extends StatelessWidget {
     required this.time,
     required this.meridiem,
     required this.seatsLeft,
+    this.photoAlignment = const Alignment(0, -0.44),
+    this.height,
     this.onSelect,
+    this.onAddToCalendar,
   });
 
   /// Cover photo. Crops to the top half of the card.
@@ -52,8 +60,19 @@ class SessionCard extends StatelessWidget {
   /// Open seats. The card always says "seats left" after the number.
   final int seatsLeft;
 
+  /// Where the cover photo crops. The default suits the portrait in the
+  /// Figma card.
+  final Alignment photoAlignment;
+
+  /// Fixed card height. Null keeps the 362 × 253 ratio.
+  final double? height;
+
   /// Whole card is the hit target when this is set.
   final VoidCallback? onSelect;
+
+  /// Shows the calendar button. Keep [onSelect] null when this is set, so
+  /// the button is not a control nested inside another.
+  final VoidCallback? onAddToCalendar;
 
   String get _seatsLabel =>
       seatsLeft == 1 ? '1 seat left' : '$seatsLeft seats left';
@@ -63,9 +82,8 @@ class SessionCard extends StatelessWidget {
     final label =
         '$sessionName, $time $meridiem, $_seatsLabel, with $keeperName';
 
-    Widget card(Set<WidgetState> _) => AspectRatio(
-      aspectRatio: 362 / 253,
-      child: ClipRRect(
+    Widget card(Set<WidgetState> _) {
+      final tile = ClipRRect(
         borderRadius: BorderRadius.circular(Radii.lg),
         child: ColoredBox(
           color: TotemColors.coreWhite,
@@ -74,27 +92,36 @@ class SessionCard extends StatelessWidget {
             children: [
               // Portrait source; this crop matches the Figma frame.
               Expanded(
-                child: Image(
-                  image: photo,
-                  fit: BoxFit.cover,
-                  alignment: const Alignment(0, -0.44),
+                child: ExcludeSemantics(
+                  child: Image(
+                    image: photo,
+                    fit: BoxFit.cover,
+                    alignment: photoAlignment,
+                  ),
                 ),
               ),
               Expanded(child: _body()),
             ],
           ),
         ),
-      ),
-    );
+      );
+      if (height case final height?) {
+        return SizedBox(height: height, child: tile);
+      }
+      return AspectRatio(aspectRatio: 362 / 253, child: tile);
+    }
 
     // A card with onSelect is one control — the whole tile, not a nested
     // Attend chip. 253px is well over the 44pt hit target.
     final select = onSelect;
     if (select == null) {
+      // The label speaks for the text; the calendar button stays its own
+      // node so screen readers can reach it.
       return Semantics(
         container: true,
+        explicitChildNodes: true,
         label: label,
-        child: ExcludeSemantics(child: card({})),
+        child: card({}),
       );
     }
     return Pressable(
@@ -121,107 +148,117 @@ class SessionCard extends StatelessWidget {
         children: [
           // Time first, then seats — same order as the Figma row.
           // The icon flips are how they sit in the file — do not "correct" them.
-          Row(
-            spacing: 21,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 3,
-                children: [
-                  Transform.flip(
-                    flipY: true,
-                    child: SvgPicture.asset(
-                      '$_assets/icon-clock.svg',
-                      width: 10.3547,
-                      height: 10.3547,
+          ExcludeSemantics(
+            child: Row(
+              spacing: 21,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 3,
+                  children: [
+                    Transform.flip(
+                      flipY: true,
+                      child: SvgPicture.asset(
+                        '$_assets/icon-clock.svg',
+                        width: 10.3547,
+                        height: 10.3547,
+                      ),
                     ),
-                  ),
-                  // Digits sit a hair smaller and heavier than "PM".
-                  Text(
-                    time,
-                    style: TotemText.raw(
-                      size: 8,
-                      weight: FontWeight.w700,
-                      height: 1,
-                      color: ink,
+                    // Digits sit a hair smaller and heavier than "PM".
+                    Text(
+                      time,
+                      style: TotemText.raw(
+                        size: 8,
+                        weight: FontWeight.w700,
+                        height: 1,
+                        color: ink,
+                      ),
                     ),
-                  ),
-                  Text(meridiem, style: fact),
-                ],
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 3,
-                children: [
-                  Transform.flip(
-                    flipX: true,
-                    child: SvgPicture.asset(
-                      '$_assets/icon-seats.svg',
-                      width: 9.83693,
-                      height: 9.83693,
-                    ),
-                  ),
-                  Text(
-                    '$seatsLeft',
-                    style: fact.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    seatsLeft == 1 ? 'seat left' : 'seats left',
-                    style: fact,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 5,
-            children: [
-              Text(
-                spaceName,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: TotemText.raw(
-                  size: 9,
-                  weight: FontWeight.w600,
-                  color: fade(ink, 0.7),
+                    Text(meridiem, style: fact),
+                  ],
                 ),
-              ),
-              Text(
-                sessionName,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TotemText.raw(
-                  size: 12,
-                  weight: FontWeight.w600,
-                  color: const Color(0xFF000000),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 3,
+                  children: [
+                    Transform.flip(
+                      flipX: true,
+                      child: SvgPicture.asset(
+                        '$_assets/icon-seats.svg',
+                        width: 9.83693,
+                        height: 9.83693,
+                      ),
+                    ),
+                    Text(
+                      '$seatsLeft',
+                      style: fact.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      seatsLeft == 1 ? 'seat left' : 'seats left',
+                      style: fact,
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          Row(
-            spacing: 6,
-            children: [
-              _avatar(),
-              Text('with', style: TotemText.raw(size: 14, color: ink)),
-              Flexible(
-                child: Text(
-                  keeperName,
+          ExcludeSemantics(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 5,
+              children: [
+                Text(
+                  spaceName,
                   maxLines: 1,
                   softWrap: false,
                   overflow: TextOverflow.ellipsis,
                   style: TotemText.raw(
-                    size: 14,
+                    size: 9,
                     weight: FontWeight.w600,
-                    color: ink,
+                    color: fade(ink, 0.7),
                   ),
                 ),
-              ),
+                Text(
+                  sessionName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TotemText.raw(
+                    size: 12,
+                    weight: FontWeight.w600,
+                    color: const Color(0xFF000000),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(child: ExcludeSemantics(child: _keeper(ink))),
+              if (onAddToCalendar case final onTap?)
+                _CalendarButton(onTap: onTap),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _keeper(Color ink) {
+    return Row(
+      spacing: 6,
+      children: [
+        _avatar(),
+        Text('with', style: TotemText.raw(size: 14, color: ink)),
+        Flexible(
+          child: Text(
+            keeperName,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: TotemText.raw(size: 14, weight: FontWeight.w600, color: ink),
+          ),
+        ),
+      ],
     );
   }
 
@@ -253,6 +290,40 @@ class SessionCard extends StatelessWidget {
           weight: FontWeight.w600,
           height: 1,
           color: TotemColors.coreWhite,
+        ),
+      ),
+    );
+  }
+}
+
+/// 30px mauve circle with the calendar glyph (Figma 2253:1859).
+class _CalendarButton extends StatelessWidget {
+  const _CalendarButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      pressedScale: 0.92,
+      focusColor: TotemColors.coreMauve,
+      focusRadius: BorderRadius.circular(Radii.full),
+      semanticLabel: 'Add to calendar',
+      builder: (context, states) => Container(
+        width: 30,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: states.contains(WidgetState.hovered)
+              ? mix(TotemColors.coreSlate, 0.12, TotemColors.coreMauve)
+              : TotemColors.coreMauve,
+          shape: BoxShape.circle,
+        ),
+        child: SvgPicture.asset(
+          '$_assets/icon-calendar.svg',
+          width: 18,
+          height: 18,
         ),
       ),
     );

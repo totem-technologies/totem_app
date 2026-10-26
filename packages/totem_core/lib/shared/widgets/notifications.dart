@@ -12,7 +12,7 @@ const _defaultNotificationAnimationDuration = Duration(milliseconds: 600);
 const _defaultNotificationDuration = Duration(seconds: 8);
 
 class AnimatedNotification extends StatefulWidget {
-  const new({
+  const AnimatedNotification({
     required this.onDismissed,
     required this.notification,
     this.animationDuration = _defaultNotificationAnimationDuration,
@@ -88,7 +88,7 @@ class AnimatedNotificationState extends State<AnimatedNotification>
 }
 
 class NotificationRequest {
-  new({
+  NotificationRequest({
     required this.overlay,
     required this.overlayEntry,
     required this.onClosed,
@@ -451,7 +451,7 @@ class NotificationController {
 }
 
 class NotificationBanner extends StatelessWidget {
-  const new({
+  const NotificationBanner({
     required this.icon,
     required this.title,
     required this.message,

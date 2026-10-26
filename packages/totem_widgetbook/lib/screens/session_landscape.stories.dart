@@ -12,7 +12,7 @@ const component = ComponentMeta(path: 'Screens/session/landscape');
 const meta = Meta(SessionLandscape.new, argsType: SessionLandscapeInput.new);
 
 class SessionLandscapeInput {
-  const new({
+  const SessionLandscapeInput({
     this.turn = LandscapeTurn.listening,
     this.participantCount = 4,
     this.prompt = '"What are you ready to set down?"',

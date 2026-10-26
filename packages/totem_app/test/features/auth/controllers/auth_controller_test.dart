@@ -126,8 +126,9 @@ void main() {
           const MethodChannel('dev.fluttercommunity.plus/connectivity'),
           (MethodCall methodCall) async => ['wifi'],
         );
-    when(() => mockSecureStorage.read(key: AppConsts.accessTokenKey))
-        .thenAnswer((_) async => null);
+    when(
+      () => mockSecureStorage.read(key: AppConsts.accessTokenKey),
+    ).thenAnswer((_) async => null);
     when(() => mockLocalStorageService.getUser()).thenAnswer((_) async => null);
 
     container = ProviderContainer(
@@ -170,8 +171,9 @@ void main() {
     String refreshToken = 'refresh',
     String? fcmToken,
   }) async {
-    when(() => mockAuthRepository.requestPin(email, false))
-        .thenAnswer((_) async => MessageResponse(message: 'OK'));
+    when(
+      () => mockAuthRepository.requestPin(email, false),
+    ).thenAnswer((_) async => MessageResponse(message: 'OK'));
     when(() => mockAuthRepository.verifyPin(email, '123456')).thenAnswer(
       (_) async => TokenResponse(
         accessToken: accessToken,
@@ -187,16 +189,18 @@ void main() {
     ).thenAnswer((_) async {});
     when(() => mockUserRepository.currentUser).thenAnswer((_) async => user);
     when(() => mockAnalyticsService.setUserId(any())).thenAnswer((_) async {});
-    when(() => mockAnalyticsService.logLogin(method: any(named: 'method')))
-        .thenReturn(null);
+    when(
+      () => mockAnalyticsService.logLogin(method: any(named: 'method')),
+    ).thenReturn(null);
     when(
       () => mockAnalyticsService.logEvent(
         any(),
         parameters: any(named: 'parameters'),
       ),
     ).thenReturn(null);
-    when(() => mockNotificationsService.fcmToken)
-        .thenAnswer((_) async => fcmToken);
+    when(
+      () => mockNotificationsService.fcmToken,
+    ).thenAnswer((_) async => fcmToken);
 
     await getController().requestPin(email);
     await getController().verifyPin('123456');
@@ -215,18 +219,24 @@ void main() {
         email: 'cached@example.com',
       );
 
-      when(() => mockSecureStorage.read(key: AppConsts.accessTokenKey))
-          .thenAnswer((_) async => 'valid-access-token');
-      when(() => mockLocalStorageService.getUser())
-          .thenAnswer((_) async => cachedUser);
-      when(() => mockUserRepository.currentUser)
-          .thenAnswer((_) async => refreshedUser);
-      when(() => mockLocalStorageService.saveUser(refreshedUser))
-          .thenAnswer((_) async {});
-      when(() => mockAnalyticsService.setUserId(refreshedUser))
-          .thenAnswer((_) async {});
-      when(() => mockNotificationsService.fcmToken)
-          .thenAnswer((_) async => null);
+      when(
+        () => mockSecureStorage.read(key: AppConsts.accessTokenKey),
+      ).thenAnswer((_) async => 'valid-access-token');
+      when(
+        () => mockLocalStorageService.getUser(),
+      ).thenAnswer((_) async => cachedUser);
+      when(
+        () => mockUserRepository.currentUser,
+      ).thenAnswer((_) async => refreshedUser);
+      when(
+        () => mockLocalStorageService.saveUser(refreshedUser),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockAnalyticsService.setUserId(refreshedUser),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockNotificationsService.fcmToken,
+      ).thenAnswer((_) async => null);
 
       await getController().checkExistingAuth();
 
@@ -242,10 +252,12 @@ void main() {
         name: 'Offline User',
       );
       setConnectivity(['none']);
-      when(() => mockSecureStorage.read(key: AppConsts.accessTokenKey))
-          .thenAnswer((_) async => 'cached-access-token');
-      when(() => mockLocalStorageService.getUser())
-          .thenAnswer((_) async => cachedUser);
+      when(
+        () => mockSecureStorage.read(key: AppConsts.accessTokenKey),
+      ).thenAnswer((_) async => 'cached-access-token');
+      when(
+        () => mockLocalStorageService.getUser(),
+      ).thenAnswer((_) async => cachedUser);
 
       await getController().checkExistingAuth();
 
@@ -256,26 +268,33 @@ void main() {
 
     test('clears local authentication when online validation fails', () async {
       setConnectivity(['wifi']);
-      when(() => mockSecureStorage.read(key: AppConsts.accessTokenKey))
-          .thenAnswer((_) async => 'invalid-access-token');
-      when(() => mockLocalStorageService.getUser())
-          .thenAnswer((_) async => null);
-      when(() => mockUserRepository.currentUser)
-          .thenThrow(Exception('unauthorized'));
-      when(() => mockSecureStorage.delete(key: any(named: 'key')))
-          .thenAnswer((_) async {});
+      when(
+        () => mockSecureStorage.read(key: AppConsts.accessTokenKey),
+      ).thenAnswer((_) async => 'invalid-access-token');
+      when(
+        () => mockLocalStorageService.getUser(),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockUserRepository.currentUser,
+      ).thenThrow(Exception('unauthorized'));
+      when(
+        () => mockSecureStorage.delete(key: any(named: 'key')),
+      ).thenAnswer((_) async {});
       when(() => mockLocalStorageService.clearUser()).thenAnswer((_) async {});
       when(() => mockCacheService.clearCache()).thenAnswer((_) async {});
-      when(() => mockNotificationsService.fcmToken)
-          .thenAnswer((_) async => null);
+      when(
+        () => mockNotificationsService.fcmToken,
+      ).thenAnswer((_) async => null);
 
       await getController().checkExistingAuth();
 
       check(getState().status).equals(AuthStatus.unauthenticated);
-      verify(() => mockSecureStorage.delete(key: AppConsts.accessTokenKey))
-          .called(1);
-      verify(() => mockSecureStorage.delete(key: AppConsts.refreshTokenKey))
-          .called(1);
+      verify(
+        () => mockSecureStorage.delete(key: AppConsts.accessTokenKey),
+      ).called(1);
+      verify(
+        () => mockSecureStorage.delete(key: AppConsts.refreshTokenKey),
+      ).called(1);
       verify(() => mockLocalStorageService.clearUser()).called(1);
       verify(() => mockCacheService.clearCache()).called(1);
     });
@@ -284,8 +303,9 @@ void main() {
   group('MobileAuthController - requestPin', () {
     test('successfully requests PIN and updates state', () async {
       final email = 'test@example.com';
-      when(() => mockAuthRepository.requestPin(email, false))
-          .thenAnswer((_) async => MessageResponse(message: 'Success'));
+      when(
+        () => mockAuthRepository.requestPin(email, false),
+      ).thenAnswer((_) async => MessageResponse(message: 'Success'));
       when(
         () => mockAnalyticsService.logEvent(
           any(),
@@ -325,8 +345,9 @@ void main() {
           expiresIn: 3600,
         );
 
-        when(() => mockAuthRepository.requestPin(email, false))
-            .thenAnswer((_) async => MessageResponse(message: 'OK'));
+        when(
+          () => mockAuthRepository.requestPin(email, false),
+        ).thenAnswer((_) async => MessageResponse(message: 'OK'));
         when(
           () => mockAnalyticsService.logEvent(
             any(),
@@ -335,24 +356,30 @@ void main() {
         ).thenReturn(null);
         await getController().requestPin(email);
 
-        when(() => mockAuthRepository.verifyPin(email, pin))
-            .thenAnswer((_) async => mockTokenResponse);
+        when(
+          () => mockAuthRepository.verifyPin(email, pin),
+        ).thenAnswer((_) async => mockTokenResponse);
         when(
           () => mockSecureStorage.write(
             key: any(named: 'key'),
             value: any(named: 'value'),
           ),
         ).thenAnswer((_) async {});
-        when(() => mockUserRepository.currentUser)
-            .thenAnswer((_) async => mockUser);
-        when(() => mockAnalyticsService.setUserId(mockUser))
-            .thenAnswer((_) async {});
-        when(() => mockAnalyticsService.logLogin(method: 'pin'))
-            .thenReturn(null);
-        when(() => mockNotificationsService.fcmToken)
-            .thenAnswer((_) async => 'fcm_token');
-        when(() => mockAuthRepository.updateFcmToken('fcm_token'))
-            .thenAnswer((_) async {});
+        when(
+          () => mockUserRepository.currentUser,
+        ).thenAnswer((_) async => mockUser);
+        when(
+          () => mockAnalyticsService.setUserId(mockUser),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockAnalyticsService.logLogin(method: 'pin'),
+        ).thenReturn(null);
+        when(
+          () => mockNotificationsService.fcmToken,
+        ).thenAnswer((_) async => 'fcm_token');
+        when(
+          () => mockAuthRepository.updateFcmToken('fcm_token'),
+        ).thenAnswer((_) async {});
 
         await getController().verifyPin(pin);
 
@@ -386,14 +413,17 @@ void main() {
     test('logout successfully clears tokens and resets state', () async {
       await authenticateUser();
 
-      when(() => mockSecureStorage.read(key: AppConsts.refreshTokenKey))
-          .thenAnswer((_) async => 'refresh_token');
-      when(() => mockSecureStorage.delete(key: any(named: 'key')))
-          .thenAnswer((_) async {});
+      when(
+        () => mockSecureStorage.read(key: AppConsts.refreshTokenKey),
+      ).thenAnswer((_) async => 'refresh_token');
+      when(
+        () => mockSecureStorage.delete(key: any(named: 'key')),
+      ).thenAnswer((_) async {});
       when(() => mockLocalStorageService.clearUser()).thenAnswer((_) async {});
       when(() => mockCacheService.clearCache()).thenAnswer((_) async {});
-      when(() => mockAuthRepository.logout('refresh_token'))
-          .thenAnswer((_) async => MessageResponse(message: 'OK'));
+      when(
+        () => mockAuthRepository.logout('refresh_token'),
+      ).thenAnswer((_) async => MessageResponse(message: 'OK'));
 
       when(() => mockAnalyticsService.logLogout()).thenAnswer((_) async {});
 
@@ -402,8 +432,9 @@ void main() {
       check(getState().status).equals(AuthStatus.unauthenticated);
       check(getController().isAuthenticated).equals(false);
       verify(() => mockAuthRepository.logout('refresh_token')).called(1);
-      verify(() => mockSecureStorage.delete(key: AppConsts.accessTokenKey))
-          .called(1);
+      verify(
+        () => mockSecureStorage.delete(key: AppConsts.accessTokenKey),
+      ).called(1);
       verify(() => mockLocalStorageService.clearUser()).called(1);
     });
 
@@ -412,10 +443,12 @@ void main() {
 
       when(() => mockUserRepository.deleteAccount()).thenAnswer((_) async {});
 
-      when(() => mockAnalyticsService.logAccountDeleted())
-          .thenAnswer((_) async {});
-      when(() => mockSecureStorage.delete(key: any(named: 'key')))
-          .thenAnswer((_) async {});
+      when(
+        () => mockAnalyticsService.logAccountDeleted(),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockSecureStorage.delete(key: any(named: 'key')),
+      ).thenAnswer((_) async {});
       when(() => mockSecureStorage.deleteAll()).thenAnswer((_) async {});
       when(() => mockLocalStorageService.clearUser()).thenAnswer((_) async {});
       when(() => mockCacheService.clearCache()).thenAnswer((_) async {});

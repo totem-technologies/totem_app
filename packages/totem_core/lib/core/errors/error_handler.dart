@@ -17,7 +17,7 @@ enum ErrorDisposition { expected, recovered, unexpected }
 
 /// Centralized error handling for the Totem App.
 class ErrorHandler {
-  const new _();
+  const ErrorHandler._();
 
   static final Expando<bool> _reportedErrors = Expando<bool>(
     'totem.reportedErrors',
@@ -246,9 +246,7 @@ class ErrorHandler {
           );
         },
       );
-    } else
-    // For other errors, just show a snackbar
-    {
+    } else {
       showErrorSnackBar(context, message);
     }
   }

@@ -19,7 +19,7 @@ Future<void> showDownloadMobileAppDialog(BuildContext context) {
 }
 
 class DownloadMobileAppDialog extends StatelessWidget {
-  const new({super.key});
+  const DownloadMobileAppDialog({super.key});
 
   @override
   Widget build(BuildContext context) {

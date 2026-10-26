@@ -11,7 +11,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 }, name: 'Auth Repository Provider');
 
 class AuthRepository {
-  const new({required this.apiService});
+  const AuthRepository({required this.apiService});
 
   final ClientApi apiService;
 

@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 class LoadingIndicator extends StatelessWidget {
-  const new({
+  const LoadingIndicator({
     super.key,
     this.size = 36.0,
     this.color,
@@ -37,7 +37,7 @@ class LoadingIndicator extends StatelessWidget {
 }
 
 class LoadingScreen extends StatelessWidget {
-  const new({super.key});
+  const LoadingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

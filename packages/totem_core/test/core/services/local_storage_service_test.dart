@@ -8,7 +8,7 @@ import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/services/local_storage_service.dart';
 import 'package:totem_core/core/services/secure_storage.dart';
 
-class _MockSecureStorage extends Mock implements SecureStorage;
+class _MockSecureStorage extends Mock implements SecureStorage {}
 
 void main() {
   late _MockSecureStorage storage;
@@ -37,8 +37,9 @@ void main() {
     ).thenAnswer((invocation) async {
       persisted = invocation.namedArguments[#value] as String;
     });
-    when(() => storage.read(key: AppConsts.storageUserProfileKey))
-        .thenAnswer((_) async => persisted);
+    when(
+      () => storage.read(key: AppConsts.storageUserProfileKey),
+    ).thenAnswer((_) async => persisted);
 
     await localStorage.saveUser(user);
     final restored = await localStorage.getUser();
@@ -48,14 +49,17 @@ void main() {
   });
 
   test('clears an invalid user payload instead of returning it', () async {
-    when(() => storage.read(key: AppConsts.storageUserProfileKey))
-        .thenAnswer((_) async => '{invalid');
-    when(() => storage.delete(key: AppConsts.storageUserProfileKey))
-        .thenAnswer((_) async {});
+    when(
+      () => storage.read(key: AppConsts.storageUserProfileKey),
+    ).thenAnswer((_) async => '{invalid');
+    when(
+      () => storage.delete(key: AppConsts.storageUserProfileKey),
+    ).thenAnswer((_) async {});
 
     check(await localStorage.getUser()).isNull();
-    verify(() => storage.delete(key: AppConsts.storageUserProfileKey))
-        .called(1);
+    verify(
+      () => storage.delete(key: AppConsts.storageUserProfileKey),
+    ).called(1);
   });
 
   test('persists, reads, and clears the onboarding flag', () async {
@@ -63,16 +67,19 @@ void main() {
       () =>
           storage.write(key: AppConsts.hasSeenWelcomeOnboarding, value: 'true'),
     ).thenAnswer((_) async {});
-    when(() => storage.read(key: AppConsts.hasSeenWelcomeOnboarding))
-        .thenAnswer((_) async => 'true');
-    when(() => storage.delete(key: AppConsts.hasSeenWelcomeOnboarding))
-        .thenAnswer((_) async {});
+    when(
+      () => storage.read(key: AppConsts.hasSeenWelcomeOnboarding),
+    ).thenAnswer((_) async => 'true');
+    when(
+      () => storage.delete(key: AppConsts.hasSeenWelcomeOnboarding),
+    ).thenAnswer((_) async {});
 
     await localStorage.markWelcomeOnboardingCompleted();
     check(await localStorage.hasSeenWelcomeOnboarding()).equals(true);
     await localStorage.clearWelcomeOnboardingFlag();
 
-    verify(() => storage.delete(key: AppConsts.hasSeenWelcomeOnboarding))
-        .called(1);
+    verify(
+      () => storage.delete(key: AppConsts.hasSeenWelcomeOnboarding),
+    ).called(1);
   });
 }

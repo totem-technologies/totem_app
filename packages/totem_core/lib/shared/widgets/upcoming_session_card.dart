@@ -18,9 +18,9 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 /// A card widget displaying an upcoming session with its details.
 class UpcomingSessionCard extends ConsumerStatefulWidget {
-  const new({required this.data, super.key, this.onTap});
+  const UpcomingSessionCard({required this.data, super.key, this.onTap});
 
-  factory fromSessionDetail(
+  factory UpcomingSessionCard.fromSessionDetail(
     SessionDetailSchema session, {
     Key? key,
     VoidCallback? onTap,
@@ -32,7 +32,7 @@ class UpcomingSessionCard extends ConsumerStatefulWidget {
     );
   }
 
-  factory fromSpaceAndSession(
+  factory UpcomingSessionCard.fromSpaceAndSession(
     MobileSpaceDetailSchema space,
     NextSessionSchema session, {
     Key? key,

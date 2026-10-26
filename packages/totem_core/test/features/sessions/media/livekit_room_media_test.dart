@@ -9,9 +9,9 @@ import 'package:totem_core/features/sessions/media/room_media.dart';
 
 import '../livekit_mocks.dart';
 
-class _MockRoom extends Mock implements Room;
+class _MockRoom extends Mock implements Room {}
 
-class _MockRemoteParticipant extends Mock implements RemoteParticipant;
+class _MockRemoteParticipant extends Mock implements RemoteParticipant {}
 
 void main() {
   group('LiveKitRoomMedia', () {
@@ -33,8 +33,9 @@ void main() {
       when(() => remote.hasAudio).thenReturn(false);
       when(() => remote.isMuted).thenReturn(false);
       when(() => remote.hasVideo).thenReturn(true);
-      when(() => remote.getTrackPublicationBySource(TrackSource.camera))
-          .thenReturn(camera);
+      when(
+        () => remote.getTrackPublicationBySource(TrackSource.camera),
+      ).thenReturn(camera);
       when(() => camera.muted).thenReturn(false);
       when(() => camera.track).thenReturn(cameraTrack);
       when(() => cameraTrack.muted).thenReturn(false);

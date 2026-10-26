@@ -7,7 +7,7 @@ import 'package:flutter/widgets.dart';
 /// animation. Defers frame requests themselves, while Ticker still supplies
 /// frame timestamps and AnimationController retains its interpolation behavior.
 class FramePacedTicker extends Ticker {
-  new(super._onTick, {super.debugLabel});
+  FramePacedTicker(super._onTick, {super.debugLabel});
 
   static const interval = Duration(microseconds: 33334);
   static final _pending = <FramePacedTicker>{};

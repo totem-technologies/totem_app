@@ -23,6 +23,20 @@ bool isTrackLive(TrackPublication publication) {
 bool isMicrophoneOn(Participant participant) =>
     participant.hasAudio && !participant.isMuted;
 
+/// Calls [onEnded] when [track]'s current capture ends without the app
+/// stopping it, such as a revoked permission or an unplugged device. Keeps
+/// any handler already set, such as LiveKit's own.
+///
+/// A restart replaces the capture, so callers observe each new one.
+void observeCaptureEnd(LocalTrack track, void Function() onEnded) {
+  final mediaStreamTrack = track.mediaStreamTrack;
+  final previous = mediaStreamTrack.onEnded;
+  mediaStreamTrack.onEnded = () {
+    previous?.call();
+    onEnded();
+  };
+}
+
 final _trackChanges = Expando<Stream<void>>();
 
 /// Emits on every event from [track], such as mute changes. Returns the same
@@ -40,7 +54,7 @@ Stream<void> trackChanges(Track track) =>
 /// [changes] survive reconnects. [register] adds the room events that should
 /// report a change; handlers call the `notify` callback it receives.
 class LiveKitRoomBinding {
-  new(this.register);
+  LiveKitRoomBinding(this.register);
 
   final void Function(
     EventsListener<RoomEvent> listener,

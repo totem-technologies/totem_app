@@ -7,7 +7,7 @@ import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/services/cache_service.dart';
 import 'package:totem_core/core/services/secure_storage.dart';
 
-class _MockSecureStorage extends Mock implements SecureStorage;
+class _MockSecureStorage extends Mock implements SecureStorage {}
 
 void main() {
   late _MockSecureStorage storage;
