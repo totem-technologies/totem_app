@@ -17,6 +17,13 @@ import 'package:web/web.dart' as web;
 /// Mirrors the room background onto the page body so any area the Flutter
 /// view doesn't cover (e.g. when mobile browser chrome resizes the viewport)
 /// matches the session instead of showing the default white page.
+///
+/// Flutter web sizes `body` with `position: fixed; inset: 0`, so the body's
+/// box is empty for background painting. A CSS gradient without
+/// `background-attachment: fixed` can collapse to nothing and leave only
+/// `background-color` showing — mauve at the top of the waiting room. Pin
+/// the gradient to the viewport so cream stays at the top and mauve/slate
+/// cover the bottom strip.
 void _applyPageBackground(BoxDecoration decoration) {
   final style = web.document.body?.style;
   if (style == null) return;
@@ -42,14 +49,20 @@ void _applyPageBackground(BoxDecoration decoration) {
         ..write('${stops[index] * 100}%');
     }
     value.write(')');
-    // Fill anything past the gradient with its bottom color.
+    // Viewport-sized gradient; [colors.last] fills anything the image
+    // doesn't cover (the original white bottom bar).
     style
       ..setProperty('background-color', toHex(colors.last))
       ..setProperty('background-image', value.toString())
-      ..setProperty('background-repeat', 'no-repeat');
+      ..setProperty('background-repeat', 'no-repeat')
+      ..setProperty('background-attachment', 'fixed');
   } else if (decoration.color != null) {
+    // Solid fill (in-session slate, or cream once the room unmounts).
+    // Drop gradient leftovers so they can't peek through on the next route.
     style
       ..setProperty('background-image', 'none')
+      ..removeProperty('background-repeat')
+      ..removeProperty('background-attachment')
       ..setProperty('background-color', toHex(decoration.color!));
   }
 }
