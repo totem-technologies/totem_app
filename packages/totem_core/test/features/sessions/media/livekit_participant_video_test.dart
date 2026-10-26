@@ -177,32 +177,36 @@ void main() {
       check(find.textContaining('Bitrate').evaluate()).length.equals(1);
     });
 
-    testWidgets('follows a participant who leaves and rejoins', (tester) async {
-      final before = MockRemoteParticipant('user-2', 'John Doe');
-      final after = MockRemoteParticipant('user-2', 'John Doe');
-      final camera = _camera('before');
-      final rejoinedCamera = _camera('after');
-      when(
-        () => before.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(camera.publication);
-      when(
-        () => after.getTrackPublicationBySource(TrackSource.camera),
-      ).thenReturn(rejoinedCamera.publication);
-      Participant? current = before;
-      await pumpVideo(tester, () => current);
-      await tester.pumpAndSettle();
+    testWidgets(
+      'follows a participant who leaves and rejoins',
+      (tester) async {
+        final before = MockRemoteParticipant('user-2', 'John Doe');
+        final after = MockRemoteParticipant('user-2', 'John Doe');
+        final camera = _camera('before');
+        final rejoinedCamera = _camera('after');
+        when(
+          () => before.getTrackPublicationBySource(TrackSource.camera),
+        ).thenReturn(camera.publication);
+        when(
+          () => after.getTrackPublicationBySource(TrackSource.camera),
+        ).thenReturn(rejoinedCamera.publication);
+        Participant? current = before;
+        await pumpVideo(tester, () => current);
+        await tester.pumpAndSettle();
 
-      current = null;
-      await change(tester);
-      check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
+        current = null;
+        await change(tester);
+        check(tester.widgetList(find.byType(VideoTrackRenderer))).isEmpty();
 
-      current = after;
-      await change(tester);
-      final key = tester.widget(find.byType(VideoTrackRenderer)).key;
-      check((key! as ValueKey).value).equals(('pub-after', 'track-after'));
+        current = after;
+        await change(tester);
+        final key = tester.widget(find.byType(VideoTrackRenderer)).key;
+        check((key! as ValueKey).value).equals(('pub-after', 'track-after'));
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpAndSettle();
-    }, experimentalLeakTesting: ignoreRenderers);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      },
+      experimentalLeakTesting: ignoreRenderers,
+    );
   });
 }
