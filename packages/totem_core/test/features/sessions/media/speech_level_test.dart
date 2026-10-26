@@ -80,12 +80,6 @@ void main() {
     });
   });
 
-  test('amplitudeToDb converts LiveKit audio levels', () {
-    check(amplitudeToDb(1)).equals(0);
-    check(amplitudeToDb(0.1)).isCloseTo(-20, 0.0001);
-    check(amplitudeToDb(0)).equals(double.negativeInfinity);
-  });
-
   test('rmsDb measures a sine wave', () {
     // A sine at amplitude 0.1 has an RMS of 0.1 / sqrt(2), about -23 dB.
     final samples = Float32List.fromList([

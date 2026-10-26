@@ -25,15 +25,16 @@ class LiveKitSpeakerLevel extends StatelessWidget {
   final Color color;
   final double iconSize;
 
-  TrackPublication<Track>? _publication() =>
-      participant()?.getTrackPublicationBySource(TrackSource.microphone);
+  TrackPublication<Track>? _publication([Participant? participant]) =>
+      (participant ?? this.participant())?.getTrackPublicationBySource(
+        TrackSource.microphone,
+      );
 
   bool _microphoneOn() {
     final participant = this.participant();
-    final publication = _publication();
-    return participant != null &&
-        isMicrophoneOn(participant) &&
-        !(publication?.muted ?? false);
+    if (participant == null) return false;
+    return isMicrophoneOn(participant) &&
+        !(_publication(participant)?.muted ?? false);
   }
 
   AudioTrack? _track() {
