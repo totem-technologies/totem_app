@@ -121,23 +121,34 @@ class _WebWaveform extends StatefulWidget {
 }
 
 class _WebWaveformState extends State<_WebWaveform> {
-  StreamSubscription<double>? _subscription;
-  var _level = 0.0;
+  StreamSubscription<List<double>>? _subscription;
+  List<double> _levels = <double>[];
   bool _isSpeaking = false;
 
   void _listen() {
     unawaited(_subscription?.cancel());
-    _level = 0;
+    _levels = List<double>.filled(widget.barCount, 0, growable: false);
     _isSpeaking = false;
-    _subscription = localAudioLevel(widget.track).listen((level) {
-      final isSpeaking = webWaveformIsActive(level, wasActive: _isSpeaking);
-      final nextLevel = isSpeaking ? level : 0.0;
-      if (_level == nextLevel && isSpeaking == _isSpeaking) return;
-      setState(() {
-        _level = nextLevel;
-        _isSpeaking = isSpeaking;
-      });
-    });
+    _subscription =
+        localAudioLevels(
+          widget.track,
+          barCount: widget.barCount,
+        ).listen((levels) {
+          final isSpeaking = webWaveformIsActive(
+            levels,
+            wasActive: _isSpeaking,
+          );
+          final nextLevels = isSpeaking
+              ? levels
+              : List<double>.filled(widget.barCount, 0, growable: false);
+          if (listEquals(_levels, nextLevels) && isSpeaking == _isSpeaking) {
+            return;
+          }
+          setState(() {
+            _levels = List<double>.of(nextLevels, growable: false);
+            _isSpeaking = isSpeaking;
+          });
+        });
   }
 
   @override
@@ -159,9 +170,6 @@ class _WebWaveformState extends State<_WebWaveform> {
   }
 
   @override
-  Widget build(BuildContext context) => LevelBars.fromLevel(
-    _level,
-    barCount: widget.barCount,
-    color: widget.color,
-  );
+  Widget build(BuildContext context) =>
+      LevelBars(levels: _levels, color: widget.color);
 }

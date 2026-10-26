@@ -34,15 +34,29 @@ void main() {
     );
     samples.add(const [0.05, 0.05, 0.05, 0.05, 0.05]);
     await tester.pump();
-    final quiet = tester.widget<LevelBars>(find.byType(LevelBars)).levels;
+    final quiet = List.of(
+      tester.widget<LevelBars>(find.byType(LevelBars)).levels,
+    );
 
     samples.add(const [0.2, 0.4, 0.6, 0.8, 1]);
     await tester.pump(const Duration(milliseconds: 140));
     final loud = tester.widget<LevelBars>(find.byType(LevelBars)).levels;
-
+    check(loud[0]).isLessThan(loud[4]);
     check(loud[2]).isGreaterThan(quiet[2]);
+
+    samples.add(const [0, 0, 0, 0, 0]);
+    await tester.pump(const Duration(milliseconds: 140));
+    check(
+      tester.widget<LevelBars>(find.byType(LevelBars)).levels,
+    ).deepEquals(const [0, 0, 0, 0, 0]);
+
+    samples.add(const [0, 0, 0, 0, 0]);
+    await tester.pump(const Duration(milliseconds: 140));
+    check(tester.binding.hasScheduledFrame).isFalse();
+
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+    check(samples.hasListener).isFalse();
   });
 
   group('AudioVisualizerCircuitBreaker', () {
@@ -85,38 +99,24 @@ void main() {
 
   group('webWaveformIsActive', () {
     test('filters quantized background noise before activating', () {
-      check(webWaveformIsActive(0.05, wasActive: false)).isFalse();
-      check(webWaveformIsActive(0.1, wasActive: false)).isFalse();
-      check(webWaveformIsActive(0.15, wasActive: false)).isTrue();
+      check(
+        webWaveformIsActive(const [0.05, 0, 0, 0, 0], wasActive: false),
+      ).isFalse();
+      check(
+        webWaveformIsActive(const [0.1, 0, 0, 0, 0], wasActive: false),
+      ).isFalse();
+      check(
+        webWaveformIsActive(const [0, 0.15, 0, 0, 0], wasActive: false),
+      ).isTrue();
     });
 
     test('holds the first visible Web Audio step until silence', () {
-      check(webWaveformIsActive(0.05, wasActive: true)).isTrue();
-      check(webWaveformIsActive(0, wasActive: true)).isFalse();
-    });
-  });
-
-  group('audioVisualizerSamplesChanged', () {
-    test('ignores imperceptible changes and detects visible changes', () {
       check(
-        audioVisualizerSamplesChanged(
-          const [0.1, 0.5, 0.9],
-          const [0.105, 0.495, 0.9],
-        ),
+        webWaveformIsActive(const [0.05, 0, 0, 0, 0], wasActive: true),
+      ).isTrue();
+      check(
+        webWaveformIsActive(const [0, 0, 0, 0, 0], wasActive: true),
       ).isFalse();
-      check(
-        audioVisualizerSamplesChanged(
-          const [0.1, 0.5, 0.9],
-          const [0.111, 0.5, 0.9],
-        ),
-      ).isTrue();
-      check(
-        audioVisualizerSamplesChanged(const [0.1], const [0.1, 0.2]),
-      ).isTrue();
-    });
-
-    test('settles a previously visible waveform to silence', () {
-      check(audioVisualizerSamplesChanged(const [0.009], const [0])).isTrue();
     });
   });
 }

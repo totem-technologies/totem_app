@@ -131,29 +131,6 @@ void main() {
       await unmount(tester);
     });
 
-    testWidgets('schedules no frame when its waveform is unchanged', (
-      tester,
-    ) async {
-      final track = _audioTrack();
-
-      await pumpLevel(
-        tester,
-        LiveKitMicrophoneLevel(
-          track: () => track,
-          changes: changes.stream,
-          color: Colors.white,
-          barCount: 5,
-        ),
-      );
-      await tester.pump();
-      check(tester.binding.hasScheduledFrame).isFalse();
-
-      changes.add(null);
-
-      check(tester.binding.hasScheduledFrame).isFalse();
-      await unmount(tester);
-    });
-
     testWidgets('replaces the waveform track without retaining the old one', (
       tester,
     ) async {
