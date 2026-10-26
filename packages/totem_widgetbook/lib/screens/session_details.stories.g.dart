@@ -23,14 +23,21 @@ final SessionDetailsPageComponent =
       path: component.path ?? 'screens',
       docsBuilder: component.docsBuilder,
       docComment:
-          r'''Figma "Session Details (Latest)" (2379:2497): one Session of a Space.
+          r'''Figma "Session Details (Latest)" (2379:2497): one Session of a Space,
+reached from the Sessions list at `spaces/event/:slug`.
+
+Not the same screen as `SessionDetails`, the pre-join landing inside
+`session/:slug`. That one carries Join Session and the join phases;
+this one is for browsing: Attend, seats, recurrence, cost, and an
+ended state that points to the next Session.
 
 Hero photo with back and share, the Space and Session names, a card of
 facts with the date and Attend, the description, a similar Session, and
 the Keeper. An ended Session is covered by a dialog that points to the
 next one.
 
-Fills the viewport height and scrolls.''',
+Fills the viewport height and scrolls. From 640 wide it becomes one
+centered 560px column and the hero gets rounded corners.''',
       stories: [
         $Open..$generatedName = 'Open',
         $Attending..$generatedName = 'Attending',

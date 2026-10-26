@@ -42,6 +42,22 @@ void main() {
     check(paintedBars(tester)).isEmpty();
   });
 
+  testWidgets('tapers full-height edge bars toward the center', (tester) async {
+    await pumpBars(
+      tester,
+      const [1, 1, 1, 1, 1],
+      size: const Size(50, 100),
+    );
+
+    check(paintedBars(tester).map((bar) => bar.rect.height)).deepEquals([
+      81.5,
+      90.75,
+      100.0,
+      90.75,
+      81.5,
+    ]);
+  });
+
   testWidgets('eases heights and color and retargets without a jump', (
     tester,
   ) async {
@@ -92,7 +108,7 @@ void main() {
     final bars = paintedBars(tester);
     // The silent first bar sits in the right-hand cell.
     check(bars.map((bar) => bar.rect.center.dx)).deepEquals([68.125, 21.875]);
-    check(bars.map((bar) => bar.rect.height)).deepEquals([42.5, 100]);
+    check(bars.map((bar) => bar.rect.height)).deepEquals([42.5, 94.25]);
   });
 
   testWidgets('animation ticks repaint without rebuilding widgets', (

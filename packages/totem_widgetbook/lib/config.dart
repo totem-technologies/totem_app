@@ -38,7 +38,9 @@ final config = Config(
     // tablets, plus macOS / Windows / Linux for web.
     ViewportAddon([
       TotemViewports.phone,
+      TotemViewports.phoneLandscape,
       TotemViewports.tablet,
+      TotemViewports.tabletLandscape,
       TotemViewports.desktop,
       ...Viewports.all,
     ]),

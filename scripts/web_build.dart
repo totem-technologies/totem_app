@@ -24,6 +24,7 @@ const _assetBase = {
 
 const _sourceMapMarker = '//# sourceMappingURL=flutter.js.map';
 const _cloudflareStaticAssetLimit = 25 * 1024 * 1024;
+const _defaultFlutterVersion = '3.50.0-0.2.pre';
 
 Future<void> main() async {
   // scripts/web_build.dart -> repo root is two levels up.
@@ -66,9 +67,30 @@ Future<void> main() async {
     if (sentryDist != null && sentryDist.isNotEmpty)
       '--dart-define=SENTRY_DIST=$sentryDist',
   ];
+  final expectedFlutterVersion =
+      Platform.environment['WEB_FLUTTER_VERSION'] ?? _defaultFlutterVersion;
+  final fvmFlutterVersion = Platform.environment['FVM_FLUTTER_VERSION'];
+  if (fvmFlutterVersion != null &&
+      fvmFlutterVersion != expectedFlutterVersion) {
+    stderr.writeln(
+      'web_build: FVM_FLUTTER_VERSION must be $expectedFlutterVersion, '
+      'got $fvmFlutterVersion.',
+    );
+    exit(1);
+  }
+  final flutterCommand = fvmFlutterVersion == null ? 'flutter' : 'fvm';
+  final flutterArguments = [
+    if (fvmFlutterVersion != null) ...['spawn', fvmFlutterVersion],
+    ...arguments,
+  ];
+  await _verifyFlutterVersion(
+    flutterCommand,
+    fvmFlutterVersion,
+    expectedFlutterVersion,
+  );
   final build = await Process.start(
-    'flutter',
-    arguments,
+    flutterCommand,
+    flutterArguments,
     workingDirectory: webDir,
     mode: ProcessStartMode.inheritStdio,
   );
@@ -78,6 +100,31 @@ Future<void> main() async {
   final buildDirectory = Directory('$webDir/build/web');
   if (hasSentryRelease) _verifyAndReportSourceMaps(buildDirectory);
   _stripInlinedSourceMap(File('${buildDirectory.path}/index.html'));
+}
+
+Future<void> _verifyFlutterVersion(
+  String flutterCommand,
+  String? fvmFlutterVersion,
+  String expectedFlutterVersion,
+) async {
+  final version = await Process.run(flutterCommand, [
+    if (fvmFlutterVersion != null) ...['spawn', fvmFlutterVersion],
+    '--version',
+    '--machine',
+  ]);
+  final match = RegExp(
+    r'"flutterVersion":\s*"([^"]+)"',
+  ).firstMatch(version.stdout as String? ?? '');
+  if (version.exitCode != 0 || match?.group(1) != expectedFlutterVersion) {
+    stderr.writeln(
+      'web_build: requires Flutter $expectedFlutterVersion; '
+      'found ${match?.group(1) ?? 'unknown'}.',
+    );
+    if (version.stderr.toString().isNotEmpty) {
+      stderr.write(version.stderr);
+    }
+    exit(1);
+  }
 }
 
 String? _readEnvironment(File envFile) {
