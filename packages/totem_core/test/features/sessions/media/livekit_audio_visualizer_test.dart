@@ -42,6 +42,23 @@ void main() {
     );
   });
 
+  group('webWaveformIsActive', () {
+    test('filters quantized background noise before activating', () {
+      check(
+        webWaveformIsActive(const [0.05, 0, 0], wasActive: false),
+      ).isFalse();
+      check(
+        webWaveformIsActive(const [0.1, 0.05, 0], wasActive: false),
+      ).isFalse();
+      check(webWaveformIsActive(const [0.15, 0, 0], wasActive: false)).isTrue();
+    });
+
+    test('holds the first visible Web Audio step until silence', () {
+      check(webWaveformIsActive(const [0.05, 0, 0], wasActive: true)).isTrue();
+      check(webWaveformIsActive(const [0, 0, 0], wasActive: true)).isFalse();
+    });
+  });
+
   group('audioVisualizerSamplesChanged', () {
     test('ignores imperceptible changes and detects visible changes', () {
       check(

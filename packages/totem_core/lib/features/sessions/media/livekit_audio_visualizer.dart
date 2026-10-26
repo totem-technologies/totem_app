@@ -47,6 +47,14 @@ bool waveformIsActive(List<double> samples, {required bool wasActive}) {
   return samples.any((sample) => sample >= threshold);
 }
 
+/// Applies hysteresis on the Web Audio meter's 0.05-step scale.
+bool webWaveformIsActive(List<double> samples, {required bool wasActive}) {
+  const activationThreshold = 0.15;
+  const releaseThreshold = 0.05;
+  final threshold = wasActive ? releaseThreshold : activationThreshold;
+  return samples.any((sample) => sample >= threshold);
+}
+
 @visibleForTesting
 class AudioVisualizerCircuitBreaker {
   bool _permanentlyUnavailable = false;
