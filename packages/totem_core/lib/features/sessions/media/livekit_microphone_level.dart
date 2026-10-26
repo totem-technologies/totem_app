@@ -132,14 +132,15 @@ class _WebWaveformState extends State<_WebWaveform> {
     _subscription = localAudioLevels(widget.track, barCount: widget.barCount)
         .listen((levels) {
           final isSpeaking = waveformIsActive(levels, wasActive: _isSpeaking);
-          if (!audioVisualizerSamplesChanged(_levels, levels) &&
+          final nextLevels = isSpeaking
+              ? levels
+              : List<double>.filled(widget.barCount, 0, growable: false);
+          if (!audioVisualizerSamplesChanged(_levels, nextLevels) &&
               isSpeaking == _isSpeaking) {
             return;
           }
           setState(() {
-            _levels = isSpeaking
-                ? levels
-                : List.filled(widget.barCount, 0, growable: false);
+            _levels = nextLevels;
             _isSpeaking = isSpeaking;
           });
         });

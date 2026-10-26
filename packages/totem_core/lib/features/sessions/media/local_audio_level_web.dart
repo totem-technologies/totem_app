@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:js_interop';
 
 import 'package:dart_webrtc/dart_webrtc.dart' show MediaStreamTrackWeb;
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/features/sessions/media/local_audio_level.dart';
 import 'package:totem_core/features/sessions/media/speech_level.dart';
@@ -58,7 +59,7 @@ Stream<List<double>> localAudioLevels(
               ),
             ),
         ];
-        if (next == shown) return;
+        if (listEquals(next, shown)) return;
         shown = next;
         controller.add(next);
       });
