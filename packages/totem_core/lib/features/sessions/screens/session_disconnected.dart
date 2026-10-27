@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/gestures.dart';
@@ -245,7 +246,7 @@ class _PortraitLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsetsDirectional.symmetric(
           horizontal: 20,
           vertical: 16,
@@ -261,15 +262,10 @@ class _PortraitLayout extends StatelessWidget {
                 reason == SessionDisconnectedReason.keeperEnded)
               _InteractiveFeedbackWidget(session: session!),
             if (!isBanned)
-              Flexible(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 254),
-                  child: _NextSessionsSection(
-                    session: session,
-                    isBanned: isBanned,
-                    onRefreshHome: onRefreshHome,
-                  ),
-                ),
+              _NextSessionsSection(
+                session: session,
+                isBanned: isBanned,
+                onRefreshHome: onRefreshHome,
               ),
             _ActionButtons(onRefreshHome: onRefreshHome),
           ],
@@ -311,23 +307,29 @@ class _LandscapeLayout extends StatelessWidget {
               ],
             ),
           ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 20,
-            children: [
-              if (!isBanned)
-                Flexible(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    child: _NextSessionsSection(
-                      session: session,
-                      isBanned: isBanned,
-                      onRefreshHome: onRefreshHome,
-                    ),
+          Expanded(
+            child: _CenteredScrollView(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: _NextSessionsSection.maxWidth,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 20,
+                    children: [
+                      if (!isBanned)
+                        _NextSessionsSection(
+                          session: session,
+                          isBanned: isBanned,
+                          onRefreshHome: onRefreshHome,
+                        ),
+                      _ActionButtons(onRefreshHome: onRefreshHome),
+                    ],
                   ),
                 ),
-              _ActionButtons(onRefreshHome: onRefreshHome),
-            ],
+              ),
+            ),
           ),
         ],
       ),
@@ -364,32 +366,34 @@ class _MediumSmallLayout extends StatelessWidget {
             ),
             child: FractionallySizedBox(
               widthFactor: 0.75,
-              child: Column(
-                spacing: 30,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _wrapConstrained(_MediumStatusIcon(reason: reason)),
-                  _wrapConstrained(_SessionHeader(reason: reason)),
-                  _wrapConstrained(_SessionSubheader(reason: reason)),
-                  const Divider(color: Color(0x0FFFFFFF)),
-                  ?switch (reason) {
-                    SessionDisconnectedReason.keeperEnded => _wrapConstrained(
-                      _InteractiveFeedbackWidget(session: session!),
-                    ),
-                    _ => null,
-                  },
-                  if (!isBanned)
-                    Flexible(
-                      child: _wrapConstrained(
-                        _NextSessionsSection(
+              child: _CenteredScrollView(
+                child: Column(
+                  spacing: 30,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _wrapConstrained(_MediumStatusIcon(reason: reason)),
+                    _wrapConstrained(_SessionHeader(reason: reason)),
+                    _wrapConstrained(_SessionSubheader(reason: reason)),
+                    const Divider(color: Color(0x0FFFFFFF)),
+                    if (session != null &&
+                        reason == SessionDisconnectedReason.keeperEnded)
+                      _wrapConstrained(
+                        _InteractiveFeedbackWidget(session: session!),
+                      ),
+                    if (!isBanned)
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: _NextSessionsSection.maxWidth,
+                        ),
+                        child: _NextSessionsSection(
                           session: session,
                           isBanned: isBanned,
                           onRefreshHome: onRefreshHome,
                         ),
                       ),
-                    ),
-                  _ActionButtons(onRefreshHome: onRefreshHome),
-                ],
+                    _ActionButtons(onRefreshHome: onRefreshHome),
+                  ],
+                ),
               ),
             ),
           ),
@@ -435,26 +439,25 @@ class _MediumPlusLayout extends StatelessWidget {
         Expanded(
           child: FractionallySizedBox(
             widthFactor: 0.75,
-            child: Column(
-              spacing: 30,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _wrapConstrained(_MediumStatusIcon(reason: reason)),
-                _wrapConstrained(_SessionHeader(reason: reason)),
-                _wrapConstrained(_SessionSubheader(reason: reason)),
-                const Divider(color: Color(0x0FFFFFFF)),
-                if (session != null &&
-                    reason == SessionDisconnectedReason.keeperEnded)
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    child: _InteractiveFeedbackWidget(session: session!),
-                  ),
-                if (!isBanned)
-                  Flexible(
-                    child: ConstrainedBox(
+            child: _CenteredScrollView(
+              child: Column(
+                spacing: 30,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _wrapConstrained(_MediumStatusIcon(reason: reason)),
+                  _wrapConstrained(_SessionHeader(reason: reason)),
+                  _wrapConstrained(_SessionSubheader(reason: reason)),
+                  const Divider(color: Color(0x0FFFFFFF)),
+                  if (session != null &&
+                      reason == SessionDisconnectedReason.keeperEnded)
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: _InteractiveFeedbackWidget(session: session!),
+                    ),
+                  if (!isBanned)
+                    ConstrainedBox(
                       constraints: const BoxConstraints(
-                        maxWidth: 500,
-                        maxHeight: 362,
+                        maxWidth: _NextSessionsSection.maxWidth,
                       ),
                       child: _NextSessionsSection(
                         session: session,
@@ -462,9 +465,9 @@ class _MediumPlusLayout extends StatelessWidget {
                         onRefreshHome: onRefreshHome,
                       ),
                     ),
-                  ),
-                _ActionButtons(onRefreshHome: onRefreshHome),
-              ],
+                  _ActionButtons(onRefreshHome: onRefreshHome),
+                ],
+              ),
             ),
           ),
         ),
@@ -473,6 +476,29 @@ class _MediumPlusLayout extends StatelessWidget {
     );
   }
 }
+
+/// A vertical scroll view whose content is at least as tall as the viewport,
+/// so a centered [Column] stays centered until it overflows and scrolls.
+class _CenteredScrollView extends StatelessWidget {
+  const _CenteredScrollView({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+}
+
 // -----------------------------------------------------------------------------
 // COMPONENTS
 // -----------------------------------------------------------------------------
@@ -654,6 +680,15 @@ class _NextSessionsSection extends ConsumerWidget {
 
   static const int count = 1;
 
+  /// Max width of the section in layouts wider than a phone in portrait.
+  static const double maxWidth = 320;
+
+  static const double _cardAspectRatio = 1.32;
+
+  /// Minimum card height (before text scaling) that fits the date chip,
+  /// a two-line title, the next session line, the keeper row and seats.
+  static const double _cardMinHeight = 220;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (isBanned) return const SizedBox.shrink();
@@ -721,13 +756,27 @@ class _NextSessionsSection extends ConsumerWidget {
       textAlign: TextAlign.start,
     );
 
+    final minCardHeight = MediaQuery.textScalerOf(
+      context,
+    ).scale(_cardMinHeight);
+    final sizedCard = LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        return SizedBox(
+          width: width,
+          height: math.max(width / _cardAspectRatio, minCardHeight),
+          child: card,
+        );
+      },
+    );
+
     return Column(
       spacing: 20,
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         header,
-        Flexible(child: card),
+        sizedCard,
       ],
     );
   }

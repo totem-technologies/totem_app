@@ -1,12 +1,25 @@
 import 'package:checks/checks.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
+import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
+import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/space_card.dart';
+
+import '../../../auth/controllers/auth_controller_mock.dart';
+import '../../../setup.dart';
 
 class MockSharedPreferences extends Mock implements SharedPreferences {}
 
@@ -56,6 +69,166 @@ SessionRoomState _createEndedState({
       ),
     ),
   );
+}
+
+SessionDetailSchema _sessionWithNextEvent({
+  String keeperName = 'Keeper Ada',
+  String spaceTitle = 'Evening Circle',
+  String nextTitle = 'Week Two',
+}) {
+  final next = NextSessionSchema(
+    slug: 'next-session',
+    start: DateTime.utc(2026, 11, 4, 18),
+    link: 'https://example.com/next',
+    title: nextTitle,
+    seatsLeft: 4,
+    duration: 60,
+    meetingProvider: MeetingProviderEnum.livekit,
+    calLink: '',
+    attending: false,
+    cancelled: false,
+    open: true,
+    joinable: true,
+  );
+
+  return SessionDetailSchema(
+    slug: 'ended-session',
+    title: 'Ended session',
+    space: MobileSpaceDetailSchema(
+      slug: 'test-space',
+      title: spaceTitle,
+      imageLink: null,
+      shortDescription: 'A test space.',
+      content: '',
+      author: PublicUserSchema(
+        profileAvatarType: ProfileAvatarTypeEnum.td,
+        dateCreated: DateTime.utc(2024),
+        name: Omittable(keeperName),
+        slug: const Omittable('keeper-ada'),
+      ),
+      category: null,
+      subscribers: 0,
+      recurring: null,
+      price: 0,
+      nextEvents: [next],
+    ),
+    content: '',
+    seatsLeft: 4,
+    duration: 60,
+    start: DateTime.utc(2026, 10, 27, 18),
+    attending: true,
+    open: true,
+    started: true,
+    cancelled: false,
+    joinable: true,
+    ended: true,
+    rsvpUrl: '',
+    joinUrl: null,
+    subscribeUrl: '',
+    calLink: '',
+    subscribed: false,
+    userTimezone: null,
+    meetingProvider: MeetingProviderEnum.livekit,
+  );
+}
+
+/// Serves a 1x1 transparent PNG for every image so [SpaceCard]'s fallback
+/// background resolves without touching the real asset bundle.
+class _FakeImageAssetBundle extends CachingAssetBundle {
+  static final _transparentPng = Uint8List.fromList(const [
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, //
+    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+    0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+    0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+    0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+    0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+  ]);
+
+  @override
+  Future<ByteData> load(String key) async {
+    if (key == 'AssetManifest.bin') {
+      return const StandardMessageCodec().encodeMessage(<Object?, Object?>{})!;
+    }
+    return ByteData.sublistView(_transparentPng);
+  }
+}
+
+Future<void> _pumpDisconnectedScreen(
+  WidgetTester tester, {
+  required Size size,
+  required SessionDetailSchema? session,
+  SessionDisconnectedReason reason = SessionDisconnectedReason.keeperEnded,
+  double textScale = 1,
+}) async {
+  tester.view
+    ..physicalSize = size
+    ..devicePixelRatio = 1;
+  tester.platformDispatcher.textScaleFactorTestValue = textScale;
+  addTearDown(() {
+    tester.view
+      ..resetPhysicalSize()
+      ..resetDevicePixelRatio();
+    tester.platformDispatcher.clearTextScaleFactorTestValue();
+  });
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        authControllerProvider.overrideWith(
+          () => FakeAuthController(AuthState.unauthenticated()),
+        ),
+        currentSessionProvider.overrideWithValue(null),
+        currentSessionStateProvider.overrideWithValue(null),
+        getRecommendedSessionsProvider(limit: 1).overrideWith((_) async => []),
+        spacesSummaryProvider.overrideWith((_) async {
+          throw UnimplementedError();
+        }),
+      ],
+      child: DefaultAssetBundle(
+        bundle: _FakeImageAssetBundle(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: SessionDisconnectedScreen(
+              session: session,
+              sessionDisconnectedReason: reason,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  // Flush spacesSummary refresh timer from initState.
+  await tester.pump(const Duration(milliseconds: 2800));
+  addTearDown(() async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    tester.binding.imageCache
+      ..clearLiveImages()
+      ..clear();
+  });
+}
+
+Finder _keeperText(String keeperName) {
+  return find.byWidgetPredicate(
+    (widget) =>
+        widget is RichText && widget.text.toPlainText().contains(keeperName),
+    description: 'RichText containing $keeperName',
+  );
+}
+
+/// Whether the keeper row sits inside the card (not clipped by the card) and
+/// inside the screen (not cut off by the page viewport).
+bool _isKeeperFullyVisible(WidgetTester tester, String keeperName) {
+  final keeperRect = tester.getRect(_keeperText(keeperName));
+  final cardRect = tester.getRect(find.byType(SpaceCard)).inflate(0.5);
+  final viewRect =
+      (Offset.zero & tester.view.physicalSize / tester.view.devicePixelRatio)
+          .inflate(0.5);
+  return cardRect.contains(keeperRect.topLeft) &&
+      cardRect.contains(keeperRect.bottomRight) &&
+      viewRect.contains(keeperRect.topLeft) &&
+      viewRect.contains(keeperRect.bottomRight);
 }
 
 void main() {
@@ -319,6 +492,133 @@ void main() {
               prefs.setBool(SessionDisconnectedScreen.reviewRequestedKey, true),
         );
       });
+    });
+
+    group('Next Session card layout (TOT-1439)', () {
+      const keeper = 'Keeper Ada';
+      final seeAllSessions = find.text('See all upcoming sessions');
+
+      setUp(() => TotemRouter.instance = FakeTotemRouter());
+
+      testWidgets(
+        'desktop shows the whole card centered without scrolling',
+        (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: const Size(1600, 1100),
+            session: _sessionWithNextEvent(keeperName: keeper),
+          );
+
+          check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+          final statusIcon = find.byWidgetPredicate(
+            (widget) =>
+                widget is TotemIcon && widget.icon == TotemIcons.checkmark,
+          );
+          final topGap = tester
+              .getRect(
+                find
+                    .ancestor(of: statusIcon, matching: find.byType(Container))
+                    .first,
+              )
+              .top;
+          // The layout reserves 50px below the scrollable content.
+          final bottomGap =
+              1100 -
+              tester
+                  .getRect(
+                    find.ancestor(
+                      of: seeAllSessions,
+                      matching: find.byType(TextButton),
+                    ),
+                  )
+                  .bottom -
+              50;
+          check(topGap).isGreaterThan(0);
+          check((topGap - bottomGap).abs()).isLessThan(2);
+        },
+      );
+
+      testWidgets(
+        'phone portrait shows the whole card without scrolling',
+        (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: const Size(390, 844),
+            session: _sessionWithNextEvent(keeperName: keeper),
+          );
+
+          check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+        },
+      );
+
+      testWidgets(
+        'short portrait scrolls the page to reveal the full card',
+        (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: const Size(390, 560),
+            session: _sessionWithNextEvent(keeperName: keeper),
+          );
+
+          await tester.ensureVisible(_keeperText(keeper));
+          await tester.pump();
+
+          check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+        },
+      );
+
+      testWidgets(
+        'narrow phone with large text and a long title does not clip keeper',
+        (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: const Size(320, 640),
+            textScale: 1.5,
+            session: _sessionWithNextEvent(
+              keeperName: keeper,
+              spaceTitle: 'A Much Longer Evening Circle Name',
+              nextTitle: 'Week Two: Listening Deeply Together',
+            ),
+          );
+
+          await tester.ensureVisible(_keeperText(keeper));
+          await tester.pump();
+
+          check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+        },
+      );
+
+      testWidgets(
+        'phone landscape shows the card and scrolls to the actions',
+        (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: const Size(844, 390),
+            session: _sessionWithNextEvent(keeperName: keeper),
+          );
+
+          check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+
+          await tester.ensureVisible(seeAllSessions);
+          await tester.pump();
+
+          check(tester.getRect(seeAllSessions).bottom).isLessOrEqual(390);
+        },
+      );
+
+      testWidgets(
+        'tablet renders keeperEnded without session details',
+        (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: const Size(800, 1100),
+            session: null,
+          );
+
+          check(find.text('Session Ended').evaluate()).isNotEmpty();
+          check(seeAllSessions.evaluate()).isNotEmpty();
+        },
+      );
     });
   });
 }
