@@ -10,7 +10,6 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/core/services/screen_protection_service.dart';
@@ -87,11 +86,9 @@ class _DockedSessionPanelsRail extends ConsumerWidget {
     final promptsOpen = isKeeper && ref.watch(sessionPromptsOpenProvider);
     final Widget? panel = switch ((chatOpen, promptsOpen)) {
       (true, _) => const SessionChatPanel(embedded: true),
-      (false, true) => Material(
-        color: AppTheme.cream,
-        elevation: 6,
-        shadowColor: const Color.fromRGBO(0, 0, 0, 0.16),
-        child: SessionPromptsModal(sessionSlug: sessionSlug, embedded: true),
+      (false, true) => SessionPromptsModal(
+        sessionSlug: sessionSlug,
+        embedded: true,
       ),
       (false, false) => null,
     };

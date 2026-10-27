@@ -163,14 +163,31 @@ class _DockedSessionSidePanelState extends State<DockedSessionSidePanel>
         }
         final child = _activeChild;
         if (child == null) return const SizedBox.shrink();
-        return ClipRect(
-          child: Align(
-            alignment: AlignmentDirectional.centerEnd,
-            widthFactor: sessionSidePanelCurve.transform(_controller.value),
-            child: SizedBox(
-              width: sessionSidePanelWidth,
-              height: MediaQuery.sizeOf(context).height,
-              child: child,
+        // The shadow sits outside the clip so it tracks the visible
+        // leading edge while the rail slides.
+        final leading = Directionality.of(context) == TextDirection.ltr
+            ? -1.0
+            : 1.0;
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppTheme.cream,
+            boxShadow: [
+              BoxShadow(
+                color: const Color.fromRGBO(0, 0, 0, 0.14),
+                blurRadius: 24,
+                offset: Offset(6 * leading, 0),
+              ),
+            ],
+          ),
+          child: ClipRect(
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              widthFactor: sessionSidePanelCurve.transform(_controller.value),
+              child: SizedBox(
+                width: sessionSidePanelWidth,
+                height: MediaQuery.sizeOf(context).height,
+                child: child,
+              ),
             ),
           ),
         );
