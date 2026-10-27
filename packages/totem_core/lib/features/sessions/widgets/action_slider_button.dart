@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 typedef OnActionPerformed = AsyncValueGetter<bool>;
 
@@ -196,6 +195,8 @@ class _ActionButtonState extends State<ActionButton> {
   }
 }
 
+const _defaultTrackHeight = 50.0;
+
 @visibleForTesting
 class ActionSlider extends StatefulWidget {
   const ActionSlider({
@@ -216,6 +217,9 @@ class ActionSlider extends StatefulWidget {
   final Color? backgroundColor;
   final bool autofocus;
   final bool enabled;
+
+  @visibleForTesting
+  static const thumbKey = Key('action_slider_thumb');
 
   @override
   State<ActionSlider> createState() => ActionSliderState();
@@ -305,14 +309,13 @@ class ActionSliderState extends State<ActionSlider> {
         assert(trackWidth > 0, 'ActionSlider must have a positive width');
         assert(trackWidth.isFinite, 'ActionSlider width must be finite');
 
-        // smallPortrait only: nudge thumb/track down so Pass does not dwarf
-        // the enlarged ActionBar. Other viewports keep the prior 48/50 sizes.
-        final isPhonePortrait =
-            ViewportResolver.getViewportKind(context) ==
-            ViewportKind.smallPortrait;
-        final thumbSize = isPhonePortrait ? 40.0 : 48.0;
-        final padding = isPhonePortrait ? 4.0 : 6.0;
-        final minTrackHeight = isPhonePortrait ? 48.0 : 50.0;
+        // Callers own the track height via a fixed-height parent; the thumb
+        // is derived from it so it stays round. Loose parents get 50.
+        final trackHeight = constraints.hasTightHeight
+            ? constraints.maxHeight
+            : math.min(_defaultTrackHeight, constraints.maxHeight);
+        const padding = 4.0;
+        final thumbSize = trackHeight - padding * 2;
         maxSlideDistance = trackWidth - thumbSize - (padding * 2);
         final progress = widget.isLoading == true
             ? 1
@@ -359,10 +362,10 @@ class ActionSliderState extends State<ActionSlider> {
               child: Opacity(
                 opacity: widget.enabled ? 1.0 : 0.5,
                 child: Container(
-                  constraints: BoxConstraints(minHeight: minTrackHeight),
+                  height: trackHeight,
                   decoration: BoxDecoration(
                     color: backgroundColor,
-                    borderRadius: BorderRadius.circular(25),
+                    borderRadius: BorderRadius.circular(trackHeight / 2),
                   ),
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -392,10 +395,11 @@ class ActionSliderState extends State<ActionSlider> {
                         top: padding,
                         bottom: padding,
                         child: Container(
+                          key: ActionSlider.thumbKey,
                           width: thumbSize,
                           decoration: BoxDecoration(
                             color: foregroundColor,
-                            borderRadius: BorderRadius.circular(25),
+                            shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.2),

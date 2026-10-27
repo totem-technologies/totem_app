@@ -359,6 +359,23 @@ void main() {
       ).length.equals(1);
     });
 
+    testWidgets('matches the Pass slider size on portrait phones', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await pumpReceiveTotem(tester);
+
+      final thumb = tester.getSize(find.byKey(ActionSlider.thumbKey));
+      check(tester.getSize(find.byType(ActionSlider)).height).equals(48);
+      check(thumb.width).equals(thumb.height);
+    });
+
     testWidgets('shows the local participant card', (tester) async {
       await pumpReceiveTotem(tester);
 

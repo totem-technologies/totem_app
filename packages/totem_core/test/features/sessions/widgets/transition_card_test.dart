@@ -61,6 +61,30 @@ void main() {
       }
     });
 
+    autoSizeTest('Pass slider uses the 48dp phone track in portrait', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          PassTransitionCard(
+            onActionPressed: () async => true,
+            actionText: 'Pass',
+          ),
+        ),
+      );
+
+      final thumb = tester.getSize(find.byKey(ActionSlider.thumbKey));
+      check(tester.getSize(find.byType(ActionSlider)).height).equals(48);
+      check(thumb.width).equals(thumb.height);
+    });
+
     autoSizeTest('WaitingReceiveTransitionCard renders without action button', (
       tester,
     ) async {

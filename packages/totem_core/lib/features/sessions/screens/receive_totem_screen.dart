@@ -103,7 +103,8 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
               children: [
                 ?roundPromptText(roundPrompt),
                 SizedBox(
-                  height: 50,
+                  // Matches PassTransitionCard so both sliders read alike.
+                  height: viewportKind == ViewportKind.smallPortrait ? 48 : 50,
                   child: ActionSliderButton(
                     text: 'Receive',
                     onActionCompleted: onAccept,

@@ -42,8 +42,11 @@ enum ActionBarButtonRole {
   }
 }
 
+const _pillBorderWidth = 1.5;
+
 @immutable
-// Two named layouts plus a derived width; not a closed token set.
+// Three named layouts (comfortable, phone, compact) plus a derived width;
+// not a closed token set.
 // ignore: use_enums
 class _ActionBarMetrics {
   const _ActionBarMetrics({
@@ -54,6 +57,8 @@ class _ActionBarMetrics {
     required this.verticalPadding,
   });
 
+  /// Tablets/desktop. Smaller than [phone] on purpose: pointer input does
+  /// not need the 48dp touch minimum.
   static const comfortable = _ActionBarMetrics(
     buttonSize: 44,
     iconSize: 22,
@@ -90,7 +95,8 @@ class _ActionBarMetrics {
     if (childCount <= 0) return 0;
     return childCount * buttonSize +
         (childCount - 1) * gap +
-        horizontalPadding * 2;
+        horizontalPadding * 2 +
+        _pillBorderWidth * 2;
   }
 }
 
@@ -394,7 +400,10 @@ class ActionBar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: pillFill,
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: pillStroke, width: 1.5),
+                    border: Border.all(
+                      color: pillStroke,
+                      width: _pillBorderWidth,
+                    ),
                   ),
                   child: Padding(
                     padding: EdgeInsetsDirectional.symmetric(
