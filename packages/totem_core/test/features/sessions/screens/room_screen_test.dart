@@ -988,6 +988,11 @@ void main() {
           listen: false,
         );
         container.read(screenProvider.notifier).set(RoomScreen.listening);
+        await tester.pump();
+        check(tester.widgetList(find.text('What brought you here?'))).isEmpty();
+        container
+            .read(admittedSessionParticipantIdentitiesProvider.notifier)
+            .update(['user-1']);
         await tester.pumpAndSettle();
 
         check(

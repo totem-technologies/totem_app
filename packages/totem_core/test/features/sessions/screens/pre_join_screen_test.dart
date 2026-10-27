@@ -18,6 +18,7 @@ import 'package:totem_core/features/sessions/admission/admission_controllers.dar
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_preview_card.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_view.dart';
@@ -32,6 +33,7 @@ import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/session_browsing_view.dart';
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
+import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 import 'package:totem_core/shared/router.dart';
 
@@ -122,6 +124,20 @@ class _WaitingAdmissionFlowController extends PreJoinFlowController {
     admissionStatus: AdmissionStatus.pending,
     nativePermissionsGranted: true,
   );
+}
+
+class _MutableFlowController extends PreJoinFlowController {
+  @override
+  PreJoinFlowState build(String sessionSlug) =>
+      const PreJoinFlowState(nativePermissionsGranted: true);
+
+  void setPhase(PreJoinFlowPhase phase, {AdmissionStatus? admissionStatus}) {
+    state = PreJoinFlowState(
+      phase: phase,
+      admissionStatus: admissionStatus,
+      nativePermissionsGranted: true,
+    );
+  }
 }
 
 class _TerminalAdmissionFlowController extends PreJoinFlowController {
@@ -235,6 +251,7 @@ void main() {
     Future<SessionDetailSchema> Function()? getSession,
     DateTime Function()? now,
     PreJoinPreviewTrackFactory? trackFactory,
+    PreJoinFlowController Function()? flowController,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -289,6 +306,8 @@ void main() {
             preJoinFlowControllerProvider(_slug).overrideWith(
               () => _TerminalAdmissionFlowController(terminalAdmissionStatus),
             ),
+          if (flowController != null)
+            preJoinFlowControllerProvider(_slug).overrideWith(flowController),
           if (permissionsGranted || successfulJoin)
             preJoinFlowControllerProvider(
               _slug,
@@ -536,6 +555,61 @@ void main() {
     ).length.equals(1);
     check(tester.widgetList(find.byType(ActionSliderButton))).isEmpty();
   });
+
+  testWidgets(
+    'keeps the preview and media controls mounted across joining states',
+    (tester) async {
+      final factory = _TrackFactory();
+      await pumpScreen(
+        tester,
+        trackFactory: factory,
+        flowController: _MutableFlowController.new,
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PreJoinScreen)),
+      );
+      final flow =
+          (container.read(
+                  preJoinFlowControllerProvider(_slug).notifier,
+                )
+                as _MutableFlowController)
+            ..setPhase(PreJoinFlowPhase.joining);
+      await tester.pump();
+      final preview = tester.element(find.byType(LocalParticipantCard));
+      final controls = tester.element(find.byType(SessionKeyboardShortcuts));
+      check(factory.videoTracks).length.equals(1);
+      check(factory.audioTracks).length.equals(1);
+
+      flow.setPhase(
+        PreJoinFlowPhase.pending,
+        admissionStatus: AdmissionStatus.pending,
+      );
+      await tester.pump();
+      check(tester.element(find.byType(LocalParticipantCard))).identicalTo(
+        preview,
+      );
+      check(tester.element(find.byType(SessionKeyboardShortcuts))).identicalTo(
+        controls,
+      );
+
+      flow.setPhase(
+        PreJoinFlowPhase.joining,
+        admissionStatus: AdmissionStatus.approved,
+      );
+      await tester.pump();
+      check(tester.element(find.byType(LocalParticipantCard))).identicalTo(
+        preview,
+      );
+      check(tester.element(find.byType(SessionKeyboardShortcuts))).identicalTo(
+        controls,
+      );
+      check(factory.videoTracks).length.equals(1);
+      check(factory.audioTracks).length.equals(1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
 
   for (final status in [AdmissionStatus.denied, AdmissionStatus.expired]) {
     testWidgets('$status shows a declined screen instead of a join action', (

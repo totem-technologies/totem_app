@@ -50,18 +50,18 @@ class _ParticipantReorderWidgetState
         (state) => state == null
             ? null
             : (
-                participants: state.participantsList,
                 talkingOrder: state.roomState.talkingOrder,
                 keeper: state.roomState.keeper,
                 speakingNow: state.speakingNow,
               ),
       ),
     );
+    final visibleParticipants = ref.watch(sessionParticipantsProvider);
     if (sessionState == null) return const SizedBox.shrink();
 
     if (!_initialized) {
-      final roomParticipants = sessionState.participants
-          .map((p) => p.identity)
+      final roomParticipants = visibleParticipants
+          .map((participant) => participant.identity)
           .toSet();
       _localOrder = sessionState.talkingOrder.isEmpty
           ? {sessionState.keeper, ...roomParticipants}.toList()
@@ -142,10 +142,9 @@ class _ParticipantReorderWidgetState
                             child: _ParticipantReorderItem(
                               key: ValueKey(keeperSlug),
                               participantIdentity: keeperSlug,
-                              participant: sessionState.participants
-                                  .firstWhereOrNull(
-                                    (p) => p.identity == keeperSlug,
-                                  ),
+                              participant: visibleParticipants.firstWhereOrNull(
+                                (p) => p.identity == keeperSlug,
+                              ),
                               index: 0,
                               isSpeakingNow:
                                   keeperSlug == sessionState.speakingNow,
@@ -208,7 +207,7 @@ class _ParticipantReorderWidgetState
                               final participantIdentity =
                                   reorderableParticipants[index];
 
-                              final participant = sessionState.participants
+                              final participant = visibleParticipants
                                   .firstWhereOrNull(
                                     (p) => p.identity == participantIdentity,
                                   );

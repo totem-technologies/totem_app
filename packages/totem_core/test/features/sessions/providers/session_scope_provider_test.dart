@@ -159,13 +159,61 @@ void main() {
   });
 
   group('session scope selectors', () {
-    test('pending identities hide only presentation until joined', () {
+    test(
+      'hides unknown participants and speaker presentations until admitted',
+      () {
+        final state = _state(
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+          turnState: TurnState.passing,
+          currentSpeaker: 'alice',
+          nextSpeaker: 'bob',
+          talkingOrder: const ['keeper', 'alice', 'bob'],
+          participants: [
+            testParticipant('keeper'),
+            testParticipant('alice'),
+            testParticipant('bob'),
+          ],
+        );
+        final container = ProviderContainer(
+          overrides: [currentSessionStateProvider.overrideWithValue(state)],
+        );
+        addTearDown(container.dispose);
+
+        final layout = container.read(visibleSessionParticipantLayoutProvider);
+        check(
+          layout.participants.map((p) => p.identity),
+        ).deepEquals(['keeper']);
+        check(layout.talkingOrder).deepEquals(['keeper']);
+        check(layout.speakingNow).isEmpty();
+        check(layout.nextSpeaker).isNull();
+        check(
+          container.read(featuredParticipantProvider)?.identity,
+        ).equals('keeper');
+        check(container.read(speakingNextParticipantProvider)).isNull();
+        check(
+          state.roomState.talkingOrder,
+        ).deepEquals(['keeper', 'alice', 'bob']);
+        check(
+          state.participants.participants.map(
+            (participant) => participant.identity,
+          ),
+        ).deepEquals(['keeper', 'alice', 'bob']);
+      },
+    );
+
+    test('reveals admitted participants and resets on a new room scope', () {
+      SessionOptions roomOptions(String slug) => SessionOptions(
+        sessionSlug: slug,
+        token: 'token',
+        cameraEnabled: true,
+        microphoneEnabled: true,
+        speakerEnabled: true,
+        cameraOptions: const CameraCaptureOptions(),
+      );
       final state = _state(
-        connectionState: RoomConnectionState.connected,
-        roomStatus: RoomStatus.active,
-        turnState: TurnState.passing,
-        currentSpeaker: 'keeper',
-        nextSpeaker: 'alice',
+        currentSpeaker: 'alice',
+        nextSpeaker: 'bob',
         talkingOrder: const ['keeper', 'alice', 'bob'],
         participants: [
           testParticipant('keeper'),
@@ -174,76 +222,34 @@ void main() {
         ],
       );
       final container = ProviderContainer(
-        overrides: [currentSessionStateProvider.overrideWithValue(state)],
-      );
-      addTearDown(container.dispose);
-      final pending = container.read(
-        pendingSessionParticipantIdentitiesProvider.notifier,
-      );
-      final identities = <String>{'alice'};
-      pending.update(identities);
-      identities.clear();
-
-      check(
-        container.read(sessionParticipantsProvider).map((p) => p.identity),
-      ).deepEquals(['keeper', 'bob']);
-      final layout = container.read(visibleSessionParticipantLayoutProvider);
-      check(
-        layout.participants.map((p) => p.identity),
-      ).deepEquals(['keeper', 'bob']);
-      check(layout.talkingOrder).deepEquals(['keeper', 'alice', 'bob']);
-      check(layout.nextSpeaker).equals('alice');
-      check(layout.speakingNow).equals('keeper');
-      check(container.read(turnStateProvider)).equals(TurnState.passing);
-      check(
-        state.roomState.talkingOrder,
-      ).deepEquals(['keeper', 'alice', 'bob']);
-      check(
-        state.participants.participants.map((p) => p.identity),
-      ).deepEquals(['keeper', 'alice', 'bob']);
-
-      // The owner reports only requested/joining identities; joined users
-      // remain in the canonical session and return to the presentation.
-      pending.update(<String>{});
-      check(
-        container.read(sessionParticipantsProvider).map((p) => p.identity),
-      ).deepEquals(['keeper', 'alice', 'bob']);
-      check(
-        container
-            .read(visibleSessionParticipantLayoutProvider)
-            .participants
-            .map((p) => p.identity),
-      ).deepEquals(['keeper', 'alice', 'bob']);
-      check(container.read(turnStateProvider)).equals(TurnState.passing);
-    });
-
-    test('pending identities do not carry between room scopes', () {
-      ProviderContainer room(String slug) => ProviderContainer(
         overrides: [
-          sessionScopeProvider.overrideWithValue(
-            SessionOptions(
-              sessionSlug: slug,
-              token: 'token',
-              cameraEnabled: true,
-              microphoneEnabled: true,
-              speakerEnabled: true,
-              cameraOptions: const CameraCaptureOptions(),
-            ),
-          ),
+          sessionScopeProvider.overrideWithValue(roomOptions('first')),
+          currentSessionStateProvider.overrideWithValue(state),
         ],
       );
-      final first = room('first');
-      final second = room('second');
-      addTearDown(first.dispose);
-      addTearDown(second.dispose);
-      first.read(pendingSessionParticipantIdentitiesProvider.notifier).update({
-        'alice',
-      });
+      addTearDown(container.dispose);
+
+      container
+          .read(admittedSessionParticipantIdentitiesProvider.notifier)
+          .update(['alice', 'bob']);
+      check(
+        container.read(sessionParticipantsProvider).map((p) => p.identity),
+      ).deepEquals(['keeper', 'alice', 'bob']);
+      check(
+        container.read(featuredParticipantProvider)?.identity,
+      ).equals('alice');
+      check(
+        container.read(speakingNextParticipantProvider)?.identity,
+      ).equals('bob');
+
+      container.updateOverrides([
+        sessionScopeProvider.overrideWithValue(roomOptions('second')),
+        currentSessionStateProvider.overrideWithValue(state),
+      ]);
 
       check(
-        first.read(pendingSessionParticipantIdentitiesProvider),
-      ).contains('alice');
-      check(second.read(pendingSessionParticipantIdentitiesProvider)).isEmpty();
+        container.read(sessionParticipantsProvider).map((p) => p.identity),
+      ).deepEquals(['keeper']);
     });
 
     test('participant projections ignore chat-only changes', () {
@@ -420,6 +426,9 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
+      container
+          .read(admittedSessionParticipantIdentitiesProvider.notifier)
+          .update(['alice', 'bob']);
 
       check(container.read(hasKeeperProvider)).equals(true);
       check(

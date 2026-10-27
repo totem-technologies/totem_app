@@ -228,6 +228,14 @@ void main() {
             () => FakeAuthController(testAuthenticatedState()),
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
+          admittedSessionParticipantIdentitiesProvider.overrideWith(
+            () => TestAdmittedSessionParticipantIdentities({
+              sessionState.roomState.keeper,
+              ...sessionState.participantsList.map(
+                (participant) => participant.identity,
+              ),
+            }),
+          ),
           currentSessionProvider.overrideWith((ref) => session),
           currentSessionPromptProvider.overrideWith((ref) => currentPrompt),
           sessionPromptsControllerProvider('test-session').overrideWithValue(

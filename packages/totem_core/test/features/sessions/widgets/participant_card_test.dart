@@ -23,6 +23,7 @@ import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../media/fake_room_media.dart';
 import '../media/test_participants.dart';
+import '../session_test_fixtures.dart';
 
 void main() {
   final remoteParticipant = testParticipant('user-2', name: 'John Doe');
@@ -240,6 +241,9 @@ void main() {
           currentSessionStateProvider.overrideWithValue(
             fakeSessionState.mockState,
           ),
+          admittedSessionParticipantIdentitiesProvider.overrideWith(
+            () => TestAdmittedSessionParticipantIdentities({'user-1'}),
+          ),
         ],
         child: const FeaturedParticipantCard(),
       );
@@ -290,6 +294,9 @@ void main() {
         overrides: [
           currentSessionStateProvider.overrideWithValue(
             fakeSessionState.mockState,
+          ),
+          admittedSessionParticipantIdentitiesProvider.overrideWith(
+            () => TestAdmittedSessionParticipantIdentities({'user-1'}),
           ),
         ],
         child: const FeaturedParticipantCard(),

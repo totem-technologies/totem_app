@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_final_fields
 
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -101,6 +102,18 @@ class FakeRoom extends Fake implements Room {
   FakeRoom(this.participant);
 
   final MockLocalParticipant participant;
+  final EventsEmitter<RoomEvent> _events = EventsEmitter<RoomEvent>();
+
+  @override
+  String? get metadata => null;
+
+  @override
+  UnmodifiableMapView<String, RemoteParticipant> get remoteParticipants =>
+      UnmodifiableMapView({});
+
+  @override
+  EventsListener<RoomEvent> createListener({bool synchronized = false}) =>
+      EventsListener<RoomEvent>(_events, synchronized: synchronized);
 
   @override
   LocalParticipant get localParticipant => participant;

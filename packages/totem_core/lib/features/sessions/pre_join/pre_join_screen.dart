@@ -75,6 +75,8 @@ class PreJoinScreen extends ConsumerStatefulWidget {
 class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     with WidgetsBindingObserver {
   final GlobalKey _preJoinViewKey = GlobalKey();
+  final GlobalKey _previewKey = GlobalKey();
+  final GlobalKey _controlsKey = GlobalKey();
   bool _showingAlreadyPresentDialog = false;
   bool _showingWebPermissionsDialog = false;
   bool _reportedFullyDisplayed = false;
@@ -471,6 +473,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         onActionPressed: () => Future.value(false),
         enabled: false,
       ),
+      previewKey: _previewKey,
+      controlsKey: _controlsKey,
     );
   }
 
@@ -531,6 +535,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       onToggleSpeaker: mediaController.toggleSpeaker,
       onCameraFacingChanged: mediaController.setCameraFacing,
       onCameraDeviceSelected: mediaController.selectCameraDevice,
+      previewKey: _previewKey,
+      controlsKey: _controlsKey,
       joinCard: pending
           ? SessionWaitingCard(
               title: 'Waiting to join',

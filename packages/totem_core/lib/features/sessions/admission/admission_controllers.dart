@@ -226,22 +226,74 @@ final class KeeperAdmissionAttempt {
   final DateTime? joinDeadline;
 }
 
+/// Explicit process-local ownership for a keeper roster across controller
+/// recreation. It is never populated from room metadata or remote packets.
+final class KeeperAdmissionRosterStore {
+  KeeperAdmissionRosterStore({String? keeperGeneration})
+    : _keeperGeneration = keeperGeneration ?? const Uuid().v4();
+
+  final String _keeperGeneration;
+  final _members = <String>{};
+  var _revision = 0;
+
+  String get keeperGeneration => _keeperGeneration;
+  int get revision => _revision;
+  Iterable<String> get members => _members;
+
+  void replace(Iterable<String> members, int revision) {
+    _members
+      ..clear()
+      ..addAll(members);
+    _revision = revision;
+  }
+
+  void clear() => replace(const [], 0);
+}
+
 /// Keeper-side queue with one decision per sender + request ID. Decisions are
 /// retained until their request expires so reconnect resends get the same reply.
 class KeeperAdmissionController {
   KeeperAdmissionController({
     required this.channel,
     required this.keeperIdentity,
+    String? sessionIdentity,
+    String? keeperGeneration,
+    KeeperAdmissionRosterStore? rosterStore,
     DateTime Function()? now,
-  }) : _now = now ?? DateTime.now,
+    String Function()? newId,
+  }) : _sessionIdentity = sessionIdentity ?? '',
+       _rosterStore = rosterStore,
+       _keeperGeneration =
+           keeperGeneration ??
+           rosterStore?.keeperGeneration ??
+           const Uuid().v4(),
+       _now = now ?? DateTime.now,
+       _newId = newId ?? const Uuid().v4,
        _ended = channel.hasEnded {
+    if (rosterStore != null &&
+        keeperGeneration != null &&
+        keeperGeneration != rosterStore.keeperGeneration) {
+      throw ArgumentError.value(
+        keeperGeneration,
+        'keeperGeneration',
+        'Must match rosterStore.keeperGeneration',
+      );
+    }
+    _roster
+      ..addAll(rosterStore?.members ?? const [])
+      ..remove(channel.localIdentity);
+    _rosterRevision = rosterStore?.revision ?? 0;
     _subscription = channel.events.listen(_onEvent);
     _advertise();
   }
 
   final AdmissionChannel channel;
   final String Function() keeperIdentity;
+  final String _sessionIdentity;
+  final KeeperAdmissionRosterStore? _rosterStore;
+  final String _keeperGeneration;
   final DateTime Function() _now;
+  final String Function() _newId;
   final _changes = StreamController<void>.broadcast();
   // At most one active request per participant identity. Keep the latest
   // packet across disconnects so an older request cannot resurrect the queue.
@@ -253,6 +305,8 @@ class KeeperAdmissionController {
   final _expirations = <String, Timer>{};
   final _inFlight = <String>{};
   final _approving = <String>{};
+  final _roster = <String>{};
+  var _rosterRevision = 0;
   late final StreamSubscription<AdmissionEvent> _subscription;
   bool _disposed = false;
   bool _ended;
@@ -261,6 +315,11 @@ class KeeperAdmissionController {
   List<AdmissionRequest> get requests => List.unmodifiable(_pending.values);
   List<KeeperAdmissionAttempt> get attempts =>
       List.unmodifiable(_attempts.values);
+
+  /// Session-scoped participants confirmed through a normal-room receipt.
+  List<String> get roster => List.unmodifiable(_roster.toList()..sort());
+  int get rosterRevision => _rosterRevision;
+  String get keeperGeneration => _keeperGeneration;
 
   String _key(String sender, String id) => '$sender\u0000$id';
 
@@ -280,7 +339,7 @@ class KeeperAdmissionController {
       channel
           .send(
             AdmissionHello(
-              id: const Uuid().v4(),
+              id: _newId(),
               senderIdentity: keeper,
               recipientIdentity: identity,
               expiresAt: _now().add(AdmissionProtocol.lifetime),
@@ -288,6 +347,57 @@ class KeeperAdmissionController {
           )
           .catchError((Object _) {}),
     );
+    _sendRosterSnapshot(identity);
+  }
+
+  void _sendRosterSnapshot(String identity, {String? requestId}) {
+    if (_sessionIdentity.isEmpty ||
+        _disposed ||
+        _ended ||
+        (requestId == null && !_roster.contains(identity)) ||
+        keeperIdentity() != channel.localIdentity) {
+      return;
+    }
+    unawaited(
+      channel
+          .send(
+            AdmissionRosterSnapshot(
+              id: _newId(),
+              senderIdentity: channel.localIdentity,
+              recipientIdentity: identity,
+              expiresAt: _now().add(AdmissionProtocol.lifetime),
+              sessionIdentity: _sessionIdentity,
+              keeperGeneration: _keeperGeneration,
+              revision: _rosterRevision,
+              members: _roster.contains(identity) ? roster : const [],
+              requestId: requestId,
+            ),
+          )
+          .catchError((Object _) {}),
+    );
+  }
+
+  void _publishRosterUpdate() {
+    if (_sessionIdentity.isEmpty) return;
+    for (final identity in channel.remoteIdentities) {
+      if (!_roster.contains(identity)) continue;
+      unawaited(
+        channel
+            .send(
+              AdmissionRosterUpdated(
+                id: _newId(),
+                senderIdentity: channel.localIdentity,
+                recipientIdentity: identity,
+                expiresAt: _now().add(AdmissionProtocol.lifetime),
+                sessionIdentity: _sessionIdentity,
+                keeperGeneration: _keeperGeneration,
+                revision: _rosterRevision,
+                members: roster,
+              ),
+            )
+            .catchError((Object _) {}),
+      );
+    }
   }
 
   void _onEvent(AdmissionEvent event) {
@@ -303,6 +413,9 @@ class KeeperAdmissionController {
       _decisions.clear();
       _attempts.clear();
       _earlyOutcomes.clear();
+      _roster.clear();
+      _rosterRevision = 0;
+      _rosterStore?.clear();
       _changes.add(null);
       return;
     }
@@ -319,6 +432,10 @@ class KeeperAdmissionController {
           }
           _changes.add(null);
         }
+      case AdmissionPacketReceived(
+        packet: final AdmissionRosterRequest request,
+      ):
+        _receiveRosterRequest(request);
       case AdmissionPacketReceived(:final packet)
           when packet is AdmissionJoined || packet is AdmissionJoinFailed:
         _receiveOutcome(packet);
@@ -367,6 +484,18 @@ class KeeperAdmissionController {
       default:
         break;
     }
+  }
+
+  void _receiveRosterRequest(AdmissionRosterRequest request) {
+    if (_sessionIdentity.isEmpty ||
+        keeperIdentity() != channel.localIdentity ||
+        request.senderIdentity == channel.localIdentity ||
+        request.recipientIdentity != channel.localIdentity ||
+        request.sessionIdentity != _sessionIdentity ||
+        !_now().isBefore(request.expiresAt)) {
+      return;
+    }
+    _sendRosterSnapshot(request.senderIdentity, requestId: request.id);
   }
 
   void _record(AdmissionPacket packet) {
@@ -442,6 +571,11 @@ class KeeperAdmissionController {
         joinDeadline: attempt.joinDeadline,
       );
       _changes.add(null);
+      if (packet is AdmissionJoined && _roster.add(sender)) {
+        _rosterRevision++;
+        _rosterStore?.replace(_roster, _rosterRevision);
+        _publishRosterUpdate();
+      }
     } else if (_approving.contains(_key(sender, packet.id))) {
       _earlyOutcomes[sender] = packet;
     }
@@ -521,7 +655,201 @@ class KeeperAdmissionController {
     _attempts.clear();
     _earlyOutcomes.clear();
     _approving.clear();
+    _roster.clear();
     _inFlight.clear();
+    await _subscription.cancel();
+    await _changes.close();
+  }
+}
+
+/// Session-scoped roster accepted only from the currently configured keeper.
+final class AdmissionRoster {
+  const AdmissionRoster({
+    required this.keeperGeneration,
+    required this.revision,
+    required this.members,
+  });
+
+  final String keeperGeneration;
+  final int revision;
+  final List<String> members;
+
+  bool contains(String identity) => members.contains(identity);
+}
+
+/// Client-side, fail-closed roster consumer. Until an authoritative snapshot
+/// from the current keeper arrives, [roster] is null and membership is unknown.
+class ClientAdmissionRosterController {
+  ClientAdmissionRosterController({
+    required this.channel,
+    required this.keeperIdentity,
+    required this.sessionIdentity,
+    DateTime Function()? now,
+    String Function()? newId,
+  }) : _now = now ?? DateTime.now,
+       _newId = newId ?? const Uuid().v4 {
+    if (sessionIdentity.isEmpty) {
+      throw ArgumentError.value(sessionIdentity, 'sessionIdentity');
+    }
+    _subscription = channel.events.listen(_onEvent);
+    _requestIfCurrentKeeperPresent();
+  }
+
+  final AdmissionChannel channel;
+  final String Function() keeperIdentity;
+  final String sessionIdentity;
+  final DateTime Function() _now;
+  final String Function() _newId;
+  final _changes = StreamController<AdmissionRoster?>.broadcast();
+  late final StreamSubscription<AdmissionEvent> _subscription;
+  AdmissionRoster? _roster;
+  String? _rosterKeeperIdentity;
+  String? _outstandingRequestId;
+  DateTime? _outstandingRequestExpiry;
+  bool _refreshAfterSnapshot = false;
+  bool _disposed = false;
+
+  Stream<AdmissionRoster?> get changes => _changes.stream;
+  AdmissionRoster? get roster =>
+      _rosterKeeperIdentity == keeperIdentity() ? _roster : null;
+  bool get hasAuthoritativeRoster => roster != null;
+  bool contains(String identity) => roster?.contains(identity) ?? false;
+
+  void _onEvent(AdmissionEvent event) {
+    if (_disposed || channel.hasEnded) return;
+    switch (event) {
+      case AdmissionPacketReceived(:final AdmissionRosterSnapshot packet):
+        _receiveSnapshot(packet);
+      case AdmissionPacketReceived(:final AdmissionRosterUpdated packet):
+        _receiveUpdate(packet);
+      case AdmissionPacketReceived(packet: final AdmissionHello hello):
+        if (_isCurrentKeeper(hello.senderIdentity) &&
+            hello.recipientIdentity == channel.localIdentity) {
+          _requestIfCurrentKeeperPresent();
+        }
+      case AdmissionConnectionRestored():
+        _requestIfCurrentKeeperPresent();
+      case AdmissionPresenceChanged(:final identity, present: true):
+        if (_isCurrentKeeper(identity)) _requestIfCurrentKeeperPresent();
+      case AdmissionRoomEnded():
+        _clear();
+      default:
+        break;
+    }
+  }
+
+  bool _isCurrentKeeper(String identity) {
+    final keeper = keeperIdentity();
+    return keeper.isNotEmpty && identity == keeper;
+  }
+
+  bool _isValid(AdmissionRosterPacket packet) =>
+      _isCurrentKeeper(packet.senderIdentity) &&
+      packet.senderIdentity != channel.localIdentity &&
+      packet.recipientIdentity == channel.localIdentity &&
+      packet.sessionIdentity == sessionIdentity &&
+      packet.keeperGeneration.isNotEmpty &&
+      packet.revision >= 0 &&
+      packet.members.length <= 256 &&
+      packet.members.every(
+        (member) => member.isNotEmpty && member.length <= 256,
+      ) &&
+      packet.members.toSet().length == packet.members.length &&
+      _now().isBefore(packet.expiresAt);
+
+  void _receiveSnapshot(AdmissionRosterSnapshot packet) {
+    if (!_isValid(packet) || packet.requestId != _outstandingRequestId) {
+      return;
+    }
+    _outstandingRequestId = null;
+    _outstandingRequestExpiry = null;
+    final current = _roster;
+    if (current == null ||
+        current.keeperGeneration != packet.keeperGeneration ||
+        packet.revision >= current.revision) {
+      _setRoster(packet);
+    }
+    if (_refreshAfterSnapshot) {
+      _refreshAfterSnapshot = false;
+      _requestIfCurrentKeeperPresent();
+    }
+  }
+
+  void _receiveUpdate(AdmissionRosterUpdated packet) {
+    if (!_isValid(packet)) return;
+    final current = _roster;
+    if (current == null) {
+      if (_outstandingRequestId != null) _refreshAfterSnapshot = true;
+      return;
+    }
+    if (current.keeperGeneration != packet.keeperGeneration) {
+      if (_outstandingRequestId != null) _refreshAfterSnapshot = true;
+      return;
+    }
+    if (packet.revision <= current.revision) return;
+    if (packet.revision != current.revision + 1) {
+      _clear();
+      _requestIfCurrentKeeperPresent();
+      return;
+    }
+    _setRoster(packet);
+  }
+
+  void _setRoster(AdmissionRosterPacket packet) {
+    _rosterKeeperIdentity = packet.senderIdentity;
+    _roster = AdmissionRoster(
+      keeperGeneration: packet.keeperGeneration,
+      revision: packet.revision,
+      members: List.unmodifiable(packet.members),
+    );
+    _changes.add(_roster);
+  }
+
+  void _clear() {
+    if (_roster == null) return;
+    _roster = null;
+    _rosterKeeperIdentity = null;
+    _changes.add(null);
+  }
+
+  void _requestIfCurrentKeeperPresent() {
+    final keeper = keeperIdentity();
+    final now = _now();
+    if (_disposed ||
+        channel.hasEnded ||
+        keeper.isEmpty ||
+        keeper == channel.localIdentity ||
+        !channel.isPresent(keeper) ||
+        (_outstandingRequestExpiry?.isAfter(now) ?? false)) {
+      return;
+    }
+    final expiry = now.add(AdmissionProtocol.lifetime);
+    final id = _newId();
+    _outstandingRequestId = id;
+    _outstandingRequestExpiry = expiry;
+    unawaited(
+      channel
+          .send(
+            AdmissionRosterRequest(
+              id: id,
+              senderIdentity: channel.localIdentity,
+              recipientIdentity: keeper,
+              expiresAt: expiry,
+              sessionIdentity: sessionIdentity,
+            ),
+          )
+          .catchError((Object _) {
+            if (_outstandingRequestId == id) {
+              _outstandingRequestId = null;
+              _outstandingRequestExpiry = null;
+            }
+          }),
+    );
+  }
+
+  Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
     await _subscription.cancel();
     await _changes.close();
   }

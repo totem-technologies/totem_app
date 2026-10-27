@@ -25,6 +25,8 @@ class PreJoinView extends StatelessWidget {
     required this.onCameraFacingChanged,
     required this.onCameraDeviceSelected,
     required this.joinCard,
+    required this.previewKey,
+    required this.controlsKey,
     this.waiting = false,
     this.onLeave,
     super.key,
@@ -33,6 +35,8 @@ class PreJoinView extends StatelessWidget {
   final PreJoinMediaState mediaState;
   final bool locked;
   final Widget joinCard;
+  final GlobalKey previewKey;
+  final GlobalKey controlsKey;
   final bool waiting;
   final VoidCallback? onLeave;
   final AsyncCallback onToggleCamera;
@@ -45,43 +49,49 @@ class PreJoinView extends StatelessWidget {
   Widget build(BuildContext context) {
     final preferences = mediaState.preferences;
     final previewAudioTrack = mediaState.microphone.track;
-    final cameraPreview = Container(
-      margin: const EdgeInsetsDirectional.symmetric(horizontal: 40),
-      alignment: AlignmentDirectional.center,
-      child: Semantics(
-        label:
-            'Your video preview, camera ${preferences.isCameraOn ? 'on' : 'off'}',
-        image: true,
-        child: LocalParticipantCard(
-          isCameraOn: preferences.isCameraOn,
-          videoTrack: mediaState.camera.track,
+    final cameraPreview = KeyedSubtree(
+      key: previewKey,
+      child: Container(
+        margin: const EdgeInsetsDirectional.symmetric(horizontal: 40),
+        alignment: AlignmentDirectional.center,
+        child: Semantics(
+          label:
+              'Your video preview, camera ${preferences.isCameraOn ? 'on' : 'off'}',
+          image: true,
+          child: LocalParticipantCard(
+            isCameraOn: preferences.isCameraOn,
+            videoTrack: mediaState.camera.track,
+          ),
         ),
       ),
     );
-    final actionBar = SessionKeyboardShortcuts(
-      enableChatShortcut: false,
-      onToggleMicrophone: locked ? null : onToggleMicrophone,
-      onToggleCamera: locked ? null : onToggleCamera,
-      child: PrejoinActionBar(
-        locked: locked,
-        microphoneLevel: previewAudioTrack == null
-            ? null
-            : (color, iconSize, barCount) => LiveKitMicrophoneLevel.preview(
-                previewAudioTrack,
-                color: color,
-                iconSize: iconSize,
-                barCount: barCount,
-              ),
-        isMicOn: preferences.isMicOn,
-        onToggleMic: onToggleMicrophone,
-        isSpeakerOn: preferences.isSpeakerOn,
-        onToggleSpeaker: onToggleSpeaker,
-        isCameraOn: preferences.isCameraOn,
-        onToggleCamera: onToggleCamera,
-        cameraFacing: preferences.cameraOptions.cameraPosition.toFacing(),
-        selectedCameraDeviceId: preferences.cameraOptions.deviceId,
-        onCameraFacingChanged: onCameraFacingChanged,
-        onCameraDeviceSelected: onCameraDeviceSelected,
+    final actionBar = KeyedSubtree(
+      key: controlsKey,
+      child: SessionKeyboardShortcuts(
+        enableChatShortcut: false,
+        onToggleMicrophone: locked ? null : onToggleMicrophone,
+        onToggleCamera: locked ? null : onToggleCamera,
+        child: PrejoinActionBar(
+          locked: locked,
+          microphoneLevel: previewAudioTrack == null
+              ? null
+              : (color, iconSize, barCount) => LiveKitMicrophoneLevel.preview(
+                  previewAudioTrack,
+                  color: color,
+                  iconSize: iconSize,
+                  barCount: barCount,
+                ),
+          isMicOn: preferences.isMicOn,
+          onToggleMic: onToggleMicrophone,
+          isSpeakerOn: preferences.isSpeakerOn,
+          onToggleSpeaker: onToggleSpeaker,
+          isCameraOn: preferences.isCameraOn,
+          onToggleCamera: onToggleCamera,
+          cameraFacing: preferences.cameraOptions.cameraPosition.toFacing(),
+          selectedCameraDeviceId: preferences.cameraOptions.deviceId,
+          onCameraFacingChanged: onCameraFacingChanged,
+          onCameraDeviceSelected: onCameraDeviceSelected,
+        ),
       ),
     );
     if (waiting) {

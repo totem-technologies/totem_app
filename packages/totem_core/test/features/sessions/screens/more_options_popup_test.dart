@@ -20,6 +20,7 @@ import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../media/test_participants.dart';
+import '../session_test_fixtures.dart';
 import '../session_test_mocks.dart';
 
 class _TestSessionDeviceController extends SessionDeviceController {
@@ -64,6 +65,14 @@ Future<void> _pumpMoreOptions(
         ),
         currentSessionProvider.overrideWith((ref) => session),
         currentSessionStateProvider.overrideWithValue(state),
+        admittedSessionParticipantIdentitiesProvider.overrideWith(
+          () => TestAdmittedSessionParticipantIdentities({
+            state.roomState.keeper,
+            ...state.participantsList.map(
+              (participant) => participant.identity,
+            ),
+          }),
+        ),
         sessionDeviceControllerProvider(
           session,
         ).overrideWith(() => deviceController),

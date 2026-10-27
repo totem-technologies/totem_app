@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
@@ -197,38 +198,52 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
   }
 }
 
-/// Identities still requesting admission or joining, scoped to the room.
-/// The room owner removes identities once they have joined.
-@Riverpod(keepAlive: true, dependencies: [sessionScope])
-class PendingSessionParticipantIdentities
-    extends _$PendingSessionParticipantIdentities {
+/// Authoritative identities admitted to the current room.
+///
+/// Before a client receives a roster, only the room state's keeper is visible.
+/// Room owners should call [update] with the current roster's members, or an
+/// empty iterable when no authoritative roster is available.
+@Riverpod(keepAlive: true, dependencies: [sessionScope, keeperIdentity])
+class AdmittedSessionParticipantIdentities
+    extends _$AdmittedSessionParticipantIdentities {
   @override
   Set<String> build() {
     ref.watch(sessionScopeProvider);
-    return const {};
+    final keeperIdentity = ref.watch(keeperIdentityProvider);
+    return Set.unmodifiable({?keeperIdentity});
   }
 
-  void update(Set<String> identities) => state = Set.unmodifiable(identities);
+  void update(Iterable<String> identities) {
+    state = _withKeeper(identities);
+  }
+
+  Set<String> _withKeeper(Iterable<String> identities) {
+    final keeperIdentity = ref.read(keeperIdentityProvider);
+    return Set.unmodifiable({?keeperIdentity, ...identities});
+  }
 }
 
-/// Only the participant tiles are filtered; turn order and speaker state stay
-/// authoritative in the session state.
+/// Filters participant presentation against the room-scoped admitted roster.
+/// RoomState itself remains authoritative and unchanged.
 @Riverpod(
-  dependencies: [currentSessionState, PendingSessionParticipantIdentities],
+  dependencies: [currentSessionState, AdmittedSessionParticipantIdentities],
 )
 SessionParticipantLayout visibleSessionParticipantLayout(Ref ref) {
   final layout = ref.watch(
     currentSessionStateProvider.select(sessionParticipantLayout),
   );
-  final pending = ref.watch(pendingSessionParticipantIdentitiesProvider);
-  if (pending.isEmpty) return layout;
+  final admitted = ref.watch(admittedSessionParticipantIdentitiesProvider);
+  final isAdmitted = admitted.contains;
   return (
     participants: layout.participants
-        .where((participant) => !pending.contains(participant.identity))
+        .where((participant) => isAdmitted(participant.identity))
         .toList(),
-    talkingOrder: layout.talkingOrder,
-    speakingNow: layout.speakingNow,
-    nextSpeaker: layout.nextSpeaker,
+    talkingOrder: layout.talkingOrder.where(isAdmitted).toList(),
+    speakingNow: isAdmitted(layout.speakingNow) ? layout.speakingNow : '',
+    nextSpeaker: switch (layout.nextSpeaker) {
+      final identity? when isAdmitted(identity) => identity,
+      _ => null,
+    },
   );
 }
 
@@ -390,17 +405,14 @@ String? keeperIdentity(Ref ref) {
   );
 }
 
-@Riverpod(dependencies: [currentSessionState])
+@Riverpod(dependencies: [visibleSessionParticipantLayout])
 String speakingNowIdentity(Ref ref) {
-  return ref.watch(currentSessionStateProvider.select((s) => s?.speakingNow)) ??
-      '';
+  return ref.watch(visibleSessionParticipantLayoutProvider).speakingNow;
 }
 
-@Riverpod(dependencies: [currentSessionState])
+@Riverpod(dependencies: [visibleSessionParticipantLayout])
 String? nextSpeakerIdentity(Ref ref) {
-  return ref.watch(
-    currentSessionStateProvider.select((s) => s?.roomState.nextSpeaker.value),
-  );
+  return ref.watch(visibleSessionParticipantLayoutProvider).nextSpeaker;
 }
 
 /// Whether the keeper participant is currently present in the room.
@@ -411,11 +423,32 @@ bool hasKeeper(Ref ref) {
 }
 
 /// Participant currently featured in the room layout.
-@Riverpod(dependencies: [currentSessionState])
+@Riverpod(
+  dependencies: [
+    currentSessionState,
+    visibleSessionParticipantLayout,
+    keeperIdentity,
+  ],
+)
 ParticipantInfo? featuredParticipant(Ref ref) {
-  return ref.watch(
-    currentSessionStateProvider.select((s) => s?.featuredParticipant()),
+  final layout = ref.watch(visibleSessionParticipantLayoutProvider);
+  final roomStatus = ref.watch(
+    currentSessionStateProvider.select((state) => state?.roomState.status),
   );
+  final keeper = ref.watch(keeperIdentityProvider);
+  final hasVisibleKeeper = layout.participants.any(
+    (participant) => participant.identity == keeper,
+  );
+  if (layout.participants.isEmpty ||
+      (roomStatus == RoomStatus.waitingRoom && !hasVisibleKeeper)) {
+    return null;
+  }
+  return layout.participants.firstWhereOrNull(
+        (participant) => participant.identity == layout.speakingNow,
+      ) ??
+      layout.participants.firstWhereOrNull(
+        (participant) => participant.identity == keeper,
+      );
 }
 
 /// The wall-clock time when the current featured turn began.
@@ -426,10 +459,13 @@ DateTime? featuredTurnStartTime(Ref ref) {
 }
 
 /// Participant expected to speak next.
-@Riverpod(dependencies: [currentSessionState])
+@Riverpod(dependencies: [visibleSessionParticipantLayout])
 ParticipantInfo? speakingNextParticipant(Ref ref) {
-  return ref.watch(
-    currentSessionStateProvider.select((s) => s?.speakingNextParticipant()),
+  final layout = ref.watch(visibleSessionParticipantLayoutProvider);
+  final nextSpeaker = layout.nextSpeaker;
+  if (nextSpeaker == null) return null;
+  return layout.participants.firstWhereOrNull(
+    (participant) => participant.identity == nextSpeaker,
   );
 }
 

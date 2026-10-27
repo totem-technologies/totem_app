@@ -608,44 +608,63 @@ final class ResolveCurrentScreenProvider
 String _$resolveCurrentScreenHash() =>
     r'19618a6f7fc74e6783f0e95d937321d23edc37c0';
 
-/// Identities still requesting admission or joining, scoped to the room.
-/// The room owner removes identities once they have joined.
+/// Authoritative identities admitted to the current room.
+///
+/// Before a client receives a roster, only the room state's keeper is visible.
+/// Room owners should call [update] with the current roster's members, or an
+/// empty iterable when no authoritative roster is available.
 
-@ProviderFor(PendingSessionParticipantIdentities)
-final pendingSessionParticipantIdentitiesProvider =
-    PendingSessionParticipantIdentitiesProvider._();
+@ProviderFor(AdmittedSessionParticipantIdentities)
+final admittedSessionParticipantIdentitiesProvider =
+    AdmittedSessionParticipantIdentitiesProvider._();
 
-/// Identities still requesting admission or joining, scoped to the room.
-/// The room owner removes identities once they have joined.
-final class PendingSessionParticipantIdentitiesProvider
+/// Authoritative identities admitted to the current room.
+///
+/// Before a client receives a roster, only the room state's keeper is visible.
+/// Room owners should call [update] with the current roster's members, or an
+/// empty iterable when no authoritative roster is available.
+final class AdmittedSessionParticipantIdentitiesProvider
     extends
-        $NotifierProvider<PendingSessionParticipantIdentities, Set<String>> {
-  /// Identities still requesting admission or joining, scoped to the room.
-  /// The room owner removes identities once they have joined.
-  PendingSessionParticipantIdentitiesProvider._()
+        $NotifierProvider<AdmittedSessionParticipantIdentities, Set<String>> {
+  /// Authoritative identities admitted to the current room.
+  ///
+  /// Before a client receives a roster, only the room state's keeper is visible.
+  /// Room owners should call [update] with the current roster's members, or an
+  /// empty iterable when no authoritative roster is available.
+  AdmittedSessionParticipantIdentitiesProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'pendingSessionParticipantIdentitiesProvider',
+        name: r'admittedSessionParticipantIdentitiesProvider',
         isAutoDispose: false,
-        dependencies: <ProviderOrFamily>[sessionScopeProvider],
+        dependencies: <ProviderOrFamily>[
+          sessionScopeProvider,
+          keeperIdentityProvider,
+        ],
         $allTransitiveDependencies: <ProviderOrFamily>[
-          PendingSessionParticipantIdentitiesProvider
+          AdmittedSessionParticipantIdentitiesProvider
               .$allTransitiveDependencies0,
+          AdmittedSessionParticipantIdentitiesProvider
+              .$allTransitiveDependencies1,
+          AdmittedSessionParticipantIdentitiesProvider
+              .$allTransitiveDependencies2,
         ],
       );
 
   static final $allTransitiveDependencies0 = sessionScopeProvider;
+  static final $allTransitiveDependencies1 = keeperIdentityProvider;
+  static final $allTransitiveDependencies2 =
+      KeeperIdentityProvider.$allTransitiveDependencies0;
 
   @override
   String debugGetCreateSourceHash() =>
-      _$pendingSessionParticipantIdentitiesHash();
+      _$admittedSessionParticipantIdentitiesHash();
 
   @$internal
   @override
-  PendingSessionParticipantIdentities create() =>
-      PendingSessionParticipantIdentities();
+  AdmittedSessionParticipantIdentities create() =>
+      AdmittedSessionParticipantIdentities();
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(Set<String> value) {
@@ -656,13 +675,16 @@ final class PendingSessionParticipantIdentitiesProvider
   }
 }
 
-String _$pendingSessionParticipantIdentitiesHash() =>
-    r'3394bf5a4592d1d8ea62c9266b7db49521b85454';
+String _$admittedSessionParticipantIdentitiesHash() =>
+    r'3809c1f9fc7bbd8f1d3682c2f57e8428a520a4be';
 
-/// Identities still requesting admission or joining, scoped to the room.
-/// The room owner removes identities once they have joined.
+/// Authoritative identities admitted to the current room.
+///
+/// Before a client receives a roster, only the room state's keeper is visible.
+/// Room owners should call [update] with the current roster's members, or an
+/// empty iterable when no authoritative roster is available.
 
-abstract class _$PendingSessionParticipantIdentities
+abstract class _$AdmittedSessionParticipantIdentities
     extends $Notifier<Set<String>> {
   Set<String> build();
   @$mustCallSuper
@@ -681,15 +703,15 @@ abstract class _$PendingSessionParticipantIdentities
   }
 }
 
-/// Only the participant tiles are filtered; turn order and speaker state stay
-/// authoritative in the session state.
+/// Filters participant presentation against the room-scoped admitted roster.
+/// RoomState itself remains authoritative and unchanged.
 
 @ProviderFor(visibleSessionParticipantLayout)
 final visibleSessionParticipantLayoutProvider =
     VisibleSessionParticipantLayoutProvider._();
 
-/// Only the participant tiles are filtered; turn order and speaker state stay
-/// authoritative in the session state.
+/// Filters participant presentation against the room-scoped admitted roster.
+/// RoomState itself remains authoritative and unchanged.
 
 final class VisibleSessionParticipantLayoutProvider
     extends
@@ -699,8 +721,8 @@ final class VisibleSessionParticipantLayoutProvider
           SessionParticipantLayout
         >
     with $Provider<SessionParticipantLayout> {
-  /// Only the participant tiles are filtered; turn order and speaker state stay
-  /// authoritative in the session state.
+  /// Filters participant presentation against the room-scoped admitted roster.
+  /// RoomState itself remains authoritative and unchanged.
   VisibleSessionParticipantLayoutProvider._()
     : super(
         from: null,
@@ -710,20 +732,23 @@ final class VisibleSessionParticipantLayoutProvider
         isAutoDispose: true,
         dependencies: <ProviderOrFamily>[
           currentSessionStateProvider,
-          pendingSessionParticipantIdentitiesProvider,
+          admittedSessionParticipantIdentitiesProvider,
         ],
-        $allTransitiveDependencies: <ProviderOrFamily>[
+        $allTransitiveDependencies: <ProviderOrFamily>{
           VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies0,
           VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies1,
           VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2,
-        ],
+          VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3,
+        },
       );
 
   static final $allTransitiveDependencies0 = currentSessionStateProvider;
   static final $allTransitiveDependencies1 =
       CurrentSessionStateProvider.$allTransitiveDependencies0;
   static final $allTransitiveDependencies2 =
-      pendingSessionParticipantIdentitiesProvider;
+      admittedSessionParticipantIdentitiesProvider;
+  static final $allTransitiveDependencies3 =
+      AdmittedSessionParticipantIdentitiesProvider.$allTransitiveDependencies1;
 
   @override
   String debugGetCreateSourceHash() => _$visibleSessionParticipantLayoutHash();
@@ -749,7 +774,7 @@ final class VisibleSessionParticipantLayoutProvider
 }
 
 String _$visibleSessionParticipantLayoutHash() =>
-    r'af915b9313a346331283e88db1f99c6e26a06825';
+    r'287347aabfbcdb735c6555c8d5e5e7d0f67045f8';
 
 /// The list of participants shown in the session.
 
@@ -782,6 +807,7 @@ final class SessionParticipantsProvider
           SessionParticipantsProvider.$allTransitiveDependencies1,
           SessionParticipantsProvider.$allTransitiveDependencies2,
           SessionParticipantsProvider.$allTransitiveDependencies3,
+          SessionParticipantsProvider.$allTransitiveDependencies4,
         },
       );
 
@@ -793,6 +819,8 @@ final class SessionParticipantsProvider
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies1;
   static final $allTransitiveDependencies3 =
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2;
+  static final $allTransitiveDependencies4 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3;
 
   @override
   String debugGetCreateSourceHash() => _$sessionParticipantsHash();
@@ -1664,16 +1692,28 @@ final class SpeakingNowIdentityProvider
         retry: null,
         name: r'speakingNowIdentityProvider',
         isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
-        $allTransitiveDependencies: <ProviderOrFamily>[
+        dependencies: <ProviderOrFamily>[
+          visibleSessionParticipantLayoutProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>{
           SpeakingNowIdentityProvider.$allTransitiveDependencies0,
           SpeakingNowIdentityProvider.$allTransitiveDependencies1,
-        ],
+          SpeakingNowIdentityProvider.$allTransitiveDependencies2,
+          SpeakingNowIdentityProvider.$allTransitiveDependencies3,
+          SpeakingNowIdentityProvider.$allTransitiveDependencies4,
+        },
       );
 
-  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies0 =
+      visibleSessionParticipantLayoutProvider;
   static final $allTransitiveDependencies1 =
-      CurrentSessionStateProvider.$allTransitiveDependencies0;
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies1;
+  static final $allTransitiveDependencies3 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2;
+  static final $allTransitiveDependencies4 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3;
 
   @override
   String debugGetCreateSourceHash() => _$speakingNowIdentityHash();
@@ -1698,7 +1738,7 @@ final class SpeakingNowIdentityProvider
 }
 
 String _$speakingNowIdentityHash() =>
-    r'97153a1cc9e6da1c9ecf4abb4c9a8c2720d536a2';
+    r'96a30976f5c33bf598edba1073c5773028508f9a';
 
 @ProviderFor(nextSpeakerIdentity)
 final nextSpeakerIdentityProvider = NextSpeakerIdentityProvider._();
@@ -1713,16 +1753,28 @@ final class NextSpeakerIdentityProvider
         retry: null,
         name: r'nextSpeakerIdentityProvider',
         isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
-        $allTransitiveDependencies: <ProviderOrFamily>[
+        dependencies: <ProviderOrFamily>[
+          visibleSessionParticipantLayoutProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>{
           NextSpeakerIdentityProvider.$allTransitiveDependencies0,
           NextSpeakerIdentityProvider.$allTransitiveDependencies1,
-        ],
+          NextSpeakerIdentityProvider.$allTransitiveDependencies2,
+          NextSpeakerIdentityProvider.$allTransitiveDependencies3,
+          NextSpeakerIdentityProvider.$allTransitiveDependencies4,
+        },
       );
 
-  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies0 =
+      visibleSessionParticipantLayoutProvider;
   static final $allTransitiveDependencies1 =
-      CurrentSessionStateProvider.$allTransitiveDependencies0;
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies1;
+  static final $allTransitiveDependencies3 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2;
+  static final $allTransitiveDependencies4 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3;
 
   @override
   String debugGetCreateSourceHash() => _$nextSpeakerIdentityHash();
@@ -1747,7 +1799,7 @@ final class NextSpeakerIdentityProvider
 }
 
 String _$nextSpeakerIdentityHash() =>
-    r'd2956948af0482cc526b6edbcf8b58206510efff';
+    r'ff532fec5d4515a0eef4126a3fe4c13116d77d9b';
 
 /// Whether the keeper participant is currently present in the room.
 
@@ -1824,16 +1876,29 @@ final class FeaturedParticipantProvider
         retry: null,
         name: r'featuredParticipantProvider',
         isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
-        $allTransitiveDependencies: <ProviderOrFamily>[
+        dependencies: <ProviderOrFamily>[
+          currentSessionStateProvider,
+          visibleSessionParticipantLayoutProvider,
+          keeperIdentityProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>{
           FeaturedParticipantProvider.$allTransitiveDependencies0,
           FeaturedParticipantProvider.$allTransitiveDependencies1,
-        ],
+          FeaturedParticipantProvider.$allTransitiveDependencies2,
+          FeaturedParticipantProvider.$allTransitiveDependencies3,
+          FeaturedParticipantProvider.$allTransitiveDependencies4,
+        },
       );
 
   static final $allTransitiveDependencies0 = currentSessionStateProvider;
   static final $allTransitiveDependencies1 =
       CurrentSessionStateProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      visibleSessionParticipantLayoutProvider;
+  static final $allTransitiveDependencies3 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2;
+  static final $allTransitiveDependencies4 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3;
 
   @override
   String debugGetCreateSourceHash() => _$featuredParticipantHash();
@@ -1858,7 +1923,7 @@ final class FeaturedParticipantProvider
 }
 
 String _$featuredParticipantHash() =>
-    r'04bc460cf46b284b24988ad0776e269cba71cea4';
+    r'29f35509a662792230441c7a23447cdabcba2433';
 
 /// The wall-clock time when the current featured turn began.
 /// Null while no speaker is featured.
@@ -1940,16 +2005,28 @@ final class SpeakingNextParticipantProvider
         retry: null,
         name: r'speakingNextParticipantProvider',
         isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
-        $allTransitiveDependencies: <ProviderOrFamily>[
+        dependencies: <ProviderOrFamily>[
+          visibleSessionParticipantLayoutProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>{
           SpeakingNextParticipantProvider.$allTransitiveDependencies0,
           SpeakingNextParticipantProvider.$allTransitiveDependencies1,
-        ],
+          SpeakingNextParticipantProvider.$allTransitiveDependencies2,
+          SpeakingNextParticipantProvider.$allTransitiveDependencies3,
+          SpeakingNextParticipantProvider.$allTransitiveDependencies4,
+        },
       );
 
-  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies0 =
+      visibleSessionParticipantLayoutProvider;
   static final $allTransitiveDependencies1 =
-      CurrentSessionStateProvider.$allTransitiveDependencies0;
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies1;
+  static final $allTransitiveDependencies3 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2;
+  static final $allTransitiveDependencies4 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3;
 
   @override
   String debugGetCreateSourceHash() => _$speakingNextParticipantHash();
@@ -1974,7 +2051,7 @@ final class SpeakingNextParticipantProvider
 }
 
 String _$speakingNextParticipantHash() =>
-    r'cd52410656fabaf460464a1c79a8f7c3d9a95e52';
+    r'b5e96f3bd5664c6538cb1e4a9479b666f129e9ad';
 
 /// Active session payload.
 
@@ -2126,6 +2203,9 @@ final class IsMyTurnProvider extends $FunctionalProvider<bool, bool, bool>
           IsMyTurnProvider.$allTransitiveDependencies3,
           IsMyTurnProvider.$allTransitiveDependencies4,
           IsMyTurnProvider.$allTransitiveDependencies5,
+          IsMyTurnProvider.$allTransitiveDependencies6,
+          IsMyTurnProvider.$allTransitiveDependencies7,
+          IsMyTurnProvider.$allTransitiveDependencies8,
         },
       );
 
@@ -2139,6 +2219,12 @@ final class IsMyTurnProvider extends $FunctionalProvider<bool, bool, bool>
   static final $allTransitiveDependencies4 =
       LocalParticipantIdentityProvider.$allTransitiveDependencies3;
   static final $allTransitiveDependencies5 = speakingNowIdentityProvider;
+  static final $allTransitiveDependencies6 =
+      SpeakingNowIdentityProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies7 =
+      SpeakingNowIdentityProvider.$allTransitiveDependencies3;
+  static final $allTransitiveDependencies8 =
+      SpeakingNowIdentityProvider.$allTransitiveDependencies4;
 
   @override
   String debugGetCreateSourceHash() => _$isMyTurnHash();
@@ -2192,6 +2278,9 @@ final class AmNextSpeakerProvider extends $FunctionalProvider<bool, bool, bool>
           AmNextSpeakerProvider.$allTransitiveDependencies3,
           AmNextSpeakerProvider.$allTransitiveDependencies4,
           AmNextSpeakerProvider.$allTransitiveDependencies5,
+          AmNextSpeakerProvider.$allTransitiveDependencies6,
+          AmNextSpeakerProvider.$allTransitiveDependencies7,
+          AmNextSpeakerProvider.$allTransitiveDependencies8,
         },
       );
 
@@ -2205,6 +2294,12 @@ final class AmNextSpeakerProvider extends $FunctionalProvider<bool, bool, bool>
   static final $allTransitiveDependencies4 =
       LocalParticipantIdentityProvider.$allTransitiveDependencies3;
   static final $allTransitiveDependencies5 = nextSpeakerIdentityProvider;
+  static final $allTransitiveDependencies6 =
+      NextSpeakerIdentityProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies7 =
+      NextSpeakerIdentityProvider.$allTransitiveDependencies3;
+  static final $allTransitiveDependencies8 =
+      NextSpeakerIdentityProvider.$allTransitiveDependencies4;
 
   @override
   String debugGetCreateSourceHash() => _$amNextSpeakerHash();

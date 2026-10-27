@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 
@@ -55,7 +56,17 @@ class PreJoinFlowController extends _$PreJoinFlowController {
   int _admissionAttempt = 0;
 
   @visibleForTesting
-  Room createAdmissionRoom() => Room();
+  Room createAdmissionRoom() {
+    final preferences = ref
+        .read(preJoinMediaControllerProvider(sessionSlug))
+        .preferences;
+    return Room(
+      roomOptions: SessionController.sessionRoomOptions(
+        cameraOptions: preferences.cameraOptions,
+        speakerEnabled: preferences.isSpeakerOn,
+      ),
+    );
+  }
 
   @visibleForTesting
   LiveKitAdmissionTransport createAdmissionTransport(Room room) =>
@@ -127,6 +138,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
             admission.status == AdmissionStatus.failed) {
           await _handleAdmissionStatus(
             admission.status,
+            response.token,
             _admissionAttempt,
             admission,
           );
@@ -182,7 +194,13 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     _admissionRoom = room;
     final transport = createAdmissionTransport(room);
     _admissionTransport = transport;
-    await connectAdmissionRoom(room, token);
+    final connectTrace = developer.TimelineTask()
+      ..start('session_admission_room_connect');
+    try {
+      await connectAdmissionRoom(room, token);
+    } finally {
+      connectTrace.finish();
+    }
     if (!ref.mounted || _cancelRequested) return;
     final admission = PendingAdmissionController(
       channel: transport,
@@ -191,7 +209,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     _admission = admission;
     _admissionSubscription = admission.changes.listen((status) {
       if (status != AdmissionStatus.pending) {
-        unawaited(_handleAdmissionStatus(status, attempt, admission));
+        unawaited(_handleAdmissionStatus(status, token, attempt, admission));
       }
     });
     if (admission.status == AdmissionStatus.ended) return;
@@ -208,6 +226,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
 
   Future<void> _handleAdmissionStatus(
     AdmissionStatus status,
+    String token,
     int attempt,
     PendingAdmissionController admission,
   ) async {
@@ -233,19 +252,15 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           admissionStatus: status,
           clearExpiresAt: true,
         );
-        await _cleanupAdmission();
+        final connectedRoom = await _takeAdmissionRoom();
+        if (connectedRoom == null) return;
         if (ref.mounted && !_cancelRequested && attempt == _admissionAttempt) {
           try {
-            // Authorization can change while waiting; a fresh backend join
-            // check must succeed before opening the normal Session connection.
-            final response = await ref.refresh(
-              sessionTokenProvider(sessionSlug).future,
+            await _joinWithToken(
+              token,
+              admissionRequest: request,
+              admissionRoom: connectedRoom,
             );
-            if (ref.mounted &&
-                !_cancelRequested &&
-                attempt == _admissionAttempt) {
-              await _joinWithToken(response.token, admissionRequest: request);
-            }
           } catch (error, stackTrace) {
             if (ref.mounted &&
                 attempt == _admissionAttempt &&
@@ -278,6 +293,9 @@ class PreJoinFlowController extends _$PreJoinFlowController {
               );
             }
           }
+        } else {
+          await connectedRoom.disconnect();
+          await connectedRoom.dispose();
         }
       } else if (status == AdmissionStatus.denied ||
           status == AdmissionStatus.expired ||
@@ -377,6 +395,20 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         _admissionCleanup = null;
       });
 
+  Future<Room?> _takeAdmissionRoom() async {
+    final room = _admissionRoom;
+    if (room == null) return null;
+    _admissionRoom = null;
+    try {
+      await _cleanupAdmission();
+      return room;
+    } catch (_) {
+      await room.disconnect();
+      await room.dispose();
+      rethrow;
+    }
+  }
+
   Future<void> _disposeAdmission() async {
     final subscription = _admissionSubscription;
     final admission = _admission;
@@ -405,8 +437,14 @@ class PreJoinFlowController extends _$PreJoinFlowController {
   Future<PreJoinJoinOutcome> _joinWithToken(
     String token, {
     AdmissionRequest? admissionRequest,
+    Room? admissionRoom,
   }) async {
-    if (!ref.mounted || _cancelRequested) return PreJoinJoinOutcome.ignored;
+    if (!ref.mounted || _cancelRequested) {
+      await admissionRoom?.disconnect();
+      await admissionRoom?.dispose();
+      return PreJoinJoinOutcome.ignored;
+    }
+    var roomTransferred = false;
     SessionController? session;
     SessionJoinMedia? joinMedia;
     var joinStarted = false;
@@ -461,7 +499,22 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       currentSession.preventAutoDispose();
 
       joinStarted = true;
-      final result = await currentSession.join(joinMedia: joinMedia);
+      final SessionJoinResult result;
+      if (admissionRoom == null) {
+        result = await currentSession.join(joinMedia: joinMedia);
+      } else {
+        roomTransferred = true;
+        final activationTrace = developer.TimelineTask()
+          ..start('session_admission_room_activation');
+        try {
+          result = await currentSession.activateConnectedRoom(
+            room: admissionRoom,
+            joinMedia: joinMedia,
+          );
+        } finally {
+          activationTrace.finish();
+        }
+      }
       if (result == SessionJoinResult.retryableFailure ||
           (admissionRequest != null &&
               result == SessionJoinResult.fatalFailure)) {
@@ -563,6 +616,10 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       return PreJoinJoinOutcome.retryableFailure;
     } finally {
       session?.allowAutoDispose();
+      if (admissionRoom != null && !roomTransferred) {
+        await admissionRoom.disconnect();
+        await admissionRoom.dispose();
+      }
     }
   }
 

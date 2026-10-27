@@ -21,6 +21,9 @@ abstract final class AdmissionProtocol {
         AdmissionHello() => 'hello',
         AdmissionJoined() => 'admission.joined',
         AdmissionJoinFailed() => 'admission.joinFailed',
+        AdmissionRosterRequest() => 'roster.request',
+        AdmissionRosterSnapshot() => 'roster.snapshot',
+        AdmissionRosterUpdated() => 'roster.updated',
       },
       'id': packet.id,
       'from': packet.senderIdentity,
@@ -28,6 +31,32 @@ abstract final class AdmissionProtocol {
       'expiresAt': packet.expiresAt.millisecondsSinceEpoch,
       if (packet case AdmissionRequest(:final displayName)) 'name': displayName,
       if (packet case AdmissionDecision(:final approved)) 'approved': approved,
+      if (packet case AdmissionRosterRequest(:final sessionIdentity))
+        'session': sessionIdentity,
+      if (packet case AdmissionRosterSnapshot(
+        :final sessionIdentity,
+        :final keeperGeneration,
+        :final revision,
+        :final members,
+        :final requestId,
+      )) ...{
+        'session': sessionIdentity,
+        'generation': keeperGeneration,
+        'revision': revision,
+        'members': members,
+        'requestId': ?requestId,
+      },
+      if (packet case AdmissionRosterUpdated(
+        :final sessionIdentity,
+        :final keeperGeneration,
+        :final revision,
+        :final members,
+      )) ...{
+        'session': sessionIdentity,
+        'generation': keeperGeneration,
+        'revision': revision,
+        'members': members,
+      },
     }),
   );
 
@@ -149,10 +178,78 @@ abstract final class AdmissionProtocol {
           approved: value['approved'] as bool,
         );
       }
+      final session = value['session'];
+      if (session is! String || session.isEmpty || session.length > 256) {
+        return null;
+      }
+      if (value['kind'] == 'roster.request') {
+        if (value.containsKey('generation') ||
+            value.containsKey('revision') ||
+            value.containsKey('members') ||
+            value.containsKey('requestId')) {
+          return null;
+        }
+        return AdmissionRosterRequest(
+          id: id,
+          senderIdentity: from as String,
+          recipientIdentity: to,
+          expiresAt: expiration,
+          sessionIdentity: session,
+        );
+      }
+      final generation = value['generation'];
+      final revision = value['revision'];
+      final members = value['members'];
+      if ((value['kind'] != 'roster.snapshot' &&
+              value['kind'] != 'roster.updated') ||
+          generation is! String ||
+          generation.isEmpty ||
+          generation.length > 128 ||
+          revision is! int ||
+          revision < 0 ||
+          members is! List ||
+          members.length > 256 ||
+          members.any(
+            (member) =>
+                member is! String || member.isEmpty || member.length > 256,
+          ) ||
+          members.toSet().length != members.length) {
+        return null;
+      }
+      final requestId = value['requestId'];
+      if (requestId != null &&
+          (requestId is! String ||
+              requestId.isEmpty ||
+              requestId.length > 128)) {
+        return null;
+      }
+      if (value['kind'] == 'roster.updated' && requestId != null) return null;
+      final rosterMembers = List<String>.unmodifiable(members.cast<String>());
+      return value['kind'] == 'roster.snapshot'
+          ? AdmissionRosterSnapshot(
+              id: id,
+              senderIdentity: from as String,
+              recipientIdentity: to,
+              expiresAt: expiration,
+              sessionIdentity: session,
+              keeperGeneration: generation,
+              revision: revision,
+              members: rosterMembers,
+              requestId: requestId as String?,
+            )
+          : AdmissionRosterUpdated(
+              id: id,
+              senderIdentity: from as String,
+              recipientIdentity: to,
+              expiresAt: expiration,
+              sessionIdentity: session,
+              keeperGeneration: generation,
+              revision: revision,
+              members: rosterMembers,
+            );
     } on FormatException {
       return null;
     }
-    return null;
   }
 }
 
@@ -230,4 +327,67 @@ final class AdmissionDecision extends AdmissionPacket {
   });
 
   final bool approved;
+}
+
+/// Requests the current, session-bound admitted-participant roster.
+final class AdmissionRosterRequest extends AdmissionPacket {
+  const AdmissionRosterRequest({
+    required super.id,
+    required super.senderIdentity,
+    required super.recipientIdentity,
+    required super.expiresAt,
+    required this.sessionIdentity,
+  });
+
+  final String sessionIdentity;
+}
+
+sealed class AdmissionRosterPacket extends AdmissionPacket {
+  const AdmissionRosterPacket({
+    required super.id,
+    required super.senderIdentity,
+    required super.recipientIdentity,
+    required super.expiresAt,
+    required this.sessionIdentity,
+    required this.keeperGeneration,
+    required this.revision,
+    required this.members,
+  });
+
+  final String sessionIdentity;
+  final String keeperGeneration;
+  final int revision;
+  final List<String> members;
+}
+
+/// An authoritative full roster. [requestId] echoes a roster request when this
+/// is a response; absent values are presence advertisements.
+final class AdmissionRosterSnapshot extends AdmissionRosterPacket {
+  const AdmissionRosterSnapshot({
+    required super.id,
+    required super.senderIdentity,
+    required super.recipientIdentity,
+    required super.expiresAt,
+    required super.sessionIdentity,
+    required super.keeperGeneration,
+    required super.revision,
+    required super.members,
+    this.requestId,
+  });
+
+  final String? requestId;
+}
+
+/// An authoritative replacement roster at the next keeper revision.
+final class AdmissionRosterUpdated extends AdmissionRosterPacket {
+  const AdmissionRosterUpdated({
+    required super.id,
+    required super.senderIdentity,
+    required super.recipientIdentity,
+    required super.expiresAt,
+    required super.sessionIdentity,
+    required super.keeperGeneration,
+    required super.revision,
+    required super.members,
+  });
 }

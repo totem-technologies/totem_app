@@ -150,7 +150,8 @@ class _DelayedUnavailableTrackFactory extends PreJoinPreviewTrackFactory {
 
 class _SuccessfulSessionController extends SessionController {
   static SessionJoinMedia? receivedMedia;
-  static bool? admissionDisposedAtJoin;
+  static Room? activatedRoom;
+  static int activationCalls = 0;
 
   @override
   SessionRoomState build(SessionOptions options) => _sessionState;
@@ -158,7 +159,18 @@ class _SuccessfulSessionController extends SessionController {
   @override
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
     receivedMedia = joinMedia;
-    admissionDisposedAtJoin = _AdmissionFlow.transport?.disposed;
+    return SessionJoinResult.success;
+  }
+
+  @override
+  Future<SessionJoinResult> activateConnectedRoom({
+    required Room room,
+    SessionJoinMedia? joinMedia,
+    bool Function(String identity)? isAdmitted,
+  }) async {
+    receivedMedia = joinMedia;
+    activatedRoom = room;
+    activationCalls++;
     return SessionJoinResult.success;
   }
 }
@@ -191,9 +203,15 @@ class _UninitializedSessionController extends _SuccessfulSessionController {
 
 class _FatalSessionController extends _RetryableSessionController {
   @override
-  Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
+  Future<SessionJoinResult> activateConnectedRoom({
+    required Room room,
+    SessionJoinMedia? joinMedia,
+    bool Function(String identity)? isAdmitted,
+  }) async {
     joinMedia?.onBeforeDispose?.call();
     await JoinMediaOwner().retain(joinMedia).dispose();
+    await room.disconnect();
+    await room.dispose();
     return SessionJoinResult.fatalFailure;
   }
 }
@@ -259,13 +277,9 @@ class _AdmissionTransport extends LiveKitAdmissionTransport {
 class _AdmissionRoom extends Room {
   bool disconnected = false;
   bool disposed = false;
-  Completer<void>? disconnectStarted;
-  Completer<void>? disconnectGate;
 
   @override
   Future<void> disconnect() async {
-    disconnectStarted?.complete();
-    await disconnectGate?.future;
     disconnected = true;
   }
 
@@ -454,16 +468,23 @@ void main() {
   );
 
   test(
-    'guest waits without transferring media, then joins after admission room teardown',
+    'approval hands the connected admission room to the session without recapturing media',
     () async {
       final factory = _TrackFactory();
+      var tokenRequests = 0;
       _AdmissionFlow.connections = 0;
       _AdmissionFlow.failConnection = false;
       _AdmissionFlow.transport = null;
       _SuccessfulSessionController.receivedMedia = null;
+      _SuccessfulSessionController.activatedRoom = null;
+      _SuccessfulSessionController.activationCalls = 0;
       final container = _container(
         factory: factory,
         response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+        getToken: () async {
+          tokenRequests++;
+          return const JoinResponse(token: 'token', isAlreadyPresent: false);
+        },
         sessionController: _SuccessfulSessionController.new,
         keeperSlug: 'keeper',
         flowController: _AdmissionFlow.new,
@@ -493,11 +514,19 @@ void main() {
         container.read(preJoinMediaControllerProvider(_slug)).transferred,
       ).equals(false);
 
+      final room = _AdmissionFlow.room!;
       _AdmissionFlow.transport!.decide(true);
       await pumpEventQueue();
-      check(_SuccessfulSessionController.admissionDisposedAtJoin).equals(true);
-      check(_AdmissionFlow.room!.disconnected).equals(true);
-      check(_AdmissionFlow.room!.disposed).equals(true);
+      check(_AdmissionFlow.connections).equals(1);
+      check(tokenRequests).equals(1);
+      check(_SuccessfulSessionController.activationCalls).equals(1);
+      check(
+        identical(_SuccessfulSessionController.activatedRoom, room),
+      ).isTrue();
+      check(room.disconnected).isFalse();
+      check(room.disposed).isFalse();
+      check(factory.videoTracks).length.equals(1);
+      check(factory.audioTracks).length.equals(1);
       check(
         _SuccessfulSessionController.receivedMedia?.cameraTrack,
       ).equals(factory.videoTracks.single);
@@ -507,59 +536,6 @@ void main() {
       check(
         container.read(preJoinFlowControllerProvider(_slug)).phase,
       ).equals(PreJoinFlowPhase.joined);
-    },
-  );
-
-  test(
-    'leaving during approved-room teardown prevents the session join',
-    () async {
-      final factory = _TrackFactory();
-      _AdmissionFlow.failConnection = false;
-      _SuccessfulSessionController.receivedMedia = null;
-      final container = _container(
-        factory: factory,
-        response: const JoinResponse(token: 'token', isAlreadyPresent: false),
-        sessionController: _SuccessfulSessionController.new,
-        keeperSlug: 'keeper',
-        flowController: _AdmissionFlow.new,
-      );
-      addTearDown(container.dispose);
-      await _waitForMedia(container);
-      final flow = container.read(
-        preJoinFlowControllerProvider(_slug).notifier,
-      );
-      check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
-      final room = _AdmissionFlow.room!;
-      final disconnectStarted = Completer<void>();
-      final disconnectGate = Completer<void>();
-      room
-        ..disconnectStarted = disconnectStarted
-        ..disconnectGate = disconnectGate;
-      addTearDown(() {
-        if (!disconnectGate.isCompleted) disconnectGate.complete();
-      });
-
-      _AdmissionFlow.transport!.decide(true);
-      await disconnectStarted.future;
-      check(
-        container.read(preJoinFlowControllerProvider(_slug)).phase,
-      ).equals(PreJoinFlowPhase.joining);
-      final leaving = flow.cancelAdmission();
-      disconnectGate.complete();
-      await leaving;
-      await pumpEventQueue();
-      check(room.disposed).equals(true);
-      check(
-        container.read(preJoinFlowControllerProvider(_slug)).phase,
-      ).equals(PreJoinFlowPhase.idle);
-      check(
-        container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
-      ).equals(AdmissionStatus.cancelled);
-      check(
-        container.read(preJoinMediaControllerProvider(_slug)).transferred,
-      ).equals(false);
-      check(_SuccessfulSessionController.receivedMedia).isNull();
-      check(factory.videoTracks).length.equals(1);
     },
   );
 
@@ -729,26 +705,34 @@ void main() {
     },
   );
 
-  test('cancelled admission releases the room without joining', () async {
-    _AdmissionFlow.failConnection = false;
-    final container = _container(
-      factory: _TrackFactory(),
-      response: const JoinResponse(token: 'token', isAlreadyPresent: false),
-      sessionController: _SuccessfulSessionController.new,
-      keeperSlug: 'keeper',
-      flowController: _AdmissionFlow.new,
-    );
-    addTearDown(container.dispose);
-    final flow = container.read(preJoinFlowControllerProvider(_slug).notifier);
-    check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
-    final transport = _AdmissionFlow.transport!;
-    await flow.cancelAdmission();
-    check(transport.disposed).equals(true);
-    check(
-      container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
-    ).equals(AdmissionStatus.cancelled);
-    check(_SuccessfulSessionController.receivedMedia).isNull();
-  });
+  test(
+    'cancelled admission disposes the connected room without joining',
+    () async {
+      _AdmissionFlow.failConnection = false;
+      final container = _container(
+        factory: _TrackFactory(),
+        response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+        sessionController: _SuccessfulSessionController.new,
+        keeperSlug: 'keeper',
+        flowController: _AdmissionFlow.new,
+      );
+      addTearDown(container.dispose);
+      final flow = container.read(
+        preJoinFlowControllerProvider(_slug).notifier,
+      );
+      check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+      final transport = _AdmissionFlow.transport!;
+      final room = _AdmissionFlow.room!;
+      await flow.cancelAdmission();
+      check(transport.disposed).equals(true);
+      check(room.disconnected).isTrue();
+      check(room.disposed).isTrue();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
+      ).equals(AdmissionStatus.cancelled);
+      check(_SuccessfulSessionController.receivedMedia).isNull();
+    },
+  );
 
   test(
     'fatal approval join never reports joined and releases its media',
@@ -781,6 +765,8 @@ void main() {
         container.read(preJoinFlowControllerProvider(_slug)).sessionOptions,
       ).isNull();
       check(_RetryableSessionController.resets).equals(1);
+      check(_AdmissionFlow.room!.disconnected).isTrue();
+      check(_AdmissionFlow.room!.disposed).isTrue();
       verify(factory.videoTracks.first.dispose).called(1);
       check(factory.videoTracks).length.equals(2);
     },
