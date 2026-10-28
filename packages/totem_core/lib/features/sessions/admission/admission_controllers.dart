@@ -173,7 +173,10 @@ class PendingAdmissionController {
       case AdmissionConnectionRestored():
         _resendIfPresent();
       case AdmissionPresenceChanged(:final identity, present: true):
-        if (identity == request.recipientIdentity) _resendIfPresent();
+        if (identity == request.recipientIdentity) {
+          // LiveKit emits this event before adding the participant to its map.
+          unawaited(_sendBestEffort(_cancellation ?? request));
+        }
       default:
         break;
     }
@@ -300,6 +303,7 @@ class KeeperAdmissionController {
   final _latest = <String, AdmissionPacket>{};
   final _pending = <String, AdmissionRequest>{};
   final _decisions = <String, AdmissionDecision>{};
+  final _decisionRetries = <String, Timer>{};
   final _attempts = <String, KeeperAdmissionAttempt>{};
   final _earlyOutcomes = <String, AdmissionPacket>{};
   final _expirations = <String, Timer>{};
@@ -411,6 +415,10 @@ class KeeperAdmissionController {
       _latest.clear();
       _pending.clear();
       _decisions.clear();
+      for (final timer in _decisionRetries.values) {
+        timer.cancel();
+      }
+      _decisionRetries.clear();
       _attempts.clear();
       _earlyOutcomes.clear();
       _roster.clear();
@@ -424,6 +432,7 @@ class KeeperAdmissionController {
         _advertise();
       case AdmissionPresenceChanged(:final identity, present: true):
         _advertiseTo(identity);
+        _resendDecision(identity);
       case AdmissionPresenceChanged(:final identity, present: false):
         // A reconnecting participant can re-advertise this same request.
         if (_pending.remove(identity) case final request?) {
@@ -503,6 +512,7 @@ class KeeperAdmissionController {
     _expirations.remove(sender)?.cancel();
     _latest[sender] = packet;
     _decisions.remove(sender);
+    _decisionRetries.remove(sender)?.cancel();
     _earlyOutcomes.remove(sender);
     if (packet is AdmissionRequest) {
       _pending[sender] = packet;
@@ -526,6 +536,7 @@ class KeeperAdmissionController {
       if (!identical(_latest[sender], packet)) return;
       _pending.remove(sender);
       _decisions.remove(sender);
+      _decisionRetries.remove(sender)?.cancel();
       _expirations.remove(sender);
       final attempt = _attempts[sender];
       if (attempt != null) {
@@ -563,6 +574,7 @@ class KeeperAdmissionController {
     final attempt = _attempts[sender]!;
     if (attempt.status == KeeperAdmissionStatus.joining &&
         _now().isBefore(attempt.joinDeadline!)) {
+      _decisionRetries.remove(sender)?.cancel();
       _attempts[sender] = KeeperAdmissionAttempt(
         request,
         packet is AdmissionJoined
@@ -579,6 +591,19 @@ class KeeperAdmissionController {
     } else if (_approving.contains(_key(sender, packet.id))) {
       _earlyOutcomes[sender] = packet;
     }
+  }
+
+  void _resendDecision(String identity) {
+    final decision = _decisions[identity];
+    if (_disposed ||
+        _ended ||
+        keeperIdentity() != channel.localIdentity ||
+        decision == null ||
+        _attempts[identity]?.status != KeeperAdmissionStatus.joining ||
+        !_now().isBefore(decision.expiresAt)) {
+      return;
+    }
+    unawaited(channel.send(decision).catchError((Object _) {}));
   }
 
   Future<void> approve(String requestId, String participantIdentity) =>
@@ -627,6 +652,15 @@ class KeeperAdmissionController {
         joinDeadline: approved ? request.expiresAt : null,
       );
       _changes.add(null);
+      if (approved) {
+        // A reliable packet is not durable; retry once if no receipt arrives.
+        // Duplicate decisions are ignored by the applicant's request state.
+        _decisionRetries.remove(sender)?.cancel();
+        _decisionRetries[sender] = Timer(const Duration(seconds: 2), () {
+          _decisionRetries.remove(sender);
+          _resendDecision(sender);
+        });
+      }
       final early = _earlyOutcomes.remove(sender);
       if (early != null && approved) _receiveOutcome(early);
     } finally {
@@ -652,6 +686,10 @@ class KeeperAdmissionController {
     _latest.clear();
     _pending.clear();
     _decisions.clear();
+    for (final timer in _decisionRetries.values) {
+      timer.cancel();
+    }
+    _decisionRetries.clear();
     _attempts.clear();
     _earlyOutcomes.clear();
     _approving.clear();
@@ -707,6 +745,8 @@ class ClientAdmissionRosterController {
   String? _outstandingRequestId;
   DateTime? _outstandingRequestExpiry;
   bool _refreshAfterSnapshot = false;
+  String? _unsynchronizedGeneration;
+  int? _unsynchronizedRevision;
   bool _disposed = false;
 
   Stream<AdmissionRoster?> get changes => _changes.stream;
@@ -763,6 +803,8 @@ class ClientAdmissionRosterController {
     }
     _outstandingRequestId = null;
     _outstandingRequestExpiry = null;
+    _unsynchronizedGeneration = null;
+    _unsynchronizedRevision = null;
     final current = _roster;
     if (current == null ||
         current.keeperGeneration != packet.keeperGeneration ||
@@ -779,7 +821,14 @@ class ClientAdmissionRosterController {
     if (!_isValid(packet)) return;
     final current = _roster;
     if (current == null) {
-      if (_outstandingRequestId != null) _refreshAfterSnapshot = true;
+      if (_unsynchronizedGeneration != packet.keeperGeneration ||
+          _unsynchronizedRevision != packet.revision) {
+        _unsynchronizedGeneration = packet.keeperGeneration;
+        _unsynchronizedRevision = packet.revision;
+        // The initial snapshot may have been lost. This authenticated update
+        // is a useful state change, so request a fresh snapshot immediately.
+        _requestIfCurrentKeeperPresent(force: true);
+      }
       return;
     }
     if (current.keeperGeneration != packet.keeperGeneration) {
@@ -788,6 +837,8 @@ class ClientAdmissionRosterController {
     }
     if (packet.revision <= current.revision) return;
     if (packet.revision != current.revision + 1) {
+      _unsynchronizedGeneration = packet.keeperGeneration;
+      _unsynchronizedRevision = packet.revision;
       _clear();
       _requestIfCurrentKeeperPresent();
       return;
@@ -812,7 +863,7 @@ class ClientAdmissionRosterController {
     _changes.add(null);
   }
 
-  void _requestIfCurrentKeeperPresent() {
+  void _requestIfCurrentKeeperPresent({bool force = false}) {
     final keeper = keeperIdentity();
     final now = _now();
     if (_disposed ||
@@ -820,7 +871,7 @@ class ClientAdmissionRosterController {
         keeper.isEmpty ||
         keeper == channel.localIdentity ||
         !channel.isPresent(keeper) ||
-        (_outstandingRequestExpiry?.isAfter(now) ?? false)) {
+        (!force && (_outstandingRequestExpiry?.isAfter(now) ?? false))) {
       return;
     }
     final expiry = now.add(AdmissionProtocol.lifetime);

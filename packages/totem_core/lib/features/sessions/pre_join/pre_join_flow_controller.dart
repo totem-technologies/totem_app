@@ -453,14 +453,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       final mediaController = ref.read(
         preJoinMediaControllerProvider(sessionSlug).notifier,
       );
-      final currentMedia = ref.read(
-        preJoinMediaControllerProvider(sessionSlug),
-      );
       final requireUsableMedia = ref.read(preJoinRequiresUsableMediaProvider);
-      if (requireUsableMedia && !currentMedia.canJoinOnWeb) {
-        state = state.copyWith(phase: PreJoinFlowPhase.idle);
-        return PreJoinJoinOutcome.permissionsDenied;
-      }
 
       // Precache before transferring preview tracks so failure is retryable.
       await ref.read(sessionProvider(sessionSlug).future);
@@ -527,28 +520,38 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         return PreJoinJoinOutcome.retryableFailure;
       }
 
-      // Only acknowledge after the normal Session connection and initial
-      // publication have succeeded. Receipt delivery is best-effort and can
-      // recover on Keeper presence without disconnecting the joined user.
-      if (admissionRequest != null && ref.mounted) {
-        try {
-          await currentSession.messaging.sendAdmissionJoined(admissionRequest);
-        } catch (error, stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            message: 'Could not confirm Session admission to Keeper',
-          );
-        }
-      }
-      // Keep the Keeper's existing fatal-error screen behavior.
+      // Keep the Keeper's existing fatal-error screen behavior. The connected
+      // Session is ready; a pending data-channel send must not keep the local
+      // user on pre-join after the Keeper has already processed the receipt.
       if (ref.mounted) state = state.copyWith(phase: PreJoinFlowPhase.joined);
+      if (admissionRequest != null && ref.mounted) {
+        // The Keeper's roster still governs visibility to other participants.
+        // Retain best-effort receipt recovery on presence and reconnect.
+        unawaited(() async {
+          try {
+            await currentSession.messaging.sendAdmissionJoined(
+              admissionRequest,
+            );
+          } catch (error, stackTrace) {
+            ErrorHandler.logError(
+              error,
+              stackTrace: stackTrace,
+              message: 'Could not confirm Session admission to Keeper',
+            );
+          }
+        }());
+      }
       return PreJoinJoinOutcome.joined;
     } on PreJoinMediaPermissionDeniedException {
       if (ref.mounted) {
         state = state.copyWith(
           phase: PreJoinFlowPhase.idle,
           clearSessionOptions: true,
+          error: admissionRequest == null
+              ? null
+              : StateError(
+                  'Media permissions changed after approval. Please try joining again.',
+                ),
         );
       }
       return PreJoinJoinOutcome.permissionsDenied;

@@ -16,6 +16,7 @@ import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/admission_transport.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
@@ -119,6 +120,20 @@ class _TrackFactory extends PreJoinPreviewTrackFactory {
   }
 }
 
+class _DelayedTrackFactory extends _TrackFactory {
+  final cameraStarted = Completer<void>();
+  final cameraGate = Completer<void>();
+
+  @override
+  Future<LocalVideoTrack?> createVideoTrack(
+    CameraCaptureOptions cameraOptions,
+  ) async {
+    cameraStarted.complete();
+    await cameraGate.future;
+    return super.createVideoTrack(cameraOptions);
+  }
+}
+
 class _UnavailableTrackFactory extends PreJoinPreviewTrackFactory {
   @override
   Future<LocalVideoTrack?> createVideoTrack(
@@ -173,6 +188,24 @@ class _SuccessfulSessionController extends SessionController {
     activationCalls++;
     return SessionJoinResult.success;
   }
+}
+
+class _PendingReceiptMessagingController extends SessionMessagingController {
+  final receiptGate = Completer<void>();
+  AdmissionRequest? receivedRequest;
+
+  @override
+  Future<void> sendAdmissionJoined(AdmissionRequest request) {
+    receivedRequest = request;
+    return receiptGate.future;
+  }
+}
+
+class _PendingReceiptSessionController extends _SuccessfulSessionController {
+  static _PendingReceiptMessagingController? receiptMessaging;
+
+  @override
+  SessionMessagingController get messaging => receiptMessaging!;
 }
 
 class _RetryableSessionController extends SessionController {
@@ -328,6 +361,7 @@ ProviderContainer _container({
   required ValueGetter<SessionController> sessionController,
   Future<JoinResponse> Function()? getToken,
   bool requireUsableMedia = false,
+  SessionOptions sessionOptions = _options,
   bool Function()? shouldFailPrecache,
   String? keeperSlug,
   String userSlug = 'guest',
@@ -349,7 +383,9 @@ ProviderContainer _container({
           }
           return _event(keeperSlug: keeperSlug ?? userSlug);
         }),
-        sessionControllerProvider(_options).overrideWith(sessionController),
+        sessionControllerProvider(
+          sessionOptions,
+        ).overrideWith(sessionController),
         if (flowController != null)
           preJoinFlowControllerProvider(_slug).overrideWith(flowController),
         authControllerProvider.overrideWith(
@@ -536,6 +572,120 @@ void main() {
       check(
         container.read(preJoinFlowControllerProvider(_slug)).phase,
       ).equals(PreJoinFlowPhase.joined);
+    },
+  );
+
+  test(
+    'a pending receipt send does not hold an activated participant on pre-join',
+    () async {
+      final messaging = _PendingReceiptMessagingController();
+      _PendingReceiptSessionController.receiptMessaging = messaging;
+      addTearDown(
+        () => _PendingReceiptSessionController.receiptMessaging = null,
+      );
+      final container = _container(
+        factory: _TrackFactory(),
+        response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+        sessionController: _PendingReceiptSessionController.new,
+        keeperSlug: 'keeper',
+        flowController: _AdmissionFlow.new,
+      );
+      addTearDown(container.dispose);
+      await _waitForMedia(container);
+
+      final flow = container.read(
+        preJoinFlowControllerProvider(_slug).notifier,
+      );
+      check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+      _AdmissionFlow.transport!.decide(true);
+      await pumpEventQueue();
+
+      check(
+        messaging.receivedRequest?.id,
+      ).equals(_AdmissionFlow.transport!.request!.id);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.joined);
+      messaging.receiptGate.complete();
+    },
+  );
+
+  test('camera-off approval enters the session with the same room', () async {
+    const cameraOffOptions = SessionOptions(
+      sessionSlug: _slug,
+      token: 'token',
+      cameraEnabled: false,
+      microphoneEnabled: true,
+      speakerEnabled: true,
+      cameraOptions: SessionController.defaultCameraCaptureOptions,
+    );
+    final factory = _TrackFactory();
+    _SuccessfulSessionController.activationCalls = 0;
+    _SuccessfulSessionController.receivedMedia = null;
+    final container = _container(
+      factory: factory,
+      response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+      sessionController: _SuccessfulSessionController.new,
+      sessionOptions: cameraOffOptions,
+      keeperSlug: 'keeper',
+      flowController: _AdmissionFlow.new,
+      requireUsableMedia: true,
+    );
+    addTearDown(container.dispose);
+    await _waitForMedia(container);
+    await container
+        .read(preJoinMediaControllerProvider(_slug).notifier)
+        .toggleCamera();
+
+    final flow = container.read(preJoinFlowControllerProvider(_slug).notifier);
+    check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+    _AdmissionFlow.transport!.decide(true);
+    await pumpEventQueue();
+
+    check(_SuccessfulSessionController.activationCalls).equals(1);
+    check(_SuccessfulSessionController.receivedMedia?.cameraTrack).isNull();
+    check(
+      _SuccessfulSessionController.receivedMedia?.microphoneTrack,
+    ).equals(factory.audioTracks.single);
+    check(
+      container.read(preJoinFlowControllerProvider(_slug)).phase,
+    ).equals(PreJoinFlowPhase.joined);
+  });
+
+  test(
+    'first approval waits for in-flight preview capture before activating the room',
+    () async {
+      final factory = _DelayedTrackFactory();
+      _SuccessfulSessionController.activationCalls = 0;
+      final container = _container(
+        factory: factory,
+        response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+        sessionController: _SuccessfulSessionController.new,
+        keeperSlug: 'keeper',
+        flowController: _AdmissionFlow.new,
+        requireUsableMedia: true,
+      );
+      addTearDown(container.dispose);
+      await factory.cameraStarted.future;
+
+      final flow = container.read(
+        preJoinFlowControllerProvider(_slug).notifier,
+      );
+      check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+      _AdmissionFlow.transport!.decide(true);
+      await pumpEventQueue();
+      check(_SuccessfulSessionController.activationCalls).equals(0);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.joining);
+
+      factory.cameraGate.complete();
+      await pumpEventQueue();
+      check(_SuccessfulSessionController.activationCalls).equals(1);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.joined);
+      check(factory.videoTracks).length.equals(1);
     },
   );
 

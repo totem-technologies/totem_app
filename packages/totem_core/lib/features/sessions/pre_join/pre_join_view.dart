@@ -128,10 +128,14 @@ class PreJoinView extends StatelessWidget {
                     spacing: 18,
                     children: [
                       Expanded(child: cameraPreview),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        spacing: 18,
-                        children: [joinCard, actionBar],
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 18,
+                            children: [joinCard, actionBar],
+                          ),
+                        ),
                       ),
                     ],
                   ),

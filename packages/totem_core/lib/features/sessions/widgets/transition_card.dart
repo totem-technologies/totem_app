@@ -179,6 +179,7 @@ class JoinTransitionCard extends StatelessWidget {
     this.isSliderLoading,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
     this.enabled = true,
+    this.note,
     super.key,
   });
 
@@ -187,12 +188,13 @@ class JoinTransitionCard extends StatelessWidget {
   final bool? isSliderLoading;
   final EdgeInsetsGeometry margin;
   final bool enabled;
+  final String? note;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return _TransitionCardBase(
-      keyboardShortcutText: 'press space bar to join',
+      keyboardShortcutText: enabled ? 'press space bar to join' : null,
       childBuilder: (context, hasMouseConnected) {
         return _TransitionCardContainer(
           margin: margin,
@@ -215,6 +217,12 @@ class JoinTransitionCard extends StatelessWidget {
                     'Your session will start soon. Please check your audio and video before joining.',
                     textAlign: TextAlign.center,
                   ),
+                  if (note != null)
+                    Text(
+                      note!,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium,
+                    ),
                   Padding(
                     padding: const EdgeInsetsDirectional.symmetric(
                       horizontal: 14,

@@ -53,7 +53,7 @@ Components/
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
   Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard, SessionWaitingQueueButton
 Screens/
-  session/:slug   SessionEntry (one story; args are the states; browsing, waiting, declined, queue and orientation content use core views)
+  session/:slug   SessionEntry (one story; browsing is catalog-only; waiting, declined, queue and orientation use core views)
 ```
 
 ### Rules

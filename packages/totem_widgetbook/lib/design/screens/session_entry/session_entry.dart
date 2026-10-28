@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/session_admission_list.dart';
-import 'package:totem_core/features/sessions/widgets/session_browsing_view.dart';
+
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_info_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
@@ -16,6 +16,7 @@ import '../../components/session_controls/session_controls.dart';
 import '../../paint.dart';
 import '../../tokens/tokens.dart';
 import 'entry_layer.dart';
+import 'session_browsing_view.dart';
 import 'session_details.dart';
 
 typedef EntryPhase = DetailsPhase;

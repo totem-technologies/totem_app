@@ -26,10 +26,9 @@ import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/permissions_popups.dart';
-import 'package:totem_core/features/sessions/widgets/session_browsing_view.dart';
+
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
-import 'package:totem_core/features/sessions/widgets/session_entry_info_card.dart';
-import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
+
 import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/router.dart';
@@ -88,7 +87,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   bool _terminalMediaReleaseRequested = false;
   Timer? _joinWindowTimer;
   DateTime? _joinWindowStart;
-  bool _earlyNoticeDismissed = false;
 
   @override
   void initState() {
@@ -279,131 +277,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     context.go(RouteNames.space(session.space.slug));
   }
 
-  Widget _buildBrowsing(
-    SessionDetailSchema session,
-    PreJoinFlowState flow, {
-    required bool early,
-  }) {
-    final starts = session.start.toLocal();
-    final keeper = session.space.author;
-    final next = session.space.nextEvents.where(
-      (event) =>
-          !event.cancelled &&
-          event.slug != session.slug &&
-          event.start.isAfter(widget.now()),
-    );
-    final nextSession = next.isEmpty ? null : next.first;
-    final keeperImage = keeper.profileImage.value;
-    final image = session.space.imageLink;
-    final notice = early && !_earlyNoticeDismissed;
-    return Material(
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: SessionBrowsingView(
-              spaceName: session.space.title,
-              sessionName: session.title,
-              keeperName: keeper.name.value ?? 'Keeper',
-              dateLabel: DateFormat('EEEE, MMMM d').format(starts),
-              timeLabel: DateFormat('h:mm a').format(starts),
-              facts: [
-                SessionEntryFact(
-                  icon: const Icon(Icons.timer_outlined, size: 16),
-                  value: '${session.duration}',
-                  label: 'minutes',
-                ),
-                SessionEntryFact(
-                  icon: const Icon(Icons.people_outline, size: 16),
-                  value: '${session.seatsLeft}',
-                  label: 'seats left',
-                ),
-              ],
-              heroPhoto: image == null || image.isEmpty
-                  ? null
-                  : NetworkImage(image),
-              keeperPhoto: keeperImage == null || keeperImage.isEmpty
-                  ? null
-                  : NetworkImage(keeperImage),
-              about: session.content.isEmpty ? null : session.content,
-              similarSession: nextSession == null
-                  ? null
-                  : Text(
-                      '${nextSession.title ?? session.space.title} · ${DateFormat('MMM d, h:mm a').format(nextSession.start.toLocal())}',
-                    ),
-              onJoin: early || flow.phase != PreJoinFlowPhase.idle
-                  ? null
-                  : () => unawaited(_requestJoin()),
-              onBack: () => _backToSpace(session),
-            ),
-          ),
-          if (flow.error != null && !early)
-            Positioned(
-              bottom: 16,
-              left: 16,
-              right: 16,
-              child: SafeArea(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: Material(
-                      borderRadius: BorderRadius.circular(20),
-                      elevation: 6,
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: SessionEntryNotice(
-                          kicker: 'Unable to join',
-                          title: 'Please try again',
-                          onDone: () => unawaited(_requestJoin()),
-                          doneLabel: 'Try again',
-                          children: [Text('${flow.error}')],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          if (notice)
-            Positioned.fill(
-              child: Stack(
-                children: [
-                  const ModalBarrier(dismissible: false, color: Colors.black54),
-                  Align(
-                    alignment: MediaQuery.sizeOf(context).width >= 640
-                        ? Alignment.center
-                        : Alignment.bottomCenter,
-                    child: SafeArea(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
-                        child: Material(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: SessionEntryNotice(
-                              kicker: 'A little early',
-                              title: 'Your Session is coming up',
-                              onDone: () =>
-                                  setState(() => _earlyNoticeDismissed = true),
-                              children: [
-                                Text(
-                                  'Join Session opens at ${DateFormat('h:mm a').format(starts.subtract(const Duration(minutes: 10)))}.',
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildDeclined(SessionDetailSchema session, PreJoinFlowState flow) {
     final next = session.space.nextEvents.where(
       (event) =>
@@ -502,8 +375,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   Widget _buildPreJoinView(
     PreJoinMediaState media,
     PreJoinFlowState flow,
-    SessionDetailSchema session,
-  ) {
+    SessionDetailSchema session, {
+    required bool early,
+  }) {
     final mediaController = ref.read(
       preJoinMediaControllerProvider(widget.sessionSlug).notifier,
     );
@@ -512,6 +386,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         ? media.canJoinOnWeb
         : flow.nativePermissionsGranted;
     final pending = flow.phase == PreJoinFlowPhase.pending;
+    String? joinNote;
+    if (early) {
+      joinNote =
+          'Join opens at ${DateFormat('h:mm a').format(session.start.toLocal().subtract(const Duration(minutes: 10)))}.';
+    } else if (flow.error != null) {
+      joinNote = 'Please try again: ${flow.error}';
+    }
     void leaveWaiting() {
       unawaited(() async {
         await ref
@@ -550,9 +431,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           : JoinTransitionCard(
               margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
               keepActionLoadingOnSuccess: true,
-              enabled: permissionsGranted,
-              onActionPressed: _requestJoin,
+              enabled: permissionsGranted && !early,
+              onActionPressed: early ? () async => false : _requestJoin,
               isSliderLoading: flow.phase == PreJoinFlowPhase.joining,
+              note: joinNote,
             ),
     );
   }
@@ -591,20 +473,14 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         flow.admissionStatus == AdmissionStatus.ended) {
       return _buildDeclined(session, flow);
     }
-    if (early && flow.phase == PreJoinFlowPhase.idle) {
-      return _buildBrowsing(session, flow, early: true);
-    }
     final media = ref.watch(preJoinMediaControllerProvider(widget.sessionSlug));
-    if (flow.phase == PreJoinFlowPhase.idle) {
-      return _buildBrowsing(session, flow, early: false);
-    }
     _joined = flow.phase == PreJoinFlowPhase.joined;
 
     ref.listen(preJoinMediaControllerProvider(widget.sessionSlug), (_, next) {
       _handleWebMediaState(next);
     });
 
-    final preJoinView = _buildPreJoinView(media, flow, session);
+    final preJoinView = _buildPreJoinView(media, flow, session, early: early);
     final hasStartedJoin =
         flow.phase != PreJoinFlowPhase.idle && flow.sessionOptions != null;
     if (!hasStartedJoin || loadingData) {
@@ -620,6 +496,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         loadingScreen: preJoinView,
         showAdmissionOrientation:
             flow.admissionStatus == AdmissionStatus.approved,
+        admissionReady: flow.phase == PreJoinFlowPhase.joined,
       ),
     );
   }

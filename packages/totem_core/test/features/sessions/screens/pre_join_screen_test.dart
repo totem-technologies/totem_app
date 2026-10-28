@@ -30,9 +30,9 @@ import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
-import 'package:totem_core/features/sessions/widgets/session_browsing_view.dart';
+
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
-import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
+
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 import 'package:totem_core/shared/router.dart';
@@ -486,39 +486,67 @@ void main() {
     );
 
     check(tokenRequests).equals(0);
-    check(factory.videoTracks).isEmpty();
-    check(factory.audioTracks).isEmpty();
-    check(find.byType(SessionBrowsingView).evaluate()).isNotEmpty();
-    check(find.text('Join Session opens at 12:01 PM.').evaluate()).isNotEmpty();
+    check(factory.videoTracks).length.equals(1);
+    check(factory.audioTracks).length.equals(1);
+    check(find.byType(PreJoinView).evaluate()).isNotEmpty();
+    check(find.text('Join opens at 12:01 PM.').evaluate()).isNotEmpty();
     check(
       tester
-          .widget<SessionEntryAction>(
-            find.widgetWithText(SessionEntryAction, 'Join session'),
-          )
-          .onPressed,
-    ).isNull();
-    await tester.tap(find.text('Got it'));
-    await tester.pump();
-    check(find.text('Test session').evaluate()).isNotEmpty();
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .enabled,
+    ).isFalse();
 
     now = now.add(const Duration(minutes: 1));
     await tester.pump(const Duration(minutes: 1));
     await tester.pump();
 
     check(tokenRequests).equals(0);
-    check(find.text('Join Session opens at 12:01 PM.').evaluate()).isEmpty();
-    check(find.byType(SessionBrowsingView).evaluate()).isNotEmpty();
+    check(find.text('Join opens at 12:01 PM.').evaluate()).isEmpty();
+    check(find.byType(PreJoinView).evaluate()).isNotEmpty();
     check(
       tester
-          .widget<SessionEntryAction>(
-            find.widgetWithText(SessionEntryAction, 'Join session'),
-          )
-          .onPressed,
-    ).isNotNull();
-    check(find.byType(PreJoinView).evaluate()).isEmpty();
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .enabled,
+    ).isTrue();
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+  });
+
+  testWidgets('Keeper can join directly before the participant window', (
+    tester,
+  ) async {
+    final now = DateTime(2030, 1, 1, 12);
+    var tokenRequests = 0;
+    await pumpScreen(
+      tester,
+      successfulJoin: true,
+      now: () => now,
+      getSession: () async => _event(start: now.add(const Duration(hours: 1))),
+      getSessionToken: () async {
+        tokenRequests++;
+        return const JoinResponse(token: 'token', isAlreadyPresent: false);
+      },
+    );
+
+    check(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .enabled,
+    ).isTrue();
+    check(find.byType(SessionWaitingView).evaluate()).isEmpty();
+    check(tokenRequests).equals(0);
+    unawaited(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted(),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    check(tokenRequests).equals(1);
+    check(find.byType(VideoSessionScreen).evaluate()).isNotEmpty();
+    check(find.byType(SessionWaitingView).evaluate()).isEmpty();
   });
 
   testWidgets('pending admission shows a waiting room with local preview', (
@@ -639,8 +667,14 @@ void main() {
     });
   }
 
-  for (final size in [const Size(360, 800), const Size(900, 800)]) {
-    testWidgets('browsing session details and Join work at $size', (
+  for (final size in [
+    const Size(360, 800),
+    const Size(900, 800),
+    const Size(1280, 720),
+    const Size(1024, 480),
+    const Size(700, 400),
+  ]) {
+    testWidgets('pre-join preview and controls fit at $size', (
       tester,
     ) async {
       tester.view.physicalSize = size;
@@ -652,17 +686,20 @@ void main() {
         getSessionToken: () async => throw Exception('join unavailable'),
       );
 
-      check(find.text('Test session').evaluate()).isNotEmpty();
-      check(find.text('Morgan Keeper').evaluate()).isNotEmpty();
+      check(find.byType(PreJoinView).evaluate()).isNotEmpty();
+      check(find.byType(LocalParticipantCard).evaluate()).isNotEmpty();
+      check(find.byType(ActionSliderButton).evaluate()).isNotEmpty();
       check(tester.takeException()).isNull();
-      await tester.tap(find.text('Join session'));
+      await tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted();
       await tester.pump();
-      check(find.text('Try again').evaluate()).isNotEmpty();
+      check(find.textContaining('Please try again:').evaluate()).isNotEmpty();
       check(tester.takeException()).isNull();
     });
   }
 
-  testWidgets('browsing shows session data and defers token until Join', (
+  testWidgets('pre-join preview defers the token until Join', (
     tester,
   ) async {
     var tokenRequests = 0;
@@ -677,22 +714,19 @@ void main() {
       },
     );
 
-    check(find.byType(SessionBrowsingView).evaluate()).isNotEmpty();
-    check(find.text('Test session').evaluate()).isNotEmpty();
-    check(find.text('Space').evaluate()).isNotEmpty();
-    check(find.text('Morgan Keeper').evaluate()).isNotEmpty();
-    check(
-      find.text('A quiet space to connect and reflect.').evaluate(),
-    ).isNotEmpty();
-    check(find.textContaining('4 seats left').evaluate()).isNotEmpty();
+    check(find.byType(PreJoinView).evaluate()).isNotEmpty();
+    check(find.byType(LocalParticipantCard).evaluate()).isNotEmpty();
     check(tokenRequests).equals(0);
     check(factory.videoTracks).length.equals(1);
     check(factory.audioTracks).length.equals(1);
-    check(find.byType(PreJoinView).evaluate()).isEmpty();
 
-    await tester.tap(find.text('Join session'));
+    final joining = tester
+        .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+        .onActionCompleted();
     await tester.pump();
     check(tokenRequests).equals(1);
+    token.completeError(StateError('Test token request canceled'));
+    await joining;
   });
 
   testWidgets(
@@ -756,15 +790,16 @@ void main() {
     );
 
     check(tokenRequests).equals(0);
-    check(find.byType(SessionBrowsingView).evaluate()).isNotEmpty();
-    await tester.tap(find.text('Join session'));
+    check(find.byType(PreJoinView).evaluate()).isNotEmpty();
+    await tester
+        .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+        .onActionCompleted();
     await tester.pump();
     await tester.pump();
 
     check(tokenRequests).equals(1);
-    check(find.text('Please try again').evaluate()).isNotEmpty();
-    check(find.text('Try again').evaluate()).isNotEmpty();
-    check(find.byType(SessionBrowsingView).evaluate()).isNotEmpty();
+    check(find.textContaining('Please try again:').evaluate()).isNotEmpty();
+    check(find.byType(PreJoinView).evaluate()).isNotEmpty();
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
@@ -795,7 +830,11 @@ void main() {
   ) async {
     await pumpScreen(tester, successfulJoin: true);
 
-    await tester.tap(find.text('Join session'));
+    unawaited(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted(),
+    );
     await tester.pump();
     await tester.pump();
 
@@ -810,7 +849,11 @@ void main() {
     await pumpScreen(tester, pendingJoin: true, trackFactory: factory);
     check(factory.videoTracks).length.equals(1);
 
-    await tester.tap(find.text('Join session'));
+    unawaited(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted(),
+    );
     await tester.pump();
     await tester.pump();
 
@@ -835,7 +878,11 @@ void main() {
       tester.widgetList(find.text("You're already in this session")),
     ).length.equals(0);
 
-    await tester.tap(find.text('Join session'));
+    unawaited(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted(),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 

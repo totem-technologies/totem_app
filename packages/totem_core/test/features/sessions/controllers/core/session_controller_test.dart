@@ -1061,6 +1061,70 @@ void main() {
         },
       );
 
+      test(
+        'camera-off activation publishes existing microphone and becomes connected',
+        () async {
+          const eventSlug = 'test-session';
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final participant = MockLocalParticipant();
+          final microphoneTrack = MockLocalAudioTrack();
+          final publication =
+              Completer<LocalTrackPublication<LocalAudioTrack>>();
+          when(participant.isMicrophoneEnabled).thenReturn(true);
+          when(
+            () => participant.publishAudioTrack(microphoneTrack),
+          ).thenAnswer((_) => publication.future);
+          when(
+            () => participant.setMicrophoneEnabled(
+              false,
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
+          ).thenAnswer((_) async => null);
+          when(participant.unpublishAllTracks).thenAnswer((_) async {});
+          final room = _CountingRoom(participant);
+
+          final activation = controller.activateConnectedRoom(
+            room: room,
+            joinMedia: SessionJoinMedia(microphoneTrack: microphoneTrack),
+          );
+          await pumpEventQueue();
+          verify(
+            () => participant.publishAudioTrack(microphoneTrack),
+          ).called(1);
+          verifyNever(
+            () => participant.setMicrophoneEnabled(
+              false,
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
+          );
+          publication.complete(MockLocalAudioTrackPublication());
+          check(await activation).equals(SessionJoinResult.success);
+          check(
+            controller.state.connectionState,
+          ).equals(RoomConnectionState.connected);
+          verifyNever(() => participant.setCameraEnabled(any<bool>()));
+          await controller.leave();
+        },
+      );
+
       test('adopts an already-connected room only once', () async {
         const eventSlug = 'test-session';
         const options = SessionOptions(

@@ -424,6 +424,77 @@ void main() {
     check(nextKeeper.attempts).isEmpty();
   });
 
+  test('a missed joined receipt retries once without a presence change', () {
+    fakeAsync((async) {
+      final room = _AdmissionRoom(null)..participant = _Participant('guest');
+      final transport = LiveKitAdmissionTransport(room);
+      final request = AdmissionRequest(
+        id: 'r1',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        displayName: 'Guest',
+      );
+      unawaited(transport.sendJoinOutcome(request));
+      async.flushMicrotasks();
+      check(room.participant!.published).length.equals(1);
+
+      async
+        ..elapse(const Duration(seconds: 2))
+        ..flushMicrotasks();
+      check(room.participant!.published).length.equals(2);
+      async.elapse(const Duration(seconds: 4));
+      check(room.participant!.published).length.equals(2);
+      unawaited(transport.dispose());
+      async.flushMicrotasks();
+    });
+  });
+
+  test('admitted roster arriving during publish prevents a receipt retry', () {
+    fakeAsync((async) {
+      final room = _AdmissionRoom(null)..participant = _Participant('guest');
+      final publishGate = Completer<void>();
+      room.participant!.onPublish = (_) => publishGate.future;
+      final transport = LiveKitAdmissionTransport(room);
+      final request = AdmissionRequest(
+        id: 'r1',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        displayName: 'Guest',
+      );
+      unawaited(transport.sendJoinOutcome(request));
+      async.flushMicrotasks();
+      unawaited(
+        room.listener.trigger(
+          DataReceivedEvent(
+            data: AdmissionProtocol.encode(
+              AdmissionRosterUpdated(
+                id: 'roster',
+                senderIdentity: 'keeper',
+                recipientIdentity: 'guest',
+                expiresAt: request.expiresAt,
+                sessionIdentity: 'session',
+                keeperGeneration: 'generation',
+                revision: 1,
+                members: const ['guest'],
+              ),
+            ),
+            participant: _RemoteParticipant('keeper'),
+            topic: AdmissionProtocol.topic,
+          ),
+        ),
+      );
+      publishGate.complete();
+      async
+        ..flushMicrotasks()
+        ..elapse(const Duration(seconds: 2));
+      check(room.participant!.published).length.equals(1);
+      unawaited(transport.dispose());
+      async.flushMicrotasks();
+    });
+  });
+
   test('transient reconnect does not emit terminal disconnect', () async {
     final room = _AdmissionRoom(null);
     final transport = LiveKitAdmissionTransport(room);
@@ -698,6 +769,60 @@ void main() {
   );
 
   test(
+    'an unanswered first approval is retried once without another participant action',
+    () {
+      fakeAsync((async) {
+        final guestChannel = _Channel('guest');
+        final keeperChannel = _Channel('keeper');
+        guestChannel.peer = keeperChannel;
+        keeperChannel.peer = guestChannel;
+        guestChannel.present.add('keeper');
+        keeperChannel.present.add('guest');
+        final guest = PendingAdmissionController(
+          channel: guestChannel,
+          keeperIdentity: () => 'keeper',
+        );
+        final keeper = KeeperAdmissionController(
+          channel: keeperChannel,
+          keeperIdentity: () => 'keeper',
+        );
+        AdmissionRequest? request;
+        unawaited(
+          guest
+              .requestAdmission(displayName: 'Guest')
+              .then((value) => request = value),
+        );
+        async.flushMicrotasks();
+        check(keeper.requests).length.equals(1);
+        keeperChannel.dropNext = true;
+        unawaited(keeper.approve(request!.id, 'guest'));
+        async.flushMicrotasks();
+        check(guest.status).equals(AdmissionStatus.pending);
+        check(
+          keeper.attempts.single.status,
+        ).equals(KeeperAdmissionStatus.joining);
+
+        async
+          ..elapse(const Duration(seconds: 2))
+          ..flushMicrotasks();
+        check(guest.status).equals(AdmissionStatus.approved);
+        check(
+          keeperChannel.sent.whereType<AdmissionDecision>(),
+        ).length.equals(2);
+        async.elapse(const Duration(seconds: 4));
+        check(
+          keeperChannel.sent.whereType<AdmissionDecision>(),
+        ).length.equals(2);
+        unawaited(guest.dispose());
+        unawaited(keeper.dispose());
+        unawaited(guestChannel.dispose());
+        unawaited(keeperChannel.dispose());
+        async.flushMicrotasks();
+      });
+    },
+  );
+
+  test(
     'keeper rejects non-keeper authority and expired or changed requests',
     () async {
       final channel = _Channel('keeper');
@@ -758,9 +883,10 @@ void main() {
       });
       await guest.requestAdmission(displayName: 'Guest');
       check(channel.sent).isEmpty();
-      channel.present.add('keeper');
+      // The SDK emits presence before adding the Keeper to remoteParticipants.
       channel.controller.add(const AdmissionPresenceChanged('keeper', true));
       check(channel.sent).length.equals(1);
+      channel.present.add('keeper');
       now = now.add(AdmissionProtocol.lifetime);
       channel.controller.add(const AdmissionConnectionRestored());
       check(guest.status).equals(AdmissionStatus.expired);
@@ -1698,7 +1824,7 @@ void main() {
   );
 
   test(
-    'client resyncs once when update precedes its initial snapshot',
+    'client resyncs immediately when an update arrives before a lost initial snapshot',
     () async {
       final channel = _Channel('guest')..present.add('keeper');
       var nextId = 0;
@@ -1713,20 +1839,20 @@ void main() {
         await channel.dispose();
       });
       final expiry = DateTime.now().add(const Duration(minutes: 1));
-      channel.controller.add(
-        AdmissionPacketReceived(
-          AdmissionRosterUpdated(
-            id: 'update-first',
-            senderIdentity: 'keeper',
-            recipientIdentity: 'guest',
-            expiresAt: expiry,
-            sessionIdentity: 'session',
-            keeperGeneration: 'generation',
-            revision: 1,
-            members: const ['guest'],
-          ),
-        ),
+      final update = AdmissionRosterUpdated(
+        id: 'update-first',
+        senderIdentity: 'keeper',
+        recipientIdentity: 'guest',
+        expiresAt: expiry,
+        sessionIdentity: 'session',
+        keeperGeneration: 'generation',
+        revision: 1,
+        members: const ['guest'],
       );
+      channel.controller
+        ..add(AdmissionPacketReceived(update))
+        ..add(AdmissionPacketReceived(update));
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionRosterSnapshot(
@@ -1742,8 +1868,7 @@ void main() {
           ),
         ),
       );
-      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
-      check(client.roster?.revision).equals(0);
+      check(client.roster).isNull();
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionRosterSnapshot(

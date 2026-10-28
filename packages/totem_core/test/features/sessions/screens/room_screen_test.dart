@@ -158,6 +158,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   RoomStatus roomStatus = RoomStatus.active,
   DisconnectReason? disconnectReason,
   bool showAdmissionOrientation = false,
+  bool admissionReady = false,
   String? admissionPrompt,
   List<Object?> extraOverrides = const [],
 }) async {
@@ -238,6 +239,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
             sessionSlug: 'test-session',
             loadingScreen: const SizedBox(key: ValueKey('loading-screen')),
             showAdmissionOrientation: showAdmissionOrientation,
+            admissionReady: admissionReady,
             now: tester.binding.clock.now,
           ),
         ),
@@ -978,6 +980,7 @@ void main() {
           screen: RoomScreen.loading,
           roomScreenProvider: screenProvider,
           showAdmissionOrientation: true,
+          admissionReady: true,
           admissionPrompt: 'What brought you here?',
         );
 
@@ -989,12 +992,11 @@ void main() {
         );
         container.read(screenProvider.notifier).set(RoomScreen.listening);
         await tester.pump();
-        check(tester.widgetList(find.text('What brought you here?'))).isEmpty();
-        container
-            .read(admittedSessionParticipantIdentitiesProvider.notifier)
-            .update(['user-1']);
-        await tester.pumpAndSettle();
-
+        check(
+          container
+              .read(admittedSessionParticipantIdentitiesProvider)
+              .contains('user-1'),
+        ).isFalse();
         check(
           tester.widgetList(find.text('What brought you here?')),
         ).length.equals(1);
@@ -1008,6 +1010,38 @@ void main() {
         await _unmountRoomScreen(tester);
         PaintingBinding.instance.imageCache.clearLiveImages();
         PaintingBinding.instance.imageCache.clear();
+      },
+    );
+
+    testWidgets(
+      'does not expose the room before admission activation finishes',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          showAdmissionOrientation: true,
+          admissionPrompt: 'What brought you here?',
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container
+            .read(admittedSessionParticipantIdentitiesProvider.notifier)
+            .update(['user-1']);
+        await tester.pump();
+        check(
+          tester.widgetList(find.byKey(const ValueKey('loading-screen'))),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(ListeningTurnScreen))).isEmpty();
+        await _unmountRoomScreen(tester);
       },
     );
 

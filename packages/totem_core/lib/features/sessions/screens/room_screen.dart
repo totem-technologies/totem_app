@@ -43,6 +43,7 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
     required this.sessionSlug,
     required this.loadingScreen,
     this.showAdmissionOrientation = false,
+    this.admissionReady = false,
     this.now = DateTime.now,
     super.key,
   });
@@ -50,6 +51,7 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
   final String sessionSlug;
   final Widget loadingScreen;
   final bool showAdmissionOrientation;
+  final bool admissionReady;
   final ValueGetter<DateTime> now;
 
   @override
@@ -633,18 +635,13 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     // Keep the rail mounted on wide windows even while closed so the
     // close animation has a widget to slide out.
     final dockChatSlot = shouldDockSessionChat(context);
-    final localIdentity = currentSession.room?.localParticipant?.identity;
-    final waitingForRoster =
-        widget.showAdmissionOrientation &&
-        connectionState == RoomConnectionState.connected &&
-        localIdentity != null &&
-        !ref
-            .watch(admittedSessionParticipantIdentitiesProvider)
-            .contains(
-              localIdentity,
-            );
+    // The Keeper-approved, fully activated local connection can enter without
+    // waiting for a separate roster packet. The roster still filters everyone
+    // shown to other participants.
+    final waitingForAdmission =
+        widget.showAdmissionOrientation && !widget.admissionReady;
     final showOrientation =
-        !waitingForRoster &&
+        !waitingForAdmission &&
         widget.showAdmissionOrientation &&
         !_admissionOrientationDismissed &&
         connectionState == RoomConnectionState.connected &&
@@ -658,7 +655,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     return SessionKeyboardShortcuts(
       navigatorKey: _roomNavigatorKey,
       enableEmojiReactions:
-          !waitingForRoster && currentRoomScreen == RoomScreen.listening,
+          !waitingForAdmission && currentRoomScreen == RoomScreen.listening,
       child: RoomBackground(
         status: roomStatus,
         child: Stack(
@@ -692,7 +689,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
                                               },
                                           child: _buildBody(
                                             currentSession,
-                                            waitingForRoster
+                                            waitingForAdmission
                                                 ? RoomScreen.loading
                                                 : currentRoomScreen,
                                             currentSessionEvent,

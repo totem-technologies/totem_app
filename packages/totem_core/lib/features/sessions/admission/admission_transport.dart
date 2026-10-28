@@ -65,6 +65,14 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
               packet.recipientIdentity == localIdentity) {
             _retryJoinReceipt();
           }
+          if (packet is AdmissionRosterPacket &&
+              packet.senderIdentity == _joinReceipt?.recipientIdentity &&
+              packet.recipientIdentity == localIdentity &&
+              packet.members.contains(localIdentity)) {
+            _joinReceiptConfirmed = true;
+            _joinReceiptRetry?.cancel();
+            _joinReceiptRetry = null;
+          }
         }
       })
       ..on<ParticipantConnectedEvent>((event) {
@@ -94,6 +102,9 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
         }
       })
       ..on<RoomDisconnectedEvent>((event) {
+        _joinReceiptRetry?.cancel();
+        _joinReceiptRetry = null;
+        _joinReceiptConfirmed = false;
         _joinReceipt = null;
         if (!_ended) _events.add(AdmissionRoomDisconnected(event.reason));
       });
@@ -106,6 +117,8 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
   late final EventsListener<RoomEvent> _listener;
   bool _disposed = false;
   AdmissionPacket? _joinReceipt;
+  Timer? _joinReceiptRetry;
+  bool _joinReceiptConfirmed = false;
 
   bool _ended = false;
 
@@ -123,6 +136,9 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
     }
     if (state.status == RoomStatus.ended) {
       _ended = true;
+      _joinReceiptRetry?.cancel();
+      _joinReceiptRetry = null;
+      _joinReceiptConfirmed = false;
       _joinReceipt = null;
       _events.add(const AdmissionRoomEnded());
     }
@@ -198,7 +214,19 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
       throw ArgumentError('Invalid or expired admission receipt');
     }
     _joinReceipt = receipt;
-    await send(receipt);
+    _joinReceiptConfirmed = false;
+    try {
+      await send(receipt);
+    } finally {
+      if (!_disposed && !_ended && !_joinReceiptConfirmed) {
+        // A successful publish does not confirm delivery to the Keeper. Give
+        // the receipt one bounded retry if no admitted roster arrives.
+        _joinReceiptRetry = Timer(
+          const Duration(seconds: 2),
+          _retryJoinReceipt,
+        );
+      }
+    }
   }
 
   void _retryJoinReceipt() {
@@ -214,6 +242,8 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _joinReceiptRetry?.cancel();
+    _joinReceiptRetry = null;
     _joinReceipt = null;
     await _listener.dispose();
     await _events.close();
