@@ -79,14 +79,10 @@ class MoreOptions extends ConsumerWidget {
     final currentSession = ref.watch(currentSessionProvider)!;
     final state = ref.watch(
       currentSessionStateProvider.select(
-        (state) => state == null
-            ? null
-            : (
-                roomState: state.roomState,
-                participants: state.participantsList,
-              ),
+        (state) => state == null ? null : (roomState: state.roomState),
       ),
     )!;
+    final participants = ref.watch(sessionParticipantsProvider);
     final deviceState = ref.watch(
       sessionDeviceControllerProvider(currentSession),
     );
@@ -211,10 +207,10 @@ class MoreOptions extends ConsumerWidget {
                   builder: (context) {
                     final next = state.roomState
                         .nextParticipantForcePassIdentity(
-                          participants: state.participants,
+                          participants: participants,
                         );
                     final nextParticipantName = next != null
-                        ? state.participants
+                        ? participants
                               .firstWhereOrNull((p) => p.identity == next)
                               ?.name
                         : null;
@@ -291,7 +287,7 @@ class MoreOptions extends ConsumerWidget {
                 builder: (context) {
                   final currentSpeaker = state.roomState.currentSpeaker.value;
                   final String? userName = currentSpeaker != null
-                      ? state.participants
+                      ? participants
                             .firstWhereOrNull(
                               (p) => p.identity == currentSpeaker,
                             )

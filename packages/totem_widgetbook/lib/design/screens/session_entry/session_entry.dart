@@ -2,16 +2,21 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/features/sessions/widgets/session_admission_list.dart';
+
+import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
+import 'package:totem_core/features/sessions/widgets/session_entry_info_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
+import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
+import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 
 import '../../components/button/button.dart';
 import '../../components/participant_card/participant_card.dart';
-import '../../components/session_card/session_card.dart';
 import '../../components/session_controls/session_controls.dart';
-import '../../components/waiting_card/waiting_card.dart';
 import '../../paint.dart';
-import '../../pressable.dart';
 import '../../tokens/tokens.dart';
 import 'entry_layer.dart';
+import 'session_browsing_view.dart';
 import 'session_details.dart';
 
 typedef EntryPhase = DetailsPhase;
@@ -34,51 +39,6 @@ class AdmissionRequest {
   final String name;
   final String expiresLabel;
 }
-
-const _spaceName = 'Shame & Self-Worth';
-const _sessionName = 'Letting Shame Fall Away';
-const _keeperName = 'Vanessa';
-const _startDateLabel = 'Wednesday, February 11th';
-const _startTime = '6:30 PM GMT';
-const _joinTime = '6:20 PM GMT';
-const _prompt = 'What are you ready to set down?';
-const _youName = 'Alex';
-
-const _details = 'assets/design/session_entry';
-const _previewPhoto = AssetImage('assets/design/participant_card/preview.jpg');
-
-typedef _Offer = ({
-  String name,
-  String space,
-  String keeper,
-  ImageProvider? keeperPhoto,
-  ImageProvider photo,
-  String time,
-  String meridiem,
-  int seatsLeft,
-});
-
-const _Offer _nextSession = (
-  name: 'After the Storm',
-  space: _spaceName,
-  keeper: 'Vanessa',
-  keeperPhoto: AssetImage('$_details/avatar-vanessa.png'),
-  photo: AssetImage('assets/design/session_card/photo.jpg'),
-  time: '6:30',
-  meridiem: 'PM',
-  seatsLeft: 5,
-);
-
-const _Offer _relatedSession = (
-  name: 'Holding the Hard Thing',
-  space: _spaceName,
-  keeper: 'Jonah',
-  keeperPhoto: null,
-  photo: AssetImage('$_details/similar.jpg'),
-  time: '7:00',
-  meridiem: 'PM',
-  seatsLeft: 3,
-);
 
 const _circle = [
   (name: 'Noah', feature: true),
@@ -145,11 +105,6 @@ TextStyle _title(BuildContext context) => TotemText.h2.copyWith(
   color: TotemTheme.of(context).textPrimary,
 );
 
-TextStyle _subtitle(BuildContext context) => TotemText.h3.copyWith(
-  letterSpacing: -0.27,
-  color: TotemTheme.of(context).textPrimary,
-);
-
 TextStyle _muted(BuildContext context) =>
     TotemText.bodySmall.copyWith(color: TotemTheme.of(context).textSecondary);
 
@@ -169,6 +124,26 @@ class SessionEntry extends StatefulWidget {
     required this.role,
     required this.phase,
     required this.status,
+    this.spaceName = '',
+    this.sessionName = '',
+    this.keeperName = '',
+    this.startDateLabel = '',
+    this.startTime = '',
+    this.joinTime = '',
+    this.participantName = 'You',
+    this.previewPhoto,
+    this.heroPhoto,
+    this.keeperPhoto,
+    this.about,
+    this.similarSession,
+    this.keeperLocation,
+    this.keeperBio,
+    this.onShare,
+    this.onKeeperProfile,
+    this.facts = const [],
+    this.prompt,
+    this.nextOffer,
+    this.relatedOffer,
     this.requests = const [],
     this.panelOpen = false,
     this.showOrientation = false,
@@ -189,6 +164,26 @@ class SessionEntry extends StatefulWidget {
   final EntryRole role;
   final EntryPhase phase;
   final EntryStatus status;
+  final String spaceName;
+  final String sessionName;
+  final String keeperName;
+  final String startDateLabel;
+  final String startTime;
+  final String joinTime;
+  final String participantName;
+  final ImageProvider? previewPhoto;
+  final ImageProvider? heroPhoto;
+  final ImageProvider? keeperPhoto;
+  final String? about;
+  final Widget? similarSession;
+  final String? keeperLocation;
+  final String? keeperBio;
+  final VoidCallback? onShare;
+  final VoidCallback? onKeeperProfile;
+  final List<SessionEntryFact> facts;
+  final String? prompt;
+  final Widget? nextOffer;
+  final Widget? relatedOffer;
   final List<AdmissionRequest> requests;
   final bool panelOpen;
   final bool showOrientation;
@@ -253,7 +248,7 @@ class _SessionEntryState extends State<SessionEntry> {
     final late = widget.phase == EntryPhase.inProgress;
     return switch (widget.status) {
       EntryStatus.browsing when early =>
-        "You're all set for $_sessionName. Join session is available at $_joinTime.",
+        "You're all set for ${widget.sessionName}. Join session is available at ${widget.joinTime}.",
       EntryStatus.browsing => 'Join session is available.',
       EntryStatus.lobby when late =>
         "This session is already in progress. You're waiting to be admitted.",
@@ -367,6 +362,7 @@ class _SessionEntryState extends State<SessionEntry> {
       children: [
         if (widget.phase == EntryPhase.inProgress)
           _Room(
+            participantName: widget.participantName,
             showAlex: widget.status == EntryStatus.inSession,
             media: _media,
             waitingCount: _waitingCount,
@@ -374,6 +370,9 @@ class _SessionEntryState extends State<SessionEntry> {
           )
         else
           _KeeperPrep(
+            startTime: widget.startTime,
+            joinTime: widget.joinTime,
+            keeperName: widget.keeperName,
             phase: widget.phase,
             requestCount: widget.requests.length,
             media: _media,
@@ -395,6 +394,21 @@ class _SessionEntryState extends State<SessionEntry> {
   Widget _participantScreen() {
     return switch (widget.status) {
       EntryStatus.browsing => _PreSession(
+        spaceName: widget.spaceName,
+        sessionName: widget.sessionName,
+        keeperName: widget.keeperName,
+        startDateLabel: widget.startDateLabel,
+        startTime: widget.startTime,
+        joinTime: widget.joinTime,
+        facts: widget.facts,
+        heroPhoto: widget.heroPhoto,
+        keeperPhoto: widget.keeperPhoto,
+        about: widget.about,
+        similarSession: widget.similarSession,
+        keeperLocation: widget.keeperLocation,
+        keeperBio: widget.keeperBio,
+        onShare: widget.onShare,
+        onKeeperProfile: widget.onKeeperProfile,
         phase: widget.phase,
         onJoin: widget.onJoin,
         onBack: widget.onBackToSpace,
@@ -405,23 +419,40 @@ class _SessionEntryState extends State<SessionEntry> {
         onBindDismiss: (close) => _closeBrowsingLayer = close,
       ),
       EntryStatus.lobby => _Lobby(
+        participantName: widget.participantName,
+        previewPhoto: widget.previewPhoto,
         late: widget.phase == EntryPhase.inProgress,
         expiresLabel: widget.expiresLabel,
         media: _media,
         onLeave: widget.onLeaveLobby,
       ),
-      EntryStatus.waitingRoom => _WaitingRoom(media: _media),
+      EntryStatus.waitingRoom => _WaitingRoom(
+        media: _media,
+        participantName: widget.participantName,
+        previewPhoto: widget.previewPhoto,
+        sessionName: widget.sessionName,
+        startTime: widget.startTime,
+      ),
       EntryStatus.inSession => Stack(
         fit: StackFit.expand,
         children: [
-          _Room(showAlex: true, media: _media, waitingCount: 0),
+          _Room(
+            participantName: widget.participantName,
+            showAlex: true,
+            media: _media,
+            waitingCount: 0,
+          ),
           _Orientation(
+            prompt: widget.prompt,
             open: widget.showOrientation,
             onDismiss: widget.onDismissOrientation,
           ),
         ],
       ),
       EntryStatus.declined => _Declined(
+        offer: widget.declineVariant == DeclineVariant.nextSession
+            ? widget.nextOffer
+            : widget.relatedOffer,
         variant: widget.declineVariant,
         onSignUp: widget.onSignUp,
         onBackToSpace: widget.onBackToSpace,
@@ -434,78 +465,15 @@ class _SessionEntryState extends State<SessionEntry> {
 // Small pieces
 // ------------------------------------------------------------------
 
-class _IconButton extends StatelessWidget {
-  const _IconButton({
-    required this.label,
-    required this.onTap,
-    required this.icon,
-    required this.size,
-    this.background,
-    this.shadow,
-  });
-
-  final String label;
-  final VoidCallback? onTap;
-  final Widget icon;
-  final double size;
-  final Color? background;
-  final List<BoxShadow>? shadow;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = TotemTheme.of(context);
-    return Pressable(
-      onTap: onTap ?? () {},
-      pressedScale: 0.97,
-      focusColor: theme.accent,
-      focusRadius: BorderRadius.circular(Radii.full),
-      semanticLabel: label,
-      builder: (context, states) => Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: background,
-          shape: BoxShape.circle,
-          boxShadow: shadow,
-        ),
-        child: IconTheme(
-          data: IconThemeData(color: theme.textPrimary),
-          child: icon,
-        ),
-      ),
-    );
-  }
-}
-
 /// Stroke icons drawn from the Figma paths. Color follows [IconTheme].
 class _StrokeIcon extends StatelessWidget {
   const _StrokeIcon._(this.size, this.viewBox, this.paint);
 
-  factory _StrokeIcon.chevron() => const _StrokeIcon._(18, 18, _chevron);
-  factory _StrokeIcon.close() => const _StrokeIcon._(16, 16, _close);
   factory _StrokeIcon.cameraOff() => const _StrokeIcon._(22, 24, _cameraOff);
 
   final double size;
   final double viewBox;
   final void Function(Canvas canvas, Paint paint) paint;
-
-  static void _chevron(Canvas canvas, Paint paint) {
-    paint.strokeWidth = 1.8;
-    canvas.drawPath(
-      Path()
-        ..moveTo(11.5, 3.5)
-        ..lineTo(6, 9)
-        ..lineTo(11.5, 14.5),
-      paint,
-    );
-  }
-
-  static void _close(Canvas canvas, Paint paint) {
-    paint.strokeWidth = 1.8;
-    canvas.drawLine(const Offset(3.5, 3.5), const Offset(12.5, 12.5), paint);
-    canvas.drawLine(const Offset(12.5, 3.5), const Offset(3.5, 12.5), paint);
-  }
 
   static void _cameraOff(Canvas canvas, Paint paint) {
     paint.strokeWidth = 1.7;
@@ -562,29 +530,6 @@ class _StrokePainter extends CustomPainter {
       oldDelegate.color != color || oldDelegate.draw != draw;
 }
 
-class _Avatar extends StatelessWidget {
-  const _Avatar(this.name);
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    final tone = _toneFor(name);
-    return ExcludeSemantics(
-      child: Container(
-        width: 40,
-        height: 40,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(color: tone.bg, shape: BoxShape.circle),
-        child: Text(
-          _initial(name),
-          style: TotemText.bodyBold.copyWith(height: 1, color: tone.fg),
-        ),
-      ),
-    );
-  }
-}
-
 /// Pops in from a little below, once, when it first appears.
 class _PopIn extends StatelessWidget {
   const _PopIn({required this.child});
@@ -614,146 +559,6 @@ class _PopIn extends StatelessWidget {
 // ------------------------------------------------------------------
 // Admission
 // ------------------------------------------------------------------
-
-class _RequestList extends StatelessWidget {
-  const _RequestList({
-    required this.requests,
-    this.onAdmit,
-    this.onAdmitAll,
-    this.onDeclineRequest,
-    this.onDismiss,
-  });
-
-  final List<AdmissionRequest> requests;
-  final ValueChanged<String>? onAdmit;
-  final VoidCallback? onAdmitAll;
-  final ValueChanged<String>? onDeclineRequest;
-  final VoidCallback? onDismiss;
-
-  String get _countLabel => switch (requests.length) {
-    0 => 'No one is waiting',
-    1 => '1 person',
-    final count => '$count people',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final wide = _Breakpoints.of(context).wide;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: Spacing.s16,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: Spacing.s12,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Semantics(
-                    header: true,
-                    child: Text('Waiting to join', style: _subtitle(context)),
-                  ),
-                  Text(_countLabel, style: _muted(context)),
-                ],
-              ),
-            ),
-            _IconButton(
-              label: 'Close admission',
-              onTap: onDismiss,
-              size: 36,
-              background: fade(TotemColors.coreSlate, 0.08),
-              icon: _StrokeIcon.close(),
-            ),
-          ],
-        ),
-        if (requests.isEmpty)
-          Text("You're clear. No one is waiting.", style: _muted(context))
-        else ...[
-          // One person is a single decision. A group gets one action that
-          // lets everyone in, without hiding the per-person buttons.
-          if (requests.length > 1)
-            Button(
-              onPressed: onAdmitAll ?? () {},
-              block: true,
-              child: const Text('Admit all'),
-            ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: Spacing.s12,
-            children: [
-              for (final request in requests) _request(context, request, wide),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _request(BuildContext context, AdmissionRequest request, bool wide) {
-    final decline = Button(
-      variant: ButtonVariant.secondary,
-      size: ButtonSize.compact,
-      block: !wide,
-      onPressed: () => onDeclineRequest?.call(request.id),
-      child: const Text('Decline'),
-    );
-    final admit = Button(
-      size: ButtonSize.compact,
-      block: !wide,
-      onPressed: () => onAdmit?.call(request.id),
-      child: const Text('Admit'),
-    );
-    final person = [
-      _Avatar(request.name),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              request.name,
-              style: TotemText.bodyBold.copyWith(
-                color: TotemTheme.of(context).textPrimary,
-              ),
-            ),
-            Text('Expires in ${request.expiresLabel}', style: _muted(context)),
-          ],
-        ),
-      ),
-    ];
-
-    // Wide rows fit the actions beside the name. Narrow stacks them below.
-    if (wide) {
-      return Row(
-        spacing: Spacing.s12,
-        children: [
-          ...person,
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: Spacing.s8,
-            children: [decline, admit],
-          ),
-        ],
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: Spacing.s8,
-      children: [
-        Row(spacing: Spacing.s12, children: person),
-        Row(
-          spacing: Spacing.s8,
-          children: [
-            Expanded(child: decline),
-            Expanded(child: admit),
-          ],
-        ),
-      ],
-    );
-  }
-}
 
 /// Overlay in both seats. Phone: sheet from the bottom. Window: drawer
 /// from the right. Same list either way.
@@ -785,12 +590,19 @@ class _Admission extends StatelessWidget {
       scrim: LayerScrim.soft,
       dismissOnScrim: true,
       onDismiss: onDismiss,
-      child: _RequestList(
-        requests: requests,
+      child: SessionAdmissionList(
+        guests: [
+          for (final request in requests)
+            SessionAdmissionGuest(
+              id: request.id,
+              name: request.name,
+              expiresLabel: request.expiresLabel,
+            ),
+        ],
         onAdmit: onAdmit,
         onAdmitAll: onAdmitAll,
-        onDeclineRequest: onDeclineRequest,
-        onDismiss: onDismiss,
+        onDecline: onDeclineRequest,
+        onClose: onDismiss,
       ),
     );
   }
@@ -830,7 +642,6 @@ class _MediaBarState extends State<_MediaBar> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = TotemTheme.of(context);
     final count = widget.waitingCount;
     final media = widget.media;
 
@@ -843,28 +654,9 @@ class _MediaBarState extends State<_MediaBar> {
           children: [
             if (count > 0)
               _PopIn(
-                child: Pressable(
-                  onTap: widget.onWaiting ?? () {},
-                  pressedScale: 0.97,
-                  focusColor: theme.accent,
-                  focusRadius: BorderRadius.circular(Radii.full),
-                  builder: (context, states) => Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: Spacing.s8,
-                      horizontal: Spacing.s16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: TotemColors.extendedGold,
-                      borderRadius: BorderRadius.circular(Radii.full),
-                      boxShadow: Shadows.elevation1,
-                    ),
-                    child: Text(
-                      count == 1 ? '1 person waiting' : '$count people waiting',
-                      style: TotemText.buttonSmall.copyWith(
-                        color: TotemColors.coreSlate,
-                      ),
-                    ),
-                  ),
+                child: SessionWaitingQueueButton(
+                  count: count,
+                  onPressed: widget.onWaiting,
                 ),
               ),
             SessionControls(
@@ -937,7 +729,8 @@ class _MediaBarState extends State<_MediaBar> {
 // Session room
 // ------------------------------------------------------------------
 
-String _cardLabel(String name) => name == _youName ? '$_youName (you)' : name;
+String _cardLabel(String name, String participantName) =>
+    name == participantName ? '$participantName (you)' : name;
 
 /// Same arrangement as the live call. Narrow: the speaker sits on top,
 /// everyone else in two columns. Wide: the speaker fills the left, the rest
@@ -946,12 +739,14 @@ String _cardLabel(String name) => name == _youName ? '$_youName (you)' : name;
 /// Names stay at the bottom of each card. No stats overlay.
 class _Room extends StatelessWidget {
   const _Room({
+    required this.participantName,
     required this.showAlex,
     required this.media,
     required this.waitingCount,
     this.onWaiting,
   });
 
+  final String participantName;
   final bool showAlex;
   final _Media media;
   final int waitingCount;
@@ -960,18 +755,21 @@ class _Room extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sizes = _Breakpoints.of(context);
-    final people = [..._circle, if (showAlex) (name: _youName, feature: false)];
+    final people = [
+      ..._circle,
+      if (showAlex) (name: participantName, feature: false),
+    ];
     final feature = people.where((person) => person.feature).firstOrNull;
     final rest = [
       for (final person in people.where((person) => !person.feature))
         // Same tile as the waiting-room preview — the shared red → blue
         // wash when there's no picture.
-        ParticipantCard(name: _cardLabel(person.name)),
+        ParticipantCard(name: _cardLabel(person.name, participantName)),
     ];
     final speaker = feature == null
         ? null
         : ParticipantCard(
-            name: _cardLabel(feature.name),
+            name: _cardLabel(feature.name, participantName),
             feature: true,
             showTalkingPiece: true,
           );
@@ -1185,59 +983,15 @@ class _TileGrid extends StatelessWidget {
 // Sheets and modals
 // ------------------------------------------------------------------
 
-/// Title, copy, and one full-width "Got it". Wide frames hug the button.
-class _Notice extends StatelessWidget {
-  const _Notice({
-    required this.kicker,
-    required this.title,
-    required this.children,
-    this.onDone,
-  });
-
-  final String kicker;
-  final String title;
-  final List<Widget> children;
-  final VoidCallback? onDone;
-
-  @override
-  Widget build(BuildContext context) {
-    final wide = _Breakpoints.of(context).wide;
-    final done = Button(
-      onPressed: onDone ?? () {},
-      block: !wide,
-      child: const Text('Got it'),
-    );
-    // Hug the copy. A max column inside the dialog stretches to the
-    // frame and leaves a tall empty panel under the button.
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: Spacing.s12,
-      children: [
-        Text(kicker.toUpperCase(), style: _kicker(context)),
-        Semantics(header: true, child: Text(title, style: _subtitle(context))),
-        ...children,
-        if (wide)
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 140),
-            child: done,
-          )
-        else
-          SizedBox(width: double.infinity, child: done),
-      ],
-    );
-  }
-}
-
 class _Orientation extends StatelessWidget {
-  const _Orientation({required this.open, this.onDismiss});
+  const _Orientation({required this.open, this.prompt, this.onDismiss});
 
+  final String? prompt;
   final bool open;
   final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {
-    final theme = TotemTheme.of(context);
     final wide = _Breakpoints.of(context).wide;
     return EntryLayer(
       key: ValueKey(wide),
@@ -1246,33 +1000,7 @@ class _Orientation extends StatelessWidget {
       label: "You're joining a session already in progress",
       scrim: wide ? LayerScrim.dim : LayerScrim.soft,
       onDismiss: onDismiss,
-      child: _Notice(
-        kicker: 'Joining',
-        title: "You're joining a session already in progress.",
-        onDone: onDismiss,
-        children: [
-          Text(
-            'CURRENT PROMPT',
-            style: TotemText.captionBold.copyWith(
-              letterSpacing: 0.48,
-              color: theme.textSecondary,
-            ),
-          ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(Spacing.s16),
-            decoration: BoxDecoration(
-              color: theme.canvas,
-              borderRadius: BorderRadius.circular(Radii.md),
-            ),
-            child: Text(_prompt, style: _subtitle(context)),
-          ),
-          Text(
-            "You'll receive the talking piece when it's your turn to share.",
-            style: _muted(context),
-          ),
-        ],
-      ),
+      child: SessionOrientationNotice(prompt: prompt, onDone: onDismiss),
     );
   }
 }
@@ -1286,14 +1014,44 @@ class _Orientation extends StatelessWidget {
 /// dialog once the frame reads as a window.
 class _PreSession extends StatefulWidget {
   const _PreSession({
+    required this.spaceName,
+    required this.sessionName,
+    required this.keeperName,
+    required this.startDateLabel,
+    required this.startTime,
+    required this.joinTime,
+    required this.facts,
     required this.phase,
+    this.heroPhoto,
+    this.keeperPhoto,
+    this.about,
+    this.similarSession,
+    this.keeperLocation,
+    this.keeperBio,
+    this.onShare,
+    this.onKeeperProfile,
     this.onJoin,
     this.onBack,
     this.onCoverChanged,
     this.onBindDismiss,
   });
 
+  final String spaceName;
+  final String sessionName;
+  final String keeperName;
+  final String startDateLabel;
+  final String startTime;
+  final String joinTime;
+  final List<SessionEntryFact> facts;
   final EntryPhase phase;
+  final ImageProvider? heroPhoto;
+  final ImageProvider? keeperPhoto;
+  final String? about;
+  final Widget? similarSession;
+  final String? keeperLocation;
+  final String? keeperBio;
+  final VoidCallback? onShare;
+  final VoidCallback? onKeeperProfile;
   final VoidCallback? onJoin;
   final VoidCallback? onBack;
 
@@ -1387,16 +1145,27 @@ class _PreSessionState extends State<_PreSession> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        SessionDetails(
-          spaceName: _spaceName,
-          sessionName: _sessionName,
-          keeperName: _keeperName,
-          dateLabel: _startDateLabel,
-          timeLabel: _startTime,
+        SessionBrowsingView(
+          spaceName: widget.spaceName,
+          sessionName: widget.sessionName,
+          keeperName: widget.keeperName,
+          dateLabel: widget.startDateLabel,
+          timeLabel: widget.startTime,
+          facts: widget.facts,
+          heroPhoto: widget.heroPhoto,
+          keeperPhoto: widget.keeperPhoto,
+          about: widget.about,
+          similarSession: widget.similarSession,
+          keeperLocation: widget.keeperLocation,
+          keeperBio: widget.keeperBio,
+          onShare: widget.onShare,
+          onKeeperProfile: widget.onKeeperProfile,
           onJoin: _onJoin,
           onBack: widget.onBack,
         ),
         _EarlyArrival(
+          sessionName: widget.sessionName,
+          joinTime: widget.joinTime,
           open: _earlyOpen,
           onDismiss: () => _setEarly(false),
           onGuidelines: () => _setGuide(true),
@@ -1408,7 +1177,7 @@ class _PreSessionState extends State<_PreSession> {
           label: 'Community Guidelines',
           scrim: wide ? LayerScrim.dim : LayerScrim.soft,
           onDismiss: () => _setGuide(false),
-          child: _Notice(
+          child: SessionEntryNotice(
             kicker: 'Before you enter',
             title: 'Community Guidelines',
             onDone: () => _setGuide(false),
@@ -1449,11 +1218,15 @@ class _PreSessionState extends State<_PreSession> {
 /// takes over from the live position.
 class _EarlyArrival extends StatelessWidget {
   const _EarlyArrival({
+    required this.sessionName,
+    required this.joinTime,
     required this.open,
     required this.onDismiss,
     required this.onGuidelines,
   });
 
+  final String sessionName;
+  final String joinTime;
   final bool open;
   final VoidCallback onDismiss;
   final VoidCallback onGuidelines;
@@ -1473,13 +1246,13 @@ class _EarlyArrival extends StatelessWidget {
       open: open,
       kind: wide ? LayerKind.modal : LayerKind.sheet,
       label:
-          "You're all set for $_sessionName. You can join beginning at $_joinTime.",
+          "You're all set for $sessionName. You can join beginning at $joinTime.",
       scrim: wide ? LayerScrim.dim : LayerScrim.soft,
       dismissOnScrim: true,
       onDismiss: onDismiss,
-      child: _Notice(
+      child: SessionEntryNotice(
         kicker: 'Before you join',
-        title: "You're all set for $_sessionName.",
+        title: "You're all set for $sessionName.",
         onDone: onDismiss,
         children: [
           Text.rich(
@@ -1487,7 +1260,7 @@ class _EarlyArrival extends StatelessWidget {
               style: body,
               children: [
                 const TextSpan(text: 'You can join beginning at '),
-                TextSpan(text: _joinTime, style: strong),
+                TextSpan(text: joinTime, style: strong),
                 const TextSpan(
                   text:
                       '. In the meantime, grab some water, get comfortable, or review our ',
@@ -1511,139 +1284,46 @@ class _EarlyArrival extends StatelessWidget {
 /// bar in the thumb zone. Wide frames keep the three pieces as one centered
 /// group with more air.
 class _WaitShell extends StatelessWidget {
-  const _WaitShell({this.onBack, required this.media, required this.card});
+  const _WaitShell({
+    required this.participantName,
+    this.previewPhoto,
+    this.onBack,
+    required this.media,
+    required this.card,
+  });
 
-  /// Back stays pinned above the group. Leave off to hide it.
+  final String participantName;
+  final ImageProvider? previewPhoto;
   final VoidCallback? onBack;
   final _Media media;
   final Widget card;
 
   @override
-  Widget build(BuildContext context) {
-    final wide = _Breakpoints.of(context).wide;
-    final gap = wide ? Spacing.s24 : Spacing.s16;
-    final onBack = this.onBack;
-
-    return Semantics(
-      container: true,
-      label: 'Waiting room',
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              TotemColors.coreCream,
-              TotemColors.coreCream,
-              TotemColors.coreMauve,
-            ],
-            stops: [0, 0.42, 1],
-          ),
-        ),
-        child: CustomScrollView(
-          slivers: [
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Padding(
-                padding: wide
-                    ? const EdgeInsets.symmetric(
-                        vertical: Spacing.s24,
-                        horizontal: Spacing.s40,
-                      )
-                    : const EdgeInsets.fromLTRB(
-                        Spacing.s16,
-                        Spacing.s12,
-                        Spacing.s16,
-                        28,
-                      ),
-                child: Column(
-                  spacing: wide ? Spacing.s16 : Spacing.s12,
-                  children: [
-                    if (onBack != null)
-                      SizedBox(
-                        height: 35,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: Spacing.s8,
-                          ),
-                          // Drawn 30px in Figma; 44pt is the HIG floor.
-                          child: OverflowBox(
-                            maxHeight: 44,
-                            alignment: Alignment.centerLeft,
-                            child: _IconButton(
-                              label: 'Leave',
-                              onTap: onBack,
-                              size: 44,
-                              background: TotemColors.coreWhite,
-                              shadow: Shadows.elevation1,
-                              icon: _StrokeIcon.chevron(),
-                            ),
-                          ),
-                        ),
-                      ),
-                    Expanded(
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          spacing: gap,
-                          children: [
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: wide ? 420 : double.infinity,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                spacing: gap,
-                                children: [
-                                  // Same tile as the circle, locked to the Figma
-                                  // 234 × 280.8 waiting-for-approval still. Talking
-                                  // piece on, more off — this is your camera, not a
-                                  // per-person menu.
-                                  ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 234,
-                                    ),
-                                    child: SizedBox(
-                                      width: double.infinity,
-                                      height: 280.8,
-                                      child: ParticipantCard(
-                                        name: _youName,
-                                        photo: media.cameraOn
-                                            ? _previewPhoto
-                                            : null,
-                                        showTalkingPiece: true,
-                                        showMore: false,
-                                      ),
-                                    ),
-                                  ),
-                                  card,
-                                ],
-                              ),
-                            ),
-                            _MediaBar(media: media),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SessionWaitingView(
+    onLeave: onBack,
+    preview: ParticipantCard(
+      name: participantName,
+      photo: media.cameraOn ? previewPhoto : null,
+      showTalkingPiece: true,
+      showMore: false,
+    ),
+    card: card,
+    controls: _MediaBar(media: media),
+  );
 }
 
 class _Lobby extends StatelessWidget {
   const _Lobby({
+    required this.participantName,
+    this.previewPhoto,
     required this.late,
     required this.expiresLabel,
     required this.media,
     this.onLeave,
   });
 
+  final String participantName;
+  final ImageProvider? previewPhoto;
   final bool late;
   final String? expiresLabel;
   final _Media media;
@@ -1673,38 +1353,47 @@ class _Lobby extends StatelessWidget {
     }
 
     return _WaitShell(
-      onBack: onLeave ?? () {},
+      participantName: participantName,
+      previewPhoto: previewPhoto,
+      onBack: onLeave,
       media: media,
-      card: WaitingCard(
+      card: SessionWaitingCard(
         title: late
             ? 'Keeper is reviewing your request to join'
             : "We're getting the room ready for you",
         body: body,
-        action: Button(
-          variant: ButtonVariant.secondary,
-          // Same as design CSS: the waiting-card action is a 300-wide pill.
-          block: true,
-          onPressed: onLeave ?? () {},
-          child: const Text('Cancel request and leave'),
-        ),
+        actionLabel: 'Cancel request and leave',
+        onAction: onLeave,
       ),
     );
   }
 }
 
 class _WaitingRoom extends StatelessWidget {
-  const _WaitingRoom({required this.media});
+  const _WaitingRoom({
+    required this.media,
+    required this.participantName,
+    this.previewPhoto,
+    required this.sessionName,
+    required this.startTime,
+  });
 
   final _Media media;
+  final String participantName;
+  final ImageProvider? previewPhoto;
+  final String sessionName;
+  final String startTime;
 
   @override
   Widget build(BuildContext context) {
     return _WaitShell(
+      participantName: participantName,
+      previewPhoto: previewPhoto,
       media: media,
-      card: const WaitingCard(
+      card: SessionWaitingCard(
         title: "You're in.",
         body: Text(
-          '$_sessionName begins at $_startTime. Settle in. The circle opens then.',
+          '$sessionName begins at $startTime. Settle in. The circle opens then.',
         ),
       ),
     );
@@ -1712,9 +1401,15 @@ class _WaitingRoom extends StatelessWidget {
 }
 
 class _Declined extends StatefulWidget {
-  const _Declined({required this.variant, this.onSignUp, this.onBackToSpace});
+  const _Declined({
+    required this.variant,
+    this.offer,
+    this.onSignUp,
+    this.onBackToSpace,
+  });
 
   final DeclineVariant variant;
+  final Widget? offer;
   final VoidCallback? onSignUp;
   final VoidCallback? onBackToSpace;
 
@@ -1727,104 +1422,20 @@ class _DeclinedState extends State<_Declined> {
 
   @override
   Widget build(BuildContext context) {
-    final wide = _Breakpoints.of(context).wide;
     final next = widget.variant == DeclineVariant.nextSession;
-    final offer = next ? _nextSession : _relatedSession;
 
-    final signUp = Button(
-      block: !wide,
-      onPressed: _signedUp
-          ? null
-          : () {
-              setState(() => _signedUp = true);
-              widget.onSignUp?.call();
-            },
-      child: Text(
-        _signedUp
-            ? "You're signed up"
-            : next
-            ? 'Join the next session'
-            : 'Sign up for this session',
-      ),
-    );
-
-    return Semantics(
-      container: true,
-      label: 'Session unavailable',
-      child: CustomScrollView(
-        slivers: [
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: Spacing.s32,
-                horizontal: Spacing.s20,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: Spacing.s16,
-                    children: [
-                      Text('SESSION', style: _kicker(context)),
-                      Semantics(
-                        header: true,
-                        child: Text(
-                          "We're sorry, this session is no longer available for admission, "
-                          "but we'd love to see you soon.",
-                          style: _title(context),
-                        ),
-                      ),
-                      Text(
-                        next
-                            ? 'The next one is open.'
-                            : 'Nothing else is on the calendar yet. This one sits close to what you came for.',
-                        style: _muted(context),
-                      ),
-                      SessionCard(
-                        photo: offer.photo,
-                        spaceName: offer.space,
-                        sessionName: offer.name,
-                        keeperName: offer.keeper,
-                        keeperPhoto: offer.keeperPhoto,
-                        time: offer.time,
-                        meridiem: offer.meridiem,
-                        seatsLeft: offer.seatsLeft,
-                      ),
-                      Column(
-                        spacing: Spacing.s8,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (wide)
-                            Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  minWidth: 240,
-                                ),
-                                child: signUp,
-                              ),
-                            )
-                          else
-                            signUp,
-                          Center(
-                            child: Button(
-                              variant: ButtonVariant.text,
-                              onPressed: widget.onBackToSpace ?? () {},
-                              child: const Text('Return to the Space'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return SessionDeclinedView(
+      message: next
+          ? "The next one is open."
+          : "Nothing else is on the calendar yet. This one sits close to what you came for.",
+      offer: widget.offer,
+      actionLabel: next ? "Join the next session" : "Sign up for this session",
+      signedUp: _signedUp,
+      onSignUp: () {
+        setState(() => _signedUp = true);
+        widget.onSignUp?.call();
+      },
+      onBackToSpace: widget.onBackToSpace,
     );
   }
 }
@@ -1962,6 +1573,9 @@ class _Portrait extends StatelessWidget {
 
 class _KeeperPrep extends StatelessWidget {
   const _KeeperPrep({
+    required this.startTime,
+    required this.joinTime,
+    required this.keeperName,
     required this.phase,
     required this.requestCount,
     required this.media,
@@ -1969,6 +1583,9 @@ class _KeeperPrep extends StatelessWidget {
     this.onWaiting,
   });
 
+  final String startTime;
+  final String joinTime;
+  final String keeperName;
   final EntryPhase phase;
   final int requestCount;
   final _Media media;
@@ -2006,7 +1623,7 @@ class _KeeperPrep extends StatelessWidget {
                     child: Semantics(
                       header: true,
                       child: Text(
-                        'The room is yours until $_startTime.',
+                        'The room is yours until $startTime.',
                         textAlign: TextAlign.center,
                         style: _title(context),
                       ),
@@ -2015,7 +1632,7 @@ class _KeeperPrep extends StatelessWidget {
                   ConstrainedBox(
                     constraints: copyWidth,
                     child: Text(
-                      'People can join from $_joinTime. Nothing is shared with them until you admit them.',
+                      'People can join from $joinTime. Nothing is shared with them until you admit them.',
                       textAlign: TextAlign.center,
                       style: _muted(context),
                     ),
@@ -2030,7 +1647,7 @@ class _KeeperPrep extends StatelessWidget {
                       ),
                     ),
                   _Portrait(
-                    name: _keeperName,
+                    name: keeperName,
                     cameraOn: media.cameraOn,
                     micOn: media.micOn,
                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' hide SessionOptions;
 import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
 enum PreJoinCapturePhase {
@@ -19,10 +20,11 @@ enum PreJoinCapturePhase {
   unavailable,
 }
 
-enum PreJoinFlowPhase { idle, joining, joined }
+enum PreJoinFlowPhase { idle, joining, pending, joined }
 
 enum PreJoinJoinOutcome {
   confirmationRequired,
+  pending,
   joined,
   retryableFailure,
   microphoneNeeded,
@@ -121,21 +123,42 @@ class PreJoinFlowState {
   const PreJoinFlowState({
     this.phase = PreJoinFlowPhase.idle,
     this.sessionOptions,
+
+    this.admissionStatus,
+    this.expiresAt,
+    this.error,
   });
 
   final PreJoinFlowPhase phase;
   final SessionOptions? sessionOptions;
 
+  final AdmissionStatus? admissionStatus;
+  final DateTime? expiresAt;
+  final Object? error;
+
   PreJoinFlowState copyWith({
     PreJoinFlowPhase? phase,
     SessionOptions? sessionOptions,
     bool clearSessionOptions = false,
+
+    AdmissionStatus? admissionStatus,
+    bool clearAdmissionStatus = false,
+    DateTime? expiresAt,
+    bool clearExpiresAt = false,
+    Object? error,
+    bool clearError = false,
   }) {
     return PreJoinFlowState(
       phase: phase ?? this.phase,
       sessionOptions: clearSessionOptions
           ? null
           : sessionOptions ?? this.sessionOptions,
+
+      admissionStatus: clearAdmissionStatus
+          ? null
+          : admissionStatus ?? this.admissionStatus,
+      expiresAt: clearExpiresAt ? null : expiresAt ?? this.expiresAt,
+      error: clearError ? null : error ?? this.error,
     );
   }
 }

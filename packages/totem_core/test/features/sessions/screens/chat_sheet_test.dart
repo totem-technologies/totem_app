@@ -27,6 +27,7 @@ import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../media/test_participants.dart';
+import '../session_test_fixtures.dart';
 import '../session_test_mocks.dart';
 
 class _TestMessagesNotifier extends Notifier<List<SessionChatMessage>> {
@@ -145,6 +146,13 @@ List<Object?> _sharedOverrides({
     currentSessionEventProvider.overrideWith((ref) => _createSessionEvent()),
     currentSessionStateProvider.overrideWithValue(
       _createSessionState(messages: messages, participants: participants),
+    ),
+    admittedSessionParticipantIdentitiesProvider.overrideWith(
+      () => TestAdmittedSessionParticipantIdentities({
+        'keeper-1',
+        ...?participants?.map((participant) => participant.identity),
+        if (participants == null) 'lucas',
+      }),
     ),
     isCurrentUserKeeperProvider.overrideWith((ref) => isKeeper),
     resolveCurrentScreenProvider.overrideWith((ref) => currentScreen),

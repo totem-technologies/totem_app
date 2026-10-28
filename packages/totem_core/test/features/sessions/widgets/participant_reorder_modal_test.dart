@@ -8,6 +8,7 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_reorder_modal.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
@@ -21,11 +22,13 @@ class _ReorderTestHarness {
     required this.session,
     required this.keeper,
     required this.sessionState,
+    required this.participantIds,
   });
 
   final MockSessionController session;
   final MockSessionKeeperController keeper;
   final MockSessionRoomState sessionState;
+  final List<String> participantIds;
 }
 
 _ReorderTestHarness _createHarness({
@@ -52,6 +55,9 @@ _ReorderTestHarness _createHarness({
   when(() => sessionState.roomState).thenReturn(roomState);
   when(() => sessionState.speakingNow).thenReturn(speakingNow);
   when(() => sessionState.participantsList).thenReturn(participantList);
+  when(
+    () => sessionState.participants,
+  ).thenReturn(ParticipantsState(participants: participantList));
   when(() => keeper.reorder(any())).thenAnswer((invocation) async {
     final order = invocation.positionalArguments.first as List<String>;
     if (reorderHandler != null) {
@@ -63,6 +69,7 @@ _ReorderTestHarness _createHarness({
     session: session,
     keeper: keeper,
     sessionState: sessionState,
+    participantIds: participantIds,
   );
 }
 
@@ -70,12 +77,16 @@ Future<void> _pumpReorderWidget(
   WidgetTester tester,
   _ReorderTestHarness harness, {
   required Widget child,
+  Set<String>? admittedIdentities,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         currentSessionProvider.overrideWith((ref) => harness.session),
         currentSessionStateProvider.overrideWith((ref) => harness.sessionState),
+        admittedSessionParticipantIdentitiesProvider.overrideWithValue(
+          admittedIdentities ?? harness.participantIds.toSet(),
+        ),
       ],
       child: child,
     ),
@@ -142,6 +153,40 @@ void main() {
     check(
       captured,
     ).not((it) => it.equals(['keeper-1', 'user-1', 'user-2', 'user-3']));
+  });
+
+  testWidgets('hides unadmitted participants from the reorder picker', (
+    tester,
+  ) async {
+    const roomState = RoomState(
+      sessionSlug: 'test-session',
+      version: 1,
+      status: RoomStatus.waitingRoom,
+      turnState: TurnState.idle,
+      statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+      talkingOrder: ['keeper-1', 'user-1', 'user-2'],
+      keeper: 'keeper-1',
+      roundNumber: 1,
+    );
+    final harness = _createHarness(
+      participantIds: ['keeper-1', 'user-1', 'user-2'],
+      roomState: roomState,
+      speakingNow: 'keeper-1',
+    );
+
+    await _pumpReorderWidget(
+      tester,
+      harness,
+      admittedIdentities: {'keeper-1', 'user-1'},
+      child: const MaterialApp(
+        home: Scaffold(body: ParticipantReorderWidget()),
+      ),
+    );
+
+    check(tester.widgetList(find.byKey(const ValueKey('user-1')))).isNotEmpty();
+    check(tester.widgetList(find.byKey(const ValueKey('user-2')))).isEmpty();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
   });
 
   testWidgets('keeps the keeper visually pinned above reordered items', (

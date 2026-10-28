@@ -239,6 +239,14 @@ void main() {
             ),
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
+          admittedSessionParticipantIdentitiesProvider.overrideWith(
+            () => TestAdmittedSessionParticipantIdentities({
+              sessionState.roomState.keeper,
+              ...sessionState.participantsList.map(
+                (participant) => participant.identity,
+              ),
+            }),
+          ),
           currentSessionProvider.overrideWith((ref) => session),
           isCurrentUserKeeperProvider.overrideWith((ref) => isKeeper),
           amNextSpeakerProvider.overrideWith((ref) {

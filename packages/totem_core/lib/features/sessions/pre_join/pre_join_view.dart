@@ -9,6 +9,7 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
+import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
@@ -24,6 +25,10 @@ class PreJoinView extends StatelessWidget {
     required this.onCameraFacingChanged,
     required this.onCameraDeviceSelected,
     required this.joinCard,
+    required this.previewKey,
+    required this.controlsKey,
+    this.waiting = false,
+    this.onLeave,
     this.notice,
     super.key,
   });
@@ -31,6 +36,10 @@ class PreJoinView extends StatelessWidget {
   final PreJoinMediaState mediaState;
   final bool locked;
   final Widget joinCard;
+  final GlobalKey previewKey;
+  final GlobalKey controlsKey;
+  final bool waiting;
+  final VoidCallback? onLeave;
 
   /// Shown above [joinCard], such as what's needed before joining.
   final Widget? notice;
@@ -44,47 +53,63 @@ class PreJoinView extends StatelessWidget {
   Widget build(BuildContext context) {
     final preferences = mediaState.preferences;
     final previewAudioTrack = mediaState.microphone.track;
-    final cameraPreview = Container(
-      margin: const EdgeInsetsDirectional.symmetric(horizontal: 40),
-      alignment: AlignmentDirectional.center,
-      child: Semantics(
-        label:
-            'Your video preview, camera ${preferences.isCameraOn ? 'on' : 'off'}',
-        image: true,
-        child: LocalParticipantCard(
-          isCameraOn: preferences.isCameraOn,
-          videoTrack: mediaState.camera.track,
+    final cameraPreview = KeyedSubtree(
+      key: previewKey,
+      child: Container(
+        margin: const EdgeInsetsDirectional.symmetric(horizontal: 40),
+        alignment: AlignmentDirectional.center,
+        child: Semantics(
+          label:
+              'Your video preview, camera ${preferences.isCameraOn ? 'on' : 'off'}',
+          image: true,
+          child: LocalParticipantCard(
+            isCameraOn: preferences.isCameraOn,
+            videoTrack: mediaState.camera.track,
+          ),
         ),
       ),
     );
-    final actionBar = SessionKeyboardShortcuts(
-      enableChatShortcut: false,
-      onToggleMicrophone: locked ? null : onToggleMicrophone,
-      onToggleCamera: locked ? null : onToggleCamera,
-      child: PrejoinActionBar(
-        locked: locked,
-        microphoneLevel: previewAudioTrack == null
-            ? null
-            : (color, iconSize, barCount) => LiveKitMicrophoneLevel.preview(
-                previewAudioTrack,
-                color: color,
-                iconSize: iconSize,
-                barCount: barCount,
-              ),
-        isMicOn: preferences.isMicOn,
-        onToggleMic: onToggleMicrophone,
-        isSpeakerOn: preferences.isSpeakerOn,
-        onToggleSpeaker: onToggleSpeaker,
-        isCameraOn: preferences.isCameraOn,
-        onToggleCamera: onToggleCamera,
-        cameraFacing: preferences.cameraOptions.cameraPosition.toFacing(),
-        selectedCameraDeviceId: preferences.cameraOptions.deviceId,
-        onCameraFacingChanged: onCameraFacingChanged,
-        onCameraDeviceSelected: onCameraDeviceSelected,
-        microphoneProblem: mediaState.microphone.problem,
-        cameraProblem: mediaState.camera.problem,
+    final actionBar = KeyedSubtree(
+      key: controlsKey,
+      child: SessionKeyboardShortcuts(
+        enableChatShortcut: false,
+        onToggleMicrophone: locked ? null : onToggleMicrophone,
+        onToggleCamera: locked ? null : onToggleCamera,
+        child: PrejoinActionBar(
+          locked: locked,
+          microphoneLevel: previewAudioTrack == null
+              ? null
+              : (color, iconSize, barCount) => LiveKitMicrophoneLevel.preview(
+                  previewAudioTrack,
+                  color: color,
+                  iconSize: iconSize,
+                  barCount: barCount,
+                ),
+          isMicOn: preferences.isMicOn,
+          onToggleMic: onToggleMicrophone,
+          isSpeakerOn: preferences.isSpeakerOn,
+          onToggleSpeaker: onToggleSpeaker,
+          isCameraOn: preferences.isCameraOn,
+          onToggleCamera: onToggleCamera,
+          cameraFacing: preferences.cameraOptions.cameraPosition.toFacing(),
+          selectedCameraDeviceId: preferences.cameraOptions.deviceId,
+          onCameraFacingChanged: onCameraFacingChanged,
+          onCameraDeviceSelected: onCameraDeviceSelected,
+          microphoneProblem: mediaState.microphone.problem,
+          cameraProblem: mediaState.camera.problem,
+        ),
       ),
     );
+    if (waiting) {
+      return SafeArea(
+        child: SessionWaitingView(
+          preview: cameraPreview,
+          controls: actionBar,
+          card: joinCard,
+          onLeave: onLeave,
+        ),
+      );
+    }
     return RoomBackground(
       overlayStyle: SystemUiOverlayStyle.dark,
       child: SafeArea(
@@ -109,14 +134,14 @@ class PreJoinView extends StatelessWidget {
                     spacing: 18,
                     children: [
                       Expanded(child: cameraPreview),
-                      // Scrolls when a notice makes the controls taller than
-                      // a short landscape screen.
-                      Center(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: 18,
-                            children: [?notice, joinCard, actionBar],
+                      Expanded(
+                        child: Center(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: 18,
+                              children: [?notice, joinCard, actionBar],
+                            ),
                           ),
                         ),
                       ),
@@ -129,9 +154,6 @@ class PreJoinView extends StatelessWidget {
                       spacing: 18,
                       children: [
                         Expanded(child: cameraPreview),
-                        // The preview gives up its space first, down to a
-                        // third of the screen; past that, as when a notice
-                        // shows on a small phone, the controls scroll.
                         ConstrainedBox(
                           constraints: BoxConstraints(
                             maxHeight: constraints.maxHeight * 2 / 3,

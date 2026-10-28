@@ -1,5 +1,6 @@
 // ignore_for_file: cascade_invocations
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:checks/checks.dart';
@@ -7,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
+import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 
@@ -171,6 +174,161 @@ void main() {
           check(after.first.emoji).equals('👍');
         },
       );
+    });
+
+    group('Admission receipt', () {
+      AdmissionRequest request({String sender = 'user-1'}) => AdmissionRequest(
+        id: 'attempt-1',
+        senderIdentity: sender,
+        recipientIdentity: 'keeper-1',
+        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        displayName: 'Guest',
+      );
+
+      test(
+        'publishes to the keeper and retries on hello until teardown',
+        () async {
+          final participant = MockLocalParticipant('user-1');
+          final published = <List<int>>[];
+          when(
+            () => participant.publishData(
+              any(),
+              reliable: true,
+              destinationIdentities: ['keeper-1'],
+              topic: AdmissionProtocol.topic,
+            ),
+          ).thenAnswer((invocation) async {
+            published.add(invocation.positionalArguments.single as List<int>);
+          });
+          final room = _ReceiptRoom(participant);
+          final session = FakeSessionController()..mockRoom = room;
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final subscription = container.listen(
+            sessionMessagingControllerProvider(session),
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+          final controller = container.read(
+            sessionMessagingControllerProvider(session).notifier,
+          );
+          final attempt = request();
+
+          await controller.sendAdmissionJoined(attempt);
+
+          check(room.listenerCount).equals(1);
+          check(published).length.equals(1);
+          final receipt = AdmissionProtocol.decode(
+            published.single,
+            senderIdentity: 'user-1',
+            now: DateTime.now(),
+          );
+          check(receipt).isA<AdmissionJoined>();
+          check(receipt?.id).equals(attempt.id);
+          check(receipt?.recipientIdentity).equals('keeper-1');
+          controller.handleDataReceived(
+            DataReceivedEvent(
+              data: published.single,
+              participant: MockRemoteParticipant('user-1', 'Guest'),
+              topic: AdmissionProtocol.topic,
+            ),
+          );
+          check(session.addedChatMessages).isEmpty();
+          check(container.read(emojiReactionsProvider)).isEmpty();
+
+          await room.listener.trigger(
+            DataReceivedEvent(
+              data: AdmissionProtocol.encode(
+                AdmissionHello(
+                  id: 'hello',
+                  senderIdentity: 'keeper-1',
+                  recipientIdentity: 'user-1',
+                  expiresAt: attempt.expiresAt,
+                ),
+              ),
+              participant: MockRemoteParticipant('keeper-1', 'Keeper'),
+              topic: AdmissionProtocol.topic,
+            ),
+          );
+          await Future<void>.value();
+          check(published).length.equals(2);
+          await room.listener.trigger(const RoomReconnectedEvent());
+          await Future<void>.value();
+          check(published).length.equals(3);
+          await check(
+            controller.sendAdmissionJoined(attempt),
+          ).throws<StateError>();
+          check(room.listenerCount).equals(1);
+
+          await controller.disposeAdmissionTransport();
+          await controller.disposeAdmissionTransport();
+          check(room.listener.disposeCount).equals(1);
+          await room.listener.trigger(const RoomReconnectedEvent());
+          check(published).length.equals(3);
+        },
+      );
+
+      test('rejects an unjoined room or a different local identity', () async {
+        final room = _ReceiptRoom(MockLocalParticipant('user-1'));
+        final session = FakeSessionController()..mockRoom = room;
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionMessagingControllerProvider(session).notifier,
+        );
+        session.mockState = SessionRoomState(
+          connection: session.state.connection.copyWith(
+            state: RoomConnectionState.disconnected,
+          ),
+          participants: session.state.participants,
+          chat: session.state.chat,
+          turn: session.state.turn,
+        );
+
+        await check(
+          controller.sendAdmissionJoined(request()),
+        ).throws<StateError>();
+        check(room.listenerCount).equals(0);
+        session.mockState = SessionRoomState(
+          connection: session.state.connection.copyWith(
+            state: RoomConnectionState.connected,
+          ),
+          participants: session.state.participants,
+          chat: session.state.chat,
+          turn: session.state.turn,
+        );
+        await check(
+          controller.sendAdmissionJoined(request(sender: 'other')),
+        ).throws<StateError>();
+        check(room.listenerCount).equals(0);
+      });
+
+      test('releases the retained listener on provider disposal', () async {
+        final participant = MockLocalParticipant('user-1');
+        when(
+          () => participant.publishData(
+            any(),
+            reliable: true,
+            destinationIdentities: ['keeper-1'],
+            topic: AdmissionProtocol.topic,
+          ),
+        ).thenAnswer((_) async {});
+        final room = _ReceiptRoom(participant);
+        final session = FakeSessionController()..mockRoom = room;
+        final container = ProviderContainer();
+        final controller = container.read(
+          sessionMessagingControllerProvider(session).notifier,
+        );
+
+        await controller.sendAdmissionJoined(request());
+        container.dispose();
+        await room.listener.disposed.future;
+        check(room.listener.disposeCount).equals(1);
+        await check(
+          controller.sendAdmissionJoined(request()),
+        ).throws<StateError>();
+        check(room.listenerCount).equals(1);
+      });
     });
 
     group('Send Message', () {
@@ -589,4 +747,55 @@ void main() {
       });
     });
   });
+}
+
+class _ReceiptRoom extends FakeRoom {
+  _ReceiptRoom(super.participant);
+
+  final listener = _ReceiptEvents();
+  int listenerCount = 0;
+
+  @override
+  String? get metadata => null;
+
+  @override
+  EventsListener<RoomEvent> createListener({bool synchronized = true}) {
+    listenerCount++;
+    return listener;
+  }
+}
+
+class _ReceiptEvents implements EventsListener<RoomEvent> {
+  final handlers = <Type, List<FutureOr<void> Function(Object?)>>{};
+  final disposed = Completer<void>();
+  int disposeCount = 0;
+
+  @override
+  CancelListenFunc on<E>(
+    FutureOr<void> Function(E event) handler, {
+    bool Function(E)? filter,
+  }) {
+    handlers.putIfAbsent(E, () => []).add((event) {
+      final typed = event as E;
+      if (filter == null || filter(typed)) return handler(typed);
+    });
+    return () async {};
+  }
+
+  Future<void> trigger<E>(E event) async {
+    if (disposeCount > 0) return;
+    for (final handler in handlers[E] ?? <FutureOr<void> Function(Object?)>[]) {
+      await handler(event);
+    }
+  }
+
+  @override
+  Future<bool> dispose() async {
+    disposeCount++;
+    disposed.complete();
+    return true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

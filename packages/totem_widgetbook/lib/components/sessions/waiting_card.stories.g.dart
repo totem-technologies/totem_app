@@ -11,95 +11,117 @@ part of 'waiting_card.stories.dart';
 // StoryGenerator
 // **************************************************************************
 
-typedef _Component = Component<WaitingCard, StoryArgs<WaitingCard>>;
-typedef _Scenario = WaitingCardScenario;
-typedef _Defaults = WaitingCardDefaults;
-typedef _Story = WaitingCardStory;
-typedef _Args = WaitingCardArgs;
-final WaitingCardComponent = Component<WaitingCard, StoryArgs<WaitingCard>>(
-  name: component.name ?? 'WaitingCard',
-  path: component.path ?? 'components/sessions',
-  docsBuilder: component.docsBuilder,
-  docComment:
-      r'''Figma waiting-for-approval card (3796:9181): a white slab under the
-preview. Title, a short wait line, then whatever [action] the parent
-passes — usually the secondary Button.
+typedef _Component =
+    Component<SessionWaitingCard, StoryArgs<SessionWaitingCard>>;
+typedef _Scenario = SessionWaitingCardScenario;
+typedef _Defaults = SessionWaitingCardDefaults;
+typedef _Story = SessionWaitingCardStory;
+typedef _Args = SessionWaitingCardArgs;
+final SessionWaitingCardComponent =
+    Component<SessionWaitingCard, StoryArgs<SessionWaitingCard>>(
+      name: component.name ?? 'SessionWaitingCard',
+      path: component.path ?? 'components/sessions',
+      docsBuilder: component.docsBuilder,
+      docComment:
+          r'''Data and action for the lobby, or a passive admitted-before-start card.''',
+      stories: [
+        $Reviewing..$generatedName = 'Reviewing',
+        $Admitted..$generatedName = 'Admitted',
+      ],
+    );
+typedef SessionWaitingCardScenario =
+    Scenario<SessionWaitingCard, SessionWaitingCardArgs>;
+typedef SessionWaitingCardDefaults =
+    Defaults<SessionWaitingCard, SessionWaitingCardArgs>;
 
-Figma frame is 366 × 214, radius 25, 20px vertical / 10px horizontal
-inset. The action is a slot so the parent can pass a Button, or
-nothing, without this card knowing.''',
-  stories: [
-    $Reviewing..$generatedName = 'Reviewing',
-    $Admitted..$generatedName = 'Admitted',
-  ],
-);
-typedef WaitingCardScenario = Scenario<WaitingCard, WaitingCardArgs>;
-typedef WaitingCardDefaults = Defaults<WaitingCard, WaitingCardArgs>;
-
-class WaitingCardStory extends Story<WaitingCard, WaitingCardArgs> {
-  WaitingCardStory({
+class SessionWaitingCardStory
+    extends Story<SessionWaitingCard, SessionWaitingCardArgs> {
+  SessionWaitingCardStory({
     super.name,
     super.designLink,
-    SetupBuilder<WaitingCard, WaitingCardArgs>? setup,
+    SetupBuilder<SessionWaitingCard, SessionWaitingCardArgs>? setup,
     super.modes,
     required super.args,
-    StoryWidgetBuilder<WaitingCard, WaitingCardArgs>? builder,
+    StoryWidgetBuilder<SessionWaitingCard, SessionWaitingCardArgs>? builder,
     super.scenarios,
     super.excludeFromTests,
   }) : super(
          builder:
              builder ??
-             (context, args) => WaitingCard(
-               key: args.key,
+             (context, args) => SessionWaitingCard(
                title: args.title,
                body: args.body,
-               action: args.action,
+               key: args.key,
+               actionLabel: args.actionLabel,
+               onAction: args.onAction,
              ),
          setup: setup ?? defaults.setup!,
        );
 }
 
-class WaitingCardArgs extends StoryArgs<WaitingCard> {
-  WaitingCardArgs({
-    Arg<Key?>? key,
+class SessionWaitingCardArgs extends StoryArgs<SessionWaitingCard> {
+  SessionWaitingCardArgs({
     Arg<String>? title,
     required Arg<Widget> body,
-    Arg<Widget?>? action,
-  }) : this.keyArg = $initArg('key', key, null),
-       this.titleArg = $initArg('title', title, StringArg(''))!,
+    Arg<Key?>? key,
+    Arg<String?>? actionLabel,
+    Arg<void Function()?>? onAction,
+  }) : this.titleArg = $initArg('title', title, StringArg(''))!,
        this.bodyArg = $initArg('body', body, null)!,
-       this.actionArg = $initArg('action', action, null);
+       this.keyArg = $initArg('key', key, null),
+       this.actionLabelArg = $initArg(
+         'actionLabel',
+         actionLabel,
+         NullableStringArg(null),
+       )!,
+       this.onActionArg = $initArg('onAction', onAction, null);
 
-  WaitingCardArgs.fixed({
-    Key? key,
+  SessionWaitingCardArgs.fixed({
     String title = '',
     required Widget body,
-    Widget? action,
-  }) : this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
-       this.titleArg = $initArg('title', Arg.fixed(title), null)!,
+    Key? key,
+    String? actionLabel = null,
+    void Function()? onAction,
+  }) : this.titleArg = $initArg('title', Arg.fixed(title), null)!,
        this.bodyArg = $initArg('body', Arg.fixed(body), null)!,
-       this.actionArg = $initArg(
-         'action',
-         action == null ? null : Arg.fixed(action),
+       this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
+       this.actionLabelArg = $initArg(
+         'actionLabel',
+         actionLabel == null ? null : Arg.fixed(actionLabel),
+         null,
+       ),
+       this.onActionArg = $initArg(
+         'onAction',
+         onAction == null ? null : Arg.fixed(onAction),
          null,
        );
-
-  final Arg<Key?>? keyArg;
 
   final Arg<String> titleArg;
 
   final Arg<Widget> bodyArg;
 
-  final Arg<Widget?>? actionArg;
+  final Arg<Key?>? keyArg;
 
-  Key? get key => keyArg?.value;
+  final Arg<String?>? actionLabelArg;
+
+  final Arg<void Function()?>? onActionArg;
 
   String get title => titleArg.value;
 
   Widget get body => bodyArg.value;
 
-  Widget? get action => actionArg?.value;
+  Key? get key => keyArg?.value;
+
+  String? get actionLabel => actionLabelArg?.value;
+
+  void Function()? get onAction => onActionArg?.value;
 
   @override
-  List<Arg?> get list => [keyArg, titleArg, bodyArg, actionArg];
+  List<Arg?> get list => [
+    titleArg,
+    bodyArg,
+    keyArg,
+    actionLabelArg,
+    onActionArg,
+  ];
 }

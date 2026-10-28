@@ -51,12 +51,12 @@ Components/
   Feedback/    EmptyIndicator, ErrorScreen, InfoText, LoadingIndicator, LoadingScreen
   Navigation/  PageIndicator, SheetDragHandle
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
-  Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard
+  Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard, SessionWaitingQueueButton
 Screens/
-  auth            AuthFlow (18 states)
-  session/:slug   SessionEntry (one story; args are the states)
-  session/landscape    SessionLandscape
-  spaces          SessionsScreen (4 states)
+  auth                AuthFlow (18 states)
+  session/:slug       SessionEntry (one story; browsing is catalog-only; waiting, declined, queue and orientation use core views)
+  session/landscape   SessionLandscape
+  spaces              SessionsScreen (4 states)
   spaces/event/:slug  SessionDetailsPage (4 states)
 ```
 
