@@ -56,21 +56,22 @@ class _SessionAdmissionOverlayState
     _admittedIdentities = ref.read(
       admittedSessionParticipantIdentitiesProvider.notifier,
     );
-    ref.listenManual(
-      currentSessionStateProvider,
-      (_, _) => _syncAdmission(),
-      fireImmediately: true,
-    );
-    ref.listenManual(
-      currentSessionEventProvider,
-      (_, _) => _syncAdmission(),
-      fireImmediately: true,
-    );
-    ref.listenManual(
-      currentSessionProvider,
-      (_, _) => _syncAdmission(),
-      fireImmediately: true,
-    );
+    ref
+      ..listenManual(
+        currentSessionStateProvider,
+        (_, _) => _syncAdmission(),
+        fireImmediately: true,
+      )
+      ..listenManual(
+        currentSessionEventProvider,
+        (_, _) => _syncAdmission(),
+        fireImmediately: true,
+      )
+      ..listenManual(
+        currentSessionProvider,
+        (_, _) => _syncAdmission(),
+        fireImmediately: true,
+      );
   }
 
   @override
