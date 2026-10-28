@@ -5,6 +5,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/features/permissions/media_permission_controller.dart';
+import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/permissions/platform_info.dart';
+import 'package:totem_core/features/permissions/policy.dart';
+import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -448,11 +453,17 @@ class PrejoinActionBar extends ConsumerWidget {
     required this.selectedCameraDeviceId,
     required this.onCameraFacingChanged,
     required this.onCameraDeviceSelected,
+    this.microphoneProblem,
+    this.cameraProblem,
     super.key,
   });
 
   final bool locked;
   final MicrophoneLevelBuilder? microphoneLevel;
+
+  /// Why each preview device isn't working, for its badge.
+  final DeviceProblem? microphoneProblem;
+  final DeviceProblem? cameraProblem;
   final bool isMicOn;
   final AsyncCallback onToggleMic;
   final bool isSpeakerOn;
@@ -467,12 +478,19 @@ class PrejoinActionBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cameraDevices = ref.watch(cameraDevicesProvider);
+    final permissions = ref.watch(mediaPermissionControllerProvider);
+    final platform = ref.watch(platformInfoProvider);
     final microphoneButton = ActionBarShortcutTooltip(
       shortcut: ActionBarShortcut.microphone,
       child: ActionBarMicButton(
         microphoneLevel: microphoneLevel,
         isMicOn: isMicOn,
         onToggle: !locked ? (v) => onToggleMic() : null,
+        needsAttention: needsAttention(
+          permissions?.microphone,
+          microphoneProblem,
+          platform,
+        ),
       ),
     );
     final cameraButton = ActionBarShortcutTooltip(
@@ -486,6 +504,11 @@ class PrejoinActionBar extends ConsumerWidget {
             selectedCameraDeviceId ?? cameraDevices.firstOrNull?.id,
         onCameraFacingChanged: onCameraFacingChanged,
         onCameraDeviceSelected: onCameraDeviceSelected,
+        needsAttention: needsAttention(
+          permissions?.camera,
+          cameraProblem,
+          platform,
+        ),
       ),
     );
 
@@ -548,12 +571,22 @@ class SessionActionBar extends ConsumerWidget {
         requiresUnmuteConfirmation:
             totemState?.status == RoomStatus.active &&
             totemState?.speaker != localIdentity,
+        needsAttention: needsAttention(
+          ref.watch(mediaPermissionControllerProvider)?.microphone,
+          deviceState.microphoneProblem,
+          ref.watch(platformInfoProvider),
+        ),
         onToggle: (shouldEnable) async {
-          final devices = ref.read(deviceProvider.notifier);
           if (shouldEnable) {
-            await devices.enableMicrophone();
+            // Asks for permission where needed and explains a failure, the
+            // same as the camera (X13).
+            await turnOnMedia(
+              context,
+              ref,
+              ref.read(deviceProvider.notifier).control(MediaKind.microphone),
+            );
           } else {
-            await devices.disableMicrophone();
+            await ref.read(deviceProvider.notifier).disableMicrophone();
           }
         },
       ),

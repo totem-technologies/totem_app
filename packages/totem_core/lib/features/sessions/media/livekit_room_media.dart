@@ -6,7 +6,6 @@ import 'package:totem_core/features/sessions/media/livekit_speaker_level.dart';
 import 'package:totem_core/features/sessions/media/livekit_support.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/media/room_media.dart';
-import 'package:totem_core/features/sessions/media/speech_level.dart';
 
 /// [RoomMedia] backed by the LiveKit Flutter SDK.
 ///
@@ -19,10 +18,7 @@ class LiveKitRoomMedia implements RoomMedia {
       ..on<RoomConnectedEvent>((_) => notify())
       ..on<RoomDisconnectedEvent>((_) => notify())
       ..on<ParticipantConnectedEvent>((_) => notify())
-      ..on<ParticipantDisconnectedEvent>((event) {
-        _meters.remove(event.participant.identity);
-        notify();
-      })
+      ..on<ParticipantDisconnectedEvent>((_) => notify())
       ..on<TrackPublishedEvent>((_) => notify())
       ..on<TrackUnpublishedEvent>((_) => notify())
       ..on<TrackSubscribedEvent>((_) => notify())
@@ -33,29 +29,8 @@ class LiveKitRoomMedia implements RoomMedia {
       ..on<TrackUnmutedEvent>((_) => notify()),
   );
 
-  // Speaker updates arrive several times a second while anyone talks, so
-  // they get their own binding and only wake the level bars.
-  final _speakers = LiveKitRoomBinding(
-    (listener, notify) =>
-        listener.on<ActiveSpeakersChangedEvent>((_) => notify()),
-  );
-
-  late final Stream<void> _levelChanges = Stream<void>.multi((controller) {
-    final subscriptions = [
-      _media.changes.listen(controller.addSync),
-      _speakers.changes.listen(controller.addSync),
-    ];
-    controller.onCancel = () =>
-        Future.wait([for (final s in subscriptions) s.cancel()]);
-  }, isBroadcast: true);
-
-  /// Each participant's level scaling, kept while they are in the room.
-  final _meters = <String, SpeechLevelMeter>{};
-
   void attach(Room? room) {
-    if (!identical(room, _media.room)) _meters.clear();
     _media.attach(room);
-    _speakers.attach(room);
   }
 
   Participant? _participant(String identity) =>
@@ -115,8 +90,7 @@ class LiveKitRoomMedia implements RoomMedia {
   }) {
     return LiveKitSpeakerLevel(
       participant: () => _participant(participant.identity),
-      changes: _levelChanges,
-      meter: _meters.putIfAbsent(participant.identity, SpeechLevelMeter.new),
+      changes: _media.changes,
       color: color,
       iconSize: iconSize,
     );

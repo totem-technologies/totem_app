@@ -15,6 +15,9 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/media_permission_controller.dart';
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
@@ -33,6 +36,7 @@ import 'package:totem_core/shared/widgets/notifications.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
+import '../../permissions/fake_media_permission_adapter.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
@@ -523,18 +527,16 @@ void main() {
     );
   });
 
+  // Every group shares these, so none depends on another running first.
   setUpAll(() {
     TotemRouter.instance = FakeTotemRouter();
+    registerFallbackValue(TrackSource.camera);
+    setupAppConfig();
   });
 
   group('VideoRoomScreen - screen rendering', () {
     late MockSessionController session;
     late MockSessionDeviceController devices;
-
-    setUpAll(() async {
-      registerFallbackValue(TrackSource.camera);
-      setupAppConfig();
-    });
 
     setUp(() {
       session = MockSessionController();
@@ -558,9 +560,13 @@ void main() {
       when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
       when(() => devices.selectedCameraDeviceId).thenReturn(null);
       when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
-      when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+      when(
+        () => devices.turnOn(MediaKind.microphone),
+      ).thenAnswer((_) async => const TurnedOn());
       when(() => devices.disableMicrophone()).thenAnswer((_) async {});
-      when(() => devices.enableCamera()).thenAnswer((_) async {});
+      when(
+        () => devices.turnOn(MediaKind.camera),
+      ).thenAnswer((_) async => const TurnedOn());
       when(() => devices.disableCamera()).thenAnswer((_) async {});
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
       when(() => session.session).thenReturn(
@@ -1071,9 +1077,12 @@ void main() {
       (tester) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
         try {
-          var enableMicrophoneCallCount = 0;
-          when(() => devices.enableMicrophone()).thenAnswer((_) async {
-            enableMicrophoneCallCount += 1;
+          var microphoneTurnOnCount = 0;
+          when(() => devices.turnOn(MediaKind.microphone)).thenAnswer((
+            _,
+          ) async {
+            microphoneTurnOnCount += 1;
+            return const TurnedOn();
           });
 
           final event = _createSessionEventWithElapsed(
@@ -1090,7 +1099,7 @@ void main() {
 
           await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
           await tester.pump();
-          check(enableMicrophoneCallCount).equals(1);
+          check(microphoneTurnOnCount).equals(1);
 
           final context = tester.element(find.byType(ListeningTurnScreen));
 
@@ -1109,7 +1118,7 @@ void main() {
           await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
           await tester.pump();
 
-          check(enableMicrophoneCallCount).equals(1);
+          check(microphoneTurnOnCount).equals(1);
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }
@@ -1547,6 +1556,118 @@ void main() {
           find.text('Audio is now routed to another output device.'),
         ),
       ).length.equals(1);
+    });
+
+    for (final (kind, problem, title) in [
+      (MediaKind.microphone, DeviceProblem.lost, 'Your microphone stopped'),
+      (MediaKind.camera, DeviceProblem.lost, 'Your camera stopped'),
+      (MediaKind.microphone, null, "Your microphone isn't on"),
+    ]) {
+      testWidgets('X13: tells the user when the ${kind.name} needs attention '
+          '(${problem?.name ?? 'not on'})', (tester) async {
+        final notices = StreamController<MediaKind>.broadcast();
+        addTearDown(notices.close);
+        devices.deviceNeedsAttentionStream = notices.stream;
+        _TestSessionDeviceController.initialState = SessionDeviceState(
+          selectedCameraDeviceId: null,
+          selectedAudioOutputDeviceId: null,
+          isSpeakerphoneEnabled: true,
+          isMicrophoneEnabled: false,
+          isCameraEnabled: false,
+          microphoneProblem: kind == MediaKind.microphone ? problem : null,
+          cameraProblem: kind == MediaKind.camera ? problem : null,
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 5),
+          ),
+          screen: RoomScreen.listening,
+          extraOverrides: [
+            sessionDeviceControllerProvider(
+              session,
+            ).overrideWith(_TestSessionDeviceController.new),
+          ],
+        );
+        notices.add(kind);
+        await tester.pump(const Duration(seconds: 1));
+
+        check(tester.widgetList(find.text(title))).length.equals(1);
+      });
+    }
+
+    for (final (blocker, title) in [
+      (TurnOnBlocker.keeperAway, "You can't unmute right now"),
+      (TurnOnBlocker.connection, "Couldn't turn on your microphone"),
+    ]) {
+      testWidgets('explains a turn-on blocked by ${blocker.name}', (
+        tester,
+      ) async {
+        final blocked =
+            StreamController<(MediaKind, TurnOnBlocker)>.broadcast();
+        addTearDown(blocked.close);
+        devices.turnOnBlockedStream = blocked.stream;
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 5),
+          ),
+          screen: RoomScreen.listening,
+        );
+        blocked.add((MediaKind.microphone, blocker));
+        await tester.pump(const Duration(seconds: 1));
+
+        check(tester.widgetList(find.text(title))).length.equals(1);
+      });
+    }
+
+    testWidgets('X13: tapping the notice turns the device on again', (
+      tester,
+    ) async {
+      final notices = StreamController<MediaKind>.broadcast();
+      addTearDown(notices.close);
+      devices.deviceNeedsAttentionStream = notices.stream;
+      when(
+        () => devices.turnOn(MediaKind.microphone),
+      ).thenAnswer((_) async => const TurnedOn());
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        ),
+        screen: RoomScreen.listening,
+        extraOverrides: grantedMediaPermissionOverrides(),
+      );
+      await tester.runAsync(
+        () => ProviderScope.containerOf(
+          tester.element(find.byType(ListeningTurnScreen)),
+        ).read(mediaPermissionControllerProvider.notifier).refresh(),
+      );
+      notices.add(MediaKind.microphone);
+      await tester.pump(const Duration(seconds: 1));
+      // The banner slides in off-screen here, so tap it through its handler.
+      tester
+          .widget<GestureDetector>(
+            find
+                .ancestor(
+                  of: find.text("Your microphone isn't on"),
+                  matching: find.byType(GestureDetector),
+                )
+                .first,
+          )
+          .onTap!();
+      await tester.pump(const Duration(seconds: 1));
+
+      verify(() => devices.turnOn(MediaKind.microphone)).called(1);
     });
 
     testWidgets('does not show notification while disconnected', (

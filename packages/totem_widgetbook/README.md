@@ -53,7 +53,11 @@ Components/
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
   Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard, SessionWaitingQueueButton
 Screens/
-  session/:slug   SessionEntry (one story; browsing is catalog-only; waiting, declined, queue and orientation use core views)
+  auth                AuthFlow (18 states)
+  session/:slug       SessionEntry (one story; browsing is catalog-only; waiting, declined, queue and orientation use core views)
+  session/landscape   SessionLandscape
+  spaces              SessionsScreen (4 states)
+  spaces/event/:slug  SessionDetailsPage (4 states)
 ```
 
 ### Rules

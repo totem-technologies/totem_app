@@ -3,12 +3,15 @@
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:livekit_client/livekit_client.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
 
+import '../../../setup.dart';
 import '../livekit_mocks.dart';
 
 class _MockRoom extends Mock implements Room {}
@@ -21,6 +24,7 @@ void main() {
   tearDownAll(() => restoreWebRtcChannels());
 
   setUpAll(() {
+    setupAppConfig();
     restoreWebRtcChannels = stubFlutterWebRtcChannels();
     registerFallbackValue(const AudioCaptureOptions());
     registerFallbackValue(MockLocalVideoTrack());
@@ -59,6 +63,48 @@ void main() {
     tearDown(() {
       media.attach(null);
     });
+
+    for (final error in <LiveKitException>[
+      TrackPublishException(),
+      UnexpectedConnectionState('cannot publish track when not connected'),
+      UnexpectedStateException('Participant disposed'),
+      NegotiationError('negotiation failed'),
+    ]) {
+      test('X14: ${error.runtimeType} is the room, not capture', () async {
+        when(
+          () => participant.setMicrophoneEnabled(
+            any(),
+            audioCaptureOptions: any(named: 'audioCaptureOptions'),
+          ),
+        ).thenThrow(error);
+
+        await check(
+          media.setMicrophoneEnabled(true),
+        ).throws<MediaPublishException>();
+      });
+    }
+
+    for (final error in <Object>[
+      TrackCreateException('NotAllowedError: Permission denied'),
+      Exception('NotReadableError: Could not start audio source'),
+    ]) {
+      test('a capture error passes through: ${error.runtimeType}', () async {
+        when(
+          () => participant.setMicrophoneEnabled(
+            any(),
+            audioCaptureOptions: any(named: 'audioCaptureOptions'),
+          ),
+        ).thenThrow(error);
+
+        Object? thrown;
+        try {
+          await media.setMicrophoneEnabled(true);
+        } on Object catch (caught) {
+          thrown = caught;
+        }
+        check(thrown).identicalTo(error);
+      });
+    }
 
     for (final enabled in [true, false]) {
       test('toggling the microphone to $enabled keeps capture open', () async {
@@ -123,6 +169,24 @@ void main() {
       await media.setMicrophoneEnabled(true);
 
       verifyNever(track.restartTrack);
+    });
+
+    test('the microphone reads on once its track unmutes', () {
+      // LiveKit updates the publication's mute flag from an async event, so
+      // right after an unmute it still says muted.
+      final publication = MockLocalAudioTrackPublication();
+      final unmuted = MockLocalAudioTrack();
+      final muted = MockLocalAudioTrack(muted: true);
+      when(() => publication.muted).thenReturn(true);
+      when(
+        () => participant.getTrackPublicationBySource(TrackSource.microphone),
+      ).thenReturn(publication);
+
+      when(() => publication.track).thenReturn(unmuted);
+      check(media.isMicrophoneEnabled).isTrue();
+
+      when(() => publication.track).thenReturn(muted);
+      check(media.isMicrophoneEnabled).isFalse();
     });
 
     test('joining muted mutes the microphone before publishing it', () async {
@@ -257,5 +321,279 @@ void main() {
         check(restarted.cameraPosition).equals(CameraPosition.back);
       });
     });
+
+    group('a new camera', () {
+      late MockLocalVideoTrack captured;
+      late LiveKitLocalMedia cameraMedia;
+
+      setUp(() {
+        captured = MockLocalVideoTrack();
+        when(captured.stop).thenAnswer((_) async => true);
+        when(captured.dispose).thenAnswer((_) async => true);
+        when(
+          () => participant.getTrackPublicationBySource(TrackSource.camera),
+        ).thenReturn(null);
+        cameraMedia = LiveKitLocalMedia(
+          cameraCaptureOptions: SessionController.defaultCameraCaptureOptions,
+          createCameraTrack: (_) async => captured,
+        )..attach(room);
+      });
+
+      tearDown(() => cameraMedia.attach(null));
+
+      test('is captured, then published', () async {
+        when(() => participant.publishVideoTrack(captured)).thenAnswer(
+          (_) async => MockLocalTrackPublication(videoTrack: captured),
+        );
+
+        await cameraMedia.setCameraEnabled(true);
+
+        verify(() => participant.publishVideoTrack(captured)).called(1);
+        verifyNever(captured.stop);
+        verifyNever(captured.dispose);
+      });
+
+      test(
+        "X14: is stopped and disposed when the room can't take it",
+        () async {
+          when(
+            () => participant.publishVideoTrack(captured),
+          ).thenThrow(TrackPublishException());
+
+          await check(
+            cameraMedia.setCameraEnabled(true),
+          ).throws<MediaPublishException>();
+          verify(captured.stop).called(1);
+          verify(captured.dispose).called(1);
+        },
+      );
+
+      test('is disposed even when stopping it fails', () async {
+        when(
+          () => participant.publishVideoTrack(captured),
+        ).thenThrow(TrackPublishException());
+        when(captured.stop).thenThrow(StateError('stop failed'));
+
+        await check(
+          cameraMedia.setCameraEnabled(true),
+        ).throws<MediaPublishException>();
+        verify(captured.dispose).called(1);
+      });
+
+      test('a capture failure is not a publish failure', () async {
+        final refusal = TrackCreateException('NotAllowedError');
+        final failing = LiveKitLocalMedia(
+          cameraCaptureOptions: SessionController.defaultCameraCaptureOptions,
+          createCameraTrack: (_) async => throw refusal,
+        )..attach(room);
+        addTearDown(() => failing.attach(null));
+
+        Object? thrown;
+        try {
+          await failing.setCameraEnabled(true);
+        } on Object catch (caught) {
+          thrown = caught;
+        }
+        check(thrown).identicalTo(refusal);
+        verifyNever(() => participant.publishVideoTrack(any()));
+      });
+    });
+
+    group('capture lost', () {
+      late List<CaptureLost> lost;
+      late _CaptureTrack microphone;
+      late _CaptureTrack camera;
+      late MockLocalAudioTrackPublication microphonePublication;
+      late MockLocalAudioTrackPublication cameraPublication;
+
+      setUp(() {
+        lost = [];
+        media.captureLost.listen(lost.add);
+        microphone = _CaptureTrack(TrackSource.microphone);
+        camera = _CaptureTrack(TrackSource.camera);
+        microphonePublication = _publicationOf(microphone);
+        cameraPublication = _publicationOf(camera);
+        when(
+          () => participant.getTrackPublicationBySource(TrackSource.microphone),
+        ).thenReturn(microphonePublication);
+        when(
+          () => participant.getTrackPublicationBySource(TrackSource.camera),
+        ).thenReturn(cameraPublication);
+        when(
+          () => participant.setCameraEnabled(
+            any(),
+            cameraCaptureOptions: any(named: 'cameraCaptureOptions'),
+          ),
+        ).thenAnswer((_) async => null);
+        when(() => participant.unpublishAllTracks()).thenAnswer((_) async {});
+      });
+
+      test('X13: a live microphone that stops on its own is lost', () async {
+        await media.setMicrophoneEnabled(true);
+
+        microphone.endCapture();
+        await pumpEventQueue();
+
+        check(
+          lost.map((l) => (l.kind, l.wasOn)),
+        ).deepEquals([(MediaKind.microphone, true)]);
+        // Stopped and muted, so the controls show it off and turning it on
+        // restarts capture.
+        verify(() => microphonePublication.mute(stopOnMute: true)).called(1);
+      });
+
+      test('X13: a muted microphone that stops is lost, but was off', () async {
+        await media.setMicrophoneEnabled(false);
+        microphone
+          ..isMuted = true
+          ..endCapture();
+        await pumpEventQueue();
+
+        check(
+          lost.map((l) => (l.kind, l.wasOn)),
+        ).deepEquals([(MediaKind.microphone, false)]);
+      });
+
+      test('X13: a camera that stops while on is lost', () async {
+        await media.setCameraEnabled(true);
+
+        camera.endCapture();
+        await pumpEventQueue();
+
+        check(
+          lost.map((l) => (l.kind, l.wasOn)),
+        ).deepEquals([(MediaKind.camera, true)]);
+      });
+
+      test('turning the camera off is not a loss', () async {
+        await media.setCameraEnabled(true);
+        await media.setCameraEnabled(false);
+
+        camera.endCapture();
+        await pumpEventQueue();
+
+        check(lost).isEmpty();
+      });
+
+      test('a camera that failed to turn on is not lost later', () async {
+        await media.setMicrophoneEnabled(true);
+        when(
+          () => participant.setCameraEnabled(
+            true,
+            cameraCaptureOptions: any(named: 'cameraCaptureOptions'),
+          ),
+        ).thenThrow(Exception('NotAllowedError'));
+        await check(media.setCameraEnabled(true)).throws<Exception>();
+
+        camera.endCapture();
+        await pumpEventQueue();
+
+        check(lost).isEmpty();
+      });
+
+      test('a lost camera is reported once, even after LiveKit unpublished '
+          'it', () async {
+        await media.setCameraEnabled(true);
+        // LiveKit's own end handler removes the publication first.
+        when(
+          () => participant.getTrackPublicationBySource(TrackSource.camera),
+        ).thenReturn(null);
+        camera.endCapture();
+        await pumpEventQueue();
+
+        final republished = _CaptureTrack(TrackSource.camera);
+        final publication = _publicationOf(republished);
+        when(
+          () => participant.getTrackPublicationBySource(TrackSource.camera),
+        ).thenReturn(publication);
+        await media.setMicrophoneEnabled(true);
+        republished.endCapture();
+        await pumpEventQueue();
+
+        check(lost.map((l) => l.kind)).deepEquals([MediaKind.camera]);
+      });
+
+      test(
+        'X13: any media operation hooks the capture it leaves behind',
+        () async {
+          await media.setCameraEnabled(true);
+          // A camera switch replaces the capture inside a media operation.
+          camera.mediaStreamTrack = MockMediaStreamTrack();
+          await media.setMicrophoneEnabled(true);
+
+          camera.endCapture();
+          await pumpEventQueue();
+
+          check(lost.map((l) => l.kind)).deepEquals([MediaKind.camera]);
+        },
+      );
+
+      test('release is not a loss', () async {
+        await media.setMicrophoneEnabled(true);
+        await media.release();
+
+        microphone.endCapture();
+        await pumpEventQueue();
+
+        check(lost).isEmpty();
+      });
+
+      test("keeps LiveKit's own end handler", () async {
+        var liveKitHandled = false;
+        microphone.mediaStreamTrack.onEnded = () => liveKitHandled = true;
+        await media.setMicrophoneEnabled(true);
+
+        microphone.endCapture();
+        await pumpEventQueue();
+
+        check(liveKitHandled).isTrue();
+        check(lost).length.equals(1);
+      });
+
+      test('X13: a capture restarted by unmuting is still watched', () async {
+        microphone.isCapturing = false;
+        when(() => microphone.restartTrack()).thenAnswer((_) async {
+          microphone
+            ..mediaStreamTrack = MockMediaStreamTrack()
+            ..isCapturing = true;
+        });
+
+        await media.setMicrophoneEnabled(true);
+        microphone.endCapture();
+        await pumpEventQueue();
+
+        check(lost).length.equals(1);
+      });
+    });
   });
+}
+
+MockLocalAudioTrackPublication _publicationOf(_CaptureTrack track) {
+  final publication = MockLocalAudioTrackPublication();
+  when(() => publication.track).thenReturn(track);
+  when(
+    () => publication.mute(stopOnMute: any(named: 'stopOnMute')),
+  ).thenAnswer((_) async {});
+  return publication;
+}
+
+/// A local track whose capture can end, like the SDK reports when a
+/// permission is revoked or a device is unplugged.
+class _CaptureTrack extends MockLocalAudioTrack {
+  _CaptureTrack(this._source) {
+    when(() => muted).thenAnswer((_) => isMuted);
+    when(() => isActive).thenAnswer((_) => isCapturing);
+  }
+
+  final TrackSource _source;
+  bool isMuted = false;
+  bool isCapturing = true;
+
+  @override
+  TrackSource get source => _source;
+
+  @override
+  webrtc.MediaStreamTrack mediaStreamTrack = MockMediaStreamTrack();
+
+  void endCapture() => mediaStreamTrack.onEnded?.call();
 }

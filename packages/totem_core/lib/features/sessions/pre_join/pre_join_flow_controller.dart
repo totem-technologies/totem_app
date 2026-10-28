@@ -11,6 +11,8 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/permissions/media_permission_controller.dart';
+import 'package:totem_core/features/permissions/policy.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/admission_transport.dart';
@@ -79,10 +81,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     connectOptions: LiveKitAdmissionTransport.pendingConnectOptions,
   );
 
-  void setNativePermissionsGranted(bool granted) {
-    state = state.copyWith(nativePermissionsGranted: granted);
-  }
-
   Future<PreJoinJoinOutcome> requestJoin({
     bool replaceExistingSession = false,
   }) async {
@@ -112,6 +110,13 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           !replaceExistingSession) {
         state = state.copyWith(phase: PreJoinFlowPhase.idle);
         return PreJoinJoinOutcome.confirmationRequired;
+      }
+
+      final readiness = await _currentJoinReadiness();
+      if (!ref.mounted || _cancelRequested) return PreJoinJoinOutcome.ignored;
+      if (readiness != JoinReadiness.ready) {
+        state = state.copyWith(phase: PreJoinFlowPhase.idle);
+        return PreJoinJoinOutcome.microphoneNeeded;
       }
 
       final event = await ref.read(sessionProvider(sessionSlug).future);
@@ -434,6 +439,19 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     }
   }
 
+  Future<JoinReadiness> _currentJoinReadiness() async {
+    await ref
+        .read(preJoinMediaControllerProvider(sessionSlug).notifier)
+        .settled();
+    if (!ref.mounted || _cancelRequested) return JoinReadiness.checking;
+    final media = ref.read(preJoinMediaControllerProvider(sessionSlug));
+    return joinReadiness(
+      permissions: ref.read(mediaPermissionControllerProvider),
+      microphoneProblem: media.microphone.problem,
+      mediaSettled: media.initializationComplete,
+    );
+  }
+
   Future<PreJoinJoinOutcome> _joinWithToken(
     String token, {
     AdmissionRequest? admissionRequest,
@@ -453,15 +471,27 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       final mediaController = ref.read(
         preJoinMediaControllerProvider(sessionSlug).notifier,
       );
-      final requireUsableMedia = ref.read(preJoinRequiresUsableMediaProvider);
 
       // Precache before transferring preview tracks so failure is retryable.
       await ref.read(sessionProvider(sessionSlug).future);
       if (!ref.mounted || _cancelRequested) return PreJoinJoinOutcome.ignored;
 
-      joinMedia = await mediaController.takeForJoin(
-        requireUsableMedia: requireUsableMedia,
-      );
+      // Permissions or the preview may have changed while waiting for the Keeper.
+      final readiness = await _currentJoinReadiness();
+      if (!ref.mounted || _cancelRequested) return PreJoinJoinOutcome.ignored;
+      if (readiness != JoinReadiness.ready) {
+        state = state.copyWith(
+          phase: PreJoinFlowPhase.idle,
+          error: admissionRequest == null
+              ? null
+              : StateError(
+                  'Microphone access changed after approval. Please try joining again.',
+                ),
+        );
+        return PreJoinJoinOutcome.microphoneNeeded;
+      }
+
+      joinMedia = await mediaController.takeForJoin();
       mediaTransferred = true;
       if (!ref.mounted || _cancelRequested) {
         throw StateError('Pre-join flow closed before media handoff');
@@ -542,19 +572,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         }());
       }
       return PreJoinJoinOutcome.joined;
-    } on PreJoinMediaPermissionDeniedException {
-      if (ref.mounted) {
-        state = state.copyWith(
-          phase: PreJoinFlowPhase.idle,
-          clearSessionOptions: true,
-          error: admissionRequest == null
-              ? null
-              : StateError(
-                  'Media permissions changed after approval. Please try joining again.',
-                ),
-        );
-      }
-      return PreJoinJoinOutcome.permissionsDenied;
     } catch (error, stackTrace) {
       if (mediaTransferred && !joinStarted && joinMedia != null) {
         try {

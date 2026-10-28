@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' hide SessionOptions;
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
@@ -7,10 +8,16 @@ enum PreJoinCapturePhase {
   uninitialized,
   initializing,
   waitingForForeground,
+
+  /// Capture waits until permission is granted, so the OS prompt only appears in
+  /// response to the user (X2 in specs/permissions.md).
+  waitingForAccess,
   ready,
   disabled,
+
+  /// Capture failed or stopped: the device's problem or its permission
+  /// says why.
   unavailable,
-  permissionDenied,
 }
 
 enum PreJoinFlowPhase { idle, joining, pending, joined }
@@ -20,7 +27,7 @@ enum PreJoinJoinOutcome {
   pending,
   joined,
   retryableFailure,
-  permissionsDenied,
+  microphoneNeeded,
   ignored,
 }
 
@@ -55,16 +62,18 @@ class PreJoinMediaPreferences {
 
 @immutable
 class PreJoinCaptureState<T extends LocalTrack> {
-  const PreJoinCaptureState({required this.phase, this.track, this.error});
+  const PreJoinCaptureState({required this.phase, this.track, this.problem});
 
   const PreJoinCaptureState.uninitialized()
     : phase = PreJoinCapturePhase.uninitialized,
       track = null,
-      error = null;
+      problem = null;
 
   final PreJoinCapturePhase phase;
   final T? track;
-  final Object? error;
+
+  /// Why the device isn't working, when the permission is fine.
+  final DeviceProblem? problem;
 
   bool get initializationComplete => switch (phase) {
     PreJoinCapturePhase.uninitialized ||
@@ -94,14 +103,6 @@ class PreJoinMediaState {
   bool get initializationComplete =>
       camera.initializationComplete && microphone.initializationComplete;
 
-  bool get canJoinOnWeb =>
-      initializationComplete &&
-      (microphone.phase == PreJoinCapturePhase.ready ||
-          microphone.phase == PreJoinCapturePhase.disabled) &&
-      (camera.phase == PreJoinCapturePhase.ready ||
-          camera.phase == PreJoinCapturePhase.disabled ||
-          camera.phase == PreJoinCapturePhase.unavailable);
-
   PreJoinMediaState copyWith({
     PreJoinMediaPreferences? preferences,
     PreJoinCaptureState<LocalVideoTrack>? camera,
@@ -122,7 +123,7 @@ class PreJoinFlowState {
   const PreJoinFlowState({
     this.phase = PreJoinFlowPhase.idle,
     this.sessionOptions,
-    this.nativePermissionsGranted = false,
+
     this.admissionStatus,
     this.expiresAt,
     this.error,
@@ -130,7 +131,7 @@ class PreJoinFlowState {
 
   final PreJoinFlowPhase phase;
   final SessionOptions? sessionOptions;
-  final bool nativePermissionsGranted;
+
   final AdmissionStatus? admissionStatus;
   final DateTime? expiresAt;
   final Object? error;
@@ -139,7 +140,7 @@ class PreJoinFlowState {
     PreJoinFlowPhase? phase,
     SessionOptions? sessionOptions,
     bool clearSessionOptions = false,
-    bool? nativePermissionsGranted,
+
     AdmissionStatus? admissionStatus,
     bool clearAdmissionStatus = false,
     DateTime? expiresAt,
@@ -152,8 +153,7 @@ class PreJoinFlowState {
       sessionOptions: clearSessionOptions
           ? null
           : sessionOptions ?? this.sessionOptions,
-      nativePermissionsGranted:
-          nativePermissionsGranted ?? this.nativePermissionsGranted,
+
       admissionStatus: clearAdmissionStatus
           ? null
           : admissionStatus ?? this.admissionStatus,

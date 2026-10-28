@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:totem_core/features/permissions/model.dart';
 
 /// App-owned boundary between session code and the media SDK.
 ///
@@ -69,11 +70,40 @@ abstract interface class MediaDeviceCatalog {
   Stream<List<MediaDeviceInfo>> get changes;
 }
 
+/// A published microphone or camera track that stopped capturing on its
+/// own, such as when its permission was revoked or the device was unplugged.
+@immutable
+class CaptureLost {
+  const CaptureLost(this.kind, {required this.wasOn});
+
+  final MediaKind kind;
+
+  /// Whether the device was on (for the microphone, unmuted) when capture
+  /// stopped, so the user was relying on it.
+  final bool wasOn;
+}
+
+/// Turning a device on captured it, but the room couldn't take the track,
+/// such as while its connection is down. The device and its permission are
+/// fine, so this isn't a capture failure.
+class MediaPublishException implements Exception {
+  const MediaPublishException(this.cause);
+
+  final Object cause;
+
+  @override
+  String toString() => 'MediaPublishException: $cause';
+}
+
 /// The local participant's microphone, camera and audio output in a room.
 abstract interface class LocalMedia {
   /// Emits whenever any getter below may have changed, including changes made
   /// outside this interface, such as a keeper muting the participant.
   Stream<void> get changes;
+
+  /// Emits when a published track stops capturing without this interface
+  /// stopping it. Turning the camera off and [release] never emit.
+  Stream<CaptureLost> get captureLost;
 
   /// Whether a room is attached that local media can be published to.
   bool get isAvailable;
@@ -89,6 +119,12 @@ abstract interface class LocalMedia {
   String? get cameraDeviceId;
   String? get audioOutputDeviceId;
 
+  /// Whether this platform can apply an explicit output-device selection.
+  bool get supportsAudioOutputSelection;
+
+  /// Whether the browser can open its native output-device chooser.
+  bool get supportsAudioOutputChooser;
+
   /// The facing of the active camera. While the camera is off, the facing
   /// chosen for when it turns on, or null if none was chosen.
   CameraFacing? get cameraFacing;
@@ -99,9 +135,16 @@ abstract interface class LocalMedia {
 
   /// Muting keeps the microphone captured and only stops sending audio.
   /// Unmuting always resumes live capture, however the microphone was muted.
+  ///
+  /// Turning a device on throws [MediaPublishException] when the room can't
+  /// take its track, and the capture error otherwise.
   Future<void> setMicrophoneEnabled(bool enabled);
 
   Future<void> setCameraEnabled(bool enabled);
+
+  /// Sets the active camera facing. While the camera is off, chooses the
+  /// facing it turns on with instead.
+  Future<void> setCameraFacing(CameraFacing facing);
 
   /// Flips the active camera. While the camera is off, changes the facing it
   /// turns on with instead.
@@ -109,6 +152,9 @@ abstract interface class LocalMedia {
 
   Future<void> selectCamera(MediaDeviceInfo device);
   Future<void> selectAudioOutput(MediaDeviceInfo device);
+
+  /// Opens the browser's native output-device chooser when supported.
+  Future<void> requestAudioOutput();
 
   Future<void> setSpeakerOutputPreferred(bool preferred);
 

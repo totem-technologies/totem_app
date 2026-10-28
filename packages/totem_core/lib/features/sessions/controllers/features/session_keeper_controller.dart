@@ -5,6 +5,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/shared/logger.dart';
@@ -159,7 +161,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     }
 
     final wasMicEnabled = session.devices.isMicrophoneEnabled;
-    final micFuture = session.devices.enableMicrophone();
+    final micFuture = session.devices.turnOn(MediaKind.microphone);
 
     try {
       final roomState = await _run(
@@ -168,10 +170,15 @@ class SessionKeeperController extends _$SessionKeeperController {
         errorMessage: 'Error accepting totem',
       );
       session.applyRoomState(roomState);
-      await micFuture;
+      // The totem is theirs either way; if the microphone didn't come on,
+      // tell them how to fix it rather than failing the accept (X13). A
+      // skipped turn-on was already explained by the session.
+      if (await micFuture is TurnOnFailed) {
+        session.devices.flagNeedsAttention(MediaKind.microphone);
+      }
       logger.i('Accepted totem successfully');
     } catch (e) {
-      await micFuture.catchError((_) {});
+      await micFuture.catchError((Object _) => const TurnOnSkipped());
       if (!wasMicEnabled) {
         await session.devices.disableMicrophone();
       }

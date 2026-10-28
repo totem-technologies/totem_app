@@ -10,18 +10,19 @@ import 'package:totem_core/features/sessions/media/local_audio_level.dart';
 import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
-/// Audio level bars measured on this device for a local microphone track,
-/// or a microphone-off icon while it is muted or missing.
+/// Audio level bars measured from a microphone track, or a microphone-off
+/// icon while it is muted or missing. An unmuted microphone always renders
+/// bars; silence settles to small dots.
 ///
-/// On web the bars come from [localAudioLevel], on the same scale as remote
-/// speakers' bars, and redraw only when the level changes. Native platforms
-/// use the SDK visualizer.
+/// Native platforms use the SDK visualizer. Web uses samples from the track's
+/// browser audio analyser.
 class LiveKitMicrophoneLevel extends StatelessWidget {
   const LiveKitMicrophoneLevel({
     required this.track,
     required this.changes,
     required this.color,
     required this.barCount,
+    this.microphoneOn,
     this.iconSize = 20,
     super.key,
   });
@@ -50,12 +51,21 @@ class LiveKitMicrophoneLevel extends StatelessWidget {
 
   final Color color;
   final int barCount;
+
+  /// Resolves the microphone's published mute state when the track has not
+  /// been subscribed locally yet.
+  final bool Function()? microphoneOn;
+
   final double iconSize;
 
-  /// The track while it is unmuted.
-  AudioTrack? _read() {
+  ({bool microphoneOn, AudioTrack? track}) _read() {
     final track = this.track();
-    return track == null || track.muted ? null : track;
+    final microphoneOn =
+        this.microphoneOn?.call() ?? (track != null && !track.muted);
+    return (
+      microphoneOn: microphoneOn,
+      track: microphoneOn && track != null && !track.muted ? track : null,
+    );
   }
 
   @override
@@ -63,16 +73,27 @@ class LiveKitMicrophoneLevel extends StatelessWidget {
     return LiveKitSelector(
       changes: changes,
       read: _read,
-      builder: (context, track) {
-        if (track == null) {
+      builder: (context, reading) {
+        if (!reading.microphoneOn) {
           return TotemIcon(
             TotemIcons.microphoneOff,
             size: iconSize,
             color: color,
           );
         }
+        final track = reading.track;
+        if (track == null) {
+          return LevelBars(
+            levels: List.filled(barCount, 0, growable: false),
+            color: color,
+          );
+        }
         if (kIsWeb) {
-          return _WebLevelBars(track: track, barCount: barCount, color: color);
+          return _WebWaveform(
+            track: track,
+            barCount: barCount,
+            color: color,
+          );
         }
         return SoundWaveformWidget(
           audioTrack: track,
@@ -84,8 +105,8 @@ class LiveKitMicrophoneLevel extends StatelessWidget {
   }
 }
 
-class _WebLevelBars extends StatefulWidget {
-  const _WebLevelBars({
+class _WebWaveform extends StatefulWidget {
+  const _WebWaveform({
     required this.track,
     required this.barCount,
     required this.color,
@@ -96,19 +117,38 @@ class _WebLevelBars extends StatefulWidget {
   final Color color;
 
   @override
-  State<_WebLevelBars> createState() => _WebLevelBarsState();
+  State<_WebWaveform> createState() => _WebWaveformState();
 }
 
-class _WebLevelBarsState extends State<_WebLevelBars> {
-  StreamSubscription<double>? _subscription;
-  var _level = 0.0;
+class _WebWaveformState extends State<_WebWaveform> {
+  StreamSubscription<List<double>>? _subscription;
+  List<double> _levels = <double>[];
+  bool _isSpeaking = false;
 
   void _listen() {
     unawaited(_subscription?.cancel());
-    _level = 0;
-    _subscription = localAudioLevel(
-      widget.track,
-    ).listen((level) => setState(() => _level = level));
+    _levels = List<double>.filled(widget.barCount, 0, growable: false);
+    _isSpeaking = false;
+    _subscription =
+        localAudioLevels(
+          widget.track,
+          barCount: widget.barCount,
+        ).listen((levels) {
+          final isSpeaking = webWaveformIsActive(
+            levels,
+            wasActive: _isSpeaking,
+          );
+          final nextLevels = isSpeaking
+              ? levels
+              : List<double>.filled(widget.barCount, 0, growable: false);
+          if (listEquals(_levels, nextLevels) && isSpeaking == _isSpeaking) {
+            return;
+          }
+          setState(() {
+            _levels = List<double>.of(nextLevels, growable: false);
+            _isSpeaking = isSpeaking;
+          });
+        });
   }
 
   @override
@@ -118,7 +158,7 @@ class _WebLevelBarsState extends State<_WebLevelBars> {
   }
 
   @override
-  void didUpdateWidget(covariant _WebLevelBars oldWidget) {
+  void didUpdateWidget(covariant _WebWaveform oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.track != widget.track) _listen();
   }
@@ -130,11 +170,6 @@ class _WebLevelBarsState extends State<_WebLevelBars> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return LevelBars.fromLevel(
-      _level,
-      barCount: widget.barCount,
-      color: widget.color,
-    );
-  }
+  Widget build(BuildContext context) =>
+      LevelBars(levels: _levels, color: widget.color);
 }

@@ -14,6 +14,11 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
+import 'package:totem_core/features/permissions/adapters/media_permission_adapter.dart';
+import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/permissions/platform_info.dart';
+import 'package:totem_core/features/permissions/ui/priming_sheet.dart';
+import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
@@ -26,21 +31,18 @@ import 'package:totem_core/features/sessions/repositories/session_repository.dar
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
-
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
-
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
-
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 import 'package:totem_core/shared/router.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../mocks/flutter_foreground_task_mock.dart';
-import '../../../mocks/permission_handler_mock.dart';
 import '../../../setup.dart';
+import '../../permissions/fake_media_permission_adapter.dart';
 import '../livekit_mocks.dart';
 
 const _slug = 'pre-join-screen-test';
@@ -111,31 +113,22 @@ const _sessionState = SessionRoomState(
   ),
 );
 
-class _PermissionsGrantedFlowController extends PreJoinFlowController {
-  @override
-  PreJoinFlowState build(String sessionSlug) =>
-      const PreJoinFlowState(nativePermissionsGranted: true);
-}
-
 class _WaitingAdmissionFlowController extends PreJoinFlowController {
   @override
   PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState(
     phase: PreJoinFlowPhase.pending,
     admissionStatus: AdmissionStatus.pending,
-    nativePermissionsGranted: true,
   );
 }
 
 class _MutableFlowController extends PreJoinFlowController {
   @override
-  PreJoinFlowState build(String sessionSlug) =>
-      const PreJoinFlowState(nativePermissionsGranted: true);
+  PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState();
 
   void setPhase(PreJoinFlowPhase phase, {AdmissionStatus? admissionStatus}) {
     state = PreJoinFlowState(
       phase: phase,
       admissionStatus: admissionStatus,
-      nativePermissionsGranted: true,
     );
   }
 }
@@ -225,14 +218,12 @@ void main() {
     TotemRouter.instance = FakeTotemRouter();
     silenceLogger();
     setupMockFlutterForegroundTask();
-    setupMockPermissionHandler();
     restoreWebRtcChannels = stubFlutterWebRtcChannels();
   });
 
   tearDownAll(() {
     restoreWebRtcChannels();
     clearMockFlutterForegroundTask();
-    clearMockPermissionHandler();
   });
 
   Future<void> pumpScreen(
@@ -246,16 +237,22 @@ void main() {
     bool earlyParticipant = false,
     bool waitingForAdmission = false,
     AdmissionStatus? terminalAdmissionStatus,
-    bool permissionsGranted = false,
+
     Future<JoinResponse> Function()? getSessionToken,
     Future<SessionDetailSchema> Function()? getSession,
     DateTime Function()? now,
     PreJoinPreviewTrackFactory? trackFactory,
     PreJoinFlowController Function()? flowController,
+    FakeMediaPermissionAdapter? adapter,
+    PlatformInfo platform = const IosApp(),
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          platformInfoProvider.overrideWithValue(platform),
+          mediaPermissionAdapterProvider.overrideWithValue(
+            adapter ?? FakeMediaPermissionAdapter(),
+          ),
           authControllerProvider.overrideWith(
             () => FakeAuthController(
               AuthState.authenticated(
@@ -308,18 +305,12 @@ void main() {
             ),
           if (flowController != null)
             preJoinFlowControllerProvider(_slug).overrideWith(flowController),
-          if (permissionsGranted || successfulJoin)
-            preJoinFlowControllerProvider(
-              _slug,
-            ).overrideWith(_PermissionsGrantedFlowController.new),
+
           if (successfulJoin)
             sessionControllerProvider(
               _options,
             ).overrideWith(_SuccessfulSessionController.new),
           if (pendingJoin) ...[
-            preJoinFlowControllerProvider(
-              _slug,
-            ).overrideWith(_PermissionsGrantedFlowController.new),
             sessionControllerProvider(
               _options,
             ).overrideWith(_PendingSessionController.new),
@@ -473,7 +464,7 @@ void main() {
     await pumpScreen(
       tester,
       earlyParticipant: true,
-      permissionsGranted: true,
+
       now: () => now,
       getSession: () async => _event(start: start).copyWith(started: false),
       trackFactory: factory,
@@ -778,6 +769,308 @@ void main() {
       classes: <String>['TextPainter'],
     ),
   );
+
+  group('media access', () {
+    bool joinEnabled(WidgetTester tester) => tester
+        .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+        .enabled;
+
+    Future<void> settle(WidgetTester tester) async {
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    testWidgets('X1: already granted needs no sheet and enables Join', (
+      tester,
+    ) async {
+      await pumpScreen(tester);
+      await settle(tester);
+
+      check(find.byType(MediaPrimingSheet).evaluate()).isEmpty();
+      check(find.byType(MediaRecoveryBanner).evaluate()).isEmpty();
+      check(joinEnabled(tester)).isTrue();
+    });
+
+    testWidgets('X2: unknown access shows the priming sheet first', (
+      tester,
+    ) async {
+      final factory = _TrackFactory();
+      await pumpScreen(
+        tester,
+        trackFactory: factory,
+        adapter: FakeMediaPermissionAdapter(
+          camera: MediaPermission.unknown,
+          microphone: MediaPermission.unknown,
+        ),
+      );
+      await settle(tester);
+
+      check(find.byType(MediaPrimingSheet).evaluate()).length.equals(1);
+      check(factory.videoTracks).isEmpty();
+      check(factory.audioTracks).isEmpty();
+      check(joinEnabled(tester)).isFalse();
+    });
+
+    testWidgets('X5: granting from the sheet starts the preview and Join', (
+      tester,
+    ) async {
+      final factory = _TrackFactory();
+      await pumpScreen(
+        tester,
+        trackFactory: factory,
+        adapter: FakeMediaPermissionAdapter(
+          camera: MediaPermission.unknown,
+          microphone: MediaPermission.unknown,
+          requestResults: {MediaKind.microphone: MediaPermission.granted},
+        ),
+      );
+      await settle(tester);
+
+      await tester.tap(find.text('Microphone'));
+      await settle(tester);
+
+      check(factory.audioTracks).length.equals(1);
+      check(factory.videoTracks).isEmpty();
+      await tester.tap(find.text('Continue'));
+      await settle(tester);
+      check(joinEnabled(tester)).isTrue();
+    });
+
+    testWidgets("X2: the sheet's main action asks for the microphone", (
+      tester,
+    ) async {
+      Finder inSheet(String text) => find.descendant(
+        of: find.byType(MediaPrimingSheet),
+        matching: find.text(text),
+      );
+      final adapter = FakeMediaPermissionAdapter(
+        camera: MediaPermission.unknown,
+        microphone: MediaPermission.unknown,
+        requestResults: {MediaKind.microphone: MediaPermission.granted},
+      );
+      await pumpScreen(tester, adapter: adapter);
+      await settle(tester);
+      check(inSheet('Not now').evaluate()).length.equals(1);
+
+      await tester.tap(inSheet('Allow microphone'));
+      await settle(tester);
+
+      check(adapter.requested).deepEquals([MediaKind.microphone]);
+      check(inSheet('Not now').evaluate()).isEmpty();
+      await tester.tap(inSheet('Continue'));
+      await settle(tester);
+      check(find.byType(MediaPrimingSheet).evaluate()).isEmpty();
+      check(joinEnabled(tester)).isTrue();
+    });
+
+    testWidgets('X2: turning on a waiting mic asks and captures once', (
+      tester,
+    ) async {
+      final factory = _TrackFactory();
+      final adapter = FakeMediaPermissionAdapter(
+        microphone: MediaPermission.unknown,
+        requestResults: {MediaKind.microphone: MediaPermission.granted},
+      );
+      await pumpScreen(tester, trackFactory: factory, adapter: adapter);
+      await settle(tester);
+      await tester.tap(find.text('Not now'));
+      await settle(tester);
+
+      await tester.tap(find.bySemanticsLabel(RegExp('^Microphone off')));
+      await settle(tester);
+
+      check(adapter.requested).deepEquals([MediaKind.microphone]);
+      check(factory.audioTracks).length.equals(1);
+      check(joinEnabled(tester)).isTrue();
+    });
+
+    testWidgets('X3: a refused camera still allows joining', (tester) async {
+      await pumpScreen(
+        tester,
+        adapter: FakeMediaPermissionAdapter(camera: MediaPermission.blocked),
+      );
+      await settle(tester);
+
+      check(find.byType(MediaPrimingSheet).evaluate()).isEmpty();
+      check(joinEnabled(tester)).isTrue();
+    });
+
+    testWidgets('X4: the mic toggle relies on the banner, not a dialog', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        adapter: FakeMediaPermissionAdapter(
+          microphone: MediaPermission.blocked,
+        ),
+      );
+      await settle(tester);
+
+      await tester.tap(find.bySemanticsLabel(RegExp('^Microphone off')));
+      await settle(tester);
+
+      check(find.byType(MediaRecoveryDialog).evaluate()).isEmpty();
+      check(find.byType(MediaRecoveryBanner).evaluate()).length.equals(1);
+    });
+
+    testWidgets('X4: the microphone fix fits a small phone', (tester) async {
+      tester.view
+        ..physicalSize = const Size(320, 568)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await pumpScreen(
+        tester,
+        adapter: FakeMediaPermissionAdapter(
+          microphone: MediaPermission.blocked,
+        ),
+      );
+      await settle(tester);
+
+      check(find.byType(MediaRecoveryBanner).evaluate()).length.equals(1);
+      check(tester.takeException()).isNull();
+    });
+
+    testWidgets('a prompt answered after leaving pre-join is ignored', (
+      tester,
+    ) async {
+      final adapter = FakeMediaPermissionAdapter(
+        camera: MediaPermission.unknown,
+        requestResults: {MediaKind.camera: MediaPermission.granted},
+      )..requestGate = Completer();
+      await pumpScreen(tester, adapter: adapter);
+      await settle(tester);
+
+      await tester.tap(find.bySemanticsLabel(RegExp('^Camera off')));
+      await tester.pump();
+      check(adapter.requested).deepEquals([MediaKind.camera]);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      adapter.requestGate!.complete();
+      await tester.pump();
+
+      check(tester.takeException()).isNull();
+    });
+
+    testWidgets('X7: a blocked camera toggle explains the fix', (tester) async {
+      await pumpScreen(
+        tester,
+        adapter: FakeMediaPermissionAdapter(camera: MediaPermission.blocked),
+      );
+      await settle(tester);
+
+      await tester.tap(find.bySemanticsLabel(RegExp('^Camera off')));
+      await settle(tester);
+
+      check(find.byType(MediaRecoveryDialog).evaluate()).length.equals(1);
+    });
+
+    testWidgets('priming tiles only act when a tap can fix the device', (
+      tester,
+    ) async {
+      final adapter = FakeMediaPermissionAdapter(
+        camera: MediaPermission.restricted,
+        microphone: MediaPermission.unknown,
+      );
+      await pumpScreen(tester, adapter: adapter);
+      await settle(tester);
+
+      await tester.tap(find.text('Camera'));
+      await settle(tester);
+      check(adapter.settingsOpened).equals(0);
+      check(adapter.requested).isEmpty();
+
+      await tester.tap(find.text('Microphone'));
+      await settle(tester);
+      check(adapter.requested).deepEquals([MediaKind.microphone]);
+    });
+
+    testWidgets('X2: an ended session shows no priming sheet', (tester) async {
+      await pumpScreen(
+        tester,
+        sessionEnded: true,
+        adapter: FakeMediaPermissionAdapter(
+          camera: MediaPermission.unknown,
+          microphone: MediaPermission.unknown,
+        ),
+      );
+      await settle(tester);
+
+      check(find.byType(MediaPrimingSheet).evaluate()).isEmpty();
+    });
+
+    testWidgets('X2: permission priming precedes the join token request', (
+      tester,
+    ) async {
+      var tokenRequests = 0;
+      await pumpScreen(
+        tester,
+        getSessionToken: () {
+          tokenRequests++;
+          throw Exception('token failed');
+        },
+        adapter: FakeMediaPermissionAdapter(
+          camera: MediaPermission.unknown,
+          microphone: MediaPermission.unknown,
+        ),
+      );
+      await settle(tester);
+
+      check(find.byType(MediaPrimingSheet).evaluate()).isNotEmpty();
+      check(tokenRequests).equals(0);
+    });
+
+    testWidgets('X2: an unanswered camera alone brings no sheet back', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        adapter: FakeMediaPermissionAdapter(camera: MediaPermission.unknown),
+      );
+      await settle(tester);
+
+      check(find.byType(MediaPrimingSheet).evaluate()).isEmpty();
+      check(joinEnabled(tester)).isTrue();
+    });
+
+    testWidgets('A2: a tile Android stops asking for points to Settings', (
+      tester,
+    ) async {
+      final adapter = FakeMediaPermissionAdapter(
+        microphone: MediaPermission.denied,
+        requestResults: {MediaKind.microphone: MediaPermission.blocked},
+      );
+      await pumpScreen(tester, adapter: adapter, platform: const AndroidApp());
+      await settle(tester);
+
+      await tester.tap(find.text('Microphone'));
+      await settle(tester);
+      check(adapter.requested).deepEquals([MediaKind.microphone]);
+      check(
+        find.text("It's off in Settings. Tap to change it.").evaluate(),
+      ).length.equals(1);
+
+      await tester.tap(find.text('Microphone'));
+      await settle(tester);
+      check(adapter.settingsOpened).equals(1);
+    });
+
+    testWidgets('X4: a blocked microphone shows its fix and disables Join', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        adapter: FakeMediaPermissionAdapter(
+          microphone: MediaPermission.blocked,
+        ),
+      );
+      await settle(tester);
+
+      check(find.byType(MediaRecoveryBanner).evaluate()).length.equals(1);
+      check(find.text('Open Settings').evaluate()).length.equals(1);
+      check(joinEnabled(tester)).isFalse();
+    });
+  });
 
   testWidgets('token failures offer a retry after Join', (tester) async {
     var tokenRequests = 0;

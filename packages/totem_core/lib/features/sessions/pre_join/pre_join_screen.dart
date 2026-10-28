@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +12,13 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/media_permission_controller.dart';
+import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/permissions/platform_info.dart';
+import 'package:totem_core/features/permissions/policy.dart';
+import 'package:totem_core/features/permissions/ui/priming_sheet.dart';
+import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
@@ -25,10 +31,7 @@ import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
-import 'package:totem_core/features/sessions/widgets/permissions_popups.dart';
-
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
-
 import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/router.dart';
@@ -77,7 +80,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   final GlobalKey _previewKey = GlobalKey();
   final GlobalKey _controlsKey = GlobalKey();
   bool _showingAlreadyPresentDialog = false;
-  bool _showingWebPermissionsDialog = false;
+  bool _primingSheetShown = false;
   bool _reportedFullyDisplayed = false;
   bool _joined = false;
   bool _wakeLockEnabled = false;
@@ -93,7 +96,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     unawaited(_setWakeLock(enabled: true));
-    _initializeNativePermissions();
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
     );
@@ -156,25 +158,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     }
   }
 
-  void _initializeNativePermissions() {
-    if (kIsWeb || kIsWasm) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      final granted = await showPermissionsRequestSheet(context);
-      if (!mounted) return;
-      if (!granted) {
-        if (context.canPop()) context.pop();
-        return;
-      }
-
-      ref
-          .read(preJoinFlowControllerProvider(widget.sessionSlug).notifier)
-          .setNativePermissionsGranted(true);
-      if (Platform.isAndroid && mounted) {
-        await showBackgroundActivityDialog(context);
-      }
-      if (mounted) _reportFullyDisplayed();
+  /// Offers the priming sheet once, when access is first known and there's
+  /// something the OS can still prompt for. Web capture supplies its prompt.
+  void _maybeShowPrimingSheet(MediaPermissions? permissions) {
+    if (permissions == null || _primingSheetShown || !mounted) return;
+    if (!shouldShowPrimingSheet(permissions, ref.read(platformInfoProvider))) {
+      return;
+    }
+    _primingSheetShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(showMediaPrimingSheet(context));
     });
   }
 
@@ -184,49 +177,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     SentryDisplayWidget.of(context).reportFullyDisplayed();
   }
 
-  void _handleWebMediaState(PreJoinMediaState media) {
-    if (!(kIsWeb || kIsWasm) || !media.initializationComplete || !mounted) {
-      return;
-    }
-    if (media.canJoinOnWeb) {
-      _reportFullyDisplayed();
-      return;
-    }
-    if (_showingWebPermissionsDialog) return;
-    _showingWebPermissionsDialog = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_showWebPermissionsDialog());
-    });
-  }
-
-  Future<void> _showWebPermissionsDialog() async {
-    if (!mounted) {
-      _showingWebPermissionsDialog = false;
-      return;
-    }
-    var granted = false;
-    try {
-      granted = await showWebPermissionsDeniedDialog(
-        context,
-        retryPermissions: () async {
-          final media = await ref
-              .read(preJoinMediaControllerProvider(widget.sessionSlug).notifier)
-              .retryFailedMedia();
-          return media.canJoinOnWeb;
-        },
-      );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to show or retry the web permissions dialog',
-      );
-    } finally {
-      _showingWebPermissionsDialog = false;
-    }
-    if (granted && mounted) _reportFullyDisplayed();
-  }
-
   Future<bool> _requestJoin({bool replaceExistingSession = false}) async {
     final outcome = await ref
         .read(preJoinFlowControllerProvider(widget.sessionSlug).notifier)
@@ -234,10 +184,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     if (!mounted) return false;
     if (outcome == PreJoinJoinOutcome.confirmationRequired) {
       await _promptAlreadyPresent();
-    } else if (outcome == PreJoinJoinOutcome.permissionsDenied) {
-      _handleWebMediaState(
-        ref.read(preJoinMediaControllerProvider(widget.sessionSlug)),
-      );
     }
     return ref.read(preJoinFlowControllerProvider(widget.sessionSlug)).phase ==
         PreJoinFlowPhase.joined;
@@ -372,6 +318,38 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     );
   }
 
+  /// The preview's [kind], for the shared turn-on and recovery flow.
+  MediaControl _control(MediaKind kind) {
+    final provider = preJoinMediaControllerProvider(widget.sessionSlug);
+    return MediaControl(
+      kind: kind,
+      problem: provider.select(
+        (media) => switch (kind) {
+          MediaKind.camera => media.camera.problem,
+          MediaKind.microphone => media.microphone.problem,
+        },
+      ),
+      turnOn: () async => mounted
+          ? ref.read(provider.notifier).turnOn(kind)
+          : const TurnOnSkipped(),
+    );
+  }
+
+  Future<void> _toggleMedia(MediaKind kind, {required bool isOn}) async {
+    if (isOn) {
+      await ref
+          .read(preJoinMediaControllerProvider(widget.sessionSlug).notifier)
+          .turnOff(kind);
+      return;
+    }
+    await turnOnMedia(
+      context,
+      ref,
+      _control(kind),
+      explain: kind != MediaKind.microphone,
+    );
+  }
+
   Widget _buildPreJoinView(
     PreJoinMediaState media,
     PreJoinFlowState flow,
@@ -382,9 +360,18 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       preJoinMediaControllerProvider(widget.sessionSlug).notifier,
     );
     _mediaController = mediaController;
-    final permissionsGranted = (kIsWeb || kIsWasm)
-        ? media.canJoinOnWeb
-        : flow.nativePermissionsGranted;
+    final permissions = ref.watch(mediaPermissionControllerProvider);
+    _maybeShowPrimingSheet(permissions);
+    final readiness = joinReadiness(
+      permissions: permissions,
+      microphoneProblem: media.microphone.problem,
+      mediaSettled: media.initializationComplete,
+    );
+    if (readiness != JoinReadiness.checking && !_reportedFullyDisplayed) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _reportFullyDisplayed(),
+      );
+    }
     final pending = flow.phase == PreJoinFlowPhase.pending;
     String? joinNote;
     if (early) {
@@ -411,13 +398,18 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           (flow.phase != PreJoinFlowPhase.idle &&
               flow.phase != PreJoinFlowPhase.pending) ||
           !media.initializationComplete,
-      onToggleCamera: mediaController.toggleCamera,
-      onToggleMicrophone: mediaController.toggleMicrophone,
+      onToggleCamera: () =>
+          _toggleMedia(MediaKind.camera, isOn: media.preferences.isCameraOn),
+      onToggleMicrophone: () =>
+          _toggleMedia(MediaKind.microphone, isOn: media.preferences.isMicOn),
       onToggleSpeaker: mediaController.toggleSpeaker,
       onCameraFacingChanged: mediaController.setCameraFacing,
       onCameraDeviceSelected: mediaController.selectCameraDevice,
       previewKey: _previewKey,
       controlsKey: _controlsKey,
+      notice: readiness == JoinReadiness.microphoneNeeded
+          ? MediaRecoveryBanner(control: _control(MediaKind.microphone))
+          : null,
       joinCard: pending
           ? SessionWaitingCard(
               title: 'Waiting to join',
@@ -431,7 +423,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           : JoinTransitionCard(
               margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
               keepActionLoadingOnSuccess: true,
-              enabled: permissionsGranted && !early,
+              enabled: readiness == JoinReadiness.ready && !early,
               onActionPressed: early ? () async => false : _requestJoin,
               isSliderLoading: flow.phase == PreJoinFlowPhase.joining,
               note: joinNote,
@@ -475,10 +467,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     }
     final media = ref.watch(preJoinMediaControllerProvider(widget.sessionSlug));
     _joined = flow.phase == PreJoinFlowPhase.joined;
-
-    ref.listen(preJoinMediaControllerProvider(widget.sessionSlug), (_, next) {
-      _handleWebMediaState(next);
-    });
 
     final preJoinView = _buildPreJoinView(media, flow, session, early: early);
     final hasStartedJoin =

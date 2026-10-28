@@ -29,6 +29,7 @@ class PreJoinView extends StatelessWidget {
     required this.controlsKey,
     this.waiting = false,
     this.onLeave,
+    this.notice,
     super.key,
   });
 
@@ -39,6 +40,9 @@ class PreJoinView extends StatelessWidget {
   final GlobalKey controlsKey;
   final bool waiting;
   final VoidCallback? onLeave;
+
+  /// Shown above [joinCard], such as what's needed before joining.
+  final Widget? notice;
   final AsyncCallback onToggleCamera;
   final AsyncCallback onToggleMicrophone;
   final VoidCallback onToggleSpeaker;
@@ -91,6 +95,8 @@ class PreJoinView extends StatelessWidget {
           selectedCameraDeviceId: preferences.cameraOptions.deviceId,
           onCameraFacingChanged: onCameraFacingChanged,
           onCameraDeviceSelected: onCameraDeviceSelected,
+          microphoneProblem: mediaState.microphone.problem,
+          cameraProblem: mediaState.camera.problem,
         ),
       ),
     );
@@ -129,25 +135,39 @@ class PreJoinView extends StatelessWidget {
                     children: [
                       Expanded(child: cameraPreview),
                       Expanded(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: 18,
-                            children: [joinCard, actionBar],
+                        child: Center(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: 18,
+                              children: [?notice, joinCard, actionBar],
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
 
-                  _ => Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: 18,
-                    children: [
-                      Expanded(child: cameraPreview),
-                      joinCard,
-                      actionBar,
-                    ],
+                  _ => LayoutBuilder(
+                    builder: (context, constraints) => Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      spacing: 18,
+                      children: [
+                        Expanded(child: cameraPreview),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: constraints.maxHeight * 2 / 3,
+                          ),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: 18,
+                              children: [?notice, joinCard, actionBar],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 };
               },
