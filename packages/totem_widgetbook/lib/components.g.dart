@@ -14,6 +14,7 @@ import 'package:totem_widgetbook/components/buttons/button.stories.dart' as _tot
 import 'package:totem_widgetbook/components/buttons/circle_icon_button.stories.dart' as _totem_widgetbook_components_buttons_circle_icon_button_stories;
 import 'package:totem_widgetbook/components/dialogs/confirmation_dialog.stories.dart' as _totem_widgetbook_components_dialogs_confirmation_dialog_stories;
 import 'package:totem_widgetbook/components/dialogs/error_dialog.stories.dart' as _totem_widgetbook_components_dialogs_error_dialog_stories;
+import 'package:totem_widgetbook/components/dialogs/update_available_dialog.stories.dart' as _totem_widgetbook_components_dialogs_update_available_dialog_stories;
 import 'package:totem_widgetbook/components/feedback/empty_indicator.stories.dart' as _totem_widgetbook_components_feedback_empty_indicator_stories;
 import 'package:totem_widgetbook/components/feedback/error_screen.stories.dart' as _totem_widgetbook_components_feedback_error_screen_stories;
 import 'package:totem_widgetbook/components/feedback/info_text.stories.dart' as _totem_widgetbook_components_feedback_info_text_stories;
@@ -35,6 +36,7 @@ final components = <_widgetbook.Component>[
   _totem_widgetbook_components_buttons_circle_icon_button_stories.CircleIconButtonComponent,
   _totem_widgetbook_components_dialogs_confirmation_dialog_stories.ConfirmationDialogComponent,
   _totem_widgetbook_components_dialogs_error_dialog_stories.ErrorDialogComponent,
+  _totem_widgetbook_components_dialogs_update_available_dialog_stories.UpdateAvailableDialogComponent,
   _totem_widgetbook_components_feedback_empty_indicator_stories.EmptyIndicatorComponent,
   _totem_widgetbook_components_feedback_error_screen_stories.ErrorScreenComponent,
   _totem_widgetbook_components_feedback_info_text_stories.InfoTextComponent,

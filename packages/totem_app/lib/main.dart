@@ -106,7 +106,10 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
           child: child!,
         );
         if (Platform.isAndroid || Platform.isIOS) {
-          return TotemUpgradeAlert(child: app);
+          return TotemUpgradeAlert(
+            navigatorKey: TotemRouter.instance.navigatorKey,
+            child: app,
+          );
         }
         return app;
       },
