@@ -163,21 +163,15 @@ class _DockedSessionSidePanelState extends State<DockedSessionSidePanel>
         }
         final child = _activeChild;
         if (child == null) return const SizedBox.shrink();
-        // The shadow sits outside the clip so it tracks the visible
-        // leading edge while the rail slides.
-        final leading = Directionality.of(context) == TextDirection.ltr
-            ? -1.0
-            : 1.0;
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppTheme.cream,
-            boxShadow: [
-              BoxShadow(
-                color: const Color.fromRGBO(0, 0, 0, 0.14),
-                blurRadius: 24,
-                offset: Offset(6 * leading, 0),
-              ),
-            ],
+        // A border instead of a shadow: cheaper to paint every frame
+        // while the rail slides. Drawn in the foreground so opaque panel
+        // backgrounds do not cover it.
+        return Container(
+          color: AppTheme.cream,
+          foregroundDecoration: const BoxDecoration(
+            border: BorderDirectional(
+              start: BorderSide(color: AppTheme.textMuted),
+            ),
           ),
           child: ClipRect(
             child: Align(
