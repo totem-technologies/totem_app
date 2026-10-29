@@ -8,50 +8,40 @@ on:
 
 jobs:
   package-analysis:
-    name: ${{ matrix.name }}
+    name: Flutter beta
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Native compatibility (Flutter 3.44.9)
-            flutter-version: "3.44.9"
-            flutter-channel: stable
-            dart-version: "3.12.2"
-            lockfile-snapshot: ""
-            test-target: native
-          - name: Web compatibility (Flutter 3.50.0-0.2.pre)
-            flutter-version: "3.50.0-0.2.pre"
-            flutter-channel: beta
-            dart-version: "3.14.0 (build 3.14.0-315.3.beta)"
-            lockfile-snapshot: pubspec.web.lock
-            test-target: web
-
     steps:
       - uses: actions/checkout@v6
 
       - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
-          flutter-version: ${{ matrix.flutter-version }}
-          flutter-channel: ${{ matrix.flutter-channel }}
-          dart-version: ${{ matrix.dart-version }}
-          lockfile-snapshot: ${{ matrix.lockfile-snapshot }}
+          firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
+          flavor: staging
+
+      - name: Run lint
+        run: make lint PREPARE_PUB=false NATIVE_FLUTTER=flutter NATIVE_DART=dart WEB_FLUTTER=flutter WEB_DART=dart
+
+      - name: Run tests
+        run: make test PREPARE_PUB=false TEST_PUB=--no-pub NATIVE_FLUTTER=flutter NATIVE_DART=dart WEB_FLUTTER=flutter WEB_DART=dart
+
+  ios-compatibility:
+    name: iOS compatibility (Flutter 3.44.9)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-environment
+        with:
+          flutter-version: "3.44.9"
+          flutter-channel: stable
+          dart-version: "3.12.2"
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           flavor: staging
 
       - name: Run native lint
-        if: matrix.test-target == 'native'
-        run: make lint-native NATIVE_FLUTTER=flutter NATIVE_DART=dart
-
-      - name: Run Web lint
-        if: matrix.test-target == 'web'
-        run: make lint-web WEB_FLUTTER=flutter
+        run: make lint-native PREPARE_PUB=false NATIVE_FLUTTER=flutter NATIVE_DART=dart WEB_FLUTTER=flutter WEB_DART=dart
 
       - name: Run native tests
-        if: matrix.test-target == 'native'
-        run: make test-native NATIVE_FLUTTER=flutter NATIVE_DART=dart
-
-      - name: Run Web tests
-        if: matrix.test-target == 'web'
-        run: make test-web WEB_FLUTTER=flutter
+        run: make test-native PREPARE_PUB=false TEST_PUB=--no-pub NATIVE_FLUTTER=flutter NATIVE_DART=dart WEB_FLUTTER=flutter WEB_DART=dart
