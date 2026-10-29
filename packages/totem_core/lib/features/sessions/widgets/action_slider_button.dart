@@ -281,6 +281,9 @@ class ActionSlider extends StatefulWidget {
   /// Docked cards shrink this to match the action bar buttons.
   final double height;
 
+  @visibleForTesting
+  static const thumbKey = Key('action_slider_thumb');
+
   @override
   State<ActionSlider> createState() => ActionSliderState();
 }
@@ -453,6 +456,7 @@ class ActionSliderState extends State<ActionSlider> {
                             width: thumbSize,
                             height: thumbSize,
                             child: DecoratedBox(
+                              key: ActionSlider.thumbKey,
                               decoration: const BoxDecoration(
                                 color: foregroundColor,
                                 shape: BoxShape.circle,

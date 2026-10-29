@@ -172,6 +172,30 @@ void main() {
       },
     );
 
+    for (final (label, height) in [
+      ('docked 44dp track', 44.0),
+      ('default 50dp track', null),
+    ]) {
+      autoSizeTest('keeps the thumb round for a $label', (tester) async {
+        await pumpTestWidget(
+          tester,
+          child: height == null
+              ? ActionSlider(text: 'Slide', onActionCompleted: () async => true)
+              : ActionSlider(
+                  text: 'Slide',
+                  onActionCompleted: () async => true,
+                  height: height,
+                ),
+        );
+
+        final track = tester.getSize(find.byType(ActionSlider));
+        final thumb = tester.getSize(find.byKey(ActionSlider.thumbKey));
+        check(track.height).equals(height ?? 50);
+        check(thumb.width).equals(thumb.height);
+        check(thumb.height).equals(track.height - 8);
+      });
+    }
+
     autoSizeTest('reflects external loading state', (tester) async {
       await pumpTestWidget(
         tester,
