@@ -163,14 +163,25 @@ class _DockedSessionSidePanelState extends State<DockedSessionSidePanel>
         }
         final child = _activeChild;
         if (child == null) return const SizedBox.shrink();
-        return ClipRect(
-          child: Align(
-            alignment: AlignmentDirectional.centerEnd,
-            widthFactor: sessionSidePanelCurve.transform(_controller.value),
-            child: SizedBox(
-              width: sessionSidePanelWidth,
-              height: MediaQuery.sizeOf(context).height,
-              child: child,
+        // A border instead of a shadow: cheaper to paint every frame
+        // while the rail slides. Drawn in the foreground so opaque panel
+        // backgrounds do not cover it.
+        return Container(
+          color: AppTheme.cream,
+          foregroundDecoration: const BoxDecoration(
+            border: BorderDirectional(
+              start: BorderSide(color: AppTheme.textMuted),
+            ),
+          ),
+          child: ClipRect(
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              widthFactor: sessionSidePanelCurve.transform(_controller.value),
+              child: SizedBox(
+                width: sessionSidePanelWidth,
+                height: MediaQuery.sizeOf(context).height,
+                child: child,
+              ),
             ),
           ),
         );
