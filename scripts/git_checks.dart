@@ -910,15 +910,61 @@ String _describePlan(ValidationPlan plan) {
   return 'Analyzing: $analyzed; testing: $tested.';
 }
 
+/// Optional local validation, including tracked edits and untracked sources.
+Future<void> runChangedChecks() async {
+  const git = GitClient();
+  final defaultBranch = await git.defaultRemoteBranch();
+  final base = defaultBranch == null
+      ? null
+      : await git.mergeBase(defaultBranch, 'HEAD');
+  final workspace = await loadWorkspace();
+  late final ValidationPlan plan;
+  if (base == null) {
+    plan = ValidationPlan(workspace: workspace);
+    plan.requireFullValidation();
+  } else {
+    final changes = parseNameStatus(
+      await git._gitText([
+        'diff',
+        '--name-status',
+        '-z',
+        '--find-renames',
+        base,
+      ]),
+    );
+    final untracked = await git._gitText([
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+      '-z',
+    ]);
+    changes.addAll([
+      for (final path in untracked.split('\u0000'))
+        if (path.isNotEmpty) GitChange(ChangeKind.added, path),
+    ]);
+    plan = planValidation(workspace, changes);
+  }
+  print(_describePlan(plan));
+  await runCommands(
+    prePushCommands(plan, workspaceResolved: hasWorkspaceResolution(workspace)),
+    const ProcessCommandRunner(),
+  );
+}
+
 Future<void> main(List<String> args) async {
-  if (args.length != 1 || !{'pre-commit', 'pre-push'}.contains(args.single)) {
-    stderr.writeln('Usage: dart scripts/git_checks.dart <pre-commit|pre-push>');
+  if (args.length != 1 ||
+      !{'pre-commit', 'pre-push', 'changed'}.contains(args.single)) {
+    stderr.writeln(
+      'Usage: dart scripts/git_checks.dart <pre-commit|pre-push|changed>',
+    );
     exitCode = 64;
     return;
   }
   try {
     if (args.single == 'pre-commit') {
       await runPreCommit();
+    } else if (args.single == 'changed') {
+      await runChangedChecks();
     } else {
       await runPrePush(await stdin.transform(utf8.decoder).join());
     }
