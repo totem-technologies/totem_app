@@ -21,6 +21,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camer
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
+import 'package:totem_core/features/sessions/widgets/session_dock_surface.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
@@ -42,8 +43,12 @@ enum ActionBarButtonRole {
   }
 }
 
+/// Border width of [sessionDockDecoration]; counted in widthFor.
+const _pillBorderWidth = 1.5;
+
 @immutable
-// Two named layouts plus a derived width; not a closed token set.
+// Three named layouts (comfortable, phone, compact) plus a derived width;
+// not a closed token set.
 // ignore: use_enums
 class _ActionBarMetrics {
   const _ActionBarMetrics({
@@ -54,9 +59,20 @@ class _ActionBarMetrics {
     required this.verticalPadding,
   });
 
+  /// Tablets/desktop. Smaller than [phone] on purpose: pointer input does
+  /// not need the 48dp touch minimum.
   static const comfortable = _ActionBarMetrics(
     buttonSize: 44,
     iconSize: 22,
+    gap: 6,
+    horizontalPadding: 6,
+    verticalPadding: 6,
+  );
+
+  /// Phones: Material minimum touch (48) with proportionally larger icons.
+  static const phone = _ActionBarMetrics(
+    buttonSize: 48,
+    iconSize: 24,
     gap: 6,
     horizontalPadding: 6,
     verticalPadding: 6,
@@ -81,7 +97,8 @@ class _ActionBarMetrics {
     if (childCount <= 0) return 0;
     return childCount * buttonSize +
         (childCount - 1) * gap +
-        horizontalPadding * 2;
+        horizontalPadding * 2 +
+        _pillBorderWidth * 2;
   }
 }
 
@@ -365,14 +382,6 @@ class ActionBar extends StatelessWidget {
         final metrics = _resolveMetrics(context, constraints);
         final onLightBackground = _onLightBackground(context);
 
-        // 8% white glass disappears on the waiting-room cream gradient.
-        final pillFill = onLightBackground
-            ? AppTheme.slate.withValues(alpha: 0.12)
-            : AppTheme.white.withValues(alpha: 0.08);
-        final pillStroke = onLightBackground
-            ? AppTheme.slate.withValues(alpha: 0.22)
-            : AppTheme.white.withValues(alpha: 0.16);
-
         return _ActionBarScope(
           metrics: metrics,
           onLightBackground: onLightBackground,
@@ -382,10 +391,8 @@ class ActionBar extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsetsDirectional.only(bottom: 20),
                 child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: pillFill,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: pillStroke, width: 1.5),
+                  decoration: sessionDockDecoration(
+                    onLightBackground: onLightBackground,
                   ),
                   child: Padding(
                     padding: EdgeInsetsDirectional.symmetric(
@@ -414,9 +421,10 @@ class ActionBar extends StatelessWidget {
   /// LayoutBuilder reports incoming constraints. A non-flex Row child gets
   /// `maxWidth: infinity`, so we cannot key compact off that alone.
   ///
-  /// Phones always compact. Larger viewports use comfortable unless the
+  /// Phones prefer phone metrics (≥48dp touch targets). Tablets/desktop
+  /// prefer comfortable. Either falls back to compact only when the
   /// *finite* constraint (or the screen width, when unbounded) cannot fit
-  /// `children.length`.
+  /// `children.length` via widthFor.
   _ActionBarMetrics _resolveMetrics(
     BuildContext context,
     BoxConstraints constraints,
@@ -425,16 +433,17 @@ class ActionBar extends StatelessWidget {
     final isPhone =
         viewport == ViewportKind.smallPortrait ||
         viewport == ViewportKind.smallLandscape;
-    if (isPhone) return _ActionBarMetrics.compact;
+    final preferred = isPhone
+        ? _ActionBarMetrics.phone
+        : _ActionBarMetrics.comfortable;
 
     final availableWidth = constraints.maxWidth.isFinite
         ? constraints.maxWidth
         : MediaQuery.sizeOf(context).width;
-    if (availableWidth <
-        _ActionBarMetrics.comfortable.widthFor(children.length)) {
+    if (availableWidth < preferred.widthFor(children.length)) {
       return _ActionBarMetrics.compact;
     }
-    return _ActionBarMetrics.comfortable;
+    return preferred;
   }
 }
 

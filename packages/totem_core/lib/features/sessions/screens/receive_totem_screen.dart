@@ -168,12 +168,18 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
                   children: [
                     const SizedBox(),
                     Expanded(child: videoCard),
-                    roundPromptText(roundPrompt) ?? const SizedBox(height: 10),
-                    ReceiveTransitionCard(
-                      onActionPressed: onAccept,
-                      keepActionLoadingOnSuccess: true,
+                    // Prompt, receive pill and dock read as one cluster.
+                    Column(
+                      spacing: 16,
+                      children: [
+                        ?roundPromptText(roundPrompt),
+                        ReceiveTransitionCard(
+                          onActionPressed: onAccept,
+                          keepActionLoadingOnSuccess: true,
+                        ),
+                        const SessionActionBar(),
+                      ],
                     ),
-                    const SessionActionBar(),
                   ],
                 ),
               );
