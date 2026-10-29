@@ -19,14 +19,10 @@ class LevelBars extends StatelessWidget {
     Key? key,
   }) {
     final scaled = level.clamp(0.0, 1.0);
-    final center = (barCount - 1) / 2;
     return LevelBars(
       key: key,
       color: color,
-      levels: [
-        for (var i = 0; i < barCount; i++)
-          scaled * (1 - 0.4 * ((i - center).abs() / math.max(center, 1))),
-      ],
+      levels: List.filled(barCount, scaled),
     );
   }
 
@@ -35,6 +31,12 @@ class LevelBars extends StatelessWidget {
   final Color color;
 
   static const _spacing = 2.5;
+
+  /// Keeps edge bars inside circular microphone badges visually balanced.
+  static double _edgeScale(int index, int barCount) {
+    final center = (barCount - 1) / 2;
+    return 1 - 0.2 * ((index - center).abs() / math.max(center, 1));
+  }
 
   /// How long all the bars together take to reach new levels.
   static const _transitionMilliseconds = 500;
@@ -52,8 +54,14 @@ class LevelBars extends StatelessWidget {
               milliseconds: _transitionMilliseconds ~/ levels.length,
             ),
             heights: [
-              for (final level in levels)
-                math.max(dot, level * (constraints.maxHeight - dot) + dot),
+              for (var i = 0; i < levels.length; i++)
+                math.max(
+                  dot,
+                  levels[i] *
+                          _edgeScale(i, levels.length) *
+                          (constraints.maxHeight - dot) +
+                      dot,
+                ),
             ],
             color: color,
             height: constraints.maxHeight,

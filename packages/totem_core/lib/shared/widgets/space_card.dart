@@ -110,7 +110,7 @@ class SpaceCard extends StatelessWidget {
         if (nextSession.seatsLeft > 0)
           '${nextSession.seatsLeft} ${nextSession.seatsLeft == 1 ? 'spot' : 'spots'} left',
       ],
-      'with keeper ${space.author.name}',
+      if (space.author.name.value case final keeper?) 'with keeper $keeper',
     ];
     final semanticLabel = semanticParts.join(', ');
 

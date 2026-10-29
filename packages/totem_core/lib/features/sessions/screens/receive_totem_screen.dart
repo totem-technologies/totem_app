@@ -34,6 +34,9 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
     final session = ref.watch(currentSessionProvider);
     final localParticipant = ref.watch(localParticipantInfoProvider);
     final roundPrompt = ref.watch(currentSessionPromptProvider);
+    final selfViewEnabled = ref.watch(
+      selfViewSettingsProvider.select((settings) => settings.enabled),
+    );
 
     Future<bool> onAccept() async {
       try {
@@ -63,6 +66,9 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
       child: ViewportResolver(
         builder: (context, viewportKind) {
           final theme = Theme.of(context);
+          final selfViewMessage = selfViewEnabled
+              ? 'Your self-view will stay visible during your turn. Everyone else will still see you. You can disable your camera at any time.'
+              : "We'll hide your self-view during your turn so you can stay in the moment. Everyone else will still see you. You can disable your camera at any time.";
           final titleWidget = Column(
             spacing: 16,
             children: [
@@ -77,7 +83,7 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
               Padding(
                 padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
                 child: Text(
-                  "We'll hide your self-view during your turn so you can stay in the moment. Everyone else will still see you. You can disable your camera at any time.",
+                  selfViewMessage,
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),

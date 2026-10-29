@@ -24,12 +24,16 @@ class PreJoinView extends StatelessWidget {
     required this.onCameraFacingChanged,
     required this.onCameraDeviceSelected,
     required this.joinCard,
+    this.notice,
     super.key,
   });
 
   final PreJoinMediaState mediaState;
   final bool locked;
   final Widget joinCard;
+
+  /// Shown above [joinCard], such as what's needed before joining.
+  final Widget? notice;
   final AsyncCallback onToggleCamera;
   final AsyncCallback onToggleMicrophone;
   final VoidCallback onToggleSpeaker;
@@ -77,6 +81,8 @@ class PreJoinView extends StatelessWidget {
         selectedCameraDeviceId: preferences.cameraOptions.deviceId,
         onCameraFacingChanged: onCameraFacingChanged,
         onCameraDeviceSelected: onCameraDeviceSelected,
+        microphoneProblem: mediaState.microphone.problem,
+        cameraProblem: mediaState.camera.problem,
       ),
     );
     return RoomBackground(
@@ -103,22 +109,43 @@ class PreJoinView extends StatelessWidget {
                     spacing: 18,
                     children: [
                       Expanded(child: cameraPreview),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        spacing: 18,
-                        children: [joinCard, actionBar],
+                      // Scrolls when a notice makes the controls taller than
+                      // a short landscape screen.
+                      Center(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 18,
+                            children: [?notice, joinCard, actionBar],
+                          ),
+                        ),
                       ),
                     ],
                   ),
 
-                  _ => Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: 18,
-                    children: [
-                      Expanded(child: cameraPreview),
-                      joinCard,
-                      actionBar,
-                    ],
+                  _ => LayoutBuilder(
+                    builder: (context, constraints) => Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      spacing: 18,
+                      children: [
+                        Expanded(child: cameraPreview),
+                        // The preview gives up its space first, down to a
+                        // third of the screen; past that, as when a notice
+                        // shows on a small phone, the controls scroll.
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: constraints.maxHeight * 2 / 3,
+                          ),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: 18,
+                              children: [?notice, joinCard, actionBar],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 };
               },

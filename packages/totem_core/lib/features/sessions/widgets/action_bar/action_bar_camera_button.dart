@@ -6,6 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/features/permissions/media_permission_controller.dart';
+import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/permissions/platform_info.dart';
+import 'package:totem_core/features/permissions/policy.dart';
+import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -23,6 +28,7 @@ class ActionBarCameraSwitcherButton extends StatefulWidget {
     required this.selectedCameraDeviceId,
     required this.onCameraFacingChanged,
     this.onCameraDeviceSelected,
+    this.needsAttention = false,
     super.key,
   });
 
@@ -37,6 +43,9 @@ class ActionBarCameraSwitcherButton extends StatefulWidget {
   final String? selectedCameraDeviceId;
   final ValueChanged<CameraFacing> onCameraFacingChanged;
   final ValueChanged<MediaDeviceInfo>? onCameraDeviceSelected;
+
+  /// Whether the camera can't turn on until the user fixes its access.
+  final bool needsAttention;
 
   @override
   State<ActionBarCameraSwitcherButton> createState() =>
@@ -80,18 +89,15 @@ class _ActionBarCameraSwitcherButtonState
   @override
   Widget build(BuildContext context) {
     final isDesktopPicker = usesMediaDevicePicker;
-    // If the user only has one camera, we show a simple
-    // toggle button without the option to switch cameras
-    final canChooseBetweenMultipleCameras =
-        isDesktopPicker && widget.availableCameraDevices.length > 1;
-    if (isDesktopPicker && !canChooseBetweenMultipleCameras) {
+    if (widget.availableCameraDevices.length <= 1) {
       return ActionBarButton(
-        semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
+        semanticsLabel: _cameraLabel(widget.isCameraOn, widget.needsAttention),
         // Off is pinkTint, not cream — that's the muted media treatment.
         role: ActionBarButtonRole.media(enabled: widget.isCameraOn),
         onPressed: widget.onToggle,
-        child: TotemIcon(
-          widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+        child: _CameraIcon(
+          isOn: widget.isCameraOn,
+          needsAttention: widget.needsAttention,
         ),
       );
     }
@@ -126,11 +132,15 @@ class _ActionBarCameraSwitcherButtonState
             ? null
             : _showCameraPositionOptions,
         camera: ActionBarButton(
-          semanticsLabel: 'Camera ${widget.isCameraOn ? 'on' : 'off'}',
+          semanticsLabel: _cameraLabel(
+            widget.isCameraOn,
+            widget.needsAttention,
+          ),
           onPressed: widget.onToggle,
           role: ActionBarButtonRole.media(enabled: widget.isCameraOn),
-          child: TotemIcon(
-            widget.isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
+          child: _CameraIcon(
+            isOn: widget.isCameraOn,
+            needsAttention: widget.needsAttention,
           ),
         ),
       ),
@@ -599,7 +609,9 @@ class _SessionActionBarCameraButtonState
       if (isCameraOn) {
         await devices.disableCamera();
       } else {
-        await devices.enableCamera();
+        // Asks for permission where the platform needs it, and explains
+        // what to do when the camera can't turn on (X6, X7).
+        await turnOnMedia(context, ref, devices.control(MediaKind.camera));
       }
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -618,30 +630,54 @@ class _SessionActionBarCameraButtonState
     final deviceState = ref.watch(deviceProvider);
     final isCameraOn = deviceState.isCameraOn;
     final onToggle = _busy ? null : () => _toggleCamera(isCameraOn);
+    final needsFix = needsAttention(
+      ref.watch(mediaPermissionControllerProvider)?.camera,
+      deviceState.cameraProblem,
+      ref.watch(platformInfoProvider),
+    );
 
     if (!usesMediaDevicePicker) {
       return ActionBarButton(
-        semanticsLabel: 'Camera ${isCameraOn ? 'on' : 'off'}',
+        semanticsLabel: _cameraLabel(isCameraOn, needsFix),
         role: ActionBarButtonRole.media(enabled: isCameraOn),
         onPressed: onToggle,
-        child: TotemIcon(
-          isCameraOn ? TotemIcons.cameraOn : TotemIcons.cameraOff,
-        ),
+        child: _CameraIcon(isOn: isCameraOn, needsAttention: needsFix),
       );
     }
-
     final cameraDevices = ref.watch(cameraDevicesProvider);
     return ActionBarCameraSwitcherButton(
       isCameraOn: isCameraOn,
       onToggle: onToggle,
-      cameraFacing: CameraFacing.front,
+      cameraFacing: deviceState.cameraFacing ?? CameraFacing.front,
       availableCameraDevices: cameraDevices,
       selectedCameraDeviceId:
           deviceState.selectedCameraDeviceId ?? cameraDevices.firstOrNull?.id,
-      onCameraFacingChanged: (_) {},
+      onCameraFacingChanged: ref.read(deviceProvider.notifier).setCameraFacing,
       onCameraDeviceSelected: ref
           .read(deviceProvider.notifier)
           .selectCameraDevice,
+      needsAttention: needsFix,
+    );
+  }
+}
+
+String _cameraLabel(bool isOn, bool needsAttention) =>
+    'Camera ${isOn ? 'on' : 'off'}${needsAttention ? ', needs attention' : ''}';
+
+/// The camera glyph, badged while its access needs fixing (X7).
+class _CameraIcon extends StatelessWidget {
+  const _CameraIcon({required this.isOn, required this.needsAttention});
+
+  final bool isOn;
+  final bool needsAttention;
+
+  @override
+  Widget build(BuildContext context) {
+    return Badge(
+      isLabelVisible: needsAttention && !isOn,
+      backgroundColor: AppTheme.attention,
+      smallSize: 8,
+      child: TotemIcon(isOn ? TotemIcons.cameraOn : TotemIcons.cameraOff),
     );
   }
 }

@@ -46,20 +46,42 @@ List<String> findViolations(Map<String, String> files) {
   return violations;
 }
 
-void main() {
-  final files = <String, String>{
-    for (final package in Directory('packages').listSync())
-      if (Directory('${package.path}/lib').existsSync())
-        for (final entity in Directory(
-          '${package.path}/lib',
-        ).listSync(recursive: true, followLinks: false))
-          if (entity is File &&
-              entity.path.endsWith('.dart') &&
-              !entity.path.endsWith('.g.dart'))
-            entity.path: entity.readAsStringSync(),
-  };
+Future<Map<String, String>> filesForCheck(List<String> args) async {
+  if (args.isEmpty) {
+    return {
+      for (final package in Directory('packages').listSync())
+        if (Directory('${package.path}/lib').existsSync())
+          for (final entity in Directory(
+            '${package.path}/lib',
+          ).listSync(recursive: true, followLinks: false))
+            if (entity is File &&
+                entity.path.endsWith('.dart') &&
+                !entity.path.endsWith('.g.dart'))
+              entity.path: entity.readAsStringSync(),
+    };
+  }
 
-  final violations = findViolations(files);
+  final staged = args.first == '--staged';
+  final paths = args.skip(1);
+  if (!staged && args.first != '--files') {
+    throw ArgumentError('Usage: --files <path...> or --staged <path...>');
+  }
+  final files = <String, String>{};
+  for (final path in paths) {
+    if (!path.endsWith('.dart') || path.endsWith('.g.dart')) continue;
+    if (staged) {
+      final result = await Process.run('git', ['show', ':$path']);
+      if (result.exitCode == 0) files[path] = result.stdout.toString();
+    } else {
+      final file = File(path);
+      if (file.existsSync()) files[path] = await file.readAsString();
+    }
+  }
+  return files;
+}
+
+Future<void> main(List<String> args) async {
+  final violations = findViolations(await filesForCheck(args));
   if (violations.isEmpty) {
     print('✅ Local capture stays behind the media adapters');
     return;

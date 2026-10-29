@@ -136,18 +136,88 @@ class EmojiBar extends StatelessWidget {
               spacing: 10,
               children: [
                 for (final emoji in emojis)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => onEmojiSelected(emoji),
-                    child: Text(
-                      emoji,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        textBaseline: TextBaseline.ideographic,
-                      ),
-                    ),
+                  _EmojiReactionButton(
+                    emoji: emoji,
+                    onPressed: () => onEmojiSelected(emoji),
                   ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmojiReactionButton extends StatefulWidget {
+  const _EmojiReactionButton({
+    required this.emoji,
+    required this.onPressed,
+  });
+
+  final Emoji emoji;
+  final VoidCallback onPressed;
+
+  @override
+  State<_EmojiReactionButton> createState() => _EmojiReactionButtonState();
+}
+
+class _EmojiReactionButtonState extends State<_EmojiReactionButton> {
+  var _hovered = false;
+  var _pressed = false;
+
+  void _setHovered(bool value) {
+    if (_hovered == value) return;
+    setState(() => _hovered = value);
+  }
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double scale;
+    if (_pressed) {
+      scale = 0.92;
+    } else if (_hovered) {
+      scale = 1.08;
+    } else {
+      scale = 1;
+    }
+
+    return Semantics(
+      button: true,
+      label: 'Send ${widget.emoji} reaction',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          mouseCursor: SystemMouseCursors.click,
+          onTap: widget.onPressed,
+          onHover: _setHovered,
+          onHighlightChanged: _setPressed,
+          borderRadius: BorderRadius.circular(16),
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          child: AnimatedScale(
+            key: ValueKey('emoji-reaction-${widget.emoji}'),
+            scale: scale,
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOutCubic,
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Center(
+                child: Text(
+                  widget.emoji,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    textBaseline: TextBaseline.ideographic,
+                  ),
+                ),
+              ),
             ),
           ),
         ),

@@ -10,6 +10,8 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
@@ -19,10 +21,13 @@ import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
+import '../media/fake_local_media.dart';
 import '../media/test_participants.dart';
 import '../session_test_mocks.dart';
 
 class _TestSessionDeviceController extends SessionDeviceController {
+  _TestSessionDeviceController([this.deviceState = _defaultState]);
+
   static const _defaultState = SessionDeviceState(
     selectedCameraDeviceId: null,
     selectedAudioOutputDeviceId: null,
@@ -31,8 +36,10 @@ class _TestSessionDeviceController extends SessionDeviceController {
     isCameraEnabled: false,
   );
 
+  final SessionDeviceState deviceState;
+
   @override
-  SessionDeviceState build(SessionController session) => _defaultState;
+  SessionDeviceState build(SessionController session) => deviceState;
 }
 
 SessionRoomState _sessionState({
@@ -55,6 +62,7 @@ Future<void> _pumpMoreOptions(
   required MockSessionController session,
   required SessionRoomState state,
   required _TestSessionDeviceController deviceController,
+  List<MediaDeviceInfo> audioOutputs = const [],
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -67,6 +75,9 @@ Future<void> _pumpMoreOptions(
         sessionDeviceControllerProvider(
           session,
         ).overrideWith(() => deviceController),
+        mediaDeviceCatalogProvider.overrideWithValue(
+          FakeMediaDeviceCatalog(audioOutputs),
+        ),
         userProfileProvider.overrideWith(
           (ref, slug) => Future.value(
             PublicUserSchema(
@@ -151,6 +162,7 @@ void main() {
     when(() => devices.isSpeakerphoneEnabled).thenReturn(false);
     when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
     when(() => devices.switchCameraPosition()).thenAnswer((_) async {});
+    when(() => devices.requestAudioOutputDevice()).thenAnswer((_) async {});
     when(() => keeper.forcePassTotem()).thenAnswer((_) async {});
   });
 
@@ -377,6 +389,148 @@ void main() {
         tester.widgetList(find.byType(ConfirmationDialog)),
       ).length.equals(0);
       verifyNever(() => keeper.forcePassTotem());
+    });
+  });
+
+  group('audio output', () {
+    const roomState = RoomState(
+      keeper: 'keeper-1',
+      nextSpeaker: Omittable('user-2'),
+      currentSpeaker: Omittable('user-1'),
+      status: RoomStatus.active,
+      turnState: TurnState.speaking,
+      sessionSlug: 'test-session',
+      statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+      talkingOrder: ['user-1'],
+      version: 1,
+      roundNumber: 1,
+    );
+
+    SessionDeviceState deviceState({
+      required bool supportsSelection,
+      required bool supportsChooser,
+      String? selectedAudioOutputDeviceId,
+    }) => SessionDeviceState(
+      selectedCameraDeviceId: null,
+      selectedAudioOutputDeviceId: selectedAudioOutputDeviceId,
+      isSpeakerphoneEnabled: false,
+      isMicrophoneEnabled: false,
+      isCameraEnabled: false,
+      supportsAudioOutputSelection: supportsSelection,
+      supportsAudioOutputChooser: supportsChooser,
+    );
+
+    testWidgets('shows output choices for any browser with multiple outputs', (
+      tester,
+    ) async {
+      await _pumpMoreOptions(
+        tester,
+        session: session,
+        state: _sessionState(roomState: roomState),
+        deviceController: _TestSessionDeviceController(
+          deviceState(supportsSelection: true, supportsChooser: false),
+        ),
+        audioOutputs: [
+          fakeAudioOutput('default', 'Default'),
+          fakeAudioOutput('earpiece', 'Earpiece'),
+        ],
+      );
+      await tester.pump();
+
+      check(
+        tester.widgetList(find.byType(DropdownButton<MediaDeviceInfo>)),
+      ).isNotEmpty();
+    });
+
+    testWidgets('uses distinct labels for unnamed selectable outputs', (
+      tester,
+    ) async {
+      await _pumpMoreOptions(
+        tester,
+        session: session,
+        state: _sessionState(roomState: roomState),
+        deviceController: _TestSessionDeviceController(
+          deviceState(
+            supportsSelection: true,
+            supportsChooser: false,
+            selectedAudioOutputDeviceId: 'headphones',
+          ),
+        ),
+        audioOutputs: [
+          fakeAudioOutput('default', ''),
+          fakeAudioOutput('headphones', ''),
+        ],
+      );
+      await tester.pump();
+
+      check(tester.widgetList(find.text('Speaker 2'))).isNotEmpty();
+    });
+
+    testWidgets('shows the browser chooser when only default is visible', (
+      tester,
+    ) async {
+      await _pumpMoreOptions(
+        tester,
+        session: session,
+        state: _sessionState(roomState: roomState),
+        deviceController: _TestSessionDeviceController(
+          deviceState(supportsSelection: true, supportsChooser: true),
+        ),
+        audioOutputs: [fakeAudioOutput('default', 'Default')],
+      );
+      await tester.pump();
+
+      check(
+        tester.widgetList(find.text('Choose audio output')),
+      ).length.equals(1);
+      await tester.tap(find.text('Choose audio output'));
+      verify(() => devices.requestAudioOutputDevice()).called(1);
+    });
+
+    testWidgets('uses system-controlled output without a chooser', (
+      tester,
+    ) async {
+      await _pumpMoreOptions(
+        tester,
+        session: session,
+        state: _sessionState(roomState: roomState),
+        deviceController: _TestSessionDeviceController(
+          deviceState(supportsSelection: true, supportsChooser: false),
+        ),
+        audioOutputs: [fakeAudioOutput('default', 'Default')],
+      );
+      await tester.pump();
+
+      check(
+        tester.widgetList(
+          find.text('Audio output — Controlled by your device'),
+        ),
+      ).length.equals(1);
+    });
+
+    testWidgets('does not expose choices when setSinkId is unsupported', (
+      tester,
+    ) async {
+      await _pumpMoreOptions(
+        tester,
+        session: session,
+        state: _sessionState(roomState: roomState),
+        deviceController: _TestSessionDeviceController(
+          deviceState(supportsSelection: false, supportsChooser: true),
+        ),
+        audioOutputs: [
+          fakeAudioOutput('default', 'Default'),
+          fakeAudioOutput('headphones', 'Headphones'),
+        ],
+      );
+      await tester.pump();
+
+      check(
+        tester.widgetList(
+          find.text('Audio output — Controlled by your device'),
+        ),
+      ).length.equals(1);
+      check(tester.widgetList(find.text('Choose audio output'))).isEmpty();
     });
   });
 }

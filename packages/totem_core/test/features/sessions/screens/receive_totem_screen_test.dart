@@ -14,6 +14,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/permissions/media_control.dart';
+import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -25,6 +27,7 @@ import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.
 
 import '../../../auth/controllers/auth_controller_mock.dart';
 import '../../../setup.dart';
+import '../../permissions/fake_media_permission_adapter.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
@@ -120,11 +123,14 @@ void main() {
     when(() => devices.selectedCameraDeviceId).thenReturn(null);
     when(() => devices.selectedAudioOutputDeviceId).thenReturn(null);
 
-    when(() => devices.enableMicrophone()).thenAnswer((_) async {});
+    when(
+      () => devices.turnOn(MediaKind.microphone),
+    ).thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableMicrophone()).thenAnswer((_) async {});
-    when(() => devices.enableCamera()).thenAnswer((_) async {});
+    when(
+      () => devices.turnOn(MediaKind.camera),
+    ).thenAnswer((_) async => const TurnedOn());
     when(() => devices.disableCamera()).thenAnswer((_) async {});
-    when(() => devices.toggleCamera()).thenAnswer((_) async {});
     when(() => keeper.acceptTotem()).thenAnswer((_) async {});
 
     when(
@@ -142,6 +148,7 @@ void main() {
     SessionRoomState? state,
     String? roundMessage,
     bool isStaff = false,
+    bool selfViewEnabled = false,
     SessionCuesService? feedbackService,
   }) async {
     final sessionState = state ?? _buildState();
@@ -159,6 +166,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          ...grantedMediaPermissionOverrides(),
           authControllerProvider.overrideWith(
             () => FakeAuthController(testAuthenticatedState(isStaff: isStaff)),
           ),
@@ -168,6 +176,12 @@ void main() {
           currentSessionPromptProvider.overrideWith((ref) => roundMessage),
           resolveCurrentScreenProvider.overrideWith(
             (ref) => RoomScreen.receiving,
+          ),
+          selfViewSettingsProvider.overrideWithValue(
+            SelfViewState(
+              enabled: selfViewEnabled,
+              position: SelfViewPosition.end,
+            ),
           ),
           sessionCuesServiceProvider.overrideWithValue(testCuesService),
           userProfileProvider.overrideWith(
@@ -229,6 +243,37 @@ void main() {
       check(tester.widgetList(find.text('"Take your time"'))).length.equals(1);
     });
 
+    testWidgets('explains that self-view hides when the setting is disabled', (
+      tester,
+    ) async {
+      await pumpReceiveTotem(tester, selfViewEnabled: false);
+
+      check(
+        tester.widgetList(
+          find.text(
+            "We'll hide your self-view during your turn so you can stay in the moment. Everyone else will still see you. You can disable your camera at any time.",
+          ),
+        ),
+      ).length.equals(1);
+    });
+
+    testWidgets(
+      'explains that self-view stays visible when the setting is enabled',
+      (
+        tester,
+      ) async {
+        await pumpReceiveTotem(tester, selfViewEnabled: true);
+
+        check(
+          tester.widgetList(
+            find.text(
+              'Your self-view will stay visible during your turn. Everyone else will still see you. You can disable your camera at any time.',
+            ),
+          ),
+        ).length.equals(1);
+      },
+    );
+
     testWidgets('hides round message text when no round message is provided', (
       tester,
     ) async {
@@ -264,11 +309,11 @@ void main() {
 
         await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
         await tester.pump();
-        verify(() => devices.enableMicrophone()).called(1);
+        verify(() => devices.turnOn(MediaKind.microphone)).called(1);
 
         await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
         await tester.pump();
-        verify(() => devices.toggleCamera()).called(1);
+        verify(() => devices.turnOn(MediaKind.camera)).called(1);
       });
     });
 

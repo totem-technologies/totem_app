@@ -28,6 +28,11 @@ class AppTheme {
   static const Color paleGreen = Color(0xFF98BD44);
 
   static const Color errorColor = Color(0xFFFF545C);
+
+  /// Marks a control that needs the user's attention. The theme's error
+  /// color is [pinkTint], the same as a muted control, so badges on those
+  /// would disappear.
+  static const Color attention = Color(0xFFF4DC92);
   static const Color successColor = paleGreen;
 
   // --- Shadows ---

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_infra_controller.dart';
@@ -9,54 +8,17 @@ import 'package:totem_core/features/sessions/controllers/features/session_infra_
 import '../../../../setup.dart';
 
 class _FakeSessionInfraPlatform extends SessionInfraPlatform {
-  _FakeSessionInfraPlatform({
-    this.canUse = true,
-    this.android = false,
-    this.notificationPermission = NotificationPermission.granted,
-    this.requestedNotificationPermission = NotificationPermission.granted,
-    this.ignoringBatteryOptimizations = true,
-    this.ignoreBatteryOptimizationResult = true,
-  });
+  _FakeSessionInfraPlatform({this.canUse = true});
 
   final bool canUse;
-  final bool android;
-  NotificationPermission notificationPermission;
-  final NotificationPermission requestedNotificationPermission;
   bool running = false;
-  final bool ignoringBatteryOptimizations;
-  final bool ignoreBatteryOptimizationResult;
   Exception? startError;
   int initializeCalls = 0;
-  int requestNotificationPermissionCalls = 0;
-  int requestIgnoreBatteryOptimizationCalls = 0;
   int startServiceCalls = 0;
   int stopServiceCalls = 0;
 
   @override
   bool get canUseForegroundTask => canUse;
-
-  @override
-  bool get isAndroid => android;
-
-  @override
-  Future<NotificationPermission> checkNotificationPermission() async =>
-      notificationPermission;
-
-  @override
-  Future<NotificationPermission> requestNotificationPermission() async {
-    requestNotificationPermissionCalls++;
-    return notificationPermission = requestedNotificationPermission;
-  }
-
-  @override
-  Future<bool> get isIgnoringBatteryOptimizations async =>
-      ignoringBatteryOptimizations;
-
-  @override
-  Future<bool> requestIgnoreBatteryOptimization() async {
-    requestIgnoreBatteryOptimizationCalls++;
-    return ignoreBatteryOptimizationResult;
-  }
 
   @override
   Future<bool> get isRunningService async => running;
@@ -96,55 +58,33 @@ void main() {
     return container;
   }
 
-  test(
-    'desktop sessions do not request native foreground-task permissions',
-    () async {
-      final platform = _FakeSessionInfraPlatform(canUse: false);
-      final controller = createContainer(
-        platform,
-      ).read(sessionInfraControllerProvider.notifier);
-
-      check(await controller.requestPermissions()).isTrue();
-      await controller.activate();
-      await controller.deactivate();
-
-      check(platform.initializeCalls).equals(0);
-      check(platform.startServiceCalls).equals(0);
-      check(platform.stopServiceCalls).equals(0);
-    },
-  );
-
-  test('permission denial prevents foreground service activation', () async {
-    final platform = _FakeSessionInfraPlatform(
-      notificationPermission: NotificationPermission.denied,
-      requestedNotificationPermission: NotificationPermission.denied,
-    );
+  test('desktop sessions do not start a foreground service', () async {
+    final platform = _FakeSessionInfraPlatform(canUse: false);
     final controller = createContainer(
       platform,
     ).read(sessionInfraControllerProvider.notifier);
 
     await controller.activate();
+    await controller.deactivate();
 
-    check(platform.requestNotificationPermissionCalls).equals(1);
     check(platform.initializeCalls).equals(0);
     check(platform.startServiceCalls).equals(0);
+    check(platform.stopServiceCalls).equals(0);
   });
 
   test(
-    'Android battery optimization is requested after notification access',
+    'N5: starts the foreground service without asking for anything',
     () async {
-      final platform = _FakeSessionInfraPlatform(
-        android: true,
-        ignoringBatteryOptimizations: false,
-        ignoreBatteryOptimizationResult: true,
-      );
+      final platform = _FakeSessionInfraPlatform();
       final controller = createContainer(
         platform,
       ).read(sessionInfraControllerProvider.notifier);
 
-      check(await controller.requestPermissions()).isTrue();
+      await controller.activate();
 
-      check(platform.requestIgnoreBatteryOptimizationCalls).equals(1);
+      check(platform.initializeCalls).equals(1);
+      check(platform.startServiceCalls).equals(1);
+      check(platform.running).isTrue();
     },
   );
 
@@ -183,30 +123,25 @@ void main() {
   );
 
   test('pending activation stops before it can start after disposal', () async {
-    final permissionRequest = Completer<NotificationPermission>();
-    final delayedPlatform = _DelayedPermissionPlatform(permissionRequest);
+    final runningCheck = Completer<bool>();
+    final delayedPlatform = _DelayedRunningCheckPlatform(runningCheck);
     final container = createContainer(delayedPlatform);
     final controller = container.read(sessionInfraControllerProvider.notifier);
 
     final activation = controller.activate();
     container.dispose();
-    permissionRequest.complete(NotificationPermission.granted);
+    runningCheck.complete(false);
     await activation;
 
-    check(delayedPlatform.initializeCalls).equals(0);
     check(delayedPlatform.startServiceCalls).equals(0);
   });
 }
 
-class _DelayedPermissionPlatform extends _FakeSessionInfraPlatform {
-  _DelayedPermissionPlatform(this.completer);
+class _DelayedRunningCheckPlatform extends _FakeSessionInfraPlatform {
+  _DelayedRunningCheckPlatform(this.completer);
 
-  final Completer<NotificationPermission> completer;
+  final Completer<bool> completer;
 
   @override
-  Future<NotificationPermission> requestNotificationPermission() async {
-    requestNotificationPermissionCalls++;
-    final permission = await completer.future;
-    return notificationPermission = permission;
-  }
+  Future<bool> get isRunningService => completer.future;
 }

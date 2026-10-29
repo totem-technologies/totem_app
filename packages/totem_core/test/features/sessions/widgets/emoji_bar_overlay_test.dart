@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -74,6 +76,52 @@ void main() {
         because: 'Overlay should not be dismissed',
         dismissed,
       ).equals(false);
+    });
+
+    testWidgets('shows transient hover and press feedback for an emoji', (
+      tester,
+    ) async {
+      String? selectedEmoji;
+      final emoji = EmojiBar.defaultEmojis.first;
+      final reaction = find.byKey(ValueKey('emoji-reaction-$emoji'));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EmojiBar(
+              emojis: EmojiBar.defaultEmojis,
+              onEmojiSelected: (value) => selectedEmoji = value,
+            ),
+          ),
+        ),
+      );
+
+      double scale() => tester.widget<AnimatedScale>(reaction).scale;
+
+      check(scale()).equals(1);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(tester.getCenter(reaction));
+      await tester.pump();
+
+      check(scale()).equals(1.08);
+
+      await mouse.moveTo(Offset.zero);
+      await tester.pump();
+
+      check(scale()).equals(1);
+
+      final touch = await tester.startGesture(tester.getCenter(reaction));
+      await tester.pump();
+
+      check(scale()).equals(0.92);
+
+      await touch.up();
+      await tester.pump();
+
+      check(selectedEmoji).equals(emoji);
+      check(scale()).equals(1);
     });
 
     testWidgets('tapping outside the menu dismisses it', (tester) async {
