@@ -5,9 +5,9 @@ guided group introspection. It supports iOS, Android, and web.
 
 ## Install
 
-Install [FVM](https://fvm.app/) and both pinned Flutter SDKs. Native development
-uses Flutter **3.44.9** (bundled Dart 3.12.2); Web uses Flutter
-**3.50.0-0.2.pre** (bundled Dart 3.14.0 beta). iOS development also requires macOS and Xcode.
+Install [FVM](https://fvm.app/). Flutter **3.50.0-0.2.pre** (bundled Dart
+3.14.0 beta) is the default for Android, web, desktop, and shared development.
+iOS uses **3.44.9** (bundled Dart 3.12.2) and requires macOS and Xcode.
 
 ```sh
 git clone https://github.com/totem-technologies/totem_app.git
@@ -19,8 +19,8 @@ make prepare-native
 make githooks
 ```
 
-`.fvmrc` deliberately remains pinned to 3.44.9, so `fvm flutter` and `fvm dart`
-are the native/default commands. Do not change it to run the Web client.
+`.fvmrc` pins the default beta SDK. Use `make run-ios RUN_ARGS='-d <device-id>'`
+for iOS, or `fvm spawn 3.44.9` for other iOS-specific Flutter commands.
 
 Configure [Firebase](https://firebase.google.com/docs/flutter/setup) locally:
 
@@ -37,16 +37,18 @@ and set `MOBILE_API_URL`. Do not edit generated package `.env` files; see the
 ## Develop
 
 ```sh
-make run          # iOS/Android with Flutter 3.44.9
-make run-chrome   # Web client with Flutter 3.50.0-0.2.pre
+make run          # Android/desktop with the default beta SDK
+make run-ios      # iOS with Flutter 3.44.9 (use RUN_ARGS to select a device)
+make run-chrome   # Web client with the default beta SDK
 make build-web-release
 make lint
 make test
 ```
 
-Web commands temporarily select the Web dependency resolution, then restore the
-native `pubspec.lock` and `.dart_tool`, including after failures. `make test`
-runs native/shared tests first and Web tests second.
+There is one `pubspec.lock`. Run `make install` after changing SDKs so Pub can
+resolve dependencies compatible with the selected SDK. No lockfile swapping or
+`.dart_tool` deletion is required. `make test` resolves once, then runs all
+shared/native suites and Chrome web tests.
 
 The [Makefile](Makefile) contains additional commands. The codebase has a
 [mobile app](packages/totem_app), [web client](packages/totem_web), and
@@ -59,19 +61,19 @@ conventions in [AGENTS.md](AGENTS.md).
 applicable custom source checks for staged Dart changes; it does not format or
 run Flutter analysis.
 
-Pre-push compares every pushed ref with its remote commit (or the merge base of
-the remote default branch for a new branch), then analyzes and tests only the
-affected workspace packages. A `totem_core` change analyzes its dependents but
-runs only core tests unless a dependent also changed. Package manifests,
-workspace/build configuration, hooks, and unknown build-affecting files use a
-conservative comprehensive fallback. Documentation-only changes run no Flutter
-commands. Dependency resolution runs only when manifests change or the existing
-workspace resolution is missing.
+Pre-push intentionally runs no validation: pushing a PR never waits for local
+SDK setup, analysis, or tests, and does not require `git push --no-verify`.
+GitHub Actions runs the complete validation before merging.
+
+For optional local incremental validation, run `make test-changed`. It compares
+the working tree to the merge base with the remote default branch, analyzes
+affected packages and core dependents, and tests directly affected packages.
+Shared configuration or an unavailable comparison base selects full validation.
 
 Run `make lint` and `make test` for complete local validation; they remain the
 full-repository commands used by CI. Formatting is manual (`make format`) and
 is not part of hooks or CI. `make lint-changed` and `make test-changed` expose
-the same local hook behavior when needed.
+the local staged checks and optional incremental validation respectively.
 
 ### Useful development commands
 
@@ -137,30 +139,30 @@ unavailable in 3.44.9 to shared code.
 
 | Platform | Flutter | Bundled Dart | Resolution |
 | --- | --- | --- | --- |
-| iOS / Android | 3.44.9 | 3.12.2 | `pubspec.lock` |
-| Web | 3.50.0-0.2.pre | 3.14.0 beta | `pubspec.web.lock` |
+| iOS | 3.44.9 | 3.12.2 | SDK-specific `pub get` |
+| Android / Web / desktop | 3.50.0-0.2.pre | 3.14.0 beta | `pubspec.lock` |
 
 The Web pin includes the CanvasKit/Skwasm context-loss recovery change from
 [flutter/flutter#185116](https://github.com/flutter/flutter/pull/185116), which
 addresses the `LateInitializationError` reported in
 [flutter/flutter#190192](https://github.com/flutter/flutter/issues/190192).
-It does **not** prove that Totem's Safari failure is resolved. Native remains on
+It does **not** prove that Totem's Safari failure is resolved. iOS remains on
 3.44.9 because Flutter 3.47 has the platform-view composition regression in
 [flutter/flutter#193363](https://github.com/flutter/flutter/issues/193363),
 where video platform views can appear above Flutter dialogs and sheets.
 
-Pub supports one active workspace lockfile. `pubspec.lock` is the native
-baseline; `pubspec.web.lock` is the Web snapshot. CI and Make targets copy the
-selected snapshot to `pubspec.lock`, clear `.dart_tool`, and use
-`flutter pub get --enforce-lockfile`.
+Only `pubspec.lock` is maintained, using `fvm flutter pub get` with the default
+beta SDK. CI runs ordinary `flutter pub get` once with each job's selected SDK;
+it may adjust SDK-pinned packages in that ephemeral checkout. A lockfile that
+needs an SDK-specific adjustment is not rejected with `--enforce-lockfile`.
+Dependency resolution errors still fail CI.
 
-After changing dependencies, update the native baseline with `fvm flutter pub
-get`, then run `make update-web-lockfile`. It refreshes and verifies the Web
-snapshot, restores the native state, and validates both resolutions. Before
-upgrading either SDK, check the relevant upstream issue and update both
-resolutions and the CI matrix. CI analyzes shared code under both SDKs, tests
-native/shared code under 3.44.9 and Web code under 3.50.0-0.2.pre, and compiles
-Web on PRs and `main`.
+For iOS development, run `make prepare-ios` before stable SDK commands and
+`make install` when returning to beta. Pub may update `pubspec.lock` when
+switching SDKs; commit dependency updates using the default beta resolution,
+not a second snapshot. CI runs the complete lint/test suite on beta and the
+shared/native compatibility checks on stable for iOS. Android and web builds
+use beta; iOS builds use stable.
 
 ## Web hosting
 

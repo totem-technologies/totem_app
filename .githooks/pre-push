@@ -1,12 +1,7 @@
 #!/usr/bin/env sh
 
-# Pre-push hook for dependency-aware package analysis and tests
-# To use this hook, run: make githooks
-
+# Pushes must not wait for local SDK setup, analysis, or test suites.
+# Comprehensive validation runs in GitHub Actions for every PR.
+# Use make test-changed explicitly when local pre-push validation is desired.
 set -eu
-
-# Flutter uses Git to determine its SDK version; don't let the hook's GIT_DIR
-# make it inspect this repository instead of the Flutter SDK repository.
-unset GIT_DIR
-
-fvm dart scripts/git_checks.dart pre-push
+exit 0

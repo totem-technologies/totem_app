@@ -60,8 +60,6 @@ jobs:
       - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
-          flutter-version: "3.44.9"
-          dart-version: "3.12.2"
           java: "true"
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           google_services_json: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
@@ -96,6 +94,7 @@ jobs:
         uses: ./.github/actions/setup-environment
         with:
           flutter-version: "3.44.9"
+          flutter-channel: stable
           dart-version: "3.12.2"
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           google_service_plist: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
