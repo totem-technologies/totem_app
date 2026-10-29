@@ -21,6 +21,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camer
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
+import 'package:totem_core/features/sessions/widgets/session_dock_surface.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
@@ -365,14 +366,6 @@ class ActionBar extends StatelessWidget {
         final metrics = _resolveMetrics(context, constraints);
         final onLightBackground = _onLightBackground(context);
 
-        // 8% white glass disappears on the waiting-room cream gradient.
-        final pillFill = onLightBackground
-            ? AppTheme.slate.withValues(alpha: 0.12)
-            : AppTheme.white.withValues(alpha: 0.08);
-        final pillStroke = onLightBackground
-            ? AppTheme.slate.withValues(alpha: 0.22)
-            : AppTheme.white.withValues(alpha: 0.16);
-
         return _ActionBarScope(
           metrics: metrics,
           onLightBackground: onLightBackground,
@@ -382,10 +375,8 @@ class ActionBar extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsetsDirectional.only(bottom: 20),
                 child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: pillFill,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: pillStroke, width: 1.5),
+                  decoration: sessionDockDecoration(
+                    onLightBackground: onLightBackground,
                   ),
                   child: Padding(
                     padding: EdgeInsetsDirectional.symmetric(

@@ -50,7 +50,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(ElevatedButton));
+      await tester.tap(find.byType(InkWell));
       await tester.pump();
 
       check(calls).equals(1);
@@ -80,7 +80,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(ElevatedButton));
+      await tester.tap(find.byType(InkWell));
       await tester.pump();
       await tester.pump();
 
@@ -107,7 +107,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(ElevatedButton));
+      await tester.tap(find.byType(InkWell));
       await tester.pump();
 
       check(calls).equals(0);
