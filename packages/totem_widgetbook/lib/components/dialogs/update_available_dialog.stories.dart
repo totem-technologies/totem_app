@@ -22,8 +22,6 @@ final $Default = _Story(
     onUpdate: ConstArg(noop),
     laterButtonText: NullableStringArg('Later'),
     onLater: ConstArg(noop),
-    ignoreButtonText: NullableStringArg('Ignore'),
-    onIgnore: ConstArg(noop),
   ),
 );
 
@@ -35,10 +33,8 @@ final $WithoutDismiss = _Story(
     ),
     updateButtonText: StringArg('Update'),
     onUpdate: ConstArg(noop),
-    // Force-update / blocked: no Later or Ignore.
+    // Force-update / blocked: no Later.
     laterButtonText: NullableStringArg(null),
     onLater: ConstArg(null),
-    ignoreButtonText: NullableStringArg(null),
-    onIgnore: ConstArg(null),
   ),
 );

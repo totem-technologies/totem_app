@@ -38,7 +38,6 @@ void main() {
     testWidgets('renders title, message, prompt, and actions', (tester) async {
       var updated = false;
       var later = false;
-      var ignored = false;
 
       await pumpDialog(
         tester,
@@ -50,8 +49,6 @@ void main() {
           onUpdate: () => updated = true,
           laterButtonText: 'Later',
           onLater: () => later = true,
-          ignoreButtonText: 'Ignore',
-          onIgnore: () => ignored = true,
         ),
       );
 
@@ -70,13 +67,9 @@ void main() {
       await tester.tap(find.widgetWithText(OutlinedButton, 'Later'));
       await tester.pump();
       check(later).isTrue();
-
-      await tester.tap(find.widgetWithText(TextButton, 'Ignore'));
-      await tester.pump();
-      check(ignored).isTrue();
     });
 
-    testWidgets('hides Later and Ignore when not provided', (tester) async {
+    testWidgets('hides Later when not provided', (tester) async {
       await pumpDialog(
         tester,
         dialog: UpdateAvailableDialog(
@@ -89,7 +82,6 @@ void main() {
 
       check(tester.widgetList(find.text('Update'))).length.equals(1);
       check(tester.widgetList(find.text('Later'))).length.equals(0);
-      check(tester.widgetList(find.text('Ignore'))).length.equals(0);
     });
 
     testWidgets('hides Later when callback is missing', (tester) async {

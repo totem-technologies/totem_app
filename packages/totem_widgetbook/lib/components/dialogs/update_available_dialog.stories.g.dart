@@ -25,8 +25,10 @@ final UpdateAvailableDialogComponent =
       docComment:
           r'''Dialog shown when a newer store version of the mobile app is available.
 
-Layout matches ConfirmationDialog (max width, padding, stacked primary /
-secondary actions). Used by the mobile upgrader integration in totem_app;
+Shares [TotemDialogLayout] with ConfirmationDialog but not its buttons:
+ConfirmationDialog's Cancel / async busy handlers pop the route themselves,
+while upgrader's `onUser*` callbacks also pop — reusing them would
+double-pop. Used by the mobile upgrader integration in totem_app;
 previewed in Widgetbook under Components/Dialogs.''',
       stories: [
         $Default..$generatedName = 'Default',
@@ -61,8 +63,6 @@ class UpdateAvailableDialogStory
                prompt: args.prompt,
                laterButtonText: args.laterButtonText,
                onLater: args.onLater,
-               ignoreButtonText: args.ignoreButtonText,
-               onIgnore: args.onIgnore,
                icon: args.icon,
                iconSize: args.iconSize,
                key: args.key,
@@ -79,8 +79,6 @@ class UpdateAvailableDialogArgs extends StoryArgs<UpdateAvailableDialog> {
     Arg<String?>? prompt,
     Arg<String?>? laterButtonText,
     Arg<void Function()?>? onLater,
-    Arg<String?>? ignoreButtonText,
-    Arg<void Function()?>? onIgnore,
     Arg<String?>? icon,
     Arg<double>? iconSize,
     Arg<Key?>? key,
@@ -99,12 +97,6 @@ class UpdateAvailableDialogArgs extends StoryArgs<UpdateAvailableDialog> {
          NullableStringArg(null),
        )!,
        this.onLaterArg = $initArg('onLater', onLater, null),
-       this.ignoreButtonTextArg = $initArg(
-         'ignoreButtonText',
-         ignoreButtonText,
-         NullableStringArg(null),
-       )!,
-       this.onIgnoreArg = $initArg('onIgnore', onIgnore, null),
        this.iconArg = $initArg(
          'icon',
          icon,
@@ -121,8 +113,6 @@ class UpdateAvailableDialogArgs extends StoryArgs<UpdateAvailableDialog> {
     String? prompt = null,
     String? laterButtonText = null,
     void Function()? onLater,
-    String? ignoreButtonText = null,
-    void Function()? onIgnore,
     String? icon = TotemIcons.downloadApp,
     double iconSize = 60,
     Key? key,
@@ -149,16 +139,6 @@ class UpdateAvailableDialogArgs extends StoryArgs<UpdateAvailableDialog> {
          onLater == null ? null : Arg.fixed(onLater),
          null,
        ),
-       this.ignoreButtonTextArg = $initArg(
-         'ignoreButtonText',
-         ignoreButtonText == null ? null : Arg.fixed(ignoreButtonText),
-         null,
-       ),
-       this.onIgnoreArg = $initArg(
-         'onIgnore',
-         onIgnore == null ? null : Arg.fixed(onIgnore),
-         null,
-       ),
        this.iconArg = $initArg(
          'icon',
          icon == null ? null : Arg.fixed(icon),
@@ -181,10 +161,6 @@ class UpdateAvailableDialogArgs extends StoryArgs<UpdateAvailableDialog> {
 
   final Arg<void Function()?>? onLaterArg;
 
-  final Arg<String?>? ignoreButtonTextArg;
-
-  final Arg<void Function()?>? onIgnoreArg;
-
   final Arg<String?>? iconArg;
 
   final Arg<double> iconSizeArg;
@@ -205,10 +181,6 @@ class UpdateAvailableDialogArgs extends StoryArgs<UpdateAvailableDialog> {
 
   void Function()? get onLater => onLaterArg?.value;
 
-  String? get ignoreButtonText => ignoreButtonTextArg?.value;
-
-  void Function()? get onIgnore => onIgnoreArg?.value;
-
   String? get icon => iconArg?.value;
 
   double get iconSize => iconSizeArg.value;
@@ -224,8 +196,6 @@ class UpdateAvailableDialogArgs extends StoryArgs<UpdateAvailableDialog> {
     promptArg,
     laterButtonTextArg,
     onLaterArg,
-    ignoreButtonTextArg,
-    onIgnoreArg,
     iconArg,
     iconSizeArg,
     keyArg,

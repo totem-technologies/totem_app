@@ -11,7 +11,6 @@ class _FakeUpgrader extends Upgrader {
   final bool isBlocked;
   var initializeCount = 0;
   var sentToStore = 0;
-  var ignored = 0;
 
   @override
   Future<bool> initialize() async {
@@ -24,12 +23,6 @@ class _FakeUpgrader extends Upgrader {
 
   @override
   Future<void> sendUserToAppStore() async => sentToStore++;
-
-  @override
-  Future<bool> saveIgnored() async {
-    ignored++;
-    return true;
-  }
 
   @override
   Future<bool> saveLastAlerted() async => true;
@@ -126,7 +119,7 @@ void main() {
       check(identical(widget.upgrader, rebuilt.upgrader)).isTrue();
     });
 
-    testWidgets('shows Update, Later and Ignore when not blocked', (
+    testWidgets('shows Update and Later but not Ignore when not blocked', (
       tester,
     ) async {
       final upgrader = _FakeUpgrader();
@@ -141,7 +134,7 @@ void main() {
       check(
         tester.widgetList(button<OutlinedButton>('LATER')),
       ).length.equals(1);
-      check(tester.widgetList(button<TextButton>('IGNORE'))).length.equals(1);
+      check(tester.widgetList(find.text('IGNORE'))).isEmpty();
       check(
         tester.widgetList(find.text('Would you like to update it now?')),
       ).length.equals(1);
@@ -160,25 +153,11 @@ void main() {
       check(tester.widgetList(find.byType(UpdateAvailableDialog))).isEmpty();
     });
 
-    testWidgets('Ignore saves the ignored version and closes', (tester) async {
-      final upgrader = _FakeUpgrader();
-      await pumpAndShow(tester, upgrader);
-
-      await tester.tap(button<TextButton>('IGNORE'));
-      await tester.pumpAndSettle();
-
-      check(upgrader.ignored).equals(1);
-      check(tester.widgetList(find.byType(UpdateAvailableDialog))).isEmpty();
-    });
-
-    testWidgets('blocked update hides Later and Ignore and stays open', (
-      tester,
-    ) async {
+    testWidgets('blocked update hides Later and stays open', (tester) async {
       final upgrader = _FakeUpgrader(isBlocked: true);
       await pumpAndShow(tester, upgrader);
 
       check(tester.widgetList(button<OutlinedButton>('LATER'))).isEmpty();
-      check(tester.widgetList(button<TextButton>('IGNORE'))).isEmpty();
 
       await tester.tap(button<ElevatedButton>('UPDATE NOW'));
       await tester.pumpAndSettle();

@@ -18,8 +18,6 @@ class UpdateAvailableDialog extends StatelessWidget {
     this.prompt,
     this.laterButtonText,
     this.onLater,
-    this.ignoreButtonText,
-    this.onIgnore,
     this.icon = TotemIcons.downloadApp,
     this.iconSize = 60,
     super.key,
@@ -39,15 +37,10 @@ class UpdateAvailableDialog extends StatelessWidget {
   final String? laterButtonText;
   final VoidCallback? onLater;
 
-  /// Optional tertiary text action to ignore this version.
-  final String? ignoreButtonText;
-  final VoidCallback? onIgnore;
-
   final TotemIconData? icon;
   final double iconSize;
 
   bool get _showLater => laterButtonText != null && onLater != null;
-  bool get _showIgnore => ignoreButtonText != null && onIgnore != null;
 
   @override
   Widget build(BuildContext context) {
@@ -77,11 +70,6 @@ class UpdateAvailableDialog extends StatelessWidget {
           OutlinedButton(
             onPressed: onLater,
             child: Text(laterButtonText!, textAlign: TextAlign.center),
-          ),
-        if (_showIgnore)
-          TextButton(
-            onPressed: onIgnore,
-            child: Text(ignoreButtonText!, textAlign: TextAlign.center),
           ),
       ],
     );

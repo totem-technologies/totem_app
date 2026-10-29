@@ -15,6 +15,9 @@ class TotemUpgradeAlert extends UpgradeAlert {
          upgrader: upgrader ?? _sharedUpgrader,
          // Release notes stay out of the Totem-designed dialog for now.
          showReleaseNotes: false,
+         // Later already re-prompts after a few days; skipping a release for
+         // good is not offered.
+         showIgnore: false,
        );
 
   static final _sharedUpgrader = _MinorVersionUpgrader();
@@ -149,14 +152,11 @@ class _TotemUpgradeAlertState extends UpgradeAlertState {
     UpgraderMessages messages,
   ) {
     final isBlocked = widget.upgrader.blocked();
-    final showIgnore = isBlocked ? false : widget.showIgnore;
     final showLater = isBlocked ? false : widget.showLater;
     final updateButton =
         messages.message(UpgraderMessage.buttonTitleUpdate) ?? 'Update';
     final laterButton =
         messages.message(UpgraderMessage.buttonTitleLater) ?? 'Later';
-    final ignoreButton =
-        messages.message(UpgraderMessage.buttonTitleIgnore) ?? 'Ignore';
     final prompt = widget.showPrompt
         ? messages.message(UpgraderMessage.prompt)
         : null;
@@ -170,8 +170,6 @@ class _TotemUpgradeAlertState extends UpgradeAlertState {
       onUpdate: () => onUserUpdated(context, !isBlocked),
       laterButtonText: showLater ? laterButton : null,
       onLater: showLater ? () => onUserLater(context, true) : null,
-      ignoreButtonText: showIgnore ? ignoreButton : null,
-      onIgnore: showIgnore ? () => onUserIgnored(context, true) : null,
     );
   }
 }
