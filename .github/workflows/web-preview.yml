@@ -33,6 +33,10 @@ jobs:
       - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
+          flutter-version: "3.50.0-0.2.pre"
+          flutter-channel: beta
+          dart-version: "3.14.0 (build 3.14.0-315.3.beta)"
+          lockfile-snapshot: pubspec.web.lock
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           flavor: staging
 
@@ -41,9 +45,11 @@ jobs:
         run: dart scripts/web_preview.dart
 
       - name: Build preview
+        uses: ./.github/actions/build-web
+        with:
+          flutter-version: "3.50.0-0.2.pre"
         env:
           WEB_ASSET_BASE: ${{ steps.preview.outputs.asset_base }}
-        run: dart scripts/web_build.dart
 
       # A PR can close or advance while this build is queued or running.
       - name: Check PR status
@@ -71,7 +77,7 @@ jobs:
 
             [Open preview](${{ steps.preview.outputs.url }}) · Backend: https://totem.kbl.io
 
-            Built from ${{ github.event.pull_request.head.sha }}.
+            Built from ${{ github.event.pull_request.head.sha }} with Flutter 3.50.0-0.2.pre (beta).
             Staging selects this build for two hours. Open a session to test it.
 
             [Return to normal staging](https://totem.kbl.io/?room_preview=off)

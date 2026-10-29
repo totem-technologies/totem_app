@@ -34,6 +34,9 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
     final session = ref.watch(currentSessionProvider);
     final localParticipant = ref.watch(localParticipantInfoProvider);
     final roundPrompt = ref.watch(currentSessionPromptProvider);
+    final selfViewEnabled = ref.watch(
+      selfViewSettingsProvider.select((settings) => settings.enabled),
+    );
 
     Future<bool> onAccept() async {
       try {
@@ -63,6 +66,9 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
       child: ViewportResolver(
         builder: (context, viewportKind) {
           final theme = Theme.of(context);
+          final selfViewMessage = selfViewEnabled
+              ? 'Your self-view will stay visible during your turn. Everyone else will still see you. You can disable your camera at any time.'
+              : "We'll hide your self-view during your turn so you can stay in the moment. Everyone else will still see you. You can disable your camera at any time.";
           final titleWidget = Column(
             spacing: 16,
             children: [
@@ -77,7 +83,7 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
               Padding(
                 padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
                 child: Text(
-                  "We'll hide your self-view during your turn so you can stay in the moment. Everyone else will still see you. You can disable your camera at any time.",
+                  selfViewMessage,
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -103,8 +109,7 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
               children: [
                 ?roundPromptText(roundPrompt),
                 SizedBox(
-                  // Matches PassTransitionCard so both sliders read alike.
-                  height: viewportKind == ViewportKind.smallPortrait ? 48 : 50,
+                  height: 50,
                   child: ActionSliderButton(
                     text: 'Receive',
                     onActionCompleted: onAccept,
@@ -163,12 +168,18 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
                   children: [
                     const SizedBox(),
                     Expanded(child: videoCard),
-                    roundPromptText(roundPrompt) ?? const SizedBox(height: 10),
-                    ReceiveTransitionCard(
-                      onActionPressed: onAccept,
-                      keepActionLoadingOnSuccess: true,
+                    // Prompt, receive pill and dock read as one cluster.
+                    Column(
+                      spacing: 16,
+                      children: [
+                        ?roundPromptText(roundPrompt),
+                        ReceiveTransitionCard(
+                          onActionPressed: onAccept,
+                          keepActionLoadingOnSuccess: true,
+                        ),
+                        const SessionActionBar(),
+                      ],
                     ),
-                    const SessionActionBar(),
                   ],
                 ),
               );

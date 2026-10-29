@@ -50,7 +50,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(ElevatedButton));
+      await tester.tap(find.byType(InkWell));
       await tester.pump();
 
       check(calls).equals(1);
@@ -80,7 +80,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(ElevatedButton));
+      await tester.tap(find.byType(InkWell));
       await tester.pump();
       await tester.pump();
 
@@ -107,7 +107,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(ElevatedButton));
+      await tester.tap(find.byType(InkWell));
       await tester.pump();
 
       check(calls).equals(0);
@@ -172,26 +172,25 @@ void main() {
       },
     );
 
-    for (final (label, trackHeight) in [
-      ('48dp track', 48.0),
-      ('50dp track', 50.0),
-      ('parent without a fixed height', null),
+    for (final (label, height) in [
+      ('docked 44dp track', 44.0),
+      ('default 50dp track', null),
     ]) {
       autoSizeTest('keeps the thumb round for a $label', (tester) async {
         await pumpTestWidget(
           tester,
-          child: SizedBox(
-            height: trackHeight,
-            child: ActionSlider(
-              text: 'Slide',
-              onActionCompleted: () async => true,
-            ),
-          ),
+          child: height == null
+              ? ActionSlider(text: 'Slide', onActionCompleted: () async => true)
+              : ActionSlider(
+                  text: 'Slide',
+                  onActionCompleted: () async => true,
+                  height: height,
+                ),
         );
 
         final track = tester.getSize(find.byType(ActionSlider));
         final thumb = tester.getSize(find.byKey(ActionSlider.thumbKey));
-        check(track.height).equals(trackHeight ?? 50);
+        check(track.height).equals(height ?? 50);
         check(thumb.width).equals(thumb.height);
         check(thumb.height).equals(track.height - 8);
       });

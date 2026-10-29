@@ -57,12 +57,22 @@ Leak tracking is enabled through:
 
 ## Validation
 
-```sh
-make lint
-make test
-```
+During implementation, use the narrowest validation that covers the change; do
+not run `make lint` or `make test` by default. They validate every workspace
+package and are intended for comprehensive local verification and CI.
 
-Run the focused test file first after a lifecycle or timing fix, then run the affected package suite.
+1. Format only modified Dart files with `dart format <files>`.
+2. Run narrow analysis, for example `dart analyze <files>` or
+   `cd packages/totem_app && flutter analyze --no-pub` for app-wide changes.
+3. Run the focused test file first after a lifecycle or timing fix.
+4. Run the affected package suite only when the focused test is insufficient:
+   `make test-core`, `make test-app`, `make test-web`, `make test-benchmark`,
+   `make test-widgetbook`, or `make test-scripts` with `TEST_PUB=--no-pub`
+   when the workspace is already resolved.
+
+Run `make lint` and `make test` at most once, only for cross-package,
+workspace/configuration, dependency, or explicitly requested full validation.
+CI always runs both comprehensive commands before merging.
 
 ## Test performance
 

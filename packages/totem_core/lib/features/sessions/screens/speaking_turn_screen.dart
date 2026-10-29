@@ -147,9 +147,10 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
           }
         }();
         final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-        final restingBottom = switch (viewportKind.isLarge) {
-          true => 180,
-          false => 80,
+        final restingBottom = switch (viewportKind) {
+          ViewportKind.smallPortrait => 80,
+          ViewportKind.smallLandscape => 180,
+          ViewportKind.mediumSmall || ViewportKind.mediumPlus => 130,
         };
 
         // Calculate how far up we need to visually push the card.
@@ -229,12 +230,18 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 children: [
                   const SessionTitle(),
                   Expanded(child: Center(child: participantGrid)),
-                  ?promptText,
-                  Transform.translate(
-                    offset: Offset(0, yOffset),
-                    child: passCard,
+                  // Prompt, pass pill and dock read as one cluster.
+                  Column(
+                    spacing: 16,
+                    children: [
+                      ?promptText,
+                      Transform.translate(
+                        offset: Offset(0, yOffset),
+                        child: passCard,
+                      ),
+                      const SessionActionBar(),
+                    ],
                   ),
-                  const SessionActionBar(),
                 ],
               ),
             );

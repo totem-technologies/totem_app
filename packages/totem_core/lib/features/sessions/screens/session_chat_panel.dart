@@ -379,7 +379,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                   ref.read(sessionChatThreadTargetProvider.notifier).target =
                       keeper;
                 },
-                onViewGroup: () {
+                onViewEveryone: () {
                   _setDropdownOpen(false);
                   ref.read(sessionChatThreadTargetProvider.notifier).target =
                       null;
@@ -431,14 +431,14 @@ String _pinnedHint({
   required String? recipientName,
 }) {
   if (isPrivateThread) {
-    if (!isKeeper) return 'Only the keeper can see these messages';
+    if (!isKeeper) return 'Private messages — only the Keeper can see them';
     final name = recipientName;
-    return 'Only you and ${name != null && name.isNotEmpty ? name : 'this participant'} can see these messages';
+    return 'Private messages with ${name != null && name.isNotEmpty ? name : 'this participant'}';
   }
   if (isKeeper) {
-    return 'Only you can post messages here';
+    return 'Messages to Everyone — only you can post';
   }
-  return 'Only the Keeper can post messages here';
+  return 'Messages to Everyone — only the Keeper can post';
 }
 
 String _composerHint({
@@ -448,15 +448,15 @@ String _composerHint({
   required String? keeperIdentity,
 }) {
   if (!isPrivateThread) {
-    return 'Message everyone';
+    return 'Message Everyone';
+  }
+  if (threadTarget == keeperIdentity) {
+    return 'Message Keeper privately';
   }
   final match = _participantFor(participants, threadTarget);
   final name = match?.name;
   if (name != null && name.isNotEmpty) {
-    return 'Message $name';
-  }
-  if (threadTarget == keeperIdentity) {
-    return 'Message Keeper';
+    return 'Message $name privately';
   }
   return 'Type a message...';
 }
@@ -774,24 +774,26 @@ class _ParticipantThreadChip extends StatelessWidget {
   const _ParticipantThreadChip({
     required this.isPrivateThread,
     required this.onMessageKeeper,
-    required this.onViewGroup,
+    required this.onViewEveryone,
   });
 
   final bool isPrivateThread;
   final VoidCallback onMessageKeeper;
-  final VoidCallback onViewGroup;
+  final VoidCallback onViewEveryone;
 
   @override
   Widget build(BuildContext context) {
-    final label = isPrivateThread ? 'View Group Messages' : 'Message Keeper';
+    final label = isPrivateThread
+        ? 'View Everyone messages'
+        : 'Message Keeper privately';
     const radius = 33.0;
     return Align(
       alignment: AlignmentDirectional.centerEnd,
       child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(
+        padding: EdgeInsetsDirectional.fromSTEB(
           20,
           _messageChromeGap,
-          16,
+          math.max(20, MediaQuery.paddingOf(context).right),
           10,
         ),
         child: DecoratedBox(
@@ -809,7 +811,7 @@ class _ParticipantThreadChip extends StatelessWidget {
             color: AppTheme.mauve,
             borderRadius: BorderRadius.circular(radius),
             child: InkWell(
-              onTap: isPrivateThread ? onViewGroup : onMessageKeeper,
+              onTap: isPrivateThread ? onViewEveryone : onMessageKeeper,
               borderRadius: BorderRadius.circular(radius),
               splashColor: AppTheme.white.withValues(alpha: 0.22),
               highlightColor: AppTheme.white.withValues(alpha: 0.12),
@@ -938,8 +940,8 @@ class _RecipientDropdownOverlay extends StatelessWidget {
                       selected: threadTarget == null,
                       title: 'Everyone',
                       subtitle: isKeeper
-                          ? '$countLabel · only you can post'
-                          : '$countLabel · only the Keeper can post',
+                          ? '$countLabel · messages to everyone'
+                          : '$countLabel · messages from the Keeper',
                       leading: const _EveryoneAvatar(),
                       onTap: onSelectEveryone,
                     );
@@ -951,6 +953,9 @@ class _RecipientDropdownOverlay extends StatelessWidget {
                     title: participant.name.isNotEmpty
                         ? participant.name
                         : participant.identity,
+                    subtitle: isKeeper
+                        ? 'Private messages'
+                        : 'Private messages with the Keeper',
                     leading: _ParticipantAvatar(identity: participant.identity),
                     onTap: () => onSelectParticipant(participant.identity),
                   );

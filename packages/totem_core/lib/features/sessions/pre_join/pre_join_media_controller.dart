@@ -134,7 +134,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
       _started = true;
       return _loop.run();
     });
-    unawaited(_detectHeadphones());
+    if (!kIsWeb) unawaited(_detectHeadphones());
     return const PreJoinMediaState();
   }
 

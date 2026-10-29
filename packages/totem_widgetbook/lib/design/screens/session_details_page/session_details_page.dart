@@ -621,10 +621,7 @@ class _About extends StatelessWidget {
               color: fade(_black, 0.7),
             ),
           ),
-          Text(
-            description,
-            style: TotemText.body2.copyWith(color: _black),
-          ),
+          Text(description, style: TotemText.body2.copyWith(color: _black)),
         ],
       ),
     );
@@ -689,10 +686,7 @@ class _SessionRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: Image.asset(
-                  '$_shared/similar.jpg',
-                  fit: BoxFit.cover,
-                ),
+                child: Image.asset('$_shared/similar.jpg', fit: BoxFit.cover),
               ),
               SizedBox(
                 width: 224,

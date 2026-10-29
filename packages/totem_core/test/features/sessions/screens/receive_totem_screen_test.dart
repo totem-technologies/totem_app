@@ -148,6 +148,7 @@ void main() {
     SessionRoomState? state,
     String? roundMessage,
     bool isStaff = false,
+    bool selfViewEnabled = false,
     SessionCuesService? feedbackService,
   }) async {
     final sessionState = state ?? _buildState();
@@ -175,6 +176,12 @@ void main() {
           currentSessionPromptProvider.overrideWith((ref) => roundMessage),
           resolveCurrentScreenProvider.overrideWith(
             (ref) => RoomScreen.receiving,
+          ),
+          selfViewSettingsProvider.overrideWithValue(
+            SelfViewState(
+              enabled: selfViewEnabled,
+              position: SelfViewPosition.end,
+            ),
           ),
           sessionCuesServiceProvider.overrideWithValue(testCuesService),
           userProfileProvider.overrideWith(
@@ -235,6 +242,37 @@ void main() {
       check(tester.widgetList(find.text('Receive'))).length.equals(1);
       check(tester.widgetList(find.text('"Take your time"'))).length.equals(1);
     });
+
+    testWidgets('explains that self-view hides when the setting is disabled', (
+      tester,
+    ) async {
+      await pumpReceiveTotem(tester, selfViewEnabled: false);
+
+      check(
+        tester.widgetList(
+          find.text(
+            "We'll hide your self-view during your turn so you can stay in the moment. Everyone else will still see you. You can disable your camera at any time.",
+          ),
+        ),
+      ).length.equals(1);
+    });
+
+    testWidgets(
+      'explains that self-view stays visible when the setting is enabled',
+      (
+        tester,
+      ) async {
+        await pumpReceiveTotem(tester, selfViewEnabled: true);
+
+        check(
+          tester.widgetList(
+            find.text(
+              'Your self-view will stay visible during your turn. Everyone else will still see you. You can disable your camera at any time.',
+            ),
+          ),
+        ).length.equals(1);
+      },
+    );
 
     testWidgets('hides round message text when no round message is provided', (
       tester,
@@ -357,23 +395,6 @@ void main() {
       check(
         tester.widgetList(find.text('"Breathe and share"')),
       ).length.equals(1);
-    });
-
-    testWidgets('matches the Pass slider size on portrait phones', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      await pumpReceiveTotem(tester);
-
-      final thumb = tester.getSize(find.byKey(ActionSlider.thumbKey));
-      check(tester.getSize(find.byType(ActionSlider)).height).equals(48);
-      check(thumb.width).equals(thumb.height);
     });
 
     testWidgets('shows the local participant card', (tester) async {
