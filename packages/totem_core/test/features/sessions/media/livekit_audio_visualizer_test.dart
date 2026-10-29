@@ -35,19 +35,19 @@ void main() {
     samples.add(const [0.05, 0.05, 0.05, 0.05, 0.05]);
     await tester.pump();
     final quiet = List.of(
-      tester.widget<LevelBars>(find.byType(LevelBars)).levels,
+      tester.widget<LevelBars>(find.byType(LevelBars)).levels.value,
     );
 
     samples.add(const [0.2, 0.4, 0.6, 0.8, 1]);
     await tester.pump(const Duration(milliseconds: 140));
-    final loud = tester.widget<LevelBars>(find.byType(LevelBars)).levels;
+    final loud = tester.widget<LevelBars>(find.byType(LevelBars)).levels.value;
     check(loud[0]).isLessThan(loud[4]);
     check(loud[2]).isGreaterThan(quiet[2]);
 
     samples.add(const [0, 0, 0, 0, 0]);
     await tester.pump(const Duration(milliseconds: 140));
     check(
-      tester.widget<LevelBars>(find.byType(LevelBars)).levels,
+      tester.widget<LevelBars>(find.byType(LevelBars)).levels.value,
     ).deepEquals(const [0, 0, 0, 0, 0]);
 
     samples.add(const [0, 0, 0, 0, 0]);

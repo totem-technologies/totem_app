@@ -73,7 +73,7 @@ void main() {
     await pump(tester);
 
     final bars = tester.widget<LevelBars>(find.byType(LevelBars));
-    check(bars.levels).deepEquals(const [0, 0, 0, 0, 0]);
+    check(bars.levels.value).deepEquals(const [0, 0, 0, 0, 0]);
     check(find.byType(TotemIcon).evaluate()).isEmpty();
     check(find.byType(SoundWaveformWidget).evaluate()).isEmpty();
   });

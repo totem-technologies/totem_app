@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
-
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
 import 'package:totem_core/features/sessions/widgets/level_bars.dart';
@@ -11,6 +9,7 @@ import 'package:totem_core/features/sessions/widgets/session_status_notice.dart'
 import 'package:totem_core/features/sessions/widgets/smart_name_text.dart';
 
 import 'benchmark_config.dart';
+import 'synthetic_speech.dart';
 
 /// Rendering workload with media supplied independently of a room connection.
 class BenchmarkRoom extends StatelessWidget {
@@ -124,8 +123,8 @@ class BenchmarkRoom extends StatelessWidget {
   );
 }
 
-/// Feeds deterministic levels at the same 140 ms cadence as the call's audio
-/// visualizer, drawn by the production LevelBars.
+/// Feeds a synthetic talker's five band levels every 100 ms, the Web
+/// microphone meter's cadence, to the production LevelBars.
 class SyntheticWaveform extends StatefulWidget {
   const SyntheticWaveform({
     required this.participant,
@@ -136,19 +135,24 @@ class SyntheticWaveform extends StatefulWidget {
   final int participant;
   final WaveformMode mode;
 
+  /// Mid-phrase levels shown by [WaveformMode.frozen].
+  static const frozenLevels = [0.5, 0.8, 1.0, 0.7, 0.4];
+
   @override
   State<SyntheticWaveform> createState() => _SyntheticWaveformState();
 }
 
 class _SyntheticWaveformState extends State<SyntheticWaveform> {
   Timer? _timer;
-  int _sample = 0;
+  late final _speech = SyntheticSpeech(widget.participant);
+  final _levels = ValueNotifier<List<double>>(SyntheticWaveform.frozenLevels);
 
   void _updateTimer() {
     _timer?.cancel();
+    // Samples reach LevelBars without rebuilding this widget, as in the call.
     _timer = widget.mode == WaveformMode.animated
-        ? Timer.periodic(const Duration(milliseconds: 140), (_) {
-            setState(() => _sample++);
+        ? Timer.periodic(SyntheticSpeech.interval, (_) {
+            _levels.value = _speech.next();
           })
         : null;
   }
@@ -168,17 +172,11 @@ class _SyntheticWaveformState extends State<SyntheticWaveform> {
   @override
   void dispose() {
     _timer?.cancel();
+    _levels.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => LevelBars(
-    color: Colors.white,
-    levels: [
-      for (var bar = 0; bar < 3; bar++)
-        0.1 +
-            0.8 *
-                math.sin(_sample * 0.9 + bar * 1.7 + widget.participant).abs(),
-    ],
-  );
+  Widget build(BuildContext context) =>
+      LevelBars(color: Colors.white, levels: _levels);
 }
