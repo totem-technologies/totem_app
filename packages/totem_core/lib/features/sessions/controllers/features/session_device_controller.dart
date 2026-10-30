@@ -368,6 +368,8 @@ class SessionDeviceController extends _$SessionDeviceController {
   bool _hasExternalOutput = false;
   bool _audioRouteNotificationsEnabled = false;
   bool? _systemSpeakerphoneEnabled;
+  Future<void> _speakerphoneQueue = Future.value();
+  int _speakerphoneRequest = 0;
 
   static const externalAudioOutputTypes = <audio.AudioDeviceType>{
     audio.AudioDeviceType.wiredHeadset,
@@ -393,6 +395,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   bool get audioRouteNotificationsEnabled => _audioRouteNotificationsEnabled;
 
   void resetSpeakerRoutingDefaults([bool preference = true]) {
+    _speakerphoneRequest++;
     _userSpeakerPreference = preference;
     _hasExternalOutput = false;
   }
@@ -442,7 +445,6 @@ class SessionDeviceController extends _$SessionDeviceController {
         logger.i('Headphones unplugged, restoring to speaker.');
         _hasExternalOutput = false;
         unawaited(_autoSetSpeakerphone(true));
-        unawaited(_refreshSpeakerphoneState());
       });
 
       _devicesChangedSubscription = session.devicesChangedEventStream.listen((
@@ -461,12 +463,10 @@ class SessionDeviceController extends _$SessionDeviceController {
           _hasExternalOutput = true;
           // Remove speaker override so OS routes to the newly connected device.
           unawaited(_autoSetSpeakerphone(false));
-          unawaited(_refreshSpeakerphoneState());
         } else if (removedExternal) {
           logger.i('External audio output disconnected, switching to speaker.');
           _hasExternalOutput = false;
           unawaited(_autoSetSpeakerphone(true));
-          unawaited(_refreshSpeakerphoneState());
         } else {
           unawaited(_refreshSpeakerphoneState());
           _emitState();
@@ -499,7 +499,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   bool get isSpeakerphoneEnabled =>
       _systemSpeakerphoneEnabled ?? _media.isSpeakerOutputPreferred;
 
-  Future<void> _refreshSpeakerphoneState() async {
+  Future<void> _refreshSpeakerphoneState({bool emit = true}) async {
     if (kIsWeb) return;
 
     try {
@@ -521,7 +521,7 @@ class SessionDeviceController extends _$SessionDeviceController {
       if (speakerEnabled != null &&
           speakerEnabled != _systemSpeakerphoneEnabled) {
         _systemSpeakerphoneEnabled = speakerEnabled;
-        _emitState();
+        if (emit) _emitState();
       }
     } catch (error, stackTrace) {
       logger.w(
@@ -540,11 +540,20 @@ class SessionDeviceController extends _$SessionDeviceController {
     await _autoSetSpeakerphone(enabled);
   }
 
-  Future<void> _autoSetSpeakerphone(bool enabled) async {
-    if (!_media.isAvailable) return;
-    await _media.setSpeakerOutputPreferred(enabled);
-    await _refreshSpeakerphoneState();
-    _emitState();
+  Future<void> _autoSetSpeakerphone(bool enabled) {
+    final request = ++_speakerphoneRequest;
+    final result = _speakerphoneQueue.then((_) async {
+      if (_disposed || request != _speakerphoneRequest || !_media.isAvailable) {
+        return;
+      }
+      await _media.setSpeakerOutputPreferred(enabled);
+      if (_disposed || request != _speakerphoneRequest) return;
+      await _refreshSpeakerphoneState(emit: false);
+      if (_disposed || request != _speakerphoneRequest) return;
+      _emitState();
+    });
+    _speakerphoneQueue = result.catchError((Object _) {});
+    return result;
   }
 
   String? get selectedAudioOutputDeviceId => _media.audioOutputDeviceId;
@@ -631,6 +640,7 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   Future<void> stopDeviceChangeListener() async {
     ++_deviceListenerGeneration;
+    ++_speakerphoneRequest;
     _audioRouteNotificationsEnabled = false;
     final becomingNoisySubscription = _becomingNoisySubscription;
     final devicesChangedSubscription = _devicesChangedSubscription;

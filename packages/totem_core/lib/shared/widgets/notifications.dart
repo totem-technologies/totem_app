@@ -155,8 +155,15 @@ class NotificationRequest {
     close();
   }
 
+  void suspendActive() {
+    if (_isClosed || _isDismissing || !_isShown) return;
+
+    overlayEntry.remove();
+    _isShown = false;
+  }
+
   void dismissImmediately() {
-    if (_isClosed || _isDismissing) return;
+    if (_isClosed) return;
 
     _isDismissing = true;
     if (_isShown) _removeEntry();
@@ -226,6 +233,42 @@ class NotificationController {
     }
 
     _queue.add(request);
+    _pumpQueue();
+    return request;
+  }
+
+  NotificationRequest _enqueueUrgentLatestWins(
+    NotificationRequest request,
+    Object category,
+  ) {
+    if (_disposed || _blocked) {
+      request.cancelQueued();
+      return request;
+    }
+
+    for (final queued
+        in _queue.where((item) => item.dedupeKey == category).toList()) {
+      _queue.remove(queued);
+      queued.cancelQueued();
+    }
+
+    final active = _activeRequest;
+    if (active != null) {
+      _queue.insert(0, request);
+      if (active.dedupeKey == category) {
+        active.dismissImmediately();
+      } else if (active._isDismissing) {
+        active.dismissImmediately();
+      } else {
+        _activeRequest = null;
+        active.suspendActive();
+        _queue.insert(1, active);
+        _pumpQueue();
+      }
+      return request;
+    }
+
+    _queue.insert(0, request);
     _pumpQueue();
     return request;
   }
@@ -308,6 +351,25 @@ class NotificationController {
     VoidCallback? onShown,
     Object? dedupeKey,
   }) {
+    return _show(
+      context,
+      builder: builder,
+      animationDuration: animationDuration,
+      duration: duration,
+      onShown: onShown,
+      dedupeKey: dedupeKey,
+    );
+  }
+
+  NotificationRequest _show(
+    BuildContext context, {
+    required WidgetBuilder builder,
+    Duration animationDuration = _defaultNotificationAnimationDuration,
+    Duration duration = _defaultNotificationDuration,
+    VoidCallback? onShown,
+    Object? dedupeKey,
+    Object? urgentLatestWinsCategory,
+  }) {
     final overlay = Overlay.of(context);
 
     late OverlayEntry entry;
@@ -353,22 +415,40 @@ class NotificationController {
       return request;
     }
 
+    if (urgentLatestWinsCategory != null) {
+      return _enqueueUrgentLatestWins(request, urgentLatestWinsCategory);
+    }
+
     return _enqueue(request);
   }
 
   /// Shows a standard notification banner that auto-dismisses after
   /// [_defaultNotificationDuration].
+  ///
+  /// Providing [urgentLatestWinsCategory] shows the banner immediately,
+  /// replacing any active or queued banner in that category. An unrelated
+  /// active banner is paused and shown again once the urgent banner closes.
   NotificationRequest showTimed(
     BuildContext context, {
     required TotemIconData icon,
     required String title,
     required String message,
     VoidCallback? onTap,
+    Object? urgentLatestWinsCategory,
   }) {
     final view = View.of(context);
-    return show(
+    final dedupeKey =
+        urgentLatestWinsCategory ??
+        (
+          'notification',
+          icon,
+          title,
+          message,
+        );
+    return _show(
       context,
-      dedupeKey: ('notification', icon, title, message),
+      dedupeKey: dedupeKey,
+      urgentLatestWinsCategory: urgentLatestWinsCategory,
       onShown: () {
         SemanticsService.sendAnnouncement(
           view,

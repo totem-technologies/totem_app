@@ -88,6 +88,10 @@ class LiveKitLocalMedia implements LocalMedia {
   /// so a late toggle during shutdown cannot reopen capture.
   Room? _releasedRoom;
 
+  /// Audio route resets and applies must not overlap: a late reset from an
+  /// earlier hardware event could otherwise undo the current route.
+  Future<void> _speakerOutputQueue = Future.value();
+
   Future<void> _serialize(
     Future<void> Function(Room room, LocalParticipant participant) operation,
   ) {
@@ -496,14 +500,18 @@ class LiveKitLocalMedia implements LocalMedia {
   }
 
   @override
-  Future<void> setSpeakerOutputPreferred(bool preferred) async {
-    if (kIsWeb) return;
-    // LiveKit does not reliably turn the speakerphone on when it is already
-    // marked preferred, so reset it first.
-    unawaited(AudioManager.instance.setSpeakerOutputPreferred(false));
-    if (preferred) {
-      unawaited(AudioManager.instance.setSpeakerOutputPreferred(true));
-    }
+  Future<void> setSpeakerOutputPreferred(bool preferred) {
+    if (kIsWeb) return Future.value();
+    final result = _speakerOutputQueue.then((_) async {
+      // LiveKit does not reliably turn the speakerphone on when it is already
+      // marked preferred, so reset it first.
+      await AudioManager.instance.setSpeakerOutputPreferred(false);
+      if (preferred) {
+        await AudioManager.instance.setSpeakerOutputPreferred(true);
+      }
+    });
+    _speakerOutputQueue = result.catchError((Object _) {});
+    return result;
   }
 }
 

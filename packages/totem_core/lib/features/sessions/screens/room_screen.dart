@@ -435,18 +435,20 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     }
   }
 
-  void _onAudioRouteChanged(SessionDeviceState next) {
-    final message = next.isSpeakerphoneEnabled
-        ? 'Audio is now playing through speaker.'
-        : 'Audio is now routed to another output device.';
-
+  void _onAudioRouteChanged(
+    SessionDeviceState next, {
+    required bool speakerChanged,
+  }) {
     _notificationController.showTimed(
       context,
       icon: next.isSpeakerphoneEnabled
           ? TotemIcons.speakerOn
           : TotemIcons.speakerOff,
-      title: 'Audio route changed',
-      message: message,
+      title: speakerChanged && next.isSpeakerphoneEnabled
+          ? 'Audio switched to speakers'
+          : 'Audio switched to another device',
+      message: 'Your audio output has changed.',
+      urgentLatestWinsCategory: 'audio-route',
     );
   }
 
@@ -641,6 +643,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
 
         _onAudioRouteChanged(
           ref.read(sessionDeviceControllerProvider(currentSession)),
+          speakerChanged: previous.speakerphone != next.speakerphone,
         );
       },
     );
