@@ -64,6 +64,10 @@ class _LoopingVideoState extends State<LoopingVideo> {
       _video = video;
       video
         ..setAttribute('data-participant', '${widget.participant}')
+        // WebKit autoplays a script-created video only with these attributes;
+        // the matching properties alone are not enough.
+        ..setAttribute('muted', '')
+        ..setAttribute('playsinline', '')
         ..src = 'loop.mp4'
         ..loop = true
         ..muted = true

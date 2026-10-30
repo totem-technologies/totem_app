@@ -3,13 +3,17 @@ import 'dart:async';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
-/// A shared 30 Hz clock for small indicators that do not need display-rate
+/// A shared 15 Hz clock for small indicators that do not need display-rate
 /// animation. Defers frame requests themselves, while Ticker still supplies
 /// frame timestamps and AnimationController retains its interpolation behavior.
+///
+/// On the web every Flutter frame re-renders the canvases over the video
+/// tiles, so this rate sets the indicators' cost. In Safari, level bars paced
+/// at 15 Hz cost a little over half as much CPU as at 30 Hz and still ease.
 class FramePacedTicker extends Ticker {
   FramePacedTicker(super._onTick, {super.debugLabel});
 
-  static const interval = Duration(microseconds: 33334);
+  static const interval = Duration(microseconds: 66667);
   static final _pending = <FramePacedTicker>{};
   static Timer? _clock;
 

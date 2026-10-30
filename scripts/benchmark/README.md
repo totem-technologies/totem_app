@@ -3,9 +3,11 @@
 This runs the shared call layout, video tile clipping, name overlays, waveform
 bars, room background, and status notice without joining LiveKit or starting the
 app's authentication, API, or telemetry services. Every participant has an HTML
-video element playing a local loop. Audio levels are deterministic synthetic
-samples delivered every 140 ms to the production `LevelBars`, with its normal
-three bars and interpolation. No microphone or camera is used.
+video element playing a local loop. Each participant is a deterministic
+synthetic talker: phrases and pauses shaped by the Web microphone meter's own
+band, hold, and hysteresis functions, delivered every 100 ms to the production
+`LevelBars` with its five bars and interpolation. No microphone or camera is
+used.
 
 The dedicated `totem_benchmark` package has no `.env` asset and is never an entry
 point in the production build. Local artifacts live in ignored
@@ -70,8 +72,8 @@ and fifteen seconds of measurement per run. Available scenarios:
 
 The production status notice has a steady dot and schedules no animation frames.
 Its ticker switch remains available when comparing archived builds. Waveform
-interpolation uses a shared 30 Hz frame clock; sample updates and other widgets
-can still request additional Flutter frames.
+interpolation uses a shared 15 Hz frame clock. Samples only retarget the bars,
+so they add no frames of their own; other widgets can still request frames.
 
 Rendering experiments hold the remaining workload fixed:
 

@@ -83,8 +83,8 @@ class LiveKitMicrophoneLevel extends StatelessWidget {
         }
         final track = reading.track;
         if (track == null) {
-          return LevelBars(
-            levels: List.filled(barCount, 0, growable: false),
+          return LevelBars.fixed(
+            List.filled(barCount, 0, growable: false),
             color: color,
           );
         }
@@ -122,12 +122,17 @@ class _WebWaveform extends StatefulWidget {
 
 class _WebWaveformState extends State<_WebWaveform> {
   StreamSubscription<List<double>>? _subscription;
-  List<double> _levels = <double>[];
+  late final ValueNotifier<List<double>> _levels = ValueNotifier(_silence);
   bool _isSpeaking = false;
 
+  List<double> get _silence =>
+      List<double>.filled(widget.barCount, 0, growable: false);
+
+  /// Samples go straight to the bars, which pace their own frames; a rebuild
+  /// per sample would request an unpaced frame.
   void _listen() {
     unawaited(_subscription?.cancel());
-    _levels = List<double>.filled(widget.barCount, 0, growable: false);
+    _levels.value = _silence;
     _isSpeaking = false;
     _subscription =
         localAudioLevels(
@@ -138,16 +143,10 @@ class _WebWaveformState extends State<_WebWaveform> {
             levels,
             wasActive: _isSpeaking,
           );
-          final nextLevels = isSpeaking
-              ? levels
-              : List<double>.filled(widget.barCount, 0, growable: false);
-          if (listEquals(_levels, nextLevels) && isSpeaking == _isSpeaking) {
-            return;
-          }
-          setState(() {
-            _levels = List<double>.of(nextLevels, growable: false);
-            _isSpeaking = isSpeaking;
-          });
+          _isSpeaking = isSpeaking;
+          final next = isSpeaking ? levels : _silence;
+          if (listEquals(_levels.value, next)) return;
+          _levels.value = List<double>.of(next, growable: false);
         });
   }
 
@@ -166,6 +165,7 @@ class _WebWaveformState extends State<_WebWaveform> {
   @override
   void dispose() {
     unawaited(_subscription?.cancel());
+    _levels.dispose();
     super.dispose();
   }
 

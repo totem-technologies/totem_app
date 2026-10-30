@@ -81,7 +81,9 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
   static const Duration _maxRestartCooldown = Duration(seconds: 30);
   static const int _maxConsecutiveRestartAttempts = 6;
 
-  List<double> samples = <double>[];
+  /// Shown levels. The bars pace their own frames, so samples update this
+  /// without rebuilding the widget.
+  final _samples = ValueNotifier<List<double>>(const []);
   List<double> _backgroundSamples = <double>[];
   Timer? _pendingUiUpdate;
   Timer? _visualizerWatchdogTimer;
@@ -192,10 +194,8 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
     _lastVisualizerEventAt = null;
     _backgroundSamples = List.filled(widget.barCount, 0, growable: false);
     if (!mounted) return;
-    setState(() {
-      samples = List.filled(widget.barCount, 0, growable: false);
-      _isSpeaking = false;
-    });
+    _samples.value = List.filled(widget.barCount, 0, growable: false);
+    _isSpeaking = false;
   }
 
   void _scheduleUiUpdate() {
@@ -227,21 +227,16 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
     final nextSamples = isSpeaking
         ? _backgroundSamples
         : List<double>.filled(widget.barCount, 0, growable: false);
-    if (!audioVisualizerSamplesChanged(samples, nextSamples) &&
-        isSpeaking == _isSpeaking) {
-      return;
-    }
-    setState(() {
-      samples = List<double>.of(nextSamples, growable: false);
-      _isSpeaking = isSpeaking;
-    });
+    _isSpeaking = isSpeaking;
+    if (!audioVisualizerSamplesChanged(_samples.value, nextSamples)) return;
+    _samples.value = List<double>.of(nextSamples, growable: false);
   }
 
   @override
   void initState() {
     super.initState();
 
-    samples = List.filled(widget.barCount, 0, growable: false);
+    _samples.value = List.filled(widget.barCount, 0, growable: false);
     _backgroundSamples = List.filled(widget.barCount, 0, growable: false);
 
     if (widget.sampleLevels == null) {
@@ -365,10 +360,11 @@ class _SoundWaveformWidgetState extends State<SoundWaveformWidget> {
     _visualizerWatchdogTimer?.cancel();
     _listenerGeneration++;
     _lifecycle = _lifecycle.then((_) => _detachListeners());
+    _samples.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) =>
-      LevelBars(levels: samples, color: widget.color);
+      LevelBars(levels: _samples, color: widget.color);
 }
