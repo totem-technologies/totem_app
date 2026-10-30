@@ -390,7 +390,18 @@ ParticipantInfo? featuredParticipant(Ref ref) {
 /// Null while no speaker is featured.
 @Riverpod(dependencies: [currentSessionState])
 DateTime? featuredTurnStartTime(Ref ref) {
-  return ref.watch(currentSessionStateProvider.select((s) => s?.turnStartedAt));
+  return ref.watch(
+    currentSessionStateProvider.select(
+      (s) =>
+          s != null &&
+              s.connection.state == RoomConnectionState.connected &&
+              s.connection.phase == SessionPhase.connected &&
+              s.roomState.status == RoomStatus.active &&
+              s.speakingNow.isNotEmpty
+          ? s.turnStartedAt
+          : null,
+    ),
+  );
 }
 
 /// Participant expected to speak next.

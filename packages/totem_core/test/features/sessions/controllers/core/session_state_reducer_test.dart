@@ -180,6 +180,7 @@ void main() {
 
             final next = reducer.reduceState(current, RoomStateChanged(active));
 
+            check(next.speakingNow).equals('keeper');
             check(next.turnStartedAt).isNotNull();
           });
 
@@ -196,6 +197,25 @@ void main() {
             );
 
             check(next.turnStartedAt).isNotNull();
+          });
+
+          test('clears the stamp when the room becomes inactive', () {
+            final active = _roomState(
+              status: RoomStatus.active,
+            ).copyWith(currentSpeaker: const Omittable('user-1'));
+            final speaking = reducer.reduceState(
+              _initialState(),
+              RoomStateChanged(active),
+            );
+            check(speaking.turnStartedAt).isNotNull();
+
+            for (final status in [RoomStatus.waitingRoom, RoomStatus.ended]) {
+              final inactive = reducer.reduceState(
+                speaking,
+                RoomStateChanged(active.copyWith(status: status)),
+              );
+              check(inactive.turnStartedAt).isNull();
+            }
           });
 
           test('keeps existing stamp when same speaker continues', () {
