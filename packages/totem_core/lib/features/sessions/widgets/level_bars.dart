@@ -11,11 +11,13 @@ import 'package:totem_core/core/utils/frame_paced_ticker.dart';
 /// [FramePacedTicker] clock. On the web, any Flutter frame re-renders the
 /// canvases over the video tiles, so the bars' cost follows their frame rate
 /// rather than their size. They animate only when [levels] change, so a quiet
-/// microphone costs no frames.
+/// microphone costs no frames. The bars fill their constraints, which must be
+/// bounded.
 class LevelBars extends StatefulWidget {
   const LevelBars({required this.levels, required this.color, super.key});
 
-  /// Bars that never move, such as idle dots for a silent microphone.
+  /// Bars that never move, such as idle dots for a silent microphone. Each
+  /// rebuild passes a new listenable; equal levels leave the bars untouched.
   LevelBars.fixed(List<double> levels, {required Color color, Key? key})
     : this(levels: _FixedLevels(levels), color: color, key: key);
 
@@ -60,8 +62,19 @@ class _LevelBarsState extends State<LevelBars>
   late Color _toColor;
   late Color _shownColor;
 
-  Duration get _duration => Duration(
-    milliseconds: LevelBars._transitionMilliseconds ~/ math.max(1, _to.length),
+  /// Paced frames into the current transition.
+  int _frame = 0;
+
+  /// Transitions are counted in paced frames rather than elapsed time, so
+  /// every frame shows progress whatever the shared clock's phase. Five bars
+  /// take two frames, each about as long as a Web microphone sample.
+  int get _transitionFrames => math.max(
+    1,
+    (LevelBars._transitionMilliseconds ~/
+            math.max(1, _to.length) *
+            1000 /
+            FramePacedTicker.interval.inMicroseconds)
+        .ceil(),
   );
 
   void _retarget() {
@@ -79,20 +92,14 @@ class _LevelBarsState extends State<LevelBars>
       _shown = _from;
       _repaint.value++;
     }
-    // Restarting only requests a paced tick; nothing repaints until then.
-    _ticker
-      ..stop()
-      ..start();
+    _frame = 0;
+    // A running ticker keeps its place on the shared clock; restarting it
+    // could stop the clock and delay the next frame by a whole interval.
+    if (!_ticker.isActive) _ticker.start();
   }
 
-  void _tick(Duration elapsed) {
-    // The first paced frame lands up to one clock interval after the request,
-    // so progress starts one interval in rather than repainting the start.
-    final duration = _duration.inMicroseconds;
-    final t = duration == 0
-        ? 1.0
-        : ((elapsed + FramePacedTicker.interval).inMicroseconds / duration)
-              .clamp(0.0, 1.0);
+  void _tick(Duration _) {
+    final t = math.min(1.0, ++_frame / _transitionFrames);
     _shown = [
       for (var i = 0; i < _to.length; i++) _from[i] + (_to[i] - _from[i]) * t,
     ];

@@ -61,6 +61,9 @@ void main() {
     levels.value = const [];
     await tester.pump();
     check(paintedBars(tester)).isEmpty();
+    await tester.pump(FramePacedTicker.interval);
+    await tester.pump();
+    check(tester.binding.hasScheduledFrame).isFalse();
     await unmount(tester);
   });
 
@@ -119,6 +122,34 @@ void main() {
       for (var i = 1; i < heights.length; i++) {
         check(heights[i]).isGreaterOrEqual(heights[i - 1]);
       }
+      check(tester.binding.hasScheduledFrame).isFalse();
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    'a lone speaker sending a sample every 100 ms keeps moving at the paced '
+    'rate and settles on the last sample',
+    (tester) async {
+      // Five 10px cells, so each transition lasts 100 ms: as long as a sample.
+      levels.value = List.filled(5, 0);
+      await pumpBars(tester, size: const Size(50, 50));
+      const step = Duration(microseconds: 8333);
+      final middleHeights = <double>[];
+      for (var sample = 1; sample <= 10; sample++) {
+        levels.value = List.filled(5, sample / 10);
+        for (var i = 0; i < 12; i++) {
+          await tester.pump(step);
+          middleHeights.add(paintedBars(tester)[2].rect.height);
+        }
+      }
+      // Rising levels make every paced frame visible: ~15 in one second.
+      final moves = {...middleHeights}.length;
+      check(moves).isGreaterOrEqual(13);
+      check(moves).isLessOrEqual(16);
+
+      await tester.pump(const Duration(milliseconds: 150));
+      check(paintedBars(tester)[2].rect.height).equals(50);
       check(tester.binding.hasScheduledFrame).isFalse();
       await unmount(tester);
     },

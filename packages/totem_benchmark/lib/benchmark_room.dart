@@ -150,6 +150,9 @@ class _SyntheticWaveformState extends State<SyntheticWaveform> {
   void _updateTimer() {
     _timer?.cancel();
     // Samples reach LevelBars without rebuilding this widget, as in the call.
+    if (widget.mode == WaveformMode.frozen) {
+      _levels.value = SyntheticWaveform.frozenLevels;
+    }
     _timer = widget.mode == WaveformMode.animated
         ? Timer.periodic(SyntheticSpeech.interval, (_) {
             _levels.value = _speech.next();

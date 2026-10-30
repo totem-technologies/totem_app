@@ -83,9 +83,9 @@ void main() {
     await tester.pump(SyntheticSpeech.interval);
     check(samples()).not((it) => it.deepEquals(initial));
     await pump(WaveformMode.frozen);
-    final frozen = samples();
+    check(samples()).deepEquals(SyntheticWaveform.frozenLevels);
     await tester.pump(const Duration(seconds: 1));
-    check(samples()).deepEquals(frozen);
+    check(samples()).deepEquals(SyntheticWaveform.frozenLevels);
     check(tester.binding.hasScheduledFrame).isFalse();
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
