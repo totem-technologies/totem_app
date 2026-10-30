@@ -1442,7 +1442,7 @@ void main() {
       );
 
       check(
-        tester.widgetList(find.text('Audio route changed')),
+        tester.widgetList(find.text('Audio switched to another device')),
       ).length.equals(0);
 
       final controller = _TestSessionDeviceController.lastInstance;
@@ -1460,14 +1460,80 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       check(
-        tester.widgetList(find.text('Audio route changed')),
+        tester.widgetList(find.text('Audio switched to another device')),
       ).length.equals(1);
       check(
-        tester.widgetList(
-          find.text('Audio is now routed to another output device.'),
-        ),
+        tester.widgetList(find.text('Your audio output has changed.')),
       ).length.equals(1);
     });
+
+    testWidgets(
+      'preempts a device notice with the latest audio route change and resumes it afterward',
+      (tester) async {
+        final notices = StreamController<MediaKind>.broadcast();
+        addTearDown(notices.close);
+        devices.deviceNeedsAttentionStream = notices.stream;
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 5),
+          ),
+          screen: RoomScreen.listening,
+          extraOverrides: [
+            sessionDeviceControllerProvider(
+              session,
+            ).overrideWith(_TestSessionDeviceController.new),
+          ],
+        );
+
+        notices.add(MediaKind.microphone);
+        await tester.pump(const Duration(seconds: 1));
+
+        final controller = _TestSessionDeviceController.lastInstance!;
+        // A frame is pumped between route changes.
+        // ignore: cascade_invocations
+        controller.emit(
+          const SessionDeviceState(
+            selectedCameraDeviceId: null,
+            selectedAudioOutputDeviceId: 'headphones',
+            isSpeakerphoneEnabled: false,
+            isMicrophoneEnabled: false,
+            isCameraEnabled: false,
+          ),
+        );
+        await tester.pump();
+        controller.emit(
+          const SessionDeviceState(
+            selectedCameraDeviceId: null,
+            selectedAudioOutputDeviceId: null,
+            isSpeakerphoneEnabled: true,
+            isMicrophoneEnabled: false,
+            isCameraEnabled: false,
+          ),
+        );
+        await tester.pump();
+
+        check(
+          tester.widgetList(find.text("Your microphone isn't on")),
+        ).isEmpty();
+        check(
+          tester.widgetList(find.text('Audio switched to another device')),
+        ).isEmpty();
+        check(
+          tester.widgetList(find.text('Audio switched to speakers')),
+        ).length.equals(1);
+
+        await tester.pump(const Duration(seconds: 8));
+        await tester.pump(const Duration(milliseconds: 600));
+
+        check(
+          tester.widgetList(find.text("Your microphone isn't on")),
+        ).length.equals(1);
+      },
+    );
 
     for (final (kind, problem, title) in [
       (MediaKind.microphone, DeviceProblem.lost, 'Your microphone stopped'),
@@ -1617,7 +1683,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       check(
-        tester.widgetList(find.text('Audio route changed')),
+        tester.widgetList(find.text('Audio switched to another device')),
       ).length.equals(0);
     });
   });

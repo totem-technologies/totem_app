@@ -194,6 +194,58 @@ void main() {
       await tester.pumpAndSettle();
       check(tester.widgetList(find.text('Auto dismiss'))).length.equals(0);
     });
+
+    notificationTest(
+      'urgent latest-wins notice preempts and replaces by category',
+      (tester) async {
+        final context = await pumpHost(tester);
+        final controller = createController(tester);
+
+        final active = controller.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Active',
+          message: 'Returns after the urgent notice',
+        );
+        controller.showPermanent(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Queued',
+          message: 'Stays queued behind the active notice',
+        );
+        await tester.pump();
+
+        controller.showTimed(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Route one',
+          message: 'Replaced by the latest route notice',
+          urgentLatestWinsCategory: 'audio-route',
+        );
+        await tester.pump();
+        check(tester.widgetList(find.text('Route one'))).length.equals(1);
+        check(tester.widgetList(find.text('Active'))).isEmpty();
+
+        final latest = controller.showTimed(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Route two',
+          message: 'The latest route notice',
+          urgentLatestWinsCategory: 'audio-route',
+        );
+        await tester.pump();
+        check(tester.widgetList(find.text('Route one'))).isEmpty();
+        check(tester.widgetList(find.text('Route two'))).length.equals(1);
+
+        latest.dismissActive();
+        await tester.pumpAndSettle();
+        check(tester.widgetList(find.text('Active'))).length.equals(1);
+
+        active.dismissActive();
+        await tester.pumpAndSettle();
+        check(tester.widgetList(find.text('Queued'))).length.equals(1);
+      },
+    );
   });
 
   group('NotificationController.showPermanent', () {

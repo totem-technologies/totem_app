@@ -371,6 +371,28 @@ void main() {
 
       check(devices.userSpeakerPreference).isTrue();
     });
+
+    test('a later manual speaker choice wins over a route in flight', () async {
+      final subscription = container.listen(
+        sessionDeviceControllerProvider(session),
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final firstRoute = Completer<void>();
+      media.onSpeakerOutputCommand = (preferred) =>
+          preferred ? firstRoute.future : Future.value();
+      final devices = controller();
+
+      final enable = devices.setSpeakerphone(true);
+      await pumpEventQueue();
+      final disable = devices.setSpeakerphone(false);
+      firstRoute.complete();
+      await Future.wait([enable, disable]);
+
+      check(media.speakerOutputCommands).deepEquals([true, false]);
+      check(media.isSpeakerOutputPreferred).isFalse();
+      check(devices.userSpeakerPreference).isFalse();
+    });
   });
 
   group('SessionDeviceController access', () {
