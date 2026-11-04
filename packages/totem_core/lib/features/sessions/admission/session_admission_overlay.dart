@@ -10,6 +10,7 @@ import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/admission_transport.dart';
+import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
@@ -123,12 +124,30 @@ class _SessionAdmissionOverlayState
     }
 
     final isKeeper = room.localParticipant?.identity == keeperIdentity;
+    final declinedIdentities = isKeeper
+        ? ref
+              .read(
+                declinedSessionParticipantsProvider(
+                  widget.sessionSlug,
+                  keeperIdentity,
+                ),
+              )
+              .value
+        : null;
+    // Do not approve anyone before the durable decline list is known.
+    if (isKeeper && declinedIdentities == null) {
+      if (_hasAdmission) unawaited(_detachAdmission());
+      return;
+    }
     final controllerActive = isKeeper
         ? _keeperController != null
         : _clientController != null;
     if (identical(_room, room) &&
         _keeperIdentity == keeperIdentity &&
         controllerActive) {
+      if (declinedIdentities != null) {
+        _keeperController?.setDeclinedIdentities(declinedIdentities);
+      }
       _keeperController?.setApprovalRequired(
         ref.read(sessionAdmissionSettingsProvider),
       );
@@ -150,6 +169,7 @@ class _SessionAdmissionOverlayState
         sessionIdentity: widget.sessionSlug,
         rosterStore: _rosterStoreFor(widget.sessionSlug),
         approvalRequired: ref.read(sessionAdmissionSettingsProvider),
+        declinedIdentities: declinedIdentities!,
       );
       _keeperController = controller;
       _syncAdmittedIdentities(controller.roster);
@@ -239,12 +259,21 @@ class _SessionAdmissionOverlayState
     });
   }
 
-  Future<void> _decide(AdmissionRequest request, bool approve) async {
+  Future<void> _decide(
+    AdmissionRequest request,
+    bool approve, {
+    bool permanently = false,
+  }) async {
     final controller = _keeperController;
     if (controller == null || _busy) return;
     setState(() => _busy = true);
     try {
-      await _sendDecision(controller, request, approve);
+      await _sendDecision(
+        controller,
+        request,
+        approve,
+        permanently: permanently,
+      );
     } finally {
       if (mounted && identical(_keeperController, controller)) {
         setState(() => _busy = false);
@@ -271,11 +300,24 @@ class _SessionAdmissionOverlayState
   Future<void> _sendDecision(
     KeeperAdmissionController controller,
     AdmissionRequest request,
-    bool approve,
-  ) async {
+    bool approve, {
+    bool permanently = false,
+  }) async {
     try {
       if (approve) {
         await controller.approve(request.id, request.senderIdentity);
+      } else if (permanently) {
+        final declined = ref.read(
+          declinedSessionParticipantsProvider(
+            widget.sessionSlug,
+            controller.channel.localIdentity,
+          ).notifier,
+        );
+        await controller.denyPermanently(
+          request.id,
+          request.senderIdentity,
+          () => declined.decline(request.senderIdentity),
+        );
       } else {
         await controller.deny(request.id, request.senderIdentity);
       }
@@ -331,10 +373,57 @@ class _SessionAdmissionOverlayState
 
   @override
   Widget build(BuildContext context) {
+    final keeper = ref.watch(keeperIdentityProvider);
+    if (keeper != null &&
+        ref.read(currentSessionProvider)?.room?.localParticipant?.identity ==
+            keeper) {
+      final provider = declinedSessionParticipantsProvider(
+        widget.sessionSlug,
+        keeper,
+      );
+      ref.listen(provider, (_, _) => _syncAdmission());
+      final declined = ref.watch(provider);
+      if (declined.hasError && !declined.hasValue) {
+        return Positioned(
+          top: 16,
+          left: 16,
+          right: 16,
+          child: SafeArea(
+            child: Material(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Could not load declined participants. Admission is paused.',
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => ref.invalidate(provider),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
     final controller = _keeperController;
+    final attempts =
+        controller?.attempts
+            .where(
+              (attempt) => !controller.isPermanentlyDeclined(
+                attempt.request.senderIdentity,
+              ),
+            )
+            .toList() ??
+        const <KeeperAdmissionAttempt>[];
     if (controller == null ||
         !controller.approvalRequired ||
-        controller.attempts.isEmpty) {
+        attempts.isEmpty) {
       // The room Stack has only positioned video children; keep it expanded
       // even when the queue has nothing to display.
       return const SizedBox.expand();
@@ -346,7 +435,7 @@ class _SessionAdmissionOverlayState
             count: controller.requests.length,
             label:
                 controller.requests.isEmpty &&
-                    controller.attempts.any(
+                    attempts.any(
                       (attempt) =>
                           attempt.status == KeeperAdmissionStatus.joining,
                     )
@@ -356,10 +445,12 @@ class _SessionAdmissionOverlayState
           )
         : KeeperAdmissionPanel(
             requests: controller.requests,
-            attempts: controller.attempts,
+            attempts: attempts,
             busy: _busy,
             desktop: desktop,
             onDecision: _decide,
+            onDeclinePermanently: (request) =>
+                _decide(request, false, permanently: true),
             onAdmitAll: () => unawaited(_admitAll()),
             onClose: () => setState(() => _dismissed = true),
           );

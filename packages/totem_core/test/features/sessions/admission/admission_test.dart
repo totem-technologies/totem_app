@@ -2113,4 +2113,181 @@ void main() {
     await Future<void>.value();
     check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
   });
+
+  test(
+    'permanent denial saves before sending and remains retryable on failure',
+    () async {
+      final channel = _Channel('keeper');
+      final keeper = KeeperAdmissionController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+      );
+      addTearDown(() async {
+        await keeper.dispose();
+        await channel.dispose();
+      });
+      AdmissionRequest request(String id) => AdmissionRequest(
+        id: id,
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        displayName: 'Guest',
+      );
+
+      final first = request('first');
+      channel.controller.add(AdmissionPacketReceived(first));
+      final saved = Completer<void>();
+      var saveStarted = false;
+      final denial = keeper.denyPermanently(first.id, 'guest', () {
+        saveStarted = true;
+        return saved.future;
+      });
+      check(saveStarted).isTrue();
+      check(channel.sent.whereType<AdmissionDecision>()).isEmpty();
+      await check(keeper.deny(first.id, 'guest')).throws<StateError>();
+      saved.complete();
+      await denial;
+      check(
+        channel.sent.whereType<AdmissionDecision>().single.approved,
+      ).isFalse();
+
+      final second = request('second');
+      channel.controller.add(AdmissionPacketReceived(second));
+      await check(
+        keeper.denyPermanently(second.id, 'guest', () async {
+          throw StateError('storage unavailable');
+        }),
+      ).throws<StateError>();
+      check(keeper.requests.single.id).equals(second.id);
+      check(
+        channel.sent.whereType<AdmissionDecision>().where(
+          (d) => d.id == second.id,
+        ),
+      ).isEmpty();
+      await keeper.denyPermanently(second.id, 'guest', () async {});
+      check(
+        channel.sent.whereType<AdmissionDecision>().last.id,
+      ).equals(second.id);
+    },
+  );
+
+  test('blocked identities are denied automatically until removed', () async {
+    final channel = _Channel('keeper');
+    final keeper = KeeperAdmissionController(
+      channel: channel,
+      keeperIdentity: () => 'keeper',
+      declinedIdentities: {'guest'},
+    );
+    addTearDown(() async {
+      await keeper.dispose();
+      await channel.dispose();
+    });
+    AdmissionRequest request(String id, int offset) => AdmissionRequest(
+      id: id,
+      senderIdentity: 'guest',
+      recipientIdentity: 'keeper',
+      expiresAt: DateTime.now().add(Duration(minutes: offset)),
+      displayName: 'Guest',
+    );
+
+    check(keeper.isPermanentlyDeclined('other')).isFalse();
+    final first = request('first', 1);
+    channel.controller.add(AdmissionPacketReceived(first));
+    await pumpEventQueue();
+    check(keeper.requests).isEmpty();
+    check(
+      channel.sent.whereType<AdmissionDecision>().single.approved,
+    ).isFalse();
+    await check(keeper.approve(first.id, 'guest')).throws<StateError>();
+
+    final second = request('second', 2);
+    channel.controller.add(AdmissionPacketReceived(second));
+    await pumpEventQueue();
+    check(keeper.requests).isEmpty();
+    check(channel.sent.whereType<AdmissionDecision>()).length.equals(2);
+    check(
+      channel.sent.whereType<AdmissionDecision>().last.id,
+    ).equals(second.id);
+    check(channel.sent.whereType<AdmissionDecision>().last.approved).isFalse();
+
+    keeper.setDeclinedIdentities({});
+    check(keeper.isPermanentlyDeclined('guest')).isFalse();
+    channel.controller.add(AdmissionPacketReceived(second));
+    await pumpEventQueue();
+    check(channel.sent.whereType<AdmissionDecision>()).length.equals(3);
+    check(
+      channel.sent.whereType<AdmissionDecision>().last.id,
+    ).equals(second.id);
+    check(channel.sent.whereType<AdmissionDecision>().last.approved).isFalse();
+
+    final third = request('third', 3);
+    channel.controller.add(AdmissionPacketReceived(third));
+    check(keeper.requests.single.id).equals(third.id);
+    await keeper.approve(third.id, 'guest');
+    check(channel.sent.whereType<AdmissionDecision>().last.approved).isTrue();
+  });
+
+  test(
+    'blocklist updates override open admission and reject a superseded save',
+    () async {
+      final channel = _Channel('keeper');
+      final keeper = KeeperAdmissionController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+        approvalRequired: false,
+      );
+      addTearDown(() async {
+        await keeper.dispose();
+        await channel.dispose();
+      });
+      final first = AdmissionRequest(
+        id: 'first',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        displayName: 'Guest',
+      );
+      keeper.setDeclinedIdentities({'guest'});
+      channel.controller.add(AdmissionPacketReceived(first));
+      await pumpEventQueue();
+      check(keeper.requests).isEmpty();
+      check(
+        channel.sent.whereType<AdmissionDecision>().single.approved,
+      ).isFalse();
+
+      keeper
+        ..setDeclinedIdentities({})
+        ..setApprovalRequired(true);
+      final pending = AdmissionRequest(
+        id: 'pending',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: DateTime.now().add(const Duration(minutes: 2)),
+        displayName: 'Guest',
+      );
+      channel.controller.add(AdmissionPacketReceived(pending));
+      final saved = Completer<void>();
+      final denial = keeper.denyPermanently(
+        pending.id,
+        'guest',
+        () => saved.future,
+      );
+      final replacement = AdmissionRequest(
+        id: 'replacement',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: DateTime.now().add(const Duration(minutes: 3)),
+        displayName: 'Guest',
+      );
+      channel.controller.add(AdmissionPacketReceived(replacement));
+      saved.complete();
+      await check(denial).throws<StateError>();
+      check(keeper.requests.single.id).equals(replacement.id);
+      check(
+        channel.sent.whereType<AdmissionDecision>().where(
+          (decision) => decision.id == pending.id,
+        ),
+      ).isEmpty();
+    },
+  );
 }

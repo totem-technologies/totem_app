@@ -272,10 +272,12 @@ class KeeperAdmissionController {
     String? keeperGeneration,
     KeeperAdmissionRosterStore? rosterStore,
     this._approvalRequired = true,
+    Set<String> declinedIdentities = const {},
     DateTime Function()? now,
     String Function()? newId,
   }) : _sessionIdentity = sessionIdentity ?? '',
 
+       _declinedIdentities = Set.of(declinedIdentities),
        _rosterStore = rosterStore,
        _keeperGeneration =
            keeperGeneration ??
@@ -328,16 +330,37 @@ class KeeperAdmissionController {
   bool _disposed = false;
   bool _ended;
   bool _approvalRequired;
+  Set<String> _declinedIdentities;
+
+  bool isPermanentlyDeclined(String identity) =>
+      _declinedIdentities.contains(identity);
+
+  void setDeclinedIdentities(Set<String> identities) {
+    if (_disposed ||
+        _ended ||
+        (_declinedIdentities.length == identities.length &&
+            _declinedIdentities.containsAll(identities))) {
+      return;
+    }
+    _declinedIdentities = Set.of(identities);
+    _pending.keys.toList().forEach(_applyAutomaticDecision);
+    _changes.add(null);
+  }
 
   bool get approvalRequired => _approvalRequired;
   Stream<void> get changes => _changes.stream;
-  List<AdmissionRequest> get requests =>
-      _approvalRequired ? List.unmodifiable(_pending.values) : const [];
+  List<AdmissionRequest> get requests => _approvalRequired
+      ? List.unmodifiable(
+          _pending.values.where(
+            (request) => !isPermanentlyDeclined(request.senderIdentity),
+          ),
+        )
+      : const [];
 
   void setApprovalRequired(bool required) {
     if (_disposed || _ended || _approvalRequired == required) return;
     _approvalRequired = required;
-    if (!required) _pending.keys.toList().forEach(_approveAutomatically);
+    if (!required) _pending.keys.toList().forEach(_applyAutomaticDecision);
     _changes.add(null);
   }
 
@@ -457,11 +480,11 @@ class KeeperAdmissionController {
     switch (event) {
       case AdmissionConnectionRestored():
         _advertise();
-        _pending.keys.toList().forEach(_approveAutomatically);
+        _pending.keys.toList().forEach(_applyAutomaticDecision);
       case AdmissionPresenceChanged(:final identity, present: true):
         _advertiseTo(identity);
         _resendDecision(identity);
-        _approveAutomatically(identity);
+        _applyAutomaticDecision(identity);
       case AdmissionPresenceChanged(:final identity, present: false):
         // A reconnecting participant can re-advertise this same request.
         if (_pending.remove(identity) case final request?) {
@@ -517,7 +540,7 @@ class KeeperAdmissionController {
               KeeperAdmissionStatus.requested,
             );
             _changes.add(null);
-            _approveAutomatically(sender);
+            _applyAutomaticDecision(sender);
           }
         }
       default:
@@ -525,19 +548,22 @@ class KeeperAdmissionController {
     }
   }
 
-  void _approveAutomatically(String identity) {
+  void _applyAutomaticDecision(String identity) {
     final request = _pending[identity];
     if (_disposed ||
         _ended ||
         keeperIdentity() != channel.localIdentity ||
-        _approvalRequired ||
         request == null ||
         _inFlight.contains(_key(identity, request.id))) {
       return;
     }
-    // Open admission skips the Keeper decision, not connection activation or
-    // the joined receipt required to enter the presentation roster.
-    unawaited(approve(request.id, identity).catchError((Object _) {}));
+    final declined = isPermanentlyDeclined(identity);
+    if (!declined && _approvalRequired) return;
+    // A durable decline takes precedence over open admission. Approval still
+    // requires activation and a joined receipt before presentation.
+    unawaited(
+      _decide(request.id, identity, !declined).catchError((Object _) {}),
+    );
   }
 
   void _receiveRosterRequest(AdmissionRosterRequest request) {
@@ -610,7 +636,7 @@ class KeeperAdmissionController {
       }
     }
     _changes.add(null);
-    if (packet is AdmissionRequest) _approveAutomatically(sender);
+    if (packet is AdmissionRequest) _applyAutomaticDecision(sender);
   }
 
   void _receiveOutcome(AdmissionPacket packet) {
@@ -678,9 +704,23 @@ class KeeperAdmissionController {
   Future<void> deny(String requestId, String participantIdentity) =>
       _decide(requestId, participantIdentity, false);
 
-  Future<void> _decide(String id, String sender, bool approved) async {
+  Future<void> denyPermanently(
+    String requestId,
+    String identity,
+    Future<void> Function() saveDecline,
+  ) => _decide(requestId, identity, false, beforeDecision: saveDecline);
+
+  Future<void> _decide(
+    String id,
+    String sender,
+    bool approved, {
+    Future<void> Function()? beforeDecision,
+  }) async {
     if (_disposed || _ended || keeperIdentity() != channel.localIdentity) {
       throw StateError('Not the current keeper');
+    }
+    if (approved && isPermanentlyDeclined(sender)) {
+      throw StateError('Participant has been permanently declined');
     }
     final request = _pending[sender];
     if (request == null ||
@@ -692,6 +732,16 @@ class KeeperAdmissionController {
     if (!_inFlight.add(key)) throw StateError('Decision already in progress');
     if (approved) _approving.add(key);
     try {
+      if (beforeDecision != null) {
+        await beforeDecision();
+        if (_disposed ||
+            _ended ||
+            keeperIdentity() != channel.localIdentity ||
+            !identical(_pending[sender], request) ||
+            !_now().isBefore(request.expiresAt)) {
+          throw StateError('Request changed while saving the decline');
+        }
+      }
       final decision = AdmissionDecision(
         id: id,
         senderIdentity: channel.localIdentity,

@@ -8,6 +8,8 @@ import 'package:totem_core/features/sessions/widgets/session_admission_list.dart
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
+enum _DeclineAction { once, permanently }
+
 /// The Widgetbook admission list hosted above the existing live Session UI.
 class KeeperAdmissionPanel extends StatelessWidget {
   const KeeperAdmissionPanel({
@@ -18,6 +20,7 @@ class KeeperAdmissionPanel extends StatelessWidget {
     required this.busy,
     required this.desktop,
     this.attempts = const [],
+    this.onDeclinePermanently,
     super.key,
   });
 
@@ -25,6 +28,7 @@ class KeeperAdmissionPanel extends StatelessWidget {
   final List<KeeperAdmissionAttempt> attempts;
   final Future<void> Function(AdmissionRequest request, bool approve)
   onDecision;
+  final Future<void> Function(AdmissionRequest request)? onDeclinePermanently;
   final VoidCallback onAdmitAll;
   final VoidCallback onClose;
   final bool busy;
@@ -91,19 +95,35 @@ class KeeperAdmissionPanel extends StatelessWidget {
                     final request = requests.firstWhere(
                       (request) => request.id == id,
                     );
-                    final confirmed = await showDialog<bool>(
+                    final action = await showDialog<_DeclineAction>(
                       context: context,
                       useRootNavigator: false,
                       builder: (dialogContext) => ConfirmationDialog(
                         content:
-                            'Are you sure you want to decline ${request.displayName}?',
+                            'Are you sure you want to decline ${request.displayName}?'
+                            '${onDeclinePermanently == null ? '' : '\n\nDecline Permanently also declines future requests for this Session. You can undo this in Declined Participants.'}',
+                        scrollable: true,
                         confirmButtonText: 'Decline',
-                        onConfirm: () async =>
-                            Navigator.of(dialogContext).pop(true),
+                        onConfirm: () async => Navigator.of(
+                          dialogContext,
+                        ).pop(_DeclineAction.once),
+                        extraButtons: [
+                          if (onDeclinePermanently != null)
+                            ConfirmationDialogButton.outlined(
+                              type: ConfirmationDialogType.destructive,
+                              onConfirm: () async => Navigator.of(
+                                dialogContext,
+                              ).pop(_DeclineAction.permanently),
+                              child: const Text('Decline Permanently'),
+                            ),
+                        ],
                       ),
                     );
-                    if (confirmed == true && context.mounted) {
+                    if (!context.mounted) return;
+                    if (action == _DeclineAction.once) {
                       await onDecision(request, false);
+                    } else if (action == _DeclineAction.permanently) {
+                      await onDeclinePermanently?.call(request);
                     }
                   },
                   onAdmitAll: onAdmitAll,

@@ -8,7 +8,7 @@ WIDGETBOOK_DIR := packages/totem_widgetbook
 WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
 NATIVE_FLUTTER ?= fvm flutter
 NATIVE_DART ?= fvm dart
-WEB_FLUTTER ?= fvm spawn 3.50.0-0.2.pre
+WEB_FLUTTER ?= fvm flutter
 WEB_DART ?= fvm dart
 
 # Each Flutter suite also runs test files concurrently. Bound package-level

@@ -8,6 +8,7 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -25,6 +26,14 @@ import '../media/fake_local_media.dart';
 import '../media/test_participants.dart';
 import '../session_test_fixtures.dart';
 import '../session_test_mocks.dart';
+
+class _FakeSessionAdmissionPreferences implements SessionAdmissionPreferences {
+  @override
+  String? getString(String key) => null;
+
+  @override
+  Future<bool> setString(String key, String value) async => true;
+}
 
 class _TestSessionDeviceController extends SessionDeviceController {
   _TestSessionDeviceController([this.deviceState = _defaultState]);
@@ -75,6 +84,9 @@ Future<void> _pumpMoreOptions(
         ),
         currentSessionProvider.overrideWith((ref) => session),
         currentSessionStateProvider.overrideWithValue(state),
+        sessionAdmissionPreferencesProvider.overrideWith(
+          (ref) async => _FakeSessionAdmissionPreferences(),
+        ),
         admittedSessionParticipantIdentitiesProvider.overrideWith(
           () => TestAdmittedSessionParticipantIdentities({
             state.roomState.keeper,
@@ -210,7 +222,62 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('is not available to non-keepers', (tester) async {
+    testWidgets('opens declined participants for keepers', (tester) async {
+      final state = _sessionState(
+        roomState: const RoomState(
+          keeper: 'keeper-1',
+          nextSpeaker: Omittable('user-2'),
+          currentSpeaker: Omittable('user-1'),
+          status: RoomStatus.active,
+          turnState: TurnState.idle,
+          sessionSlug: 'test-session',
+          statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+          talkingOrder: ['user-1', 'user-2'],
+          version: 1,
+          roundNumber: 1,
+        ),
+      );
+
+      await _pumpMoreOptions(
+        tester,
+        session: session,
+        state: state,
+        deviceController: deviceController,
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MoreOptions)),
+      );
+      final provider = declinedSessionParticipantsProvider(
+        'test-session',
+        'keeper-1',
+      );
+      await container.read(provider.future);
+      await container.read(provider.notifier).decline('user-1');
+      await tester.pump();
+
+      check(
+        tester.widgetList(find.text('Declined Participants (1)')),
+      ).length.equals(1);
+      await tester.tap(find.text('Declined Participants (1)'));
+      await tester.pumpAndSettle();
+
+      check(
+        tester.widgetList(find.text('Declined Participants')),
+      ).length.equals(
+        1,
+      );
+      check(tester.widgetList(find.text('User user-1'))).length.equals(1);
+
+      await tester.tap(
+        find.byKey(const Key('close-declined-participants-modal')),
+      );
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+
+    testWidgets('are not available to non-keepers', (tester) async {
       when(() => session.isCurrentUserKeeper()).thenReturn(false);
       final state = _sessionState(
         roomState: const RoomState(
@@ -235,6 +302,7 @@ void main() {
       );
 
       check(tester.widgetList(find.text('Require approval to join'))).isEmpty();
+      check(tester.widgetList(find.text('Declined Participants'))).isEmpty();
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
       await tester.pump();

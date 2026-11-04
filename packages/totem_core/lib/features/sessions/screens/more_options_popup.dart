@@ -9,6 +9,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
     show RoomStatus, SessionDetailSchema, TurnState;
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
@@ -18,6 +19,7 @@ import 'package:totem_core/features/sessions/media/media_platform.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/banned_participants_modal.dart';
+import 'package:totem_core/features/sessions/widgets/declined_participants_modal.dart';
 import 'package:totem_core/features/sessions/widgets/participant_reorder_modal.dart';
 import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
 import 'package:totem_core/shared/extensions.dart';
@@ -93,6 +95,17 @@ class MoreOptions extends ConsumerWidget {
     final isAdmissionEnabled = ref.watch(sessionAdmissionSettingsProvider);
 
     final isKeeper = currentSession.isCurrentUserKeeper();
+    final declinedParticipants = isKeeper
+        ? ref.watch(
+            declinedSessionParticipantsProvider(
+              session.slug,
+              state.roomState.keeper,
+            ),
+          )
+        : null;
+    final declinedParticipantsCount = declinedParticipants?.hasValue == true
+        ? declinedParticipants!.value!.length
+        : 0;
 
     Widget buildContent([ScrollController? scrollController]) {
       final cameraTile = MoreOptionsTile.camera(deviceState.cameraFacing, () {
@@ -199,6 +212,20 @@ class MoreOptions extends ConsumerWidget {
                       sessionState,
                     );
                   }
+                },
+              ),
+              MoreOptionsTile<void>(
+                title:
+                    'Declined Participants'
+                    '${declinedParticipantsCount > 0 ? ' ($declinedParticipantsCount)' : ''}',
+                icon: TotemIcons.removePerson,
+                onTap: () {
+                  final navigator = Navigator.of(context)..pop();
+                  showDeclinedParticipantsModal(
+                    navigator.context,
+                    sessionSlug: session.slug,
+                    keeperIdentity: state.roomState.keeper,
+                  );
                 },
               ),
               if (state.roomState.status != mobile_api.RoomStatus.ended)
@@ -683,12 +710,13 @@ class MoreOptionsTile<T> extends StatelessWidget {
     }
     return ListTile(
       leading: SizedBox.square(dimension: 24, child: TotemIcon(icon, size: 24)),
-      title: AutoSizeText(
+      title: Text(
         options?.length == 1
             ? optionToString?.call(options!.first) ?? options!.first.toString()
             : title,
         style: const TextStyle(fontSize: 16),
-        maxLines: 1,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       ),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),

@@ -2,14 +2,15 @@ import 'dart:async';
 
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
+import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
@@ -22,6 +23,21 @@ import 'package:totem_core/features/sessions/widgets/session_waiting_queue_butto
 
 import '../livekit_mocks.dart';
 import '../session_test_mocks.dart';
+
+class _AdmissionPreferences implements SessionAdmissionPreferences {
+  _AdmissionPreferences({this.preloadedValue});
+
+  final String? preloadedValue;
+  final values = <String, String>{};
+
+  @override
+  String? getString(String key) => values[key] ?? preloadedValue;
+  @override
+  Future<bool> setString(String key, String value) async {
+    values[key] = value;
+    return true;
+  }
+}
 
 class _AdmissionRoom extends FakeRoom {
   _AdmissionRoom(super.participant);
@@ -161,7 +177,7 @@ void main() {
   });
 
   testWidgets(
-    'updates and toggles the keeper queue without rebuilding video',
+    'lays out the keeper queue and handles admission choices without rebuilding video',
     (tester) async {
       final videoBuilds = ValueNotifier(0);
       final layouts = ValueNotifier(
@@ -173,6 +189,7 @@ void main() {
       addTearDown(videoBuilds.dispose);
       addTearDown(layouts.dispose);
       final participant = MockLocalParticipant('keeper');
+      final preferences = _AdmissionPreferences();
       final sent = <AdmissionPacket>[];
       when(
         () => participant.publishData(
@@ -217,6 +234,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            sessionAdmissionPreferencesProvider.overrideWith(
+              (ref) async => preferences,
+            ),
             currentSessionProvider.overrideWith((ref) => session),
             currentSessionStateProvider.overrideWithValue(state),
             currentSessionEventProvider.overrideWith((ref) => null),
@@ -240,20 +260,25 @@ void main() {
       await tester.pump();
       check(videoBuilds.value).equals(1);
 
-      final request = AdmissionRequest(
-        id: 'request',
-        senderIdentity: 'guest',
-        recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
-        displayName: 'Guest',
-      );
-      await room.listener.trigger(
-        DataReceivedEvent(
-          data: AdmissionProtocol.encode(request),
-          participant: _RemoteParticipant('guest'),
-          topic: AdmissionProtocol.topic,
-        ),
-      );
+      AdmissionRequest request(String id, int expiryMinutes) =>
+          AdmissionRequest(
+            id: id,
+            senderIdentity: 'guest',
+            recipientIdentity: 'keeper',
+            expiresAt: DateTime.now().add(Duration(minutes: expiryMinutes)),
+            displayName: 'Guest',
+          );
+      Future<void> sendRequest(AdmissionRequest request) =>
+          room.listener.trigger(
+            DataReceivedEvent(
+              data: AdmissionProtocol.encode(request),
+              participant: _RemoteParticipant('guest'),
+              topic: AdmissionProtocol.topic,
+            ),
+          );
+
+      final initialRequest = request('request', 1);
+      await sendRequest(initialRequest);
       await tester.pump();
       await tester.pump();
 
@@ -311,22 +336,64 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(SessionAdmissionOverlay)),
       );
+      await tester.tap(find.byType(SessionWaitingQueueButton));
+      await tester.pump();
+      await tester.tap(find.text('Decline'));
+      await tester.pump();
+      await tester.tap(find.text('Decline Permanently'));
+      await tester.pump();
+      await tester.pump();
+
+      final declined = declinedSessionParticipantsProvider('session', 'keeper');
+      check(container.read(declined).requireValue).contains('guest');
+      check(preferences.values.values.single).contains('guest');
+      check(
+        sent
+            .whereType<AdmissionDecision>()
+            .singleWhere((decision) => decision.id == initialRequest.id)
+            .approved,
+      ).isFalse();
+
       container
           .read(sessionAdmissionSettingsProvider.notifier)
           .setEnabled(false);
       await tester.pump();
+      final blockedRequest = request('blocked-request', 2);
+      await sendRequest(blockedRequest);
+      await tester.pump();
       await tester.pump();
       check(find.byType(SessionWaitingQueueButton).evaluate()).isEmpty();
       check(find.byType(KeeperAdmissionPanel).evaluate()).isEmpty();
-      check(sent.whereType<AdmissionDecision>().single.approved).isTrue();
+      check(
+        sent
+            .whereType<AdmissionDecision>()
+            .singleWhere((decision) => decision.id == blockedRequest.id)
+            .approved,
+      ).isFalse();
+
+      await container.read(declined.notifier).allow('guest');
+      await tester.pump();
+      final automaticRequest = request('automatic-request', 3);
+      await sendRequest(automaticRequest);
+      await tester.pump();
+      await tester.pump();
+      check(
+        sent
+            .whereType<AdmissionDecision>()
+            .singleWhere((decision) => decision.id == automaticRequest.id)
+            .approved,
+      ).isTrue();
       check(
         container
             .read(admittedSessionParticipantIdentitiesProvider)
             .contains('guest'),
       ).isFalse();
+      check(find.byType(KeeperAdmissionPanel).evaluate()).isEmpty();
       await room.listener.trigger(
         DataReceivedEvent(
-          data: AdmissionProtocol.encode(AdmissionProtocol.joined(request)),
+          data: AdmissionProtocol.encode(
+            AdmissionProtocol.joined(automaticRequest),
+          ),
           participant: _RemoteParticipant('guest'),
           topic: AdmissionProtocol.topic,
         ),
@@ -335,6 +402,128 @@ void main() {
       check(
         container.read(admittedSessionParticipantIdentitiesProvider),
       ).contains('guest');
+
+      container
+          .read(sessionAdmissionSettingsProvider.notifier)
+          .setEnabled(true);
+      await tester.pump();
+      final manualRequest = request('manual-request', 4);
+      await sendRequest(manualRequest);
+      await tester.pump();
+      await tester.pump();
+      check(
+        container
+            .read(admittedSessionParticipantIdentitiesProvider)
+            .contains('guest'),
+      ).isFalse();
+      check(find.text('Decline').evaluate()).length.equals(1);
+
+      await tester.pump(const Duration(minutes: 5));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+  );
+
+  testWidgets(
+    'reopens open admission only after persisted declines initialize',
+    (tester) async {
+      final preferencesReady = Completer<SessionAdmissionPreferences>();
+      final preferences = _AdmissionPreferences(preloadedValue: '["guest"]');
+      final participant = MockLocalParticipant('keeper');
+      final sent = <AdmissionPacket>[];
+      when(
+        () => participant.publishData(
+          any(),
+          reliable: any(named: 'reliable'),
+          topic: any(named: 'topic'),
+          destinationIdentities: any(named: 'destinationIdentities'),
+        ),
+      ).thenAnswer((invocation) async {
+        final packet = AdmissionProtocol.decode(
+          invocation.positionalArguments.single as List<int>,
+          senderIdentity: 'keeper',
+          now: DateTime.now(),
+        );
+        if (packet != null) sent.add(packet);
+      });
+      final room = _AdmissionRoom(participant);
+      final session = _SessionController();
+      final state = MockSessionRoomState();
+      when(() => session.room).thenReturn(room);
+      when(() => state.connection).thenReturn(
+        const session_state.ConnectionState(
+          phase: session_state.SessionPhase.connected,
+          state: session_state.RoomConnectionState.connected,
+        ),
+      );
+      when(() => state.roomState).thenReturn(
+        const RoomState(
+          keeper: 'keeper',
+          nextSpeaker: Omittable(''),
+          currentSpeaker: Omittable(''),
+          status: RoomStatus.active,
+          turnState: TurnState.idle,
+          sessionSlug: 'session',
+          statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+          talkingOrder: [],
+          version: 1,
+          roundNumber: 1,
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sessionAdmissionPreferencesProvider.overrideWith(
+              (ref) => preferencesReady.future,
+            ),
+            currentSessionProvider.overrideWith((ref) => session),
+            currentSessionStateProvider.overrideWithValue(state),
+            currentSessionEventProvider.overrideWith((ref) => null),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: Stack(
+                children: [SessionAdmissionOverlay(sessionSlug: 'session')],
+              ),
+            ),
+          ),
+        ),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SessionAdmissionOverlay)),
+      );
+      container
+          .read(sessionAdmissionSettingsProvider.notifier)
+          .setEnabled(false);
+      await tester.pump();
+      check(sent.whereType<AdmissionDecision>()).isEmpty();
+
+      preferencesReady.complete(preferences);
+      await tester.pump();
+      await tester.pump();
+
+      final request = AdmissionRequest(
+        id: 'blocked-request',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        displayName: 'Guest',
+      );
+      await room.listener.trigger(
+        DataReceivedEvent(
+          data: AdmissionProtocol.encode(request),
+          participant: _RemoteParticipant('guest'),
+          topic: AdmissionProtocol.topic,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final decisions = sent.whereType<AdmissionDecision>().toList();
+      check(decisions).length.equals(1);
+      check(decisions.single.approved).isFalse();
 
       await tester.pump(const Duration(minutes: 1));
       await tester.pumpWidget(const SizedBox.shrink());
