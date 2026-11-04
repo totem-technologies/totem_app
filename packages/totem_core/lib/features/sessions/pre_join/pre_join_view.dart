@@ -9,7 +9,7 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
-import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
+
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/circle_icon_button.dart';
@@ -27,7 +27,6 @@ class PreJoinView extends StatelessWidget {
     required this.joinCard,
     required this.previewKey,
     required this.controlsKey,
-    this.waiting = false,
     this.onLeave,
     this.notice,
     super.key,
@@ -38,7 +37,6 @@ class PreJoinView extends StatelessWidget {
   final Widget joinCard;
   final GlobalKey previewKey;
   final GlobalKey controlsKey;
-  final bool waiting;
   final VoidCallback? onLeave;
 
   /// Shown above [joinCard], such as what's needed before joining.
@@ -100,16 +98,7 @@ class PreJoinView extends StatelessWidget {
         ),
       ),
     );
-    if (waiting) {
-      return SafeArea(
-        child: SessionWaitingView(
-          preview: cameraPreview,
-          controls: actionBar,
-          card: joinCard,
-          onLeave: onLeave,
-        ),
-      );
-    }
+
     return RoomBackground(
       overlayStyle: SystemUiOverlayStyle.dark,
       child: SafeArea(
@@ -121,7 +110,8 @@ class PreJoinView extends StatelessWidget {
               margin: const EdgeInsetsDirectional.only(start: 20, top: 20),
               icon: TotemIcons.arrowBack,
               tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              onPressed: () => TotemRouter.instance.popOrHome(context),
+              onPressed:
+                  onLeave ?? () => TotemRouter.instance.popOrHome(context),
             ),
           ),
           extendBodyBehindAppBar: false,

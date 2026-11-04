@@ -1,6 +1,9 @@
 import 'package:checks/checks.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/widgets/session_admission_list.dart';
@@ -87,19 +90,29 @@ void main() {
     );
     var declines = 0;
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: KeeperAdmissionPanel(
-            requests: [request],
-            onDecision: (selected, approve) async {
-              check(selected).equals(request);
-              check(approve).isFalse();
-              declines++;
-            },
-            onAdmitAll: () {},
-            onClose: () {},
-            busy: false,
-            desktop: false,
+      ProviderScope(
+        overrides: [
+          userProfileProvider('guest-7').overrideWith(
+            (ref) => PublicUserSchema(
+              profileAvatarType: ProfileAvatarTypeEnum.td,
+              dateCreated: DateTime.utc(2024),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: KeeperAdmissionPanel(
+              requests: [request],
+              onDecision: (selected, approve) async {
+                check(selected).equals(request);
+                check(approve).isFalse();
+                declines++;
+              },
+              onAdmitAll: () {},
+              onClose: () {},
+              busy: false,
+              desktop: false,
+            ),
           ),
         ),
       ),

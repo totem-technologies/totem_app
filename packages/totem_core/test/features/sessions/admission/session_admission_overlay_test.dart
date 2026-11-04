@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
@@ -14,6 +16,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart'
     as session_state;
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
 
 import '../livekit_mocks.dart';
@@ -83,6 +86,59 @@ class _VideoPlaceholderState extends State<_VideoPlaceholder> {
   }
 }
 
+class _AdmissionOverlayLayout {
+  const _AdmissionOverlayLayout({
+    required this.viewport,
+    required this.stackSize,
+  });
+
+  final Size viewport;
+  final Size stackSize;
+}
+
+class _AdmissionOverlayHost extends StatelessWidget {
+  const _AdmissionOverlayHost({
+    required this.layouts,
+    required this.videoBuilds,
+  });
+
+  final ValueListenable<_AdmissionOverlayLayout> layouts;
+  final ValueNotifier<int> videoBuilds;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<_AdmissionOverlayLayout>(
+      valueListenable: layouts,
+      builder: (context, layout, _) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(size: layout.viewport),
+          child: Center(
+            child: SizedBox(
+              key: const Key('admission-overlay-test-stack'),
+              width: layout.stackSize.width,
+              height: layout.stackSize.height,
+              child: Stack(
+                children: [
+                  _VideoPlaceholder(videoBuilds),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SizedBox(
+                      key: SessionActionBar.actionBarKey,
+                      height: 64,
+                      width: 300,
+                    ),
+                  ),
+                  const SessionAdmissionOverlay(sessionSlug: 'session'),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 void main() {
   testWidgets('fails closed without an active session roster', (tester) async {
     await tester.pumpWidget(
@@ -107,7 +163,14 @@ void main() {
     'updates and toggles the keeper queue without rebuilding video',
     (tester) async {
       final videoBuilds = ValueNotifier(0);
+      final layouts = ValueNotifier(
+        const _AdmissionOverlayLayout(
+          viewport: Size(400, 800),
+          stackSize: Size(320, 500),
+        ),
+      );
       addTearDown(videoBuilds.dispose);
+      addTearDown(layouts.dispose);
       final participant = MockLocalParticipant('keeper');
       final room = _AdmissionRoom(participant);
       final session = _SessionController();
@@ -140,14 +203,18 @@ void main() {
             currentSessionProvider.overrideWith((ref) => session),
             currentSessionStateProvider.overrideWithValue(state),
             currentSessionEventProvider.overrideWith((ref) => null),
+            userProfileProvider('guest').overrideWith(
+              (ref) => PublicUserSchema(
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                dateCreated: DateTime(2024),
+              ),
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: Stack(
-                children: [
-                  _VideoPlaceholder(videoBuilds),
-                  const SessionAdmissionOverlay(sessionSlug: 'session'),
-                ],
+              body: _AdmissionOverlayHost(
+                layouts: layouts,
+                videoBuilds: videoBuilds,
               ),
             ),
           ),
@@ -173,18 +240,56 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      final actionBar = find.byKey(SessionActionBar.actionBarKey);
+      final stack = find.byKey(const Key('admission-overlay-test-stack'));
+      void checkAboveActionBar(Finder finder) {
+        check(
+          tester.getRect(finder).bottom,
+        ).isLessOrEqual(tester.getRect(actionBar).top - 16);
+      }
+
+      void checkTopRight(Finder finder) {
+        final bounds = tester.getRect(stack);
+        final rect = tester.getRect(finder);
+        check(rect.top).equals(bounds.top + 16);
+        check(rect.right).equals(bounds.right - 16);
+      }
+
       check(find.byType(KeeperAdmissionPanel).evaluate()).length.equals(1);
+      checkAboveActionBar(find.byType(KeeperAdmissionPanel));
       check(videoBuilds.value).equals(1);
 
       await tester.tap(find.byTooltip('Close admission'));
       await tester.pump();
       check(find.byType(SessionWaitingQueueButton).evaluate()).length.equals(1);
+      checkAboveActionBar(find.byType(SessionWaitingQueueButton));
       check(videoBuilds.value).equals(1);
+
+      layouts.value = const _AdmissionOverlayLayout(
+        viewport: Size(800, 400),
+        stackSize: Size(500, 320),
+      );
+      await tester.pump();
+      await tester.pump();
+      checkAboveActionBar(find.byType(SessionWaitingQueueButton));
 
       await tester.tap(find.byType(SessionWaitingQueueButton));
       await tester.pump();
       check(find.byType(KeeperAdmissionPanel).evaluate()).length.equals(1);
-      check(videoBuilds.value).equals(1);
+      checkAboveActionBar(find.byType(KeeperAdmissionPanel));
+
+      layouts.value = const _AdmissionOverlayLayout(
+        viewport: Size(1200, 900),
+        stackSize: Size(700, 500),
+      );
+      await tester.pump();
+      await tester.pump();
+      checkTopRight(find.byType(KeeperAdmissionPanel));
+
+      await tester.tap(find.byTooltip('Close admission'));
+      await tester.pump();
+      check(find.byType(SessionWaitingQueueButton).evaluate()).length.equals(1);
+      checkTopRight(find.byType(SessionWaitingQueueButton));
 
       await tester.pump(const Duration(minutes: 1));
       await tester.pumpWidget(const SizedBox.shrink());

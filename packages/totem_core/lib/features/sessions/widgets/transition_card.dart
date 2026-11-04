@@ -180,6 +180,8 @@ class JoinTransitionCard extends StatelessWidget {
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
     this.enabled = true,
     this.note,
+    this.waiting = false,
+    this.onLeaveWaiting,
     super.key,
   });
 
@@ -189,12 +191,16 @@ class JoinTransitionCard extends StatelessWidget {
   final EdgeInsetsGeometry margin;
   final bool enabled;
   final String? note;
+  final bool waiting;
+  final VoidCallback? onLeaveWaiting;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return _TransitionCardBase(
-      keyboardShortcutText: enabled ? 'press space bar to join' : null,
+      keyboardShortcutText: enabled && !waiting
+          ? 'press space bar to join'
+          : null,
       childBuilder: (context, hasMouseConnected) {
         return _TransitionCardContainer(
           margin: margin,
@@ -206,18 +212,20 @@ class JoinTransitionCard extends StatelessWidget {
                 spacing: 10,
                 children: [
                   Text(
-                    'Welcome',
+                    waiting ? 'Waiting to join' : 'Welcome',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 28,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const Text(
-                    'Your session will start soon. Please check your audio and video before joining.',
+                  Text(
+                    waiting
+                        ? 'The Keeper will let you in. Your camera and microphone are only a local preview.'
+                        : 'Your session will start soon. Please check your audio and video before joining.',
                     textAlign: TextAlign.center,
                   ),
-                  if (note != null)
+                  if (!waiting && note != null)
                     Text(
                       note!,
                       textAlign: TextAlign.center,
@@ -229,13 +237,18 @@ class JoinTransitionCard extends StatelessWidget {
                     ),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(minWidth: 160),
-                      child: ActionSliderButton(
-                        text: 'Join',
-                        onActionCompleted: onActionPressed,
-                        keepLoadingOnSuccess: keepActionLoadingOnSuccess,
-                        isLoading: isSliderLoading,
-                        enabled: enabled,
-                      ),
+                      child: waiting
+                          ? OutlinedButton(
+                              onPressed: onLeaveWaiting,
+                              child: const Text('Leave waiting room'),
+                            )
+                          : ActionSliderButton(
+                              text: 'Join',
+                              onActionCompleted: onActionPressed,
+                              keepLoadingOnSuccess: keepActionLoadingOnSuccess,
+                              isLoading: isSliderLoading,
+                              enabled: enabled,
+                            ),
                     ),
                   ),
                 ],

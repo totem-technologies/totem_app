@@ -32,7 +32,7 @@ import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
-import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
+
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -392,7 +392,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     return PreJoinView(
       key: _preJoinViewKey,
       mediaState: media,
-      waiting: pending,
       onLeave: pending ? leaveWaiting : null,
       locked:
           (flow.phase != PreJoinFlowPhase.idle &&
@@ -410,23 +409,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       notice: readiness == JoinReadiness.microphoneNeeded
           ? MediaRecoveryBanner(control: _control(MediaKind.microphone))
           : null,
-      joinCard: pending
-          ? SessionWaitingCard(
-              title: 'Waiting to join',
-              body: const Text(
-                'The Keeper will let you in. Your camera and microphone are only a local preview.',
-              ),
-              actionLabel: 'Leave waiting room',
-              onAction: leaveWaiting,
-            )
-          : JoinTransitionCard(
-              margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
-              keepActionLoadingOnSuccess: true,
-              enabled: readiness == JoinReadiness.ready && !early,
-              onActionPressed: early ? () async => false : _requestJoin,
-              isSliderLoading: flow.phase == PreJoinFlowPhase.joining,
-              note: joinNote,
-            ),
+      joinCard: JoinTransitionCard(
+        margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
+        keepActionLoadingOnSuccess: true,
+        enabled: readiness == JoinReadiness.ready && !early,
+        onActionPressed: early ? () async => false : _requestJoin,
+        isSliderLoading: flow.phase == PreJoinFlowPhase.joining,
+        note: joinNote,
+        waiting: pending,
+        onLeaveWaiting: leaveWaiting,
+      ),
     );
   }
 

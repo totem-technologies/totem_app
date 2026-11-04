@@ -14,6 +14,7 @@ import 'package:totem_core/features/sessions/admission/keeper_admission_panel.da
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -50,6 +51,8 @@ class _SessionAdmissionOverlayState
   var _admittedUpdateVersion = 0;
   bool _dismissed = false;
   bool _busy = false;
+  bool _actionBarPositionUpdateScheduled = false;
+  final GlobalKey _overlayKey = GlobalKey();
 
   @override
   void initState() {
@@ -283,6 +286,39 @@ class _SessionAdmissionOverlayState
     }
   }
 
+  double _actionBarBottomInset() {
+    final actionBar =
+        SessionActionBar.actionBarKey.currentContext?.findRenderObject()
+            as RenderBox?;
+    final overlay =
+        _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+    if (actionBar == null ||
+        !actionBar.hasSize ||
+        overlay == null ||
+        !overlay.hasSize) {
+      return 16;
+    }
+
+    final actionBarTop = actionBar.localToGlobal(Offset.zero).dy;
+    final overlayTop = overlay.localToGlobal(Offset.zero).dy;
+    final topInOverlay = actionBarTop - overlayTop;
+    if (topInOverlay <= 0 || topInOverlay >= overlay.size.height) return 16;
+
+    return overlay.size.height - topInOverlay + 16;
+  }
+
+  void _scheduleActionBarPositionUpdate(double bottomInset) {
+    if (_actionBarPositionUpdateScheduled) return;
+    _actionBarPositionUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _actionBarPositionUpdateScheduled = false;
+      if (!mounted || (_actionBarBottomInset() - bottomInset).abs() < 0.5) {
+        return;
+      }
+      setState(() {});
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = _keeperController;
@@ -293,36 +329,60 @@ class _SessionAdmissionOverlayState
     }
 
     final desktop = shouldDockSessionChat(context);
-    return Positioned(
-      top: desktop ? 16 : null,
-      right: 16,
-      left: desktop ? null : 16,
-      bottom: desktop ? null : 16,
-      child: SafeArea(
-        child: Align(
-          alignment: desktop ? Alignment.topRight : Alignment.bottomCenter,
-          child: _dismissed
-              ? SessionWaitingQueueButton(
-                  count: controller.requests.length,
-                  label:
-                      controller.requests.isEmpty &&
-                          controller.attempts.any(
-                            (attempt) =>
-                                attempt.status == KeeperAdmissionStatus.joining,
-                          )
-                      ? 'Admission in progress'
-                      : null,
-                  onPressed: () => setState(() => _dismissed = false),
-                )
-              : KeeperAdmissionPanel(
-                  requests: controller.requests,
-                  attempts: controller.attempts,
-                  busy: _busy,
-                  desktop: desktop,
-                  onDecision: _decide,
-                  onAdmitAll: () => unawaited(_admitAll()),
-                  onClose: () => setState(() => _dismissed = true),
+    final child = _dismissed
+        ? SessionWaitingQueueButton(
+            count: controller.requests.length,
+            label:
+                controller.requests.isEmpty &&
+                    controller.attempts.any(
+                      (attempt) =>
+                          attempt.status == KeeperAdmissionStatus.joining,
+                    )
+                ? 'Admission in progress'
+                : null,
+            onPressed: () => setState(() => _dismissed = false),
+          )
+        : KeeperAdmissionPanel(
+            requests: controller.requests,
+            attempts: controller.attempts,
+            busy: _busy,
+            desktop: desktop,
+            onDecision: _decide,
+            onAdmitAll: () => unawaited(_admitAll()),
+            onClose: () => setState(() => _dismissed = true),
+          );
+    if (desktop) {
+      return Positioned(
+        top: 16,
+        right: 16,
+        child: SafeArea(
+          child: Align(alignment: Alignment.topRight, child: child),
+        ),
+      );
+    }
+
+    return Positioned.fill(
+      child: SizedBox.expand(
+        key: _overlayKey,
+        child: LayoutBuilder(
+          builder: (context, _) {
+            final bottomInset = _actionBarBottomInset();
+            _scheduleActionBarPositionUpdate(bottomInset);
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                bottom: bottomInset,
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: child,
                 ),
+              ),
+            );
+          },
         ),
       ),
     );

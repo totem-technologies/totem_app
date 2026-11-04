@@ -1,15 +1,15 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
-
 /// Display-only admission data. IDs come from the owner.
 class SessionAdmissionGuest {
   const SessionAdmissionGuest({
     required this.id,
     required this.name,
+    this.avatar,
   });
   final String id;
   final String name;
+  final Widget? avatar;
 }
 
 /// Contents of the keeper's admission sheet or side panel. The caller owns
@@ -35,7 +35,7 @@ class SessionAdmissionList extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      // The desktop drawer is only 360px wide; decide based on content width.
+      final theme = Theme.of(context);
       final rowActions = constraints.maxWidth >= 440;
       final label = switch (guests.length) {
         0 => 'No one is waiting',
@@ -45,11 +45,9 @@ class SessionAdmissionList extends StatelessWidget {
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 16,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 12,
+            spacing: 8,
             children: [
               Expanded(
                 child: Column(
@@ -57,38 +55,43 @@ class SessionAdmissionList extends StatelessWidget {
                   children: [
                     Semantics(
                       header: true,
-                      child: const Text(
+                      child: Text(
                         'Waiting to join',
-                        style: entrySubtitle,
+                        style: theme.textTheme.titleMedium,
                       ),
                     ),
-                    Text(label, style: entryMuted),
+                    Text(label, style: theme.textTheme.bodySmall),
                   ],
                 ),
               ),
+              if (guests.length > 1)
+                TextButton(
+                  onPressed: busy ? null : onAdmitAll,
+                  child: const Text('Admit all'),
+                ),
               IconButton(
                 tooltip: 'Close admission',
                 onPressed: onClose,
-                icon: const Icon(Icons.close, size: 16),
-                style: IconButton.styleFrom(
-                  backgroundColor: const Color(0x14262F37),
-                  foregroundColor: entrySlate,
-                  minimumSize: const Size(36, 36),
-                ),
+                icon: const Icon(Icons.close, size: 20),
               ),
             ],
           ),
           if (guests.isEmpty)
-            const Text("You're clear. No one is waiting.", style: entryMuted)
-          else ...[
-            if (guests.length > 1)
-              SessionEntryAction(
-                label: 'Admit all',
-                onPressed: busy ? null : onAdmitAll,
-                expand: true,
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                "You're clear. No one is waiting.",
+                style: theme.textTheme.bodyMedium,
               ),
-            for (final guest in guests) _guest(context, guest, rowActions),
-          ],
+            )
+          else
+            for (var index = 0; index < guests.length; index++) ...[
+              if (index > 0) const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: _guest(context, guests[index], rowActions),
+              ),
+            ],
         ],
       );
     },
@@ -103,79 +106,38 @@ class SessionAdmissionList extends StatelessWidget {
       spacing: 12,
       children: [
         ExcludeSemantics(
-          child: CircleAvatar(
-            radius: 20,
-            backgroundColor: entryMauve,
-            child: Text(
-              guest.name.isEmpty
-                  ? ''
-                  : guest.name.substring(0, 1).toUpperCase(),
-              style: entryBody.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+          child: SizedBox.square(
+            dimension: 36,
+            child:
+                guest.avatar ??
+                const CircleAvatar(child: Icon(Icons.person_outline)),
           ),
         ),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                guest.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: entryBody.copyWith(fontWeight: FontWeight.w600),
-              ),
-            ],
+          child: Text(
+            guest.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall,
           ),
         ),
       ],
     );
-    final actions = Row(
-      mainAxisSize: rowActions ? MainAxisSize.min : MainAxisSize.max,
+    final actions = Wrap(
+      alignment: WrapAlignment.end,
       spacing: 8,
+      runSpacing: 4,
       children: [
-        if (rowActions)
-          SessionEntryAction(
-            label: 'Decline',
-            onPressed: busy || onDecline == null
-                ? null
-                : () => onDecline!(guest.id),
-            secondary: true,
-            compact: true,
-          )
-        else
-          Expanded(
-            child: SessionEntryAction(
-              label: 'Decline',
-              onPressed: busy || onDecline == null
-                  ? null
-                  : () => onDecline!(guest.id),
-              secondary: true,
-              compact: true,
-              expand: true,
-            ),
-          ),
-        if (rowActions)
-          SessionEntryAction(
-            label: 'Admit',
-            onPressed: busy || onAdmit == null
-                ? null
-                : () => onAdmit!(guest.id),
-            compact: true,
-          )
-        else
-          Expanded(
-            child: SessionEntryAction(
-              label: 'Admit',
-              onPressed: busy || onAdmit == null
-                  ? null
-                  : () => onAdmit!(guest.id),
-              compact: true,
-              expand: true,
-            ),
-          ),
+        TextButton(
+          onPressed: busy || onDecline == null
+              ? null
+              : () => onDecline!(guest.id),
+          child: const Text('Decline'),
+        ),
+        ElevatedButton(
+          onPressed: busy || onAdmit == null ? null : () => onAdmit!(guest.id),
+          child: const Text('Admit'),
+        ),
       ],
     );
     return rowActions
@@ -188,7 +150,7 @@ class SessionAdmissionList extends StatelessWidget {
           )
         : Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 8,
+            spacing: 4,
             children: [person, actions],
           );
   }

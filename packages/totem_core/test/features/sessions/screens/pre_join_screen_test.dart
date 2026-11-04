@@ -562,8 +562,7 @@ void main() {
     check(factory.videoTracks).length.equals(1);
     check(factory.audioTracks).length.equals(1);
     check(tester.widgetList(find.byType(PreJoinView))).length.equals(1);
-    check(find.byType(SessionWaitingView).evaluate()).isNotEmpty();
-    check(find.byType(SessionWaitingCard).evaluate()).isNotEmpty();
+    check(find.text('Waiting to join').evaluate()).isNotEmpty();
     check(
       find.bySemanticsLabel(RegExp('Your video preview, camera on')).evaluate(),
     ).isNotEmpty();
@@ -674,6 +673,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       await pumpScreen(
         tester,
+        flowController: _MutableFlowController.new,
         getSessionToken: () async => throw Exception('join unavailable'),
       );
 
@@ -686,6 +686,18 @@ void main() {
           .onActionCompleted();
       await tester.pump();
       check(find.textContaining('Please try again:').evaluate()).isNotEmpty();
+      check(tester.takeException()).isNull();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PreJoinScreen)),
+      );
+      (container.read(preJoinFlowControllerProvider(_slug).notifier)
+              as _MutableFlowController)
+          .setPhase(
+            PreJoinFlowPhase.pending,
+            admissionStatus: AdmissionStatus.pending,
+          );
+      await tester.pump();
+      check(find.text('Leave waiting room').evaluate()).isNotEmpty();
       check(tester.takeException()).isNull();
     });
   }
