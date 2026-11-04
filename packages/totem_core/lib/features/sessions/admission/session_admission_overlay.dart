@@ -11,6 +11,7 @@ import 'package:totem_core/features/sessions/admission/admission_controllers.dar
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/admission_transport.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
@@ -75,6 +76,11 @@ class _SessionAdmissionOverlayState
         currentSessionProvider,
         (_, _) => _syncAdmission(),
         fireImmediately: true,
+      )
+      ..listenManual(
+        sessionAdmissionSettingsProvider,
+        (_, _) => _syncAdmission(),
+        fireImmediately: true,
       );
   }
 
@@ -123,6 +129,9 @@ class _SessionAdmissionOverlayState
     if (identical(_room, room) &&
         _keeperIdentity == keeperIdentity &&
         controllerActive) {
+      _keeperController?.setApprovalRequired(
+        ref.read(sessionAdmissionSettingsProvider),
+      );
       return;
     }
 
@@ -140,6 +149,7 @@ class _SessionAdmissionOverlayState
         keeperIdentity: _currentKeeperIdentity,
         sessionIdentity: widget.sessionSlug,
         rosterStore: _rosterStoreFor(widget.sessionSlug),
+        approvalRequired: ref.read(sessionAdmissionSettingsProvider),
       );
       _keeperController = controller;
       _syncAdmittedIdentities(controller.roster);
@@ -322,7 +332,9 @@ class _SessionAdmissionOverlayState
   @override
   Widget build(BuildContext context) {
     final controller = _keeperController;
-    if (controller == null || controller.attempts.isEmpty) {
+    if (controller == null ||
+        !controller.approvalRequired ||
+        controller.attempts.isEmpty) {
       // The room Stack has only positioned video children; keep it expanded
       // even when the queue has nothing to display.
       return const SizedBox.expand();

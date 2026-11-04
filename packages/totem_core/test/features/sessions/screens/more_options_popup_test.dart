@@ -65,6 +65,8 @@ Future<void> _pumpMoreOptions(
   required _TestSessionDeviceController deviceController,
   List<MediaDeviceInfo> audioOutputs = const [],
 }) async {
+  await tester.binding.setSurfaceSize(const Size(800, 800));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -173,6 +175,70 @@ void main() {
     when(() => devices.switchCameraPosition()).thenAnswer((_) async {});
     when(() => devices.requestAudioOutputDevice()).thenAnswer((_) async {});
     when(() => keeper.forcePassTotem()).thenAnswer((_) async {});
+  });
+
+  group('admission settings', () {
+    testWidgets('is available to keepers', (tester) async {
+      final state = _sessionState(
+        roomState: const RoomState(
+          keeper: 'keeper-1',
+          nextSpeaker: Omittable('user-2'),
+          currentSpeaker: Omittable('user-1'),
+          status: RoomStatus.active,
+          turnState: TurnState.idle,
+          sessionSlug: 'test-session',
+          statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+          talkingOrder: ['user-1', 'user-2'],
+          version: 1,
+          roundNumber: 1,
+        ),
+      );
+
+      await _pumpMoreOptions(
+        tester,
+        session: session,
+        state: state,
+        deviceController: deviceController,
+      );
+
+      final admissionTile = find.ancestor(
+        of: find.text('Require approval to join'),
+        matching: find.byType(ListTile),
+      );
+      check(tester.widgetList(admissionTile)).length.equals(1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+
+    testWidgets('is not available to non-keepers', (tester) async {
+      when(() => session.isCurrentUserKeeper()).thenReturn(false);
+      final state = _sessionState(
+        roomState: const RoomState(
+          keeper: 'keeper-1',
+          nextSpeaker: Omittable('user-2'),
+          currentSpeaker: Omittable('user-1'),
+          status: RoomStatus.active,
+          turnState: TurnState.idle,
+          sessionSlug: 'test-session',
+          statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+          talkingOrder: ['user-1', 'user-2'],
+          version: 1,
+          roundNumber: 1,
+        ),
+      );
+
+      await _pumpMoreOptions(
+        tester,
+        session: session,
+        state: state,
+        deviceController: deviceController,
+      );
+
+      check(tester.widgetList(find.text('Require approval to join'))).isEmpty();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.pump();
+    });
   });
 
   group('_onForcePass', () {

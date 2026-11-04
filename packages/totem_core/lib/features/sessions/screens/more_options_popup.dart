@@ -9,6 +9,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
     show RoomStatus, SessionDetailSchema, TurnState;
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -89,6 +90,7 @@ class MoreOptions extends ConsumerWidget {
     final isSelfViewEnabled = ref.watch(
       selfViewSettingsProvider.select((s) => s.enabled),
     );
+    final isAdmissionEnabled = ref.watch(sessionAdmissionSettingsProvider);
 
     final isKeeper = currentSession.isCurrentUserKeeper();
 
@@ -158,6 +160,21 @@ class MoreOptions extends ConsumerWidget {
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: theme.colorScheme.onSurface,
                 ),
+              ),
+              MoreOptionsTile<void>(
+                title: 'Require approval to join',
+                icon: TotemIcons.community,
+                trailing: IgnorePointer(
+                  child: Switch.adaptive(
+                    value: isAdmissionEnabled,
+                    onChanged: (value) {},
+                  ),
+                ),
+                onTap: () {
+                  ref
+                      .read(sessionAdmissionSettingsProvider.notifier)
+                      .setEnabled(!isAdmissionEnabled);
+                },
               ),
               MoreOptionsTile<void>(
                 title: 'Reorder Participants',

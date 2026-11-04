@@ -12,6 +12,7 @@ import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart'
     as session_state;
@@ -172,6 +173,22 @@ void main() {
       addTearDown(videoBuilds.dispose);
       addTearDown(layouts.dispose);
       final participant = MockLocalParticipant('keeper');
+      final sent = <AdmissionPacket>[];
+      when(
+        () => participant.publishData(
+          any(),
+          reliable: any(named: 'reliable'),
+          topic: any(named: 'topic'),
+          destinationIdentities: any(named: 'destinationIdentities'),
+        ),
+      ).thenAnswer((invocation) async {
+        final packet = AdmissionProtocol.decode(
+          invocation.positionalArguments.single as List<int>,
+          senderIdentity: 'keeper',
+          now: DateTime.now(),
+        );
+        if (packet != null) sent.add(packet);
+      });
       final room = _AdmissionRoom(participant);
       final session = _SessionController();
       final state = MockSessionRoomState();
@@ -290,6 +307,34 @@ void main() {
       await tester.pump();
       check(find.byType(SessionWaitingQueueButton).evaluate()).length.equals(1);
       checkTopRight(find.byType(SessionWaitingQueueButton));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SessionAdmissionOverlay)),
+      );
+      container
+          .read(sessionAdmissionSettingsProvider.notifier)
+          .setEnabled(false);
+      await tester.pump();
+      await tester.pump();
+      check(find.byType(SessionWaitingQueueButton).evaluate()).isEmpty();
+      check(find.byType(KeeperAdmissionPanel).evaluate()).isEmpty();
+      check(sent.whereType<AdmissionDecision>().single.approved).isTrue();
+      check(
+        container
+            .read(admittedSessionParticipantIdentitiesProvider)
+            .contains('guest'),
+      ).isFalse();
+      await room.listener.trigger(
+        DataReceivedEvent(
+          data: AdmissionProtocol.encode(AdmissionProtocol.joined(request)),
+          participant: _RemoteParticipant('guest'),
+          topic: AdmissionProtocol.topic,
+        ),
+      );
+      await tester.pump();
+      check(
+        container.read(admittedSessionParticipantIdentitiesProvider),
+      ).contains('guest');
 
       await tester.pump(const Duration(minutes: 1));
       await tester.pumpWidget(const SizedBox.shrink());

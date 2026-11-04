@@ -271,9 +271,11 @@ class KeeperAdmissionController {
     String? sessionIdentity,
     String? keeperGeneration,
     KeeperAdmissionRosterStore? rosterStore,
+    this._approvalRequired = true,
     DateTime Function()? now,
     String Function()? newId,
   }) : _sessionIdentity = sessionIdentity ?? '',
+
        _rosterStore = rosterStore,
        _keeperGeneration =
            keeperGeneration ??
@@ -325,13 +327,20 @@ class KeeperAdmissionController {
   late final StreamSubscription<AdmissionEvent> _subscription;
   bool _disposed = false;
   bool _ended;
+  bool _approvalRequired;
 
+  bool get approvalRequired => _approvalRequired;
   Stream<void> get changes => _changes.stream;
-  List<AdmissionRequest> get requests => List.unmodifiable(
-    _pending.values.where(
-      (request) => !_roster.contains(request.senderIdentity),
-    ),
-  );
+  List<AdmissionRequest> get requests =>
+      _approvalRequired ? List.unmodifiable(_pending.values) : const [];
+
+  void setApprovalRequired(bool required) {
+    if (_disposed || _ended || _approvalRequired == required) return;
+    _approvalRequired = required;
+    if (!required) _pending.keys.toList().forEach(_approveAutomatically);
+    _changes.add(null);
+  }
+
   List<KeeperAdmissionAttempt> get attempts =>
       List.unmodifiable(_attempts.values);
 
@@ -448,11 +457,11 @@ class KeeperAdmissionController {
     switch (event) {
       case AdmissionConnectionRestored():
         _advertise();
-        _pending.keys.toList().forEach(_approveReturning);
+        _pending.keys.toList().forEach(_approveAutomatically);
       case AdmissionPresenceChanged(:final identity, present: true):
         _advertiseTo(identity);
         _resendDecision(identity);
-        _approveReturning(identity);
+        _approveAutomatically(identity);
       case AdmissionPresenceChanged(:final identity, present: false):
         // A reconnecting participant can re-advertise this same request.
         if (_pending.remove(identity) case final request?) {
@@ -508,7 +517,7 @@ class KeeperAdmissionController {
               KeeperAdmissionStatus.requested,
             );
             _changes.add(null);
-            _approveReturning(sender);
+            _approveAutomatically(sender);
           }
         }
       default:
@@ -516,18 +525,18 @@ class KeeperAdmissionController {
     }
   }
 
-  void _approveReturning(String identity) {
+  void _approveAutomatically(String identity) {
     final request = _pending[identity];
     if (_disposed ||
         _ended ||
         keeperIdentity() != channel.localIdentity ||
-        !_roster.contains(identity) ||
+        _approvalRequired ||
         request == null ||
         _inFlight.contains(_key(identity, request.id))) {
       return;
     }
-    // This identity completed admission earlier in this Session. A new device
-    // still needs to activate its own room and send a fresh joined receipt.
+    // Open admission skips the Keeper decision, not connection activation or
+    // the joined receipt required to enter the presentation roster.
     unawaited(approve(request.id, identity).catchError((Object _) {}));
   }
 
@@ -601,7 +610,7 @@ class KeeperAdmissionController {
       }
     }
     _changes.add(null);
-    if (packet is AdmissionRequest) _approveReturning(sender);
+    if (packet is AdmissionRequest) _approveAutomatically(sender);
   }
 
   void _receiveOutcome(AdmissionPacket packet) {

@@ -620,6 +620,7 @@ void main() {
       final endedKeeper = KeeperAdmissionController(
         channel: endedChannel,
         keeperIdentity: () => 'keeper',
+        approvalRequired: false,
       );
       final endedGuestChannel = _Channel('guest')..hasEnded = true;
       final endedGuest = PendingAdmissionController(
@@ -845,6 +846,7 @@ void main() {
       final keeper = KeeperAdmissionController(
         channel: channel,
         keeperIdentity: () => keeperIdentity,
+        approvalRequired: false,
         now: () => now,
       );
       addTearDown(() async {
@@ -860,7 +862,9 @@ void main() {
       );
       channel.controller.add(AdmissionPacketReceived(request));
       check(keeper.requests).isEmpty();
+      check(channel.sent.whereType<AdmissionDecision>()).isEmpty();
       keeperIdentity = 'keeper';
+      keeper.setApprovalRequired(true);
       channel.controller.add(AdmissionPacketReceived(request));
       check(keeper.requests).length.equals(1);
       channel.controller.add(
@@ -1049,7 +1053,7 @@ void main() {
   );
 
   test(
-    'a previously admitted participant rejoins without another Keeper decision',
+    'open admission releases new and returning requests when enabled',
     () async {
       final guestChannel = _Channel('guest');
       final keeperChannel = _Channel('keeper');
@@ -1076,13 +1080,17 @@ void main() {
         await keeperChannel.dispose();
       });
 
+      check(keeper.approvalRequired).isTrue();
+      keeper.setApprovalRequired(false);
+      check(keeper.approvalRequired).isFalse();
       final first = await participant.requestAdmission(displayName: 'Guest');
-      check(keeper.requests.single.id).equals(first.id);
-      await keeper.approve(first.id, 'guest');
+      await pumpEventQueue();
       check(participant.status).equals(AdmissionStatus.approved);
+      check(keeper.requests).isEmpty();
       await guestChannel.send(AdmissionProtocol.joined(first));
       check(keeper.roster).deepEquals(['guest']);
 
+      keeper.setApprovalRequired(true);
       await participant.dispose();
       keeperChannel.controller.add(
         const AdmissionPresenceChanged('guest', false),
@@ -1098,9 +1106,14 @@ void main() {
       );
       await pumpEventQueue();
       check(second.id == first.id).isFalse();
+      check(participant.status).equals(AdmissionStatus.pending);
+      check(keeper.requests.single.id).equals(second.id);
+      check(keeper.roster).isEmpty();
+
+      keeper.setApprovalRequired(false);
+      await pumpEventQueue();
       check(participant.status).equals(AdmissionStatus.approved);
       check(keeper.requests).isEmpty();
-      check(keeper.roster).isEmpty();
       await guestChannel.send(AdmissionProtocol.joined(second));
       check(keeper.roster).deepEquals(['guest']);
       check(keeper.attempts.single.status).equals(KeeperAdmissionStatus.joined);
@@ -1108,7 +1121,7 @@ void main() {
   );
 
   test(
-    'a returning applicant stays out of all admitted rosters until ready',
+    'a historical roster participant requires manual approval before readiness',
     () async {
       final channel = _Channel('keeper')..present.addAll(['guest', 'friend']);
       final store = KeeperAdmissionRosterStore()
@@ -1130,10 +1143,15 @@ void main() {
         expiresAt: DateTime.now().add(AdmissionProtocol.requestLifetime),
         displayName: 'Guest',
       );
+      check(keeper.approvalRequired).isTrue();
       channel.controller.add(AdmissionPacketReceived(request));
       check(keeper.roster).deepEquals(['friend']);
+      check(keeper.requests.single.id).equals(request.id);
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.requested);
+      await keeper.approve(request.id, 'guest');
       check(keeper.requests).isEmpty();
-      await pumpEventQueue();
       check(
         keeper.attempts.single.status,
       ).equals(KeeperAdmissionStatus.joining);
