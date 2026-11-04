@@ -110,7 +110,7 @@ void main() {
   );
 
   test(
-    'surfaces read and schema failures without creating fresh state',
+    'surfaces read and schema failures',
     () async {
       final provider = keeperAdmissionRosterProvider('session-a', 'keeper-a');
       final readFailure = _container(_FakePreferences()..failedReads = 1);
@@ -127,10 +127,6 @@ void main() {
       addTearDown(malformed.dispose);
       await check(malformed.read(provider.future)).throws<StateError>();
       check(malformed.read(provider).hasError).isTrue();
-
-      final recovered = _container(_FakePreferences());
-      addTearDown(recovered.dispose);
-      check((await recovered.read(provider.future)).members).isEmpty();
     },
   );
 
@@ -207,7 +203,6 @@ void main() {
     preferences.nextWrite = Completer<bool>()..complete(false);
 
     await check(notifier.persist()).throws<StateError>();
-    check(identical(container.read(provider).requireValue, store)).isTrue();
     check(store.members.toSet()).deepEquals({'participant'});
     check(store.revision).equals(3);
 

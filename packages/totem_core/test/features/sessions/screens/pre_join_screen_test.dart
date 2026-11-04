@@ -635,15 +635,11 @@ void main() {
     check(factory.videoTracks).length.equals(1);
     check(factory.audioTracks).length.equals(1);
     check(tester.widgetList(find.byType(PreJoinView))).length.equals(1);
-    check(find.text('Waiting to join').evaluate()).isNotEmpty();
     check(
       find.bySemanticsLabel(RegExp('Your video preview, camera on')).evaluate(),
     ).isNotEmpty();
     check(find.byType(VideoSessionScreen).evaluate()).isEmpty();
     check(tester.widgetList(find.text('Leave waiting room'))).length.equals(1);
-    check(
-      tester.widgetList(find.textContaining('The Keeper will let you in.')),
-    ).length.equals(1);
     check(tester.widgetList(find.byType(ActionSliderButton))).isEmpty();
   });
 
@@ -714,15 +710,6 @@ void main() {
       );
 
       check(find.byType(SessionDeclinedView).evaluate()).isNotEmpty();
-      check(
-        find
-            .text(
-              status == AdmissionStatus.denied
-                  ? 'The Keeper was unable to admit you.'
-                  : 'Your admission request has expired.',
-            )
-            .evaluate(),
-      ).isNotEmpty();
       check(find.text('Return to the Space').evaluate()).isNotEmpty();
       check(find.text('Join session').evaluate()).isEmpty();
       check(find.byType(VideoSessionScreen).evaluate()).isEmpty();

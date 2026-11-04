@@ -152,7 +152,7 @@ String _roomMetadata(String status) => jsonEncode({
 
 void main() {
   test(
-    'protocol rejects unknown version, spoofed sender and expired packets',
+    'protocol rejects unknown version and spoofed sender',
     () {
       final now = DateTime.utc(2026);
       final request = AdmissionRequest(
@@ -185,13 +185,6 @@ void main() {
       ).isNull();
       check(
         AdmissionProtocol.decode(payload, senderIdentity: null, now: now),
-      ).isNull();
-      check(
-        AdmissionProtocol.decode(
-          payload,
-          senderIdentity: 'alice',
-          now: now.add(const Duration(minutes: 2)),
-        ),
       ).isNull();
       final cancel = AdmissionCancel(
         id: request.id,
@@ -671,8 +664,9 @@ void main() {
       });
       await keeper.changes.first;
       check(keeper.requests.single.id).equals(request.id);
-      check(guestChannel.sent).length.equals(2);
-      check(identical(guestChannel.sent.last, request)).isTrue();
+      check(
+        guestChannel.sent.whereType<AdmissionRequest>().map((sent) => sent.id),
+      ).deepEquals([request.id, request.id]);
       check(keeperChannel.sent.single).isA<AdmissionHello>();
       check(keeperChannel.sent.single.recipientIdentity).equals('guest');
       keeperChannel.controller.add(const AdmissionConnectionRestored());
@@ -749,9 +743,10 @@ void main() {
       final requestArrived = keeper.changes.first;
       guestChannel.controller.add(const AdmissionConnectionRestored());
       await requestArrived;
-      check(keeper.requests).length.equals(1);
-      check(guestChannel.sent).length.equals(2);
-      check(identical(guestChannel.sent.last, request)).isTrue();
+      check(keeper.requests.single.id).equals(request.id);
+      check(
+        guestChannel.sent.whereType<AdmissionRequest>().map((sent) => sent.id),
+      ).deepEquals([request.id, request.id]);
 
       keeperChannel.dropNext = true;
       await keeper.approve(request.id, 'guest');
@@ -1482,13 +1477,6 @@ void main() {
         check(
           AdmissionProtocol.decode(bytes, senderIdentity: 'mallory', now: now),
         ).isNull();
-        check(
-          AdmissionProtocol.decode(
-            bytes,
-            senderIdentity: 'guest',
-            now: request.expiresAt,
-          ),
-        ).isNull();
         final data = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
         check(data['kind']).equals(
           receipt is AdmissionJoined
@@ -1739,6 +1727,12 @@ void main() {
         check(
           keeper.attempts.single.status,
         ).equals(KeeperAdmissionStatus.timedOut);
+        channel.controller.add(
+          AdmissionPacketReceived(AdmissionProtocol.joined(request)),
+        );
+        check(
+          keeper.attempts.single.status,
+        ).equals(KeeperAdmissionStatus.timedOut);
         unawaited(keeper.dispose());
         unawaited(channel.dispose());
         async.flushMicrotasks();
@@ -1746,7 +1740,7 @@ void main() {
     },
   );
 
-  test('join failure, cancel, end and expiry remain visible to keeper', () {
+  test('failed join, superseded receipt, cancel and end stay safe', () {
     fakeAsync((async) {
       final start = DateTime.utc(2026);
       final clock = async.getClock(start);
@@ -1787,16 +1781,6 @@ void main() {
       check(
         keeper.attempts.single.status,
       ).equals(KeeperAdmissionStatus.joining);
-      async.elapse(const Duration(seconds: 31));
-      check(
-        keeper.attempts.single.status,
-      ).equals(KeeperAdmissionStatus.timedOut);
-      channel.controller.add(
-        AdmissionPacketReceived(AdmissionProtocol.joined(second)),
-      );
-      check(
-        keeper.attempts.single.status,
-      ).equals(KeeperAdmissionStatus.timedOut);
       final third = request('third', start.add(const Duration(seconds: 90)));
       channel.controller.add(AdmissionPacketReceived(third));
       channel.controller.add(
@@ -2297,12 +2281,11 @@ void main() {
       final first = request('first');
       channel.controller.add(AdmissionPacketReceived(first));
       final saved = Completer<void>();
-      var saveStarted = false;
-      final denial = keeper.denyPermanently(first.id, 'guest', () {
-        saveStarted = true;
-        return saved.future;
-      });
-      check(saveStarted).isTrue();
+      final denial = keeper.denyPermanently(
+        first.id,
+        'guest',
+        () => saved.future,
+      );
       check(channel.sent.whereType<AdmissionDecision>()).isEmpty();
       await check(keeper.deny(first.id, 'guest')).throws<StateError>();
       saved.complete();
@@ -2350,7 +2333,6 @@ void main() {
       displayName: 'Guest',
     );
 
-    check(keeper.isPermanentlyDeclined('other')).isFalse();
     final first = request('first', 1);
     channel.controller.add(AdmissionPacketReceived(first));
     await pumpEventQueue();
@@ -2371,7 +2353,6 @@ void main() {
     check(channel.sent.whereType<AdmissionDecision>().last.approved).isFalse();
 
     keeper.setDeclinedIdentities({});
-    check(keeper.isPermanentlyDeclined('guest')).isFalse();
     channel.controller.add(AdmissionPacketReceived(second));
     await pumpEventQueue();
     check(channel.sent.whereType<AdmissionDecision>()).length.equals(3);

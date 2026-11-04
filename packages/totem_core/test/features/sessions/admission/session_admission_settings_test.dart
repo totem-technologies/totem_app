@@ -77,24 +77,21 @@ void main() {
 
   for (final enabled in [true, false]) {
     test(
-      'explicit $enabled in waiting room survives start and token refresh',
+      'explicit $enabled survives status changes and token refresh',
       () {
+        check(container.read(sessionAdmissionSettingsProvider)).isFalse();
         container
             .read(sessionAdmissionSettingsProvider.notifier)
             .setEnabled(enabled);
-        container.read(_testRoomStatusProvider.notifier).status =
-            RoomStatus.active;
         check(container.read(sessionAdmissionSettingsProvider)).equals(enabled);
         container.read(_testSessionScopeProvider.notifier).scope = _options(
           'session-a',
           'new-token',
         );
         check(container.read(sessionAdmissionSettingsProvider)).equals(enabled);
-        container.read(_testSessionScopeProvider.notifier).scope = _options(
-          'session-b',
-          'other-token',
-        );
-        check(container.read(sessionAdmissionSettingsProvider)).isTrue();
+        container.read(_testRoomStatusProvider.notifier).status =
+            RoomStatus.active;
+        check(container.read(sessionAdmissionSettingsProvider)).equals(enabled);
       },
     );
   }

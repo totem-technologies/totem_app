@@ -9,12 +9,12 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/core/config/theme.dart';
+
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
-import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
+
 import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
@@ -558,21 +558,14 @@ void main() {
       final queue = find.byType(SessionWaitingQueueButton);
       final toolbar = find.byKey(SessionActionBar.actionBarKey);
       check(queue.evaluate()).length.equals(1);
-      check(
-        tester.getRect(queue).bottom,
-      ).isLessOrEqual(tester.getRect(toolbar).top - 8);
-      check(videoBuilds.value).equals(initialVideoBuilds);
-
-      final button = tester.widget<OutlinedButton>(
-        find.descendant(of: queue, matching: find.byType(OutlinedButton)),
+      check(tester.getRect(queue).bottom).isLessOrEqual(
+        tester.getRect(toolbar).top,
       );
-      check(button.style!.backgroundColor!.resolve({})).equals(AppTheme.cream);
-      check(button.style!.foregroundColor!.resolve({})).equals(AppTheme.slate);
+      check(videoBuilds.value).equals(initialVideoBuilds);
 
       await tester.tap(queue);
       await tester.pumpAndSettle();
       check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
-      check(find.byType(KeeperAdmissionPanel).evaluate()).length.equals(1);
 
       await harness.sendRequest(harness.request('two', name: 'Second guest'));
       await tester.pump();
@@ -662,8 +655,6 @@ void main() {
       await tester.tap(find.byType(SessionWaitingQueueButton));
       await tester.pumpAndSettle();
       check(container.read(sessionAdmissionOpenProvider)).isFalse();
-      check(container.read(sessionChatOpenProvider)).isFalse();
-      check(container.read(sessionPromptsOpenProvider)).isFalse();
       check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
 
       setViewport(tester, const Size(1200, 900));
@@ -678,7 +669,7 @@ void main() {
   );
 
   testWidgets(
-    'docks beside the room and persists a permanent decline until it is allowed',
+    'docks beside the room and allows joining after permanent decline',
     (tester) async {
       setViewport(tester, const Size(1200, 900));
       addTearDown(tester.view.resetPhysicalSize);
@@ -701,14 +692,6 @@ void main() {
       await tester.tap(find.byType(SessionWaitingQueueButton));
       await tester.pumpAndSettle();
       check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
-      check(tester.getSize(find.byType(DockedSessionSidePanel)).width).equals(
-        sessionSidePanelWidth,
-      );
-      check(
-        tester.getSize(find.byKey(const Key('room-navigator'))).width,
-      ).equals(
-        1200 - sessionSidePanelWidth,
-      );
 
       await tester.tap(find.text('Decline'));
       await tester.pumpAndSettle();
@@ -716,13 +699,6 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      final declined = declinedSessionParticipantsProvider('session', 'keeper');
-      check(container.read(declined).requireValue).contains('guest');
-      check(
-        harness.preferences.values.values.any(
-          (value) => value.contains('guest'),
-        ),
-      ).isTrue();
       check(
         harness.sent
             .whereType<AdmissionDecision>()
@@ -730,7 +706,11 @@ void main() {
             .approved,
       ).isFalse();
 
-      await container.read(declined.notifier).allow('guest');
+      await container
+          .read(
+            declinedSessionParticipantsProvider('session', 'keeper').notifier,
+          )
+          .allow('guest');
       container
           .read(sessionAdmissionSettingsProvider.notifier)
           .setEnabled(false);

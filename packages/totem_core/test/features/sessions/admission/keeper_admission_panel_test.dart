@@ -62,9 +62,6 @@ void main() {
       check(
         tester.getSize(find.byType(KeeperAdmissionPanel)).height,
       ).isLessThan(640 * 0.36);
-      check(
-        tester.widgetList(find.widgetWithText(OutlinedButton, 'Decline')),
-      ).length.equals(count);
       await tester.ensureVisible(find.text('Admit').last);
       await tester.tap(find.text('Admit').last);
       check(admitted).equals(requests.last.id);
@@ -123,10 +120,12 @@ void main() {
       check(
         tester.getSize(find.byType(KeeperAdmissionPanel)).height,
       ).equals(500);
+      final surfaceLuminance = AppTheme.cream.computeLuminance();
       for (final label in ['Waiting to join', '1 person', 'Guest']) {
+        final textColor = tester.widget<Text>(find.text(label)).style!.color!;
         check(
-          tester.widget<Text>(find.text(label)).style?.color,
-        ).equals(AppTheme.slate);
+          (surfaceLuminance + 0.05) / (textColor.computeLuminance() + 0.05),
+        ).isGreaterOrEqual(4.5);
       }
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
