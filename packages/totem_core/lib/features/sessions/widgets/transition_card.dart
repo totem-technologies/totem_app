@@ -7,6 +7,7 @@ import 'package:totem_core/features/sessions/widgets/session_dock_surface.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
+/// White card used by [JoinTransitionCard] on the pre-join screen.
 class _TransitionCardContainer extends StatelessWidget {
   const _TransitionCardContainer({
     required this.children,
@@ -22,92 +23,23 @@ class _TransitionCardContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: constraints,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return Card(
-            margin: margin,
-            elevation: 0,
-            shadowColor: Colors.transparent,
-            surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Padding(
-              padding: const EdgeInsetsDirectional.all(16),
-              // Portrait phones: hug content so the slider stays ~52px tall
-              // instead of Flexible-expanding to fill the viewport.
-              child: constraints.maxWidth < 500
-                  ? Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      spacing: 14,
-                      children: children,
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 15,
-                      children: [
-                        for (final child in children) Flexible(child: child),
-                      ],
-                    ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// Large viewports dock in-session cards into the slate chrome above the
-/// action bar instead of a white card, to give the video tiles more room.
-/// Phones keep the white card.
-bool _isDockedViewport(BuildContext context) {
-  return switch (ViewportResolver.getViewportKind(context)) {
-    ViewportKind.mediumSmall || ViewportKind.mediumPlus => true,
-    ViewportKind.smallPortrait || ViewportKind.smallLandscape => false,
-  };
-}
-
-/// Matches the action bar's comfortable button size.
-const _dockedActionHeight = 44.0;
-const _dockedInset = 6.0;
-
-class _DockedTransitionCardContainer extends StatelessWidget {
-  const _DockedTransitionCardContainer({
-    required this.children,
-    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
-    this.padding = const EdgeInsetsDirectional.only(
-      start: 20,
-      end: _dockedInset,
-      top: _dockedInset,
-      bottom: _dockedInset,
-    ),
-  });
-
-  final EdgeInsetsGeometry margin;
-  final EdgeInsetsGeometry padding;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      // Same height with or without an action, so pass -> waiting
-      // doesn't shift the layout.
-      constraints: const BoxConstraints(
-        maxWidth: 650,
-        minHeight: _dockedActionHeight + _dockedInset * 2,
-      ),
-      child: Padding(
-        padding: margin,
-        child: DecoratedBox(
-          decoration: sessionDockDecoration(onLightBackground: false),
-          child: Padding(
-            padding: padding,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 12,
-              children: children,
-            ),
+      child: Card(
+        margin: margin,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.all(16),
+          // Hug content so the slider stays its own height instead of
+          // expanding to fill the viewport.
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 14,
+            children: children,
           ),
         ),
       ),
@@ -115,10 +47,182 @@ class _DockedTransitionCardContainer extends StatelessWidget {
   }
 }
 
+/// In-session cards (pass, receive, waiting, prompt) dock into the slate
+/// chrome above the action bar as a glass pill sharing the action bar's
+/// styling, on every viewport.
+///
+/// Phones keep the 48dp Material touch minimum for the slider (matching the
+/// action bar's phone metrics, TOT-1398); larger viewports match the action
+/// bar's 44dp comfortable buttons.
+double _dockedActionHeight(BuildContext context) {
+  return _isSmallViewport(context) ? 48 : 44;
+}
+
+bool _isSmallViewport(BuildContext context) {
+  return ViewportResolver.getViewportKind(context).isSmall;
+}
+
+/// Label for the docked actions: the action bar's size on every device.
+/// Other [ActionSliderButton] uses (Join) keep their default label.
+TextStyle? _dockedActionLabelStyle(BuildContext context) {
+  return Theme.of(context).textTheme.labelLarge;
+}
+
+const _dockedInset = 6.0;
+const _dockedTextInset = 20.0;
+
+/// Pill width below which the action drops under the instruction.
+///
+/// Small viewports switch at 500, where the Pass instruction still gets two
+/// readable lines beside a 240dp slider.
+///
+/// Medium viewports stay at 400 so they keep the desktop row: the speaking
+/// screen pads 60dp per side, so a 601dp window leaves only a ~421dp pill.
+/// Raising this to 500 would stack desktop pills on 601–680dp windows.
+double _dockedInlineMinWidth(BuildContext context) {
+  return _isSmallViewport(context) ? 500 : 400;
+}
+
+class _DockedTransitionCardContainer extends StatelessWidget {
+  const _DockedTransitionCardContainer({
+    required this.actionHeight,
+    this.instruction,
+    this.field,
+    this.action,
+    this.inlineActionConstraints = const BoxConstraints(
+      minWidth: 140,
+      maxWidth: 240,
+    ),
+    this.flexibleInlineAction = false,
+    this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
+  }) : assert(
+         (instruction == null) != (field == null),
+         'Provide exactly one of instruction or field',
+       );
+
+  /// Instruction text, inset like the action bar's labels.
+  final String? instruction;
+
+  /// The keeper's prompt field. Its filled background carries its own
+  /// rounding, so it hugs the pill.
+  final Widget? field;
+  final Widget? action;
+  final double actionHeight;
+
+  /// Width bounds for [action] when it sits beside the instruction; the
+  /// touch slider needs a finite max.
+  final BoxConstraints inlineActionConstraints;
+
+  /// Lets the action share leftover width with the field instead of staying
+  /// at its bounded width.
+  final bool flexibleInlineAction;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    final action = this.action;
+    final instruction = this.instruction;
+    final inlineMinWidth = _dockedInlineMinWidth(context);
+    return ConstrainedBox(
+      // Inline pills are the same height with or without an action, so
+      // pass -> waiting doesn't shift on larger viewports. A stacked phone
+      // pill is taller than the single-row waiting pill.
+      constraints: BoxConstraints(
+        maxWidth: 650,
+        minHeight: actionHeight + _dockedInset * 2,
+      ),
+      child: Padding(
+        padding: margin,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final inline =
+                action == null || constraints.maxWidth >= inlineMinWidth;
+            if (inline) {
+              final textInset = instruction != null
+                  ? _dockedTextInset
+                  : _dockedInset;
+              return DecoratedBox(
+                decoration: sessionDockDecoration(onLightBackground: false),
+                child: Padding(
+                  padding: EdgeInsetsDirectional.only(
+                    start: textInset,
+                    end: action == null ? textInset : _dockedInset,
+                    top: _dockedInset,
+                    bottom: _dockedInset,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 12,
+                    children: [
+                      Flexible(
+                        child: instruction != null
+                            ? _DockedInstructionText(instruction, maxLines: 2)
+                            : field!,
+                      ),
+                      if (action != null)
+                        if (flexibleInlineAction)
+                          Flexible(
+                            child: ConstrainedBox(
+                              constraints: inlineActionConstraints,
+                              child: action,
+                            ),
+                          )
+                        else
+                          ConstrainedBox(
+                            constraints: inlineActionConstraints,
+                            child: action,
+                          ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            // Stacked: same glass surface, with the corner radius kept
+            // concentric with the full-width action below the instruction.
+            return DecoratedBox(
+              decoration: sessionDockDecoration(
+                onLightBackground: false,
+                radius: actionHeight / 2 + _dockedInset,
+              ),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.all(_dockedInset),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 10,
+                  children: [
+                    if (instruction != null)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          _dockedTextInset - _dockedInset,
+                          _dockedInset,
+                          _dockedTextInset - _dockedInset,
+                          0,
+                        ),
+                        // The full pill width is available, so large text
+                        // scales get a third line instead of being cut.
+                        child: _DockedInstructionText(instruction, maxLines: 3),
+                      )
+                    else
+                      field!,
+                    SizedBox(height: actionHeight, child: action),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
 class _DockedInstructionText extends StatelessWidget {
-  const _DockedInstructionText(this.text);
+  const _DockedInstructionText(this.text, {required this.maxLines});
 
   final String text;
+  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +233,7 @@ class _DockedInstructionText extends StatelessWidget {
         text,
         style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.cream),
         textAlign: TextAlign.center,
-        maxLines: 2,
+        maxLines: maxLines,
         minFontSize: 12,
       ),
     );
@@ -219,70 +323,27 @@ class _GenericTransitionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final docked = _isDockedViewport(context);
+    final actionHeight = _dockedActionHeight(context);
     return _TransitionCardBase(
       keyboardShortcutText: keyboardShortcutText,
       childBuilder: (context, hasMouseConnected) {
         final instruction = hasMouseConnected
             ? instructionTextClick
             : instructionTextSwipe;
-        if (docked) {
-          return _DockedTransitionCardContainer(
-            margin: margin,
-            padding: onActionPressed == null
-                ? const EdgeInsetsDirectional.symmetric(
-                    horizontal: 20,
-                    vertical: _dockedInset,
-                  )
-                : const EdgeInsetsDirectional.only(
-                    start: 20,
-                    end: _dockedInset,
-                    top: _dockedInset,
-                    bottom: _dockedInset,
-                  ),
-            children: [
-              Flexible(child: _DockedInstructionText(instruction)),
-              if (onActionPressed != null)
-                // Bounded, not flexible, so the instruction keeps the
-                // remaining width; the touch slider still needs a finite max.
-                ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 140,
-                    maxWidth: 240,
-                  ),
-                  child: ActionSliderButton(
-                    text: actionText,
-                    onActionCompleted: onActionPressed!,
-                    keepLoadingOnSuccess: keepActionLoadingOnSuccess,
-                    isLoading: isSliderLoading,
-                    height: _dockedActionHeight,
-                  ),
-                ),
-            ],
-          );
-        }
-        return _TransitionCardContainer(
+        return _DockedTransitionCardContainer(
           margin: margin,
-          children: [
-            AutoSizeText(
-              instruction,
-              style: theme.textTheme.bodyLarge?.copyWith(color: Colors.black),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-            ),
-            if (onActionPressed != null)
-              SizedBox(
-                height: 52,
-                child: ActionSliderButton(
+          actionHeight: actionHeight,
+          instruction: instruction,
+          action: onActionPressed == null
+              ? null
+              : ActionSliderButton(
                   text: actionText,
                   onActionCompleted: onActionPressed!,
                   keepLoadingOnSuccess: keepActionLoadingOnSuccess,
                   isLoading: isSliderLoading,
-                  height: 52,
+                  height: actionHeight,
+                  labelStyle: _dockedActionLabelStyle(context),
                 ),
-              ),
-          ],
         );
       },
     );
@@ -541,7 +602,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final docked = _isDockedViewport(context);
+    final actionHeight = _dockedActionHeight(context);
     return _TransitionCardBase(
       keyboardShortcutText: null,
       childBuilder: (context, _) {
@@ -582,35 +643,20 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
             buttonFocusNode.requestFocus();
           },
         );
-        final action = ActionSliderButton(
-          text: widget.actionText,
-          height: docked ? _dockedActionHeight : 52,
-          onActionCompleted: onPromptAction,
-          keepLoadingOnSuccess: widget.keepActionLoadingOnSuccess,
-          focusNode: buttonFocusNode,
-        );
-        if (docked) {
-          // The filled text field carries its own rounding, so hug it.
-          return _DockedTransitionCardContainer(
-            margin: widget.margin,
-            padding: const EdgeInsetsDirectional.all(_dockedInset),
-            children: [
-              Flexible(child: promptField),
-              Flexible(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 200),
-                  child: action,
-                ),
-              ),
-            ],
-          );
-        }
-        return _TransitionCardContainer(
+        return _DockedTransitionCardContainer(
           margin: widget.margin,
-          children: [
-            promptField,
-            SizedBox(height: 52, child: action),
-          ],
+          actionHeight: actionHeight,
+          field: promptField,
+          inlineActionConstraints: const BoxConstraints(minWidth: 200),
+          flexibleInlineAction: true,
+          action: ActionSliderButton(
+            text: widget.actionText,
+            height: actionHeight,
+            onActionCompleted: onPromptAction,
+            keepLoadingOnSuccess: widget.keepActionLoadingOnSuccess,
+            focusNode: buttonFocusNode,
+            labelStyle: _dockedActionLabelStyle(context),
+          ),
         );
       },
     );
