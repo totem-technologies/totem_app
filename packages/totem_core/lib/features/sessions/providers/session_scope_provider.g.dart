@@ -1300,7 +1300,7 @@ final class SessionChatOpenProvider
   }
 }
 
-String _$sessionChatOpenHash() => r'85d240ecb76b049ba96aa04d99d52f9bf5eab316';
+String _$sessionChatOpenHash() => r'3724669903597dbf53e14b93b24f58ec9fb33965';
 
 /// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
 ///
@@ -1362,11 +1362,64 @@ final class SessionPromptsOpenProvider
 }
 
 String _$sessionPromptsOpenHash() =>
-    r'f04b92273b4aec1a9114872b1efc5b4336ab871a';
+    r'ac755a914b0338f1aec11071f0d94a65449067ba';
 
 /// Docked discussion-prompt panel visibility for the active session.
 
 abstract class _$SessionPromptsOpen extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(SessionAdmissionOpen)
+final sessionAdmissionOpenProvider = SessionAdmissionOpenProvider._();
+
+final class SessionAdmissionOpenProvider
+    extends $NotifierProvider<SessionAdmissionOpen, bool> {
+  SessionAdmissionOpenProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionAdmissionOpenProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionAdmissionOpenHash();
+
+  @$internal
+  @override
+  SessionAdmissionOpen create() => SessionAdmissionOpen();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$sessionAdmissionOpenHash() =>
+    r'fc1df612bde68d534659c73c88b64b00935ce45e';
+
+abstract class _$SessionAdmissionOpen extends $Notifier<bool> {
   bool build();
   @$mustCallSuper
   @override

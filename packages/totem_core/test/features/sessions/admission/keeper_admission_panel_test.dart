@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
+import 'package:totem_core/features/sessions/widgets/background.dart';
 
 void main() {
   for (final count in [1, 8]) {
@@ -60,6 +62,9 @@ void main() {
       check(
         tester.getSize(find.byType(KeeperAdmissionPanel)).height,
       ).isLessThan(640 * 0.36);
+      check(
+        tester.widgetList(find.widgetWithText(OutlinedButton, 'Decline')),
+      ).length.equals(count);
       await tester.ensureVisible(find.text('Admit').last);
       await tester.tap(find.text('Admit').last);
       check(admitted).equals(requests.last.id);
@@ -68,6 +73,65 @@ void main() {
       await tester.pump();
     });
   }
+
+  testWidgets(
+    'embedded panel fills its rail with readable text in active Session',
+    (tester) async {
+      final request = AdmissionRequest(
+        id: 'request',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: DateTime.utc(2030),
+        displayName: 'Guest',
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userProfileProvider(request.senderIdentity).overrideWith(
+              (ref) => PublicUserSchema(
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                dateCreated: DateTime.utc(2024),
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 380,
+                height: 500,
+                child: RoomBackground(
+                  status: RoomStatus.active,
+                  child: Material(
+                    color: AppTheme.cream,
+                    child: KeeperAdmissionPanel(
+                      requests: [request],
+                      onDecision: (_, _) async {},
+                      onAdmitAll: () {},
+                      onClose: () {},
+                      busy: false,
+                      desktop: true,
+                      embedded: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      check(
+        tester.getSize(find.byType(KeeperAdmissionPanel)).height,
+      ).equals(500);
+      for (final label in ['Waiting to join', '1 person', 'Guest']) {
+        check(
+          tester.widget<Text>(find.text(label)).style?.color,
+        ).equals(AppTheme.slate);
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
 
   testWidgets('keeper can decide separately and admit the remaining queue', (
     tester,

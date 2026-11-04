@@ -121,6 +121,40 @@ class _WaitingAdmissionFlowController extends PreJoinFlowController {
   );
 }
 
+class _BlockingAdmissionFlowController extends PreJoinFlowController {
+  _BlockingAdmissionFlowController(this.cancelGate);
+
+  final Completer<void> cancelGate;
+  int cancellationCount = 0;
+
+  @override
+  PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState(
+    phase: PreJoinFlowPhase.pending,
+    admissionStatus: AdmissionStatus.pending,
+  );
+
+  @override
+  Future<void> cancelAdmission() async {
+    cancellationCount++;
+    await cancelGate.future;
+  }
+}
+
+class _RecordingTotemRouter extends FakeTotemRouter {
+  bool? tabCloseConfirmationEnabled;
+  int popOrHomeCount = 0;
+
+  @override
+  void setTabCloseConfirmationEnabled(bool enabled) {
+    tabCloseConfirmationEnabled = enabled;
+  }
+
+  @override
+  void popOrHome([BuildContext? context]) {
+    popOrHomeCount++;
+  }
+}
+
 class _MutableFlowController extends PreJoinFlowController {
   @override
   PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState();
@@ -539,6 +573,45 @@ void main() {
     check(find.byType(VideoSessionScreen).evaluate()).isNotEmpty();
     check(find.byType(SessionWaitingView).evaluate()).isEmpty();
   });
+
+  for (final leaveControl in <({String name, Finder Function() finder})>[
+    (name: 'waiting room card', finder: () => find.text('Leave waiting room')),
+    (name: 'pre-join back button', finder: () => find.byTooltip('Back')),
+  ]) {
+    testWidgets(
+      'leaving via the ${leaveControl.name} cancels before exiting once',
+      (tester) async {
+        final router = _RecordingTotemRouter();
+        TotemRouter.instance = router;
+        addTearDown(() => TotemRouter.instance = FakeTotemRouter());
+        final cancelGate = Completer<void>();
+        final flow = _BlockingAdmissionFlowController(cancelGate);
+        await pumpScreen(
+          tester,
+          earlyParticipant: true,
+          flowController: () => flow,
+        );
+
+        final control = leaveControl.finder();
+        check(control.evaluate()).length.equals(1);
+        await tester.tap(control);
+        await tester.pump();
+        await tester.tap(control);
+        await tester.pump();
+
+        check(flow.cancellationCount).equals(1);
+        check(router.popOrHomeCount).equals(0);
+        check(router.tabCloseConfirmationEnabled).isNull();
+
+        cancelGate.complete();
+        await tester.pump();
+
+        check(router.tabCloseConfirmationEnabled).equals(false);
+        check(router.popOrHomeCount).equals(1);
+        check(tester.takeException()).isNull();
+      },
+    );
+  }
 
   testWidgets('pending admission shows a waiting room with local preview', (
     tester,

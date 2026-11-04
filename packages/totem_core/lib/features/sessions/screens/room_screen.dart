@@ -65,20 +65,28 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
 
 class _SessionChatRouteObserver extends NavigatorObserver {
   final List<Route<dynamic>> chatRoutes = [];
+  final List<Route<dynamic>> admissionRoutes = [];
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (route.settings.name == sessionChatRouteName) chatRoutes.add(route);
+    switch (route.settings.name) {
+      case sessionChatRouteName:
+        chatRoutes.add(route);
+      case sessionAdmissionRouteName:
+        admissionRoutes.add(route);
+    }
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     chatRoutes.remove(route);
+    admissionRoutes.remove(route);
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
     chatRoutes.remove(route);
+    admissionRoutes.remove(route);
   }
 }
 
@@ -92,15 +100,17 @@ class _DockedSessionPanelsRail extends ConsumerWidget {
     final chatOpen = ref.watch(sessionChatOpenProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
     final promptsOpen = isKeeper && ref.watch(sessionPromptsOpenProvider);
-    final Widget? panel = switch ((chatOpen, promptsOpen)) {
-      (true, _) => const SessionChatPanel(embedded: true),
-      (false, true) => Material(
+    final admissionOpen = isKeeper && ref.watch(sessionAdmissionOpenProvider);
+    final Widget? panel = switch ((chatOpen, promptsOpen, admissionOpen)) {
+      (true, _, _) => const SessionChatPanel(embedded: true),
+      (false, true, _) => Material(
         color: AppTheme.cream,
         elevation: 6,
         shadowColor: const Color.fromRGBO(0, 0, 0, 0.16),
         child: SessionPromptsModal(sessionSlug: sessionSlug, embedded: true),
       ),
-      (false, false) => null,
+      (false, false, true) => const SessionAdmissionPanel(docked: true),
+      (false, false, false) => null,
     };
 
     return DockedSessionSidePanel(open: panel != null, child: panel);
@@ -144,6 +154,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       ref
         ..invalidate(sessionChatOpenProvider)
         ..invalidate(sessionPromptsOpenProvider)
+        ..invalidate(sessionAdmissionOpenProvider)
         ..invalidate(sessionChatThreadTargetProvider)
         ..invalidate(sessionChatUnreadThreadsProvider);
     });
@@ -717,83 +728,83 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         ? ref.watch(currentSessionPromptProvider)
         : null;
 
-    return SessionKeyboardShortcuts(
-      navigatorKey: _roomNavigatorKey,
-      enableEmojiReactions:
-          !waitingForAdmission && currentRoomScreen == RoomScreen.listening,
-      child: RoomBackground(
-        status: roomStatus,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: Navigator(
-                            key: _roomNavigatorKey,
-                            observers: [_roomNavigatorObserver],
-                            clipBehavior: Clip.none,
-                            onDidRemovePage: (page) => {},
-                            pages: [
-                              MaterialPage(
-                                child: Stack(
-                                  children: [
-                                    Positioned.fill(
-                                      child: RepaintBoundary(
-                                        child: PopScope(
-                                          canPop: false,
-                                          onPopInvokedWithResult:
-                                              (didPop, result) async {
-                                                await _handleBackNavigation(
-                                                  currentSession,
-                                                  connectionState,
-                                                );
-                                              },
-                                          child: _buildBody(
-                                            currentSession,
-                                            waitingForAdmission
-                                                ? RoomScreen.loading
-                                                : currentRoomScreen,
-                                            currentSessionEvent,
-                                            disconnectReason,
-                                            isOffline: isOffline ?? false,
+    return SessionAdmissionOverlay(
+      sessionSlug: widget.sessionSlug,
+      child: SessionKeyboardShortcuts(
+        navigatorKey: _roomNavigatorKey,
+        enableEmojiReactions:
+            !waitingForAdmission && currentRoomScreen == RoomScreen.listening,
+        child: RoomBackground(
+          status: roomStatus,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Navigator(
+                              key: _roomNavigatorKey,
+                              observers: [_roomNavigatorObserver],
+                              clipBehavior: Clip.none,
+                              onDidRemovePage: (page) => {},
+                              pages: [
+                                MaterialPage(
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: RepaintBoundary(
+                                          child: PopScope(
+                                            canPop: false,
+                                            onPopInvokedWithResult:
+                                                (didPop, result) async {
+                                                  await _handleBackNavigation(
+                                                    currentSession,
+                                                    connectionState,
+                                                  );
+                                                },
+                                            child: _buildBody(
+                                              currentSession,
+                                              waitingForAdmission
+                                                  ? RoomScreen.loading
+                                                  : currentRoomScreen,
+                                              currentSessionEvent,
+                                              disconnectReason,
+                                              isOffline: isOffline ?? false,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    Positioned.fill(
-                                      child: IgnorePointer(
-                                        child: Overlay(
-                                          key: EmojiReactions.emojiOverlayKey,
+                                      Positioned.fill(
+                                        child: IgnorePointer(
+                                          child: Overlay(
+                                            key: EmojiReactions.emojiOverlayKey,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        SessionAdmissionOverlay(
-                          sessionSlug: widget.sessionSlug,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  if (dockChatSlot)
-                    _DockedSessionPanelsRail(sessionSlug: widget.sessionSlug),
-                ],
+                    if (dockChatSlot)
+                      _DockedSessionPanelsRail(sessionSlug: widget.sessionSlug),
+                  ],
+                ),
               ),
-            ),
-            if (showOrientation)
-              _buildAdmissionOrientation(
-                admissionPrompt,
-                desktop: dockChatSlot,
-              ),
-          ],
+              if (showOrientation)
+                _buildAdmissionOrientation(
+                  admissionPrompt,
+                  desktop: dockChatSlot,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -802,11 +813,18 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   void _dismissSessionChat() {
     if (_hasDismissedChatForDisconnect) return;
     _hasDismissedChatForDisconnect = true;
-    ref.read(sessionChatOpenProvider.notifier).open = false;
+    ref
+      ..read(sessionChatOpenProvider.notifier).open = false
+      ..read(sessionPromptsOpenProvider.notifier).open = false
+      ..read(sessionAdmissionOpenProvider.notifier).open = false;
     final navigator = _roomNavigatorKey.currentState;
     if (navigator == null) return;
 
-    for (final route in _roomNavigatorObserver.chatRoutes.reversed.toList()) {
+    final routes = [
+      ..._roomNavigatorObserver.chatRoutes,
+      ..._roomNavigatorObserver.admissionRoutes,
+    ];
+    for (final route in routes.reversed.toList()) {
       if (!route.isActive) continue;
       if (route.isCurrent) {
         navigator.pop();

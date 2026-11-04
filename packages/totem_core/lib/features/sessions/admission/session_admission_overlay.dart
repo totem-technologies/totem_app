@@ -1,11 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
+import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
@@ -15,16 +16,24 @@ import 'package:totem_core/features/sessions/admission/keeper_admission_panel.da
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/screens/chat.dart';
-import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
+import 'package:totem_core/shared/widgets/responsive_modal.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
+/// Owns admission connections while the room renders queue controls and panels
+/// in its normal layout. Opening or closing a panel never recreates transport.
 class SessionAdmissionOverlay extends ConsumerStatefulWidget {
-  const SessionAdmissionOverlay({required this.sessionSlug, super.key});
+  const SessionAdmissionOverlay({
+    required this.sessionSlug,
+    required this.child,
+    super.key,
+  });
 
   final String sessionSlug;
+  final Widget child;
 
   @override
   ConsumerState<SessionAdmissionOverlay> createState() =>
@@ -51,10 +60,7 @@ class _SessionAdmissionOverlayState
   KeeperAdmissionRosterStore? _keeperRosterStore;
   String? _rosterStoreSessionSlug;
   var _admittedUpdateVersion = 0;
-  bool _dismissed = false;
   bool _busy = false;
-  bool _actionBarPositionUpdateScheduled = false;
-  final GlobalKey _overlayKey = GlobalKey();
 
   @override
   void initState() {
@@ -160,7 +166,6 @@ class _SessionAdmissionOverlayState
     _transport = transport;
     _room = room;
     _keeperIdentity = keeperIdentity;
-    _dismissed = false;
 
     if (isKeeper) {
       final controller = KeeperAdmissionController(
@@ -176,9 +181,7 @@ class _SessionAdmissionOverlayState
       _keeperChanges = controller.changes.listen((_) {
         if (!mounted || !identical(_keeperController, controller)) return;
         _syncAdmittedIdentities(controller.roster);
-        setState(() {
-          if (controller.requests.isEmpty) _dismissed = false;
-        });
+        setState(() {});
       });
     } else {
       final controller = ClientAdmissionRosterController(
@@ -338,41 +341,9 @@ class _SessionAdmissionOverlayState
     }
   }
 
-  double _actionBarBottomInset() {
-    final actionBar =
-        SessionActionBar.actionBarKey.currentContext?.findRenderObject()
-            as RenderBox?;
-    final overlay =
-        _overlayKey.currentContext?.findRenderObject() as RenderBox?;
-    if (actionBar == null ||
-        !actionBar.hasSize ||
-        overlay == null ||
-        !overlay.hasSize) {
-      return 16;
-    }
-
-    final actionBarTop = actionBar.localToGlobal(Offset.zero).dy;
-    final overlayTop = overlay.localToGlobal(Offset.zero).dy;
-    final topInOverlay = actionBarTop - overlayTop;
-    if (topInOverlay <= 0 || topInOverlay >= overlay.size.height) return 16;
-
-    return overlay.size.height - topInOverlay + 16;
-  }
-
-  void _scheduleActionBarPositionUpdate(double bottomInset) {
-    if (_actionBarPositionUpdateScheduled) return;
-    _actionBarPositionUpdateScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _actionBarPositionUpdateScheduled = false;
-      if (!mounted || (_actionBarBottomInset() - bottomInset).abs() < 0.5) {
-        return;
-      }
-      setState(() {});
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    VoidCallback? retry;
     final keeper = ref.watch(keeperIdentityProvider);
     if (keeper != null &&
         ref.read(currentSessionProvider)?.room?.localParticipant?.identity ==
@@ -384,31 +355,7 @@ class _SessionAdmissionOverlayState
       ref.listen(provider, (_, _) => _syncAdmission());
       final declined = ref.watch(provider);
       if (declined.hasError && !declined.hasValue) {
-        return Positioned(
-          top: 16,
-          left: 16,
-          right: 16,
-          child: SafeArea(
-            child: Material(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Could not load declined participants. Admission is paused.',
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => ref.invalidate(provider),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
+        retry = () => ref.invalidate(provider);
       }
     }
     final controller = _keeperController;
@@ -421,71 +368,183 @@ class _SessionAdmissionOverlayState
             )
             .toList() ??
         const <KeeperAdmissionAttempt>[];
-    if (controller == null ||
-        !controller.approvalRequired ||
-        attempts.isEmpty) {
-      // The room Stack has only positioned video children; keep it expanded
-      // even when the queue has nothing to display.
-      return const SizedBox.expand();
+    return _SessionAdmissionScope(
+      requests: controller?.requests ?? const [],
+      attempts: attempts,
+      enabled: controller?.approvalRequired ?? false,
+      busy: _busy,
+      onRetry: retry,
+      onDecision: _decide,
+      onDeclinePermanently: (request) =>
+          _decide(request, false, permanently: true),
+      onAdmitAll: () => unawaited(_admitAll()),
+      child: widget.child,
+    );
+  }
+}
+
+const sessionAdmissionRouteName = 'session-admission';
+
+class _SessionAdmissionScope extends InheritedWidget {
+  const _SessionAdmissionScope({
+    required this.requests,
+    required this.attempts,
+    required this.enabled,
+    required this.busy,
+    required this.onDecision,
+    required this.onDeclinePermanently,
+    required this.onAdmitAll,
+    required this.onRetry,
+    required super.child,
+  });
+
+  final List<AdmissionRequest> requests;
+  final List<KeeperAdmissionAttempt> attempts;
+  final bool enabled;
+  final bool busy;
+  final VoidCallback? onRetry;
+  final Future<void> Function(AdmissionRequest, bool) onDecision;
+  final Future<void> Function(AdmissionRequest) onDeclinePermanently;
+  final VoidCallback onAdmitAll;
+
+  static _SessionAdmissionScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_SessionAdmissionScope>();
+
+  @override
+  bool updateShouldNotify(_SessionAdmissionScope oldWidget) => true;
+}
+
+/// A queue control in normal Session layout; it never positions itself over video.
+class SessionAdmissionQueueControl extends ConsumerWidget {
+  const SessionAdmissionQueueControl({this.child, super.key});
+
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final admission = _SessionAdmissionScope.maybeOf(context);
+    if (admission == null) return child ?? const SizedBox.shrink();
+    final joining = admission.attempts.any(
+      (attempt) => attempt.status == KeeperAdmissionStatus.joining,
+    );
+    final retry = admission.onRetry;
+    if (retry == null &&
+        (!admission.enabled || (admission.requests.isEmpty && !joining))) {
+      return child ?? const SizedBox.shrink();
+    }
+    String? label;
+    if (retry != null) {
+      label = 'Admission unavailable';
+    } else if (admission.requests.isEmpty) {
+      label = 'Admission in progress';
+    }
+    final button = SessionWaitingQueueButton(
+      count: admission.requests.length,
+      label: label,
+      onPressed: () => unawaited(_showSessionAdmission(context, ref)),
+    );
+    if (child == null) return button;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 8,
+      children: [button, child!],
+    );
+  }
+}
+
+Future<void> _showSessionAdmission(BuildContext context, WidgetRef ref) async {
+  final open = ref.read(sessionAdmissionOpenProvider.notifier);
+  if (shouldDockSessionSidePanel(context)) {
+    open.open = !open.open;
+    return;
+  }
+  // Clear any dormant dock selection left by a viewport resize before opening
+  // a modal, so widening the window cannot show a second panel beside it.
+  open.open = false;
+  ref.read(sessionChatOpenProvider.notifier).open = false;
+  ref.read(sessionPromptsOpenProvider.notifier).open = false;
+  final kind = ViewportResolver.getViewportKind(context);
+  if (kind == ViewportKind.mediumSmall || kind == ViewportKind.mediumPlus) {
+    await showSessionSidePanelDrawer(
+      context,
+      settings: const RouteSettings(name: sessionAdmissionRouteName),
+      child: const SessionAdmissionPanel(),
+    );
+    return;
+  }
+  await showResponsiveModal<void>(
+    context: context,
+    useRootNavigator: false,
+    routeSettings: const RouteSettings(name: sessionAdmissionRouteName),
+    showDragHandle: true,
+    bottomSheetBackgroundColor: AppTheme.cream,
+    dialogBackgroundColor: AppTheme.cream,
+    bottomSheetBuilder: (context) => SizedBox(
+      height: MediaQuery.heightOf(context) * 0.7,
+      child: const SessionAdmissionPanel(),
+    ),
+    largeScreenBuilder: (context) => const SizedBox(
+      width: sessionSidePanelWidth,
+      child: SessionAdmissionPanel(),
+    ),
+  );
+}
+
+/// Shared live content for the desktop rail, tablet drawer, and phone sheet.
+class SessionAdmissionPanel extends ConsumerWidget {
+  const SessionAdmissionPanel({this.docked = false, super.key});
+
+  final bool docked;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final admission = _SessionAdmissionScope.maybeOf(context);
+    if (admission == null) return const SizedBox.shrink();
+    void close() {
+      if (docked) {
+        ref.read(sessionAdmissionOpenProvider.notifier).open = false;
+      } else {
+        Navigator.of(context).maybePop();
+      }
     }
 
-    final desktop = shouldDockSessionChat(context);
-    final child = _dismissed
-        ? SessionWaitingQueueButton(
-            count: controller.requests.length,
-            label:
-                controller.requests.isEmpty &&
-                    attempts.any(
-                      (attempt) =>
-                          attempt.status == KeeperAdmissionStatus.joining,
-                    )
-                ? 'Admission in progress'
-                : null,
-            onPressed: () => setState(() => _dismissed = false),
-          )
-        : KeeperAdmissionPanel(
-            requests: controller.requests,
-            attempts: attempts,
-            busy: _busy,
-            desktop: desktop,
-            onDecision: _decide,
-            onDeclinePermanently: (request) =>
-                _decide(request, false, permanently: true),
-            onAdmitAll: () => unawaited(_admitAll()),
-            onClose: () => setState(() => _dismissed = true),
-          );
-    if (desktop) {
-      return Positioned(
-        top: 16,
-        right: 16,
+    final retry = admission.onRetry;
+    if (retry != null) {
+      return Material(
+        color: AppTheme.cream,
         child: SafeArea(
-          child: Align(alignment: Alignment.topRight, child: child),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Could not load declined participants. Admission is paused.',
+                  style: TextStyle(color: AppTheme.slate),
+                ),
+                OutlinedButton(onPressed: retry, child: const Text('Retry')),
+                OutlinedButton(onPressed: close, child: const Text('Close')),
+              ],
+            ),
+          ),
         ),
       );
     }
-
-    return Positioned.fill(
-      child: SizedBox.expand(
-        key: _overlayKey,
-        child: LayoutBuilder(
-          builder: (context, _) {
-            final bottomInset = _actionBarBottomInset();
-            _scheduleActionBarPositionUpdate(bottomInset);
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                bottom: bottomInset,
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: child,
-                ),
-              ),
-            );
-          },
+    return Material(
+      color: AppTheme.cream,
+      elevation: docked ? 6 : 0,
+      shadowColor: const Color.fromRGBO(0, 0, 0, 0.16),
+      child: SafeArea(
+        child: KeeperAdmissionPanel(
+          requests: admission.requests,
+          attempts: admission.attempts,
+          busy: admission.busy,
+          embedded: true,
+          desktop: docked,
+          onDecision: admission.onDecision,
+          onDeclinePermanently: admission.onDeclinePermanently,
+          onAdmitAll: admission.onAdmitAll,
+          onClose: close,
         ),
       ),
     );

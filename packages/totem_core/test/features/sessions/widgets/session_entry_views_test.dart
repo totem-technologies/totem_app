@@ -138,6 +138,7 @@ void main() {
     (tester) async {
       var signedUp = false;
       var selected = 0;
+      var returned = 0;
       Widget host() => MaterialApp(
         home: Scaffold(
           body: SessionDeclinedView(
@@ -148,6 +149,7 @@ void main() {
             actionLabel: 'Join the next session',
             signedUp: signedUp,
             onSignUp: () => signedUp = true,
+            onBackToSpace: () => returned++,
           ),
         ),
       );
@@ -160,8 +162,43 @@ void main() {
       check(find.text("You're signed up").evaluate().length).equals(1);
       await tester.tap(find.text("You're signed up"));
       check(signedUp).isTrue();
+      await tester.tap(find.text('Return to the Space'));
+      check(returned).equals(1);
     },
   );
+
+  for (final size in [
+    const Size(360, 812),
+    const Size(812, 360),
+    const Size(1280, 800),
+  ]) {
+    testWidgets('declined view keeps actions available at $size', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = size;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SessionDeclinedView(
+              message: 'The session has ended.',
+              offer: const Text('Next session'),
+              actionLabel: 'View Session',
+              onSignUp: () {},
+              onBackToSpace: () {},
+            ),
+          ),
+        ),
+      );
+
+      check(tester.takeException()).isNull();
+      check(find.text('View Session').evaluate()).isNotEmpty();
+      check(find.text('Return to the Space').evaluate()).isNotEmpty();
+    });
+  }
 
   testWidgets('orientation displays only the supplied prompt and completes', (
     tester,

@@ -329,9 +329,15 @@ class SessionChatOpen extends _$SessionChatOpen {
 
   bool get open => state;
 
-  set open(bool value) => state = value;
+  set open(bool value) {
+    state = value;
+    if (value) {
+      ref.read(sessionPromptsOpenProvider.notifier).open = false;
+      ref.read(sessionAdmissionOpenProvider.notifier).open = false;
+    }
+  }
 
-  void toggle() => state = !state;
+  void toggle() => open = !state;
 }
 
 /// Docked discussion-prompt panel visibility for the active session.
@@ -342,7 +348,29 @@ class SessionPromptsOpen extends _$SessionPromptsOpen {
 
   bool get open => state;
 
-  set open(bool value) => state = value;
+  set open(bool value) {
+    state = value;
+    if (value) {
+      ref.read(sessionChatOpenProvider.notifier).open = false;
+      ref.read(sessionAdmissionOpenProvider.notifier).open = false;
+    }
+  }
+}
+
+@Riverpod(keepAlive: true)
+class SessionAdmissionOpen extends _$SessionAdmissionOpen {
+  @override
+  bool build() => false;
+
+  bool get open => state;
+
+  set open(bool value) {
+    state = value;
+    if (value) {
+      ref.read(sessionChatOpenProvider.notifier).open = false;
+      ref.read(sessionPromptsOpenProvider.notifier).open = false;
+    }
+  }
 }
 
 /// Current in-call thread. Null is the Everyone group thread.

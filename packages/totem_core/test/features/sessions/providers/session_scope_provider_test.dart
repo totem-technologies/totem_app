@@ -158,6 +158,28 @@ void main() {
     });
   });
 
+  group('session panel visibility', () {
+    test('opens exactly one of chat, prompts, or admission at a time', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(sessionAdmissionOpenProvider.notifier).open = true;
+      check(container.read(sessionAdmissionOpenProvider)).isTrue();
+      check(container.read(sessionChatOpenProvider)).isFalse();
+      check(container.read(sessionPromptsOpenProvider)).isFalse();
+
+      container.read(sessionChatOpenProvider.notifier).open = true;
+      check(container.read(sessionAdmissionOpenProvider)).isFalse();
+      check(container.read(sessionChatOpenProvider)).isTrue();
+      check(container.read(sessionPromptsOpenProvider)).isFalse();
+
+      container.read(sessionPromptsOpenProvider.notifier).open = true;
+      check(container.read(sessionAdmissionOpenProvider)).isFalse();
+      check(container.read(sessionChatOpenProvider)).isFalse();
+      check(container.read(sessionPromptsOpenProvider)).isTrue();
+    });
+  });
+
   group('session scope selectors', () {
     test(
       'hides unknown participants and speaker presentations until admitted',

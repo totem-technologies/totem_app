@@ -18,6 +18,7 @@ import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/features/permissions/media_control.dart';
 import 'package:totem_core/features/permissions/media_permission_controller.dart';
 import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
@@ -30,6 +31,7 @@ import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
+import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -164,6 +166,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   bool showAdmissionOrientation = false,
   bool admissionReady = false,
   String? admissionPrompt,
+  bool isCurrentUserKeeper = false,
   List<Object?> extraOverrides = const [],
 }) async {
   final p1 = testParticipant('user-1');
@@ -209,7 +212,9 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         ),
         connectionStateProvider.overrideWith((ref) => connectionState),
         roomStatusProvider.overrideWith((ref) => roomStatus),
-        isCurrentUserKeeperProvider.overrideWith((ref) => false),
+        isCurrentUserKeeperProvider.overrideWith(
+          (ref) => isCurrentUserKeeper,
+        ),
         currentSessionPromptProvider.overrideWith((ref) => admissionPrompt),
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
@@ -744,6 +749,34 @@ void main() {
       await _unmountRoomScreen(tester);
     });
 
+    testWidgets('clears admission panel state when the user is disconnected', (
+      tester,
+    ) async {
+      final screenProvider =
+          NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+            () => _RoomScreenOverrideNotifier(RoomScreen.listening),
+          );
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        roomScreenProvider: screenProvider,
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container.read(sessionAdmissionOpenProvider.notifier).open = true;
+      container.read(screenProvider.notifier).set(RoomScreen.disconnected);
+      await tester.pump();
+
+      check(container.read(sessionChatOpenProvider)).isFalse();
+      check(container.read(sessionPromptsOpenProvider)).isFalse();
+      check(container.read(sessionAdmissionOpenProvider)).isFalse();
+    });
+
     testWidgets('renders offline error screen for a network disconnection', (
       tester,
     ) async {
@@ -908,7 +941,7 @@ void main() {
       check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
     });
 
-    testWidgets('clears leftover chat UI state when a room is entered', (
+    testWidgets('clears leftover panel UI state when a room is entered', (
       tester,
     ) async {
       final event = _createSessionEventWithElapsed(
@@ -924,14 +957,16 @@ void main() {
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
         beforeMount: (container) async {
-          container.read(sessionChatOpenProvider.notifier).open = true;
+          container.read(sessionAdmissionOpenProvider.notifier).open = true;
           container.read(sessionChatThreadTargetProvider.notifier).target =
               'keeper-of-previous-circle';
         },
       );
 
-      expect(harness.container.read(sessionChatOpenProvider), isFalse);
-      expect(harness.container.read(sessionChatThreadTargetProvider), isNull);
+      check(harness.container.read(sessionChatOpenProvider)).isFalse();
+      check(harness.container.read(sessionPromptsOpenProvider)).isFalse();
+      check(harness.container.read(sessionAdmissionOpenProvider)).isFalse();
+      check(harness.container.read(sessionChatThreadTargetProvider)).isNull();
     });
 
     testWidgets('docks the chat sidebar on a wide viewport when open', (
@@ -966,6 +1001,40 @@ void main() {
 
       expect(find.byType(SessionChatPanel), findsOneWidget);
     });
+
+    testWidgets(
+      'docks the admission panel beside the room on a wide viewport',
+      (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          isCurrentUserKeeper: true,
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container.read(sessionAdmissionOpenProvider.notifier).open = true;
+        await tester.pumpAndSettle();
+
+        check(
+          tester.widgetList(find.byType(SessionAdmissionPanel)),
+        ).length.equals(1);
+        check(tester.getSize(find.byType(DockedSessionSidePanel)).width).equals(
+          sessionSidePanelWidth,
+        );
+      },
+    );
 
     testWidgets(
       'orients a late arrival once connected and lets them enter the room',

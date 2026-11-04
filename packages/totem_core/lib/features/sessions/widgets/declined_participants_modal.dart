@@ -220,7 +220,7 @@ class _DeclinedParticipantItem extends ConsumerWidget {
     return Container(
       margin: const EdgeInsetsDirectional.only(bottom: 8),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryFixedDim,
+        color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(20),
       ),
       child: ListTile(
@@ -246,7 +246,7 @@ class _DeclinedParticipantItem extends ConsumerWidget {
           name ?? identity,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onPrimary,
+            color: theme.colorScheme.onSurface,
           ),
         ),
         trailing: SizedBox(
@@ -254,9 +254,9 @@ class _DeclinedParticipantItem extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
             child: OutlinedButton(
-              style: const ButtonStyle(
-                foregroundColor: WidgetStatePropertyAll(Colors.white),
-                side: WidgetStatePropertyAll(BorderSide(color: Colors.white)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: theme.colorScheme.onSurface,
+                side: BorderSide(color: theme.colorScheme.outline),
               ),
               onPressed: disabled ? null : () => onAllow(identity, name),
               child: const Text(

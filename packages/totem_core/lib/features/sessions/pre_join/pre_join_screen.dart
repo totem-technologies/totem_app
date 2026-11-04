@@ -83,6 +83,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   bool _primingSheetShown = false;
   bool _reportedFullyDisplayed = false;
   bool _joined = false;
+  bool _leavingWaiting = false;
   bool _wakeLockEnabled = false;
   bool _wakeLockRequested = false;
   Future<void> _wakeLockOperation = Future.value();
@@ -238,8 +239,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
             AdmissionStatus.ended => 'The Session has ended.',
             _ => 'Your admission request has expired.',
           };
-    return Material(
-      color: const Color(0xFFFCEFE4),
+    return RoomBackground(
+      status: RoomStatus.ended,
       child: SafeArea(
         child: SessionDeclinedView(
           message: message,
@@ -381,11 +382,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       joinNote = 'Please try again: ${flow.error}';
     }
     void leaveWaiting() {
+      if (_leavingWaiting) return;
+      _leavingWaiting = true;
       unawaited(() async {
         await ref
             .read(preJoinFlowControllerProvider(widget.sessionSlug).notifier)
             .cancelAdmission();
-        if (mounted) _backToSpace(session);
+        if (!mounted) return;
+        TotemRouter.instance
+          ..setTabCloseConfirmationEnabled(false)
+          ..popOrHome(context);
       }());
     }
 

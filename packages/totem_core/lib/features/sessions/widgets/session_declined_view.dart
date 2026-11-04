@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
-
-import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
+import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
 /// The declined entry state. The offer is supplied by the caller (or omitted);
 /// selecting it and signing up are separate actions owned by the host.
@@ -29,8 +29,9 @@ class SessionDeclinedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final wide = constraints.maxWidth >= 640;
+      final isWide = constraints.maxWidth >= 640;
       final offer = this.offer;
+      final theme = Theme.of(context);
       return Semantics(
         container: true,
         label: 'Session unavailable',
@@ -39,77 +40,86 @@ class SessionDeclinedView extends StatelessWidget {
             SliverFillRemaining(
               hasScrollBody: false,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 32,
-                  horizontal: 20,
+                padding: EdgeInsetsDirectional.symmetric(
+                  horizontal: isWide ? 48 : 20,
+                  vertical: isWide ? 48 : 32,
                 ),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 520),
+                    constraints: const BoxConstraints(maxWidth: 560),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                      spacing: 16,
+                      spacing: 20,
                       children: [
-                        const Text(
-                          'SESSION',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.8,
-                            color: entryMauve,
+                        Center(
+                          child: Container(
+                            width: isWide ? 80 : 64,
+                            height: isWide ? 80 : 64,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              color: AppTheme.mauve,
+                              shape: BoxShape.circle,
+                            ),
+                            child: TotemIcon(
+                              TotemIcons.x,
+                              color: AppTheme.white,
+                              size: isWide ? 38 : 30,
+                            ),
                           ),
                         ),
                         Semantics(
                           header: true,
-                          child: const Text(
-                            "We're sorry, this session is no longer available for admission, but we'd love to see you soon.",
-                            style: entryTitle,
+                          child: Text(
+                            'Session unavailable',
+                            style: theme.textTheme.headlineMedium,
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                        Text(message, style: entryMuted),
-                        if (offer != null && onOffer == null) offer,
-                        if (offer != null && onOffer != null)
-                          InkWell(
-                            onTap: onOffer,
-                            child: Semantics(
-                              button: true,
-                              label: offerDescription,
-                              child: offer,
-                            ),
+                        Text(
+                          message,
+                          style: theme.textTheme.bodyLarge,
+                          textAlign: TextAlign.center,
+                        ),
+                        if (offer != null)
+                          _Offer(
+                            offer: offer,
+                            description: offerDescription,
+                            onPressed: onOffer,
                           ),
-                        Column(
-                          spacing: 8,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 12,
+                          runSpacing: 8,
                           children: [
-                            if (offer != null && wide)
-                              Center(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 240,
-                                  ),
-                                  child: SessionEntryAction(
-                                    label: signedUp
-                                        ? "You're signed up"
-                                        : actionLabel,
-                                    onPressed: signedUp ? null : onSignUp,
-                                  ),
+                            if (offer != null)
+                              FilledButton(
+                                onPressed: signedUp ? null : onSignUp,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppTheme.paleGreen,
+                                  foregroundColor: Colors.black,
+                                  minimumSize: const Size(0, 48),
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                        horizontal: 24,
+                                      ),
+                                ),
+                                child: Text(
+                                  signedUp ? "You're signed up" : actionLabel,
                                 ),
                               ),
-                            if (offer != null && !wide)
-                              SessionEntryAction(
-                                label: signedUp
-                                    ? "You're signed up"
-                                    : actionLabel,
-                                onPressed: signedUp ? null : onSignUp,
-                                expand: true,
+                            TextButton(
+                              onPressed: onBackToSpace,
+                              style: TextButton.styleFrom(
+                                foregroundColor:
+                                    theme.textTheme.bodyLarge?.color,
+                                minimumSize: const Size(0, 48),
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 24,
+                                ),
                               ),
-                            Center(
-                              child: SessionEntryAction(
-                                label: 'Return to the Space',
-                                onPressed: onBackToSpace,
-                                quiet: true,
-                              ),
+                              child: const Text('Return to the Space'),
                             ),
                           ],
                         ),
@@ -124,4 +134,30 @@ class SessionDeclinedView extends StatelessWidget {
       );
     },
   );
+}
+
+class _Offer extends StatelessWidget {
+  const _Offer({
+    required this.offer,
+    required this.description,
+    required this.onPressed,
+  });
+
+  final Widget offer;
+  final String? description;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    if (onPressed == null) return offer;
+
+    return Semantics(
+      button: true,
+      label: description,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(onTap: onPressed, child: offer),
+      ),
+    );
+  }
 }

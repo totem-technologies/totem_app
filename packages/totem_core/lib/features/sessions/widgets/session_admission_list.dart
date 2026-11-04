@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/config/theme.dart';
 
 /// Display-only admission data. IDs come from the owner.
 class SessionAdmissionGuest {
@@ -57,15 +58,22 @@ class SessionAdmissionList extends StatelessWidget {
                       header: true,
                       child: Text(
                         'Waiting to join',
-                        style: theme.textTheme.titleMedium,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: AppTheme.slate,
+                        ),
                       ),
                     ),
-                    Text(label, style: theme.textTheme.bodySmall),
+                    Text(
+                      label,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.slate,
+                      ),
+                    ),
                   ],
                 ),
               ),
               if (guests.length > 1)
-                TextButton(
+                OutlinedButton(
                   onPressed: busy ? null : onAdmitAll,
                   child: const Text('Admit all'),
                 ),
@@ -81,7 +89,9 @@ class SessionAdmissionList extends StatelessWidget {
               padding: const EdgeInsets.only(top: 12),
               child: Text(
                 "You're clear. No one is waiting.",
-                style: theme.textTheme.bodyMedium,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.slate,
+                ),
               ),
             )
           else
@@ -118,7 +128,9 @@ class SessionAdmissionList extends StatelessWidget {
             guest.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleSmall,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: AppTheme.slate,
+            ),
           ),
         ),
       ],
@@ -128,7 +140,7 @@ class SessionAdmissionList extends StatelessWidget {
       spacing: 8,
       runSpacing: 4,
       children: [
-        TextButton(
+        OutlinedButton(
           onPressed: busy || onDecline == null
               ? null
               : () => onDecline!(guest.id),

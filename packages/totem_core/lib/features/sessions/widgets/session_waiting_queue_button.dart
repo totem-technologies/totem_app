@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/config/theme.dart';
 
 /// Keeper's queue indicator. The host supplies the current waiting count and
 /// opens the admission surface; this control never owns the queue.
@@ -17,12 +18,12 @@ class SessionWaitingQueueButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (count <= 0 && label == null) return const SizedBox.shrink();
-    final theme = Theme.of(context);
-    return ElevatedButton.icon(
+    return OutlinedButton.icon(
       onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: theme.colorScheme.primaryContainer,
-        foregroundColor: theme.colorScheme.onPrimaryContainer,
+      style: OutlinedButton.styleFrom(
+        backgroundColor: AppTheme.cream,
+        foregroundColor: AppTheme.slate,
+        side: BorderSide(color: AppTheme.slate.withValues(alpha: 0.2)),
         shape: const StadiumBorder(),
       ),
       icon: const Icon(Icons.people_outline, size: 20),

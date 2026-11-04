@@ -10,6 +10,7 @@ import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/permissions/policy.dart';
 import 'package:totem_core/features/permissions/ui/recovery.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -615,31 +616,37 @@ class SessionActionBar extends ConsumerWidget {
       case RoomScreen.loading:
         return const SizedBox.shrink();
       case RoomScreen.listening:
-        return ActionBar(
-          key: SessionActionBar.actionBarKey,
-          children: [
-            microphoneButton,
-            cameraButton,
-            emojiBarButton,
-            chatButton,
-            moreButton,
-          ],
+        return SessionAdmissionQueueControl(
+          child: ActionBar(
+            key: SessionActionBar.actionBarKey,
+            children: [
+              microphoneButton,
+              cameraButton,
+              emojiBarButton,
+              chatButton,
+              moreButton,
+            ],
+          ),
         );
       case RoomScreen.speaking:
       case RoomScreen.passing:
-        return ActionBar(
-          key: SessionActionBar.actionBarKey,
-          children: [microphoneButton, cameraButton, chatButton, moreButton],
+        return SessionAdmissionQueueControl(
+          child: ActionBar(
+            key: SessionActionBar.actionBarKey,
+            children: [microphoneButton, cameraButton, chatButton, moreButton],
+          ),
         );
       case RoomScreen.receiving:
-        return ActionBar(
-          key: SessionActionBar.actionBarKey,
-          children: [
-            if (currentUser?.isStaff == true) microphoneButton,
-            cameraButton,
-            chatButton,
-            moreButton,
-          ],
+        return SessionAdmissionQueueControl(
+          child: ActionBar(
+            key: SessionActionBar.actionBarKey,
+            children: [
+              if (currentUser?.isStaff == true) microphoneButton,
+              cameraButton,
+              chatButton,
+              moreButton,
+            ],
+          ),
         );
     }
   }
