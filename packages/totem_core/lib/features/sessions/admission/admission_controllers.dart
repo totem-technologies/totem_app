@@ -354,7 +354,12 @@ class KeeperAdmissionController {
   List<AdmissionRequest> get requests => _approvalRequired
       ? List.unmodifiable(
           _pending.values.where(
-            (request) => !isPermanentlyDeclined(request.senderIdentity),
+            (request) =>
+                !isPermanentlyDeclined(request.senderIdentity) &&
+                !(_roster.contains(request.senderIdentity) &&
+                    _inFlight.contains(
+                      _key(request.senderIdentity, request.id),
+                    )),
           ),
         )
       : const [];
@@ -560,11 +565,13 @@ class KeeperAdmissionController {
       return;
     }
     final declined = isPermanentlyDeclined(identity);
-    if (!declined && _approvalRequired) return;
-    // A durable decline takes precedence over open admission. Approval still
-    // requires activation and a joined receipt before presentation.
+    if (!declined && _approvalRequired && !_roster.contains(identity)) return;
+    // A durable decline takes precedence over a previous admission. Returning
+    // members still need a fresh joined receipt before appearing in the roster.
     unawaited(
-      _decide(request.id, identity, !declined).catchError((Object _) {}),
+      _decide(request.id, identity, !declined).catchError((Object _) {
+        if (!_disposed && !_ended) _changes.add(null);
+      }),
     );
   }
 
