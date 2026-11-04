@@ -119,32 +119,36 @@ class EmojiBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        elevation: 6,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 15,
-              vertical: 6,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 10,
-              children: [
-                for (final emoji in emojis)
-                  _EmojiReactionButton(
-                    emoji: emoji,
-                    onPressed: () => onEmojiSelected(emoji),
-                  ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 380;
+        final buttonSize = isCompact ? 32.0 : 40.0;
+        return Center(
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            elevation: 6,
+            child: Padding(
+              padding: EdgeInsetsDirectional.symmetric(
+                horizontal: isCompact ? 8 : 15,
+                vertical: isCompact ? 4 : 6,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: isCompact ? 4 : 10,
+                children: [
+                  for (final emoji in emojis)
+                    _EmojiReactionButton(
+                      emoji: emoji,
+                      size: buttonSize,
+                      onPressed: () => onEmojiSelected(emoji),
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -152,10 +156,12 @@ class EmojiBar extends StatelessWidget {
 class _EmojiReactionButton extends StatefulWidget {
   const _EmojiReactionButton({
     required this.emoji,
+    required this.size,
     required this.onPressed,
   });
 
   final Emoji emoji;
+  final double size;
   final VoidCallback onPressed;
 
   @override
@@ -207,13 +213,13 @@ class _EmojiReactionButtonState extends State<_EmojiReactionButton> {
             duration: const Duration(milliseconds: 120),
             curve: Curves.easeOutCubic,
             child: SizedBox(
-              width: 40,
-              height: 40,
+              width: widget.size,
+              height: widget.size,
               child: Center(
                 child: Text(
                   widget.emoji,
-                  style: const TextStyle(
-                    fontSize: 24,
+                  style: TextStyle(
+                    fontSize: widget.size * 0.6,
                     textBaseline: TextBaseline.ideographic,
                   ),
                 ),
