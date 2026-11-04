@@ -5,10 +5,15 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   validate_ios_signing:
     name: Validate iOS Signing Config
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: ./packages/totem_app
@@ -40,6 +45,7 @@ jobs:
   build_android_apk:
     name: Android ABI (${{ matrix.flavor }})
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     defaults:
       run:
@@ -72,6 +78,7 @@ jobs:
   build_ios_ipa:
     name: iOS IPA (${{ matrix.flavor }})
     runs-on: macos-26
+    timeout-minutes: 60
     needs: validate_ios_signing
 
     defaults:
