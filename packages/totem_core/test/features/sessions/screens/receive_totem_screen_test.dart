@@ -397,6 +397,72 @@ void main() {
       ).length.equals(1);
     });
 
+    for (final (label, size, textScale, prompt) in [
+      ('portrait phone', const Size(360, 740), 1.0, 'Breathe and share'),
+      ('landscape phone', const Size(844, 390), 1.0, 'Breathe and share'),
+      (
+        'short portrait phone with a long prompt at 1.5x text',
+        const Size(360, 640),
+        1.5,
+        'Think of a moment this week when you felt truly heard by someone, '
+            'and share what they did that made the difference for you.',
+      ),
+      (
+        'short landscape phone with a long prompt at 1.5x text',
+        const Size(667, 375),
+        1.5,
+        'Think of a moment this week when you felt truly heard by someone, '
+            'and share what they did that made the difference for you.',
+      ),
+    ]) {
+      testWidgets('keeps the receive pill on screen on a $label', (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = size
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+        await pumpReceiveTotem(tester, roundMessage: prompt);
+
+        check(tester.takeException()).isNull();
+        // The pill carries the "being passed" line, so it isn't repeated.
+        check(
+          tester.widgetList(find.text('The Totem is being passed to you.')),
+        ).length.equals(1);
+        final slider = tester.getRect(find.byType(ActionSlider));
+        check(slider.height).equals(48);
+        check(slider.left).isGreaterOrEqual(0);
+        check(slider.top).isGreaterOrEqual(0);
+        check(slider.right).isLessOrEqual(size.width);
+        check(slider.bottom).isLessOrEqual(size.height);
+      });
+    }
+
+    testWidgets('accepts the totem when the receive slider is swiped', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(360, 740)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final feedbackService = _TestSessionCuesService();
+
+      await pumpReceiveTotem(tester, feedbackService: feedbackService);
+
+      await tester.drag(
+        find.byKey(ActionSlider.thumbKey),
+        const Offset(400, 0),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      verify(() => keeper.acceptTotem()).called(1);
+      check(feedbackService.swipePulseCount).equals(1);
+    });
+
     testWidgets('shows the local participant card', (tester) async {
       await pumpReceiveTotem(tester);
 
