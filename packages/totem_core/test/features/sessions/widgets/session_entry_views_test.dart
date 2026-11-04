@@ -1,6 +1,8 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
+import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/widgets/session_admission_list.dart';
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_info_card.dart';
@@ -45,7 +47,6 @@ void main() {
         const SessionAdmissionGuest(
           id: 'request-7',
           name: 'Sara',
-          expiresLabel: '1:47',
         ),
       ];
       Widget host(bool busy) => MaterialApp(
@@ -60,6 +61,7 @@ void main() {
       );
 
       await tester.pumpWidget(host(false));
+      check(find.textContaining('Expires').evaluate()).isEmpty();
       await tester.tap(find.text('Admit'));
       check(admitted).equals('request-7');
       await tester.tap(find.text('Decline'));
@@ -72,6 +74,51 @@ void main() {
       check(declined).equals('request-7');
     },
   );
+
+  testWidgets('Keeper declines only after confirming the request', (
+    tester,
+  ) async {
+    final request = AdmissionRequest(
+      id: 'request-7',
+      senderIdentity: 'guest-7',
+      recipientIdentity: 'keeper',
+      expiresAt: DateTime.utc(2030),
+      displayName: 'Sara',
+    );
+    var declines = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: KeeperAdmissionPanel(
+            requests: [request],
+            onDecision: (selected, approve) async {
+              check(selected).equals(request);
+              check(approve).isFalse();
+              declines++;
+            },
+            onAdmitAll: () {},
+            onClose: () {},
+            busy: false,
+            desktop: false,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Decline'));
+    await tester.pumpAndSettle();
+    check(declines).equals(0);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    check(declines).equals(0);
+
+    await tester.tap(find.text('Decline'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Decline').last);
+    await tester.pumpAndSettle();
+    check(declines).equals(1);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets(
     'decline offer and signup reflect host state, without creating a mock offer',

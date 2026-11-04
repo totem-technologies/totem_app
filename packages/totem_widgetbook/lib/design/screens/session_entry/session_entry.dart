@@ -32,12 +32,10 @@ class AdmissionRequest {
   const AdmissionRequest({
     required this.id,
     required this.name,
-    required this.expiresLabel,
   });
 
   final String id;
   final String name;
-  final String expiresLabel;
 }
 
 const _circle = [
@@ -158,7 +156,6 @@ class SessionEntry extends StatefulWidget {
     this.onDismissOrientation,
     this.onBackToSpace,
     this.onSignUp,
-    this.expiresLabel,
   });
 
   final EntryRole role;
@@ -198,9 +195,6 @@ class SessionEntry extends StatefulWidget {
   final VoidCallback? onDismissOrientation;
   final VoidCallback? onBackToSpace;
   final VoidCallback? onSignUp;
-
-  /// Countdown on the waiting card. Comes from the join request.
-  final String? expiresLabel;
 
   @override
   State<SessionEntry> createState() => _SessionEntryState();
@@ -422,7 +416,6 @@ class _SessionEntryState extends State<SessionEntry> {
         participantName: widget.participantName,
         previewPhoto: widget.previewPhoto,
         late: widget.phase == EntryPhase.inProgress,
-        expiresLabel: widget.expiresLabel,
         media: _media,
         onLeave: widget.onLeaveLobby,
       ),
@@ -596,7 +589,6 @@ class _Admission extends StatelessWidget {
             SessionAdmissionGuest(
               id: request.id,
               name: request.name,
-              expiresLabel: request.expiresLabel,
             ),
         ],
         onAdmit: onAdmit,
@@ -1317,7 +1309,6 @@ class _Lobby extends StatelessWidget {
     required this.participantName,
     this.previewPhoto,
     required this.late,
-    required this.expiresLabel,
     required this.media,
     this.onLeave,
   });
@@ -1325,32 +1316,14 @@ class _Lobby extends StatelessWidget {
   final String participantName;
   final ImageProvider? previewPhoto;
   final bool late;
-  final String? expiresLabel;
   final _Media media;
   final VoidCallback? onLeave;
 
   @override
   Widget build(BuildContext context) {
-    final label = expiresLabel;
-    final Widget body;
-    if (!late) {
-      body = const Text('Check your camera and microphone while you wait.');
-    } else if (label == null) {
-      body = const Text('Join and your Keeper will bring you in.');
-    } else {
-      body = Text.rich(
-        TextSpan(
-          text: 'Please wait,\nwe will let you know in ',
-          children: [
-            TextSpan(
-              text: label,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            const TextSpan(text: ' min'),
-          ],
-        ),
-      );
-    }
+    final body = late
+        ? const Text('Join and your Keeper will bring you in.')
+        : const Text('Check your camera and microphone while you wait.');
 
     return _WaitShell(
       participantName: participantName,

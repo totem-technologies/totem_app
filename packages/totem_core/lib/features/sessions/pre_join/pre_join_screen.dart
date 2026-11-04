@@ -413,9 +413,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       joinCard: pending
           ? SessionWaitingCard(
               title: 'Waiting to join',
-              body: Text(
-                'The Keeper will let you in. Your camera and microphone are only a local preview.\n'
-                'Request expires at ${flow.expiresAt == null ? 'soon' : DateFormat('h:mm a').format(flow.expiresAt!.toLocal())}.',
+              body: const Text(
+                'The Keeper will let you in. Your camera and microphone are only a local preview.',
               ),
               actionLabel: 'Leave waiting room',
               onAction: leaveWaiting,

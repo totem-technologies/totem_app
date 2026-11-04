@@ -6,8 +6,11 @@ abstract final class AdmissionProtocol {
   static const topic = 'totem.admission.v1';
   static const version = 1;
   static const lifetime = Duration(minutes: 2);
-  // A second of headroom lets consecutive requests have distinct millisecond
-  // expirations without allowing unbounded future-dated packets.
+  // Requests stay actionable throughout a Session. This is a protocol safety
+  // bound, not a two-minute waiting-room countdown or the server join cutoff.
+  static const requestLifetime = Duration(hours: 24);
+  // A second of headroom lets consecutive attempts have distinct timestamps.
+  static const maxRequestLifetime = Duration(hours: 24, seconds: 1);
   static const maxLifetime = Duration(minutes: 2, seconds: 1);
   static const maxPayloadBytes = 4096;
 
@@ -120,9 +123,20 @@ abstract final class AdmissionProtocol {
         );
       }
       final nowMillis = now.millisecondsSinceEpoch;
+      final requestPacket = switch (value['kind']) {
+        'request' ||
+        'cancel' ||
+        'decision' ||
+        'admission.joined' ||
+        'admission.joinFailed' => true,
+        _ => false,
+      };
       if (expiresAt <= nowMillis ||
           expiresAt > 8640000000000000 ||
-          expiresAt > nowMillis + maxLifetime.inMilliseconds) {
+          expiresAt >
+              nowMillis +
+                  (requestPacket ? maxRequestLifetime : maxLifetime)
+                      .inMilliseconds) {
         return null;
       }
       final expiration = DateTime.fromMillisecondsSinceEpoch(expiresAt);

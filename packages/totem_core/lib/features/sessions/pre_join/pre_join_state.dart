@@ -125,7 +125,6 @@ class PreJoinFlowState {
     this.sessionOptions,
 
     this.admissionStatus,
-    this.expiresAt,
     this.error,
   });
 
@@ -133,7 +132,6 @@ class PreJoinFlowState {
   final SessionOptions? sessionOptions;
 
   final AdmissionStatus? admissionStatus;
-  final DateTime? expiresAt;
   final Object? error;
 
   PreJoinFlowState copyWith({
@@ -143,8 +141,6 @@ class PreJoinFlowState {
 
     AdmissionStatus? admissionStatus,
     bool clearAdmissionStatus = false,
-    DateTime? expiresAt,
-    bool clearExpiresAt = false,
     Object? error,
     bool clearError = false,
   }) {
@@ -157,7 +153,7 @@ class PreJoinFlowState {
       admissionStatus: clearAdmissionStatus
           ? null
           : admissionStatus ?? this.admissionStatus,
-      expiresAt: clearExpiresAt ? null : expiresAt ?? this.expiresAt,
+
       error: clearError ? null : error ?? this.error,
     );
   }

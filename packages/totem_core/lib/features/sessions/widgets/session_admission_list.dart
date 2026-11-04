@@ -2,16 +2,14 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
 
-/// Display-only admission data. IDs and expiration labels come from the owner.
+/// Display-only admission data. IDs come from the owner.
 class SessionAdmissionGuest {
   const SessionAdmissionGuest({
     required this.id,
     required this.name,
-    required this.expiresLabel,
   });
   final String id;
   final String name;
-  final String expiresLabel;
 }
 
 /// Contents of the keeper's admission sheet or side panel. The caller owns
@@ -129,7 +127,6 @@ class SessionAdmissionList extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: entryBody.copyWith(fontWeight: FontWeight.w600),
               ),
-              Text('Expires in ${guest.expiresLabel}', style: entryMuted),
             ],
           ),
         ),

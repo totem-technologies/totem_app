@@ -62,7 +62,6 @@ class SessionEntryInputArgs extends StoryArgs<SessionEntry> {
     Arg<bool>? panelOpen,
     Arg<bool>? showOrientation,
     Arg<DeclineVariant>? declineVariant,
-    Arg<String?>? expiresLabel,
   }) : this.roleArg = $initArg(
          'role',
          role,
@@ -95,11 +94,6 @@ class SessionEntryInputArgs extends StoryArgs<SessionEntry> {
            DeclineVariant.nextSession,
            values: DeclineVariant.values,
          ),
-       )!,
-       this.expiresLabelArg = $initArg(
-         'expiresLabel',
-         expiresLabel,
-         NullableStringArg(null),
        )!;
 
   SessionEntryInputArgs.fixed({
@@ -110,7 +104,6 @@ class SessionEntryInputArgs extends StoryArgs<SessionEntry> {
     bool panelOpen = false,
     bool showOrientation = false,
     DeclineVariant declineVariant = DeclineVariant.nextSession,
-    String? expiresLabel = null,
   }) : this.roleArg = $initArg('role', Arg.fixed(role), null)!,
        this.phaseArg = $initArg('phase', Arg.fixed(phase), null)!,
        this.statusArg = $initArg('status', Arg.fixed(status), null)!,
@@ -125,12 +118,7 @@ class SessionEntryInputArgs extends StoryArgs<SessionEntry> {
          'declineVariant',
          Arg.fixed(declineVariant),
          null,
-       )!,
-       this.expiresLabelArg = $initArg(
-         'expiresLabel',
-         expiresLabel == null ? null : Arg.fixed(expiresLabel),
-         null,
-       );
+       )!;
 
   final Arg<EntryRole> roleArg;
 
@@ -146,8 +134,6 @@ class SessionEntryInputArgs extends StoryArgs<SessionEntry> {
 
   final Arg<DeclineVariant> declineVariantArg;
 
-  final Arg<String?>? expiresLabelArg;
-
   EntryRole get role => roleArg.value;
 
   DetailsPhase get phase => phaseArg.value;
@@ -162,8 +148,6 @@ class SessionEntryInputArgs extends StoryArgs<SessionEntry> {
 
   DeclineVariant get declineVariant => declineVariantArg.value;
 
-  String? get expiresLabel => expiresLabelArg?.value;
-
   @override
   List<Arg?> get list => [
     roleArg,
@@ -173,6 +157,5 @@ class SessionEntryInputArgs extends StoryArgs<SessionEntry> {
     panelOpenArg,
     showOrientationArg,
     declineVariantArg,
-    expiresLabelArg,
   ];
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
@@ -182,7 +183,7 @@ class _SessionAdmissionOverlayState
   void _syncAdmittedIdentities(Iterable<String> identities) {
     final roster = List<String>.of(identities);
     final version = ++_admittedUpdateVersion;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    void update() {
       if (!mounted || version != _admittedUpdateVersion) return;
       _admittedIdentities.update(roster);
       ref
@@ -190,7 +191,13 @@ class _SessionAdmissionOverlayState
           ?.updateAdmittedMediaRecipients(
             roster.toSet(),
           );
-    });
+    }
+
+    if (WidgetsBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      update();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => update());
+    }
   }
 
   Future<void> _detachAdmission({bool clearAdmitted = true}) {

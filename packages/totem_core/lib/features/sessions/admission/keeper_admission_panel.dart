@@ -5,9 +5,10 @@ import 'package:totem_core/features/sessions/admission/admission_controllers.dar
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/widgets/session_admission_list.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_style.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 /// The Widgetbook admission list hosted above the existing live Session UI.
-class KeeperAdmissionPanel extends StatefulWidget {
+class KeeperAdmissionPanel extends StatelessWidget {
   const KeeperAdmissionPanel({
     required this.requests,
     required this.onDecision,
@@ -28,49 +29,6 @@ class KeeperAdmissionPanel extends StatefulWidget {
   final bool busy;
   final bool desktop;
 
-  @override
-  State<KeeperAdmissionPanel> createState() => _KeeperAdmissionPanelState();
-}
-
-class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
-  Timer? _countdown;
-
-  @override
-  void initState() {
-    super.initState();
-    _syncCountdown();
-  }
-
-  @override
-  void didUpdateWidget(KeeperAdmissionPanel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _syncCountdown();
-  }
-
-  void _syncCountdown() {
-    if (widget.requests.isNotEmpty && _countdown == null) {
-      _countdown = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) setState(() {});
-      });
-    } else if (widget.requests.isEmpty) {
-      _countdown?.cancel();
-      _countdown = null;
-    }
-  }
-
-  @override
-  void dispose() {
-    _countdown?.cancel();
-    super.dispose();
-  }
-
-  String _remaining(DateTime expiresAt) {
-    final duration = expiresAt.difference(DateTime.now());
-    if (duration <= Duration.zero) return '0:00';
-    final seconds = duration.inSeconds;
-    return '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
-  }
-
   String _status(KeeperAdmissionStatus status) => switch (status) {
     KeeperAdmissionStatus.requested => 'Waiting for a decision',
     KeeperAdmissionStatus.joining => 'Approval sent · joining',
@@ -85,7 +43,7 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
   @override
   Widget build(BuildContext context) {
     final height = MediaQuery.sizeOf(context).height;
-    final statuses = widget.attempts.where(
+    final statuses = attempts.where(
       (attempt) => attempt.status != KeeperAdmissionStatus.requested,
     );
     return Material(
@@ -94,8 +52,8 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
       borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       child: SizedBox(
-        width: widget.desktop ? 380 : double.infinity,
-        height: widget.desktop ? height * 0.65 : height * 0.42,
+        width: desktop ? 380 : double.infinity,
+        height: desktop ? height * 0.65 : height * 0.42,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -104,28 +62,40 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
             children: [
               SessionAdmissionList(
                 guests: [
-                  for (final request in widget.requests)
+                  for (final request in requests)
                     SessionAdmissionGuest(
                       id: request.id,
                       name: request.displayName,
-                      expiresLabel: _remaining(request.expiresAt),
                     ),
                 ],
-                busy: widget.busy,
-                onClose: widget.onClose,
+                busy: busy,
+                onClose: onClose,
                 onAdmit: (id) {
-                  final request = widget.requests.firstWhere(
+                  final request = requests.firstWhere(
                     (request) => request.id == id,
                   );
-                  unawaited(widget.onDecision(request, true));
+                  unawaited(onDecision(request, true));
                 },
-                onDecline: (id) {
-                  final request = widget.requests.firstWhere(
+                onDecline: (id) async {
+                  final request = requests.firstWhere(
                     (request) => request.id == id,
                   );
-                  unawaited(widget.onDecision(request, false));
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    useRootNavigator: false,
+                    builder: (dialogContext) => ConfirmationDialog(
+                      content:
+                          'Are you sure you want to decline ${request.displayName}?',
+                      confirmButtonText: 'Decline',
+                      onConfirm: () async =>
+                          Navigator.of(dialogContext).pop(true),
+                    ),
+                  );
+                  if (confirmed == true && context.mounted) {
+                    await onDecision(request, false);
+                  }
                 },
-                onAdmitAll: widget.onAdmitAll,
+                onAdmitAll: onAdmitAll,
               ),
               for (final attempt in statuses)
                 Semantics(

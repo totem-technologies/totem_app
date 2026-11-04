@@ -212,12 +212,14 @@ void main() {
     required SessionRoomState sessionState,
     String currentUserSlug = 'user-1',
     bool isKeeper = false,
+    Set<String>? admittedIdentities,
+    Size viewportSize = const Size(390, 844),
     RoomScreen currentScreen = RoomScreen.listening,
     FakeMediaPermissionAdapter? adapter,
   }) async {
     when(() => session.state).thenReturn(sessionState);
     tester.view
-      ..physicalSize = const Size(390, 844)
+      ..physicalSize = viewportSize
       ..devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -242,9 +244,10 @@ void main() {
           admittedSessionParticipantIdentitiesProvider.overrideWith(
             () => TestAdmittedSessionParticipantIdentities({
               sessionState.roomState.keeper,
-              ...sessionState.participantsList.map(
-                (participant) => participant.identity,
-              ),
+              ...admittedIdentities ??
+                  sessionState.participantsList.map(
+                    (participant) => participant.identity,
+                  ),
             }),
           ),
           currentSessionProvider.overrideWith((ref) => session),
@@ -299,6 +302,34 @@ void main() {
     }
 
     group('participant grid', () {
+      testWidgets('waiting applicants stay out of the Keeper grid', (
+        tester,
+      ) async {
+        final state = _buildState(
+          status: RoomStatus.waitingRoom,
+          keeper: 'keeper-1',
+          currentSpeaker: 'keeper-1',
+          nextSpeaker: 'applicant',
+          talkingOrder: const ['keeper-1', 'admitted', 'applicant'],
+          participants: [
+            _mockRemote('keeper-1', 'Keeper'),
+            _mockRemote('admitted', 'Admitted'),
+            _mockRemote('applicant', 'Applicant'),
+          ],
+        );
+        await pumpListeningTurn(
+          tester,
+          sessionState: state,
+          isKeeper: true,
+          viewportSize: const Size(1600, 900),
+          admittedIdentities: {'admitted'},
+        );
+        check(_participantGridIdentities(tester)).deepEquals([
+          'keeper-1',
+          'admitted',
+        ]);
+      });
+
       testWidgets('renders the participant grid for room sizes up to 12', (
         tester,
       ) async {

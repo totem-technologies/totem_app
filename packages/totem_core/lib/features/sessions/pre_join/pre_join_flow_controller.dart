@@ -96,7 +96,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       phase: PreJoinFlowPhase.joining,
       clearError: true,
       clearAdmissionStatus: true,
-      clearExpiresAt: true,
     );
     _cancelRequested = false;
 
@@ -218,13 +217,12 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       }
     });
     if (admission.status == AdmissionStatus.ended) return;
-    final request = await admission.requestAdmission(displayName: name);
+    await admission.requestAdmission(displayName: name);
     if (!ref.mounted || _cancelRequested) return;
     if (admission.status == AdmissionStatus.pending) {
       state = state.copyWith(
         phase: PreJoinFlowPhase.pending,
         admissionStatus: AdmissionStatus.pending,
-        expiresAt: request.expiresAt,
       );
     }
   }
@@ -255,7 +253,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         state = state.copyWith(
           phase: PreJoinFlowPhase.joining,
           admissionStatus: status,
-          clearExpiresAt: true,
         );
         final connectedRoom = await _takeAdmissionRoom();
         if (connectedRoom == null) return;
@@ -318,7 +315,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           state = state.copyWith(
             phase: PreJoinFlowPhase.idle,
             admissionStatus: status,
-            clearExpiresAt: true,
           );
         }
       } else if (status == AdmissionStatus.failed) {
@@ -327,7 +323,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           state = state.copyWith(
             phase: PreJoinFlowPhase.idle,
             admissionStatus: status,
-            clearExpiresAt: true,
             error: StateError(
               'Waiting room connection was lost. Check your connection and try again.',
             ),
@@ -339,7 +334,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         state = state.copyWith(
           phase: PreJoinFlowPhase.idle,
           error: error,
-          clearExpiresAt: true,
           admissionStatus:
               status == AdmissionStatus.denied ||
                   status == AdmissionStatus.expired ||
@@ -376,7 +370,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         state = state.copyWith(
           phase: PreJoinFlowPhase.idle,
           admissionStatus: AdmissionStatus.cancelled,
-          clearExpiresAt: true,
         );
       }
     } catch (error, stackTrace) {
@@ -384,7 +377,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         state = state.copyWith(
           phase: PreJoinFlowPhase.idle,
           error: error,
-          clearExpiresAt: true,
         );
       }
       ErrorHandler.logError(

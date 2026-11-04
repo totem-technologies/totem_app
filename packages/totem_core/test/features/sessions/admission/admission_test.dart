@@ -164,6 +164,20 @@ void main() {
       check(
         AdmissionProtocol.decode(payload, senderIdentity: 'alice', now: now),
       ).isA<AdmissionRequest>();
+      final sessionRequest = AdmissionRequest(
+        id: 'session-request',
+        senderIdentity: 'alice',
+        recipientIdentity: 'keeper',
+        expiresAt: now.add(AdmissionProtocol.requestLifetime),
+        displayName: 'Alice',
+      );
+      check(
+        AdmissionProtocol.decode(
+          AdmissionProtocol.encode(sessionRequest),
+          senderIdentity: 'alice',
+          now: now.add(const Duration(minutes: 3)),
+        ),
+      ).isA<AdmissionRequest>();
       check(
         AdmissionProtocol.decode(payload, senderIdentity: 'mallory', now: now),
       ).isNull();
@@ -867,7 +881,7 @@ void main() {
   );
 
   test(
-    'request waits for keeper presence and expires without polling',
+    'request stays pending beyond two minutes and reaches a late Keeper',
     () async {
       final channel = _Channel('guest');
       var now = DateTime.now();
@@ -887,10 +901,23 @@ void main() {
       channel.controller.add(const AdmissionPresenceChanged('keeper', true));
       check(channel.sent).length.equals(1);
       channel.present.add('keeper');
-      now = now.add(AdmissionProtocol.lifetime);
+      now = now.add(const Duration(minutes: 3));
       channel.controller.add(const AdmissionConnectionRestored());
-      check(guest.status).equals(AdmissionStatus.expired);
-      check(channel.sent).length.equals(1);
+      check(guest.status).equals(AdmissionStatus.pending);
+      check(channel.sent).length.equals(2);
+      final request = guest.request!;
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionDecision(
+            id: request.id,
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: request.expiresAt,
+            approved: true,
+          ),
+        ),
+      );
+      check(guest.status).equals(AdmissionStatus.approved);
     },
   );
 
@@ -1018,6 +1045,115 @@ void main() {
       check(keeper.requests).isEmpty();
       keeperChannel.controller.add(AdmissionPacketReceived(request));
       check(keeper.requests).isEmpty();
+    },
+  );
+
+  test(
+    'a previously admitted participant rejoins without another Keeper decision',
+    () async {
+      final guestChannel = _Channel('guest');
+      final keeperChannel = _Channel('keeper');
+      guestChannel.peer = keeperChannel;
+      keeperChannel.peer = guestChannel;
+      guestChannel.present.add('keeper');
+      keeperChannel.present.add('guest');
+      var nextId = 0;
+      PendingAdmissionController guest() => PendingAdmissionController(
+        channel: guestChannel,
+        keeperIdentity: () => 'keeper',
+        newId: () => 'r${++nextId}',
+      );
+      var participant = guest();
+      final keeper = KeeperAdmissionController(
+        channel: keeperChannel,
+        keeperIdentity: () => 'keeper',
+        sessionIdentity: 'session',
+      );
+      addTearDown(() async {
+        await participant.dispose();
+        await keeper.dispose();
+        await guestChannel.dispose();
+        await keeperChannel.dispose();
+      });
+
+      final first = await participant.requestAdmission(displayName: 'Guest');
+      check(keeper.requests.single.id).equals(first.id);
+      await keeper.approve(first.id, 'guest');
+      check(participant.status).equals(AdmissionStatus.approved);
+      await guestChannel.send(AdmissionProtocol.joined(first));
+      check(keeper.roster).deepEquals(['guest']);
+
+      await participant.dispose();
+      keeperChannel.controller.add(
+        const AdmissionPresenceChanged('guest', false),
+      );
+      guestChannel.present.remove('keeper');
+      participant = guest();
+      final second = await participant.requestAdmission(displayName: 'Guest');
+      check(participant.status).equals(AdmissionStatus.pending);
+      check(keeper.requests).isEmpty();
+      guestChannel.present.add('keeper');
+      guestChannel.controller.add(
+        const AdmissionPresenceChanged('keeper', true),
+      );
+      await pumpEventQueue();
+      check(second.id == first.id).isFalse();
+      check(participant.status).equals(AdmissionStatus.approved);
+      check(keeper.requests).isEmpty();
+      check(keeper.roster).isEmpty();
+      await guestChannel.send(AdmissionProtocol.joined(second));
+      check(keeper.roster).deepEquals(['guest']);
+      check(keeper.attempts.single.status).equals(KeeperAdmissionStatus.joined);
+    },
+  );
+
+  test(
+    'a returning applicant stays out of all admitted rosters until ready',
+    () async {
+      final channel = _Channel('keeper')..present.addAll(['guest', 'friend']);
+      final store = KeeperAdmissionRosterStore()
+        ..replace(const ['guest', 'friend'], 1);
+      final keeper = KeeperAdmissionController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+        sessionIdentity: 'session',
+        rosterStore: store,
+      );
+      addTearDown(() async {
+        await keeper.dispose();
+        await channel.dispose();
+      });
+      final request = AdmissionRequest(
+        id: 'return',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: DateTime.now().add(AdmissionProtocol.requestLifetime),
+        displayName: 'Guest',
+      );
+      channel.controller.add(AdmissionPacketReceived(request));
+      check(keeper.roster).deepEquals(['friend']);
+      check(keeper.requests).isEmpty();
+      await pumpEventQueue();
+      check(
+        keeper.attempts.single.status,
+      ).equals(KeeperAdmissionStatus.joining);
+      check(
+        channel.sent
+            .whereType<AdmissionRosterUpdated>()
+            .lastWhere((packet) => packet.recipientIdentity == 'friend')
+            .members,
+      ).deepEquals(['friend']);
+
+      channel.controller.add(
+        AdmissionPacketReceived(AdmissionProtocol.joined(request)),
+      );
+      check(keeper.roster).deepEquals(['friend', 'guest']);
+      check(
+        channel.sent
+            .whereType<AdmissionRosterUpdated>()
+            .lastWhere((packet) => packet.recipientIdentity == 'friend')
+            .members,
+      ).deepEquals(['friend', 'guest']);
     },
   );
 
@@ -1221,7 +1357,7 @@ void main() {
           {
             ...data,
             'expiresAt': now
-                .add(const Duration(minutes: 3))
+                .add(const Duration(hours: 25))
                 .millisecondsSinceEpoch,
           },
           {...data, 'approved': true},
@@ -1426,6 +1562,43 @@ void main() {
       check(keeper.requests).isEmpty();
       channel.controller.add(AdmissionPacketReceived(request));
       check(keeper.requests.single.id).equals(request.id);
+    },
+  );
+
+  test(
+    'long-lived requests still time out after approval without a receipt',
+    () {
+      fakeAsync((async) {
+        final now = async.getClock(DateTime.utc(2026));
+        final channel = _Channel('keeper');
+        final keeper = KeeperAdmissionController(
+          channel: channel,
+          keeperIdentity: () => 'keeper',
+          now: now.now,
+        );
+        final request = AdmissionRequest(
+          id: 'long-request',
+          senderIdentity: 'guest',
+          recipientIdentity: 'keeper',
+          expiresAt: now.now().add(AdmissionProtocol.requestLifetime),
+          displayName: 'Guest',
+        );
+        channel.controller.add(AdmissionPacketReceived(request));
+        async.elapse(const Duration(minutes: 3));
+        check(keeper.requests.single.id).equals(request.id);
+        unawaited(keeper.approve(request.id, 'guest'));
+        async.flushMicrotasks();
+        check(
+          keeper.attempts.single.status,
+        ).equals(KeeperAdmissionStatus.joining);
+        async.elapse(AdmissionProtocol.lifetime);
+        check(
+          keeper.attempts.single.status,
+        ).equals(KeeperAdmissionStatus.timedOut);
+        unawaited(keeper.dispose());
+        unawaited(channel.dispose());
+        async.flushMicrotasks();
+      });
     },
   );
 
@@ -1803,6 +1976,19 @@ void main() {
       );
       check(first.roster).deepEquals(['guest']);
       check(first.rosterRevision).equals(2);
+      firstChannel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRequest(
+            id: 'return',
+            senderIdentity: 'guest',
+            recipientIdentity: 'keeper',
+            expiresAt: DateTime.now().add(AdmissionProtocol.requestLifetime),
+            displayName: 'Guest',
+          ),
+        ),
+      );
+      await pumpEventQueue();
+      check(first.roster).isEmpty();
       await first.dispose();
       await firstChannel.dispose();
 
@@ -1818,8 +2004,9 @@ void main() {
         await nextChannel.dispose();
       });
       check(next.keeperGeneration).equals('generation');
-      check(next.roster).deepEquals(['guest']);
-      check(next.rosterRevision).equals(2);
+      check(next.roster).isEmpty();
+      check(store.members).contains('guest');
+      check(next.rosterRevision).equals(3);
     },
   );
 

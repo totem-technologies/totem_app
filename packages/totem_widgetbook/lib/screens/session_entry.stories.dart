@@ -24,7 +24,6 @@ class SessionEntryInput {
     this.panelOpen = false,
     this.showOrientation = false,
     this.declineVariant = DeclineVariant.nextSession,
-    this.expiresLabel,
   });
 
   final EntryRole role;
@@ -36,9 +35,6 @@ class SessionEntryInput {
   final bool panelOpen;
   final bool showOrientation;
   final DeclineVariant declineVariant;
-
-  /// The participant's own request countdown, e.g. `1:47`.
-  final String? expiresLabel;
 }
 
 const _spaceName = 'Shame & Self-Worth';
@@ -74,7 +70,6 @@ const _facts = [
 ];
 
 const _guests = ['Sara', 'Omar', 'Lina', 'Noah', 'Maya'];
-const _expiries = ['1:47', '3:12', '4:05', '4:40', '5:15'];
 
 final defaults = _Defaults(
   // Fill the device viewport. AlignmentAddon would otherwise keep
@@ -145,13 +140,11 @@ final defaults = _Defaults(
           AdmissionRequest(
             id: _guests[i],
             name: _guests[i],
-            expiresLabel: _expiries[i],
           ),
       ],
       panelOpen: args.panelOpen,
       showOrientation: args.showOrientation,
       declineVariant: args.declineVariant,
-      expiresLabel: args.expiresLabel,
       onJoin: () => args.statusArg.update(context, EntryStatus.lobby),
       onLeaveLobby: () => args.statusArg.update(context, EntryStatus.browsing),
       onSignUp: () {},
