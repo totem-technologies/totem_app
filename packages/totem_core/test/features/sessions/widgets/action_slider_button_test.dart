@@ -22,11 +22,20 @@ void main() {
   Future<void> pumpTestWidget(
     WidgetTester tester, {
     required Widget child,
+    double width = 320,
+    TextScaler? textScaler,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: Center(child: SizedBox(width: 320, child: child)),
+        home: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+            child: Scaffold(
+              body: Center(
+                child: SizedBox(width: width, child: child),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -212,6 +221,59 @@ void main() {
         tester.widgetList(find.byType(CircularProgressIndicator)),
       ).length.equals(1);
     });
+  });
+
+  autoSizeTest('keeps Join usable with touch and desktop interactions', (
+    tester,
+  ) async {
+    for (final scenario in [
+      (
+        platform: TargetPlatform.iOS,
+        viewport: const Size(320, 640),
+        width: 320.0,
+        textScaler: const TextScaler.linear(2),
+        control: find.byType(ActionSlider),
+        interact: (WidgetTester tester) =>
+            tester.drag(find.byType(ActionSlider), const Offset(500, 0)),
+      ),
+      (
+        platform: TargetPlatform.macOS,
+        viewport: const Size(1200, 900),
+        width: 900.0,
+        textScaler: null,
+        control: find.byType(ActionButton),
+        interact: (WidgetTester tester) => tester.tap(find.byType(InkWell)),
+      ),
+    ]) {
+      var calls = 0;
+      tester.view.physicalSize = scenario.viewport;
+      tester.view.devicePixelRatio = 1;
+      debugDefaultTargetPlatformOverride = scenario.platform;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      await pumpTestWidget(
+        tester,
+        width: scenario.width,
+        textScaler: scenario.textScaler,
+        child: ActionSliderButton(
+          text: 'Join',
+          onActionCompleted: () async {
+            calls++;
+            return true;
+          },
+        ),
+      );
+
+      check(tester.widgetList(find.text('Join'))).length.equals(1);
+      check(tester.widgetList(scenario.control)).length.equals(1);
+
+      await scenario.interact(tester);
+      await tester.pump();
+
+      check(calls).equals(1);
+    }
   });
 
   testWidgets('selects the appropriate action control for the platform', (

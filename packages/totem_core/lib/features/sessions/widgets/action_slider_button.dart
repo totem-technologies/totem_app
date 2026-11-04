@@ -225,7 +225,7 @@ class _ActionButtonState extends State<ActionButton> {
                 return Colors.transparent;
               }),
               child: Padding(
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 40),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 24),
                 child: Center(
                   child: effectiveLoading
                       ? const SizedBox(
@@ -242,8 +242,9 @@ class _ActionButtonState extends State<ActionButton> {
                       : AutoSizeText(
                           widget.text,
                           maxLines: 1,
-                          style: theme.textTheme.labelLarge?.copyWith(
+                          style: theme.textTheme.titleMedium?.copyWith(
                             color: foregroundColor,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                 ),
@@ -382,13 +383,10 @@ class ActionSliderState extends State<ActionSlider> {
         final backgroundColor = widget.backgroundColor ?? AppTheme.mauve;
         const foregroundColor = AppTheme.white;
 
-        TextStyle? baseTextStyle;
-        final buttonStyle = theme.elevatedButtonTheme.style;
-        if (buttonStyle != null) {
-          baseTextStyle = buttonStyle.textStyle?.resolve({});
-        }
-        final textStyle = (baseTextStyle ?? theme.textTheme.labelLarge)
-            ?.copyWith(color: foregroundColor);
+        final textStyle = theme.textTheme.titleMedium?.copyWith(
+          color: foregroundColor,
+          fontWeight: FontWeight.w600,
+        );
 
         return CallbackShortcuts(
           bindings: <ShortcutActivator, VoidCallback>{
