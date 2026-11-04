@@ -6,7 +6,7 @@ import 'package:totem_core/core/utils/frame_paced_ticker.dart';
 
 void main() {
   testWidgets(
-    'staggered tickers share at most 30 requested frames per second',
+    'staggered tickers share at most 15 requested frames per second',
     (tester) async {
       await tester.pumpWidget(const SizedBox.shrink());
       final frames = <Duration>{};
@@ -22,8 +22,8 @@ void main() {
       for (var i = 0; i < 120; i++) {
         await tester.pump(const Duration(microseconds: 8333));
       }
-      check(frames.length).isGreaterOrEqual(28);
-      check(frames.length).isLessOrEqual(31);
+      check(frames.length).isGreaterOrEqual(14);
+      check(frames.length).isLessOrEqual(16);
       for (final ticker in tickers) {
         ticker.dispose();
       }
@@ -43,7 +43,7 @@ void main() {
     check(ticks).equals(0);
     check(tester.binding.transientCallbackCount).equals(0);
     ticker.muted = false;
-    await tester.pump(const Duration(milliseconds: 34));
+    await tester.pump(FramePacedTicker.interval);
     check(ticks).equals(1);
     ticker.dispose();
     await tester.pump(const Duration(milliseconds: 100));
@@ -77,7 +77,7 @@ void main() {
         ),
       );
       await pump(true);
-      await tester.pump(const Duration(milliseconds: 40));
+      await tester.pump(const Duration(milliseconds: 80));
       check(ticks).isGreaterThan(0);
       await pump(false);
       final mutedTicks = ticks;
@@ -85,7 +85,7 @@ void main() {
       check(ticks).equals(mutedTicks);
       check(tester.binding.hasScheduledFrame).isFalse();
       await pump(true);
-      await tester.pump(const Duration(milliseconds: 40));
+      await tester.pump(const Duration(milliseconds: 80));
       check(ticks).isGreaterThan(mutedTicks);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();

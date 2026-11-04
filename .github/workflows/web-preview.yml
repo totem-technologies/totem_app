@@ -36,7 +36,6 @@ jobs:
           flutter-version: "3.50.0-0.2.pre"
           flutter-channel: beta
           dart-version: "3.14.0 (build 3.14.0-315.3.beta)"
-          lockfile-snapshot: pubspec.web.lock
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           flavor: staging
 

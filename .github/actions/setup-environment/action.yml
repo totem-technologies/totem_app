@@ -13,19 +13,15 @@ inputs:
   flutter-version:
     description: "Flutter SDK version to install."
     required: false
-    default: "3.44.9"
+    default: "3.50.0-0.2.pre"
   flutter-channel:
     description: "Flutter channel containing the selected SDK."
     required: false
-    default: "stable"
+    default: "beta"
   dart-version:
     description: "Expected Dart SDK bundled with the selected Flutter SDK."
     required: false
-    default: "3.12.2"
-  lockfile-snapshot:
-    description: "Optional Pub lockfile snapshot to copy to pubspec.lock before resolution."
-    required: false
-    default: ""
+    default: "3.14.0 (build 3.14.0-315.3.beta)"
   java:
     description: "Also install Java 17 + Gradle cache (needed for Android builds)."
     default: "false"
@@ -75,21 +71,10 @@ runs:
           exit 1
         fi
 
-    - name: Select lockfile and install dependencies
+    - name: Install dependencies
       shell: bash
       working-directory: ${{ github.workspace }}
-      run: |
-        set -euo pipefail
-        snapshot="${{ inputs.lockfile-snapshot }}"
-        if [ -n "$snapshot" ]; then
-          if [ ! -f "$snapshot" ]; then
-            echo "::error::Configured lockfile snapshot does not exist: $snapshot"
-            exit 1
-          fi
-          cp "$snapshot" pubspec.lock
-        fi
-        rm -rf .dart_tool
-        flutter pub get --enforce-lockfile
+      run: flutter pub get
 
     # Compose packages/*/.env from the layered sources in config/ (the single
     # source of truth, shared with the Makefile env-* targets). setup_env.dart

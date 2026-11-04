@@ -55,6 +55,17 @@ Leak tracking is enabled through:
 - A router that uses `GoRouterRefreshStream` must own the stream and dispose it when the app root disposes the router.
 - Preserve raw auth-stream refresh behavior when redirect logic depends on every auth emission. A Riverpod state listener is not always equivalent to the authentication stream.
 
+## SDK and dependency resolution
+
+- The default SDK in `.fvmrc` is Flutter 3.50.0-0.2.pre (beta) for Android,
+  web, desktop, and shared validation. Use `fvm flutter` / `fvm dart`.
+- Only iOS uses Flutter 3.44.9 via `fvm spawn 3.44.9` or `make run-ios`.
+- Maintain only `pubspec.lock`, resolved with the default beta SDK. Run ordinary
+  `pub get` with the selected SDK; do not add lockfile snapshots, enforce the
+  other SDK's resolution, or delete `.dart_tool` when switching SDKs.
+- Pre-push intentionally runs no tests or analysis. CI is the full-validation
+  gate; do not restore expensive automatic push checks.
+
 ## Validation
 
 During implementation, use the narrowest validation that covers the change; do

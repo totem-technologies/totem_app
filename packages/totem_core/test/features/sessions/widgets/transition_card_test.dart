@@ -7,10 +7,15 @@ import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 
 void main() {
-  void autoSizeTest(String description, AsyncValueSetter<WidgetTester> body) {
+  void autoSizeTest(
+    String description,
+    AsyncValueSetter<WidgetTester> body, {
+    TestVariant<Object?> variant = const DefaultTestVariant(),
+  }) {
     testWidgets(
       description,
       body,
+      variant: variant,
       experimentalLeakTesting: LeakTesting.settings.withIgnored(
         classes: <String>['TextPainter'],
       ),
@@ -59,6 +64,65 @@ void main() {
             .onActionCompleted();
         check(actionTriggered).isTrue();
       }
+    });
+
+    group('with a keyboard on desktop', () {
+      final desktop = TargetPlatformVariant.only(TargetPlatform.macOS);
+
+      Future<void> pumpAtSize(
+        WidgetTester tester,
+        Size size,
+        Widget child,
+      ) async {
+        tester.view
+          ..physicalSize = size
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(buildTestWidget(child));
+      }
+
+      autoSizeTest(
+        'large viewport keeps the space shortcut caption under the receive control',
+        (tester) async {
+          var received = false;
+          await pumpAtSize(
+            tester,
+            const Size(1280, 900),
+            ReceiveTransitionCard(
+              onActionPressed: () async {
+                received = true;
+                return true;
+              },
+            ),
+          );
+
+          check(
+            find.text('press space bar to receive').evaluate(),
+          ).isNotEmpty();
+          check(find.text('Space').evaluate()).isEmpty();
+
+          await tester.tap(find.text('Receive'));
+          await tester.pump();
+          check(received).isTrue();
+        },
+        variant: desktop,
+      );
+
+      autoSizeTest(
+        'small viewport keeps the space shortcut caption under the card',
+        (tester) async {
+          await pumpAtSize(
+            tester,
+            const Size(500, 800),
+            ReceiveTransitionCard(onActionPressed: () async => true),
+          );
+
+          check(
+            find.text('press space bar to receive').evaluate(),
+          ).isNotEmpty();
+        },
+        variant: desktop,
+      );
     });
 
     autoSizeTest('WaitingReceiveTransitionCard renders without action button', (
