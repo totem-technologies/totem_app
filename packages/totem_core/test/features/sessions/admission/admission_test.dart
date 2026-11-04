@@ -85,8 +85,10 @@ class _AdmissionRoom implements Room {
 }
 
 class _Channel implements AdmissionChannel {
-  _Channel(this.localIdentity);
+  _Channel(this.localIdentity, {DateTime Function()? now})
+    : _now = now ?? DateTime.now;
 
+  final DateTime Function() _now;
   @override
   final String localIdentity;
   @override
@@ -124,7 +126,7 @@ class _Channel implements AdmissionChannel {
     final decoded = AdmissionProtocol.decode(
       AdmissionProtocol.encode(packet),
       senderIdentity: localIdentity,
-      now: DateTime.now(),
+      now: target._now(),
     );
     if (decoded != null) {
       await Future<void>.value();
@@ -924,6 +926,130 @@ void main() {
       check(guest.status).equals(AdmissionStatus.approved);
     },
   );
+
+  for (final cancelWhileAway in [false, true]) {
+    test(
+      'Keeper reconnect restores ${cancelWhileAway ? 'cancellation' : 'the waiting request'} before presence catches up',
+      () async {
+        final guestChannel = _Channel('guest')..present.add('keeper');
+        final firstChannel = _Channel('keeper')..present.add('guest');
+        guestChannel.peer = firstChannel;
+        firstChannel.peer = guestChannel;
+        final guest = PendingAdmissionController(
+          channel: guestChannel,
+          keeperIdentity: () => 'keeper',
+          newId: () => 'waiting-request',
+        );
+        final firstKeeper = KeeperAdmissionController(
+          channel: firstChannel,
+          keeperIdentity: () => 'keeper',
+        );
+        addTearDown(() async {
+          await guest.dispose();
+          await guestChannel.dispose();
+          await firstKeeper.dispose();
+          await firstChannel.dispose();
+        });
+        final request = await guest.requestAdmission(displayName: 'Guest');
+        await pumpEventQueue();
+        check(firstKeeper.requests.single.id).equals(request.id);
+        await firstKeeper.dispose();
+        await firstChannel.dispose();
+        guestChannel
+          ..peer = null
+          ..present.remove('keeper')
+          ..controller.add(const AdmissionPresenceChanged('keeper', false));
+        check(guest.status).equals(AdmissionStatus.pending);
+        check(guest.request).identicalTo(request);
+        if (cancelWhileAway) await guest.cancel();
+
+        final returningChannel = _Channel('keeper')
+          ..present.add('guest')
+          ..peer = guestChannel;
+        guestChannel.peer = returningChannel;
+        final returningKeeper = KeeperAdmissionController(
+          channel: returningChannel,
+          keeperIdentity: () => 'keeper',
+        );
+        addTearDown(() async {
+          await returningKeeper.dispose();
+          await returningChannel.dispose();
+        });
+        await pumpEventQueue();
+        check(guestChannel.isPresent('keeper')).isFalse();
+        if (cancelWhileAway) {
+          check(guest.status).equals(AdmissionStatus.cancelled);
+          check(guestChannel.sent.last).isA<AdmissionCancel>();
+          check(returningKeeper.requests).isEmpty();
+        } else {
+          check(guest.status).equals(AdmissionStatus.pending);
+          check(returningKeeper.requests.single.id).equals(request.id);
+          await returningKeeper.approve(request.id, 'guest');
+          await pumpEventQueue();
+          check(guest.status).equals(AdmissionStatus.approved);
+        }
+      },
+    );
+  }
+
+  for (final applicantAhead in [true, false]) {
+    test(
+      'admission and roster synchronize when ${applicantAhead ? 'applicant' : 'Keeper'} clock is ahead',
+      () async {
+        final base = DateTime.utc(2026);
+        final applicantNow = base.add(
+          Duration(seconds: applicantAhead ? 30 : 0),
+        );
+        final keeperNow = base.add(Duration(seconds: applicantAhead ? 0 : 30));
+        final guestChannel = _Channel('guest', now: () => applicantNow)
+          ..present.add('keeper');
+        final keeperChannel = _Channel('keeper', now: () => keeperNow)
+          ..present.add('guest');
+        guestChannel.peer = keeperChannel;
+        keeperChannel.peer = guestChannel;
+        final guest = PendingAdmissionController(
+          channel: guestChannel,
+          keeperIdentity: () => 'keeper',
+          now: () => applicantNow,
+        );
+        final keeper = KeeperAdmissionController(
+          channel: keeperChannel,
+          keeperIdentity: () => 'keeper',
+          sessionIdentity: 'session',
+          now: () => keeperNow,
+        );
+        addTearDown(() async {
+          await guest.dispose();
+          await keeper.dispose();
+          await guestChannel.dispose();
+          await keeperChannel.dispose();
+        });
+        final request = await guest.requestAdmission(displayName: 'Guest');
+        await pumpEventQueue();
+        check(keeper.requests.single.id).equals(request.id);
+        await keeper.approve(request.id, 'guest');
+        await pumpEventQueue();
+        check(guest.status).equals(AdmissionStatus.approved);
+
+        final roster = ClientAdmissionRosterController(
+          channel: guestChannel,
+          keeperIdentity: () => 'keeper',
+          sessionIdentity: 'session',
+          now: () => applicantNow,
+        );
+        addTearDown(roster.dispose);
+        await pumpEventQueue();
+        check(roster.hasAuthoritativeRoster).isTrue();
+        check(roster.roster!.members).isEmpty();
+        await guestChannel.send(AdmissionProtocol.joined(request));
+        await pumpEventQueue();
+        check(
+          keeper.attempts.single.status,
+        ).equals(KeeperAdmissionStatus.joined);
+        check(roster.roster!.members).deepEquals(['guest']);
+      },
+    );
+  }
 
   test(
     'failed initial send stays pending and resends on keeper presence',
@@ -1977,6 +2103,40 @@ void main() {
       );
       check(client.roster?.keeperGeneration).equals('generation-2');
       check(client.contains('other')).isTrue();
+
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRosterUpdated(
+            id: 'keeper-restarted',
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: expiry,
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation-3',
+            revision: 0,
+            members: const ['guest'],
+          ),
+        ),
+      );
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(3);
+      check(client.contains('other')).isTrue();
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRosterSnapshot(
+            id: 'snapshot-3',
+            requestId: 'request-3',
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: expiry,
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation-3',
+            revision: 0,
+            members: const ['guest'],
+          ),
+        ),
+      );
+      check(client.roster?.keeperGeneration).equals('generation-3');
+      check(client.contains('other')).isFalse();
     },
   );
 

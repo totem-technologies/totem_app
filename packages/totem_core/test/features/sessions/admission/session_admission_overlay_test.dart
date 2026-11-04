@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,9 +11,11 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
+import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -28,13 +31,17 @@ import '../livekit_mocks.dart';
 import '../session_test_mocks.dart';
 
 class _AdmissionPreferences implements SessionAdmissionPreferences {
-  _AdmissionPreferences({this.preloadedValue});
+  _AdmissionPreferences({this.readError});
 
-  final String? preloadedValue;
+  final Error? readError;
   final values = <String, String>{};
 
   @override
-  String? getString(String key) => values[key] ?? preloadedValue;
+  String? getString(String key) {
+    final error = readError;
+    if (error != null) throw error;
+    return values[key];
+  }
 
   @override
   Future<bool> setString(String key, String value) async {
@@ -47,6 +54,11 @@ class _AdmissionRoom extends FakeRoom {
   _AdmissionRoom(super.participant);
 
   final listener = _AdmissionEvents();
+  final remotes = <String, RemoteParticipant>{};
+
+  @override
+  UnmodifiableMapView<String, RemoteParticipant> get remoteParticipants =>
+      UnmodifiableMapView(remotes);
 
   @override
   EventsListener<RoomEvent> createListener({bool synchronized = true}) =>
@@ -180,6 +192,13 @@ class _AdmissionHarness {
     });
     room = _AdmissionRoom(participant);
     session = _SessionController();
+    when(() => session.updateAdmittedMediaRecipients(any())).thenAnswer((
+      invocation,
+    ) {
+      mediaRecipients.add(
+        Set<String>.from(invocation.positionalArguments.single as Set<String>),
+      );
+    });
     state = MockSessionRoomState();
     when(() => session.room).thenReturn(room);
     when(() => state.connection).thenReturn(
@@ -207,6 +226,7 @@ class _AdmissionHarness {
 
   final _AdmissionPreferences preferences;
   final sent = <AdmissionPacket>[];
+  final mediaRecipients = <Set<String>>[];
   late final _AdmissionRoom room;
   late final _SessionController session;
   late final MockSessionRoomState state;
@@ -238,10 +258,12 @@ class _AdmissionHarness {
         displayName: name,
       );
 
-  Future<void> sendRequest(AdmissionRequest request) => room.listener.trigger(
+  Future<void> sendRequest(AdmissionRequest request) => sendPacket(request);
+
+  Future<void> sendPacket(AdmissionPacket packet) => room.listener.trigger(
     DataReceivedEvent(
-      data: AdmissionProtocol.encode(request),
-      participant: _RemoteParticipant('guest'),
+      data: AdmissionProtocol.encode(packet),
+      participant: _RemoteParticipant(packet.senderIdentity),
       topic: AdmissionProtocol.topic,
     ),
   );
@@ -273,6 +295,54 @@ void main() {
     );
   }
 
+  Future<void> seedDeclined(
+    _AdmissionPreferences preferences,
+    String identity,
+  ) async {
+    final container = ProviderContainer(
+      overrides: [
+        sessionAdmissionPreferencesProvider.overrideWith(
+          (ref) async => preferences,
+        ),
+      ],
+    );
+    try {
+      final provider = declinedSessionParticipantsProvider('session', 'keeper');
+      await container.read(provider.future);
+      await container.read(provider.notifier).decline(identity);
+    } finally {
+      container.dispose();
+    }
+  }
+
+  Future<KeeperAdmissionRosterStore> seedRoster(
+    _AdmissionPreferences preferences, {
+    required Iterable<String> members,
+    required int revision,
+    Iterable<String> awaitingReadiness = const [],
+  }) async {
+    final container = ProviderContainer(
+      overrides: [
+        sessionAdmissionPreferencesProvider.overrideWith(
+          (ref) async => preferences,
+        ),
+      ],
+    );
+    try {
+      final provider = keeperAdmissionRosterProvider('session', 'keeper');
+      final store = await container.read(provider.future);
+      store.replace(
+        members,
+        revision,
+        awaitingReadiness: awaitingReadiness,
+      );
+      await container.read(provider.notifier).persist();
+      return store;
+    } finally {
+      container.dispose();
+    }
+  }
+
   void setViewport(WidgetTester tester, Size size) {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -282,10 +352,13 @@ void main() {
     tester,
   ) async {
     final preferencesReady = Completer<SessionAdmissionPreferences>();
+    final preferences = _AdmissionPreferences();
+    await seedDeclined(preferences, 'guest');
     final harness = _AdmissionHarness(
-      preferences: _AdmissionPreferences(preloadedValue: '["guest"]'),
+      preferences: preferences,
       preferencesOverride: (ref) => preferencesReady.future,
     );
+    harness.room.remotes['guest'] = _RemoteParticipant('guest');
     final videoBuilds = ValueNotifier(0);
     addTearDown(videoBuilds.dispose);
 
@@ -298,7 +371,7 @@ void main() {
     await harness.sendRequest(harness.request('before-preferences'));
     await tester.pump();
 
-    check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
+    check(harness.sent).isEmpty();
     check(find.byType(SessionWaitingQueueButton).evaluate()).isEmpty();
 
     preferencesReady.complete(harness.preferences);
@@ -319,6 +392,152 @@ void main() {
     await tester.pump();
     await tester.idle();
   });
+
+  testWidgets('does not advertise an empty roster when persistence fails', (
+    tester,
+  ) async {
+    final harness = _AdmissionHarness(
+      preferences: _AdmissionPreferences(readError: StateError('unavailable')),
+    );
+    harness.room.remotes['guest'] = _RemoteParticipant('guest');
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+
+    await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.pump();
+    await tester.pump();
+
+    check(harness.sent).isEmpty();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.idle();
+  });
+
+  testWidgets(
+    'restores admitted media-off members across a fresh ProviderScope',
+    (tester) async {
+      final preferences = _AdmissionPreferences();
+      final savedRoster = await seedRoster(
+        preferences,
+        members: ['guest', 'silent'],
+        revision: 7,
+      );
+      final firstHarness = _AdmissionHarness(preferences: preferences);
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+
+      await pumpHost(tester, firstHarness, videoBuilds: videoBuilds);
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+
+      final restoredHarness = _AdmissionHarness(preferences: preferences);
+      restoredHarness.room.remotes['guest'] = _RemoteParticipant('guest');
+      restoredHarness.room.remotes['silent'] = _RemoteParticipant('silent');
+      final container = await pumpHost(
+        tester,
+        restoredHarness,
+        videoBuilds: videoBuilds,
+      );
+      await tester.pump();
+
+      final admitted = container.read(
+        admittedSessionParticipantIdentitiesProvider,
+      );
+      check(admitted).contains('guest');
+      check(admitted).contains('silent');
+      check(
+        restoredHarness.mediaRecipients.last,
+      ).deepEquals({'guest', 'silent'});
+
+      restoredHarness.sent.clear();
+      final request = AdmissionRosterRequest(
+        id: 'restore-roster',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: DateTime.now().add(const Duration(minutes: 5)),
+        sessionIdentity: 'session',
+      );
+      await restoredHarness.sendPacket(request);
+      await tester.pump();
+
+      final snapshot = restoredHarness.sent
+          .whereType<AdmissionRosterSnapshot>()
+          .single;
+      check(snapshot.requestId).equals(request.id);
+      check(snapshot.keeperGeneration).equals(savedRoster.keeperGeneration);
+      check(snapshot.revision).equals(7);
+      check(snapshot.members).deepEquals(['guest', 'silent']);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+  );
+
+  testWidgets(
+    'does not restore pending or awaiting-readiness applicants',
+    (tester) async {
+      final preferences = _AdmissionPreferences();
+      final savedRoster = await seedRoster(
+        preferences,
+        members: ['guest'],
+        revision: 3,
+        awaitingReadiness: ['guest'],
+      );
+      final pendingHarness = _AdmissionHarness(preferences: preferences);
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+
+      await pumpHost(tester, pendingHarness, videoBuilds: videoBuilds);
+      await pendingHarness.sendRequest(pendingHarness.request('pending'));
+      await tester.pump();
+      await tester.pump();
+      check(find.byType(SessionWaitingQueueButton).evaluate()).length.equals(1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+
+      final restoredHarness = _AdmissionHarness(preferences: preferences);
+      final container = await pumpHost(
+        tester,
+        restoredHarness,
+        videoBuilds: videoBuilds,
+      );
+      await tester.pump();
+
+      check(find.byType(SessionWaitingQueueButton).evaluate()).isEmpty();
+      check(
+        container
+            .read(admittedSessionParticipantIdentitiesProvider)
+            .contains('guest'),
+      ).isFalse();
+      check(restoredHarness.mediaRecipients.last).isEmpty();
+
+      final request = AdmissionRosterRequest(
+        id: 'awaiting-readiness',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: DateTime.now().add(const Duration(minutes: 5)),
+        sessionIdentity: 'session',
+      );
+      await restoredHarness.sendPacket(request);
+      await tester.pump();
+      final snapshot = restoredHarness.sent
+          .whereType<AdmissionRosterSnapshot>()
+          .single;
+      check(snapshot.keeperGeneration).equals(savedRoster.keeperGeneration);
+      check(snapshot.revision).equals(3);
+      check(snapshot.members).isEmpty();
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+  );
 
   testWidgets(
     'shows live queue updates in a phone sheet above the toolbar without rebuilding video',
@@ -499,7 +718,11 @@ void main() {
 
       final declined = declinedSessionParticipantsProvider('session', 'keeper');
       check(container.read(declined).requireValue).contains('guest');
-      check(harness.preferences.values.values.single).contains('guest');
+      check(
+        harness.preferences.values.values.any(
+          (value) => value.contains('guest'),
+        ),
+      ).isTrue();
       check(
         harness.sent
             .whereType<AdmissionDecision>()

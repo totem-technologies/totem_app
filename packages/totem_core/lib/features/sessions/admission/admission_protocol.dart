@@ -12,6 +12,9 @@ abstract final class AdmissionProtocol {
   // A second of headroom lets consecutive attempts have distinct timestamps.
   static const maxRequestLifetime = Duration(hours: 24, seconds: 1);
   static const maxLifetime = Duration(minutes: 2, seconds: 1);
+  // Separate receiver-side future-date tolerance from sender retry headroom.
+  // This does not extend expiresAt or allow already-expired packets.
+  static const maxClockSkew = Duration(minutes: 5);
   static const maxPayloadBytes = 4096;
 
   static List<int> encode(AdmissionPacket packet) => utf8.encode(
@@ -112,6 +115,8 @@ abstract final class AdmissionProtocol {
         return null;
       }
       if (value['kind'] == 'hello') {
+        // A hello only prompts a correlated resend/snapshot request; it never
+        // grants admission, so a stale hello is safe even across clock skew.
         if (expiresAt < -8640000000000000 || expiresAt > 8640000000000000) {
           return null;
         }
@@ -136,7 +141,8 @@ abstract final class AdmissionProtocol {
           expiresAt >
               nowMillis +
                   (requestPacket ? maxRequestLifetime : maxLifetime)
-                      .inMilliseconds) {
+                      .inMilliseconds +
+                  maxClockSkew.inMilliseconds) {
         return null;
       }
       final expiration = DateTime.fromMillisecondsSinceEpoch(expiresAt);

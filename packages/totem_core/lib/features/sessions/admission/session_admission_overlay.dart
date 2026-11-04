@@ -13,6 +13,7 @@ import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/admission_transport.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
+import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -57,8 +58,10 @@ class _SessionAdmissionOverlayState
 
   Room? _room;
   String? _keeperIdentity;
-  KeeperAdmissionRosterStore? _keeperRosterStore;
-  String? _rosterStoreSessionSlug;
+  KeeperAdmissionRosterStore? _attachedKeeperRoster;
+  Future<void> Function()? _saveKeeperRoster;
+  bool _rosterSaveErrorShown = false;
+  bool _sessionEnded = false;
   var _admittedUpdateVersion = 0;
   bool _busy = false;
 
@@ -97,15 +100,20 @@ class _SessionAdmissionOverlayState
     if (oldWidget.sessionSlug == widget.sessionSlug) return;
 
     _admittedUpdateVersion++;
-    _keeperRosterStore = null;
-    _rosterStoreSessionSlug = null;
-    unawaited(_detachAdmission());
+
+    unawaited(_detachAdmission(endSession: _sessionEnded));
+    _sessionEnded = false;
     _syncAdmission();
   }
 
   @override
   void dispose() {
-    unawaited(_detachAdmission(clearAdmitted: false));
+    unawaited(
+      _detachAdmission(
+        clearAdmitted: false,
+        endSession: _sessionEnded || (_transport?.hasEnded ?? false),
+      ),
+    );
     _notificationController.dispose();
     super.dispose();
   }
@@ -116,6 +124,8 @@ class _SessionAdmissionOverlayState
     final event = ref.read(currentSessionEventProvider);
     final room = ref.read(currentSessionProvider)?.room;
     final keeperIdentity = state?.roomState.keeper;
+    _sessionEnded =
+        state?.roomState.status == RoomStatus.ended || event?.ended == true;
     final connected = state?.connection.state == RoomConnectionState.connected;
     final active =
         connected &&
@@ -125,7 +135,9 @@ class _SessionAdmissionOverlayState
         keeperIdentity != null &&
         keeperIdentity.isNotEmpty;
     if (!active) {
-      if (_hasAdmission) unawaited(_detachAdmission());
+      if (_hasAdmission) {
+        unawaited(_detachAdmission(endSession: _sessionEnded));
+      }
       return;
     }
 
@@ -140,9 +152,17 @@ class _SessionAdmissionOverlayState
               )
               .value
         : null;
-    // Do not approve anyone before the durable decline list is known.
-    if (isKeeper && declinedIdentities == null) {
-      if (_hasAdmission) unawaited(_detachAdmission());
+    final rosterProvider = keeperAdmissionRosterProvider(
+      widget.sessionSlug,
+      keeperIdentity,
+    );
+    final restoredRoster = isKeeper ? ref.read(rosterProvider).value : null;
+    // Do not advertise an empty authority before persisted admission is loaded.
+    if (isKeeper && (declinedIdentities == null || restoredRoster == null)) {
+      if (_hasAdmission &&
+          (!identical(_room, room) || _keeperIdentity != keeperIdentity)) {
+        unawaited(_detachAdmission());
+      }
       return;
     }
     final controllerActive = isKeeper
@@ -150,7 +170,8 @@ class _SessionAdmissionOverlayState
         : _clientController != null;
     if (identical(_room, room) &&
         _keeperIdentity == keeperIdentity &&
-        controllerActive) {
+        controllerActive &&
+        (!isKeeper || identical(_attachedKeeperRoster, restoredRoster))) {
       if (declinedIdentities != null) {
         _keeperController?.setDeclinedIdentities(declinedIdentities);
       }
@@ -160,19 +181,20 @@ class _SessionAdmissionOverlayState
       return;
     }
 
-    unawaited(_detachAdmission());
-    _syncAdmittedIdentities(const []);
+    unawaited(_detachAdmission(clearAdmitted: !isKeeper));
     final transport = LiveKitAdmissionTransport(room);
     _transport = transport;
     _room = room;
     _keeperIdentity = keeperIdentity;
 
     if (isKeeper) {
+      _attachedKeeperRoster = restoredRoster;
+      _saveKeeperRoster = ref.read(rosterProvider.notifier).persist;
       final controller = KeeperAdmissionController(
         channel: transport,
         keeperIdentity: _currentKeeperIdentity,
         sessionIdentity: widget.sessionSlug,
-        rosterStore: _rosterStoreFor(widget.sessionSlug),
+        rosterStore: restoredRoster,
         approvalRequired: ref.read(sessionAdmissionSettingsProvider),
         declinedIdentities: declinedIdentities!,
       );
@@ -180,6 +202,8 @@ class _SessionAdmissionOverlayState
       _syncAdmittedIdentities(controller.roster);
       _keeperChanges = controller.changes.listen((_) {
         if (!mounted || !identical(_keeperController, controller)) return;
+        final persist = _saveKeeperRoster;
+        if (persist != null) unawaited(_persistRoster(persist));
         _syncAdmittedIdentities(controller.roster);
         setState(() {});
       });
@@ -208,12 +232,27 @@ class _SessionAdmissionOverlayState
       _clientController != null ||
       _transport != null;
 
-  KeeperAdmissionRosterStore _rosterStoreFor(String sessionSlug) {
-    if (_rosterStoreSessionSlug != sessionSlug) {
-      _rosterStoreSessionSlug = sessionSlug;
-      _keeperRosterStore = KeeperAdmissionRosterStore();
+  Future<void> _persistRoster(Future<void> Function() persist) async {
+    try {
+      await persist();
+      _rosterSaveErrorShown = false;
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Could not save Keeper admission recovery',
+      );
+      if (mounted && !_rosterSaveErrorShown) {
+        _rosterSaveErrorShown = true;
+        _notificationController.showError(
+          context,
+          icon: TotemIcons.errorOutlined,
+          title: 'Admission recovery could not be saved',
+          message:
+              'Please keep this Session open to avoid losing admission history.',
+        );
+      }
     }
-    return _keeperRosterStore!;
   }
 
   void _syncAdmittedIdentities(Iterable<String> identities) {
@@ -236,7 +275,15 @@ class _SessionAdmissionOverlayState
     }
   }
 
-  Future<void> _detachAdmission({bool clearAdmitted = true}) {
+  Future<void> _detachAdmission({
+    bool clearAdmitted = true,
+    bool endSession = false,
+  }) {
+    if (endSession) _attachedKeeperRoster?.clear();
+    final persist = _saveKeeperRoster;
+    if (persist != null) unawaited(_persistRoster(persist));
+    _attachedKeeperRoster = null;
+    _saveKeeperRoster = null;
     final keeperController = _keeperController;
     final clientController = _clientController;
     final transport = _transport;
@@ -252,14 +299,14 @@ class _SessionAdmissionOverlayState
     _busy = false;
     if (clearAdmitted) _syncAdmittedIdentities(const []);
 
+    final keeperDispose = keeperController?.dispose();
+    final clientDispose = clientController?.dispose();
     return Future.wait<void>([
       if (keeperChanges != null) keeperChanges.cancel(),
       if (clientChanges != null) clientChanges.cancel(),
-    ]).then((_) async {
-      await keeperController?.dispose();
-      await clientController?.dispose();
-      await transport?.dispose();
-    });
+      ?keeperDispose,
+      ?clientDispose,
+    ]).then((_) => transport?.dispose());
   }
 
   Future<void> _decide(
@@ -352,10 +399,21 @@ class _SessionAdmissionOverlayState
         widget.sessionSlug,
         keeper,
       );
-      ref.listen(provider, (_, _) => _syncAdmission());
+      final rosterProvider = keeperAdmissionRosterProvider(
+        widget.sessionSlug,
+        keeper,
+      );
+      ref
+        ..listen(provider, (_, _) => _syncAdmission())
+        ..listen(rosterProvider, (_, _) => _syncAdmission());
       final declined = ref.watch(provider);
-      if (declined.hasError && !declined.hasValue) {
-        retry = () => ref.invalidate(provider);
+      final roster = ref.watch(rosterProvider);
+      if ((declined.hasError && !declined.hasValue) ||
+          (roster.hasError && !roster.hasValue)) {
+        retry = () {
+          if (declined.hasError) ref.invalidate(provider);
+          if (roster.hasError) ref.invalidate(rosterProvider);
+        };
       }
     }
     final controller = _keeperController;
@@ -519,7 +577,7 @@ class SessionAdmissionPanel extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'Could not load declined participants. Admission is paused.',
+                  'Could not load admission recovery data. Please retry.',
                   style: TextStyle(color: AppTheme.slate),
                 ),
                 OutlinedButton(onPressed: retry, child: const Text('Retry')),

@@ -168,7 +168,9 @@ class PendingAdmissionController {
         if (hello.senderIdentity == request.recipientIdentity &&
             hello.senderIdentity == keeperIdentity() &&
             hello.recipientIdentity == channel.localIdentity) {
-          _resendIfPresent();
+          // An authenticated hello proves the Keeper can receive packets even
+          // before LiveKit updates remoteParticipants after a reconnect.
+          unawaited(_sendBestEffort(_cancellation ?? request));
         }
       case AdmissionConnectionRestored():
         _resendIfPresent();
@@ -974,7 +976,11 @@ class ClientAdmissionRosterController {
       return;
     }
     if (current.keeperGeneration != packet.keeperGeneration) {
-      if (_outstandingRequestId != null) _refreshAfterSnapshot = true;
+      if (_outstandingRequestId != null) {
+        _refreshAfterSnapshot = true;
+      } else {
+        _requestIfCurrentKeeperPresent();
+      }
       return;
     }
     if (packet.revision <= current.revision) return;

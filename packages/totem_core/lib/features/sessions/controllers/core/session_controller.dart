@@ -1127,6 +1127,9 @@ class SessionController extends _$SessionController {
       })
       ..on<TrackPublishedEvent>((event) {
         _subscribeToRemotePublication(event.publication);
+      })
+      ..on<TrackUnpublishedEvent>((event) {
+        _subscribedRemotePublications.remove(event.publication);
       });
   }
 

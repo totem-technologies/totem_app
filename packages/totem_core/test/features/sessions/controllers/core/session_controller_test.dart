@@ -1314,7 +1314,7 @@ void main() {
         check(controller.room).isNull();
       });
 
-      test('subscribes once to adopted room publications', () async {
+      test('subscribes once per publication until it is unpublished', () async {
         const eventSlug = 'test-session';
         const options = SessionOptions(
           sessionSlug: eventSlug,
@@ -1370,6 +1370,21 @@ void main() {
         await pumpEventQueue();
 
         verify(existingPublication.subscribe).called(1);
+        verify(publishedPublication.subscribe).called(1);
+
+        await room.listener.trigger(
+          TrackUnpublishedEvent(
+            participant: participant,
+            publication: publishedPublication,
+          ),
+        );
+        await room.listener.trigger(
+          TrackPublishedEvent(
+            participant: participant,
+            publication: publishedPublication,
+          ),
+        );
+        await pumpEventQueue();
         verify(publishedPublication.subscribe).called(1);
       });
 
