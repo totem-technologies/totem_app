@@ -16,6 +16,7 @@ jobs:
   create_draft_release:
     name: Create/Update Draft Release
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Create/Update Draft Release
         uses: softprops/action-gh-release@v3
@@ -27,6 +28,7 @@ jobs:
   android:
     name: Android (${{ matrix.flavor }})
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: create_draft_release
     defaults:
       run:
@@ -87,6 +89,7 @@ jobs:
   ios:
     name: iOS (${{ matrix.flavor }})
     runs-on: macos-26
+    timeout-minutes: 60
     needs: create_draft_release
     defaults:
       run:

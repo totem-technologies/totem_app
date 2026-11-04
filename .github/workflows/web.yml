@@ -45,6 +45,7 @@ jobs:
     # Production on a published release; staging for PRs, main, tags, dispatch.
     name: Web (${{ github.event_name == 'release' && 'production' || 'staging' }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       FLAVOR: ${{ github.event_name == 'release' && 'production' || 'staging' }}
       SENTRY_RELEASE: ${{ github.event_name == 'release' && format('totem_web@{0}', github.event.release.tag_name) || startsWith(github.ref, 'refs/tags/v') && format('totem_web@{0}', github.ref_name) || '' }}
