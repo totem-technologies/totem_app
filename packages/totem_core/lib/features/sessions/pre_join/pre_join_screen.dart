@@ -220,10 +220,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     }
   }
 
-  void _backToSpace(SessionDetailSchema session) {
-    context.go(RouteNames.space(session.space.slug));
-  }
-
   Widget _buildDeclined(SessionDetailSchema session, PreJoinFlowState flow) {
     final next = session.space.nextEvents.where(
       (event) =>
@@ -260,7 +256,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
               : () => context.go(
                   RouteNames.spaceSession(session.space.slug, offer.slug),
                 ),
-          onBackToSpace: () => _backToSpace(session),
+          onBackToSpace: () => TotemRouter.instance.popOrHome(context),
         ),
       ),
     );
