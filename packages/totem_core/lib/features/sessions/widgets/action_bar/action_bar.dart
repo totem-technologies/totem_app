@@ -284,6 +284,9 @@ class ActionBarShortcut {
     LogicalKeyboardKey.keyS,
     LogicalKeyboardKey.keyD,
     LogicalKeyboardKey.keyF,
+    LogicalKeyboardKey.keyG,
+    LogicalKeyboardKey.keyH,
+    LogicalKeyboardKey.keyJ,
   ];
 
   static const microphone = ActionBarShortcut(

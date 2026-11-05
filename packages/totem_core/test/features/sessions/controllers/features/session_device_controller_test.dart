@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -46,6 +47,15 @@ void main() {
 
     SessionDeviceState deviceState() =>
         container.read(sessionDeviceControllerProvider(session));
+
+    test('browser route notifications are enabled after setup', () async {
+      final devices = controller();
+      check(devices.audioRouteNotificationsEnabled).isFalse();
+      await devices.setupDeviceChangeListener();
+      check(devices.audioRouteNotificationsEnabled).isTrue();
+      await devices.stopDeviceChangeListener();
+      check(devices.audioRouteNotificationsEnabled).isFalse();
+    }, skip: !kIsWeb);
 
     test(
       'refreshes outputs after the browser grants an output device',
@@ -363,6 +373,24 @@ void main() {
       },
     );
 
+    test(
+      'a headset disconnect is reported even when the speaker state is unchanged',
+      () async {
+        final devices = controller();
+        await devices.handleExternalOutputChanged(true);
+        media
+          ..isSpeakerOutputPreferred = true
+          ..emitChange();
+
+        final before = deviceState().audioRouteRevision;
+        await devices.handleExternalOutputChanged(false);
+        check(deviceState().audioRouteRevision).equals(before + 1);
+
+        await devices.handleExternalOutputChanged(false);
+        check(deviceState().audioRouteRevision).equals(before + 1);
+      },
+    );
+
     test('joining a session replaces an earlier speaker choice', () async {
       final devices = controller();
       await devices.setSpeakerphone(false);
@@ -370,6 +398,28 @@ void main() {
       devices.resetSpeakerRoutingDefaults();
 
       check(devices.userSpeakerPreference).isTrue();
+    });
+
+    test('a later manual speaker choice wins over a route in flight', () async {
+      final subscription = container.listen(
+        sessionDeviceControllerProvider(session),
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final firstRoute = Completer<void>();
+      media.onSpeakerOutputCommand = (preferred) =>
+          preferred ? firstRoute.future : Future.value();
+      final devices = controller();
+
+      final enable = devices.setSpeakerphone(true);
+      await pumpEventQueue();
+      final disable = devices.setSpeakerphone(false);
+      firstRoute.complete();
+      await Future.wait([enable, disable]);
+
+      check(media.speakerOutputCommands).deepEquals([true, false]);
+      check(media.isSpeakerOutputPreferred).isFalse();
+      check(devices.userSpeakerPreference).isFalse();
     });
   });
 

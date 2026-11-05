@@ -237,7 +237,7 @@ class _ActionButtonState extends State<ActionButton> {
                 return Colors.transparent;
               }),
               child: Padding(
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 40),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 24),
                 child: Center(
                   child: effectiveLoading
                       ? const SizedBox(
@@ -255,7 +255,10 @@ class _ActionButtonState extends State<ActionButton> {
                           widget.text,
                           maxLines: 1,
                           style:
-                              (widget.labelStyle ?? theme.textTheme.labelLarge)
+                              (widget.labelStyle ??
+                                      theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ))
                                   ?.copyWith(color: foregroundColor),
                         ),
                 ),
@@ -399,13 +402,13 @@ class ActionSliderState extends State<ActionSlider> {
         final backgroundColor = widget.backgroundColor ?? AppTheme.mauve;
         const foregroundColor = AppTheme.white;
 
-        TextStyle? baseTextStyle = widget.labelStyle;
-        final buttonStyle = theme.elevatedButtonTheme.style;
-        if (baseTextStyle == null && buttonStyle != null) {
-          baseTextStyle = buttonStyle.textStyle?.resolve({});
-        }
-        final textStyle = (baseTextStyle ?? theme.textTheme.labelLarge)
-            ?.copyWith(color: foregroundColor);
+        final textStyle =
+            (widget.labelStyle ??
+                    theme.elevatedButtonTheme.style?.textStyle?.resolve({}) ??
+                    theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ))
+                ?.copyWith(color: foregroundColor);
 
         return CallbackShortcuts(
           bindings: <ShortcutActivator, VoidCallback>{
