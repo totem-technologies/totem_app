@@ -11,151 +11,86 @@ part of 'session_entry.stories.dart';
 // StoryGenerator
 // **************************************************************************
 
-typedef _Component = Component<SessionEntry, StoryArgs<SessionEntry>>;
-typedef _Scenario = SessionEntryScenario;
-typedef _Defaults = SessionEntryDefaults;
-typedef _Story = SessionEntryStory;
-typedef _Args = SessionEntryInputArgs;
-final SessionEntryComponent = Component<SessionEntry, StoryArgs<SessionEntry>>(
-  name: component.name ?? 'SessionEntry',
+typedef _Component = Component<PreJoinView, StoryArgs<PreJoinView>>;
+typedef _Scenario = PreJoinViewScenario;
+typedef _Defaults = PreJoinViewDefaults;
+typedef _Story = PreJoinViewStory;
+typedef _Args = PreJoinStoryInputArgs;
+final PreJoinViewComponent = Component<PreJoinView, StoryArgs<PreJoinView>>(
+  name: component.name ?? 'PreJoinView',
   path: component.path ?? 'screens',
   docsBuilder: component.docsBuilder,
-  docComment:
-      r'''Joining a Session: Google Meet's join behavior, Totem's materials.
-
-A participant never sees the room until a Keeper admits them. Join is
-the only action — the admission request is a side effect. The Keeper
-sees the same moment from the other side: a waiting pill, then the
-admission panel.
-
-Layout follows the screen's own width. Narrow is a phone with bottom
-sheets. From 640 it reads as a window: side panel and centered modal.
-From 1100 it is the web Session layout (Figma 3800:10532).''',
-  stories: [$Default..$generatedName = 'Default'],
+  docComment: null,
+  stories: [
+    $Default..$generatedName = 'Default',
+    $Waiting..$generatedName = 'Waiting',
+  ],
 );
-typedef SessionEntryScenario = Scenario<SessionEntry, SessionEntryInputArgs>;
-typedef SessionEntryDefaults = Defaults<SessionEntry, SessionEntryInputArgs>;
+typedef PreJoinViewScenario = Scenario<PreJoinView, PreJoinStoryInputArgs>;
+typedef PreJoinViewDefaults = Defaults<PreJoinView, PreJoinStoryInputArgs>;
 
-class SessionEntryStory extends Story<SessionEntry, SessionEntryInputArgs> {
-  SessionEntryStory({
+class PreJoinViewStory extends Story<PreJoinView, PreJoinStoryInputArgs> {
+  PreJoinViewStory({
     super.name,
     super.designLink,
-    SetupBuilder<SessionEntry, SessionEntryInputArgs>? setup,
+    SetupBuilder<PreJoinView, PreJoinStoryInputArgs>? setup,
     super.modes,
-    SessionEntryInputArgs? args,
-    StoryWidgetBuilder<SessionEntry, SessionEntryInputArgs>? builder,
+    PreJoinStoryInputArgs? args,
+    StoryWidgetBuilder<PreJoinView, PreJoinStoryInputArgs>? builder,
     super.scenarios,
     super.excludeFromTests,
   }) : super(
-         args: args ?? SessionEntryInputArgs(),
+         args: args ?? PreJoinStoryInputArgs(),
          builder: builder ?? defaults.builder!,
          setup: setup ?? defaults.setup!,
        );
 }
 
-class SessionEntryInputArgs extends StoryArgs<SessionEntry> {
-  SessionEntryInputArgs({
-    Arg<EntryRole>? role,
-    Arg<DetailsPhase>? phase,
-    Arg<EntryStatus>? status,
-    Arg<int>? waiting,
-    Arg<bool>? panelOpen,
-    Arg<bool>? showOrientation,
-    Arg<DeclineVariant>? declineVariant,
-  }) : this.roleArg = $initArg(
-         'role',
-         role,
-         EnumArg<EntryRole>(EntryRole.participant, values: EntryRole.values),
-       )!,
-       this.phaseArg = $initArg(
-         'phase',
-         phase,
-         EnumArg<DetailsPhase>(
-           DetailsPhase.tooEarly,
-           values: DetailsPhase.values,
-         ),
-       )!,
-       this.statusArg = $initArg(
-         'status',
-         status,
-         EnumArg<EntryStatus>(EntryStatus.browsing, values: EntryStatus.values),
-       )!,
-       this.waitingArg = $initArg('waiting', waiting, IntArg(0))!,
-       this.panelOpenArg = $initArg('panelOpen', panelOpen, BoolArg(false))!,
-       this.showOrientationArg = $initArg(
-         'showOrientation',
-         showOrientation,
+class PreJoinStoryInputArgs extends StoryArgs<PreJoinView> {
+  PreJoinStoryInputArgs({
+    Arg<String>? slug,
+    Arg<bool>? waiting,
+    Arg<bool>? cameraOn,
+    Arg<bool>? microphoneOn,
+  }) : this.slugArg = $initArg('slug', slug, StringArg('session'))!,
+       this.waitingArg = $initArg('waiting', waiting, BoolArg(false))!,
+       this.cameraOnArg = $initArg('cameraOn', cameraOn, BoolArg(false))!,
+       this.microphoneOnArg = $initArg(
+         'microphoneOn',
+         microphoneOn,
          BoolArg(false),
-       )!,
-       this.declineVariantArg = $initArg(
-         'declineVariant',
-         declineVariant,
-         EnumArg<DeclineVariant>(
-           DeclineVariant.nextSession,
-           values: DeclineVariant.values,
-         ),
        )!;
 
-  SessionEntryInputArgs.fixed({
-    EntryRole role = EntryRole.participant,
-    DetailsPhase phase = DetailsPhase.tooEarly,
-    EntryStatus status = EntryStatus.browsing,
-    int waiting = 0,
-    bool panelOpen = false,
-    bool showOrientation = false,
-    DeclineVariant declineVariant = DeclineVariant.nextSession,
-  }) : this.roleArg = $initArg('role', Arg.fixed(role), null)!,
-       this.phaseArg = $initArg('phase', Arg.fixed(phase), null)!,
-       this.statusArg = $initArg('status', Arg.fixed(status), null)!,
+  PreJoinStoryInputArgs.fixed({
+    String slug = 'session',
+    bool waiting = false,
+    bool cameraOn = false,
+    bool microphoneOn = false,
+  }) : this.slugArg = $initArg('slug', Arg.fixed(slug), null)!,
        this.waitingArg = $initArg('waiting', Arg.fixed(waiting), null)!,
-       this.panelOpenArg = $initArg('panelOpen', Arg.fixed(panelOpen), null)!,
-       this.showOrientationArg = $initArg(
-         'showOrientation',
-         Arg.fixed(showOrientation),
-         null,
-       )!,
-       this.declineVariantArg = $initArg(
-         'declineVariant',
-         Arg.fixed(declineVariant),
+       this.cameraOnArg = $initArg('cameraOn', Arg.fixed(cameraOn), null)!,
+       this.microphoneOnArg = $initArg(
+         'microphoneOn',
+         Arg.fixed(microphoneOn),
          null,
        )!;
 
-  final Arg<EntryRole> roleArg;
+  final Arg<String> slugArg;
 
-  final Arg<DetailsPhase> phaseArg;
+  final Arg<bool> waitingArg;
 
-  final Arg<EntryStatus> statusArg;
+  final Arg<bool> cameraOnArg;
 
-  final Arg<int> waitingArg;
+  final Arg<bool> microphoneOnArg;
 
-  final Arg<bool> panelOpenArg;
+  String get slug => slugArg.value;
 
-  final Arg<bool> showOrientationArg;
+  bool get waiting => waitingArg.value;
 
-  final Arg<DeclineVariant> declineVariantArg;
+  bool get cameraOn => cameraOnArg.value;
 
-  EntryRole get role => roleArg.value;
-
-  DetailsPhase get phase => phaseArg.value;
-
-  EntryStatus get status => statusArg.value;
-
-  int get waiting => waitingArg.value;
-
-  bool get panelOpen => panelOpenArg.value;
-
-  bool get showOrientation => showOrientationArg.value;
-
-  DeclineVariant get declineVariant => declineVariantArg.value;
+  bool get microphoneOn => microphoneOnArg.value;
 
   @override
-  List<Arg?> get list => [
-    roleArg,
-    phaseArg,
-    statusArg,
-    waitingArg,
-    panelOpenArg,
-    showOrientationArg,
-    declineVariantArg,
-  ];
+  List<Arg?> get list => [slugArg, waitingArg, cameraOnArg, microphoneOnArg];
 }

@@ -29,6 +29,8 @@ class PreJoinView extends StatelessWidget {
     required this.controlsKey,
     this.onLeave,
     this.notice,
+    this.preview,
+    this.controls,
     super.key,
   });
 
@@ -41,6 +43,13 @@ class PreJoinView extends StatelessWidget {
 
   /// Shown above [joinCard], such as what's needed before joining.
   final Widget? notice;
+
+  /// Replaces the provider-backed local participant preview.
+  final Widget? preview;
+
+  /// Replaces the provider-backed action bar and its keyboard shortcuts.
+  final Widget? controls;
+
   final AsyncCallback onToggleCamera;
   final AsyncCallback onToggleMicrophone;
   final VoidCallback onToggleSpeaker;
@@ -60,43 +69,48 @@ class PreJoinView extends StatelessWidget {
           label:
               'Your video preview, camera ${preferences.isCameraOn ? 'on' : 'off'}',
           image: true,
-          child: LocalParticipantCard(
-            isCameraOn: preferences.isCameraOn,
-            videoTrack: mediaState.camera.track,
-          ),
+          child:
+              preview ??
+              LocalParticipantCard(
+                isCameraOn: preferences.isCameraOn,
+                videoTrack: mediaState.camera.track,
+              ),
         ),
       ),
     );
+    final productionControls = PrejoinActionBar(
+      locked: locked,
+      microphoneLevel: previewAudioTrack == null
+          ? null
+          : (color, iconSize, barCount) => LiveKitMicrophoneLevel.preview(
+              previewAudioTrack,
+              color: color,
+              iconSize: iconSize,
+              barCount: barCount,
+            ),
+      isMicOn: preferences.isMicOn,
+      onToggleMic: onToggleMicrophone,
+      isSpeakerOn: preferences.isSpeakerOn,
+      onToggleSpeaker: onToggleSpeaker,
+      isCameraOn: preferences.isCameraOn,
+      onToggleCamera: onToggleCamera,
+      cameraFacing: preferences.cameraOptions.cameraPosition.toFacing(),
+      selectedCameraDeviceId: preferences.cameraOptions.deviceId,
+      onCameraFacingChanged: onCameraFacingChanged,
+      onCameraDeviceSelected: onCameraDeviceSelected,
+      microphoneProblem: mediaState.microphone.problem,
+      cameraProblem: mediaState.camera.problem,
+    );
     final actionBar = KeyedSubtree(
       key: controlsKey,
-      child: SessionKeyboardShortcuts(
-        enableChatShortcut: false,
-        onToggleMicrophone: locked ? null : onToggleMicrophone,
-        onToggleCamera: locked ? null : onToggleCamera,
-        child: PrejoinActionBar(
-          locked: locked,
-          microphoneLevel: previewAudioTrack == null
-              ? null
-              : (color, iconSize, barCount) => LiveKitMicrophoneLevel.preview(
-                  previewAudioTrack,
-                  color: color,
-                  iconSize: iconSize,
-                  barCount: barCount,
-                ),
-          isMicOn: preferences.isMicOn,
-          onToggleMic: onToggleMicrophone,
-          isSpeakerOn: preferences.isSpeakerOn,
-          onToggleSpeaker: onToggleSpeaker,
-          isCameraOn: preferences.isCameraOn,
-          onToggleCamera: onToggleCamera,
-          cameraFacing: preferences.cameraOptions.cameraPosition.toFacing(),
-          selectedCameraDeviceId: preferences.cameraOptions.deviceId,
-          onCameraFacingChanged: onCameraFacingChanged,
-          onCameraDeviceSelected: onCameraDeviceSelected,
-          microphoneProblem: mediaState.microphone.problem,
-          cameraProblem: mediaState.camera.problem,
-        ),
-      ),
+      child:
+          controls ??
+          SessionKeyboardShortcuts(
+            enableChatShortcut: false,
+            onToggleMicrophone: locked ? null : onToggleMicrophone,
+            onToggleCamera: locked ? null : onToggleCamera,
+            child: productionControls,
+          ),
     );
 
     return RoomBackground(

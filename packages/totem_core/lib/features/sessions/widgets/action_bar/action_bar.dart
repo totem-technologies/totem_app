@@ -490,17 +490,80 @@ class PrejoinActionBar extends ConsumerWidget {
     final cameraDevices = ref.watch(cameraDevicesProvider);
     final permissions = ref.watch(mediaPermissionControllerProvider);
     final platform = ref.watch(platformInfoProvider);
+    return PrejoinActionBarView(
+      locked: locked,
+      microphoneLevel: microphoneLevel,
+      microphoneNeedsAttention: needsAttention(
+        permissions?.microphone,
+        microphoneProblem,
+        platform,
+      ),
+      isMicOn: isMicOn,
+      onToggleMic: onToggleMic,
+      isSpeakerOn: isSpeakerOn,
+      onToggleSpeaker: onToggleSpeaker,
+      isCameraOn: isCameraOn,
+      onToggleCamera: onToggleCamera,
+      cameraFacing: cameraFacing,
+      availableCameraDevices: cameraDevices,
+      selectedCameraDeviceId: selectedCameraDeviceId,
+      onCameraFacingChanged: onCameraFacingChanged,
+      onCameraDeviceSelected: onCameraDeviceSelected,
+      cameraNeedsAttention: needsAttention(
+        permissions?.camera,
+        cameraProblem,
+        platform,
+      ),
+    );
+  }
+}
+
+/// Provider-free presentation for the pre-join media controls.
+class PrejoinActionBarView extends StatelessWidget {
+  const PrejoinActionBarView({
+    required this.locked,
+    required this.microphoneLevel,
+    required this.microphoneNeedsAttention,
+    required this.isMicOn,
+    required this.onToggleMic,
+    required this.isSpeakerOn,
+    required this.onToggleSpeaker,
+    required this.isCameraOn,
+    required this.onToggleCamera,
+    required this.cameraFacing,
+    required this.availableCameraDevices,
+    required this.selectedCameraDeviceId,
+    required this.onCameraFacingChanged,
+    required this.onCameraDeviceSelected,
+    required this.cameraNeedsAttention,
+    super.key,
+  });
+
+  final bool locked;
+  final MicrophoneLevelBuilder? microphoneLevel;
+  final bool microphoneNeedsAttention;
+  final bool isMicOn;
+  final AsyncCallback onToggleMic;
+  final bool isSpeakerOn;
+  final VoidCallback onToggleSpeaker;
+  final bool isCameraOn;
+  final VoidCallback onToggleCamera;
+  final CameraFacing cameraFacing;
+  final List<MediaDeviceInfo> availableCameraDevices;
+  final String? selectedCameraDeviceId;
+  final ValueChanged<CameraFacing> onCameraFacingChanged;
+  final ValueChanged<MediaDeviceInfo> onCameraDeviceSelected;
+  final bool cameraNeedsAttention;
+
+  @override
+  Widget build(BuildContext context) {
     final microphoneButton = ActionBarShortcutTooltip(
       shortcut: ActionBarShortcut.microphone,
       child: ActionBarMicButton(
         microphoneLevel: microphoneLevel,
         isMicOn: isMicOn,
         onToggle: !locked ? (v) => onToggleMic() : null,
-        needsAttention: needsAttention(
-          permissions?.microphone,
-          microphoneProblem,
-          platform,
-        ),
+        needsAttention: microphoneNeedsAttention,
       ),
     );
     final cameraButton = ActionBarShortcutTooltip(
@@ -509,16 +572,12 @@ class PrejoinActionBar extends ConsumerWidget {
         isCameraOn: isCameraOn,
         onToggle: locked ? null : onToggleCamera,
         cameraFacing: cameraFacing,
-        availableCameraDevices: cameraDevices,
+        availableCameraDevices: availableCameraDevices,
         selectedCameraDeviceId:
-            selectedCameraDeviceId ?? cameraDevices.firstOrNull?.id,
+            selectedCameraDeviceId ?? availableCameraDevices.firstOrNull?.id,
         onCameraFacingChanged: onCameraFacingChanged,
         onCameraDeviceSelected: onCameraDeviceSelected,
-        needsAttention: needsAttention(
-          permissions?.camera,
-          cameraProblem,
-          platform,
-        ),
+        needsAttention: cameraNeedsAttention,
       ),
     );
 

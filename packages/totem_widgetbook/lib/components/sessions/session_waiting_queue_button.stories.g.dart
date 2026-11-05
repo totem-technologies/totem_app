@@ -59,6 +59,7 @@ class SessionWaitingQueueButtonStory
              (context, args) => SessionWaitingQueueButton(
                count: args.count,
                key: args.key,
+               label: args.label,
                onPressed: args.onPressed,
              ),
          setup: setup ?? defaults.setup!,
@@ -70,17 +71,25 @@ class SessionWaitingQueueButtonArgs
   SessionWaitingQueueButtonArgs({
     Arg<int>? count,
     Arg<Key?>? key,
+    Arg<String?>? label,
     Arg<void Function()?>? onPressed,
   }) : this.countArg = $initArg('count', count, IntArg(0))!,
        this.keyArg = $initArg('key', key, null),
+       this.labelArg = $initArg('label', label, NullableStringArg(null))!,
        this.onPressedArg = $initArg('onPressed', onPressed, null);
 
   SessionWaitingQueueButtonArgs.fixed({
     int count = 0,
     Key? key,
+    String? label = null,
     void Function()? onPressed,
   }) : this.countArg = $initArg('count', Arg.fixed(count), null)!,
        this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
+       this.labelArg = $initArg(
+         'label',
+         label == null ? null : Arg.fixed(label),
+         null,
+       ),
        this.onPressedArg = $initArg(
          'onPressed',
          onPressed == null ? null : Arg.fixed(onPressed),
@@ -91,14 +100,18 @@ class SessionWaitingQueueButtonArgs
 
   final Arg<Key?>? keyArg;
 
+  final Arg<String?>? labelArg;
+
   final Arg<void Function()?>? onPressedArg;
 
   int get count => countArg.value;
 
   Key? get key => keyArg?.value;
 
+  String? get label => labelArg?.value;
+
   void Function()? get onPressed => onPressedArg?.value;
 
   @override
-  List<Arg?> get list => [countArg, keyArg, onPressedArg];
+  List<Arg?> get list => [countArg, keyArg, labelArg, onPressedArg];
 }
