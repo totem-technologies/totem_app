@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
@@ -93,15 +94,17 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
               busy: widget.busy,
               onClose: widget.onClose,
               onAdmit: (id) {
-                final request = widget.requests.firstWhere(
+                final request = widget.requests.firstWhereOrNull(
                   (request) => request.id == id,
                 );
+                if (request == null) return;
                 unawaited(widget.onDecision(request, true));
               },
               onDecline: (id) async {
-                final request = widget.requests.firstWhere(
+                final request = widget.requests.firstWhereOrNull(
                   (request) => request.id == id,
                 );
+                if (request == null) return;
                 final action = await showDialog<_DeclineAction>(
                   context: context,
                   useRootNavigator: false,

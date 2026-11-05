@@ -8,6 +8,7 @@ import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
+import 'package:totem_core/features/sessions/widgets/session_admission_list.dart';
 
 void main() {
   for (final count in [1, 8]) {
@@ -131,6 +132,60 @@ void main() {
       await tester.pump();
     },
   );
+
+  testWidgets('ignores actions for a request removed before the tap', (
+    tester,
+  ) async {
+    final request = AdmissionRequest(
+      id: 'request',
+      senderIdentity: 'guest',
+      recipientIdentity: 'keeper',
+      expiresAt: DateTime.utc(2030),
+      displayName: 'Guest',
+    );
+    final requests = ValueNotifier<List<AdmissionRequest>>([request]);
+    addTearDown(requests.dispose);
+    var decisions = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userProfileProvider('guest').overrideWith(
+            (ref) => PublicUserSchema(
+              profileAvatarType: ProfileAvatarTypeEnum.td,
+              dateCreated: DateTime.utc(2024),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: ValueListenableBuilder<List<AdmissionRequest>>(
+              valueListenable: requests,
+              builder: (context, current, child) => KeeperAdmissionPanel(
+                requests: current,
+                onDecision: (_, _) async => decisions++,
+                onAdmitAll: () {},
+                onClose: () {},
+                busy: false,
+                desktop: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final staleActions = tester.widget<SessionAdmissionList>(
+      find.byType(SessionAdmissionList),
+    );
+    requests.value = [];
+    await tester.pump();
+    staleActions.onAdmit!('request');
+    staleActions.onDecline!('request');
+    await tester.pump();
+    check(decisions).equals(0);
+    check(tester.takeException()).isNull();
+    check(find.byType(AlertDialog).evaluate()).isEmpty();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('keeper can decide separately and admit the remaining queue', (
     tester,

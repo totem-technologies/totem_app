@@ -214,11 +214,25 @@ class _SessionAdmissionOverlayState
         now: widget.now,
       );
       _keeperController = controller;
+      var persistedRosterRevision = controller.rosterRevision;
+      final savingRosterRevisions = <int>{};
       _syncAdmittedIdentities(controller.roster);
       _keeperChanges = controller.changes.listen((_) {
         if (!mounted || !identical(_keeperController, controller)) return;
+        final revision = controller.rosterRevision;
         final persist = _saveKeeperRoster;
-        if (persist != null) unawaited(_persistRoster(persist));
+        if (persist != null &&
+            revision != persistedRosterRevision &&
+            savingRosterRevisions.add(revision)) {
+          unawaited(
+            _persistRoster(persist).then((saved) {
+              savingRosterRevisions.remove(revision);
+              if (saved && revision > persistedRosterRevision) {
+                persistedRosterRevision = revision;
+              }
+            }),
+          );
+        }
         _syncAdmittedIdentities(controller.roster);
         setState(() {});
       });
@@ -248,10 +262,11 @@ class _SessionAdmissionOverlayState
       _clientController != null ||
       _transport != null;
 
-  Future<void> _persistRoster(Future<void> Function() persist) async {
+  Future<bool> _persistRoster(Future<void> Function() persist) async {
     try {
       await persist();
       _rosterSaveErrorShown = false;
+      return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -268,6 +283,7 @@ class _SessionAdmissionOverlayState
               'Please keep this Session open to avoid losing admission history.',
         );
       }
+      return false;
     }
   }
 

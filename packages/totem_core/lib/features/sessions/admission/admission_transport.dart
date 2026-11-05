@@ -192,8 +192,8 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
   }
 
   /// Call on a NEW normal room connection, after SessionController.join has
-  /// succeeded. Retain this transport until room teardown so keeper presence,
-  /// hello, or reconnect can trigger a one-shot receipt retry before expiry.
+  /// succeeded. Retain this transport until room teardown so Keeper presence,
+  /// hello, or reconnect can retry the receipt until confirmation or expiry.
   Future<void> sendJoinOutcome(
     AdmissionRequest request, {
     bool joined = true,
@@ -221,8 +221,8 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
       await send(receipt);
     } finally {
       if (!_disposed && !_ended && !_joinReceiptConfirmed) {
-        // A successful publish does not confirm delivery to the Keeper. Give
-        // the receipt one bounded retry if no admitted roster arrives.
+        // A successful publish does not confirm delivery to the Keeper.
+        // Schedule one timed retry; room events may also trigger retries.
         _joinReceiptRetry = Timer(
           const Duration(seconds: 2),
           _retryJoinReceipt,

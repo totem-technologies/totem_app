@@ -39,6 +39,7 @@ class _AdmissionPreferences implements SessionAdmissionPreferences {
 
   final Error? readError;
   final values = <String, String>{};
+  int writeCount = 0;
 
   @override
   String? getString(String key) {
@@ -49,6 +50,7 @@ class _AdmissionPreferences implements SessionAdmissionPreferences {
 
   @override
   Future<bool> setString(String key, String value) async {
+    writeCount++;
     values[key] = value;
     return true;
   }
@@ -440,6 +442,61 @@ void main() {
     await tester.pump();
     await tester.idle();
   });
+
+  testWidgets(
+    'persists roster authority but not queue-only admission changes',
+    (tester) async {
+      final preferences = _AdmissionPreferences();
+      final harness = _AdmissionHarness(preferences: preferences);
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+
+      final container = await pumpHost(
+        tester,
+        harness,
+        videoBuilds: videoBuilds,
+      );
+      container
+          .read(sessionAdmissionSettingsProvider.notifier)
+          .setEnabled(false);
+      await tester.pump();
+
+      final request = harness.request('admit');
+      await harness.sendRequest(request);
+      await tester.pump();
+      await tester.pump();
+      check(preferences.writeCount).equals(0);
+
+      await harness.sendPacket(AdmissionProtocol.joined(request));
+      await tester.pump();
+      await tester.pump();
+      check(preferences.writeCount).equals(1);
+
+      await harness.sendRequest(harness.request('ready-again'));
+      await tester.pump();
+      await tester.pump();
+      check(preferences.writeCount).equals(2);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+
+      final restored = ProviderContainer(
+        overrides: [
+          sessionAdmissionPreferencesProvider.overrideWith(
+            (ref) async => preferences,
+          ),
+        ],
+      );
+      addTearDown(restored.dispose);
+      final roster = await restored.read(
+        keeperAdmissionRosterProvider('session', 'keeper').future,
+      );
+      check(roster.revision).equals(2);
+      check(roster.members).contains('guest');
+      check(roster.awaitingReadiness).contains('guest');
+    },
+  );
 
   testWidgets('ending a Session removes its local admission data', (
     tester,

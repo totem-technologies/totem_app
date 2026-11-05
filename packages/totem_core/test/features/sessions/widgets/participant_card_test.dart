@@ -425,6 +425,12 @@ void main() {
                   );
             }),
             isCurrentUserKeeperProvider.overrideWith((ref) => true),
+            admittedSessionParticipantIdentitiesProvider.overrideWith(
+              () => TestAdmittedSessionParticipantIdentities({
+                keeper.identity,
+                participant.identity,
+              }),
+            ),
           ],
           child: const FeaturedParticipantCard(),
         );
@@ -481,6 +487,8 @@ void main() {
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        PaintingBinding.instance.imageCache.clear();
       },
     );
 

@@ -1,26 +1,14 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_core/core/api/api_client/api_client.dart';
+
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 
-final _testRoomStatusProvider = NotifierProvider<_TestRoomStatus, RoomStatus>(
-  _TestRoomStatus.new,
-);
 final _testSessionScopeProvider =
     NotifierProvider<_TestSessionScope, SessionOptions?>(_TestSessionScope.new);
-
-class _TestRoomStatus extends Notifier<RoomStatus> {
-  @override
-  RoomStatus build() => RoomStatus.waitingRoom;
-
-  RoomStatus get status => state;
-
-  set status(RoomStatus value) => state = value;
-}
 
 class _TestSessionScope extends Notifier<SessionOptions?> {
   @override
@@ -49,26 +37,16 @@ void main() {
         sessionScopeProvider.overrideWith(
           (ref) => ref.watch(_testSessionScopeProvider),
         ),
-        roomStatusProvider.overrideWith(
-          (ref) => ref.watch(_testRoomStatusProvider),
-        ),
       ],
     );
   });
 
   tearDown(() => container.dispose());
 
-  test('defaults to enabled in every status and resets for a new session', () {
-    check(container.read(sessionAdmissionSettingsProvider)).isTrue();
-
-    container.read(_testRoomStatusProvider.notifier).status = RoomStatus.active;
-    check(container.read(sessionAdmissionSettingsProvider)).isTrue();
-    container.read(_testRoomStatusProvider.notifier).status = RoomStatus.ended;
+  test('defaults to enabled and resets for a new session', () {
     check(container.read(sessionAdmissionSettingsProvider)).isTrue();
 
     container.read(sessionAdmissionSettingsProvider.notifier).setEnabled(false);
-    container.read(_testRoomStatusProvider.notifier).status =
-        RoomStatus.waitingRoom;
     check(container.read(sessionAdmissionSettingsProvider)).isFalse();
 
     container.read(_testSessionScopeProvider.notifier).scope = _options(
@@ -80,7 +58,7 @@ void main() {
 
   for (final enabled in [true, false]) {
     test(
-      'explicit $enabled survives status changes and token refresh',
+      'explicit $enabled survives a token refresh',
       () {
         check(container.read(sessionAdmissionSettingsProvider)).isTrue();
         container
@@ -92,17 +70,7 @@ void main() {
           'new-token',
         );
         check(container.read(sessionAdmissionSettingsProvider)).equals(enabled);
-        container.read(_testRoomStatusProvider.notifier).status =
-            RoomStatus.active;
-        check(container.read(sessionAdmissionSettingsProvider)).equals(enabled);
       },
     );
   }
-
-  test('defaults to enabled for unknown room statuses', () {
-    container.read(_testRoomStatusProvider.notifier).status =
-        RoomStatus.fromJson('paused');
-
-    check(container.read(sessionAdmissionSettingsProvider)).isTrue();
-  });
 }

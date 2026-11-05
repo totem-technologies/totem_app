@@ -1,11 +1,10 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_core/core/api/api_client/api_client.dart' show RoomStatus;
 
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 
 part 'session_admission_settings.g.dart';
 
-@Riverpod(dependencies: [sessionScope, roomStatus])
+@Riverpod(dependencies: [sessionScope])
 class SessionAdmissionSettings extends _$SessionAdmissionSettings {
   String? _sessionSlug;
   bool? _enabledOverride;
@@ -18,14 +17,11 @@ class SessionAdmissionSettings extends _$SessionAdmissionSettings {
       _enabledOverride = null;
     }
 
-    final status = ref.watch(roomStatusProvider);
-    return _enabledOverride ?? _defaultEnabled(status);
+    return _enabledOverride ?? true;
   }
 
   void setEnabled(bool enabled) {
     _enabledOverride = enabled;
     state = enabled;
   }
-
-  bool _defaultEnabled(RoomStatus status) => true;
 }
