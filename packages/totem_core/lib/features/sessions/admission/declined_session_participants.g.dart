@@ -64,7 +64,7 @@ final class DeclinedSessionParticipantsProvider
   }) : super(
          retry: null,
          name: r'declinedSessionParticipantsProvider',
-         isAutoDispose: false,
+         isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -96,7 +96,7 @@ final class DeclinedSessionParticipantsProvider
 }
 
 String _$declinedSessionParticipantsHash() =>
-    r'dd849baffa28cab2a35cba558ea1bade44a67a64';
+    r'ac838cad87879618f6d2ae279c67c3bea9517190';
 
 final class DeclinedSessionParticipantsFamily extends $Family
     with
@@ -113,7 +113,7 @@ final class DeclinedSessionParticipantsFamily extends $Family
         name: r'declinedSessionParticipantsProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: false,
+        isAutoDispose: true,
       );
 
   DeclinedSessionParticipantsProvider call(

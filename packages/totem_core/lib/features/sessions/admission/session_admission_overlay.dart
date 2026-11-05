@@ -60,6 +60,8 @@ class _SessionAdmissionOverlayState
   String? _keeperIdentity;
   KeeperAdmissionRosterStore? _attachedKeeperRoster;
   Future<void> Function()? _saveKeeperRoster;
+  Future<void> Function()? _clearKeeperRoster;
+  Future<void> Function()? _clearDeclinedParticipants;
   bool _rosterSaveErrorShown = false;
   bool _sessionEnded = false;
   var _admittedUpdateVersion = 0;
@@ -189,7 +191,17 @@ class _SessionAdmissionOverlayState
 
     if (isKeeper) {
       _attachedKeeperRoster = restoredRoster;
-      _saveKeeperRoster = ref.read(rosterProvider.notifier).persist;
+      final rosterNotifier = ref.read(rosterProvider.notifier);
+      _saveKeeperRoster = rosterNotifier.persist;
+      _clearKeeperRoster = rosterNotifier.clear;
+      _clearDeclinedParticipants = ref
+          .read(
+            declinedSessionParticipantsProvider(
+              widget.sessionSlug,
+              keeperIdentity,
+            ).notifier,
+          )
+          .clear;
       final controller = KeeperAdmissionController(
         channel: transport,
         keeperIdentity: _currentKeeperIdentity,
@@ -255,6 +267,18 @@ class _SessionAdmissionOverlayState
     }
   }
 
+  Future<void> _clearAdmissionData(Future<void> Function() clear) async {
+    try {
+      await clear();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Could not clear ended Session admission data',
+      );
+    }
+  }
+
   void _syncAdmittedIdentities(Iterable<String> identities) {
     final roster = List<String>.of(identities);
     final version = ++_admittedUpdateVersion;
@@ -279,11 +303,19 @@ class _SessionAdmissionOverlayState
     bool clearAdmitted = true,
     bool endSession = false,
   }) {
-    if (endSession) _attachedKeeperRoster?.clear();
-    final persist = _saveKeeperRoster;
-    if (persist != null) unawaited(_persistRoster(persist));
+    if (endSession) {
+      final clearRoster = _clearKeeperRoster;
+      final clearDeclined = _clearDeclinedParticipants;
+      if (clearRoster != null) unawaited(_clearAdmissionData(clearRoster));
+      if (clearDeclined != null) unawaited(_clearAdmissionData(clearDeclined));
+    } else {
+      final persist = _saveKeeperRoster;
+      if (persist != null) unawaited(_persistRoster(persist));
+    }
     _attachedKeeperRoster = null;
     _saveKeeperRoster = null;
+    _clearKeeperRoster = null;
+    _clearDeclinedParticipants = null;
     final keeperController = _keeperController;
     final clientController = _clientController;
     final transport = _transport;

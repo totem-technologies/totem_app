@@ -10,6 +10,8 @@ abstract interface class SessionAdmissionPreferences {
   String? getString(String key);
 
   Future<bool> setString(String key, String value);
+
+  Future<bool> remove(String key);
 }
 
 final class SharedPreferencesSessionAdmissionPreferences
@@ -24,6 +26,9 @@ final class SharedPreferencesSessionAdmissionPreferences
   @override
   Future<bool> setString(String key, String value) =>
       _preferences.setString(key, value);
+
+  @override
+  Future<bool> remove(String key) => _preferences.remove(key);
 }
 
 @Riverpod(keepAlive: true)
@@ -33,7 +38,7 @@ Future<SessionAdmissionPreferences> sessionAdmissionPreferences(Ref ref) async {
   );
 }
 
-@Riverpod(keepAlive: true)
+@riverpod
 class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
   static const _storagePrefix = 'session_admission_declined_participants';
 
@@ -84,7 +89,22 @@ class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
     await _update(identity, add: false);
   }
 
+  Future<void> clear() {
+    final link = ref.keepAlive();
+    final operation = _operations.then((_) async {
+      await _awaitInitialization();
+      if (!await _preferences.remove(_storageKey)) {
+        throw StateError('Could not clear declined session participants');
+      }
+      _declined = const <String>{};
+      if (ref.mounted) state = AsyncData(_declined);
+    });
+    _operations = operation.catchError((Object _) {});
+    return operation.whenComplete(link.close);
+  }
+
   Future<void> _update(String identity, {required bool add}) {
+    final link = ref.keepAlive();
     final operation = _operations.then((_) async {
       await _awaitInitialization();
       _validateIdentity(identity);
@@ -92,10 +112,12 @@ class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
       final changed = add ? updated.add(identity) : updated.remove(identity);
       if (!changed) return;
 
-      final persisted = await _preferences.setString(
-        _storageKey,
-        jsonEncode(updated.toList()..sort()),
-      );
+      final persisted = updated.isEmpty
+          ? await _preferences.remove(_storageKey)
+          : await _preferences.setString(
+              _storageKey,
+              jsonEncode(updated.toList()..sort()),
+            );
       if (!persisted) {
         throw StateError('Could not persist declined session participants');
       }
@@ -104,7 +126,7 @@ class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
       if (ref.mounted) state = AsyncData(_declined);
     });
     _operations = operation.catchError((Object _) {});
-    return operation;
+    return operation.whenComplete(link.close);
   }
 
   Future<void> _awaitInitialization() async {

@@ -22,6 +22,13 @@ class _FakePreferences implements SessionAdmissionPreferences {
     values[key] = value;
     return true;
   }
+
+  @override
+  Future<bool> remove(String key) async {
+    if (!writesSucceed) return false;
+    values.remove(key);
+    return true;
+  }
 }
 
 void main() {

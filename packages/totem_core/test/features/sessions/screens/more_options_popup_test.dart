@@ -33,6 +33,9 @@ class _FakeSessionAdmissionPreferences implements SessionAdmissionPreferences {
 
   @override
   Future<bool> setString(String key, String value) async => true;
+
+  @override
+  Future<bool> remove(String key) async => true;
 }
 
 class _TestSessionDeviceController extends SessionDeviceController {

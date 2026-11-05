@@ -10,6 +10,7 @@ import 'package:totem_core/features/sessions/admission/keeper_admission_roster.d
 class _FakePreferences implements SessionAdmissionPreferences {
   final values = <String, String>{};
   final writes = <(String key, String value)>[];
+  final removals = <String>[];
   Completer<bool>? nextWrite;
   Completer<void>? writeStarted;
   int failedReads = 0;
@@ -37,6 +38,13 @@ class _FakePreferences implements SessionAdmissionPreferences {
     final persisted = await result.future;
     if (persisted) values[key] = value;
     return persisted;
+  }
+
+  @override
+  Future<bool> remove(String key) async {
+    removals.add(key);
+    values.remove(key);
+    return true;
   }
 }
 
@@ -74,6 +82,7 @@ void main() {
       final preferences = _FakePreferences();
       final provider = keeperAdmissionRosterProvider('session-a', 'keeper-a');
       final first = _container(preferences);
+      final subscription = first.listen(provider, (_, _) {});
 
       final store = await first.read(provider.future);
       store.replace(
@@ -82,6 +91,9 @@ void main() {
         awaitingReadiness: ['pending-participant'],
       );
       await first.read(provider.notifier).persist();
+      subscription.close();
+      await first.pump();
+      check(first.exists(provider)).isFalse();
       first.dispose();
 
       final reloaded = _container(preferences);
@@ -155,7 +167,7 @@ void main() {
   });
 
   test(
-    'serializes invocation snapshots so clear cannot be overwritten',
+    'removes ended roster after queued writes without resurrecting it',
     () async {
       final firstWrite = Completer<bool>();
       final preferences = _FakePreferences()
@@ -180,15 +192,13 @@ void main() {
       firstWrite.complete(true);
       await Future.wait([first, second, clear]);
 
-      final persisted = jsonDecode(preferences.values.values.single) as Map;
-      check(persisted['revision']).equals(0);
-      check(persisted['members'] as List).isEmpty();
-      check(persisted['awaitingReadiness'] as List).isEmpty();
+      check(preferences.values).isEmpty();
+      check(preferences.removals).deepEquals([_key('session-a', 'keeper-a')]);
       check(
         preferences.writes
             .map((write) => (jsonDecode(write.$2) as Map)['revision'])
             .toList(),
-      ).deepEquals([1, 2, 0]);
+      ).deepEquals([1, 2]);
     },
   );
 

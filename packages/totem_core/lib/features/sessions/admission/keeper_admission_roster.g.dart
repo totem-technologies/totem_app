@@ -24,7 +24,7 @@ final class KeeperAdmissionRosterProvider
   }) : super(
          retry: null,
          name: r'keeperAdmissionRosterProvider',
-         isAutoDispose: false,
+         isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -55,7 +55,7 @@ final class KeeperAdmissionRosterProvider
 }
 
 String _$keeperAdmissionRosterHash() =>
-    r'67c580a2db396d212de815ac4481ed8a6d4ca638';
+    r'612bfae2546f8593f634b88d2f2aaa87c91e7ae8';
 
 final class KeeperAdmissionRosterFamily extends $Family
     with
@@ -72,7 +72,7 @@ final class KeeperAdmissionRosterFamily extends $Family
         name: r'keeperAdmissionRosterProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: false,
+        isAutoDispose: true,
       );
 
   KeeperAdmissionRosterProvider call(

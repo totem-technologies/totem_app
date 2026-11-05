@@ -1242,7 +1242,7 @@ void main() {
       });
 
       test(
-        'cleans up when an adopted media-off room disconnects during activation',
+        'caller cleans up a disconnected adopted room; unadopted rooms are released',
         () async {
           const eventSlug = 'test-session';
           const options = SessionOptions(
@@ -1274,12 +1274,26 @@ void main() {
           check(
             await controller.activateConnectedRoom(room: room),
           ).equals(SessionJoinResult.retryableFailure);
+          check(room.disposeCount).equals(0);
+          check(identical(controller.room, room)).isTrue();
+
+          await controller.resetAfterFailedJoin();
           check(room.disposeCount).equals(1);
           check(controller.room).isNull();
+
+          final unadoptedRoom = _CountingRoom(localParticipant)
+            .._connectionState = livekit.ConnectionState.disconnected;
+          check(
+            await controller.activateConnectedRoom(room: unadoptedRoom),
+          ).equals(SessionJoinResult.retryableFailure);
+          check(unadoptedRoom.disposeCount).equals(1);
+          check(controller.room).isNull();
+          await controller.resetAfterFailedJoin();
+          check(unadoptedRoom.disposeCount).equals(1);
         },
       );
 
-      test('cleans up an adopted room when activation fails', () async {
+      test('leaves adopted room cleanup to the failed-join caller', () async {
         const eventSlug = 'test-session';
         const options = SessionOptions(
           sessionSlug: eventSlug,
@@ -1310,6 +1324,10 @@ void main() {
 
         check(room.prepareConnectionCount).equals(0);
         check(room.connectCount).equals(0);
+        check(room.disposeCount).equals(0);
+        check(identical(controller.room, room)).isTrue();
+
+        await controller.resetAfterFailedJoin();
         check(room.disposeCount).equals(1);
         check(controller.room).isNull();
       });

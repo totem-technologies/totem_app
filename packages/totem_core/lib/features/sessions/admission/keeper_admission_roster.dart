@@ -7,7 +7,7 @@ import 'package:totem_core/features/sessions/admission/declined_session_particip
 
 part 'keeper_admission_roster.g.dart';
 
-@Riverpod(keepAlive: true)
+@riverpod
 class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
   static const _storagePrefix = 'session_admission_keeper_roster';
   static const _schemaVersion = 1;
@@ -42,10 +42,9 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
   }
 
   Future<void> clear() {
-    final store = _loadedStore();
-    final snapshot = _snapshot(store..clear());
+    final store = _loadedStore()..clear();
     if (ref.mounted) state = AsyncData(store);
-    return _enqueue(snapshot);
+    return _enqueue(null);
   }
 
   Future<KeeperAdmissionRosterStore> _initialize(
@@ -65,23 +64,23 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
         return store;
       });
 
-  Future<void> _enqueue(_RosterSnapshot snapshot) {
+  Future<void> _enqueue(_RosterSnapshot? snapshot) {
     final preferences = _preferences;
     final storageKey = _storageKey;
     if (preferences == null || storageKey == null) {
       throw StateError('Keeper admission roster is not initialized');
     }
+    final link = ref.keepAlive();
     final operation = _writes.then((_) async {
-      final persisted = await preferences.setString(
-        storageKey,
-        snapshot.encode(),
-      );
+      final persisted = snapshot == null
+          ? await preferences.remove(storageKey)
+          : await preferences.setString(storageKey, snapshot.encode());
       if (!persisted) {
         throw StateError('Could not persist keeper admission roster');
       }
     });
     _writes = operation.catchError((Object _) {});
-    return operation;
+    return operation.whenComplete(link.close);
   }
 
   KeeperAdmissionRosterStore _loadedStore() {

@@ -999,14 +999,8 @@ class SessionController extends _$SessionController {
 
       _onConnected();
       final result = await _publishInitialMedia();
-      if (result != SessionJoinResult.success) {
-        await resetAfterFailedJoin();
-        return result;
-      }
-      if (!_isRoomConnected(room)) {
-        await resetAfterFailedJoin();
-        return SessionJoinResult.retryableFailure;
-      }
+      if (result != SessionJoinResult.success) return result;
+      if (!_isRoomConnected(room)) return SessionJoinResult.retryableFailure;
 
       _isAdoptingConnectedRoom = true;
       _subscribeToExistingRemotePublications(room);
@@ -1017,20 +1011,9 @@ class SessionController extends _$SessionController {
         stackTrace: stackTrace,
         message: 'Failed to activate connected session room',
       );
-      if (identical(_room, room)) {
-        await resetAfterFailedJoin();
-      } else {
+      if (!identical(_room, room)) {
         _pendingConnectedRoom = null;
         await _releaseOfferedRoom(room);
-        if (ref.mounted) {
-          _dispatch(
-            const ConnectionChanged(
-              RoomConnectionState.disconnected,
-              SessionPhase.idle,
-              wasJoining: true,
-            ),
-          );
-        }
       }
       return SessionJoinResult.retryableFailure;
     } finally {

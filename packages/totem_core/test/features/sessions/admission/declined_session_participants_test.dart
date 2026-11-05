@@ -38,6 +38,12 @@ class _FakePreferences implements SessionAdmissionPreferences {
     if (succeeded) values[key] = value;
     return succeeded;
   }
+
+  @override
+  Future<bool> remove(String key) async {
+    values.remove(key);
+    return true;
+  }
 }
 
 ProviderContainer _container(
@@ -64,12 +70,16 @@ void main() {
         'session-a',
         'keeper-a',
       );
+      final subscription = first.listen(provider, (_, _) {});
 
       await first.read(provider.future);
       await first.read(provider.notifier).decline('participant-a');
       final declined = first.read(provider).requireValue;
       check(declined).deepEquals({'participant-a'});
       check(() => declined.add('participant-b')).throws<UnsupportedError>();
+      subscription.close();
+      await first.pump();
+      check(first.exists(provider)).isFalse();
       first.dispose();
 
       final reloaded = _container(preferences);
@@ -116,6 +126,20 @@ void main() {
         'participant-a',
         'participant-b',
       });
+
+      final lastWriteGate = Completer<bool>();
+      preferences
+        ..nextWrite = lastWriteGate
+        ..writeStarted = Completer<void>();
+      final pending = container
+          .read(provider.notifier)
+          .decline('participant-c');
+      await preferences.writeStarted!.future;
+      final clear = container.read(provider.notifier).clear();
+      lastWriteGate.complete(true);
+      await Future.wait([pending, clear]);
+      check(preferences.values).isEmpty();
+      check(container.read(provider).requireValue).isEmpty();
     },
   );
 
@@ -180,6 +204,13 @@ void main() {
       check(
         container.read(provider).requireValue,
       ).deepEquals({'participant-a'});
+
+      await notifier.allow('participant-a');
+      check(preferences.values).isEmpty();
+      await notifier.decline('participant-a');
+      await notifier.clear();
+      check(preferences.values).isEmpty();
+      check(container.read(provider).requireValue).isEmpty();
     },
   );
 }

@@ -2279,6 +2279,55 @@ void main() {
     },
   );
 
+  test('unanswered roster request retries once with a new correlation ID', () {
+    fakeAsync((async) {
+      final clock = async.getClock(DateTime.utc(2026));
+      final channel = _Channel('guest', now: clock.now)..present.add('keeper');
+      var nextId = 0;
+      final client = ClientAdmissionRosterController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+        sessionIdentity: 'session',
+        now: clock.now,
+        newId: () => 'request-${++nextId}',
+      );
+      async.flushMicrotasks();
+      check(client.roster).isNull();
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(1);
+
+      async
+        ..elapse(const Duration(seconds: 2))
+        ..flushMicrotasks();
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
+      async.elapse(const Duration(seconds: 10));
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
+      final expiry = clock.now().add(const Duration(minutes: 1));
+      for (final requestId in ['request-1', 'request-2']) {
+        channel.controller.add(
+          AdmissionPacketReceived(
+            AdmissionRosterSnapshot(
+              id: 'snapshot-$requestId',
+              requestId: requestId,
+              senderIdentity: 'keeper',
+              recipientIdentity: 'guest',
+              expiresAt: expiry,
+              sessionIdentity: 'session',
+              keeperGeneration: 'generation',
+              revision: 1,
+              members: const ['guest'],
+            ),
+          ),
+        );
+        check(client.contains('guest')).equals(requestId == 'request-2');
+      }
+      async.elapse(const Duration(seconds: 2));
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
+      unawaited(client.dispose());
+      unawaited(channel.dispose());
+      async.flushMicrotasks();
+    });
+  });
+
   test('failed roster request retries on the next presence signal', () async {
     final channel = _Channel('guest')..present.add('keeper');
     var nextId = 0;

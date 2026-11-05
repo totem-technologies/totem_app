@@ -895,6 +895,7 @@ class ClientAdmissionRosterController {
   String? _rosterKeeperIdentity;
   String? _outstandingRequestId;
   DateTime? _outstandingRequestExpiry;
+  Timer? _snapshotRetry;
   bool _refreshAfterSnapshot = false;
   String? _unsynchronizedGeneration;
   int? _unsynchronizedRevision;
@@ -923,6 +924,7 @@ class ClientAdmissionRosterController {
       case AdmissionPresenceChanged(:final identity, present: true):
         if (_isCurrentKeeper(identity)) _requestIfCurrentKeeperPresent();
       case AdmissionRoomEnded():
+        _snapshotRetry?.cancel();
         _clear();
       default:
         break;
@@ -954,6 +956,8 @@ class ClientAdmissionRosterController {
     }
     _outstandingRequestId = null;
     _outstandingRequestExpiry = null;
+    _snapshotRetry?.cancel();
+    _snapshotRetry = null;
     _unsynchronizedGeneration = null;
     _unsynchronizedRevision = null;
     final current = _roster;
@@ -1018,7 +1022,10 @@ class ClientAdmissionRosterController {
     _changes.add(null);
   }
 
-  void _requestIfCurrentKeeperPresent({bool force = false}) {
+  void _requestIfCurrentKeeperPresent({
+    bool force = false,
+    bool retry = false,
+  }) {
     final keeper = keeperIdentity();
     final now = _now();
     if (_disposed ||
@@ -1033,6 +1040,15 @@ class ClientAdmissionRosterController {
     final id = _newId();
     _outstandingRequestId = id;
     _outstandingRequestExpiry = expiry;
+    _snapshotRetry?.cancel();
+    _snapshotRetry = retry
+        ? null
+        : Timer(const Duration(seconds: 2), () {
+            if (_outstandingRequestId == id) {
+              _outstandingRequestExpiry = null;
+              _requestIfCurrentKeeperPresent(retry: true);
+            }
+          });
     unawaited(
       channel
           .send(
@@ -1048,6 +1064,8 @@ class ClientAdmissionRosterController {
             if (_outstandingRequestId == id) {
               _outstandingRequestId = null;
               _outstandingRequestExpiry = null;
+              _snapshotRetry?.cancel();
+              _snapshotRetry = null;
             }
           }),
     );
@@ -1056,6 +1074,7 @@ class ClientAdmissionRosterController {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _snapshotRetry?.cancel();
     await _subscription.cancel();
     await _changes.close();
   }

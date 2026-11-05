@@ -48,6 +48,12 @@ class _AdmissionPreferences implements SessionAdmissionPreferences {
     values[key] = value;
     return true;
   }
+
+  @override
+  Future<bool> remove(String key) async {
+    values.remove(key);
+    return true;
+  }
 }
 
 class _AdmissionRoom extends FakeRoom {
@@ -408,6 +414,49 @@ void main() {
     await tester.pump();
 
     check(harness.sent).isEmpty();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.idle();
+  });
+
+  testWidgets('ending a Session removes its local admission data', (
+    tester,
+  ) async {
+    final preferences = _AdmissionPreferences();
+    await seedDeclined(preferences, 'guest');
+    await seedRoster(preferences, members: ['guest'], revision: 2);
+    final harness = _AdmissionHarness(preferences: preferences);
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+
+    final container = await pumpHost(
+      tester,
+      harness,
+      videoBuilds: videoBuilds,
+    );
+    check(preferences.values).length.equals(2);
+
+    when(() => harness.state.roomState).thenReturn(
+      const RoomState(
+        keeper: 'keeper',
+        nextSpeaker: Omittable(''),
+        currentSpeaker: Omittable(''),
+        status: RoomStatus.ended,
+        turnState: TurnState.idle,
+        sessionSlug: 'session',
+        statusDetail: RoomStateStatusDetailEnded(
+          EndedDetail(reason: EndReason.keeperEnded),
+        ),
+        talkingOrder: [],
+        version: 2,
+        roundNumber: 1,
+      ),
+    );
+    container.read(sessionAdmissionSettingsProvider.notifier).setEnabled(false);
+    await tester.pump();
+    await tester.idle();
+    check(preferences.values).isEmpty();
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
