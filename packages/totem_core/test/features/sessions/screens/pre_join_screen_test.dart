@@ -173,13 +173,14 @@ class _MutableFlowController extends PreJoinFlowController {
 }
 
 class _TerminalAdmissionFlowController extends PreJoinFlowController {
-  _TerminalAdmissionFlowController(this.status);
+  _TerminalAdmissionFlowController(this.status, {this.error});
 
   final AdmissionStatus status;
+  final Object? error;
 
   @override
   PreJoinFlowState build(String sessionSlug) =>
-      PreJoinFlowState(admissionStatus: status);
+      PreJoinFlowState(admissionStatus: status, error: error);
 }
 
 class _SuccessfulSessionController extends SessionController {
@@ -297,6 +298,7 @@ void main() {
     AdmissionKeeperAvailability keeperAvailability =
         AdmissionKeeperAvailability.checking,
     AdmissionStatus? terminalAdmissionStatus,
+    Object? terminalAdmissionError,
 
     Future<JoinResponse> Function()? getSessionToken,
     Future<SessionDetailSchema> Function()? getSession,
@@ -368,7 +370,10 @@ void main() {
             ),
           if (terminalAdmissionStatus != null)
             preJoinFlowControllerProvider(_slug).overrideWith(
-              () => _TerminalAdmissionFlowController(terminalAdmissionStatus),
+              () => _TerminalAdmissionFlowController(
+                terminalAdmissionStatus,
+                error: terminalAdmissionError,
+              ),
             ),
           if (flowController != null)
             preJoinFlowControllerProvider(_slug).overrideWith(flowController),
@@ -902,7 +907,9 @@ void main() {
           .widget<ActionSliderButton>(find.byType(ActionSliderButton))
           .onActionCompleted();
       await tester.pump();
-      check(find.textContaining('Please try again:').evaluate()).isNotEmpty();
+      check(
+        find.text("We couldn't join the Session. Please try again.").evaluate(),
+      ).isNotEmpty();
       check(tester.takeException()).isNull();
       final container = ProviderScope.containerOf(
         tester.element(find.byType(PreJoinScreen)),
@@ -1301,27 +1308,59 @@ void main() {
     });
   });
 
-  testWidgets('token failures offer a retry after Join', (tester) async {
+  testWidgets('failed admission explains that the waiting room disconnected', (
+    tester,
+  ) async {
+    await pumpScreen(
+      tester,
+      terminalAdmissionStatus: AdmissionStatus.failed,
+      terminalAdmissionError: StateError('admission transport failed'),
+    );
+
+    check(
+      find
+          .text(
+            'Waiting room connection was lost. Check your connection and try again.',
+          )
+          .evaluate(),
+    ).length.equals(1);
+  });
+
+  testWidgets('token failures hide error details and offer a retry', (
+    tester,
+  ) async {
+    const sensitiveDetail = 'session-token=super-secret';
     var tokenRequests = 0;
     await pumpScreen(
       tester,
       getSessionToken: () async {
         tokenRequests++;
-        throw Exception('token failed');
+        throw StateError(sensitiveDetail);
       },
     );
 
     check(tokenRequests).equals(0);
     check(find.byType(PreJoinView).evaluate()).isNotEmpty();
-    await tester
-        .widget<ActionSliderButton>(find.byType(ActionSliderButton))
-        .onActionCompleted();
+    final join = tester.widget<ActionSliderButton>(
+      find.byType(ActionSliderButton),
+    );
+    await join.onActionCompleted();
     await tester.pump();
     await tester.pump();
 
     check(tokenRequests).equals(1);
-    check(find.textContaining('Please try again:').evaluate()).isNotEmpty();
-    check(find.byType(PreJoinView).evaluate()).isNotEmpty();
+    check(
+      find.text("We couldn't join the Session. Please try again.").evaluate(),
+    ).length.equals(1);
+    check(find.textContaining(sensitiveDetail).evaluate()).isEmpty();
+    final retry = tester.widget<ActionSliderButton>(
+      find.byType(ActionSliderButton),
+    );
+    check(retry.enabled).isTrue();
+    await retry.onActionCompleted();
+    await tester.pump();
+    await tester.pump();
+    check(tokenRequests).equals(2);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });

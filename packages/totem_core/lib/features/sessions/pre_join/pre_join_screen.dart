@@ -417,7 +417,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       joinNote =
           'Join opens at ${DateFormat('h:mm a').format(session.start.toLocal().subtract(const Duration(minutes: 10)))}.';
     } else if (flow.error != null) {
-      joinNote = 'Please try again: ${flow.error}';
+      joinNote = flow.admissionStatus == AdmissionStatus.failed
+          ? 'Waiting room connection was lost. Check your connection and try again.'
+          : "We couldn't join the Session. Please try again.";
     }
     final waitingMessage = switch (flow.keeperAvailability) {
       AdmissionKeeperAvailability.absent =>
