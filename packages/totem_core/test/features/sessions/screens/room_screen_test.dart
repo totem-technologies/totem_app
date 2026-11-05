@@ -20,6 +20,8 @@ import 'package:totem_core/features/permissions/media_permission_controller.dart
 import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
@@ -1423,6 +1425,79 @@ void main() {
       );
     });
 
+    testWidgets('announces a change to the browser default output', (
+      tester,
+    ) async {
+      final outputs = StreamController<List<MediaDeviceInfo>>.broadcast();
+      addTearDown(outputs.close);
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        extraOverrides: [
+          sessionDeviceControllerProvider(
+            session,
+          ).overrideWith(_TestSessionDeviceController.new),
+          mediaDevicesProvider.overrideWith((ref) => outputs.stream),
+        ],
+      );
+      const headphones = MediaDeviceInfo(
+        id: 'default',
+        label: 'Headphones',
+        kind: MediaDeviceKind.audioOutput,
+      );
+      const speakers = MediaDeviceInfo(
+        id: 'default',
+        label: 'Speakers',
+        kind: MediaDeviceKind.audioOutput,
+      );
+      outputs.add([headphones]);
+      await tester.pump();
+      check(
+        tester.widgetList(find.text('Audio switched to another device')),
+      ).isEmpty();
+
+      outputs.add([speakers]);
+      await tester.pump();
+      await tester.pump();
+      check(
+        tester.widgetList(find.text('Audio switched to another device')),
+      ).length.equals(1);
+    }, skip: !kIsWeb);
+
+    testWidgets(
+      'shows a notification when a native route changes without a speaker state change',
+      (tester) async {
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          extraOverrides: [
+            sessionDeviceControllerProvider(
+              session,
+            ).overrideWith(_TestSessionDeviceController.new),
+          ],
+        );
+        _TestSessionDeviceController.lastInstance!.emit(
+          const SessionDeviceState(
+            selectedCameraDeviceId: null,
+            selectedAudioOutputDeviceId: null,
+            isSpeakerphoneEnabled: true,
+            isMicrophoneEnabled: false,
+            isCameraEnabled: false,
+            audioRouteRevision: 1,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        check(
+          tester.widgetList(find.text('Audio switched to another device')),
+        ).length.equals(1);
+      },
+    );
+
     testWidgets('shows notification when audio route changes', (tester) async {
       final event = _createSessionEventWithElapsed(
         _testNow(tester),
@@ -1442,7 +1517,7 @@ void main() {
       );
 
       check(
-        tester.widgetList(find.text('Audio route changed')),
+        tester.widgetList(find.text('Audio switched to another device')),
       ).length.equals(0);
 
       final controller = _TestSessionDeviceController.lastInstance;
@@ -1460,14 +1535,80 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       check(
-        tester.widgetList(find.text('Audio route changed')),
+        tester.widgetList(find.text('Audio switched to another device')),
       ).length.equals(1);
       check(
-        tester.widgetList(
-          find.text('Audio is now routed to another output device.'),
-        ),
+        tester.widgetList(find.text('Your audio output has changed.')),
       ).length.equals(1);
     });
+
+    testWidgets(
+      'preempts a device notice with the latest audio route change and resumes it afterward',
+      (tester) async {
+        final notices = StreamController<MediaKind>.broadcast();
+        addTearDown(notices.close);
+        devices.deviceNeedsAttentionStream = notices.stream;
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 5),
+          ),
+          screen: RoomScreen.listening,
+          extraOverrides: [
+            sessionDeviceControllerProvider(
+              session,
+            ).overrideWith(_TestSessionDeviceController.new),
+          ],
+        );
+
+        notices.add(MediaKind.microphone);
+        await tester.pump(const Duration(seconds: 1));
+
+        final controller = _TestSessionDeviceController.lastInstance!;
+        // A frame is pumped between route changes.
+        // ignore: cascade_invocations
+        controller.emit(
+          const SessionDeviceState(
+            selectedCameraDeviceId: null,
+            selectedAudioOutputDeviceId: 'headphones',
+            isSpeakerphoneEnabled: false,
+            isMicrophoneEnabled: false,
+            isCameraEnabled: false,
+          ),
+        );
+        await tester.pump();
+        controller.emit(
+          const SessionDeviceState(
+            selectedCameraDeviceId: null,
+            selectedAudioOutputDeviceId: null,
+            isSpeakerphoneEnabled: true,
+            isMicrophoneEnabled: false,
+            isCameraEnabled: false,
+          ),
+        );
+        await tester.pump();
+
+        check(
+          tester.widgetList(find.text("Your microphone isn't on")),
+        ).isEmpty();
+        check(
+          tester.widgetList(find.text('Audio switched to another device')),
+        ).isEmpty();
+        check(
+          tester.widgetList(find.text('Audio switched to speakers')),
+        ).length.equals(1);
+
+        await tester.pump(const Duration(seconds: 8));
+        await tester.pump(const Duration(milliseconds: 600));
+
+        check(
+          tester.widgetList(find.text("Your microphone isn't on")),
+        ).length.equals(1);
+      },
+    );
 
     for (final (kind, problem, title) in [
       (MediaKind.microphone, DeviceProblem.lost, 'Your microphone stopped'),
@@ -1617,7 +1758,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       check(
-        tester.widgetList(find.text('Audio route changed')),
+        tester.widgetList(find.text('Audio switched to another device')),
       ).length.equals(0);
     });
   });

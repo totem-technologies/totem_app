@@ -56,6 +56,9 @@ class FakeLocalMedia implements LocalMedia {
   /// Runs before a camera switch applies, so tests can make it fail.
   Future<void> Function()? onCameraSwitch;
 
+  /// Runs before a speaker route applies, so tests can hold it in flight.
+  Future<void> Function(bool preferred)? onSpeakerOutputCommand;
+
   /// False drops device commands without an error, as the real media does
   /// once its room is released.
   bool appliesCommands = true;
@@ -63,6 +66,7 @@ class FakeLocalMedia implements LocalMedia {
   final List<bool> microphoneCommands = [];
   int releaseCount = 0;
   final List<bool> cameraCommands = [];
+  final List<bool> speakerOutputCommands = [];
 
   /// Simulates a change made outside the app, such as a keeper muting the
   /// participant.
@@ -156,6 +160,8 @@ class FakeLocalMedia implements LocalMedia {
 
   @override
   Future<void> setSpeakerOutputPreferred(bool preferred) async {
+    speakerOutputCommands.add(preferred);
+    await onSpeakerOutputCommand?.call(preferred);
     isSpeakerOutputPreferred = preferred;
   }
 }

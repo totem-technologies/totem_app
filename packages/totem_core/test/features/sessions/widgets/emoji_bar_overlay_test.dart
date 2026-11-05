@@ -78,6 +78,34 @@ void main() {
       ).equals(false);
     });
 
+    testWidgets('all reactions remain tappable in a narrow layout', (
+      tester,
+    ) async {
+      final selected = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 240,
+                child: EmojiBar(
+                  emojis: EmojiBar.defaultEmojis,
+                  onEmojiSelected: selected.add,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      for (final emoji in EmojiBar.defaultEmojis) {
+        await tester.tap(find.text(emoji));
+        await tester.pump();
+      }
+      check(selected).deepEquals(EmojiBar.defaultEmojis);
+      check(tester.takeException()).isNull();
+    });
+
     testWidgets('shows transient hover and press feedback for an emoji', (
       tester,
     ) async {

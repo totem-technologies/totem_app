@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +16,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
+
 import 'package:totem_core/features/sessions/widgets/speaking_indicator.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/totem_icon.dart';
@@ -93,6 +96,84 @@ void main() {
         tester.widgetList(find.byType(SpeakingIndicatorOrEmoji)),
       ).length.equals(1);
     });
+
+    testWidgets(
+      'shows elapsed text only to a keeper while an active speaker is featured',
+      (tester) async {
+        final minuteElapsed = find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              RegExp(r'^01:\d{2}$').hasMatch(widget.data ?? ''),
+          description: 'one-minute elapsed timer',
+        );
+        final turnStartedAt = DateTime.now().subtract(
+          const Duration(minutes: 1, seconds: 5),
+        );
+
+        SessionRoomState stateFor(RoomStatus status) {
+          return SessionRoomState(
+            connection: fakeSessionState.mockState.connection,
+            participants: ParticipantsState(participants: [remoteParticipant]),
+            chat: const ChatState(),
+            turn: SessionTurnState(
+              roomState: RoomState(
+                keeper: 'keeper-1',
+                nextSpeaker: const Omittable(''),
+                currentSpeaker: Omittable(remoteParticipant.identity),
+                status: status,
+                turnState: TurnState.idle,
+                sessionSlug: 'test-session',
+                statusDetail: const RoomStateStatusDetailWaitingRoom(
+                  WaitingRoomDetail(),
+                ),
+                talkingOrder: const [],
+                version: 1,
+                roundNumber: 1,
+              ),
+            ),
+            turnStartedAt: turnStartedAt,
+          );
+        }
+
+        Future<void> pumpCard({
+          required bool isKeeper,
+          required RoomStatus status,
+        }) {
+          return pumpWidget(
+            tester,
+            viewSize: const Size(240, 180),
+            authState: AuthState.unauthenticated(),
+            overrides: [
+              currentSessionStateProvider.overrideWithValue(stateFor(status)),
+              isCurrentUserKeeperProvider.overrideWith((ref) => isKeeper),
+            ],
+            child: Center(
+              child: SizedBox(
+                width: 160,
+                height: 120,
+                child: ParticipantCard(participant: remoteParticipant),
+              ),
+            ),
+          );
+        }
+
+        await pumpCard(isKeeper: true, status: RoomStatus.active);
+        check(tester.widgetList(minuteElapsed)).length.equals(1);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await pumpCard(isKeeper: false, status: RoomStatus.active);
+        check(tester.widgetList(minuteElapsed)).length.equals(0);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await pumpCard(isKeeper: true, status: RoomStatus.waitingRoom);
+        check(tester.widgetList(minuteElapsed)).length.equals(0);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
 
     testWidgets(
       'does NOT show participant control button if currentUser is NOT Keeper',
@@ -260,6 +341,144 @@ void main() {
         (decoration! as BoxDecoration).boxShadow!,
       ).deepEquals(kElevationToShadow[6]!);
     });
+
+    testWidgets(
+      'shows and clears a passive timer as keeper session state changes',
+      (tester) async {
+        final states = StreamController<SessionRoomState?>.broadcast();
+        addTearDown(states.close);
+        final sessionStateProvider = StreamProvider<SessionRoomState?>(
+          (ref) => states.stream,
+        );
+        final keeper = testParticipant('keeper-1', name: 'The Keeper');
+        final participant = testParticipant('user-1', name: 'Participant');
+        final minuteElapsed = find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              RegExp(r'^01:\d{2}$').hasMatch(widget.data ?? ''),
+          description: 'one-minute elapsed timer',
+        );
+        final secondElapsed = find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              RegExp(r'^00:\d{2}$').hasMatch(widget.data ?? ''),
+          description: 'sub-minute elapsed timer',
+        );
+
+        SessionRoomState stateFor({
+          required RoomConnectionState connectionState,
+          required SessionPhase phase,
+          required RoomStatus status,
+          required DateTime turnStartedAt,
+          String currentSpeaker = '',
+        }) {
+          return SessionRoomState(
+            connection: fakeSessionState.mockState.connection.copyWith(
+              state: connectionState,
+              phase: phase,
+            ),
+            participants: ParticipantsState(
+              participants: [keeper, participant],
+            ),
+            chat: const ChatState(),
+            turn: SessionTurnState(
+              roomState: RoomState(
+                keeper: keeper.identity,
+                nextSpeaker: const Omittable(''),
+                currentSpeaker: Omittable(currentSpeaker),
+                status: status,
+                turnState: TurnState.idle,
+                sessionSlug: 'test-session',
+                statusDetail: const RoomStateStatusDetailWaitingRoom(
+                  WaitingRoomDetail(),
+                ),
+                talkingOrder: const [],
+                version: 1,
+                roundNumber: 1,
+              ),
+            ),
+            turnStartedAt: turnStartedAt,
+          );
+        }
+
+        Future<void> pumpProviderUpdate() async {
+          await tester.pump();
+          await tester.pump();
+        }
+
+        await pumpWidget(
+          tester,
+          viewSize: const Size(240, 180),
+          authState: AuthState.unauthenticated(),
+          overrides: [
+            currentSessionStateProvider.overrideWith((ref) {
+              return ref
+                  .watch(sessionStateProvider)
+                  .when(
+                    data: (state) => state,
+                    error: (_, _) => null,
+                    loading: () => null,
+                  );
+            }),
+            isCurrentUserKeeperProvider.overrideWith((ref) => true),
+          ],
+          child: const FeaturedParticipantCard(),
+        );
+
+        states.add(
+          stateFor(
+            connectionState: RoomConnectionState.connected,
+            phase: SessionPhase.connected,
+            status: RoomStatus.active,
+            turnStartedAt: DateTime.now().subtract(
+              const Duration(minutes: 1, seconds: 5),
+            ),
+          ),
+        );
+        await pumpProviderUpdate();
+        check(tester.widgetList(minuteElapsed)).length.equals(1);
+
+        states.add(
+          stateFor(
+            connectionState: RoomConnectionState.connected,
+            phase: SessionPhase.connected,
+            status: RoomStatus.active,
+            currentSpeaker: participant.identity,
+            turnStartedAt: DateTime.now().subtract(const Duration(seconds: 2)),
+          ),
+        );
+        await pumpProviderUpdate();
+        check(tester.widgetList(minuteElapsed)).length.equals(0);
+        check(tester.widgetList(secondElapsed)).length.equals(1);
+
+        states.add(
+          stateFor(
+            connectionState: RoomConnectionState.disconnected,
+            phase: SessionPhase.disconnected,
+            status: RoomStatus.active,
+            currentSpeaker: participant.identity,
+            turnStartedAt: DateTime.now().subtract(const Duration(seconds: 2)),
+          ),
+        );
+        await pumpProviderUpdate();
+        check(tester.widgetList(secondElapsed)).length.equals(0);
+
+        states.add(
+          stateFor(
+            connectionState: RoomConnectionState.connected,
+            phase: SessionPhase.ended,
+            status: RoomStatus.ended,
+            currentSpeaker: participant.identity,
+            turnStartedAt: DateTime.now().subtract(const Duration(seconds: 2)),
+          ),
+        );
+        await pumpProviderUpdate();
+        check(tester.widgetList(secondElapsed)).length.equals(0);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
 
     testWidgets('caps overlay badges on desktop-class windows', (tester) async {
       final speaker = testParticipant('user-1', name: 'Jane Doe');
