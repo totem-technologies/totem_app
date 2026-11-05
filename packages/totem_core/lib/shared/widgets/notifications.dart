@@ -106,6 +106,7 @@ class NotificationRequest {
       GlobalKey<AnimatedNotificationState>();
 
   bool _isShown = false;
+  bool _hasBeenShown = false;
   bool _isCancelled = false;
   bool _isClosed = false;
   bool _isDismissing = false;
@@ -118,7 +119,10 @@ class NotificationRequest {
 
     _isShown = true;
     overlay.insert(overlayEntry);
-    onShown?.call();
+    if (!_hasBeenShown) {
+      _hasBeenShown = true;
+      onShown?.call();
+    }
   }
 
   void _removeEntry() {
@@ -165,6 +169,7 @@ class NotificationRequest {
   void dismissImmediately() {
     if (_isClosed) return;
 
+    // Immediate dismissal must also cut short an in-progress exit animation.
     _isDismissing = true;
     if (_isShown) _removeEntry();
     close();
@@ -255,9 +260,9 @@ class NotificationController {
     final active = _activeRequest;
     if (active != null) {
       _queue.insert(0, request);
-      if (active.dedupeKey == category) {
-        active.dismissImmediately();
-      } else if (active._isDismissing) {
+      if (active.dedupeKey == category ||
+          active._isDismissing ||
+          (active.key.currentState?._isDismissing ?? false)) {
         active.dismissImmediately();
       } else {
         _activeRequest = null;

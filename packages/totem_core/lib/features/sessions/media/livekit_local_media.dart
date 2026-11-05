@@ -505,9 +505,13 @@ class LiveKitLocalMedia implements LocalMedia {
     final result = _speakerOutputQueue.then((_) async {
       // LiveKit does not reliably turn the speakerphone on when it is already
       // marked preferred, so reset it first.
-      await AudioManager.instance.setSpeakerOutputPreferred(false);
+      await AudioManager.instance
+          .setSpeakerOutputPreferred(false)
+          .timeout(const Duration(seconds: 5));
       if (preferred) {
-        await AudioManager.instance.setSpeakerOutputPreferred(true);
+        await AudioManager.instance
+            .setSpeakerOutputPreferred(true)
+            .timeout(const Duration(seconds: 5));
       }
     });
     _speakerOutputQueue = result.catchError((Object _) {});

@@ -42,6 +42,11 @@ class FeaturedParticipantCard extends ConsumerWidget {
       ),
     );
     final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
+    final isTurnHolder =
+        ref.watch(
+          currentSessionStateProvider.select((state) => state?.speakingNow),
+        ) ==
+        activeSpeaker?.identity;
 
     final theme = Theme.of(context);
     final speakerVideoBorderRadius = switch (MediaQuery.orientationOf(
@@ -169,14 +174,7 @@ class FeaturedParticipantCard extends ConsumerWidget {
                                   children: [
                                     if (isCurrentUserKeeper &&
                                         roomStatus == RoomStatus.active &&
-                                        ref.watch(
-                                              currentSessionStateProvider
-                                                  .select(
-                                                    (state) =>
-                                                        state?.speakingNow,
-                                                  ),
-                                            ) ==
-                                            activeSpeaker.identity)
+                                        isTurnHolder)
                                       const SessionElapsedTimer(),
                                     SpeakingIndicatorOrEmoji(
                                       participant: activeSpeaker,

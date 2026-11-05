@@ -196,6 +196,49 @@ void main() {
     });
 
     notificationTest(
+      'urgent notice does not requeue an auto-dismissing banner',
+      (
+        tester,
+      ) async {
+        final context = await pumpHost(tester);
+        final controller = createController(tester);
+
+        controller.showTimed(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Expiring',
+          message: 'Already dismissing',
+        );
+        controller.showPermanent(
+          context,
+          icon: TotemIcons.pause,
+          title: 'Queued',
+          message: 'Shown after the urgent notice',
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pump(const Duration(milliseconds: 7400));
+        await tester.pump(const Duration(milliseconds: 300));
+        check(tester.widgetList(find.text('Expiring'))).length.equals(1);
+
+        final urgent = controller.showTimed(
+          context,
+          icon: TotemIcons.chat,
+          title: 'Route notice',
+          message: 'Urgent',
+          urgentLatestWinsCategory: 'audio-route',
+        );
+        await tester.pump();
+        check(tester.widgetList(find.text('Route notice'))).length.equals(1);
+        urgent.dismissActive();
+        await tester.pumpAndSettle();
+
+        check(tester.widgetList(find.text('Expiring'))).isEmpty();
+        check(tester.widgetList(find.text('Queued'))).length.equals(1);
+      },
+    );
+
+    notificationTest(
       'urgent latest-wins notice preempts and replaces by category',
       (tester) async {
         final context = await pumpHost(tester);
@@ -725,7 +768,9 @@ void main() {
       check(announcements).contains('New message: Ephemeral semantics');
     });
 
-    notificationTest('showPermanent announces message', (tester) async {
+    notificationTest('resumed permanent notification is not announced again', (
+      tester,
+    ) async {
       final context = await pumpHost(tester);
       final controller = createController(tester);
       final announcements = <String>[];
@@ -756,6 +801,26 @@ void main() {
 
       await tester.pump();
       check(announcements).contains('New message: Persistent semantics');
+
+      final urgent = controller.showTimed(
+        context,
+        icon: TotemIcons.chat,
+        title: 'Urgent',
+        message: 'Urgent semantics',
+        urgentLatestWinsCategory: 'audio-route',
+      );
+      await tester.pump();
+      urgent.dismissActive();
+      await tester.pumpAndSettle();
+
+      check(
+        tester.widgetList(find.text('Accessible permanent')),
+      ).length.equals(1);
+      check(
+        announcements.where(
+          (message) => message == 'New message: Persistent semantics',
+        ),
+      ).length.equals(1);
     });
   });
 
