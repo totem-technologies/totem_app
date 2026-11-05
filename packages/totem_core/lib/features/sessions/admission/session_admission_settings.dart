@@ -27,5 +27,5 @@ class SessionAdmissionSettings extends _$SessionAdmissionSettings {
     state = enabled;
   }
 
-  bool _defaultEnabled(RoomStatus status) => status != RoomStatus.waitingRoom;
+  bool _defaultEnabled(RoomStatus status) => true;
 }
