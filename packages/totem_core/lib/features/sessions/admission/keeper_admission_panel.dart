@@ -12,7 +12,7 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 enum _DeclineAction { once, permanently }
 
 /// The Widgetbook admission list hosted above the existing live Session UI.
-class KeeperAdmissionPanel extends StatelessWidget {
+class KeeperAdmissionPanel extends StatefulWidget {
   const KeeperAdmissionPanel({
     required this.requests,
     required this.onDecision,
@@ -39,6 +39,11 @@ class KeeperAdmissionPanel extends StatelessWidget {
   /// Whether the panel is hosted by a parent-owned docked surface.
   final bool embedded;
 
+  @override
+  State<KeeperAdmissionPanel> createState() => _KeeperAdmissionPanelState();
+}
+
+class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
   String _status(KeeperAdmissionStatus status) => switch (status) {
     KeeperAdmissionStatus.requested => 'Waiting for a decision',
     KeeperAdmissionStatus.joining => 'Approval sent · joining',
@@ -50,15 +55,21 @@ class KeeperAdmissionPanel extends StatelessWidget {
     KeeperAdmissionStatus.expired => 'Request expired',
   };
 
+  bool _isCurrent(AdmissionRequest request) => widget.requests.any(
+    (current) =>
+        current.id == request.id &&
+        current.senderIdentity == request.senderIdentity,
+  );
+
   @override
   Widget build(BuildContext context) {
     final height = MediaQuery.sizeOf(context).height;
     final theme = Theme.of(context);
-    final statuses = attempts.where(
+    final statuses = widget.attempts.where(
       (attempt) => attempt.status != KeeperAdmissionStatus.requested,
     );
     final content = SizedBox(
-      width: desktop ? 380 : double.infinity,
+      width: widget.desktop ? 380 : double.infinity,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -68,7 +79,7 @@ class KeeperAdmissionPanel extends StatelessWidget {
           children: [
             SessionAdmissionList(
               guests: [
-                for (final request in requests)
+                for (final request in widget.requests)
                   SessionAdmissionGuest(
                     id: request.id,
                     name: request.displayName,
@@ -79,16 +90,16 @@ class KeeperAdmissionPanel extends StatelessWidget {
                     ),
                   ),
               ],
-              busy: busy,
-              onClose: onClose,
+              busy: widget.busy,
+              onClose: widget.onClose,
               onAdmit: (id) {
-                final request = requests.firstWhere(
+                final request = widget.requests.firstWhere(
                   (request) => request.id == id,
                 );
-                unawaited(onDecision(request, true));
+                unawaited(widget.onDecision(request, true));
               },
               onDecline: (id) async {
-                final request = requests.firstWhere(
+                final request = widget.requests.firstWhere(
                   (request) => request.id == id,
                 );
                 final action = await showDialog<_DeclineAction>(
@@ -97,14 +108,14 @@ class KeeperAdmissionPanel extends StatelessWidget {
                   builder: (dialogContext) => ConfirmationDialog(
                     content:
                         'Are you sure you want to decline ${request.displayName}?'
-                        '${onDeclinePermanently == null ? '' : '\n\nDecline Permanently also declines future requests for this Session. You can undo this in Declined Participants.'}',
+                        '${widget.onDeclinePermanently == null ? '' : "\n\nDecline Permanently also declines future requests for this Session. You can undo this in Declined Participants."}',
                     scrollable: true,
                     confirmButtonText: 'Decline',
                     onConfirm: () async => Navigator.of(
                       dialogContext,
                     ).pop(_DeclineAction.once),
                     extraButtons: [
-                      if (onDeclinePermanently != null)
+                      if (widget.onDeclinePermanently != null)
                         ConfirmationDialogButton.outlined(
                           type: ConfirmationDialogType.destructive,
                           onConfirm: () async => Navigator.of(
@@ -115,14 +126,14 @@ class KeeperAdmissionPanel extends StatelessWidget {
                     ],
                   ),
                 );
-                if (!context.mounted) return;
+                if (!mounted || !_isCurrent(request)) return;
                 if (action == _DeclineAction.once) {
-                  await onDecision(request, false);
+                  await widget.onDecision(request, false);
                 } else if (action == _DeclineAction.permanently) {
-                  await onDeclinePermanently?.call(request);
+                  await widget.onDeclinePermanently?.call(request);
                 }
               },
-              onAdmitAll: onAdmitAll,
+              onAdmitAll: widget.onAdmitAll,
             ),
             for (final attempt in statuses)
               Semantics(
@@ -139,7 +150,7 @@ class KeeperAdmissionPanel extends StatelessWidget {
         ),
       ),
     );
-    if (embedded) return SizedBox.expand(child: content);
+    if (widget.embedded) return SizedBox.expand(child: content);
 
     return Material(
       color: theme.colorScheme.surface,
@@ -148,7 +159,7 @@ class KeeperAdmissionPanel extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: height * (desktop ? 0.65 : 0.35),
+          maxHeight: height * (widget.desktop ? 0.65 : 0.35),
         ),
         child: content,
       ),

@@ -56,6 +56,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
   Future<void>? _admissionCleanup;
   bool _cancelRequested = false;
   int _admissionAttempt = 0;
+  int? _handledAdmissionAttempt;
 
   @visibleForTesting
   Room createAdmissionRoom() {
@@ -243,9 +244,11 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         _cancelRequested ||
         attempt != _admissionAttempt ||
         !identical(_admission, admission) ||
-        admission.status != status) {
+        admission.status != status ||
+        _handledAdmissionAttempt == attempt) {
       return;
     }
+    _handledAdmissionAttempt = attempt;
     try {
       if (status == AdmissionStatus.approved) {
         final request = admission.request;
@@ -296,8 +299,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
             }
           }
         } else {
-          await connectedRoom.disconnect();
-          await connectedRoom.dispose();
+          await _closeAdmissionRoom(connectedRoom);
         }
       } else if (status == AdmissionStatus.denied ||
           status == AdmissionStatus.expired ||
@@ -400,9 +402,29 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       await _cleanupAdmission();
       return room;
     } catch (_) {
-      await room.disconnect();
-      await room.dispose();
+      await _closeAdmissionRoom(room);
       rethrow;
+    }
+  }
+
+  Future<void> _closeAdmissionRoom(Room room) async {
+    try {
+      await room.disconnect();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to disconnect admission room',
+      );
+    }
+    try {
+      await room.dispose();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to dispose admission room',
+      );
     }
   }
 
@@ -422,11 +444,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       try {
         await transport?.dispose();
       } finally {
-        try {
-          await room?.disconnect();
-        } finally {
-          await room?.dispose();
-        }
+        if (room != null) await _closeAdmissionRoom(room);
       }
     }
   }
@@ -450,8 +468,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     Room? admissionRoom,
   }) async {
     if (!ref.mounted || _cancelRequested) {
-      await admissionRoom?.disconnect();
-      await admissionRoom?.dispose();
+      if (admissionRoom != null) await _closeAdmissionRoom(admissionRoom);
       return PreJoinJoinOutcome.ignored;
     }
     var roomTransferred = false;
@@ -629,8 +646,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     } finally {
       session?.allowAutoDispose();
       if (admissionRoom != null && !roomTransferred) {
-        await admissionRoom.disconnect();
-        await admissionRoom.dispose();
+        await _closeAdmissionRoom(admissionRoom);
       }
     }
   }

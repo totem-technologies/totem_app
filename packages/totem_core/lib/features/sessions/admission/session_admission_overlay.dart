@@ -30,11 +30,13 @@ class SessionAdmissionOverlay extends ConsumerStatefulWidget {
   const SessionAdmissionOverlay({
     required this.sessionSlug,
     required this.child,
+    this.now,
     super.key,
   });
 
   final String sessionSlug;
   final Widget child;
+  final DateTime Function()? now;
 
   @override
   ConsumerState<SessionAdmissionOverlay> createState() =>
@@ -184,7 +186,7 @@ class _SessionAdmissionOverlayState
     }
 
     unawaited(_detachAdmission(clearAdmitted: !isKeeper));
-    final transport = LiveKitAdmissionTransport(room);
+    final transport = LiveKitAdmissionTransport(room, now: widget.now);
     _transport = transport;
     _room = room;
     _keeperIdentity = keeperIdentity;
@@ -209,6 +211,7 @@ class _SessionAdmissionOverlayState
         rosterStore: restoredRoster,
         approvalRequired: ref.read(sessionAdmissionSettingsProvider),
         declinedIdentities: declinedIdentities!,
+        now: widget.now,
       );
       _keeperController = controller;
       _syncAdmittedIdentities(controller.roster);
@@ -224,6 +227,7 @@ class _SessionAdmissionOverlayState
         channel: transport,
         keeperIdentity: _currentKeeperIdentity,
         sessionIdentity: widget.sessionSlug,
+        now: widget.now,
       );
       _clientController = controller;
       _syncAdmittedIdentities(controller.roster?.members ?? const []);
@@ -367,10 +371,16 @@ class _SessionAdmissionOverlayState
     final controller = _keeperController;
     if (controller == null || _busy) return;
     setState(() => _busy = true);
+    var reportedError = false;
     try {
       for (final request in controller.requests) {
         if (!identical(_keeperController, controller)) break;
-        await _sendDecision(controller, request, true);
+        reportedError |= await _sendDecision(
+          controller,
+          request,
+          true,
+          reportError: !reportedError,
+        );
       }
     } finally {
       if (mounted && identical(_keeperController, controller)) {
@@ -379,12 +389,16 @@ class _SessionAdmissionOverlayState
     }
   }
 
-  Future<void> _sendDecision(
+  Future<bool> _sendDecision(
     KeeperAdmissionController controller,
     AdmissionRequest request,
     bool approve, {
     bool permanently = false,
+    bool reportError = true,
   }) async {
+    if (!controller.isPendingRequest(request.id, request.senderIdentity)) {
+      return false;
+    }
     try {
       if (approve) {
         await controller.approve(request.id, request.senderIdentity);
@@ -403,20 +417,27 @@ class _SessionAdmissionOverlayState
       } else {
         await controller.deny(request.id, request.senderIdentity);
       }
+      return false;
     } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Could not send admission decision',
-      );
-      if (mounted && identical(_keeperController, controller)) {
-        _notificationController.showError(
-          context,
-          icon: TotemIcons.errorOutlined,
-          title: 'Could not update the queue',
-          message: 'Please check your connection and try again.',
-        );
+      if (!controller.isPendingRequest(request.id, request.senderIdentity)) {
+        return false;
       }
+      if (reportError) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Could not send admission decision',
+        );
+        if (mounted && identical(_keeperController, controller)) {
+          _notificationController.showError(
+            context,
+            icon: TotemIcons.errorOutlined,
+            title: 'Could not update the queue',
+            message: 'Please check your connection and try again.',
+          );
+        }
+      }
+      return true;
     }
   }
 

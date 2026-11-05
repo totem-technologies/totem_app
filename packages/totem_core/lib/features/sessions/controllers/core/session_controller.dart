@@ -116,7 +116,7 @@ class SessionController extends _$SessionController {
   EventsListener<RoomEvent>? _listener;
   Room? _pendingConnectedRoom;
   bool _isAdoptingConnectedRoom = false;
-  final Set<Object> _subscribedRemotePublications = Set.identity();
+  final Map<Object, Object> _subscribedRemotePublications = Map.identity();
   Set<String>? _admittedMediaRecipients;
   Set<String>? _appliedMediaRecipients;
 
@@ -224,8 +224,15 @@ class SessionController extends _$SessionController {
   /// Until this method receives a roster, non-keeper publishers fail closed
   /// while retaining access for the keeper when its identity is known.
   void updateAdmittedMediaRecipients(Set<String> identities) {
+    final newlyAdmitted = identities.difference(_admittedMediaRecipients ?? {});
     _admittedMediaRecipients = Set.unmodifiable(identities);
     _applyMediaSubscriptionPermissions();
+
+    final remoteParticipants = room?.remoteParticipants;
+    if (remoteParticipants != null &&
+        newlyAdmitted.any(remoteParticipants.containsKey)) {
+      _attemptReconcile();
+    }
   }
 
   Future<void> disconnectFromRoom() async {
@@ -535,14 +542,9 @@ class SessionController extends _$SessionController {
     _updateParticipantsList();
   }
 
-  void _onParticipantConnected(
-    ParticipantConnectedEvent event, {
-    bool Function(String identity)? isAdmitted,
-  }) {
+  void _onParticipantConnected(ParticipantConnectedEvent event) {
     final identity = event.participant.identity;
-    final isKnownAdmittedParticipant =
-        isAdmitted?.call(identity) ?? _isMediaRecipientOrKeeper(identity);
-    if (isKnownAdmittedParticipant) _attemptReconcile();
+    if (_isMediaRecipientOrKeeper(identity)) _attemptReconcile();
     _updateParticipantsList();
   }
 
@@ -944,7 +946,6 @@ class SessionController extends _$SessionController {
   Future<SessionJoinResult> activateConnectedRoom({
     required Room room,
     SessionJoinMedia? joinMedia,
-    bool Function(String identity)? isAdmitted,
   }) async {
     final retainedJoinMedia = _joinMediaOwner.retain(joinMedia);
     final pendingRoom = _pendingConnectedRoom;
@@ -984,7 +985,7 @@ class SessionController extends _$SessionController {
       }
       _pendingConnectedRoom = null;
       this.room = room;
-      _registerRoomEventListeners(room, isAdmitted: isAdmitted);
+      _registerRoomEventListeners(room);
       if (!await _initializeSessionInfrastructure()) {
         throw StateError(
           'Session controller was disposed during room activation',
@@ -1062,10 +1063,7 @@ class SessionController extends _$SessionController {
     return room;
   }
 
-  void _registerRoomEventListeners(
-    Room room, {
-    bool Function(String identity)? isAdmitted,
-  }) {
+  void _registerRoomEventListeners(Room room) {
     _listener ??= room.createListener()
       ..on<RoomMetadataChangedEvent>((_) {
         if (ref.mounted) _updateRoomState();
@@ -1101,9 +1099,7 @@ class SessionController extends _$SessionController {
         if (ref.mounted) messaging.handleDataReceived(data);
       })
       ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
-      ..on<ParticipantConnectedEvent>(
-        (event) => _onParticipantConnected(event, isAdmitted: isAdmitted),
-      )
+      ..on<ParticipantConnectedEvent>(_onParticipantConnected)
       ..on<ParticipantNameUpdatedEvent>((_) => _updateParticipantsList())
       ..on<LocalTrackPublishedEvent>((_) {
         _applyMediaSubscriptionPermissions(force: true);
@@ -1163,11 +1159,20 @@ class SessionController extends _$SessionController {
 
   void _subscribeToRemotePublication(RemoteTrackPublication publication) {
     if (!_isAdoptingConnectedRoom ||
-        !_subscribedRemotePublications.add(publication)) {
+        _subscribedRemotePublications.containsKey(publication)) {
       return;
     }
+
+    final subscriptionToken = Object();
+    _subscribedRemotePublications[publication] = subscriptionToken;
     unawaited(
       publication.subscribe().catchError((Object error, StackTrace stackTrace) {
+        if (identical(
+          _subscribedRemotePublications[publication],
+          subscriptionToken,
+        )) {
+          _subscribedRemotePublications.remove(publication);
+        }
         ErrorHandler.logError(
           error,
           stackTrace: stackTrace,

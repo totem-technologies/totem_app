@@ -5,6 +5,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -27,8 +28,11 @@ import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
 
+import '../../../setup.dart';
 import '../livekit_mocks.dart';
 import '../session_test_mocks.dart';
+
+DateTime _testNow() => DateTime.utc(2026);
 
 class _AdmissionPreferences implements SessionAdmissionPreferences {
   _AdmissionPreferences({this.readError});
@@ -139,6 +143,7 @@ class _AdmissionOverlayHost extends ConsumerWidget {
     final admissionOpen = ref.watch(sessionAdmissionOpenProvider);
     return SessionAdmissionOverlay(
       sessionSlug: 'session',
+      now: _testNow,
       child: RoomBackground(
         status: RoomStatus.active,
         child: Row(
@@ -192,9 +197,12 @@ class _AdmissionHarness {
       final packet = AdmissionProtocol.decode(
         invocation.positionalArguments.single as List<int>,
         senderIdentity: 'keeper',
-        now: DateTime.now(),
+        now: _now(),
       );
-      if (packet != null) sent.add(packet);
+      if (packet != null) {
+        sent.add(packet);
+        await afterSend?.call(packet);
+      }
     });
     room = _AdmissionRoom(participant);
     session = _SessionController();
@@ -230,9 +238,12 @@ class _AdmissionHarness {
     _preferencesOverride = preferencesOverride;
   }
 
+  final DateTime Function() _now = _testNow;
+  var _requestCount = 0;
   final _AdmissionPreferences preferences;
   final sent = <AdmissionPacket>[];
   final mediaRecipients = <Set<String>>[];
+  Future<void> Function(AdmissionPacket packet)? afterSend;
   late final _AdmissionRoom room;
   late final _SessionController session;
   late final MockSessionRoomState state;
@@ -255,14 +266,24 @@ class _AdmissionHarness {
     ),
   ];
 
-  AdmissionRequest request(String id, {String name = 'Guest'}) =>
-      AdmissionRequest(
-        id: id,
-        senderIdentity: 'guest',
-        recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 5)),
-        displayName: name,
-      );
+  AdmissionRequest request(
+    String id, {
+    String sender = 'guest',
+    String name = 'Guest',
+    DateTime? expiresAt,
+  }) => AdmissionRequest(
+    id: id,
+    senderIdentity: sender,
+    recipientIdentity: 'keeper',
+    expiresAt: expiresAt ?? _nextRequestExpiration(),
+    displayName: name,
+  );
+
+  DateTime _nextRequestExpiration() => _now().add(
+    Duration(minutes: 5, milliseconds: _requestCount++),
+  );
+
+  DateTime expiration() => _now().add(const Duration(minutes: 5));
 
   Future<void> sendRequest(AdmissionRequest request) => sendPacket(request);
 
@@ -426,7 +447,9 @@ void main() {
     final preferences = _AdmissionPreferences();
     await seedDeclined(preferences, 'guest');
     await seedRoster(preferences, members: ['guest'], revision: 2);
-    final harness = _AdmissionHarness(preferences: preferences);
+    final harness = _AdmissionHarness(
+      preferences: preferences,
+    );
     final videoBuilds = ValueNotifier(0);
     addTearDown(videoBuilds.dispose);
 
@@ -472,7 +495,9 @@ void main() {
         members: ['guest', 'silent'],
         revision: 7,
       );
-      final firstHarness = _AdmissionHarness(preferences: preferences);
+      final firstHarness = _AdmissionHarness(
+        preferences: preferences,
+      );
       final videoBuilds = ValueNotifier(0);
       addTearDown(videoBuilds.dispose);
 
@@ -482,7 +507,9 @@ void main() {
       await tester.pump();
       await tester.idle();
 
-      final restoredHarness = _AdmissionHarness(preferences: preferences);
+      final restoredHarness = _AdmissionHarness(
+        preferences: preferences,
+      );
       restoredHarness.room.remotes['guest'] = _RemoteParticipant('guest');
       restoredHarness.room.remotes['silent'] = _RemoteParticipant('silent');
       final container = await pumpHost(
@@ -506,7 +533,7 @@ void main() {
         id: 'restore-roster',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 5)),
+        expiresAt: restoredHarness.expiration(),
         sessionIdentity: 'session',
       );
       await restoredHarness.sendPacket(request);
@@ -536,7 +563,9 @@ void main() {
         revision: 3,
         awaitingReadiness: ['guest'],
       );
-      final pendingHarness = _AdmissionHarness(preferences: preferences);
+      final pendingHarness = _AdmissionHarness(
+        preferences: preferences,
+      );
       final videoBuilds = ValueNotifier(0);
       addTearDown(videoBuilds.dispose);
 
@@ -550,7 +579,9 @@ void main() {
       await tester.pump();
       await tester.idle();
 
-      final restoredHarness = _AdmissionHarness(preferences: preferences);
+      final restoredHarness = _AdmissionHarness(
+        preferences: preferences,
+      );
       final container = await pumpHost(
         tester,
         restoredHarness,
@@ -570,7 +601,7 @@ void main() {
         id: 'awaiting-readiness',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 5)),
+        expiresAt: restoredHarness.expiration(),
         sessionIdentity: 'session',
       );
       await restoredHarness.sendPacket(request);
@@ -711,6 +742,166 @@ void main() {
       check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
 
       await tester.pump(const Duration(minutes: 5));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+  );
+
+  testWidgets(
+    'admit all skips requests cancelled while deciding the batch',
+    (tester) async {
+      setViewport(tester, const Size(1200, 900));
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+
+      await pumpHost(
+        tester,
+        harness,
+        videoBuilds: videoBuilds,
+        includeDock: true,
+      );
+      final first = harness.request('first', sender: 'alice', name: 'Alice');
+      final second = harness.request(
+        'second',
+        sender: 'bob',
+        name: 'Bob',
+        expiresAt: first.expiresAt.add(const Duration(seconds: 1)),
+      );
+      await harness.sendRequest(first);
+      await harness.sendRequest(second);
+      harness.afterSend = (packet) async {
+        if (packet is AdmissionDecision && packet.id == first.id) {
+          await harness.sendPacket(
+            AdmissionCancel(
+              id: second.id,
+              senderIdentity: second.senderIdentity,
+              recipientIdentity: second.recipientIdentity,
+              expiresAt: second.expiresAt,
+            ),
+          );
+        }
+      };
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.byType(SessionWaitingQueueButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Admit all'));
+      await tester.pump();
+      await tester.pump();
+
+      final decisions = harness.sent.whereType<AdmissionDecision>().toList();
+      check(decisions).length.equals(1);
+      check(decisions.single.id).equals(first.id);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+  );
+
+  testWidgets(
+    'admit all shows one error notification when multiple sends fail',
+    (tester) async {
+      setViewport(tester, const Size(1200, 900));
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      setupAppConfig();
+      silenceLogger();
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+
+      await pumpHost(
+        tester,
+        harness,
+        videoBuilds: videoBuilds,
+        includeDock: true,
+      );
+      final first = harness.request('first', sender: 'alice', name: 'Alice');
+      final second = harness.request(
+        'second',
+        sender: 'bob',
+        name: 'Bob',
+        expiresAt: first.expiresAt.add(const Duration(seconds: 1)),
+      );
+      await harness.sendRequest(first);
+      await harness.sendRequest(second);
+      harness.afterSend = (packet) async {
+        if (packet is AdmissionDecision) throw StateError('offline');
+      };
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.byType(SessionWaitingQueueButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Admit all'));
+      await tester.pump();
+      await tester.pump();
+
+      check(harness.sent.whereType<AdmissionDecision>()).length.equals(2);
+      check(
+        find.text('Could not update the queue').evaluate(),
+      ).length.equals(1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+    // auto_size_text's notification banner does not dispose its TextPainters.
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
+
+  testWidgets(
+    'permanent decline ignores a request replaced while its dialog is open',
+    (tester) async {
+      setViewport(tester, const Size(1200, 900));
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+
+      final container = await pumpHost(
+        tester,
+        harness,
+        videoBuilds: videoBuilds,
+        includeDock: true,
+      );
+      final declinedProvider = declinedSessionParticipantsProvider(
+        'session',
+        'keeper',
+      );
+      await container.read(declinedProvider.future);
+      final oldRequest = harness.request('old');
+      await harness.sendRequest(oldRequest);
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.byType(SessionWaitingQueueButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Decline'));
+      await tester.pumpAndSettle();
+
+      final replacement = harness.request(
+        'replacement',
+        expiresAt: oldRequest.expiresAt.add(const Duration(seconds: 1)),
+      );
+      await harness.sendRequest(replacement);
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.text('Decline Permanently'));
+      await tester.pump();
+
+      check(container.read(declinedProvider).requireValue).isEmpty();
+      check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
+
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
       await tester.idle();

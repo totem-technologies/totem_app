@@ -146,9 +146,6 @@ abstract final class AdmissionProtocol {
         return null;
       }
       final expiration = DateTime.fromMillisecondsSinceEpoch(expiresAt);
-      if (!expiration.isAfter(now)) {
-        return null;
-      }
       if (value['kind'] == 'request') {
         final name = value['name'];
         if (name is! String || name.trim().isEmpty || name.length > 120) {

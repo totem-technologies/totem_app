@@ -364,6 +364,9 @@ class KeeperAdmissionController {
         )
       : const [];
 
+  bool isPendingRequest(String requestId, String participantIdentity) =>
+      _pending[participantIdentity]?.id == requestId;
+
   void setApprovalRequired(bool required) {
     if (_disposed || _ended || _approvalRequired == required) return;
     _approvalRequired = required;
@@ -439,8 +442,9 @@ class KeeperAdmissionController {
 
   void _publishRosterUpdate() {
     if (_sessionIdentity.isEmpty) return;
+    final members = roster;
     for (final identity in channel.remoteIdentities) {
-      if (!roster.contains(identity)) continue;
+      if (!members.contains(identity)) continue;
       unawaited(
         channel
             .send(
@@ -452,7 +456,7 @@ class KeeperAdmissionController {
                 sessionIdentity: _sessionIdentity,
                 keeperGeneration: _keeperGeneration,
                 revision: _rosterRevision,
-                members: roster,
+                members: members,
               ),
             )
             .catchError((Object _) {}),

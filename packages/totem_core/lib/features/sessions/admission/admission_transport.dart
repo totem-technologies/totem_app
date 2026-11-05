@@ -48,7 +48,8 @@ abstract class AdmissionChannel {
 /// Data packets remain available when remote media auto-subscription is off.
 /// Own this transport until admission ends and call [dispose] before room teardown.
 class LiveKitAdmissionTransport implements AdmissionChannel {
-  LiveKitAdmissionTransport(this.room) {
+  LiveKitAdmissionTransport(this.room, {DateTime Function()? now})
+    : _now = now ?? DateTime.now {
     _checkRoomEnded(room.metadata);
     _listener = room.createListener()
       ..on<DataReceivedEvent>((event) {
@@ -56,7 +57,7 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
         final packet = AdmissionProtocol.decode(
           event.data,
           senderIdentity: event.participant?.identity,
-          now: DateTime.now(),
+          now: _now(),
         );
         if (packet != null) {
           _events.add(AdmissionPacketReceived(packet));
@@ -113,6 +114,7 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
   static const pendingConnectOptions = ConnectOptions(autoSubscribe: false);
 
   final Room room;
+  final DateTime Function() _now;
   final _events = StreamController<AdmissionEvent>.broadcast(sync: true);
   late final EventsListener<RoomEvent> _listener;
   bool _disposed = false;
@@ -176,7 +178,7 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
             AdmissionProtocol.decode(
                   data,
                   senderIdentity: local.identity,
-                  now: DateTime.now(),
+                  now: _now(),
                 ) ==
                 null)) {
       throw ArgumentError('Invalid or expired admission receipt');
@@ -208,7 +210,7 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
         AdmissionProtocol.decode(
               AdmissionProtocol.encode(receipt),
               senderIdentity: localIdentity,
-              now: DateTime.now(),
+              now: _now(),
             ) ==
             null) {
       throw ArgumentError('Invalid or expired admission receipt');
@@ -231,8 +233,8 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
 
   void _retryJoinReceipt() {
     final receipt = _joinReceipt;
-    if (_disposed || _ended || receipt == null) return;
-    if (!DateTime.now().isBefore(receipt.expiresAt)) {
+    if (_disposed || _ended || _joinReceiptConfirmed || receipt == null) return;
+    if (!_now().isBefore(receipt.expiresAt)) {
       _joinReceipt = null;
       return;
     }

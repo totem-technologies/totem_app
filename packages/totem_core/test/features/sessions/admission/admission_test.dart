@@ -9,6 +9,63 @@ import 'package:totem_core/features/sessions/admission/admission_controllers.dar
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/admission_transport.dart';
 
+final _fixedNow = DateTime.utc(2030);
+
+DateTime _testNow() => _fixedNow;
+
+PendingAdmissionController _pendingAdmissionController({
+  required AdmissionChannel channel,
+  required String Function() keeperIdentity,
+  DateTime Function()? now,
+  String Function()? newId,
+}) => PendingAdmissionController(
+  channel: channel,
+  keeperIdentity: keeperIdentity,
+  now: now ?? _testNow,
+  newId: newId,
+);
+
+KeeperAdmissionController _keeperAdmissionController({
+  required AdmissionChannel channel,
+  required String Function() keeperIdentity,
+  String? sessionIdentity,
+  String? keeperGeneration,
+  KeeperAdmissionRosterStore? rosterStore,
+  bool approvalRequired = true,
+  Set<String> declinedIdentities = const {},
+  DateTime Function()? now,
+  String Function()? newId,
+}) => KeeperAdmissionController(
+  channel: channel,
+  keeperIdentity: keeperIdentity,
+  sessionIdentity: sessionIdentity,
+  keeperGeneration: keeperGeneration,
+  rosterStore: rosterStore,
+  approvalRequired: approvalRequired,
+  declinedIdentities: declinedIdentities,
+  now: now ?? _testNow,
+  newId: newId,
+);
+
+ClientAdmissionRosterController _clientAdmissionRosterController({
+  required AdmissionChannel channel,
+  required String Function() keeperIdentity,
+  required String sessionIdentity,
+  DateTime Function()? now,
+  String Function()? newId,
+}) => ClientAdmissionRosterController(
+  channel: channel,
+  keeperIdentity: keeperIdentity,
+  sessionIdentity: sessionIdentity,
+  now: now ?? _testNow,
+  newId: newId,
+);
+
+LiveKitAdmissionTransport _admissionTransport(
+  Room room, {
+  DateTime Function()? now,
+}) => LiveKitAdmissionTransport(room, now: now ?? _testNow);
+
 class _RoomEvents implements EventsListener<RoomEvent> {
   final handlers = <Type, List<FutureOr<void> Function(Object?)>>{};
 
@@ -86,7 +143,7 @@ class _AdmissionRoom implements Room {
 
 class _Channel implements AdmissionChannel {
   _Channel(this.localIdentity, {DateTime Function()? now})
-    : _now = now ?? DateTime.now;
+    : _now = now ?? _testNow;
 
   final DateTime Function() _now;
   @override
@@ -276,7 +333,7 @@ void main() {
     'transport reads canonical room metadata and emits ended once',
     () async {
       final room = _AdmissionRoom(null);
-      final transport = LiveKitAdmissionTransport(room);
+      final transport = _admissionTransport(room);
       final received = <AdmissionEvent>[];
       final subscription = transport.events.listen(received.add);
       addTearDown(() async {
@@ -299,23 +356,23 @@ void main() {
       check(received).length.equals(1);
       check(received.single).isA<AdmissionRoomEnded>();
 
-      final alreadyEnded = LiveKitAdmissionTransport(_AdmissionRoom(ended));
+      final alreadyEnded = _admissionTransport(_AdmissionRoom(ended));
       check(alreadyEnded.hasEnded).isTrue();
       await alreadyEnded.dispose();
     },
   );
 
   test(
-    'normal-room receipt retries only for authenticated keeper presence',
+    'confirmed normal-room receipts do not retry for keeper signals',
     () async {
       final room = _AdmissionRoom(null)..participant = _Participant('guest');
-      final transport = LiveKitAdmissionTransport(room);
+      final transport = _admissionTransport(room);
       addTearDown(transport.dispose);
       final request = AdmissionRequest(
         id: 'r1',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
         displayName: 'Guest',
       );
       await transport.sendJoinOutcome(request);
@@ -329,7 +386,7 @@ void main() {
         AdmissionProtocol.decode(
           publication.positionalArguments.single as List<int>,
           senderIdentity: 'guest',
-          now: DateTime.now(),
+          now: _fixedNow,
         ),
       ).isA<AdmissionJoined>();
       await room.listener.trigger(
@@ -347,6 +404,23 @@ void main() {
         ),
       );
       check(room.participant!.published).length.equals(1);
+      final roster = AdmissionRosterUpdated(
+        id: 'roster',
+        senderIdentity: 'keeper',
+        recipientIdentity: 'guest',
+        expiresAt: request.expiresAt,
+        sessionIdentity: 'session',
+        keeperGeneration: 'generation',
+        revision: 1,
+        members: const ['guest'],
+      );
+      await room.listener.trigger(
+        DataReceivedEvent(
+          data: AdmissionProtocol.encode(roster),
+          participant: _RemoteParticipant('mallory'),
+          topic: AdmissionProtocol.topic,
+        ),
+      );
       await room.listener.trigger(
         DataReceivedEvent(
           data: AdmissionProtocol.encode(
@@ -362,15 +436,39 @@ void main() {
         ),
       );
       check(room.participant!.published).length.equals(2);
+      await room.listener.trigger(
+        DataReceivedEvent(
+          data: AdmissionProtocol.encode(roster),
+          participant: _RemoteParticipant('keeper'),
+          topic: AdmissionProtocol.topic,
+        ),
+      );
+      await room.listener.trigger(
+        ParticipantConnectedEvent(participant: _RemoteParticipant('keeper')),
+      );
+      await room.listener.trigger(
+        DataReceivedEvent(
+          data: AdmissionProtocol.encode(
+            AdmissionHello(
+              id: 'hello',
+              senderIdentity: 'keeper',
+              recipientIdentity: 'guest',
+              expiresAt: request.expiresAt,
+            ),
+          ),
+          participant: _RemoteParticipant('keeper'),
+          topic: AdmissionProtocol.topic,
+        ),
+      );
       await room.listener.trigger(const RoomReconnectedEvent());
-      check(room.participant!.published).length.equals(3);
+      check(room.participant!.published).length.equals(2);
       await check(transport.sendJoinOutcome(request)).throws<StateError>();
     },
   );
 
   test('failed receipt publish retries on recreated Keeper hello', () async {
     final room = _AdmissionRoom(null)..participant = _Participant('guest');
-    final transport = LiveKitAdmissionTransport(room);
+    final transport = _admissionTransport(room);
     final keeperChannel = _Channel('keeper')..present.add('guest');
     addTearDown(() async {
       await transport.dispose();
@@ -380,7 +478,7 @@ void main() {
       id: 'r1',
       senderIdentity: 'guest',
       recipientIdentity: 'keeper',
-      expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+      expiresAt: _fixedNow.add(const Duration(minutes: 1)),
       displayName: 'Guest',
     );
     room.participant!.onPublish = (_) async => throw StateError('offline');
@@ -389,7 +487,7 @@ void main() {
       final packet = AdmissionProtocol.decode(
         invocation.positionalArguments.single as List<int>,
         senderIdentity: 'guest',
-        now: DateTime.now(),
+        now: _fixedNow,
       );
       if (packet != null) {
         keeperChannel.controller.add(AdmissionPacketReceived(packet));
@@ -407,7 +505,7 @@ void main() {
       );
       advertised.complete();
     };
-    final keeper = KeeperAdmissionController(
+    final keeper = _keeperAdmissionController(
       channel: keeperChannel,
       keeperIdentity: () => 'keeper',
     );
@@ -420,7 +518,7 @@ void main() {
 
     keeperChannel.present.clear();
     advertised = Completer<void>();
-    final nextKeeper = KeeperAdmissionController(
+    final nextKeeper = _keeperAdmissionController(
       channel: keeperChannel,
       keeperIdentity: () => 'keeper',
     );
@@ -435,13 +533,14 @@ void main() {
 
   test('a missed joined receipt retries once without a presence change', () {
     fakeAsync((async) {
+      final clock = async.getClock(_fixedNow);
       final room = _AdmissionRoom(null)..participant = _Participant('guest');
-      final transport = LiveKitAdmissionTransport(room);
+      final transport = _admissionTransport(room, now: clock.now);
       final request = AdmissionRequest(
         id: 'r1',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        expiresAt: clock.now().add(const Duration(minutes: 1)),
         displayName: 'Guest',
       );
       unawaited(transport.sendJoinOutcome(request));
@@ -461,15 +560,16 @@ void main() {
 
   test('admitted roster arriving during publish prevents a receipt retry', () {
     fakeAsync((async) {
+      final clock = async.getClock(_fixedNow);
       final room = _AdmissionRoom(null)..participant = _Participant('guest');
       final publishGate = Completer<void>();
       room.participant!.onPublish = (_) => publishGate.future;
-      final transport = LiveKitAdmissionTransport(room);
+      final transport = _admissionTransport(room, now: clock.now);
       final request = AdmissionRequest(
         id: 'r1',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        expiresAt: clock.now().add(const Duration(minutes: 1)),
         displayName: 'Guest',
       );
       unawaited(transport.sendJoinOutcome(request));
@@ -506,7 +606,7 @@ void main() {
 
   test('transient reconnect does not emit terminal disconnect', () async {
     final room = _AdmissionRoom(null);
-    final transport = LiveKitAdmissionTransport(room);
+    final transport = _admissionTransport(room);
     final received = <AdmissionEvent>[];
     final subscription = transport.events.listen(received.add);
     addTearDown(() async {
@@ -530,7 +630,7 @@ void main() {
   test('pending fails on terminal disconnect and ends on metadata', () async {
     final channel = _Channel('guest');
     channel.present.add('keeper');
-    final guest = PendingAdmissionController(
+    final guest = _pendingAdmissionController(
       channel: channel,
       keeperIdentity: () => 'keeper',
       newId: () => 'r1',
@@ -560,7 +660,7 @@ void main() {
     'metadata end terminates pending admission and notifies listeners',
     () async {
       final channel = _Channel('guest');
-      final guest = PendingAdmissionController(
+      final guest = _pendingAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
       );
@@ -587,7 +687,7 @@ void main() {
     'ended metadata clears keeper queue and prevents future decisions',
     () async {
       final channel = _Channel('keeper');
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
       );
@@ -599,7 +699,7 @@ void main() {
         id: 'r1',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
         displayName: 'Guest',
       );
       channel.controller.add(AdmissionPacketReceived(request));
@@ -612,13 +712,13 @@ void main() {
 
       final endedChannel = _Channel('keeper')..hasEnded = true;
       endedChannel.present.add('guest');
-      final endedKeeper = KeeperAdmissionController(
+      final endedKeeper = _keeperAdmissionController(
         channel: endedChannel,
         keeperIdentity: () => 'keeper',
         approvalRequired: false,
       );
       final endedGuestChannel = _Channel('guest')..hasEnded = true;
-      final endedGuest = PendingAdmissionController(
+      final endedGuest = _pendingAdmissionController(
         channel: endedGuestChannel,
         keeperIdentity: () => 'keeper',
       );
@@ -645,14 +745,14 @@ void main() {
       keeperChannel.peer = guestChannel;
       guestChannel.present.add('keeper');
       keeperChannel.present.add('guest');
-      final guest = PendingAdmissionController(
+      final guest = _pendingAdmissionController(
         channel: guestChannel,
         keeperIdentity: () => 'keeper',
         newId: () => 'r1',
       );
       final request = await guest.requestAdmission(displayName: 'Guest');
       // No keeper listener existed when the first request was delivered.
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: keeperChannel,
         keeperIdentity: () => 'keeper',
       );
@@ -679,7 +779,7 @@ void main() {
   test('untrusted keeper hello cannot trigger resend', () async {
     final channel = _Channel('guest');
     channel.present.add('keeper');
-    final guest = PendingAdmissionController(
+    final guest = _pendingAdmissionController(
       channel: channel,
       keeperIdentity: () => 'keeper',
       newId: () => 'r1',
@@ -695,13 +795,13 @@ void main() {
         id: 'h1',
         senderIdentity: 'attacker',
         recipientIdentity: 'guest',
-        expiresAt: DateTime.now(),
+        expiresAt: _fixedNow,
       ),
       AdmissionHello(
         id: 'h2',
         senderIdentity: 'keeper',
         recipientIdentity: 'other',
-        expiresAt: DateTime.now(),
+        expiresAt: _fixedNow,
       ),
     ]) {
       channel.controller.add(AdmissionPacketReceived(hello));
@@ -718,12 +818,12 @@ void main() {
       guestChannel.peer = keeperChannel;
       keeperChannel.peer = guestChannel;
       guestChannel.present.add('keeper');
-      final guest = PendingAdmissionController(
+      final guest = _pendingAdmissionController(
         channel: guestChannel,
         keeperIdentity: () => 'keeper',
         newId: () => 'r1',
       );
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: keeperChannel,
         keeperIdentity: () => 'keeper',
       );
@@ -784,19 +884,22 @@ void main() {
     'an unanswered first approval is retried once without another participant action',
     () {
       fakeAsync((async) {
-        final guestChannel = _Channel('guest');
-        final keeperChannel = _Channel('keeper');
+        final clock = async.getClock(_fixedNow);
+        final guestChannel = _Channel('guest', now: clock.now);
+        final keeperChannel = _Channel('keeper', now: clock.now);
         guestChannel.peer = keeperChannel;
         keeperChannel.peer = guestChannel;
         guestChannel.present.add('keeper');
         keeperChannel.present.add('guest');
-        final guest = PendingAdmissionController(
+        final guest = _pendingAdmissionController(
           channel: guestChannel,
           keeperIdentity: () => 'keeper',
+          now: clock.now,
         );
-        final keeper = KeeperAdmissionController(
+        final keeper = _keeperAdmissionController(
           channel: keeperChannel,
           keeperIdentity: () => 'keeper',
+          now: clock.now,
         );
         AdmissionRequest? request;
         unawaited(
@@ -840,7 +943,7 @@ void main() {
       final channel = _Channel('keeper');
       var keeperIdentity = 'other';
       var now = DateTime.utc(2026);
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => keeperIdentity,
         approvalRequired: false,
@@ -885,8 +988,8 @@ void main() {
     'request stays pending beyond two minutes and reaches a late Keeper',
     () async {
       final channel = _Channel('guest');
-      var now = DateTime.now();
-      final guest = PendingAdmissionController(
+      var now = _fixedNow;
+      final guest = _pendingAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
         now: () => now,
@@ -930,12 +1033,12 @@ void main() {
         final firstChannel = _Channel('keeper')..present.add('guest');
         guestChannel.peer = firstChannel;
         firstChannel.peer = guestChannel;
-        final guest = PendingAdmissionController(
+        final guest = _pendingAdmissionController(
           channel: guestChannel,
           keeperIdentity: () => 'keeper',
           newId: () => 'waiting-request',
         );
-        final firstKeeper = KeeperAdmissionController(
+        final firstKeeper = _keeperAdmissionController(
           channel: firstChannel,
           keeperIdentity: () => 'keeper',
         );
@@ -962,7 +1065,7 @@ void main() {
           ..present.add('guest')
           ..peer = guestChannel;
         guestChannel.peer = returningChannel;
-        final returningKeeper = KeeperAdmissionController(
+        final returningKeeper = _keeperAdmissionController(
           channel: returningChannel,
           keeperIdentity: () => 'keeper',
         );
@@ -1002,12 +1105,12 @@ void main() {
           ..present.add('guest');
         guestChannel.peer = keeperChannel;
         keeperChannel.peer = guestChannel;
-        final guest = PendingAdmissionController(
+        final guest = _pendingAdmissionController(
           channel: guestChannel,
           keeperIdentity: () => 'keeper',
           now: () => applicantNow,
         );
-        final keeper = KeeperAdmissionController(
+        final keeper = _keeperAdmissionController(
           channel: keeperChannel,
           keeperIdentity: () => 'keeper',
           sessionIdentity: 'session',
@@ -1026,7 +1129,7 @@ void main() {
         await pumpEventQueue();
         check(guest.status).equals(AdmissionStatus.approved);
 
-        final roster = ClientAdmissionRosterController(
+        final roster = _clientAdmissionRosterController(
           channel: guestChannel,
           keeperIdentity: () => 'keeper',
           sessionIdentity: 'session',
@@ -1053,12 +1156,12 @@ void main() {
       final keeperChannel = _Channel('keeper');
       guestChannel.peer = keeperChannel;
       guestChannel.present.add('keeper');
-      final guest = PendingAdmissionController(
+      final guest = _pendingAdmissionController(
         channel: guestChannel,
         keeperIdentity: () => 'keeper',
         newId: () => 'r1',
       );
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: keeperChannel,
         keeperIdentity: () => 'keeper',
       );
@@ -1093,12 +1196,12 @@ void main() {
       final keeperChannel = _Channel('keeper');
       guestChannel.peer = keeperChannel;
       guestChannel.present.add('keeper');
-      final guest = PendingAdmissionController(
+      final guest = _pendingAdmissionController(
         channel: guestChannel,
         keeperIdentity: () => 'keeper',
         newId: () => 'r1',
       );
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: keeperChannel,
         keeperIdentity: () => 'keeper',
       );
@@ -1143,12 +1246,12 @@ void main() {
       final keeperChannel = _Channel('keeper');
       guestChannel.peer = keeperChannel;
       guestChannel.present.add('keeper');
-      final guest = PendingAdmissionController(
+      final guest = _pendingAdmissionController(
         channel: guestChannel,
         keeperIdentity: () => 'keeper',
         newId: () => 'r1',
       );
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: keeperChannel,
         keeperIdentity: () => 'keeper',
       );
@@ -1176,23 +1279,26 @@ void main() {
   test(
     'admitted identity rejoins automatically after participant reload',
     () async {
-      final guestChannel = _Channel('guest');
-      final keeperChannel = _Channel('keeper');
+      var now = _fixedNow;
+      final guestChannel = _Channel('guest', now: () => now);
+      final keeperChannel = _Channel('keeper', now: () => now);
       guestChannel.peer = keeperChannel;
       keeperChannel.peer = guestChannel;
       guestChannel.present.add('keeper');
       keeperChannel.present.add('guest');
       var nextId = 0;
-      PendingAdmissionController guest() => PendingAdmissionController(
+      PendingAdmissionController guest() => _pendingAdmissionController(
         channel: guestChannel,
         keeperIdentity: () => 'keeper',
+        now: () => now,
         newId: () => 'r${++nextId}',
       );
       var participant = guest();
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: keeperChannel,
         keeperIdentity: () => 'keeper',
         sessionIdentity: 'session',
+        now: () => now,
       );
       addTearDown(() async {
         await participant.dispose();
@@ -1210,6 +1316,7 @@ void main() {
 
       keeper.setApprovalRequired(true);
       await participant.dispose();
+      now = now.add(const Duration(milliseconds: 1));
       participant = guest();
       final second = await participant.requestAdmission(displayName: 'Guest');
       await pumpEventQueue();
@@ -1229,14 +1336,17 @@ void main() {
   test(
     'a historical roster participant rejoins automatically while others wait',
     () async {
-      final channel = _Channel('keeper')..present.addAll(['guest', 'friend']);
+      var now = _fixedNow;
+      final channel = _Channel('keeper', now: () => now)
+        ..present.addAll(['guest', 'friend']);
       final store = KeeperAdmissionRosterStore()
         ..replace(const ['guest', 'friend'], 1);
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
         sessionIdentity: 'session',
         rosterStore: store,
+        now: () => now,
       );
       addTearDown(() async {
         await keeper.dispose();
@@ -1246,7 +1356,7 @@ void main() {
         id: id,
         senderIdentity: sender,
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(AdmissionProtocol.requestLifetime),
+        expiresAt: now.add(AdmissionProtocol.requestLifetime),
         displayName: sender,
       );
       final returning = request('return', 'guest');
@@ -1279,6 +1389,7 @@ void main() {
       check(keeper.roster).deepEquals(['friend', 'guest']);
 
       keeper.setDeclinedIdentities({'guest'});
+      now = now.add(const Duration(milliseconds: 1));
       final blockedReturn = request('blocked-return', 'guest');
       channel.controller.add(AdmissionPacketReceived(blockedReturn));
       await pumpEventQueue();
@@ -1294,7 +1405,7 @@ void main() {
     () async {
       final channel = _Channel('keeper');
       final store = KeeperAdmissionRosterStore()..replace(const ['guest'], 1);
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
         sessionIdentity: 'session',
@@ -1316,7 +1427,7 @@ void main() {
         id: 'return',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(AdmissionProtocol.requestLifetime),
+        expiresAt: _fixedNow.add(AdmissionProtocol.requestLifetime),
         displayName: 'Guest',
       );
 
@@ -1342,7 +1453,7 @@ void main() {
     'disconnect removes queue; resend restores it, not a superseded ID',
     () async {
       final channel = _Channel('keeper');
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
       );
@@ -1351,7 +1462,7 @@ void main() {
         await channel.dispose();
       });
       final expiration = DateTime.fromMillisecondsSinceEpoch(
-        DateTime.now().add(const Duration(minutes: 1)).millisecondsSinceEpoch,
+        _fixedNow.add(const Duration(minutes: 1)).millisecondsSinceEpoch,
       );
       AdmissionRequest request(String id, DateTime expiresAt, String sender) =>
           AdmissionRequest(
@@ -1389,15 +1500,15 @@ void main() {
     () async {
       final guestChannel = _Channel('guest');
       final keeperChannel = _Channel('keeper');
-      final fixedNow = DateTime.now();
+      final fixedNow = _fixedNow;
       var nextId = 0;
-      final guest = PendingAdmissionController(
+      final guest = _pendingAdmissionController(
         channel: guestChannel,
         keeperIdentity: () => 'keeper',
         now: () => fixedNow,
         newId: () => 'r${++nextId}',
       );
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: keeperChannel,
         keeperIdentity: () => 'keeper',
       );
@@ -1421,7 +1532,7 @@ void main() {
     'decision send failure retains queue and blocks simultaneous decisions',
     () async {
       final channel = _Channel('keeper');
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
       );
@@ -1433,7 +1544,7 @@ void main() {
         id: 'r1',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
         displayName: 'Guest',
       );
       channel.controller.add(AdmissionPacketReceived(request));
@@ -1458,7 +1569,7 @@ void main() {
     'older in-flight decision cannot remove or answer newer request',
     () async {
       final channel = _Channel('keeper');
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
       );
@@ -1466,7 +1577,7 @@ void main() {
         await keeper.dispose();
         await channel.dispose();
       });
-      final expiration = DateTime.now().add(const Duration(minutes: 1));
+      final expiration = _fixedNow.add(const Duration(minutes: 1));
       AdmissionRequest request(String id, DateTime expiresAt) =>
           AdmissionRequest(
             id: id,
@@ -1552,7 +1663,7 @@ void main() {
     'keeper waits for joined receipt and ignores wrong or late outcomes',
     () async {
       final channel = _Channel('keeper');
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
       );
@@ -1564,7 +1675,7 @@ void main() {
         id: 'r1',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
         displayName: 'Guest',
       );
       final receipt = AdmissionProtocol.joined(request);
@@ -1647,7 +1758,7 @@ void main() {
     'receipt arriving during approval send is applied after approval',
     () async {
       final channel = _Channel('keeper');
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
       );
@@ -1659,7 +1770,7 @@ void main() {
         id: 'r1',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
         displayName: 'Guest',
       );
       channel.controller.add(AdmissionPacketReceived(request));
@@ -1675,7 +1786,7 @@ void main() {
     'disconnect during approval still accepts the normal-room receipt',
     () async {
       final channel = _Channel('keeper');
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
       );
@@ -1687,7 +1798,7 @@ void main() {
         id: 'r1',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
         displayName: 'Guest',
       );
       channel.controller.add(AdmissionPacketReceived(request));
@@ -1710,7 +1821,7 @@ void main() {
     'failed decision after disconnect does not leave a ghost attempt',
     () async {
       final channel = _Channel('keeper');
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
       );
@@ -1722,7 +1833,7 @@ void main() {
         id: 'r1',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
         displayName: 'Guest',
       );
       channel.controller.add(AdmissionPacketReceived(request));
@@ -1745,7 +1856,7 @@ void main() {
       fakeAsync((async) {
         final now = async.getClock(DateTime.utc(2026));
         final channel = _Channel('keeper');
-        final keeper = KeeperAdmissionController(
+        final keeper = _keeperAdmissionController(
           channel: channel,
           keeperIdentity: () => 'keeper',
           now: now.now,
@@ -1787,7 +1898,7 @@ void main() {
       final start = DateTime.utc(2026);
       final clock = async.getClock(start);
       final channel = _Channel('keeper');
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
         now: clock.now,
@@ -1889,7 +2000,7 @@ void main() {
     () async {
       final channel = _Channel('guest');
       channel.present.add('keeper');
-      final guest = PendingAdmissionController(
+      final guest = _pendingAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
         newId: () => 'r1',
@@ -1923,7 +2034,7 @@ void main() {
 
   test('keeper publishes roster update after a joined receipt', () async {
     final channel = _Channel('keeper')..present.add('guest');
-    final keeper = KeeperAdmissionController(
+    final keeper = _keeperAdmissionController(
       channel: channel,
       keeperIdentity: () => 'keeper',
       sessionIdentity: 'session',
@@ -1938,7 +2049,7 @@ void main() {
       id: 'request',
       senderIdentity: 'guest',
       recipientIdentity: 'keeper',
-      expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+      expiresAt: _fixedNow.add(const Duration(minutes: 1)),
       displayName: 'Guest',
     );
     channel.controller.add(AdmissionPacketReceived(request));
@@ -1959,7 +2070,7 @@ void main() {
     final channel = _Channel('keeper')..present.addAll(['member', 'applicant']);
     final store = KeeperAdmissionRosterStore(keeperGeneration: 'generation')
       ..replace(const ['member'], 1);
-    final keeper = KeeperAdmissionController(
+    final keeper = _keeperAdmissionController(
       channel: channel,
       keeperIdentity: () => 'keeper',
       sessionIdentity: 'session',
@@ -1982,7 +2093,7 @@ void main() {
           id: 'applicant-request',
           senderIdentity: 'applicant',
           recipientIdentity: 'keeper',
-          expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+          expiresAt: _fixedNow.add(const Duration(minutes: 1)),
           sessionIdentity: 'session',
         ),
       ),
@@ -1999,7 +2110,7 @@ void main() {
       id: 'join-request',
       senderIdentity: 'applicant',
       recipientIdentity: 'keeper',
-      expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+      expiresAt: _fixedNow.add(const Duration(minutes: 1)),
       displayName: 'Applicant',
     );
     channel.controller.add(AdmissionPacketReceived(request));
@@ -2021,7 +2132,7 @@ void main() {
     () async {
       final channel = _Channel('guest')..present.add('keeper');
       var nextId = 0;
-      final client = ClientAdmissionRosterController(
+      final client = _clientAdmissionRosterController(
         channel: channel,
         keeperIdentity: () => 'keeper',
         sessionIdentity: 'session',
@@ -2031,7 +2142,7 @@ void main() {
         await client.dispose();
         await channel.dispose();
       });
-      final expiry = DateTime.now().add(const Duration(minutes: 1));
+      final expiry = _fixedNow.add(const Duration(minutes: 1));
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionRosterSnapshot(
@@ -2172,7 +2283,7 @@ void main() {
       final store = KeeperAdmissionRosterStore(keeperGeneration: 'generation')
         ..replace(const ['guest'], 2);
       final firstChannel = _Channel('keeper');
-      final first = KeeperAdmissionController(
+      final first = _keeperAdmissionController(
         channel: firstChannel,
         keeperIdentity: () => 'keeper',
         sessionIdentity: 'session',
@@ -2186,7 +2297,7 @@ void main() {
             id: 'return',
             senderIdentity: 'guest',
             recipientIdentity: 'keeper',
-            expiresAt: DateTime.now().add(AdmissionProtocol.requestLifetime),
+            expiresAt: _fixedNow.add(AdmissionProtocol.requestLifetime),
             displayName: 'Guest',
           ),
         ),
@@ -2197,7 +2308,7 @@ void main() {
       await firstChannel.dispose();
 
       final nextChannel = _Channel('keeper');
-      final next = KeeperAdmissionController(
+      final next = _keeperAdmissionController(
         channel: nextChannel,
         keeperIdentity: () => 'keeper',
         sessionIdentity: 'session',
@@ -2219,7 +2330,7 @@ void main() {
     () async {
       final channel = _Channel('guest')..present.add('keeper');
       var nextId = 0;
-      final client = ClientAdmissionRosterController(
+      final client = _clientAdmissionRosterController(
         channel: channel,
         keeperIdentity: () => 'keeper',
         sessionIdentity: 'session',
@@ -2229,7 +2340,7 @@ void main() {
         await client.dispose();
         await channel.dispose();
       });
-      final expiry = DateTime.now().add(const Duration(minutes: 1));
+      final expiry = _fixedNow.add(const Duration(minutes: 1));
       final update = AdmissionRosterUpdated(
         id: 'update-first',
         senderIdentity: 'keeper',
@@ -2284,7 +2395,7 @@ void main() {
       final clock = async.getClock(DateTime.utc(2026));
       final channel = _Channel('guest', now: clock.now)..present.add('keeper');
       var nextId = 0;
-      final client = ClientAdmissionRosterController(
+      final client = _clientAdmissionRosterController(
         channel: channel,
         keeperIdentity: () => 'keeper',
         sessionIdentity: 'session',
@@ -2332,7 +2443,7 @@ void main() {
     final channel = _Channel('guest')..present.add('keeper');
     var nextId = 0;
     channel.beforeSend = (_) async => throw StateError('offline');
-    final client = ClientAdmissionRosterController(
+    final client = _clientAdmissionRosterController(
       channel: channel,
       keeperIdentity: () => 'keeper',
       sessionIdentity: 'session',
@@ -2352,10 +2463,12 @@ void main() {
   test(
     'permanent denial saves before sending and remains retryable on failure',
     () async {
-      final channel = _Channel('keeper');
-      final keeper = KeeperAdmissionController(
+      var now = _fixedNow;
+      final channel = _Channel('keeper', now: () => now);
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
+        now: () => now,
       );
       addTearDown(() async {
         await keeper.dispose();
@@ -2365,7 +2478,7 @@ void main() {
         id: id,
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        expiresAt: now.add(const Duration(minutes: 1)),
         displayName: 'Guest',
       );
 
@@ -2385,6 +2498,7 @@ void main() {
         channel.sent.whereType<AdmissionDecision>().single.approved,
       ).isFalse();
 
+      now = now.add(const Duration(milliseconds: 1));
       final second = request('second');
       channel.controller.add(AdmissionPacketReceived(second));
       await check(
@@ -2407,7 +2521,7 @@ void main() {
 
   test('blocked identities are denied automatically until removed', () async {
     final channel = _Channel('keeper');
-    final keeper = KeeperAdmissionController(
+    final keeper = _keeperAdmissionController(
       channel: channel,
       keeperIdentity: () => 'keeper',
       declinedIdentities: {'guest'},
@@ -2420,7 +2534,7 @@ void main() {
       id: id,
       senderIdentity: 'guest',
       recipientIdentity: 'keeper',
-      expiresAt: DateTime.now().add(Duration(minutes: offset)),
+      expiresAt: _fixedNow.add(Duration(minutes: offset)),
       displayName: 'Guest',
     );
 
@@ -2463,7 +2577,7 @@ void main() {
     'blocklist updates override open admission and reject a superseded save',
     () async {
       final channel = _Channel('keeper');
-      final keeper = KeeperAdmissionController(
+      final keeper = _keeperAdmissionController(
         channel: channel,
         keeperIdentity: () => 'keeper',
         approvalRequired: false,
@@ -2476,7 +2590,7 @@ void main() {
         id: 'first',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
         displayName: 'Guest',
       );
       keeper.setDeclinedIdentities({'guest'});
@@ -2494,7 +2608,7 @@ void main() {
         id: 'pending',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 2)),
+        expiresAt: _fixedNow.add(const Duration(minutes: 2)),
         displayName: 'Guest',
       );
       channel.controller.add(AdmissionPacketReceived(pending));
@@ -2508,7 +2622,7 @@ void main() {
         id: 'replacement',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: DateTime.now().add(const Duration(minutes: 3)),
+        expiresAt: _fixedNow.add(const Duration(minutes: 3)),
         displayName: 'Guest',
       );
       channel.controller.add(AdmissionPacketReceived(replacement));

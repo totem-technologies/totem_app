@@ -185,7 +185,6 @@ class _SuccessfulSessionController extends SessionController {
   Future<SessionJoinResult> activateConnectedRoom({
     required Room room,
     SessionJoinMedia? joinMedia,
-    bool Function(String identity)? isAdmitted,
   }) async {
     receivedMedia = joinMedia;
     activatedRoom = room;
@@ -243,7 +242,6 @@ class _FatalSessionController extends _RetryableSessionController {
   Future<SessionJoinResult> activateConnectedRoom({
     required Room room,
     SessionJoinMedia? joinMedia,
-    bool Function(String identity)? isAdmitted,
   }) async {
     joinMedia?.onBeforeDispose?.call();
     await JoinMediaOwner().retain(joinMedia).dispose();
@@ -262,6 +260,7 @@ class _AdmissionTransport extends LiveKitAdmissionTransport {
   AdmissionRequest? request;
   bool disposed = false;
   bool ended = false;
+  bool endWhenRequestSent = false;
   bool keepEventsOpenAfterDispose = false;
 
   @override
@@ -285,7 +284,10 @@ class _AdmissionTransport extends LiveKitAdmissionTransport {
 
   @override
   Future<void> send(AdmissionPacket packet) async {
-    if (packet is AdmissionRequest) request = packet;
+    if (packet is AdmissionRequest) {
+      request = packet;
+      if (endWhenRequestSent) end();
+    }
   }
 
   void decide(bool approved) {
@@ -314,15 +316,19 @@ class _AdmissionTransport extends LiveKitAdmissionTransport {
 class _AdmissionRoom extends Room {
   bool disconnected = false;
   bool disposed = false;
+  bool throwOnDisconnect = false;
+  bool throwOnDispose = false;
 
   @override
   Future<void> disconnect() async {
     disconnected = true;
+    if (throwOnDisconnect) throw StateError('Admission room disconnect failed');
   }
 
   @override
-  Future<bool> dispose() {
+  Future<bool> dispose() async {
     disposed = true;
+    if (throwOnDispose) throw StateError('Admission room dispose failed');
     return super.dispose();
   }
 }
@@ -331,6 +337,7 @@ class _AdmissionFlow extends PreJoinFlowController {
   static _AdmissionTransport? transport;
   static int connections = 0;
   static bool failConnection = false;
+  static bool endWhenRequestSent = false;
   static Completer<void>? connectionStarted;
   static Completer<void>? connectionGate;
   static _AdmissionRoom? room;
@@ -340,7 +347,8 @@ class _AdmissionFlow extends PreJoinFlowController {
 
   @override
   LiveKitAdmissionTransport createAdmissionTransport(Room room) =>
-      transport = _AdmissionTransport(room);
+      (transport = _AdmissionTransport(room))
+        ..endWhenRequestSent = endWhenRequestSent;
 
   @override
   Future<void> connectAdmissionRoom(Room room, String token) async {
@@ -762,6 +770,82 @@ void main() {
     verify(factory.videoTracks.single.dispose).called(1);
     verify(factory.audioTracks.single.dispose).called(1);
   });
+
+  test(
+    'room cleanup errors do not override a denied admission outcome',
+    () async {
+      final factory = _TrackFactory();
+      final container = _container(
+        factory: factory,
+        response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+        sessionController: _SuccessfulSessionController.new,
+        keeperSlug: 'keeper',
+        flowController: _AdmissionFlow.new,
+      );
+      addTearDown(container.dispose);
+      await _waitForMedia(container);
+
+      final flow = container.read(
+        preJoinFlowControllerProvider(_slug).notifier,
+      );
+      check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+      final room = _AdmissionFlow.room!
+        ..throwOnDisconnect = true
+        ..throwOnDispose = true;
+      _AdmissionFlow.transport!.decide(false);
+      await pumpEventQueue();
+
+      final state = container.read(preJoinFlowControllerProvider(_slug));
+      check(room.disconnected).isTrue();
+      check(room.disposed).isTrue();
+      check(state.phase).equals(PreJoinFlowPhase.idle);
+      check(state.admissionStatus).equals(AdmissionStatus.denied);
+      check(state.error).isNull();
+      verify(factory.videoTracks.single.dispose).called(1);
+      verify(factory.audioTracks.single.dispose).called(1);
+    },
+  );
+
+  test(
+    'a synchronously ended admission publishes one terminal transition',
+    () async {
+      _AdmissionFlow.endWhenRequestSent = true;
+      final container = _container(
+        factory: _TrackFactory(),
+        response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+        sessionController: _SuccessfulSessionController.new,
+        keeperSlug: 'keeper',
+        flowController: _AdmissionFlow.new,
+      );
+      addTearDown(() {
+        _AdmissionFlow.endWhenRequestSent = false;
+        container.dispose();
+      });
+      await _waitForMedia(container);
+      var endedTransitions = 0;
+      final subscription = container.listen<PreJoinFlowState>(
+        preJoinFlowControllerProvider(_slug),
+        (_, next) {
+          if (next.admissionStatus == AdmissionStatus.ended) {
+            endedTransitions++;
+          }
+        },
+      );
+      addTearDown(subscription.close);
+
+      final flow = container.read(
+        preJoinFlowControllerProvider(_slug).notifier,
+      );
+      final joining = flow.requestJoin();
+      check(await joining).equals(PreJoinJoinOutcome.ignored);
+      await pumpEventQueue();
+
+      check(endedTransitions).equals(1);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
+      ).equals(AdmissionStatus.ended);
+    },
+  );
 
   test(
     'room ended while waiting releases preview and prevents another join',

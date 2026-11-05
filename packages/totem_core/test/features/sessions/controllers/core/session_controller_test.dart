@@ -1407,6 +1407,98 @@ void main() {
       });
 
       test(
+        'retries failed remote subscriptions without clearing a newer attempt',
+        () async {
+          const eventSlug = 'test-session';
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final firstAttempt = Completer<void>();
+          final secondAttempt = Completer<void>();
+          var subscribeAttempts = 0;
+          final publication = MockRemoteTrackPublication<RemoteTrack>();
+          when(publication.subscribe).thenAnswer((_) {
+            subscribeAttempts++;
+            return switch (subscribeAttempts) {
+              1 => firstAttempt.future,
+              2 => secondAttempt.future,
+              _ => Future.value(),
+            };
+          });
+          final participant = _RemoteParticipantWithPublications(
+            'remote',
+            'Remote',
+            [publication],
+          );
+          final localParticipant = MockLocalParticipant();
+          when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+          final room = _CountingRoom(
+            localParticipant,
+            remoteParticipantMap: {'remote': participant},
+          );
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(subscription.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+
+          check(
+            await controller.activateConnectedRoom(room: room),
+          ).equals(SessionJoinResult.success);
+          await pumpEventQueue();
+          check(subscribeAttempts).equals(1);
+
+          await room.listener.trigger(
+            TrackUnpublishedEvent(
+              participant: participant,
+              publication: publication,
+            ),
+          );
+          await room.listener.trigger(
+            TrackPublishedEvent(
+              participant: participant,
+              publication: publication,
+            ),
+          );
+          await pumpEventQueue();
+          check(subscribeAttempts).equals(2);
+
+          firstAttempt.completeError(StateError('first subscription failed'));
+          await pumpEventQueue();
+          await room.listener.trigger(
+            TrackPublishedEvent(
+              participant: participant,
+              publication: publication,
+            ),
+          );
+          await pumpEventQueue();
+          check(subscribeAttempts).equals(2);
+
+          secondAttempt.completeError(StateError('second subscription failed'));
+          await pumpEventQueue();
+          await room.listener.trigger(
+            TrackPublishedEvent(
+              participant: participant,
+              publication: publication,
+            ),
+          );
+          await pumpEventQueue();
+          check(subscribeAttempts).equals(3);
+        },
+      );
+
+      test(
         'limits participant media to the keeper and admitted roster',
         () async {
           const eventSlug = 'test-session';
@@ -1647,8 +1739,16 @@ void main() {
           sessionControllerProvider(options).notifier,
         );
         final localParticipant = MockLocalParticipant('keeper');
+        final admittedParticipant = _RemoteParticipantWithPublications(
+          'admitted',
+          'Admitted',
+          const [],
+        );
         when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
-        final room = _CountingRoom(localParticipant);
+        final room = _CountingRoom(
+          localParticipant,
+          remoteParticipantMap: {'admitted': admittedParticipant},
+        );
         controller.applyRoomState(roomState);
 
         check(
@@ -1657,6 +1757,12 @@ void main() {
         await pumpEventQueue();
         reconcilePolls = 0;
         controller.updateAdmittedMediaRecipients({'admitted'});
+        await pumpEventQueue();
+        check(reconcilePolls).equals(1);
+
+        controller.updateAdmittedMediaRecipients({'admitted'});
+        await pumpEventQueue();
+        check(reconcilePolls).equals(1);
 
         await room.listener.trigger(
           ParticipantConnectedEvent(
@@ -1664,7 +1770,7 @@ void main() {
           ),
         );
         await pumpEventQueue();
-        check(reconcilePolls).equals(0);
+        check(reconcilePolls).equals(1);
 
         await room.listener.trigger(
           ParticipantConnectedEvent(
@@ -1672,7 +1778,7 @@ void main() {
           ),
         );
         await pumpEventQueue();
-        check(reconcilePolls).equals(1);
+        check(reconcilePolls).equals(2);
       });
 
       test('join only calls room.connect once while connecting', () async {

@@ -197,7 +197,10 @@ class _PendingSessionController extends SessionController {
       joinCompleter!.future;
 }
 
-SessionDetailSchema _event({DateTime? start}) => SessionDetailSchema(
+SessionDetailSchema _event({
+  DateTime? start,
+  List<NextSessionSchema>? nextEvents,
+}) => SessionDetailSchema(
   slug: _slug,
   title: 'Test session',
   space: MobileSpaceDetailSchema(
@@ -216,7 +219,7 @@ SessionDetailSchema _event({DateTime? start}) => SessionDetailSchema(
     subscribers: 0,
     recurring: null,
     price: 0,
-    nextEvents: const [],
+    nextEvents: nextEvents ?? const [],
   ),
   content: 'A quiet space to connect and reflect.',
   seatsLeft: 4,
@@ -236,6 +239,22 @@ SessionDetailSchema _event({DateTime? start}) => SessionDetailSchema(
   userTimezone: null,
   meetingProvider: MeetingProviderEnum.livekit,
 );
+
+NextSessionSchema _nextSession({String slug = 'next-session'}) =>
+    NextSessionSchema(
+      slug: slug,
+      start: DateTime.now().add(const Duration(days: 1)),
+      link: '',
+      title: 'Next session',
+      seatsLeft: 4,
+      duration: 60,
+      meetingProvider: MeetingProviderEnum.livekit,
+      calLink: '',
+      attending: false,
+      cancelled: false,
+      open: true,
+      joinable: true,
+    );
 
 void main() {
   late VoidCallback restoreWebRtcChannels;
@@ -274,6 +293,7 @@ void main() {
 
     Future<JoinResponse> Function()? getSessionToken,
     Future<SessionDetailSchema> Function()? getSession,
+    Future<bool> Function()? confirmRsvp,
     DateTime Function()? now,
     PreJoinPreviewTrackFactory? trackFactory,
     PreJoinFlowController Function()? flowController,
@@ -308,6 +328,10 @@ void main() {
             (ref) => Stream.value(initiallyOffline),
           ),
           getRecommendedSessionsProvider(limit: 1).overrideWith((_) => []),
+          if (confirmRsvp != null)
+            rsvpConfirmProvider('next-session').overrideWith(
+              (_) => confirmRsvp(),
+            ),
           sessionTokenProvider(_slug).overrideWith((_) {
             if (getSessionToken != null) return getSessionToken();
             // ApiError is the generated client's failure value and deliberately
@@ -716,6 +740,99 @@ void main() {
       check(factory.videoTracks).isEmpty();
     });
   }
+
+  testWidgets('declined offer sign-up is busy then confirms its RSVP', (
+    tester,
+  ) async {
+    final confirmation = Completer<bool>();
+    var confirmations = 0;
+    var offer = _nextSession();
+    await pumpScreen(
+      tester,
+      terminalAdmissionStatus: AdmissionStatus.denied,
+      getSession: () async => _event(nextEvents: [offer]),
+      confirmRsvp: () {
+        confirmations++;
+        return confirmation.future;
+      },
+    );
+
+    await tester.tap(find.text('Sign up'));
+    await tester.pump();
+    await tester.tap(find.text('Signing up…'));
+
+    check(confirmations).equals(1);
+    check(find.text('Signing up…').evaluate()).isNotEmpty();
+
+    confirmation.complete(true);
+    await tester.pump();
+
+    check(find.text("You're signed up").evaluate()).isNotEmpty();
+
+    offer = _nextSession(slug: 'replacement-session');
+    ProviderScope.containerOf(
+      tester.element(find.byType(PreJoinScreen)),
+    ).invalidate(sessionProvider(_slug));
+    await tester.pump();
+    await tester.pump();
+
+    check(find.text("You're signed up").evaluate()).isEmpty();
+    check(find.text('Sign up').evaluate()).isNotEmpty();
+  });
+
+  testWidgets(
+    'declined offer sign-up failure shows an error and permits retry',
+    (
+      tester,
+    ) async {
+      var confirmations = 0;
+      await pumpScreen(
+        tester,
+        terminalAdmissionStatus: AdmissionStatus.denied,
+        getSession: () async => _event(nextEvents: [_nextSession()]),
+        confirmRsvp: () async {
+          confirmations++;
+          return false;
+        },
+      );
+
+      await tester.tap(find.text('Sign up'));
+      await tester.pump();
+
+      check(find.text('Failed to attend').evaluate()).isNotEmpty();
+      await tester.tap(find.text('Sign up'));
+      await tester.pump();
+
+      check(confirmations).equals(2);
+    },
+  );
+
+  testWidgets(
+    'declined offer sign-up exception shows an error and permits retry',
+    (tester) async {
+      var confirmations = 0;
+      await pumpScreen(
+        tester,
+        terminalAdmissionStatus: AdmissionStatus.denied,
+        getSession: () async => _event(nextEvents: [_nextSession()]),
+        confirmRsvp: () async {
+          confirmations++;
+          if (confirmations == 1) throw StateError('offline');
+          return true;
+        },
+      );
+
+      await tester.tap(find.text('Sign up'));
+      await tester.pump();
+
+      check(find.text('Failed to attend').evaluate()).isNotEmpty();
+      await tester.tap(find.text('Sign up'));
+      await tester.pump();
+
+      check(confirmations).equals(2);
+      check(find.text("You're signed up").evaluate()).isNotEmpty();
+    },
+  );
 
   for (final size in [
     const Size(360, 800),

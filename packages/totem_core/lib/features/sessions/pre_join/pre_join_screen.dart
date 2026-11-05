@@ -37,6 +37,7 @@ import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 Future<bool> showAlreadyPresentDialog(BuildContext context) async {
@@ -86,6 +87,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   bool _leavingWaiting = false;
   bool _wakeLockEnabled = false;
   bool _wakeLockRequested = false;
+  bool _signingUpForOffer = false;
+  String? _signedUpOfferSlug;
+  final _notificationController = NotificationController();
   Future<void> _wakeLockOperation = Future.value();
   PreJoinMediaController? _mediaController;
   bool _terminalMediaReleaseRequested = false;
@@ -106,6 +110,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _joinWindowTimer?.cancel();
+    _notificationController.dispose();
     if (!_joined) {
       unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     }
@@ -207,6 +212,43 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     final _ = await ref.refresh(sessionProvider(widget.sessionSlug).future);
   }
 
+  Future<void> _signUpForOffer(String sessionSlug) async {
+    if (_signingUpForOffer || !mounted) return;
+    setState(() => _signingUpForOffer = true);
+    try {
+      final attending = await ref.refresh(
+        rsvpConfirmProvider(sessionSlug).future,
+      );
+      if (!mounted) return;
+      setState(() {
+        _signingUpForOffer = false;
+        _signedUpOfferSlug = attending ? sessionSlug : null;
+      });
+      if (!attending) {
+        _notificationController.showError(
+          context,
+          icon: TotemIcons.spaces,
+          title: 'Failed to attend',
+          message: 'Please try again later',
+        );
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to attend session',
+      );
+      if (!mounted) return;
+      setState(() => _signingUpForOffer = false);
+      _notificationController.showError(
+        context,
+        icon: TotemIcons.spaces,
+        title: 'Failed to attend',
+        message: 'Please try again later',
+      );
+    }
+  }
+
   void _scheduleJoinWindow(SessionDetailSchema session) {
     final start = session.start.toLocal().subtract(const Duration(minutes: 10));
     if (_joinWindowStart == start) return;
@@ -240,7 +282,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       child: SafeArea(
         child: SessionDeclinedView(
           message: message,
-          actionLabel: 'View Session',
+          actionLabel: _signingUpForOffer ? 'Signing up…' : 'Sign up',
           offer: offer == null
               ? null
               : Text(
@@ -251,11 +293,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
               : () => context.go(
                   RouteNames.spaceSession(session.space.slug, offer.slug),
                 ),
-          onSignUp: offer == null
+          signedUp:
+              (offer?.attending ?? false) || offer?.slug == _signedUpOfferSlug,
+          onSignUp: offer == null || offer.attending || _signingUpForOffer
               ? null
-              : () => context.go(
-                  RouteNames.spaceSession(session.space.slug, offer.slug),
-                ),
+              : () => unawaited(_signUpForOffer(offer.slug)),
           onBackToSpace: () => TotemRouter.instance.popOrHome(context),
         ),
       ),
