@@ -3,7 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
-import 'package:totem_core/shared/widgets/viewport_resolver.dart';
+import 'package:totem_core/shared/widgets/totem_dialog_layout.dart';
 
 enum ConfirmationDialogType { destructive, standard }
 
@@ -73,128 +73,79 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
     final iconSize = MediaQuery.textScalerOf(context).scale(widget.iconSize);
     return PopScope(
       canPop: !_anyButtonBusy,
-      child: ViewportResolver(
-        builder: (context, viewportKind) {
-          final contentPadding = switch (viewportKind) {
-            ViewportKind.mediumSmall ||
-            ViewportKind.mediumPlus => const EdgeInsetsDirectional.symmetric(
-              horizontal: 40,
-              vertical: 24,
-            ),
-            _ => const EdgeInsetsDirectional.symmetric(
-              horizontal: 24,
-              vertical: 28,
-            ),
-          };
-          return AlertDialog(
-            scrollable: widget.scrollable,
-            constraints: const BoxConstraints(maxWidth: 480),
-            contentPadding: contentPadding,
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 20,
-              children: [
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: 10,
-                  children: [
-                    if (widget.icon != null)
-                      TotemIcon(
-                        widget.icon!,
-                        size: iconSize,
-                        color: switch (widget.type) {
-                          ConfirmationDialogType.destructive => Colors.red,
-                          ConfirmationDialogType.standard =>
-                            theme.colorScheme.primary,
-                        },
-                      )
-                    else if (widget.iconWidget != null)
-                      SizedBox.square(
-                        dimension: iconSize,
-                        child: Center(child: widget.iconWidget),
-                      ),
-                    Semantics(
-                      header: true,
-                      namesRoute: true,
-                      child: Text(
-                        widget.title,
-                        textAlign: TextAlign.center,
-                        style:
-                            (theme.dialogTheme.titleTextStyle ??
-                                    theme.textTheme.titleLarge)
-                                ?.copyWith(
-                                  color: theme.colorScheme.onSurface,
-                                  fontSize: 18,
-                                ),
-                      ),
-                    ),
-                    if (widget.contentSpan case final contentSpan?)
-                      Text.rich(
-                        contentSpan,
-                        textAlign: TextAlign.center,
-                        style: widget.contentStyle?.copyWith(
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      )
-                    else if (widget.content != null)
-                      Text(
-                        widget.content!,
-                        textAlign: TextAlign.center,
-                        style: widget.contentStyle?.copyWith(
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                    if (widget.contentWidget != null) widget.contentWidget!,
-                  ],
-                ),
-
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: 10,
-                  children: [
-                    ConfirmationDialogButton.elevated(
-                      onBusyChanged: _onBusyChanged,
-                      disabled: _anyButtonBusy,
-                      onConfirm: widget.onConfirm,
-                      type: widget.type,
-                      autofocus: switch (widget.type) {
-                        ConfirmationDialogType.standard => true,
-                        _ => false,
-                      },
-                      child: Text(
-                        widget.confirmButtonText,
-                        maxLines: 1,
-                        overflow: TextOverflow.fade,
-                      ),
-                    ),
-                    ...widget.extraButtons.map(
-                      (b) => b._withBusyChanged(
-                        onBusyChanged: _onBusyChanged,
-                        disabled: _anyButtonBusy,
-                      ),
-                    ),
-                    if (widget.showCancel)
-                      ConfirmationDialogButton.outlined(
-                        autofocus: switch (widget.type) {
-                          ConfirmationDialogType.destructive => true,
-                          _ => false,
-                        },
-                        disabled: _anyButtonBusy,
-                        onConfirm: () async => Navigator.of(context).pop(),
-                        child: const Text(
-                          'Cancel',
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          );
+      child: TotemDialogLayout(
+        scrollable: widget.scrollable,
+        icon: switch ((widget.icon, widget.iconWidget)) {
+          (final icon?, _) => TotemIcon(
+            icon,
+            size: iconSize,
+            color: switch (widget.type) {
+              ConfirmationDialogType.destructive => Colors.red,
+              ConfirmationDialogType.standard => theme.colorScheme.primary,
+            },
+          ),
+          (_, final iconWidget?) => SizedBox.square(
+            dimension: iconSize,
+            child: Center(child: iconWidget),
+          ),
+          _ => null,
         },
+        title: widget.title,
+        body: [
+          if (widget.contentSpan case final contentSpan?)
+            Text.rich(
+              contentSpan,
+              textAlign: TextAlign.center,
+              style: widget.contentStyle?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            )
+          else if (widget.content != null)
+            Text(
+              widget.content!,
+              textAlign: TextAlign.center,
+              style: widget.contentStyle?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          if (widget.contentWidget != null) widget.contentWidget!,
+        ],
+        actions: [
+          ConfirmationDialogButton.elevated(
+            onBusyChanged: _onBusyChanged,
+            disabled: _anyButtonBusy,
+            onConfirm: widget.onConfirm,
+            type: widget.type,
+            autofocus: switch (widget.type) {
+              ConfirmationDialogType.standard => true,
+              _ => false,
+            },
+            child: Text(
+              widget.confirmButtonText,
+              maxLines: 1,
+              overflow: TextOverflow.fade,
+            ),
+          ),
+          ...widget.extraButtons.map(
+            (b) => b._withBusyChanged(
+              onBusyChanged: _onBusyChanged,
+              disabled: _anyButtonBusy,
+            ),
+          ),
+          if (widget.showCancel)
+            ConfirmationDialogButton.outlined(
+              autofocus: switch (widget.type) {
+                ConfirmationDialogType.destructive => true,
+                _ => false,
+              },
+              disabled: _anyButtonBusy,
+              onConfirm: () async => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                textAlign: TextAlign.center,
+              ),
+            ),
+        ],
       ),
     );
   }
