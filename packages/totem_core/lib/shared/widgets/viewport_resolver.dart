@@ -6,6 +6,9 @@ enum ViewportKind {
   mediumSmall,
   mediumPlus;
 
+  /// Phone-sized: shortest side of 600dp or less, in either orientation.
+  bool get isSmall => this == smallPortrait || this == smallLandscape;
+
   bool get isLarge =>
       this == smallLandscape || this == mediumPlus || this == mediumSmall;
 }
