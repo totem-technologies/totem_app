@@ -29,6 +29,7 @@ class SessionDeviceState {
     required this.isCameraEnabled,
     this.supportsAudioOutputSelection = true,
     this.supportsAudioOutputChooser = false,
+    this.audioRouteRevision = 0,
     this.isMicrophoneOn = false,
     this.isCameraOn = false,
     this.hasMicrophoneTrack = false,
@@ -44,6 +45,7 @@ class SessionDeviceState {
   final bool isCameraEnabled;
   final bool supportsAudioOutputSelection;
   final bool supportsAudioOutputChooser;
+  final int audioRouteRevision;
 
   /// What the microphone and camera controls show: the track's state, or what
   /// joining will do until the track is first published.
@@ -76,6 +78,7 @@ class SessionDeviceState {
         other.isCameraEnabled == isCameraEnabled &&
         other.supportsAudioOutputSelection == supportsAudioOutputSelection &&
         other.supportsAudioOutputChooser == supportsAudioOutputChooser &&
+        other.audioRouteRevision == audioRouteRevision &&
         other.isMicrophoneOn == isMicrophoneOn &&
         other.isCameraOn == isCameraOn &&
         other.hasMicrophoneTrack == hasMicrophoneTrack &&
@@ -93,6 +96,7 @@ class SessionDeviceState {
     isCameraEnabled,
     supportsAudioOutputSelection,
     supportsAudioOutputChooser,
+    audioRouteRevision,
     isMicrophoneOn,
     isCameraOn,
     hasMicrophoneTrack,
@@ -131,6 +135,7 @@ class SessionDeviceController extends _$SessionDeviceController {
       isCameraEnabled: isCameraEnabled,
       supportsAudioOutputSelection: media.supportsAudioOutputSelection,
       supportsAudioOutputChooser: media.supportsAudioOutputChooser,
+      audioRouteRevision: _audioRouteRevision,
       isMicrophoneOn: _microphoneWasPublished
           ? media.isMicrophoneEnabled
           : session.shouldEnableMicrophone(),
@@ -366,6 +371,7 @@ class SessionDeviceController extends _$SessionDeviceController {
   bool _disposed = false;
   bool _userSpeakerPreference = true;
   bool _hasExternalOutput = false;
+  int _audioRouteRevision = 0;
   bool _audioRouteNotificationsEnabled = false;
   bool? _systemSpeakerphoneEnabled;
   Future<void> _speakerphoneQueue = Future.value();
@@ -415,8 +421,8 @@ class SessionDeviceController extends _$SessionDeviceController {
   }
 
   Future<void> _setupDeviceChangeListener(int generation) async {
-    if (kIsWeb) return;
     try {
+      if (kIsWeb) return;
       final session = await audio.AudioSession.instance;
       if (!_isDeviceListenerSetupCurrent(generation)) return;
       await _refreshSpeakerphoneState();
@@ -443,8 +449,7 @@ class SessionDeviceController extends _$SessionDeviceController {
       _becomingNoisySubscription = session.becomingNoisyEventStream.listen((_) {
         if (!_isDeviceListenerSetupCurrent(generation)) return;
         logger.i('Headphones unplugged, restoring to speaker.');
-        _hasExternalOutput = false;
-        unawaited(_autoSetSpeakerphone(true));
+        unawaited(handleExternalOutputChanged(false));
       });
 
       _devicesChangedSubscription = session.devicesChangedEventStream.listen((
@@ -458,15 +463,16 @@ class SessionDeviceController extends _$SessionDeviceController {
             .where((d) => d.isOutput)
             .any((d) => externalAudioOutputTypes.contains(d.type));
 
-        if (addedExternal) {
+        if (addedExternal && removedExternal && _hasExternalOutput) {
+          _audioRouteRevision++;
+          _emitState();
+        } else if (addedExternal) {
           logger.i('External audio output connected, routing to headphones.');
-          _hasExternalOutput = true;
           // Remove speaker override so OS routes to the newly connected device.
-          unawaited(_autoSetSpeakerphone(false));
+          unawaited(handleExternalOutputChanged(true));
         } else if (removedExternal) {
           logger.i('External audio output disconnected, switching to speaker.');
-          _hasExternalOutput = false;
-          unawaited(_autoSetSpeakerphone(true));
+          unawaited(handleExternalOutputChanged(false));
         } else {
           unawaited(_refreshSpeakerphoneState());
           _emitState();
@@ -495,6 +501,30 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   Future<void> switchCameraPosition() =>
       _switchCamera(_media.switchCameraFacing);
+
+  @visibleForTesting
+  Future<void> handleExternalOutputChanged(bool hasExternalOutput) async {
+    // A single unplug can arrive through both native event streams.
+    if (_disposed || _hasExternalOutput == hasExternalOutput) return;
+    _hasExternalOutput = hasExternalOutput;
+    final previousSpeakerphone = isSpeakerphoneEnabled;
+    final previousOutput = selectedAudioOutputDeviceId;
+    final operation = _autoSetSpeakerphone(!hasExternalOutput);
+    final request = _speakerphoneRequest;
+    try {
+      await operation;
+    } finally {
+      // If the speaker or output ID changed, the existing state listener
+      // already reports the route change.
+      if (!_disposed &&
+          request == _speakerphoneRequest &&
+          previousSpeakerphone == isSpeakerphoneEnabled &&
+          previousOutput == selectedAudioOutputDeviceId) {
+        _audioRouteRevision++;
+        _emitState();
+      }
+    }
+  }
 
   bool get isSpeakerphoneEnabled =>
       _systemSpeakerphoneEnabled ?? _media.isSpeakerOutputPreferred;

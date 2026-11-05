@@ -20,6 +20,8 @@ import 'package:totem_core/features/permissions/media_permission_controller.dart
 import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
@@ -1422,6 +1424,79 @@ void main() {
         ),
       );
     });
+
+    testWidgets('announces a change to the browser default output', (
+      tester,
+    ) async {
+      final outputs = StreamController<List<MediaDeviceInfo>>.broadcast();
+      addTearDown(outputs.close);
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        extraOverrides: [
+          sessionDeviceControllerProvider(
+            session,
+          ).overrideWith(_TestSessionDeviceController.new),
+          mediaDevicesProvider.overrideWith((ref) => outputs.stream),
+        ],
+      );
+      const headphones = MediaDeviceInfo(
+        id: 'default',
+        label: 'Headphones',
+        kind: MediaDeviceKind.audioOutput,
+      );
+      const speakers = MediaDeviceInfo(
+        id: 'default',
+        label: 'Speakers',
+        kind: MediaDeviceKind.audioOutput,
+      );
+      outputs.add([headphones]);
+      await tester.pump();
+      check(
+        tester.widgetList(find.text('Audio switched to another device')),
+      ).isEmpty();
+
+      outputs.add([speakers]);
+      await tester.pump();
+      await tester.pump();
+      check(
+        tester.widgetList(find.text('Audio switched to another device')),
+      ).length.equals(1);
+    }, skip: !kIsWeb);
+
+    testWidgets(
+      'shows a notification when a native route changes without a speaker state change',
+      (tester) async {
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          extraOverrides: [
+            sessionDeviceControllerProvider(
+              session,
+            ).overrideWith(_TestSessionDeviceController.new),
+          ],
+        );
+        _TestSessionDeviceController.lastInstance!.emit(
+          const SessionDeviceState(
+            selectedCameraDeviceId: null,
+            selectedAudioOutputDeviceId: null,
+            isSpeakerphoneEnabled: true,
+            isMicrophoneEnabled: false,
+            isCameraEnabled: false,
+            audioRouteRevision: 1,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        check(
+          tester.widgetList(find.text('Audio switched to another device')),
+        ).length.equals(1);
+      },
+    );
 
     testWidgets('shows notification when audio route changes', (tester) async {
       final event = _createSessionEventWithElapsed(

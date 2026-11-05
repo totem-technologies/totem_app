@@ -19,6 +19,8 @@ import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/permissions/ui/recovery_content.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -631,6 +633,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         (state) => (
           speakerphone: state.isSpeakerphoneEnabled,
           outputDeviceId: state.selectedAudioOutputDeviceId,
+          routeRevision: state.audioRouteRevision,
         ),
       ),
       (previous, next) {
@@ -647,6 +650,37 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         );
       },
     );
+
+    if (kIsWeb) {
+      ref.listen(mediaDevicesProvider, (previous, next) {
+        if (!mounted ||
+            !audioRouteNotifier.audioRouteNotificationsEnabled ||
+            ref.read(connectionStateProvider) !=
+                RoomConnectionState.connected) {
+          return;
+        }
+        final deviceState = ref.read(
+          sessionDeviceControllerProvider(currentSession),
+        );
+        if (!deviceState.supportsAudioOutputSelection ||
+            deviceState.selectedAudioOutputDeviceId != null) {
+          return;
+        }
+        final oldOutputs = previous?.value;
+        final newOutputs = next.value;
+        if (oldOutputs == null || newOutputs == null) return;
+        final oldDefault = oldOutputs
+            .where((device) => device.kind == MediaDeviceKind.audioOutput)
+            .firstOrNull;
+        final newDefault = newOutputs
+            .where((device) => device.kind == MediaDeviceKind.audioOutput)
+            .firstOrNull;
+        if (oldDefault?.id != newDefault?.id ||
+            oldDefault?.label != newDefault?.label) {
+          _onAudioRouteChanged(deviceState, speakerChanged: false);
+        }
+      });
+    }
 
     final isOffline = ref.watch(isOfflineProvider).value ?? _lastIsOffline;
 

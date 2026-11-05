@@ -303,53 +303,56 @@ void main() {
   autoSizeTest('keeps Join usable with touch and desktop interactions', (
     tester,
   ) async {
-    for (final scenario in [
-      (
-        platform: TargetPlatform.iOS,
-        viewport: const Size(320, 640),
-        width: 320.0,
-        textScaler: const TextScaler.linear(2),
-        control: find.byType(ActionSlider),
-        interact: (WidgetTester tester) =>
-            tester.drag(find.byType(ActionSlider), const Offset(500, 0)),
-      ),
-      (
-        platform: TargetPlatform.macOS,
-        viewport: const Size(1200, 900),
-        width: 900.0,
-        textScaler: null,
-        control: find.byType(ActionButton),
-        interact: (WidgetTester tester) => tester.tap(find.byType(InkWell)),
-      ),
-    ]) {
-      var calls = 0;
-      tester.view.physicalSize = scenario.viewport;
-      tester.view.devicePixelRatio = 1;
-      debugDefaultTargetPlatformOverride = scenario.platform;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
-
-      await pumpTestWidget(
-        tester,
-        width: scenario.width,
-        textScaler: scenario.textScaler,
-        child: ActionSliderButton(
-          text: 'Join',
-          onActionCompleted: () async {
-            calls++;
-            return true;
-          },
+    try {
+      for (final scenario in [
+        (
+          platform: TargetPlatform.iOS,
+          viewport: const Size(320, 640),
+          width: 320.0,
+          textScaler: const TextScaler.linear(2),
+          control: find.byType(ActionSlider),
+          interact: (WidgetTester tester) =>
+              tester.drag(find.byType(ActionSlider), const Offset(500, 0)),
         ),
-      );
+        (
+          platform: TargetPlatform.macOS,
+          viewport: const Size(1200, 900),
+          width: 900.0,
+          textScaler: null,
+          control: find.byType(ActionButton),
+          interact: (WidgetTester tester) => tester.tap(find.byType(InkWell)),
+        ),
+      ]) {
+        var calls = 0;
+        tester.view.physicalSize = scenario.viewport;
+        tester.view.devicePixelRatio = 1;
+        debugDefaultTargetPlatformOverride = scenario.platform;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      check(tester.widgetList(find.text('Join'))).length.equals(1);
-      check(tester.widgetList(scenario.control)).length.equals(1);
+        await pumpTestWidget(
+          tester,
+          width: scenario.width,
+          textScaler: scenario.textScaler,
+          child: ActionSliderButton(
+            text: 'Join',
+            onActionCompleted: () async {
+              calls++;
+              return true;
+            },
+          ),
+        );
 
-      await scenario.interact(tester);
-      await tester.pump();
+        check(tester.widgetList(find.text('Join'))).length.equals(1);
+        check(tester.widgetList(scenario.control)).length.equals(1);
 
-      check(calls).equals(1);
+        await scenario.interact(tester);
+        await tester.pump();
+
+        check(calls).equals(1);
+      }
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
     }
   });
 
