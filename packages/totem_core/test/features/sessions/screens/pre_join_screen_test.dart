@@ -114,10 +114,15 @@ const _sessionState = SessionRoomState(
 );
 
 class _WaitingAdmissionFlowController extends PreJoinFlowController {
+  _WaitingAdmissionFlowController(this.keeperAvailability);
+
+  final AdmissionKeeperAvailability keeperAvailability;
+
   @override
-  PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState(
+  PreJoinFlowState build(String sessionSlug) => PreJoinFlowState(
     phase: PreJoinFlowPhase.pending,
     admissionStatus: AdmissionStatus.pending,
+    keeperAvailability: keeperAvailability,
   );
 }
 
@@ -289,6 +294,8 @@ void main() {
     bool initiallyOffline = false,
     bool earlyParticipant = false,
     bool waitingForAdmission = false,
+    AdmissionKeeperAvailability keeperAvailability =
+        AdmissionKeeperAvailability.checking,
     AdmissionStatus? terminalAdmissionStatus,
 
     Future<JoinResponse> Function()? getSessionToken,
@@ -356,7 +363,9 @@ void main() {
           if (waitingForAdmission)
             preJoinFlowControllerProvider(
               _slug,
-            ).overrideWith(_WaitingAdmissionFlowController.new),
+            ).overrideWith(
+              () => _WaitingAdmissionFlowController(keeperAvailability),
+            ),
           if (terminalAdmissionStatus != null)
             preJoinFlowControllerProvider(_slug).overrideWith(
               () => _TerminalAdmissionFlowController(terminalAdmissionStatus),
@@ -666,6 +675,37 @@ void main() {
     check(tester.widgetList(find.text('Leave waiting room'))).length.equals(1);
     check(tester.widgetList(find.byType(ActionSliderButton))).isEmpty();
   });
+
+  for (final status
+      in <
+        ({
+          AdmissionKeeperAvailability availability,
+          String message,
+        })
+      >[
+        (
+          availability: AdmissionKeeperAvailability.absent,
+          message:
+              'The Keeper is not connected yet. You can keep waiting or leave and try again later.',
+        ),
+        (
+          availability: AdmissionKeeperAvailability.unresponsive,
+          message:
+              "The Keeper hasn't confirmed your request. Ask them to reconnect or update Totem, or leave and try again.",
+        ),
+      ]) {
+    testWidgets('pending admission shows ${status.message}', (tester) async {
+      await pumpScreen(
+        tester,
+        earlyParticipant: true,
+        waitingForAdmission: true,
+        keeperAvailability: status.availability,
+      );
+
+      check(find.text(status.message).evaluate()).length.equals(1);
+      check(find.text('Leave waiting room').evaluate()).length.equals(1);
+    });
+  }
 
   testWidgets(
     'keeps the preview and media controls mounted across joining states',

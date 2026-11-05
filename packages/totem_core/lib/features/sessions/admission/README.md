@@ -2,6 +2,19 @@
 
 This is cooperative client-side admission, **not server-enforced authorization**. The existing `/rooms/{session_slug}/join` endpoint records attendance when it issues a token, before the Keeper admits anyone. Its token allows connection to the actual LiveKit room. Pending clients occupy one of the room's 10 LiveKit slots, and an old or modified client can bypass this flow. The backend's speaking-order reconciliation also sees pending LiveKit connections; client presentation filtering cannot repair the server's `talking_order`. The Keeper's client avoids requesting a reconciliation solely because an unknown participant connected, but other server events can still include them. The backend remains the authority on join timing (including its earlier first-join cutoff); the UI cannot promise T+15 access.
 
+## Mixed-version compatibility and release cutover
+
+**Mixed-version Sessions are unsupported. This change requires a coordinated cutover, not a gradual rollout into shared rooms.** An updated participant cannot complete admission with a Keeper that does not implement `totem.admission.v1`. A legacy participant joins directly without a joined receipt, so updated publishers do not grant it media subscriptions and updated clients do not display it. Turning off Keeper approval does not make legacy clients compatible: automatic approval still requires the admission exchange and readiness receipt.
+
+This repository has no minimum-client-version gate, and the join endpoint currently issues ordinary room tokens without an admission-capability check. Do not treat room presence, published tracks, or a missing Hello as permission to bypass admission. A client-only fallback would silently defeat Keeper approval and cannot distinguish a legacy client from a delayed or disconnected client.
+
+Before release:
+
+1. Deploy admission-compatible web clients and require compatible mobile builds for **both Keepers and participants** before starting admission-enabled Sessions. Set the required build versions in the deployment's update policy; the data-channel protocol name is not an enforced version gate.
+2. End in-progress legacy Sessions before cutover. Do not introduce an updated Keeper or participant into a Session still using older clients.
+3. If all clients cannot be upgraded together, block broad rollout until a backend minimum-version/capability gate rejects unsupported clients **before issuing a LiveKit token**, with an actionable update-required response. This enforcement is not implemented here.
+4. Validate the supported-client smoke test below and verify that unsupported Keeper and participant builds cannot enter admission-enabled Sessions through the chosen rollout gate. For rollback, stop new Sessions and drain active ones before reverting clients; mixing old and new clients is not a safe rollback strategy.
+
 ## Connection and admission
 
 The participant obtains one existing Session token and connects once to a normal-configured LiveKit `Room` with `autoSubscribe: false`. Pending users publish no microphone or camera tracks and have only a local pre-join preview. The request is a reliable targeted packet on `totem.admission.v1`. Its ID remains stable on presence/reconnection retransmission. Pending requests have no two-minute countdown: they remain actionable while the participant is connected and the Session is open, until the Keeper decides or the participant cancels. The packet carries a 24-hour safety limit to reject stale replay; it is not a join-window guarantee or a user-facing timer. On approval, admission listeners are removed and ownership of the **connected room** moves from pre-join to `SessionController.activateConnectedRoom`; no second token request, `prepareConnection`, `Room.connect`, or deliberate disconnect occurs. The Session controller registers its listeners, loads current room state/participants, starts normal infrastructure and remote subscriptions (existing and future publications), transfers and publishes the same pre-join media tracks, and only then reports activation success. It owns subsequent room teardown. Keeper direct joining retains its normal join path.
@@ -13,6 +26,12 @@ When someone who completed admission leaves and returns, their new request remov
 ## Clock validation
 
 The decoder allows five minutes of additional clock skew when checking whether a packet is implausibly far in the future. This allowance is separate from the one-second retry-timestamp headroom and applies to both request-family packets (including decisions and joined receipts) and short-lived roster packets. It does not modify `expiresAt`, local timers, or request/receipt correlation: packets at or past their expiry according to the receiver clock are still rejected. This fixes ordinary sender-ahead clock differences without extending expired attempts or assuming synchronized clocks in tests.
+
+## Waiting diagnostics
+
+While a participant is waiting, the client distinguishes an absent Keeper from a present Keeper whose admission support has not responded. A present Keeper gets a ten-second response window. A targeted Hello from the authenticated current Keeper confirms responsiveness; updated Keepers also send it when first recording a request, covering an initial Hello lost before the applicant subscribed. Duplicate requests do not generate another acknowledgement, avoiding a Hello/request loop.
+
+If the Keeper is absent, the waiting view says so. If no trusted response arrives within ten seconds, it asks the participant to have the Keeper reconnect or update Totem, and keeps **Leave waiting room** available. This is a diagnostic, not definitive version detection: packet loss or a paused client can look the same as an old build. A late response clears the warning. No diagnostic timeout approves, rejects, or publishes media for an applicant; the existing admission decision and receipt are still required.
 
 ## Keeper disconnect recovery
 

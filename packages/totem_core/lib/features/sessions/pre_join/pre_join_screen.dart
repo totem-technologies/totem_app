@@ -419,6 +419,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     } else if (flow.error != null) {
       joinNote = 'Please try again: ${flow.error}';
     }
+    final waitingMessage = switch (flow.keeperAvailability) {
+      AdmissionKeeperAvailability.absent =>
+        'The Keeper is not connected yet. You can keep waiting or leave and try again later.',
+      AdmissionKeeperAvailability.unresponsive =>
+        "The Keeper hasn't confirmed your request. Ask them to reconnect or update Totem, or leave and try again.",
+      _ => null,
+    };
     void leaveWaiting() {
       if (_leavingWaiting) return;
       _leavingWaiting = true;
@@ -461,6 +468,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         isSliderLoading: flow.phase == PreJoinFlowPhase.joining,
         note: joinNote,
         waiting: pending,
+        waitingMessage: waitingMessage,
         onLeaveWaiting: leaveWaiting,
       ),
     );

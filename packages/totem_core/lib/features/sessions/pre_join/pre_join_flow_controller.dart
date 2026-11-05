@@ -97,6 +97,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       phase: PreJoinFlowPhase.joining,
       clearError: true,
       clearAdmissionStatus: true,
+      keeperAvailability: AdmissionKeeperAvailability.checking,
     );
     _cancelRequested = false;
 
@@ -213,7 +214,9 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     );
     _admission = admission;
     _admissionSubscription = admission.changes.listen((status) {
-      if (status != AdmissionStatus.pending) {
+      if (status == AdmissionStatus.pending) {
+        _copyKeeperAvailability(attempt, admission);
+      } else {
         unawaited(_handleAdmissionStatus(status, token, attempt, admission));
       }
     });
@@ -224,8 +227,23 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       state = state.copyWith(
         phase: PreJoinFlowPhase.pending,
         admissionStatus: AdmissionStatus.pending,
+        keeperAvailability: admission.keeperAvailability,
       );
     }
+  }
+
+  void _copyKeeperAvailability(
+    int attempt,
+    PendingAdmissionController admission,
+  ) {
+    if (!ref.mounted ||
+        _cancelRequested ||
+        attempt != _admissionAttempt ||
+        !identical(_admission, admission) ||
+        admission.status != AdmissionStatus.pending) {
+      return;
+    }
+    state = state.copyWith(keeperAvailability: admission.keeperAvailability);
   }
 
   Future<void> _handleAdmissionStatus(

@@ -125,6 +125,7 @@ class PreJoinFlowState {
     this.sessionOptions,
 
     this.admissionStatus,
+    this.keeperAvailability = AdmissionKeeperAvailability.checking,
     this.error,
   });
 
@@ -132,6 +133,7 @@ class PreJoinFlowState {
   final SessionOptions? sessionOptions;
 
   final AdmissionStatus? admissionStatus;
+  final AdmissionKeeperAvailability keeperAvailability;
   final Object? error;
 
   PreJoinFlowState copyWith({
@@ -141,6 +143,7 @@ class PreJoinFlowState {
 
     AdmissionStatus? admissionStatus,
     bool clearAdmissionStatus = false,
+    AdmissionKeeperAvailability? keeperAvailability,
     Object? error,
     bool clearError = false,
   }) {
@@ -153,6 +156,7 @@ class PreJoinFlowState {
       admissionStatus: clearAdmissionStatus
           ? null
           : admissionStatus ?? this.admissionStatus,
+      keeperAvailability: keeperAvailability ?? this.keeperAvailability,
 
       error: clearError ? null : error ?? this.error,
     );

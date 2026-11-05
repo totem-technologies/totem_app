@@ -556,6 +556,16 @@ void main() {
       check(
         container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
       ).equals(AdmissionStatus.pending);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).keeperAvailability,
+      ).equals(AdmissionKeeperAvailability.checking);
+      _AdmissionFlow.transport!.eventsController.add(
+        const AdmissionPresenceChanged('keeper', false),
+      );
+      await pumpEventQueue();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).keeperAvailability,
+      ).equals(AdmissionKeeperAvailability.absent);
       check(_AdmissionFlow.transport!.request!.displayName).equals('Guest');
       check(
         _AdmissionFlow.transport!.request!.recipientIdentity,

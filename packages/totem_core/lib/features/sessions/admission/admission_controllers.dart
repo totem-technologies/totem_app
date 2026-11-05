@@ -15,6 +15,13 @@ enum AdmissionStatus {
   failed,
 }
 
+enum AdmissionKeeperAvailability {
+  checking,
+  absent,
+  unresponsive,
+  responsive,
+}
+
 /// The caller owns [channel] and must dispose this controller before the room.
 /// Changes are emitted for UI consumers; read [status] after subscribing.
 class PendingAdmissionController {
@@ -38,14 +45,18 @@ class PendingAdmissionController {
   final _changes = StreamController<AdmissionStatus>.broadcast();
   late final StreamSubscription<AdmissionEvent> _subscription;
   Timer? _expiration;
+  Timer? _keeperAvailabilityTimer;
   AdmissionRequest? _request;
   AdmissionCancel? _cancellation;
   AdmissionStatus _status;
+  AdmissionKeeperAvailability _keeperAvailability =
+      AdmissionKeeperAvailability.checking;
   bool _disposed = false;
 
   Stream<AdmissionStatus> get changes => _changes.stream;
   AdmissionStatus get status => _status;
   AdmissionRequest? get request => _request;
+  AdmissionKeeperAvailability get keeperAvailability => _keeperAvailability;
 
   Future<AdmissionRequest> requestAdmission({
     required String displayName,
@@ -90,6 +101,7 @@ class PendingAdmissionController {
     _request = packet;
     _setStatus(AdmissionStatus.pending);
     _expiration = Timer(packet.expiresAt.difference(_now()), _expire);
+    _startKeeperAvailabilityCheck();
     if (channel.isPresent(keeper)) await _sendBestEffort(packet);
     return packet;
   }
@@ -110,6 +122,7 @@ class PendingAdmissionController {
       expiresAt: request.expiresAt,
     );
     _expiration?.cancel();
+    _keeperAvailabilityTimer?.cancel();
     if (_status != AdmissionStatus.cancelled) {
       _setStatus(AdmissionStatus.cancelled);
     }
@@ -131,6 +144,7 @@ class PendingAdmissionController {
     if (_disposed) return;
     if (event is AdmissionRoomEnded) {
       _expiration?.cancel();
+      _keeperAvailabilityTimer?.cancel();
       if (_status != AdmissionStatus.ended) _setStatus(AdmissionStatus.ended);
       return;
     }
@@ -141,6 +155,7 @@ class PendingAdmissionController {
     if (event is AdmissionRoomDisconnected) {
       if (_status == AdmissionStatus.pending) {
         _expiration?.cancel();
+        _keeperAvailabilityTimer?.cancel();
         _setStatus(AdmissionStatus.failed);
       }
       return;
@@ -170,14 +185,25 @@ class PendingAdmissionController {
             hello.recipientIdentity == channel.localIdentity) {
           // An authenticated hello proves the Keeper can receive packets even
           // before LiveKit updates remoteParticipants after a reconnect.
+          _setKeeperAvailability(AdmissionKeeperAvailability.responsive);
           unawaited(_sendBestEffort(_cancellation ?? request));
         }
       case AdmissionConnectionRestored():
+        _startKeeperAvailabilityCheck();
         _resendIfPresent();
       case AdmissionPresenceChanged(:final identity, present: true):
         if (identity == request.recipientIdentity) {
+          if (_keeperAvailability != AdmissionKeeperAvailability.responsive) {
+            _startKeeperAvailabilityCheck(isPresent: true);
+          }
           // LiveKit emits this event before adding the participant to its map.
           unawaited(_sendBestEffort(_cancellation ?? request));
+        }
+      case AdmissionPresenceChanged(:final identity, present: false):
+        if (identity == request.recipientIdentity &&
+            _status == AdmissionStatus.pending) {
+          _keeperAvailabilityTimer?.cancel();
+          _setKeeperAvailability(AdmissionKeeperAvailability.absent);
         }
       default:
         break;
@@ -193,11 +219,40 @@ class PendingAdmissionController {
     }
   }
 
+  void _startKeeperAvailabilityCheck({bool? isPresent}) {
+    if (_disposed || _status != AdmissionStatus.pending) {
+      _keeperAvailabilityTimer?.cancel();
+      return;
+    }
+    final request = _request!;
+    _keeperAvailabilityTimer?.cancel();
+    if (!(isPresent ?? channel.isPresent(request.recipientIdentity))) {
+      _setKeeperAvailability(AdmissionKeeperAvailability.absent);
+      return;
+    }
+    _setKeeperAvailability(AdmissionKeeperAvailability.checking);
+    _keeperAvailabilityTimer = Timer(const Duration(seconds: 10), () {
+      if (!_disposed && _status == AdmissionStatus.pending) {
+        _setKeeperAvailability(AdmissionKeeperAvailability.unresponsive);
+      }
+    });
+  }
+
+  void _setKeeperAvailability(AdmissionKeeperAvailability next) {
+    if (_keeperAvailability == next) return;
+    if (next != AdmissionKeeperAvailability.checking) {
+      _keeperAvailabilityTimer?.cancel();
+    }
+    _keeperAvailability = next;
+    if (_status == AdmissionStatus.pending) _changes.add(_status);
+  }
+
   void _expire() {
     if (_status == AdmissionStatus.pending) _setStatus(AdmissionStatus.expired);
   }
 
   void _setStatus(AdmissionStatus next) {
+    if (next != AdmissionStatus.pending) _keeperAvailabilityTimer?.cancel();
     _status = next;
     _changes.add(next);
   }
@@ -206,6 +261,7 @@ class PendingAdmissionController {
     if (_disposed) return;
     _disposed = true;
     _expiration?.cancel();
+    _keeperAvailabilityTimer?.cancel();
     await _subscription.cancel();
     await _changes.close();
   }
@@ -649,7 +705,25 @@ class KeeperAdmissionController {
       }
     }
     _changes.add(null);
-    if (packet is AdmissionRequest) _applyAutomaticDecision(sender);
+    if (packet is AdmissionRequest) {
+      _acknowledgeRequest(packet);
+      _applyAutomaticDecision(sender);
+    }
+  }
+
+  void _acknowledgeRequest(AdmissionRequest request) {
+    unawaited(
+      channel
+          .send(
+            AdmissionHello(
+              id: _newId(),
+              senderIdentity: channel.localIdentity,
+              recipientIdentity: request.senderIdentity,
+              expiresAt: _now().add(AdmissionProtocol.lifetime),
+            ),
+          )
+          .catchError((Object _) {}),
+    );
   }
 
   void _receiveOutcome(AdmissionPacket packet) {

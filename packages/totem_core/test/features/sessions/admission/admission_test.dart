@@ -737,6 +737,200 @@ void main() {
   );
 
   test(
+    'pending admission reports absence, legacy Keeper timeout and no implicit decision',
+    () {
+      fakeAsync((async) {
+        final clock = async.getClock(_fixedNow);
+        final channel = _Channel('guest', now: clock.now);
+        final guest = _pendingAdmissionController(
+          channel: channel,
+          keeperIdentity: () => 'keeper',
+          now: clock.now,
+          newId: () => 'r1',
+        );
+        unawaited(guest.requestAdmission(displayName: 'Guest'));
+        async.flushMicrotasks();
+        check(guest.status).equals(AdmissionStatus.pending);
+        check(
+          guest.keeperAvailability,
+        ).equals(AdmissionKeeperAvailability.absent);
+
+        channel.controller.add(const AdmissionPresenceChanged('keeper', true));
+        check(guest.keeperAvailability).equals(
+          AdmissionKeeperAvailability.checking,
+        );
+        channel.present.add('keeper');
+        async.elapse(const Duration(seconds: 10));
+        check(guest.status).equals(AdmissionStatus.pending);
+        check(guest.keeperAvailability).equals(
+          AdmissionKeeperAvailability.unresponsive,
+        );
+        check(channel.sent.whereType<AdmissionRequest>()).length.equals(1);
+
+        unawaited(guest.dispose());
+        unawaited(channel.dispose());
+        async.flushMicrotasks();
+      });
+    },
+  );
+
+  test('only a trusted late Keeper hello clears an availability warning', () {
+    fakeAsync((async) {
+      final clock = async.getClock(_fixedNow);
+      final channel = _Channel('guest', now: clock.now)..present.add('keeper');
+      final guest = _pendingAdmissionController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+        now: clock.now,
+        newId: () => 'r1',
+      );
+      unawaited(guest.requestAdmission(displayName: 'Guest'));
+      async.flushMicrotasks();
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionHello(
+            id: 'spoofed',
+            senderIdentity: 'attacker',
+            recipientIdentity: 'guest',
+            expiresAt: _fixedNow,
+          ),
+        ),
+      );
+      check(guest.keeperAvailability).equals(
+        AdmissionKeeperAvailability.checking,
+      );
+
+      async.elapse(const Duration(seconds: 10));
+      check(guest.keeperAvailability).equals(
+        AdmissionKeeperAvailability.unresponsive,
+      );
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionHello(
+            id: 'late',
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: _fixedNow,
+          ),
+        ),
+      );
+      check(guest.status).equals(AdmissionStatus.pending);
+      check(guest.keeperAvailability).equals(
+        AdmissionKeeperAvailability.responsive,
+      );
+
+      unawaited(guest.dispose());
+      unawaited(channel.dispose());
+      async.flushMicrotasks();
+    });
+  });
+
+  test(
+    'an early trusted Keeper hello remains responsive after ten seconds',
+    () {
+      fakeAsync((async) {
+        final clock = async.getClock(_fixedNow);
+        final channel = _Channel('guest', now: clock.now)
+          ..present.add('keeper');
+        final guest = _pendingAdmissionController(
+          channel: channel,
+          keeperIdentity: () => 'keeper',
+          now: clock.now,
+        );
+        unawaited(guest.requestAdmission(displayName: 'Guest'));
+        async.flushMicrotasks();
+        channel.controller.add(
+          AdmissionPacketReceived(
+            AdmissionHello(
+              id: 'early',
+              senderIdentity: 'keeper',
+              recipientIdentity: 'guest',
+              expiresAt: _fixedNow,
+            ),
+          ),
+        );
+        check(guest.keeperAvailability).equals(
+          AdmissionKeeperAvailability.responsive,
+        );
+        async.elapse(const Duration(seconds: 10));
+        check(guest.keeperAvailability).equals(
+          AdmissionKeeperAvailability.responsive,
+        );
+
+        unawaited(guest.dispose());
+        unawaited(channel.dispose());
+        async.flushMicrotasks();
+      });
+    },
+  );
+
+  test(
+    'reconnect after cancellation does not create an availability timer',
+    () {
+      fakeAsync((async) {
+        final clock = async.getClock(_fixedNow);
+        final channel = _Channel('guest', now: clock.now)
+          ..present.add('keeper');
+        final guest = _pendingAdmissionController(
+          channel: channel,
+          keeperIdentity: () => 'keeper',
+          now: clock.now,
+        );
+        unawaited(guest.requestAdmission(displayName: 'Guest'));
+        async.flushMicrotasks();
+        unawaited(guest.cancel());
+        async.flushMicrotasks();
+        channel.controller.add(const AdmissionConnectionRestored());
+        check(guest.status).equals(AdmissionStatus.cancelled);
+        check(async.pendingTimers).isEmpty();
+
+        unawaited(guest.dispose());
+        unawaited(channel.dispose());
+        async.flushMicrotasks();
+      });
+    },
+  );
+
+  test(
+    'availability timers stop when pending admission ends or is disposed',
+    () {
+      fakeAsync((async) {
+        final clock = async.getClock(_fixedNow);
+        for (final finish
+            in <void Function(PendingAdmissionController, _Channel)>[
+              (guest, _) => unawaited(guest.cancel()),
+              (_, channel) =>
+                  channel.controller.add(const AdmissionRoomEnded()),
+              (_, channel) => channel.controller.add(
+                const AdmissionRoomDisconnected(DisconnectReason.roomDeleted),
+              ),
+              (guest, _) => unawaited(guest.dispose()),
+            ]) {
+          final channel = _Channel('guest', now: clock.now)
+            ..present.add('keeper');
+          final guest = _pendingAdmissionController(
+            channel: channel,
+            keeperIdentity: () => 'keeper',
+            now: clock.now,
+          );
+          unawaited(guest.requestAdmission(displayName: 'Guest'));
+          async.flushMicrotasks();
+          finish(guest, channel);
+          async
+            ..flushMicrotasks()
+            ..elapse(const Duration(seconds: 10));
+          check(guest.keeperAvailability).equals(
+            AdmissionKeeperAvailability.checking,
+          );
+          unawaited(guest.dispose());
+          unawaited(channel.dispose());
+          async.flushMicrotasks();
+        }
+      });
+    },
+  );
+
+  test(
     'keeper attach advertises to already waiting participant after lost request',
     () async {
       final guestChannel = _Channel('guest');
@@ -762,16 +956,16 @@ void main() {
         await guestChannel.dispose();
         await keeperChannel.dispose();
       });
-      await keeper.changes.first;
+      await pumpEventQueue();
       check(keeper.requests.single.id).equals(request.id);
       check(
         guestChannel.sent.whereType<AdmissionRequest>().map((sent) => sent.id),
-      ).deepEquals([request.id, request.id]);
-      check(keeperChannel.sent.single).isA<AdmissionHello>();
-      check(keeperChannel.sent.single.recipientIdentity).equals('guest');
+      ).deepEquals([request.id, request.id, request.id]);
+      check(keeperChannel.sent.whereType<AdmissionHello>()).length.equals(2);
+      check(keeperChannel.sent.last.recipientIdentity).equals('guest');
       keeperChannel.controller.add(const AdmissionConnectionRestored());
       await Future<void>.value();
-      check(keeperChannel.sent).length.equals(2);
+      check(keeperChannel.sent).length.equals(3);
       check(keeper.requests).length.equals(1);
     },
   );
@@ -859,8 +1053,8 @@ void main() {
         const AdmissionPresenceChanged('keeper', true),
       );
       await approved;
-      check(guestChannel.sent).length.equals(3);
-      check(keeperChannel.sent).length.equals(2);
+      check(guestChannel.sent).length.equals(4);
+      check(keeperChannel.sent).length.equals(4);
       check(guest.status).equals(AdmissionStatus.approved);
       check((keeperChannel.sent.last as AdmissionDecision).approved).isTrue();
       check(keeperChannel.sent.last.recipientIdentity).equals('guest');
@@ -1560,7 +1754,7 @@ void main() {
       await keeper.deny('r1', 'guest');
       check(keeper.requests).isEmpty();
       channel.controller.add(AdmissionPacketReceived(request));
-      check(channel.sent).length.equals(3);
+      check(channel.sent).length.equals(4);
       check((channel.sent.last as AdmissionDecision).approved).isFalse();
     },
   );
@@ -1697,7 +1891,7 @@ void main() {
       check(keeper.attempts.single.joinDeadline).equals(request.expiresAt);
       channel.controller.add(AdmissionPacketReceived(request));
       await Future<void>.value();
-      check(channel.sent).length.equals(2);
+      check(channel.sent).length.equals(3);
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionJoined(

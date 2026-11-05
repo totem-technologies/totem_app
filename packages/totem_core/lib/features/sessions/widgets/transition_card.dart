@@ -359,6 +359,7 @@ class JoinTransitionCard extends StatelessWidget {
     this.enabled = true,
     this.note,
     this.waiting = false,
+    this.waitingMessage,
     this.onLeaveWaiting,
     super.key,
   });
@@ -370,6 +371,7 @@ class JoinTransitionCard extends StatelessWidget {
   final bool enabled;
   final String? note;
   final bool waiting;
+  final String? waitingMessage;
   final VoidCallback? onLeaveWaiting;
 
   @override
@@ -394,7 +396,8 @@ class JoinTransitionCard extends StatelessWidget {
             ),
             Text(
               waiting
-                  ? 'The Keeper will let you in. Your camera and microphone are only a local preview.'
+                  ? waitingMessage ??
+                        'The Keeper will let you in. Your camera and microphone are only a local preview.'
                   : 'Your session will start soon. Please check your audio and video before joining.',
               textAlign: TextAlign.center,
             ),
