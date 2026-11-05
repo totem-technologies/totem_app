@@ -113,7 +113,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
                     else if (widget.iconWidget != null)
                       SizedBox.square(
                         dimension: iconSize,
-                        child: ClipOval(
+                        child: Center(
                           child: FittedBox(
                             fit: BoxFit.cover,
                             child: widget.iconWidget,
