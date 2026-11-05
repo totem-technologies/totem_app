@@ -6,6 +6,9 @@ import 'dart:convert';
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
+import 'package:livekit_client/livekit_client.dart'
+    as livekit
+    show ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
@@ -302,6 +305,55 @@ void main() {
         ).throws<StateError>();
         check(room.listenerCount).equals(0);
       });
+
+      test(
+        'sends failure from a connected adopted room before session state connects, and skips a disconnected room',
+        () async {
+          final participant = MockLocalParticipant('user-1');
+          final published = <List<int>>[];
+          when(
+            () => participant.publishData(
+              any(),
+              reliable: true,
+              destinationIdentities: ['keeper-1'],
+              topic: AdmissionProtocol.topic,
+            ),
+          ).thenAnswer((invocation) async {
+            published.add(invocation.positionalArguments.single as List<int>);
+          });
+          final room = _ReceiptRoom(participant);
+          final session = FakeSessionController()..mockRoom = room;
+          session.mockState = SessionRoomState(
+            connection: session.state.connection.copyWith(
+              state: RoomConnectionState.connecting,
+            ),
+            participants: session.state.participants,
+            chat: session.state.chat,
+            turn: session.state.turn,
+          );
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final controller = container.read(
+            sessionMessagingControllerProvider(session).notifier,
+          );
+          final attempt = request();
+          await controller.sendAdmissionJoinFailed(attempt);
+          final receipt = AdmissionProtocol.decode(
+            published.single,
+            senderIdentity: 'user-1',
+            now: DateTime.now(),
+          );
+          check(receipt).isA<AdmissionJoinFailed>();
+          check(receipt?.id).equals(attempt.id);
+          check(receipt?.recipientIdentity).equals('keeper-1');
+          await controller.disposeAdmissionTransport();
+          room.connected = false;
+          await check(
+            controller.sendAdmissionJoinFailed(attempt),
+          ).throws<StateError>();
+          check(published).length.equals(1);
+        },
+      );
 
       test('releases the retained listener on provider disposal', () async {
         final participant = MockLocalParticipant('user-1');
@@ -754,6 +806,12 @@ class _ReceiptRoom extends FakeRoom {
 
   final listener = _ReceiptEvents();
   int listenerCount = 0;
+  bool connected = true;
+
+  @override
+  livekit.ConnectionState get connectionState => connected
+      ? livekit.ConnectionState.connected
+      : livekit.ConnectionState.disconnected;
 
   @override
   String? get metadata => null;

@@ -128,7 +128,7 @@ class PendingAdmissionController {
     }
     if (_now().isBefore(request.expiresAt) &&
         channel.isPresent(request.recipientIdentity)) {
-      await _sendBestEffort(_cancellation!);
+      unawaited(_sendBestEffort(_cancellation!));
     }
   }
 

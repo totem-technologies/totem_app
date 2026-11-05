@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:livekit_client/livekit_client.dart' hide logger;
+import 'package:livekit_client/livekit_client.dart'
+    as livekit
+    show ConnectionState;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -129,11 +132,22 @@ class SessionMessagingController extends _$SessionMessagingController {
   LiveKitAdmissionTransport? _admissionTransport;
   Future<void>? _admissionDisposeFuture;
 
-  Future<void> sendAdmissionJoined(AdmissionRequest request) async {
+  Future<void> sendAdmissionJoined(AdmissionRequest request) =>
+      _sendAdmissionOutcome(request, joined: true);
+
+  Future<void> sendAdmissionJoinFailed(AdmissionRequest request) =>
+      _sendAdmissionOutcome(request, joined: false);
+
+  Future<void> _sendAdmissionOutcome(
+    AdmissionRequest request, {
+    required bool joined,
+  }) async {
     final room = _room;
     if (!ref.mounted ||
-        _state.connectionState != RoomConnectionState.connected ||
         room == null ||
+        (joined
+            ? _state.connectionState != RoomConnectionState.connected
+            : room.connectionState != livekit.ConnectionState.connected) ||
         room.localParticipant?.identity != request.senderIdentity) {
       throw StateError('Admission sender is not connected to the session room');
     }
@@ -145,14 +159,16 @@ class SessionMessagingController extends _$SessionMessagingController {
     if (_admissionDisposeFuture case final pending?) await pending;
     if (!ref.mounted ||
         !identical(_room, room) ||
-        _state.connectionState != RoomConnectionState.connected) {
+        (joined
+            ? _state.connectionState != RoomConnectionState.connected
+            : room.connectionState != livekit.ConnectionState.connected)) {
       throw StateError('Session room disconnected before admission receipt');
     }
 
     final transport = _admissionTransport ??= LiveKitAdmissionTransport(room);
-    // Retain a failed initial publish for a one-shot retry on Keeper presence,
-    // hello, or room reconnection. The room owns this transport until teardown.
-    await transport.sendJoinOutcome(request);
+    // Retain the receipt for timed and event-driven retries until confirmation
+    // or expiry. The room owns this transport until teardown.
+    await transport.sendJoinOutcome(request, joined: joined);
   }
 
   Future<void> disposeAdmissionTransport() {

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -231,6 +232,45 @@ class _RetryableSessionController extends SessionController {
   }
 }
 
+class _FailureReceiptMessaging extends SessionMessagingController {
+  final requests = <AdmissionRequest>[];
+  Completer<void>? gate;
+  @override
+  Future<void> sendAdmissionJoinFailed(AdmissionRequest request) {
+    requests.add(request);
+    _FailureReceiptSession.events.add('failure receipt');
+    return gate?.future ?? Future<void>.value();
+  }
+}
+
+class _FailureReceiptSession extends _RetryableSessionController {
+  static late _FailureReceiptMessaging receiptMessaging;
+  static SessionJoinResult result = SessionJoinResult.retryableFailure;
+  static bool throwActivation = false;
+  static bool throwReset = false;
+  static final events = <String>[];
+  Room? adoptedRoom;
+  @override
+  Room? get room => adoptedRoom;
+  @override
+  SessionMessagingController get messaging => receiptMessaging;
+  @override
+  Future<SessionJoinResult> activateConnectedRoom({
+    required Room room,
+    SessionJoinMedia? joinMedia,
+  }) async {
+    adoptedRoom = room;
+    if (throwActivation) throw StateError('activation failed');
+    return result;
+  }
+
+  @override
+  Future<void> resetAfterFailedJoin() async {
+    events.add('reset');
+    if (throwReset) throw StateError('reset failed');
+  }
+}
+
 class _UninitializedSessionController extends _SuccessfulSessionController {
   @override
   void preventAutoDispose() =>
@@ -262,6 +302,8 @@ class _AdmissionTransport extends LiveKitAdmissionTransport {
   bool ended = false;
   bool endWhenRequestSent = false;
   bool keepEventsOpenAfterDispose = false;
+  Completer<void>? cancelSendGate;
+  int cancelSends = 0;
 
   @override
   bool get hasEnded => ended;
@@ -287,6 +329,9 @@ class _AdmissionTransport extends LiveKitAdmissionTransport {
     if (packet is AdmissionRequest) {
       request = packet;
       if (endWhenRequestSent) end();
+    } else if (packet is AdmissionCancel) {
+      cancelSends++;
+      await cancelSendGate?.future;
     }
   }
 
@@ -638,6 +683,88 @@ void main() {
     },
   );
 
+  for (final scenario in [
+    'retryable',
+    'fatal',
+    'thrown',
+    'reset throws',
+    'stalled',
+  ]) {
+    test('approval $scenario failure reports before reset', () async {
+      final clock = FakeAsync();
+      await runZoned(
+        () async {
+          final messaging = _FailureReceiptMessaging();
+          if (scenario == 'stalled') messaging.gate = Completer<void>();
+          _FailureReceiptSession.receiptMessaging = messaging;
+          _FailureReceiptSession.result = scenario == 'fatal'
+              ? SessionJoinResult.fatalFailure
+              : SessionJoinResult.retryableFailure;
+          _FailureReceiptSession.throwActivation = scenario == 'thrown';
+          _FailureReceiptSession.throwReset = scenario == 'reset throws';
+          _FailureReceiptSession.events.clear();
+          var tokenRequests = 0;
+          _AdmissionFlow.connections = 0;
+          final container = _container(
+            factory: _TrackFactory(),
+            response: const JoinResponse(
+              token: 'token',
+              isAlreadyPresent: false,
+            ),
+            getToken: () async {
+              tokenRequests++;
+              return const JoinResponse(
+                token: 'token',
+                isAlreadyPresent: false,
+              );
+            },
+            sessionController: _FailureReceiptSession.new,
+            keeperSlug: 'keeper',
+            flowController: _AdmissionFlow.new,
+          );
+          addTearDown(container.dispose);
+          await _waitForMedia(container);
+          final flow = container.read(
+            preJoinFlowControllerProvider(_slug).notifier,
+          );
+          check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+          final request = _AdmissionFlow.transport!.request!;
+          _AdmissionFlow.transport!.decide(true);
+          await pumpEventQueue();
+          check(messaging.requests).length.equals(1);
+          check(messaging.requests.single.id).equals(request.id);
+          check(messaging.requests.single.recipientIdentity).equals('keeper');
+          if (scenario == 'stalled') {
+            check(
+              _FailureReceiptSession.events,
+            ).deepEquals(['failure receipt']);
+            clock.elapse(const Duration(milliseconds: 501));
+          }
+          await pumpEventQueue();
+          check(
+            _FailureReceiptSession.events.take(2).toList(),
+          ).deepEquals(['failure receipt', 'reset']);
+          check(
+            container.read(preJoinFlowControllerProvider(_slug)).phase ==
+                PreJoinFlowPhase.joined,
+          ).isFalse();
+          check(messaging.requests).length.equals(1);
+          messaging.gate?.complete();
+          check(tokenRequests).equals(1);
+          check(_AdmissionFlow.connections).equals(1);
+        },
+        zoneSpecification: ZoneSpecification(
+          createTimer: (self, parent, zone, duration, callback) {
+            if (duration == const Duration(milliseconds: 500)) {
+              return clock.run((_) => Timer(duration, callback));
+            }
+            return parent.createTimer(zone, duration, callback);
+          },
+        ),
+      );
+    });
+  }
+
   test('camera-off approval enters the session with the same room', () async {
     const cameraOffOptions = SessionOptions(
       sessionSlug: _slug,
@@ -973,7 +1100,13 @@ void main() {
       check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
       final transport = _AdmissionFlow.transport!;
       final room = _AdmissionFlow.room!;
-      await flow.cancelAdmission();
+      final cancelSendGate = Completer<void>();
+      transport.cancelSendGate = cancelSendGate;
+      var cancelled = false;
+      final cancellation = flow.cancelAdmission().then((_) => cancelled = true);
+      await pumpEventQueue();
+      check(cancelled).isTrue();
+      check(transport.cancelSends).equals(1);
       check(transport.disposed).equals(true);
       check(room.disconnected).isTrue();
       check(room.disposed).isTrue();
@@ -981,6 +1114,9 @@ void main() {
         container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
       ).equals(AdmissionStatus.cancelled);
       check(_SuccessfulSessionController.receivedMedia).isNull();
+      cancelSendGate.completeError(StateError('send failed after cleanup'));
+      await cancellation;
+      await pumpEventQueue();
     },
   );
 

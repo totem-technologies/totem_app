@@ -1383,6 +1383,31 @@ void main() {
     },
   );
 
+  test('cancel completes locally while its send remains unresolved', () async {
+    final channel = _Channel('guest')..present.add('keeper');
+    final guest = _pendingAdmissionController(
+      channel: channel,
+      keeperIdentity: () => 'keeper',
+    );
+    addTearDown(() async {
+      await guest.dispose();
+      await channel.dispose();
+    });
+    await guest.requestAdmission(displayName: 'Guest');
+    final sendGate = Completer<void>();
+    channel.beforeSend = (packet) =>
+        packet is AdmissionCancel ? sendGate.future : Future<void>.value();
+    var completed = false;
+    final cancellation = guest.cancel().then((_) => completed = true);
+    check(guest.status).equals(AdmissionStatus.cancelled);
+    await pumpEventQueue();
+    check(completed).isTrue();
+    check(channel.sent.last).isA<AdmissionCancel>();
+    sendGate.completeError(StateError('send failed'));
+    await cancellation;
+    await pumpEventQueue();
+  });
+
   test(
     'cancel is targeted, terminal locally, and prevents request replay',
     () async {
@@ -2114,6 +2139,7 @@ void main() {
       check(
         keeper.attempts.single.status,
       ).equals(KeeperAdmissionStatus.joinFailed);
+      check(keeper.roster).isEmpty();
       final second = request('second', start.add(const Duration(seconds: 31)));
       channel.controller.add(AdmissionPacketReceived(second));
       unawaited(keeper.approve(second.id, 'guest'));

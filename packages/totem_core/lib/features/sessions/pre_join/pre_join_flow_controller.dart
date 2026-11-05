@@ -494,6 +494,29 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     SessionJoinMedia? joinMedia;
     var joinStarted = false;
     var mediaTransferred = false;
+    var failureReceiptAttempted = false;
+    Future<void> sendFailureReceipt() async {
+      if (failureReceiptAttempted ||
+          admissionRequest == null ||
+          admissionRoom == null ||
+          session == null ||
+          !identical(session.room, admissionRoom)) {
+        return;
+      }
+      failureReceiptAttempted = true;
+      try {
+        await session.messaging
+            .sendAdmissionJoinFailed(admissionRequest)
+            .timeout(const Duration(milliseconds: 500));
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Could not report Session admission failure to Keeper',
+        );
+      }
+    }
+
     try {
       final mediaController = ref.read(
         preJoinMediaControllerProvider(sessionSlug).notifier,
@@ -568,6 +591,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       if (result == SessionJoinResult.retryableFailure ||
           (admissionRequest != null &&
               result == SessionJoinResult.fatalFailure)) {
+        await sendFailureReceipt();
         await _resetAfterFailedJoin(currentSession);
         if (ref.mounted && result == SessionJoinResult.fatalFailure) {
           state = state.copyWith(
@@ -631,6 +655,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           }
         }
       } else if (mediaTransferred && session != null) {
+        await sendFailureReceipt();
         try {
           await _resetAfterFailedJoin(session);
         } catch (resetError, resetStackTrace) {
