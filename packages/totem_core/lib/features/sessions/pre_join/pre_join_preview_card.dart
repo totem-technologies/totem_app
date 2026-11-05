@@ -66,6 +66,7 @@ class LocalParticipantCardView extends StatelessWidget {
             if (showVideo) Positioned.fill(child: IgnorePointer(child: avatar)),
             if (_hasRenderer)
               IgnorePointer(
+                key: const ValueKey('prejoin-video-renderer'),
                 child: VideoTrackRenderer(
                   videoTrack!,
                   key: ValueKey(videoTrack!.sid),

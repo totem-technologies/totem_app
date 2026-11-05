@@ -8,7 +8,7 @@ WIDGETBOOK_DIR := packages/totem_widgetbook
 WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
 NATIVE_FLUTTER ?= fvm flutter
 NATIVE_DART ?= fvm dart
-WEB_FLUTTER ?= flutter
+WEB_FLUTTER ?= $(NATIVE_FLUTTER)
 WEB_DART ?= $(NATIVE_DART)
 IOS_FLUTTER ?= fvm spawn 3.44.9
 # CI resolves once with its selected SDK before invoking lint/test targets.

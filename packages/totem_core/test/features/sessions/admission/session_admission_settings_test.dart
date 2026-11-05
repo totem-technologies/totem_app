@@ -58,14 +58,17 @@ void main() {
 
   tearDown(() => container.dispose());
 
-  test('follows room status until overridden and resets for a new session', () {
-    check(container.read(sessionAdmissionSettingsProvider)).isFalse();
+  test('defaults to enabled in every status and resets for a new session', () {
+    check(container.read(sessionAdmissionSettingsProvider)).isTrue();
 
     container.read(_testRoomStatusProvider.notifier).status = RoomStatus.active;
     check(container.read(sessionAdmissionSettingsProvider)).isTrue();
+    container.read(_testRoomStatusProvider.notifier).status = RoomStatus.ended;
+    check(container.read(sessionAdmissionSettingsProvider)).isTrue();
 
     container.read(sessionAdmissionSettingsProvider.notifier).setEnabled(false);
-    container.read(_testRoomStatusProvider.notifier).status = RoomStatus.ended;
+    container.read(_testRoomStatusProvider.notifier).status =
+        RoomStatus.waitingRoom;
     check(container.read(sessionAdmissionSettingsProvider)).isFalse();
 
     container.read(_testSessionScopeProvider.notifier).scope = _options(
@@ -79,7 +82,7 @@ void main() {
     test(
       'explicit $enabled survives status changes and token refresh',
       () {
-        check(container.read(sessionAdmissionSettingsProvider)).isFalse();
+        check(container.read(sessionAdmissionSettingsProvider)).isTrue();
         container
             .read(sessionAdmissionSettingsProvider.notifier)
             .setEnabled(enabled);
