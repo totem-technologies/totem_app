@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:in_app_review/in_app_review.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -10,12 +11,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
+import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/confetti.dart';
 import 'package:totem_core/shared/widgets/space_card.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -159,6 +163,8 @@ Future<void> _pumpDisconnectedScreen(
   required SessionDetailSchema? session,
   SessionDisconnectedReason reason = SessionDisconnectedReason.keeperEnded,
   double textScale = 1,
+  List<SessionDetailSchema> recommended = const [],
+  TextDirection textDirection = TextDirection.ltr,
 }) async {
   tester.view
     ..physicalSize = size
@@ -179,7 +185,9 @@ Future<void> _pumpDisconnectedScreen(
         ),
         currentSessionProvider.overrideWithValue(null),
         currentSessionStateProvider.overrideWithValue(null),
-        getRecommendedSessionsProvider(limit: 1).overrideWith((_) async => []),
+        getRecommendedSessionsProvider(
+          limit: 1,
+        ).overrideWith((_) async => recommended),
         spacesSummaryProvider.overrideWith((_) async {
           throw UnimplementedError();
         }),
@@ -187,10 +195,17 @@ Future<void> _pumpDisconnectedScreen(
       child: DefaultAssetBundle(
         bundle: _FakeImageAssetBundle(),
         child: MaterialApp(
-          home: Scaffold(
-            body: SessionDisconnectedScreen(
-              session: session,
-              sessionDisconnectedReason: reason,
+          theme: AppTheme.lightTheme,
+          home: Directionality(
+            textDirection: textDirection,
+            child: Scaffold(
+              body: RoomBackground(
+                status: RoomStatus.ended,
+                child: SessionDisconnectedScreen(
+                  session: session,
+                  sessionDisconnectedReason: reason,
+                ),
+              ),
             ),
           ),
         ),
@@ -229,6 +244,22 @@ bool _isKeeperFullyVisible(WidgetTester tester, String keeperName) {
       cardRect.contains(keeperRect.bottomRight) &&
       viewRect.contains(keeperRect.topLeft) &&
       viewRect.contains(keeperRect.bottomRight);
+}
+
+/// Whether [finder]'s widget lies entirely inside the screen.
+bool _isFullyVisible(WidgetTester tester, Finder finder) {
+  final rect = tester.getRect(finder);
+  final viewRect =
+      (Offset.zero & tester.view.physicalSize / tester.view.devicePixelRatio)
+          .inflate(0.5);
+  return viewRect.contains(rect.topLeft) && viewRect.contains(rect.bottomRight);
+}
+
+/// Whether any scroll view on screen has content hidden past its edges.
+bool _hasScrollableContent(WidgetTester tester) {
+  return tester
+      .stateList<ScrollableState>(find.byType(Scrollable))
+      .any((state) => state.position.maxScrollExtent > 0);
 }
 
 void main() {
@@ -500,54 +531,196 @@ void main() {
 
       setUp(() => TotemRouter.instance = FakeTotemRouter());
 
+      // Phone portrait, the reported desktop (TOT-1439), a laptop, a tall
+      // desktop, and the short desktop, short tablet and landscape windows
+      // from review.
+      for (final size in const [
+        Size(390, 844),
+        Size(1440, 900),
+        Size(1280, 800),
+        Size(1600, 1100),
+        Size(1702, 650),
+        Size(812, 650),
+        Size(700, 650),
+        Size(906, 339),
+      ]) {
+        testWidgets(
+          'shows the whole card and actions without scrolling at '
+          '${size.width.toInt()}x${size.height.toInt()}',
+          (tester) async {
+            await _pumpDisconnectedScreen(
+              tester,
+              size: size,
+              session: _sessionWithNextEvent(keeperName: keeper),
+            );
+
+            check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+            check(_isFullyVisible(tester, find.byType(SpaceCard))).isTrue();
+            check(_isFullyVisible(tester, seeAllSessions)).isTrue();
+            check(_hasScrollableContent(tester)).isFalse();
+          },
+        );
+      }
+
+      for (final size in const [
+        Size(1702, 650),
+        Size(812, 650),
+        Size(700, 650),
+        Size(906, 339),
+        Size(1280, 800),
+      ]) {
+        testWidgets(
+          'places the card beside the header at '
+          '${size.width.toInt()}x${size.height.toInt()}',
+          (tester) async {
+            await _pumpDisconnectedScreen(
+              tester,
+              size: size,
+              session: _sessionWithNextEvent(keeperName: keeper),
+            );
+
+            final headerRect = tester.getRect(find.text('Session Ended'));
+            final cardRect = tester.getRect(find.byType(SpaceCard));
+            check(cardRect.left).isGreaterOrEqual(headerRect.right);
+          },
+        );
+      }
+
+      for (final size in const [Size(1440, 900), Size(1600, 1100)]) {
+        testWidgets(
+          'stacks the card below the header at '
+          '${size.width.toInt()}x${size.height.toInt()}',
+          (tester) async {
+            await _pumpDisconnectedScreen(
+              tester,
+              size: size,
+              session: _sessionWithNextEvent(keeperName: keeper),
+            );
+
+            final headerRect = tester.getRect(find.text('Session Ended'));
+            final cardRect = tester.getRect(find.byType(SpaceCard));
+            check(cardRect.top).isGreaterOrEqual(headerRect.bottom);
+          },
+        );
+      }
+
       testWidgets(
-        'desktop shows the whole card centered without scrolling',
+        'short desktop with large text scrolls to reveal the whole card',
         (tester) async {
           await _pumpDisconnectedScreen(
             tester,
-            size: const Size(1600, 1100),
+            size: const Size(1702, 650),
+            textScale: 2,
             session: _sessionWithNextEvent(keeperName: keeper),
           );
 
+          await tester.ensureVisible(_keeperText(keeper));
+          await tester.pump();
+
           check(_isKeeperFullyVisible(tester, keeper)).isTrue();
-          final statusIcon = find.byWidgetPredicate(
-            (widget) =>
-                widget is TotemIcon && widget.icon == TotemIcons.checkmark,
-          );
-          final topGap = tester
-              .getRect(
-                find
-                    .ancestor(of: statusIcon, matching: find.byType(Container))
-                    .first,
-              )
-              .top;
-          // The layout reserves 50px below the scrollable content.
-          final bottomGap =
-              1100 -
-              tester
-                  .getRect(
-                    find.ancestor(
-                      of: seeAllSessions,
-                      matching: find.byType(TextButton),
-                    ),
-                  )
-                  .bottom -
-              50;
-          check(topGap).isGreaterThan(0);
-          check((topGap - bottomGap).abs()).isLessThan(2);
         },
       );
 
       testWidgets(
-        'phone portrait shows the whole card without scrolling',
+        'narrow short window with large text does not clip the card',
         (tester) async {
           await _pumpDisconnectedScreen(
             tester,
-            size: const Size(390, 844),
+            size: const Size(720, 650),
+            textScale: 2,
             session: _sessionWithNextEvent(keeperName: keeper),
           );
 
+          await tester.ensureVisible(_keeperText(keeper));
+          await tester.pump();
+
           check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+        },
+      );
+
+      // Reasons with longer copy and no feedback bar, at heights where the
+      // keeperEnded copy would still stack.
+      for (final reason in const [
+        SessionDisconnectedReason.removed,
+        SessionDisconnectedReason.keeperAbsent,
+        SessionDisconnectedReason.movedToAnotherDevice,
+      ]) {
+        for (final size in const [
+          Size(620, 770),
+          Size(812, 770),
+          Size(1000, 770),
+        ]) {
+          testWidgets(
+            'shows the whole card for ${reason.name} without scrolling at '
+            '${size.width.toInt()}x${size.height.toInt()}',
+            (tester) async {
+              await _pumpDisconnectedScreen(
+                tester,
+                size: size,
+                reason: reason,
+                session: _sessionWithNextEvent(keeperName: keeper),
+              );
+
+              check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+              check(_isFullyVisible(tester, seeAllSessions)).isTrue();
+              check(_hasScrollableContent(tester)).isFalse();
+            },
+          );
+        }
+      }
+
+      testWidgets(
+        'removed participant sees a recommended session beside the header',
+        (tester) async {
+          final recommended = _sessionWithNextEvent(
+            keeperName: 'Keeper Bo',
+          ).copyWith(slug: 'recommended-session');
+          await _pumpDisconnectedScreen(
+            tester,
+            size: const Size(1702, 650),
+            session: null,
+            reason: SessionDisconnectedReason.removed,
+            recommended: [recommended],
+          );
+          await tester.pump();
+
+          check(find.text('You may enjoy this space').evaluate()).isNotEmpty();
+          check(_isKeeperFullyVisible(tester, 'Keeper Bo')).isTrue();
+          check(_isFullyVisible(tester, seeAllSessions)).isTrue();
+          check(_hasScrollableContent(tester)).isFalse();
+        },
+      );
+
+      testWidgets(
+        'short desktop without a next session fits without scrolling',
+        (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: const Size(1702, 650),
+            session: null,
+          );
+
+          check(find.byType(SpaceCard).evaluate()).isEmpty();
+          check(_isFullyVisible(tester, seeAllSessions)).isTrue();
+          check(_hasScrollableContent(tester)).isFalse();
+        },
+      );
+
+      testWidgets(
+        'right-to-left places the card before the header',
+        (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: const Size(1702, 650),
+            session: _sessionWithNextEvent(keeperName: keeper),
+            textDirection: TextDirection.rtl,
+          );
+
+          final headerRect = tester.getRect(find.text('Session Ended'));
+          final cardRect = tester.getRect(find.byType(SpaceCard));
+          check(cardRect.right).isLessOrEqual(headerRect.left);
+          check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+          check(_hasScrollableContent(tester)).isFalse();
         },
       );
 
@@ -589,21 +762,95 @@ void main() {
       );
 
       testWidgets(
-        'phone landscape shows the card and scrolls to the actions',
+        'very short landscape with large text scrolls to reveal the whole card',
         (tester) async {
           await _pumpDisconnectedScreen(
             tester,
-            size: const Size(844, 390),
+            size: const Size(740, 340),
+            textScale: 1.5,
             session: _sessionWithNextEvent(keeperName: keeper),
           );
 
-          check(_isKeeperFullyVisible(tester, keeper)).isTrue();
-
-          await tester.ensureVisible(seeAllSessions);
+          await tester.ensureVisible(_keeperText(keeper));
           await tester.pump();
 
-          check(tester.getRect(seeAllSessions).bottom).isLessOrEqual(390);
+          check(_isKeeperFullyVisible(tester, keeper)).isTrue();
         },
+      );
+
+      testWidgets(
+        'keeps the feedback selection when a resize switches layouts',
+        (tester) async {
+          var likes = 0;
+          final thumbUp = find.byWidgetPredicate(
+            (widget) =>
+                widget is TotemIcon && widget.icon == TotemIcons.thumbUp,
+          );
+          tester.view
+            ..physicalSize = const Size(1280, 1000)
+            ..devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                authControllerProvider.overrideWith(
+                  () => FakeAuthController(AuthState.unauthenticated()),
+                ),
+              ],
+              child: DefaultAssetBundle(
+                bundle: _FakeImageAssetBundle(),
+                child: MaterialApp(
+                  home: Scaffold(
+                    body: SessionDisconnectedView(
+                      reason: SessionDisconnectedReason.keeperEnded,
+                      nextSession: NextSessionPromo(
+                        space: _sessionWithNextEvent().space,
+                        onTap: () {},
+                      ),
+                      onLike: () async => likes++,
+                      onDislike: (_) async {},
+                      onGoHome: () {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          final headerRect = tester.getRect(find.text('Session Ended'));
+          check(
+            tester.getRect(find.byType(SpaceCard)).top,
+          ).isGreaterOrEqual(headerRect.bottom);
+
+          await tester.tap(thumbUp);
+          await tester.pump();
+          check(likes).equals(1);
+          check(
+            find.text('Thank you! Glad you enjoyed it.').evaluate(),
+          ).isNotEmpty();
+
+          tester.view.physicalSize = const Size(1280, 700);
+          await tester.pump();
+
+          check(
+            tester.getRect(find.byType(SpaceCard)).left,
+          ).isGreaterOrEqual(tester.getRect(find.text('Session Ended')).right);
+          check(
+            find.text('Thank you! Glad you enjoyed it.').evaluate(),
+          ).isNotEmpty();
+
+          await tester.tap(thumbUp, warnIfMissed: false);
+          await tester.pump();
+          check(likes).equals(1);
+
+          ConfettiController.clear();
+          await tester.pumpWidget(const SizedBox.shrink());
+        },
+        // AutoSizeText doesn't dispose the painters it measures with.
+        experimentalLeakTesting: LeakTesting.settings.withIgnored(
+          classes: <String>['TextPainter'],
+        ),
       );
 
       testWidgets(

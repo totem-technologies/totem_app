@@ -27,6 +27,7 @@ import 'package:totem_widgetbook/components/sessions/session_controls.stories.da
 import 'package:totem_widgetbook/components/sessions/waiting_card.stories.dart' as _totem_widgetbook_components_sessions_waiting_card_stories;
 import 'package:totem_widgetbook/screens/auth.stories.dart' as _totem_widgetbook_screens_auth_stories;
 import 'package:totem_widgetbook/screens/session_details.stories.dart' as _totem_widgetbook_screens_session_details_stories;
+import 'package:totem_widgetbook/screens/session_disconnected.stories.dart' as _totem_widgetbook_screens_session_disconnected_stories;
 import 'package:totem_widgetbook/screens/session_entry.stories.dart' as _totem_widgetbook_screens_session_entry_stories;
 import 'package:totem_widgetbook/screens/session_landscape.stories.dart' as _totem_widgetbook_screens_session_landscape_stories;
 import 'package:totem_widgetbook/screens/sessions.stories.dart' as _totem_widgetbook_screens_sessions_stories;
@@ -52,6 +53,7 @@ final components = <_widgetbook.Component>[
   _totem_widgetbook_components_sessions_waiting_card_stories.WaitingCardComponent,
   _totem_widgetbook_screens_auth_stories.AuthFlowComponent,
   _totem_widgetbook_screens_session_details_stories.SessionDetailsPageComponent,
+  _totem_widgetbook_screens_session_disconnected_stories.SessionDisconnectedViewComponent,
   _totem_widgetbook_screens_session_entry_stories.SessionEntryComponent,
   _totem_widgetbook_screens_session_landscape_stories.SessionLandscapeComponent,
   _totem_widgetbook_screens_sessions_stories.SessionsScreenComponent,
