@@ -401,6 +401,7 @@ void main() {
     await tester.pump();
 
     check(harness.sent).isEmpty();
+    check(harness.mediaRecipients).isEmpty();
     check(find.byType(SessionWaitingQueueButton).evaluate()).isEmpty();
 
     preferencesReady.complete(harness.preferences);
@@ -437,6 +438,7 @@ void main() {
     await tester.pump();
 
     check(harness.sent).isEmpty();
+    check(harness.mediaRecipients).isEmpty();
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

@@ -1592,7 +1592,7 @@ void main() {
       );
 
       test(
-        'keeps keeper media closed to pending and unknown identities',
+        'allows keeper media until authority loads, then restricts it',
         () async {
           const eventSlug = 'test-session';
           const options = SessionOptions(
@@ -1646,7 +1646,38 @@ void main() {
           check(
             await controller.activateConnectedRoom(room: room),
           ).equals(SessionJoinResult.success);
-          final pendingPermissions =
+          final initialPermissions =
+              verify(
+                    () => localParticipant.setTrackSubscriptionPermissions(
+                      allParticipantsAllowed: true,
+                      trackPermissions: captureAny(named: 'trackPermissions'),
+                    ),
+                  ).captured.single
+                  as List<ParticipantTrackPermission>;
+          check(initialPermissions).isEmpty();
+          clearInteractions(localParticipant);
+
+          await room.listener.trigger(
+            LocalTrackPublishedEvent(
+              participant: localParticipant,
+              publication: MockLocalTrackPublication(),
+            ),
+          );
+          await room.listener.trigger(const RoomReconnectedEvent());
+          final fallbackPermissions = verify(
+            () => localParticipant.setTrackSubscriptionPermissions(
+              allParticipantsAllowed: true,
+              trackPermissions: captureAny(named: 'trackPermissions'),
+            ),
+          ).captured.cast<List<ParticipantTrackPermission>>();
+          check(fallbackPermissions.length).equals(2);
+          for (final permissions in fallbackPermissions) {
+            check(permissions).isEmpty();
+          }
+          clearInteractions(localParticipant);
+
+          controller.updateAdmittedMediaRecipients({});
+          final emptyRosterPermissions =
               verify(
                     () => localParticipant.setTrackSubscriptionPermissions(
                       allParticipantsAllowed: false,
@@ -1654,7 +1685,7 @@ void main() {
                     ),
                   ).captured.single
                   as List<ParticipantTrackPermission>;
-          check(pendingPermissions).isEmpty();
+          check(emptyRosterPermissions).isEmpty();
           clearInteractions(localParticipant);
 
           controller.updateAdmittedMediaRecipients({'keeper', 'admitted'});

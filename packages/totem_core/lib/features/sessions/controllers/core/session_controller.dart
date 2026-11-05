@@ -119,6 +119,7 @@ class SessionController extends _$SessionController {
   final Map<Object, Object> _subscribedRemotePublications = Map.identity();
   Set<String>? _admittedMediaRecipients;
   Set<String>? _appliedMediaRecipients;
+  bool? _appliedAllParticipantsAllowed;
 
   final JoinMediaOwner _joinMediaOwner = JoinMediaOwner();
 
@@ -221,8 +222,9 @@ class SessionController extends _$SessionController {
 
   /// Limits local media subscriptions to the keeper and admitted recipients.
   ///
-  /// Until this method receives a roster, non-keeper publishers fail closed
-  /// while retaining access for the keeper when its identity is known.
+  /// Until this method receives a roster, Keeper media remains available to
+  /// avoid a local recovery failure silencing the Session. Other publishers
+  /// fail closed while retaining access for the Keeper when known.
   void updateAdmittedMediaRecipients(Set<String> identities) {
     final newlyAdmitted = identities.difference(_admittedMediaRecipients ?? {});
     _admittedMediaRecipients = Set.unmodifiable(identities);
@@ -897,6 +899,7 @@ class SessionController extends _$SessionController {
     _subscribedRemotePublications.clear();
     _admittedMediaRecipients = null;
     _appliedMediaRecipients = null;
+    _appliedAllParticipantsAllowed = null;
     ++_connectionGeneration;
     _pollPending = false;
     _pendingReconcile = false;
@@ -1122,13 +1125,16 @@ class SessionController extends _$SessionController {
     final localParticipant = room?.localParticipant;
     if (!ref.mounted || localParticipant == null) return;
 
+    final isKeeper = _isLocalUserKeeper;
+    final allParticipantsAllowed = isKeeper && _admittedMediaRecipients == null;
     final recipients = <String>{...?_admittedMediaRecipients};
     final keeperIdentity = state.roomState.keeper;
-    if (!_isLocalUserKeeper && keeperIdentity.isNotEmpty) {
+    if (!isKeeper && keeperIdentity.isNotEmpty) {
       recipients.add(keeperIdentity);
     }
     recipients.remove(localParticipant.identity);
     if (!force &&
+        _appliedAllParticipantsAllowed == allParticipantsAllowed &&
         _appliedMediaRecipients != null &&
         setEquals(_appliedMediaRecipients, recipients)) {
       return;
@@ -1136,12 +1142,13 @@ class SessionController extends _$SessionController {
 
     try {
       localParticipant.setTrackSubscriptionPermissions(
-        allParticipantsAllowed: false,
+        allParticipantsAllowed: allParticipantsAllowed,
         trackPermissions: recipients
             .map((identity) => ParticipantTrackPermission(identity, true, null))
             .toList(growable: false),
       );
       _appliedMediaRecipients = Set.unmodifiable(recipients);
+      _appliedAllParticipantsAllowed = allParticipantsAllowed;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
