@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_benchmark/benchmark_config.dart';
 import 'package:totem_benchmark/benchmark_room.dart';
+import 'package:totem_benchmark/synthetic_speech.dart';
 import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/features/sessions/widgets/participant_tile_surface.dart';
 
@@ -76,15 +77,15 @@ void main() {
       ),
     );
     List<double> samples() =>
-        tester.widget<LevelBars>(find.byType(LevelBars)).levels;
+        tester.widget<LevelBars>(find.byType(LevelBars)).levels.value;
     await pump(WaveformMode.animated);
     final initial = samples();
-    await tester.pump(const Duration(milliseconds: 140));
+    await tester.pump(SyntheticSpeech.interval);
     check(samples()).not((it) => it.deepEquals(initial));
     await pump(WaveformMode.frozen);
-    final frozen = samples();
+    check(samples()).deepEquals(SyntheticWaveform.frozenLevels);
     await tester.pump(const Duration(seconds: 1));
-    check(samples()).deepEquals(frozen);
+    check(samples()).deepEquals(SyntheticWaveform.frozenLevels);
     check(tester.binding.hasScheduledFrame).isFalse();
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

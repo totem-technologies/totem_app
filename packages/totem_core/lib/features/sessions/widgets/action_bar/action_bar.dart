@@ -432,10 +432,7 @@ class ActionBar extends StatelessWidget {
     BuildContext context,
     BoxConstraints constraints,
   ) {
-    final viewport = ViewportResolver.getViewportKind(context);
-    final isPhone =
-        viewport == ViewportKind.smallPortrait ||
-        viewport == ViewportKind.smallLandscape;
+    final isPhone = ViewportResolver.getViewportKind(context).isSmall;
     final preferred = isPhone
         ? _ActionBarMetrics.phone
         : _ActionBarMetrics.comfortable;

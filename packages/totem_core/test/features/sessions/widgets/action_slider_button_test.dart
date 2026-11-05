@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
@@ -182,7 +184,8 @@ void main() {
     );
 
     for (final (label, height) in [
-      ('docked 44dp track', 44.0),
+      ('desktop 44dp track', 44.0),
+      ('phone 48dp track', 48.0),
       ('default 50dp track', null),
     ]) {
       autoSizeTest('keeps the thumb round for a $label', (tester) async {
@@ -204,6 +207,80 @@ void main() {
         check(thumb.height).equals(track.height - 8);
       });
     }
+
+    autoSizeTest('completes on a swipe across a phone 48dp track', (
+      tester,
+    ) async {
+      var calls = 0;
+      await pumpTestWidget(
+        tester,
+        child: ActionSlider(
+          text: 'Receive',
+          height: 48,
+          onActionCompleted: () async {
+            calls++;
+            return true;
+          },
+        ),
+      );
+
+      await tester.drag(
+        find.byKey(ActionSlider.thumbKey),
+        const Offset(320, 0),
+      );
+      await tester.pump();
+
+      check(calls).equals(1);
+    });
+
+    autoSizeTest(
+      'keeps the app button label unless a label style is given',
+      (tester) async {
+        final theme = AppTheme.lightTheme;
+        const override = TextStyle(fontSize: 14, fontWeight: FontWeight.w500);
+        // Join and other sliders keep the ElevatedButton label; only the
+        // docked transition cards pass a smaller one.
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 320,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ActionSlider(
+                        text: 'Default',
+                        onActionCompleted: () async => true,
+                      ),
+                      ActionSlider(
+                        text: 'Override',
+                        labelStyle: override,
+                        onActionCompleted: () async => true,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        TextStyle? labelOf(String text) => tester
+            .widget<AutoSizeText>(find.widgetWithText(AutoSizeText, text))
+            .style;
+
+        final buttonLabel = theme.elevatedButtonTheme.style?.textStyle?.resolve(
+          {},
+        );
+        check(labelOf('Default')?.fontSize).equals(buttonLabel?.fontSize);
+        check(labelOf('Default')?.fontWeight).equals(buttonLabel?.fontWeight);
+        check(labelOf('Override')?.fontSize).equals(14);
+        check(labelOf('Override')?.fontWeight).equals(FontWeight.w500);
+        check(labelOf('Override')?.color).equals(AppTheme.white);
+      },
+    );
 
     autoSizeTest('reflects external loading state', (tester) async {
       await pumpTestWidget(

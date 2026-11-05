@@ -29,6 +29,7 @@ class ActionSliderButton extends StatefulWidget {
     this.autofocus = true,
     this.enabled = true,
     this.height = 50,
+    this.labelStyle,
     super.key,
   });
 
@@ -41,8 +42,12 @@ class ActionSliderButton extends StatefulWidget {
   final bool autofocus;
   final bool enabled;
 
-  /// Docked cards shrink this to match the action bar buttons.
+  /// Track height. Transition cards pass 48 on phones and 44 on larger
+  /// viewports to match the action bar; Join uses 52.
   final double height;
+
+  /// Overrides the label text style; the color is always white.
+  final TextStyle? labelStyle;
 
   @override
   State<ActionSliderButton> createState() => _ActionSliderButtonState();
@@ -71,6 +76,7 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
         autofocus: widget.autofocus,
         enabled: widget.enabled,
         height: widget.height,
+        labelStyle: widget.labelStyle,
       );
     }
 
@@ -84,6 +90,7 @@ class _ActionSliderButtonState extends State<ActionSliderButton> {
       autofocus: widget.autofocus,
       enabled: widget.enabled,
       height: widget.height,
+      labelStyle: widget.labelStyle,
     );
   }
 }
@@ -100,6 +107,7 @@ class ActionButton extends StatefulWidget {
     this.autofocus = true,
     this.enabled = true,
     this.height = 50,
+    this.labelStyle,
     super.key,
   });
 
@@ -112,8 +120,12 @@ class ActionButton extends StatefulWidget {
   final bool autofocus;
   final bool enabled;
 
-  /// Docked cards shrink this to match the action bar buttons.
+  /// Track height. Transition cards pass 48 on phones and 44 on larger
+  /// viewports to match the action bar; Join uses 52.
   final double height;
+
+  /// Overrides the label text style; the color is always white.
+  final TextStyle? labelStyle;
 
   @override
   State<ActionButton> createState() => _ActionButtonState();
@@ -242,10 +254,12 @@ class _ActionButtonState extends State<ActionButton> {
                       : AutoSizeText(
                           widget.text,
                           maxLines: 1,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: foregroundColor,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style:
+                              (widget.labelStyle ??
+                                      theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ))
+                                  ?.copyWith(color: foregroundColor),
                         ),
                 ),
               ),
@@ -268,6 +282,7 @@ class ActionSlider extends StatefulWidget {
     this.autofocus = true,
     this.enabled = true,
     this.height = 50,
+    this.labelStyle,
     super.key,
   });
 
@@ -279,8 +294,12 @@ class ActionSlider extends StatefulWidget {
   final bool autofocus;
   final bool enabled;
 
-  /// Docked cards shrink this to match the action bar buttons.
+  /// Track height. Transition cards pass 48 on phones and 44 on larger
+  /// viewports to match the action bar; Join uses 52.
   final double height;
+
+  /// Overrides the label text style; the color is always white.
+  final TextStyle? labelStyle;
 
   @visibleForTesting
   static const thumbKey = Key('action_slider_thumb');
@@ -383,10 +402,13 @@ class ActionSliderState extends State<ActionSlider> {
         final backgroundColor = widget.backgroundColor ?? AppTheme.mauve;
         const foregroundColor = AppTheme.white;
 
-        final textStyle = theme.textTheme.titleMedium?.copyWith(
-          color: foregroundColor,
-          fontWeight: FontWeight.w600,
-        );
+        final textStyle =
+            (widget.labelStyle ??
+                    theme.elevatedButtonTheme.style?.textStyle?.resolve({}) ??
+                    theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ))
+                ?.copyWith(color: foregroundColor);
 
         return CallbackShortcuts(
           bindings: <ShortcutActivator, VoidCallback>{
