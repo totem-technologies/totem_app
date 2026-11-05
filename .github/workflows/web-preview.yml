@@ -21,6 +21,7 @@ jobs:
   deploy:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: web-preview-pr-${{ github.event.pull_request.number }}
       url: ${{ steps.preview.outputs.url }}
