@@ -137,7 +137,9 @@ void main() {
         );
       final malformed = _container(malformedPreferences);
       addTearDown(malformed.dispose);
-      await check(malformed.read(provider.future)).throws<StateError>();
+      await check(
+        malformed.read(provider.future),
+      ).throws<CorruptSessionAdmissionData>();
       check(malformed.read(provider).hasError).isTrue();
     },
   );
@@ -162,7 +164,9 @@ void main() {
         ..values[_key('session-a', 'keeper-a')] = jsonEncode(payload);
       final container = _container(preferences);
       addTearDown(container.dispose);
-      await check(container.read(provider.future)).throws<StateError>();
+      await check(
+        container.read(provider.future),
+      ).throws<CorruptSessionAdmissionData>();
     }
   });
 

@@ -120,6 +120,14 @@ void main() {
       autoSizeTest(
         'join card stays in place when its shortcut becomes unavailable',
         (tester) async {
+          final shortcut = find.text('press space bar to join');
+          bool shortcutVisible() => tester
+              .widget<Visibility>(
+                find
+                    .ancestor(of: shortcut, matching: find.byType(Visibility))
+                    .first,
+              )
+              .visible;
           Widget card({bool enabled = true, bool waiting = false}) =>
               JoinTransitionCard(
                 onActionPressed: () async => true,
@@ -129,15 +137,15 @@ void main() {
 
           await pumpAtSize(tester, const Size(1280, 900), card());
           final originalPosition = tester.getTopLeft(find.byType(Card));
-          check(find.text('press space bar to join').evaluate()).isNotEmpty();
+          check(shortcutVisible()).isTrue();
 
           await tester.pumpWidget(buildTestWidget(card(enabled: false)));
           check(tester.getTopLeft(find.byType(Card))).equals(originalPosition);
-          check(find.text('press space bar to join').evaluate()).isEmpty();
+          check(shortcutVisible()).isFalse();
 
           await tester.pumpWidget(buildTestWidget(card(waiting: true)));
           check(tester.getTopLeft(find.byType(Card))).equals(originalPosition);
-          check(find.text('press space bar to join').evaluate()).isEmpty();
+          check(shortcutVisible()).isFalse();
           check(find.text('Leave waiting room').evaluate()).isNotEmpty();
         },
         variant: desktop,

@@ -172,12 +172,14 @@ class _SuccessfulSessionController extends SessionController {
   static SessionJoinMedia? receivedMedia;
   static Room? activatedRoom;
   static int activationCalls = 0;
+  static int joinCalls = 0;
 
   @override
   SessionRoomState build(SessionOptions options) => _sessionState;
 
   @override
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
+    joinCalls++;
     receivedMedia = joinMedia;
     return SessionJoinResult.success;
   }
@@ -234,7 +236,16 @@ class _RetryableSessionController extends SessionController {
 
 class _FailureReceiptMessaging extends SessionMessagingController {
   final requests = <AdmissionRequest>[];
+  final joinedRequests = <AdmissionRequest>[];
+  Completer<void>? finished;
   Completer<void>? gate;
+
+  @override
+  Future<void> sendAdmissionJoined(AdmissionRequest request) async {
+    joinedRequests.add(request);
+    finished?.complete();
+  }
+
   @override
   Future<void> sendAdmissionJoinFailed(AdmissionRequest request) {
     requests.add(request);
@@ -271,6 +282,27 @@ class _FailureReceiptSession extends _RetryableSessionController {
   }
 }
 
+class _PendingActivationSession extends _FailureReceiptSession {
+  static late Completer<void> started;
+  static late Completer<SessionJoinResult> gate;
+
+  @override
+  Future<SessionJoinResult> activateConnectedRoom({
+    required Room room,
+    SessionJoinMedia? joinMedia,
+  }) {
+    adoptedRoom = room;
+    started.complete();
+    return gate.future;
+  }
+
+  @override
+  Future<void> resetAfterFailedJoin() async {
+    await super.resetAfterFailedJoin();
+    _FailureReceiptSession.receiptMessaging.finished?.complete();
+  }
+}
+
 class _UninitializedSessionController extends _SuccessfulSessionController {
   @override
   void preventAutoDispose() =>
@@ -304,6 +336,7 @@ class _AdmissionTransport extends LiveKitAdmissionTransport {
   bool keepEventsOpenAfterDispose = false;
   Completer<void>? cancelSendGate;
   int cancelSends = 0;
+  void Function(AdmissionPacket)? onSend;
 
   @override
   bool get hasEnded => ended;
@@ -326,6 +359,7 @@ class _AdmissionTransport extends LiveKitAdmissionTransport {
 
   @override
   Future<void> send(AdmissionPacket packet) async {
+    onSend?.call(packet);
     if (packet is AdmissionRequest) {
       request = packet;
       if (endWhenRequestSent) end();
@@ -380,6 +414,7 @@ class _AdmissionRoom extends Room {
 
 class _AdmissionFlow extends PreJoinFlowController {
   static _AdmissionTransport? transport;
+  static void Function(_AdmissionTransport)? onTransportCreated;
   static int connections = 0;
   static bool failConnection = false;
   static bool endWhenRequestSent = false;
@@ -391,9 +426,13 @@ class _AdmissionFlow extends PreJoinFlowController {
   Room createAdmissionRoom() => room = _AdmissionRoom();
 
   @override
-  LiveKitAdmissionTransport createAdmissionTransport(Room room) =>
-      (transport = _AdmissionTransport(room))
-        ..endWhenRequestSent = endWhenRequestSent;
+  LiveKitAdmissionTransport createAdmissionTransport(Room room) {
+    final created = _AdmissionTransport(room)
+      ..endWhenRequestSent = endWhenRequestSent;
+    transport = created;
+    onTransportCreated?.call(created);
+    return created;
+  }
 
   @override
   Future<void> connectAdmissionRoom(Room room, String token) async {
@@ -649,6 +688,67 @@ void main() {
   );
 
   test(
+    'microphone lost after approval reports failure before room closes',
+    () async {
+      final factory = _TrackFactory();
+      _AdmissionFlow.failConnection = false;
+      _SuccessfulSessionController.receivedMedia = null;
+      _SuccessfulSessionController.activationCalls = 0;
+      _SuccessfulSessionController.joinCalls = 0;
+      final container = _container(
+        factory: factory,
+        response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+        sessionController: _SuccessfulSessionController.new,
+        keeperSlug: 'keeper',
+        flowController: _AdmissionFlow.new,
+      );
+      addTearDown(container.dispose);
+      await _waitForMedia(container);
+
+      final flow = container.read(
+        preJoinFlowControllerProvider(_slug).notifier,
+      );
+      check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+      final transport = _AdmissionFlow.transport!;
+      final room = _AdmissionFlow.room!;
+      final request = transport.request!;
+      final receipts = <AdmissionPacket>[];
+      var connectedAtSend = false;
+      _AdmissionFlow.onTransportCreated = (receiptTransport) {
+        receiptTransport.onSend = (packet) {
+          if (packet is AdmissionJoinFailed) {
+            receipts.add(packet);
+            connectedAtSend =
+                !receiptTransport.disposed &&
+                !room.disconnected &&
+                !room.disposed;
+          }
+        };
+      };
+      addTearDown(() => _AdmissionFlow.onTransportCreated = null);
+
+      transport.decide(true);
+      factory.audioTracks.single.mockMediaStreamTrack.onEnded?.call();
+      await pumpEventQueue();
+
+      check(_SuccessfulSessionController.activationCalls).equals(0);
+      check(_SuccessfulSessionController.joinCalls).equals(0);
+      check(_SuccessfulSessionController.receivedMedia).isNull();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
+      check(room.disconnected).isTrue();
+      check(room.disposed).isTrue();
+      check(transport.disposed).isTrue();
+      check(receipts).length.equals(1);
+      check(receipts.single.id).equals(request.id);
+      check(receipts.single.senderIdentity).equals('guest');
+      check(receipts.single.recipientIdentity).equals('keeper');
+      check(connectedAtSend).isTrue();
+    },
+  );
+
+  test(
     'a pending receipt send does not hold an activated participant on pre-join',
     () async {
       final messaging = _PendingReceiptMessagingController();
@@ -680,6 +780,63 @@ void main() {
         container.read(preJoinFlowControllerProvider(_slug)).phase,
       ).equals(PreJoinFlowPhase.joined);
       messaging.receiptGate.complete();
+    },
+  );
+
+  test(
+    'cancellation during approved room activation rejects late success',
+    () async {
+      final messaging = _FailureReceiptMessaging()
+        ..finished = Completer<void>();
+      _FailureReceiptSession.receiptMessaging = messaging;
+      _FailureReceiptSession.throwReset = false;
+      _FailureReceiptSession.events.clear();
+      _PendingActivationSession.started = Completer<void>();
+      _PendingActivationSession.gate = Completer<SessionJoinResult>();
+      final container = _container(
+        factory: _TrackFactory(),
+        response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+        sessionController: _PendingActivationSession.new,
+        keeperSlug: 'keeper',
+        flowController: _AdmissionFlow.new,
+      );
+      addTearDown(container.dispose);
+      await _waitForMedia(container);
+      final phases = <PreJoinFlowPhase>[];
+      container.listen(preJoinFlowControllerProvider(_slug), (_, next) {
+        phases.add(next.phase);
+      });
+      final flow = container.read(
+        preJoinFlowControllerProvider(_slug).notifier,
+      );
+      check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+      final transport = _AdmissionFlow.transport!;
+      final request = transport.request!;
+      transport.decide(true);
+      await _PendingActivationSession.started.future;
+
+      await flow.cancelAdmission();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
+      ).equals(AdmissionStatus.cancelled);
+      _PendingActivationSession.gate.complete(SessionJoinResult.success);
+      await messaging.finished!.future;
+      await pumpEventQueue();
+
+      check(phases.contains(PreJoinFlowPhase.joined)).isFalse();
+      check(messaging.joinedRequests).isEmpty();
+      check(messaging.requests).length.equals(1);
+      check(messaging.requests.single.id).equals(request.id);
+      check(
+        _FailureReceiptSession.events,
+      ).deepEquals(['failure receipt', 'reset']);
+      check(transport.disposed).isTrue();
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
+      ).equals(AdmissionStatus.cancelled);
     },
   );
 

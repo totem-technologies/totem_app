@@ -766,6 +766,14 @@ void main() {
           AdmissionKeeperAvailability.unresponsive,
         );
         check(channel.sent.whereType<AdmissionRequest>()).length.equals(1);
+        channel.controller.add(const AdmissionConnectionRestored());
+        check(guest.keeperAvailability).equals(
+          AdmissionKeeperAvailability.checking,
+        );
+        async.elapse(const Duration(seconds: 10));
+        check(guest.keeperAvailability).equals(
+          AdmissionKeeperAvailability.unresponsive,
+        );
 
         unawaited(guest.dispose());
         unawaited(channel.dispose());
@@ -826,7 +834,7 @@ void main() {
   });
 
   test(
-    'an early trusted Keeper hello remains responsive after ten seconds',
+    'a confirmed request remains responsive after a quick reconnect',
     () {
       fakeAsync((async) {
         final clock = async.getClock(_fixedNow);
@@ -852,9 +860,27 @@ void main() {
         check(guest.keeperAvailability).equals(
           AdmissionKeeperAvailability.responsive,
         );
+        final sentBeforeReconnect = channel.sent.length;
+        channel.controller.add(const AdmissionConnectionRestored());
+        check(channel.sent).length.equals(sentBeforeReconnect + 1);
+        check(channel.sent.last).equals(channel.sent.first);
         async.elapse(const Duration(seconds: 10));
+        check(guest.status).equals(AdmissionStatus.pending);
         check(guest.keeperAvailability).equals(
           AdmissionKeeperAvailability.responsive,
+        );
+
+        channel.controller.add(const AdmissionPresenceChanged('keeper', false));
+        check(guest.keeperAvailability).equals(
+          AdmissionKeeperAvailability.absent,
+        );
+        channel.controller.add(const AdmissionPresenceChanged('keeper', true));
+        check(guest.keeperAvailability).equals(
+          AdmissionKeeperAvailability.checking,
+        );
+        async.elapse(const Duration(seconds: 10));
+        check(guest.keeperAvailability).equals(
+          AdmissionKeeperAvailability.unresponsive,
         );
 
         unawaited(guest.dispose());
@@ -1547,6 +1573,124 @@ void main() {
       ).equals(KeeperAdmissionStatus.joining);
 
       await guestChannel.send(AdmissionProtocol.joined(second));
+      check(keeper.roster).deepEquals(['guest']);
+      check(keeper.attempts.single.status).equals(KeeperAdmissionStatus.joined);
+    },
+  );
+
+  test('revocation removes admission and requires a fresh decision', () async {
+    final channel = _Channel('keeper')..present.addAll(['guest', 'friend']);
+    final store = KeeperAdmissionRosterStore()
+      ..replace(['guest', 'friend'], 4, awaitingReadiness: ['guest']);
+    final keeper = _keeperAdmissionController(
+      channel: channel,
+      keeperIdentity: () => 'keeper',
+      sessionIdentity: 'session',
+      rosterStore: store,
+    );
+    var changes = 0;
+    final subscription = keeper.changes.listen((_) => changes++);
+    addTearDown(() async {
+      await subscription.cancel();
+      await keeper.dispose();
+      await channel.dispose();
+    });
+    final old = AdmissionRequest(
+      id: 'old',
+      senderIdentity: 'guest',
+      recipientIdentity: 'keeper',
+      expiresAt: _fixedNow.add(const Duration(minutes: 1)),
+      displayName: 'Guest',
+    );
+    channel.controller.add(AdmissionPacketReceived(old));
+    await pumpEventQueue();
+    changes = 0;
+    keeper.revoke('guest');
+    await pumpEventQueue();
+    check(changes > 0).isTrue();
+    check(keeper.roster).deepEquals(['friend']);
+    check(store.members.toList()).deepEquals(['friend']);
+    check(store.awaitingReadiness).isEmpty();
+    check(store.revision).equals(5);
+    final update = channel.sent.whereType<AdmissionRosterUpdated>().last;
+    check(update.recipientIdentity).equals('friend');
+    check(update.revision).equals(5);
+    check(update.members).deepEquals(['friend']);
+    channel.controller.add(
+      AdmissionPacketReceived(AdmissionProtocol.joined(old)),
+    );
+    channel.controller.add(AdmissionPacketReceived(old));
+    check(keeper.roster).deepEquals(['friend']);
+    check(keeper.requests).isEmpty();
+    check(keeper.attempts).isEmpty();
+
+    final fresh = AdmissionRequest(
+      id: 'fresh',
+      senderIdentity: 'guest',
+      recipientIdentity: 'keeper',
+      expiresAt: old.expiresAt.add(const Duration(milliseconds: 1)),
+      displayName: 'Guest',
+    );
+    channel.controller.add(AdmissionPacketReceived(fresh));
+    check(keeper.requests.single.id).equals('fresh');
+    await keeper.approve('fresh', 'guest');
+    channel.controller.add(
+      AdmissionPacketReceived(AdmissionProtocol.joined(fresh)),
+    );
+    check(keeper.roster).deepEquals(['friend', 'guest']);
+  });
+
+  test(
+    'revocation isolates overlapping approvals and permits automatic readmission',
+    () async {
+      final channel = _Channel('keeper');
+      final keeper = _keeperAdmissionController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+      );
+      addTearDown(() async {
+        await keeper.dispose();
+        await channel.dispose();
+      });
+      final old = AdmissionRequest(
+        id: 'old',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
+        displayName: 'Guest',
+      );
+      final fresh = AdmissionRequest(
+        id: 'fresh',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: old.expiresAt.add(const Duration(milliseconds: 1)),
+        displayName: 'Guest',
+      );
+      final oldGate = Completer<void>();
+      final freshGate = Completer<void>();
+      channel.beforeSend = (packet) {
+        if (packet is AdmissionDecision) {
+          return packet.id == 'old' ? oldGate.future : freshGate.future;
+        }
+        return Future.value();
+      };
+      channel.controller.add(AdmissionPacketReceived(old));
+      final oldApproval = keeper.approve('old', 'guest');
+      keeper
+        ..revoke('guest')
+        ..setApprovalRequired(false);
+      channel.controller.add(AdmissionPacketReceived(fresh));
+      channel.controller.add(
+        AdmissionPacketReceived(AdmissionProtocol.joined(fresh)),
+      );
+      oldGate.complete();
+      await check(oldApproval).throws<StateError>();
+      channel.controller.add(
+        AdmissionPacketReceived(AdmissionProtocol.joined(old)),
+      );
+      check(keeper.roster).isEmpty();
+      freshGate.complete();
+      await pumpEventQueue();
       check(keeper.roster).deepEquals(['guest']);
       check(keeper.attempts.single.status).equals(KeeperAdmissionStatus.joined);
     },

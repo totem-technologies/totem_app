@@ -21,6 +21,8 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
   SessionAdmissionPreferences? _preferences;
   KeeperAdmissionRosterStore? _store;
   String? _storageKey;
+  late String _sessionSlug;
+  late String _keeperIdentity;
 
   @override
   Future<KeeperAdmissionRosterStore> build(
@@ -28,6 +30,8 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
     String keeperIdentity,
   ) {
     _validateSession(sessionSlug, keeperIdentity);
+    _sessionSlug = sessionSlug;
+    _keeperIdentity = keeperIdentity;
     final generation = ++_initializationGeneration;
     _loadedGeneration = 0;
     _preferences = null;
@@ -45,6 +49,25 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
     final store = _loadedStore()..clear();
     if (ref.mounted) state = AsyncData(store);
     return _enqueue(null);
+  }
+
+  Future<void> resetCorruptData() {
+    if (state.error is! CorruptSessionAdmissionData) {
+      throw StateError('Keeper admission roster is not corrupt');
+    }
+    final key = _storageKeyFor(_sessionSlug, _keeperIdentity);
+    final link = ref.keepAlive();
+    final operation = _writes.then((_) async {
+      final preferences = await ref.read(
+        sessionAdmissionPreferencesProvider.future,
+      );
+      if (!await preferences.remove(key)) {
+        throw StateError('Could not clear keeper admission roster');
+      }
+      if (ref.mounted) ref.invalidateSelf();
+    });
+    _writes = operation.catchError((Object _) {});
+    return operation.whenComplete(link.close);
   }
 
   Future<KeeperAdmissionRosterStore> _initialize(
@@ -99,14 +122,19 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
     final encoded = preferences.getString(storageKey);
     if (encoded == null) return KeeperAdmissionRosterStore();
 
-    final decoded = jsonDecode(encoded);
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(encoded);
+    } on FormatException {
+      throw CorruptSessionAdmissionData();
+    }
     if (decoded is! Map<String, Object?> ||
         decoded['version'] != _schemaVersion ||
         decoded['generation'] is! String ||
         decoded['revision'] is! int ||
         decoded['members'] is! List ||
         decoded['awaitingReadiness'] is! List) {
-      throw StateError('Invalid keeper admission roster');
+      throw CorruptSessionAdmissionData();
     }
 
     final generation = decoded['generation']! as String;
@@ -123,7 +151,7 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
         revision < 0 ||
         revision > _maxRevision ||
         !members.containsAll(awaitingReadiness)) {
-      throw StateError('Invalid keeper admission roster');
+      throw CorruptSessionAdmissionData();
     }
 
     return KeeperAdmissionRosterStore(keeperGeneration: generation)
@@ -132,7 +160,7 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
 
   Set<String> _readIdentities(List<Object?> values, String keeperIdentity) {
     if (values.any((value) => value is! String)) {
-      throw StateError('Invalid keeper admission roster');
+      throw CorruptSessionAdmissionData();
     }
     final identities = values.cast<String>().toSet();
     if (identities.length != values.length ||
@@ -142,7 +170,7 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
               identity.length > _maxIdentityLength ||
               identity == keeperIdentity,
         )) {
-      throw StateError('Invalid keeper admission roster');
+      throw CorruptSessionAdmissionData();
     }
     return identities;
   }

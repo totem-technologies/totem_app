@@ -6,6 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'declined_session_participants.g.dart';
 
+class CorruptSessionAdmissionData extends StateError {
+  CorruptSessionAdmissionData() : super('Invalid saved session admission data');
+}
+
 abstract interface class SessionAdmissionPreferences {
   String? getString(String key);
 
@@ -53,6 +57,8 @@ class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
   @override
   Future<Set<String>> build(String sessionSlug, String keeperIdentity) {
     _validateSession(sessionSlug, keeperIdentity);
+    _sessionSlug = sessionSlug;
+    _keeperIdentity = keeperIdentity;
     final generation = ++_initializationGeneration;
     return _initialization = _initialize(
       sessionSlug,
@@ -70,7 +76,11 @@ class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
       sessionAdmissionPreferencesProvider.future,
     );
     final declined = Set.unmodifiable(
-      _readDeclined(preferences, _storageKeyFor(sessionSlug, keeperIdentity)),
+      _readDeclined(
+        preferences,
+        _storageKeyFor(sessionSlug, keeperIdentity),
+        keeperIdentity,
+      ),
     );
     if (generation == _initializationGeneration) {
       _sessionSlug = sessionSlug;
@@ -98,6 +108,25 @@ class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
       }
       _declined = const <String>{};
       if (ref.mounted) state = AsyncData(_declined);
+    });
+    _operations = operation.catchError((Object _) {});
+    return operation.whenComplete(link.close);
+  }
+
+  Future<void> resetCorruptData() {
+    if (state.error is! CorruptSessionAdmissionData) {
+      throw StateError('Declined participants data is not corrupt');
+    }
+    final key = _storageKey;
+    final link = ref.keepAlive();
+    final operation = _operations.then((_) async {
+      final preferences = await ref.read(
+        sessionAdmissionPreferencesProvider.future,
+      );
+      if (!await preferences.remove(key)) {
+        throw StateError('Could not clear declined session participants');
+      }
+      if (ref.mounted) ref.invalidateSelf();
     });
     _operations = operation.catchError((Object _) {});
     return operation.whenComplete(link.close);
@@ -140,12 +169,24 @@ class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
   Set<String> _readDeclined(
     SessionAdmissionPreferences preferences,
     String storageKey,
+    String keeperIdentity,
   ) {
     final encoded = preferences.getString(storageKey);
     if (encoded == null) return const <String>{};
-    final decoded = jsonDecode(encoded);
-    if (decoded is! List || decoded.any((value) => value is! String)) {
-      throw const FormatException('Invalid declined session participants');
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(encoded);
+    } on FormatException {
+      throw CorruptSessionAdmissionData();
+    }
+    if (decoded is! List ||
+        decoded.any(
+          (value) =>
+              value is! String ||
+              value.trim().isEmpty ||
+              value == keeperIdentity,
+        )) {
+      throw CorruptSessionAdmissionData();
     }
     return decoded.cast<String>().toSet();
   }

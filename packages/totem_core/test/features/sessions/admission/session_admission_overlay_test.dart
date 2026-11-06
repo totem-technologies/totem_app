@@ -22,11 +22,13 @@ import 'package:totem_core/features/sessions/admission/session_admission_setting
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart'
     as session_state;
+import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 import '../../../setup.dart';
 import '../livekit_mocks.dart';
@@ -37,7 +39,7 @@ DateTime _testNow() => DateTime.utc(2026);
 class _AdmissionPreferences implements SessionAdmissionPreferences {
   _AdmissionPreferences({this.readError});
 
-  final Error? readError;
+  Error? readError;
   final values = <String, String>{};
   int writeCount = 0;
 
@@ -423,6 +425,136 @@ void main() {
     await tester.idle();
   });
 
+  for (final corruptStores in [
+    {'roster'},
+    {'declined'},
+    {'roster', 'declined'},
+  ]) {
+    testWidgets('reset restores admission with corrupt $corruptStores', (
+      tester,
+    ) async {
+      final preferences = _AdmissionPreferences();
+      await seedDeclined(preferences, 'blocked');
+      final declinedKey = preferences.values.keys.single;
+      await seedRoster(preferences, members: ['member'], revision: 2);
+      final rosterKey = preferences.values.keys.singleWhere(
+        (key) => key != declinedKey,
+      );
+      preferences.values['unrelated'] = 'keep';
+      final original = Map<String, String>.of(preferences.values);
+      if (corruptStores.contains('declined')) {
+        preferences.values[declinedKey] = '{';
+      }
+      if (corruptStores.contains('roster')) {
+        preferences.values[rosterKey] = '{';
+      }
+      final beforeReset = Map<String, String>.of(preferences.values);
+      final harness = _AdmissionHarness(preferences: preferences);
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+
+      final container = await pumpHost(
+        tester,
+        harness,
+        videoBuilds: videoBuilds,
+      );
+      await tester.pump();
+      await tester.tap(find.byType(SessionWaitingQueueButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reset admission data'));
+      await tester.pumpAndSettle();
+
+      check(find.byType(ConfirmationDialog).evaluate()).length.equals(1);
+      check(
+        find
+            .descendant(
+              of: find.byType(ConfirmationDialog),
+              matching: find.textContaining(
+                RegExp('lost|remov|delet|clear', caseSensitive: false),
+              ),
+            )
+            .evaluate(),
+      ).isNotEmpty();
+      check(preferences.values).deepEquals(beforeReset);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      check(preferences.values).deepEquals(beforeReset);
+      check(find.byType(ConfirmationDialog).evaluate()).isEmpty();
+
+      await tester.tap(find.text('Reset admission data'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(ConfirmationDialog),
+          matching: find.text('Reset admission data'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      check(preferences.values[declinedKey]).equals(
+        corruptStores.contains('declined') ? null : original[declinedKey],
+      );
+      check(preferences.values[rosterKey]).equals(
+        corruptStores.contains('roster') ? null : original[rosterKey],
+      );
+      check(preferences.values['unrelated']).equals('keep');
+      final declined = await container.read(
+        declinedSessionParticipantsProvider('session', 'keeper').future,
+      );
+      final roster = await container.read(
+        keeperAdmissionRosterProvider('session', 'keeper').future,
+      );
+      check(
+        declined.contains('blocked'),
+      ).equals(!corruptStores.contains('declined'));
+      check(
+        roster.members.contains('member'),
+      ).equals(!corruptStores.contains('roster'));
+      check(find.text('Retry').evaluate()).isEmpty();
+      check(find.text('Reset admission data').evaluate()).isEmpty();
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    });
+  }
+
+  testWidgets('ordinary read errors offer retry without resetting data', (
+    tester,
+  ) async {
+    final preferences = _AdmissionPreferences();
+    await seedDeclined(preferences, 'blocked');
+    await seedRoster(preferences, members: ['member'], revision: 2);
+    final original = Map<String, String>.of(preferences.values);
+    preferences.readError = StateError('unavailable');
+    final harness = _AdmissionHarness(preferences: preferences);
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+
+    final container = await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.pump();
+    await tester.tap(find.byType(SessionWaitingQueueButton));
+    await tester.pumpAndSettle();
+    check(find.text('Retry').evaluate()).length.equals(1);
+    check(find.text('Reset admission data').evaluate()).isEmpty();
+    preferences.readError = null;
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    check(preferences.values).deepEquals(original);
+    final declined = await container.read(
+      declinedSessionParticipantsProvider('session', 'keeper').future,
+    );
+    final roster = await container.read(
+      keeperAdmissionRosterProvider('session', 'keeper').future,
+    );
+    check(declined).contains('blocked');
+    check(roster.members).contains('member');
+    check(find.text('Retry').evaluate()).isEmpty();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.idle();
+  });
+
   testWidgets('does not advertise an empty roster when persistence fails', (
     tester,
   ) async {
@@ -611,6 +743,77 @@ void main() {
       await tester.idle();
     },
   );
+
+  testWidgets('removed admitted guest must request approval again', (
+    tester,
+  ) async {
+    final preferences = _AdmissionPreferences();
+    await seedRoster(preferences, members: ['guest', 'silent'], revision: 7);
+    final harness = _AdmissionHarness(preferences: preferences);
+    harness.room.remotes['guest'] = _RemoteParticipant('guest');
+    harness.room.remotes['silent'] = _RemoteParticipant('silent');
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+
+    final container = ProviderContainer(overrides: harness.overrides);
+    addTearDown(container.dispose);
+    final subscription = container.listen(
+      sessionKeeperControllerProvider(harness.session),
+      (_, _) {},
+    );
+    addTearDown(subscription.close);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: ThemeData(useMaterial3: false),
+          home: _AdmissionOverlayHost(videoBuilds: videoBuilds),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    check(harness.mediaRecipients.last).deepEquals({'guest', 'silent'});
+
+    await container
+        .read(sessionKeeperControllerProvider(harness.session).notifier)
+        .onParticipantRemoved!('guest');
+    await tester.pump();
+    check(
+      container.read(admittedSessionParticipantIdentitiesProvider),
+    ).deepEquals({'keeper', 'silent'});
+    check(harness.mediaRecipients.last).deepEquals({'silent'});
+
+    final restored = ProviderContainer(
+      overrides: [
+        sessionAdmissionPreferencesProvider.overrideWith(
+          (ref) async => preferences,
+        ),
+      ],
+    );
+    addTearDown(restored.dispose);
+    final roster = await restored.read(
+      keeperAdmissionRosterProvider('session', 'keeper').future,
+    );
+    check(roster.members).deepEquals({'silent'});
+    check(roster.revision).equals(8);
+
+    harness.sent.clear();
+    await harness.sendRequest(harness.request('rejoin'));
+    await tester.pump();
+    await tester.pump();
+    check(find.byType(SessionWaitingQueueButton).evaluate()).length.equals(1);
+    check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    check(
+      container
+          .read(sessionKeeperControllerProvider(harness.session).notifier)
+          .onParticipantRemoved,
+    ).isNull();
+    await tester.idle();
+  });
 
   testWidgets(
     'does not restore pending or awaiting-readiness applicants',

@@ -16,10 +16,12 @@ import 'package:totem_core/features/sessions/admission/keeper_admission_panel.da
 import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
@@ -50,6 +52,8 @@ class _SessionAdmissionOverlayState
 
   LiveKitAdmissionTransport? _transport;
   KeeperAdmissionController? _keeperController;
+  SessionKeeperController? _sessionKeeper;
+  Future<void> Function(String)? _revokeRemovedParticipant;
   ClientAdmissionRosterController? _clientController;
   // Cancelled by _detachAdmission.
   // ignore: cancel_subscriptions
@@ -126,7 +130,8 @@ class _SessionAdmissionOverlayState
     if (!mounted) return;
     final state = ref.read(currentSessionStateProvider);
     final event = ref.read(currentSessionEventProvider);
-    final room = ref.read(currentSessionProvider)?.room;
+    final session = ref.read(currentSessionProvider);
+    final room = session?.room;
     final keeperIdentity = state?.roomState.keeper;
     _sessionEnded =
         state?.roomState.status == RoomStatus.ended || event?.ended == true;
@@ -214,6 +219,26 @@ class _SessionAdmissionOverlayState
         now: widget.now,
       );
       _keeperController = controller;
+      final sessionKeeper = ref.read(
+        sessionKeeperControllerProvider(session!).notifier,
+      );
+      Future<void> revokeRemovedParticipant(String identity) async {
+        if (!identical(_keeperController, controller)) {
+          throw StateError(
+            'Participant was removed, but admission could not be updated.',
+          );
+        }
+        controller.revoke(identity);
+        if (!await _persistRoster(rosterNotifier.persist)) {
+          throw StateError(
+            'Participant was removed, but admission could not be saved.',
+          );
+        }
+      }
+
+      _sessionKeeper = sessionKeeper;
+      _revokeRemovedParticipant = revokeRemovedParticipant;
+      sessionKeeper.onParticipantRemoved = revokeRemovedParticipant;
       var persistedRosterRevision = controller.rosterRevision;
       final savingRosterRevisions = <int>{};
       _syncAdmittedIdentities(controller.roster);
@@ -332,6 +357,16 @@ class _SessionAdmissionOverlayState
       final persist = _saveKeeperRoster;
       if (persist != null) unawaited(_persistRoster(persist));
     }
+    final sessionKeeper = _sessionKeeper;
+    if (sessionKeeper != null &&
+        identical(
+          sessionKeeper.onParticipantRemoved,
+          _revokeRemovedParticipant,
+        )) {
+      sessionKeeper.onParticipantRemoved = null;
+    }
+    _sessionKeeper = null;
+    _revokeRemovedParticipant = null;
     _attachedKeeperRoster = null;
     _saveKeeperRoster = null;
     _clearKeeperRoster = null;
@@ -460,6 +495,7 @@ class _SessionAdmissionOverlayState
   @override
   Widget build(BuildContext context) {
     VoidCallback? retry;
+    Future<void> Function()? resetCorruptData;
     final keeper = ref.watch(keeperIdentityProvider);
     if (keeper != null &&
         ref.read(currentSessionProvider)?.room?.localParticipant?.identity ==
@@ -483,6 +519,20 @@ class _SessionAdmissionOverlayState
           if (declined.hasError) ref.invalidate(provider);
           if (roster.hasError) ref.invalidate(rosterProvider);
         };
+        final corruptDeclined =
+            declined.error is CorruptSessionAdmissionData && !declined.hasValue;
+        final corruptRoster =
+            roster.error is CorruptSessionAdmissionData && !roster.hasValue;
+        if (corruptDeclined || corruptRoster) {
+          resetCorruptData = () async {
+            if (corruptDeclined) {
+              await ref.read(provider.notifier).resetCorruptData();
+            }
+            if (corruptRoster) {
+              await ref.read(rosterProvider.notifier).resetCorruptData();
+            }
+          };
+        }
       }
     }
     final controller = _keeperController;
@@ -501,6 +551,7 @@ class _SessionAdmissionOverlayState
       enabled: controller?.approvalRequired ?? false,
       busy: _busy,
       onRetry: retry,
+      onResetCorruptData: resetCorruptData,
       onDecision: _decide,
       onDeclinePermanently: (request) =>
           _decide(request, false, permanently: true),
@@ -522,6 +573,7 @@ class _SessionAdmissionScope extends InheritedWidget {
     required this.onDeclinePermanently,
     required this.onAdmitAll,
     required this.onRetry,
+    required this.onResetCorruptData,
     required super.child,
   });
 
@@ -530,6 +582,7 @@ class _SessionAdmissionScope extends InheritedWidget {
   final bool enabled;
   final bool busy;
   final VoidCallback? onRetry;
+  final Future<void> Function()? onResetCorruptData;
   final Future<void> Function(AdmissionRequest, bool) onDecision;
   final Future<void> Function(AdmissionRequest) onDeclinePermanently;
   final VoidCallback onAdmitAll;
@@ -650,6 +703,42 @@ class SessionAdmissionPanel extends ConsumerWidget {
                   style: TextStyle(color: AppTheme.slate),
                 ),
                 OutlinedButton(onPressed: retry, child: const Text('Retry')),
+                if (admission.onResetCorruptData case final reset?)
+                  OutlinedButton(
+                    onPressed: () => showDialog<void>(
+                      context: context,
+                      useRootNavigator: false,
+                      builder: (dialogContext) => ConfirmationDialog(
+                        title: 'Reset admission data?',
+                        content:
+                            'Corrupt admission data will be removed. If the roster is reset, participants must be admitted again. If declined participants are reset, permanent declines will be lost.',
+                        confirmButtonText: 'Reset admission data',
+                        scrollable: true,
+                        onConfirm: () async {
+                          try {
+                            await reset();
+                            if (dialogContext.mounted) {
+                              Navigator.of(dialogContext).pop();
+                            }
+                          } catch (error, stackTrace) {
+                            ErrorHandler.logError(
+                              error,
+                              stackTrace: stackTrace,
+                              message: 'Could not reset admission data',
+                            );
+                            if (dialogContext.mounted) {
+                              ErrorHandler.showErrorDialog(
+                                dialogContext,
+                                message:
+                                    'Could not reset admission data. Please try again.',
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                    child: const Text('Reset admission data'),
+                  ),
                 OutlinedButton(onPressed: close, child: const Text('Close')),
               ],
             ),

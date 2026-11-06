@@ -189,7 +189,9 @@ class PendingAdmissionController {
           unawaited(_sendBestEffort(_cancellation ?? request));
         }
       case AdmissionConnectionRestored():
-        _startKeeperAvailabilityCheck();
+        if (_keeperAvailability != AdmissionKeeperAvailability.responsive) {
+          _startKeeperAvailabilityCheck();
+        }
         _resendIfPresent();
       case AdmissionPresenceChanged(:final identity, present: true):
         if (identity == request.recipientIdentity) {
@@ -373,6 +375,7 @@ class KeeperAdmissionController {
   // At most one active request per participant identity. Keep the latest
   // packet across disconnects so an older request cannot resurrect the queue.
   final _latest = <String, AdmissionPacket>{};
+  final _revoked = <String>{};
   final _pending = <String, AdmissionRequest>{};
   final _decisions = <String, AdmissionDecision>{};
   final _decisionRetries = <String, Timer>{};
@@ -439,6 +442,28 @@ class KeeperAdmissionController {
   );
   int get rosterRevision => _rosterRevision;
   String get keeperGeneration => _keeperGeneration;
+
+  /// Revokes admission after the Keeper has successfully removed a participant.
+  void revoke(String identity) {
+    if (_disposed || _ended) return;
+    _revoked.add(identity);
+    _pending.remove(identity);
+    _decisions.remove(identity);
+    _decisionRetries.remove(identity)?.cancel();
+    _attempts.remove(identity);
+    _earlyOutcomes.remove(identity);
+    _expirations.remove(identity)?.cancel();
+    _roster.remove(identity);
+    _awaitingReadiness.remove(identity);
+    _rosterRevision++;
+    _rosterStore?.replace(
+      _roster,
+      _rosterRevision,
+      awaitingReadiness: _awaitingReadiness,
+    );
+    _publishRosterUpdate();
+    _changes.add(null);
+  }
 
   String _key(String sender, String id) => '$sender\u0000$id';
 
@@ -529,6 +554,7 @@ class KeeperAdmissionController {
       }
       _expirations.clear();
       _latest.clear();
+      _revoked.clear();
       _pending.clear();
       _decisions.clear();
       for (final timer in _decisionRetries.values) {
@@ -585,7 +611,9 @@ class KeeperAdmissionController {
           if (packet.expiresAt.isAfter(latest.expiresAt)) _record(packet);
           return;
         }
-        if (packet.expiresAt != latest.expiresAt) return;
+        if (packet.expiresAt != latest.expiresAt || _revoked.contains(sender)) {
+          return;
+        }
         if (packet is AdmissionCancel) {
           if (latest is! AdmissionCancel &&
               _attempts[sender]?.status != KeeperAdmissionStatus.joined) {
@@ -651,6 +679,7 @@ class KeeperAdmissionController {
     final sender = packet.senderIdentity;
     _expirations.remove(sender)?.cancel();
     _latest[sender] = packet;
+    _revoked.remove(sender);
     _decisions.remove(sender);
     _decisionRetries.remove(sender)?.cancel();
     _earlyOutcomes.remove(sender);
@@ -898,7 +927,10 @@ class KeeperAdmissionController {
         _attempts.remove(sender);
         if (!_disposed && !_ended) _changes.add(null);
       }
-      _earlyOutcomes.remove(sender);
+      if (_earlyOutcomes[sender]?.id == id &&
+          _earlyOutcomes[sender]?.expiresAt == request.expiresAt) {
+        _earlyOutcomes.remove(sender);
+      }
       _approving.remove(key);
       _inFlight.remove(key);
     }
@@ -912,6 +944,7 @@ class KeeperAdmissionController {
     }
     _expirations.clear();
     _latest.clear();
+    _revoked.clear();
     _pending.clear();
     _decisions.clear();
     for (final timer in _decisionRetries.values) {

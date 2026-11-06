@@ -499,21 +499,34 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       if (failureReceiptAttempted ||
           admissionRequest == null ||
           admissionRoom == null ||
-          session == null ||
-          !identical(session.room, admissionRoom)) {
+          (session != null && !identical(session.room, admissionRoom))) {
         return;
       }
       failureReceiptAttempted = true;
+      LiveKitAdmissionTransport? temporaryTransport;
       try {
-        await session.messaging
-            .sendAdmissionJoinFailed(admissionRequest)
-            .timeout(const Duration(milliseconds: 500));
+        final send = session == null
+            ? (temporaryTransport = createAdmissionTransport(
+                admissionRoom,
+              )).send(AdmissionProtocol.joinFailed(admissionRequest))
+            : session.messaging.sendAdmissionJoinFailed(admissionRequest);
+        await send.timeout(const Duration(milliseconds: 500));
       } catch (error, stackTrace) {
         ErrorHandler.logError(
           error,
           stackTrace: stackTrace,
           message: 'Could not report Session admission failure to Keeper',
         );
+      } finally {
+        try {
+          await temporaryTransport?.dispose();
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Could not dispose admission receipt transport',
+          );
+        }
       }
     }
 
@@ -530,6 +543,8 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       final readiness = await _currentJoinReadiness();
       if (!ref.mounted || _cancelRequested) return PreJoinJoinOutcome.ignored;
       if (readiness != JoinReadiness.ready) {
+        await sendFailureReceipt();
+        if (!ref.mounted || _cancelRequested) return PreJoinJoinOutcome.ignored;
         state = state.copyWith(
           phase: PreJoinFlowPhase.idle,
           error: admissionRequest == null
@@ -587,6 +602,15 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         } finally {
           activationTrace.finish();
         }
+      }
+      if (_cancelRequested || !ref.mounted) {
+        await sendFailureReceipt();
+        if (ref.mounted) {
+          await _resetAfterFailedJoin(currentSession);
+        } else {
+          await currentSession.resetAfterFailedJoin();
+        }
+        return PreJoinJoinOutcome.ignored;
       }
       if (result == SessionJoinResult.retryableFailure ||
           (admissionRequest != null &&
