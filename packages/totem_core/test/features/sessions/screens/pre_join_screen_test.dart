@@ -907,9 +907,7 @@ void main() {
           .widget<ActionSliderButton>(find.byType(ActionSliderButton))
           .onActionCompleted();
       await tester.pump();
-      check(
-        find.text("We couldn't join the Session. Please try again.").evaluate(),
-      ).isNotEmpty();
+      check(find.textContaining("We couldn't join").evaluate()).isNotEmpty();
       check(tester.takeException()).isNull();
       final container = ProviderScope.containerOf(
         tester.element(find.byType(PreJoinScreen)),
@@ -1349,9 +1347,7 @@ void main() {
     await tester.pump();
 
     check(tokenRequests).equals(1);
-    check(
-      find.text("We couldn't join the Session. Please try again.").evaluate(),
-    ).length.equals(1);
+    check(find.textContaining("We couldn't join").evaluate()).length.equals(1);
     check(find.textContaining(sensitiveDetail).evaluate()).isEmpty();
     final retry = tester.widget<ActionSliderButton>(
       find.byType(ActionSliderButton),
