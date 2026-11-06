@@ -4,8 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+
+import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
@@ -16,6 +19,7 @@ import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/permissions/policy.dart';
 import 'package:totem_core/features/permissions/ui/priming_sheet.dart';
 import 'package:totem_core/features/permissions/ui/recovery.dart';
+import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
@@ -27,9 +31,13 @@ import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
+import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
+
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 Future<bool> showAlreadyPresentDialog(BuildContext context) async {
@@ -54,9 +62,14 @@ Future<bool> showAlreadyPresentDialog(BuildContext context) async {
 }
 
 class PreJoinScreen extends ConsumerStatefulWidget {
-  const PreJoinScreen({required this.sessionSlug, super.key});
+  const PreJoinScreen({
+    required this.sessionSlug,
+    this.now = DateTime.now,
+    super.key,
+  });
 
   final String sessionSlug;
+  final ValueGetter<DateTime> now;
 
   @override
   ConsumerState<PreJoinScreen> createState() => _PreJoinScreenState();
@@ -65,15 +78,23 @@ class PreJoinScreen extends ConsumerStatefulWidget {
 class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     with WidgetsBindingObserver {
   final GlobalKey _preJoinViewKey = GlobalKey();
+  final GlobalKey _previewKey = GlobalKey();
+  final GlobalKey _controlsKey = GlobalKey();
   bool _showingAlreadyPresentDialog = false;
   bool _primingSheetShown = false;
   bool _reportedFullyDisplayed = false;
   bool _joined = false;
+  bool _leavingWaiting = false;
   bool _wakeLockEnabled = false;
   bool _wakeLockRequested = false;
+  bool _signingUpForOffer = false;
+  String? _signedUpOfferSlug;
+  final _notificationController = NotificationController();
   Future<void> _wakeLockOperation = Future.value();
   PreJoinMediaController? _mediaController;
   bool _terminalMediaReleaseRequested = false;
+  Timer? _joinWindowTimer;
+  DateTime? _joinWindowStart;
 
   @override
   void initState() {
@@ -88,6 +109,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _joinWindowTimer?.cancel();
+    _notificationController.dispose();
     if (!_joined) {
       unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     }
@@ -142,9 +165,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   }
 
   /// Offers the priming sheet once, when access is first known and there's
-  /// something the OS can still prompt for (X2). Web has no sheet: capturing
-  /// is the prompt. Only the pre-join view offers it, never the loading,
-  /// error or ended screens.
+  /// something the OS can still prompt for. Web capture supplies its prompt.
   void _maybeShowPrimingSheet(MediaPermissions? permissions) {
     if (permissions == null || _primingSheetShown || !mounted) return;
     if (!shouldShowPrimingSheet(permissions, ref.read(platformInfoProvider))) {
@@ -167,8 +188,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         .read(preJoinFlowControllerProvider(widget.sessionSlug).notifier)
         .requestJoin(replaceExistingSession: replaceExistingSession);
     if (!mounted) return false;
-    // A missing microphone needs nothing here: the banner already shows its
-    // fix.
     if (outcome == PreJoinJoinOutcome.confirmationRequired) {
       await _promptAlreadyPresent();
     }
@@ -190,10 +209,99 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
   }
 
   Future<void> _onRetry() async {
-    final _ = await ref.refresh(
-      sessionTokenProvider(widget.sessionSlug).future,
-    );
     final _ = await ref.refresh(sessionProvider(widget.sessionSlug).future);
+  }
+
+  Future<void> _signUpForOffer(String sessionSlug) async {
+    if (_signingUpForOffer || !mounted) return;
+    setState(() => _signingUpForOffer = true);
+    try {
+      final attending = await ref.refresh(
+        rsvpConfirmProvider(sessionSlug).future,
+      );
+      if (!mounted) return;
+      setState(() {
+        _signingUpForOffer = false;
+        _signedUpOfferSlug = attending ? sessionSlug : null;
+      });
+      if (!attending) {
+        _notificationController.showError(
+          context,
+          icon: TotemIcons.spaces,
+          title: 'Failed to attend',
+          message: 'Please try again later',
+        );
+      }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to attend session',
+      );
+      if (!mounted) return;
+      setState(() => _signingUpForOffer = false);
+      _notificationController.showError(
+        context,
+        icon: TotemIcons.spaces,
+        title: 'Failed to attend',
+        message: 'Please try again later',
+      );
+    }
+  }
+
+  void _scheduleJoinWindow(SessionDetailSchema session) {
+    final start = session.start.toLocal().subtract(const Duration(minutes: 10));
+    if (_joinWindowStart == start) return;
+    _joinWindowStart = start;
+    _joinWindowTimer?.cancel();
+    final remaining = start.difference(widget.now());
+    if (remaining > Duration.zero) {
+      _joinWindowTimer = Timer(remaining, () {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  Widget _buildDeclined(SessionDetailSchema session, PreJoinFlowState flow) {
+    final next = session.space.nextEvents.where(
+      (event) =>
+          !event.cancelled &&
+          event.slug != session.slug &&
+          event.start.isAfter(widget.now()),
+    );
+    final offer = next.isEmpty ? null : next.first;
+    final message = isTerminalSessionJoinError(flow.error)
+        ? 'The server is no longer allowing this Session to be joined.'
+        : switch (flow.admissionStatus) {
+            AdmissionStatus.denied => 'The Keeper was unable to admit you.',
+            AdmissionStatus.ended => 'The Session has ended.',
+            _ => 'Your admission request has expired.',
+          };
+    return RoomBackground(
+      status: RoomStatus.ended,
+      child: SafeArea(
+        child: SessionDeclinedView(
+          message: message,
+          actionLabel: _signingUpForOffer ? 'Signing up…' : 'Sign up',
+          offer: offer == null
+              ? null
+              : Text(
+                  '${offer.title ?? session.space.title} · ${DateFormat('EEEE, MMMM d · h:mm a').format(offer.start.toLocal())}',
+                ),
+          onOffer: offer == null
+              ? null
+              : () => context.go(
+                  RouteNames.spaceSession(session.space.slug, offer.slug),
+                ),
+          signedUp:
+              (offer?.attending ?? false) || offer?.slug == _signedUpOfferSlug,
+          onSignUp: offer == null || offer.attending || _signingUpForOffer
+              ? null
+              : () => unawaited(_signUpForOffer(offer.slug)),
+          onBackToSpace: () => TotemRouter.instance.popOrHome(context),
+        ),
+      ),
+    );
   }
 
   void _releaseTerminalPreviewMedia() {
@@ -223,6 +331,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         onActionPressed: () => Future.value(false),
         enabled: false,
       ),
+      previewKey: _previewKey,
+      controlsKey: _controlsKey,
     );
   }
 
@@ -258,16 +368,12 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           MediaKind.microphone => media.microphone.problem,
         },
       ),
-      // A permission prompt can be answered after the screen is gone, with
-      // nothing left to turn on.
       turnOn: () async => mounted
           ? ref.read(provider.notifier).turnOn(kind)
           : const TurnOnSkipped(),
     );
   }
 
-  /// Turns a device off, or on through the shared flow, so the preview asks,
-  /// captures and explains exactly as the session does.
   Future<void> _toggleMedia(MediaKind kind, {required bool isOn}) async {
     if (isOn) {
       await ref
@@ -279,12 +385,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       context,
       ref,
       _control(kind),
-      // The microphone banner already shows its fix.
       explain: kind != MediaKind.microphone,
     );
   }
 
-  Widget _buildPreJoinView(PreJoinMediaState media, PreJoinFlowState flow) {
+  Widget _buildPreJoinView(
+    PreJoinMediaState media,
+    PreJoinFlowState flow,
+    SessionDetailSchema session, {
+    required bool early,
+  }) {
     final mediaController = ref.read(
       preJoinMediaControllerProvider(widget.sessionSlug).notifier,
     );
@@ -301,11 +411,45 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         (_) => _reportFullyDisplayed(),
       );
     }
+    final pending = flow.phase == PreJoinFlowPhase.pending;
+    String? joinNote;
+    if (early) {
+      joinNote =
+          'Join opens at ${DateFormat('h:mm a').format(session.start.toLocal().subtract(const Duration(minutes: 10)))}.';
+    } else if (flow.error != null) {
+      joinNote = flow.admissionStatus == AdmissionStatus.failed
+          ? 'Waiting room connection was lost. Check your connection and try again.'
+          : "We couldn't join the session. Please try again.";
+    }
+    final waitingMessage = switch (flow.keeperAvailability) {
+      AdmissionKeeperAvailability.absent =>
+        'The Keeper is not connected yet. You can keep waiting or leave and try again later.',
+      AdmissionKeeperAvailability.unresponsive =>
+        "The Keeper hasn't confirmed your request. Ask them to reconnect or update Totem, or leave and try again.",
+      _ => null,
+    };
+    void leaveWaiting() {
+      if (_leavingWaiting) return;
+      _leavingWaiting = true;
+      unawaited(() async {
+        await ref
+            .read(preJoinFlowControllerProvider(widget.sessionSlug).notifier)
+            .cancelAdmission();
+        if (!mounted) return;
+        TotemRouter.instance
+          ..setTabCloseConfirmationEnabled(false)
+          ..popOrHome(context);
+      }());
+    }
+
     return PreJoinView(
       key: _preJoinViewKey,
       mediaState: media,
+      onLeave: pending ? leaveWaiting : null,
       locked:
-          flow.phase != PreJoinFlowPhase.idle || !media.initializationComplete,
+          (flow.phase != PreJoinFlowPhase.idle &&
+              flow.phase != PreJoinFlowPhase.pending) ||
+          !media.initializationComplete,
       onToggleCamera: () =>
           _toggleMedia(MediaKind.camera, isOn: media.preferences.isCameraOn),
       onToggleMicrophone: () =>
@@ -313,30 +457,28 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       onToggleSpeaker: mediaController.toggleSpeaker,
       onCameraFacingChanged: mediaController.setCameraFacing,
       onCameraDeviceSelected: mediaController.selectCameraDevice,
+      previewKey: _previewKey,
+      controlsKey: _controlsKey,
       notice: readiness == JoinReadiness.microphoneNeeded
           ? MediaRecoveryBanner(control: _control(MediaKind.microphone))
           : null,
       joinCard: JoinTransitionCard(
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
         keepActionLoadingOnSuccess: true,
-        enabled: readiness == JoinReadiness.ready,
-        onActionPressed: _requestJoin,
+        enabled: readiness == JoinReadiness.ready && !early,
+        onActionPressed: early ? () async => false : _requestJoin,
         isSliderLoading: flow.phase == PreJoinFlowPhase.joining,
+        note: joinNote,
+        waiting: pending,
+        waitingMessage: waitingMessage,
+        onLeaveWaiting: leaveWaiting,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final tokenData = ref.watch(sessionTokenProvider(widget.sessionSlug));
     final sessionData = ref.watch(sessionProvider(widget.sessionSlug));
-
-    if (tokenData.hasError) {
-      if (isTerminalSessionJoinError(tokenData.error)) {
-        _releaseTerminalPreviewMedia();
-      }
-      return _buildErrorScreen(tokenData.error, session: sessionData.value);
-    }
     if (sessionData.hasError) {
       if (isTerminalSessionJoinError(sessionData.error)) {
         _releaseTerminalPreviewMedia();
@@ -344,19 +486,34 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       return _buildErrorScreen(sessionData.error);
     }
 
-    final loadingData =
-        (tokenData.isLoading && !tokenData.isRefreshing) ||
-        (sessionData.isLoading && !sessionData.isRefreshing);
+    final loadingData = sessionData.isLoading && !sessionData.isRefreshing;
     if (loadingData) return _buildEligibilityLoading();
 
     final session = sessionData.value;
     if (session?.ended ?? false) return _buildEndedScreen(session!);
 
-    final media = ref.watch(preJoinMediaControllerProvider(widget.sessionSlug));
     final flow = ref.watch(preJoinFlowControllerProvider(widget.sessionSlug));
+    if (session == null) return _buildEligibilityLoading();
+    _scheduleJoinWindow(session);
+    final keeperIdentity = session.space.author.slug.value;
+    final isKeeper =
+        keeperIdentity != null &&
+        keeperIdentity == ref.watch(authControllerProvider).user?.slug.value;
+    final early =
+        !isKeeper &&
+        widget.now().isBefore(
+          session.start.subtract(const Duration(minutes: 10)),
+        );
+    if (isTerminalSessionJoinError(flow.error) ||
+        flow.admissionStatus == AdmissionStatus.denied ||
+        flow.admissionStatus == AdmissionStatus.expired ||
+        flow.admissionStatus == AdmissionStatus.ended) {
+      return _buildDeclined(session, flow);
+    }
+    final media = ref.watch(preJoinMediaControllerProvider(widget.sessionSlug));
     _joined = flow.phase == PreJoinFlowPhase.joined;
 
-    final preJoinView = _buildPreJoinView(media, flow);
+    final preJoinView = _buildPreJoinView(media, flow, session, early: early);
     final hasStartedJoin =
         flow.phase != PreJoinFlowPhase.idle && flow.sessionOptions != null;
     if (!hasStartedJoin || loadingData) {
@@ -370,6 +527,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       child: VideoSessionScreen(
         sessionSlug: widget.sessionSlug,
         loadingScreen: preJoinView,
+        showAdmissionOrientation:
+            flow.admissionStatus == AdmissionStatus.approved,
+        admissionReady: flow.phase == PreJoinFlowPhase.joined,
       ),
     );
   }
