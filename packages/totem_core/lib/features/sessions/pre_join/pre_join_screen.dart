@@ -419,7 +419,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     } else if (flow.error != null) {
       joinNote = flow.admissionStatus == AdmissionStatus.failed
           ? 'Waiting room connection was lost. Check your connection and try again.'
-          : "We couldn't join the Session. Please try again.";
+          : "We couldn't join the session. Please try again.";
     }
     final waitingMessage = switch (flow.keeperAvailability) {
       AdmissionKeeperAvailability.absent =>

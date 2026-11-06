@@ -2114,6 +2114,87 @@ void main() {
         },
       );
 
+      test(
+        'join releases transferred camera without publishing when disabled',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final participant = MockLocalParticipant();
+          final cameraTrack = MockLocalVideoTrack();
+          when(
+            () => participant.publishVideoTrack(
+              cameraTrack,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          ).thenAnswer((_) async => MockLocalTrackPublication());
+          when(
+            () =>
+                participant.setCameraEnabled(false, cameraCaptureOptions: null),
+          ).thenAnswer((_) async => null);
+          when(
+            () => participant.setMicrophoneEnabled(
+              false,
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
+          ).thenAnswer((_) async => null);
+          when(
+            () => participant.unpublishAllTracks(notify: true),
+          ).thenAnswer((_) async {});
+          when(
+            () => participant.setTrackSubscriptionPermissions(
+              allParticipantsAllowed: false,
+              trackPermissions: any(named: 'trackPermissions'),
+            ),
+          ).thenAnswer((_) async {});
+          final room = _CountingRoom(participant, emitConnectedOnConnect: true);
+          controller.room = room;
+
+          var previewDetached = false;
+          final result = await controller.join(
+            joinMedia: SessionJoinMedia(
+              cameraTrack: cameraTrack,
+              onBeforeDispose: () => previewDetached = true,
+            ),
+          );
+
+          check(result).equals(SessionJoinResult.success);
+          check(previewDetached).isTrue();
+          check(room.lastFastConnectOptions).isNull();
+          verifyNever(
+            () => participant.publishVideoTrack(
+              cameraTrack,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          );
+          verifyNever(() => participant.setCameraEnabled(true));
+          verify(cameraTrack.stop).called(1);
+          verify(cameraTrack.dispose).called(1);
+          await controller.disposeConnection();
+          verifyNever(cameraTrack.stop);
+          verifyNever(cameraTrack.dispose);
+        },
+      );
+
       test('join waits for transferred pre-join tracks to publish', () async {
         const eventSlug = 'test-session';
         final container = _createContainerWithEventOverride(eventSlug);

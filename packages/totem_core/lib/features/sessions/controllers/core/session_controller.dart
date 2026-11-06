@@ -607,22 +607,24 @@ class SessionController extends _$SessionController {
     return true;
   }
 
-  Future<SessionJoinResult> _publishInitialMedia() async {
+  Future<SessionJoinResult> _publishInitialMedia(
+    SessionJoinMedia? joinMedia,
+  ) async {
     final initialCameraTrack = _joinMediaOwner.track<LocalVideoTrack>();
     final initialMicrophoneTrack = _joinMediaOwner.track<LocalAudioTrack>();
 
     try {
       if (!_canPublishInitialMedia) return SessionJoinResult.retryableFailure;
-      if (initialCameraTrack != null || options.cameraEnabled) {
+      if (options.cameraEnabled) {
         final published = await _localMedia.publishJoinCamera(
           initialCameraTrack,
           publishOptions: defaultVideoPublishOptions,
         );
         if (!ref.mounted) return SessionJoinResult.retryableFailure;
         if (published) _joinMediaOwner.releaseToRoom(initialCameraTrack);
-        if (published && !options.cameraEnabled) {
-          await _localMedia.setCameraEnabled(false);
-        }
+      } else if (initialCameraTrack != null) {
+        _detachJoinMediaPreview(joinMedia);
+        await _joinMediaOwner.disposeTrack(initialCameraTrack);
       }
 
       if (!_canPublishInitialMedia) return SessionJoinResult.retryableFailure;
@@ -724,7 +726,7 @@ class SessionController extends _$SessionController {
         throw StateError('Room connected without a local participant');
       }
 
-      return await _publishInitialMedia();
+      return await _publishInitialMedia(joinMedia);
     }
     // For ConnectException and MediaConnectException, we log the error but don't
     // necessarily want to show an error message to the user.
@@ -1002,7 +1004,7 @@ class SessionController extends _$SessionController {
       }
 
       _onConnected();
-      final result = await _publishInitialMedia();
+      final result = await _publishInitialMedia(joinMedia);
       if (result != SessionJoinResult.success) return result;
       if (!_isRoomConnected(room)) return SessionJoinResult.retryableFailure;
 

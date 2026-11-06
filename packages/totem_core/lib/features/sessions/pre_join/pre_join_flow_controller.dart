@@ -494,6 +494,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     SessionJoinMedia? joinMedia;
     var joinStarted = false;
     var mediaTransferred = false;
+    void Function()? releaseSessionListener;
     var failureReceiptAttempted = false;
     Future<void> sendFailureReceipt() async {
       if (failureReceiptAttempted ||
@@ -580,6 +581,11 @@ class PreJoinFlowController extends _$PreJoinFlowController {
 
       // The session is now ready, so the join screen can render without adding
       // another loading transition.
+      final subscription = ref.listen(
+        sessionControllerProvider(options),
+        (_, _) {},
+      );
+      releaseSessionListener = subscription.close;
       final currentSession = ref.read(
         sessionControllerProvider(options).notifier,
       );
@@ -628,7 +634,12 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       // Keep the Keeper's existing fatal-error screen behavior. The connected
       // Session is ready; a pending data-channel send must not keep the local
       // user on pre-join after the Keeper has already processed the receipt.
-      if (ref.mounted) state = state.copyWith(phase: PreJoinFlowPhase.joined);
+      if (ref.mounted) {
+        state = state.copyWith(phase: PreJoinFlowPhase.joined);
+        // Keep the session alive until this flow is disposed, including the
+        // frame before the room screen subscribes to the session.
+        releaseSessionListener = null;
+      }
       if (admissionRequest != null && ref.mounted) {
         // The Keeper's roster still governs visibility to other participants.
         // Retain best-effort receipt recovery on presence and reconnect.
@@ -711,6 +722,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       }
       return PreJoinJoinOutcome.retryableFailure;
     } finally {
+      releaseSessionListener?.call();
       session?.allowAutoDispose();
       if (admissionRoom != null && !roomTransferred) {
         await _closeAdmissionRoom(admissionRoom);
