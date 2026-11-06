@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -42,6 +44,42 @@ void main() {
 
     tearDown(() {
       media.attach(null);
+    });
+
+    test('speaker reports follow silence and room replacement', () async {
+      final speakers = <Participant>[];
+      when(() => room.connectionState).thenReturn(ConnectionState.connected);
+      when(
+        () => room.activeSpeakers,
+      ).thenAnswer((_) => UnmodifiableListView(speakers));
+      when(() => remote.identity).thenReturn('remote');
+      when(() => remote.audioLevel).thenReturn(0.7);
+      final levels = <double>[];
+      final subscription = media.watchAudioLevel('remote').listen(levels.add);
+      addTearDown(subscription.cancel);
+      await pumpEventQueue();
+
+      speakers.add(remote);
+      roomEvents.emit(ActiveSpeakersChangedEvent(speakers: speakers));
+      await pumpEventQueue();
+      speakers.clear();
+      roomEvents.emit(ActiveSpeakersChangedEvent(speakers: speakers));
+      await pumpEventQueue();
+      speakers.add(remote);
+      roomEvents.emit(ActiveSpeakersChangedEvent(speakers: speakers));
+      await pumpEventQueue();
+      when(() => room.getParticipantByIdentity('remote')).thenReturn(null);
+      roomEvents.emit(ParticipantDisconnectedEvent(participant: remote));
+      await pumpEventQueue();
+      when(() => room.getParticipantByIdentity('remote')).thenReturn(remote);
+      roomEvents.emit(ActiveSpeakersChangedEvent(speakers: speakers));
+      await pumpEventQueue();
+      media.attach(null);
+      await pumpEventQueue();
+      roomEvents.emit(ActiveSpeakersChangedEvent(speakers: speakers));
+      await pumpEventQueue();
+
+      check(levels).deepEquals([0.0, 0.7, 0.0, 0.7, 0.0, 0.7, 0.0]);
     });
 
     test('a remote camera is on before its track finishes starting', () async {

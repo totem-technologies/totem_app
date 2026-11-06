@@ -1,16 +1,25 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/media/livekit_microphone_level.dart';
+import 'package:totem_core/features/sessions/media/livekit_selector.dart';
 import 'package:totem_core/features/sessions/media/livekit_support.dart';
+import 'package:totem_core/features/sessions/media/speech_level.dart';
+import 'package:totem_core/features/sessions/widgets/level_bars.dart';
+import 'package:totem_core/shared/totem_icons.dart';
 
-/// A participant microphone indicator driven by samples from their subscribed
-/// microphone track.
+/// A participant microphone indicator driven by room-reported audio levels.
 class LiveKitSpeakerLevel extends StatelessWidget {
   const LiveKitSpeakerLevel({
     required this.participant,
     required this.changes,
+    required this.audioLevel,
+    required this.audioLevelChanges,
     required this.color,
     required this.iconSize,
+    this.identity = '',
     super.key,
   });
 
@@ -22,6 +31,12 @@ class LiveKitSpeakerLevel extends StatelessWidget {
   /// have changed.
   final Stream<void> changes;
 
+  /// Latest server-reported amplitude and notifications when it may change.
+  final double Function() audioLevel;
+  final Stream<void> audioLevelChanges;
+
+  /// Stable participant identity used to distinguish remote waveforms.
+  final String identity;
   final Color color;
   final double iconSize;
 
@@ -43,12 +58,141 @@ class LiveKitSpeakerLevel extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => LiveKitMicrophoneLevel(
-    track: _track,
+  Widget build(BuildContext context) => LiveKitSelector(
     changes: changes,
-    color: color,
-    barCount: 5,
-    microphoneOn: _microphoneOn,
-    iconSize: iconSize,
+    read: () => (on: _microphoneOn(), local: participant() is LocalParticipant),
+    builder: (context, state) {
+      if (!state.on) {
+        return TotemIcon(
+          TotemIcons.microphoneOff,
+          size: iconSize,
+          color: color,
+        );
+      }
+      if (state.local) {
+        return LiveKitMicrophoneLevel(
+          track: _track,
+          changes: changes,
+          color: color,
+          barCount: 5,
+          microphoneOn: _microphoneOn,
+          iconSize: iconSize,
+        );
+      }
+      return _RemoteWaveform(
+        identity: identity,
+        audioLevel: audioLevel,
+        changes: audioLevelChanges,
+        color: color,
+      );
+    },
+  );
+}
+
+class _RemoteWaveform extends StatefulWidget {
+  const _RemoteWaveform({
+    required this.identity,
+    required this.audioLevel,
+    required this.changes,
+    required this.color,
+  });
+
+  final String identity;
+  final double Function() audioLevel;
+  final Stream<void> changes;
+  final Color color;
+
+  @override
+  State<_RemoteWaveform> createState() => _RemoteWaveformState();
+}
+
+class _RemoteWaveformState extends State<_RemoteWaveform> {
+  final _levels = ValueNotifier<List<double>>(const [0, 0, 0, 0, 0]);
+  late StreamSubscription<void> _subscription;
+  late SpeechLevelMeter _meter;
+  double? _lastInput;
+  double? _lastLevel;
+  late double _phase;
+
+  void _seed() {
+    var hash = 2166136261;
+    for (final unit in widget.identity.codeUnits) {
+      hash = ((hash ^ unit) * 16777619) & 0x7fffffff;
+    }
+    _phase = hash / 0x7fffffff * 2 * math.pi;
+    _meter = SpeechLevelMeter();
+    _lastInput = null;
+    _lastLevel = null;
+  }
+
+  void _update() {
+    final input = widget.audioLevel();
+    final amplitude = input.isFinite ? input.clamp(0.0, 1.0) : 0.0;
+    final last = _lastInput;
+    // Compare against the last accepted reading so small changes can accumulate.
+    if (last != null &&
+        amplitude != 0 &&
+        (amplitude - last).abs() < math.max(0.0001, last * 0.02)) {
+      return;
+    }
+    _lastInput = amplitude;
+    final db = amplitude > 0
+        ? 20 * math.log(amplitude) / math.ln10
+        : double.negativeInfinity;
+    final level = _meter.level(db);
+    if (level == _lastLevel) return;
+    _lastLevel = level;
+    if (level == 0) {
+      if (_levels.value.any((value) => value != 0)) {
+        _levels.value = const [0, 0, 0, 0, 0];
+      }
+      return;
+    }
+    // A smooth, identity-specific contour changes gradually with loudness.
+    const weights = [0.52, 0.86, 0.95, 0.86, 0.52];
+    _levels.value = List<double>.generate(
+      5,
+      (i) =>
+          level *
+          weights[i] *
+          (0.85 + 0.15 * math.sin(_phase + level * 3 + i * 1.1)),
+      growable: false,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _seed();
+    _update();
+    _subscription = widget.changes.listen((_) => _update());
+  }
+
+  @override
+  void didUpdateWidget(_RemoteWaveform oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.identity != widget.identity) {
+      _seed();
+      _update();
+    }
+    if (oldWidget.changes != widget.changes) {
+      _subscription.cancel();
+      _subscription = widget.changes.listen((_) => _update());
+      if (oldWidget.identity == widget.identity) _update();
+    }
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    _levels.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => LevelBars(
+    levels: _levels,
+    color: widget.color,
+    releaseDuration: const Duration(milliseconds: 200),
   );
 }
