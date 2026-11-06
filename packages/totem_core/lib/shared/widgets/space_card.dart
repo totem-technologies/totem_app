@@ -19,7 +19,8 @@ const _textShadows = [
   ),
 ];
 
-MobileSpaceDetailSchema _spaceDetailFromSessionDetailSchema(
+/// The space of [session], with [session] as its only next event.
+MobileSpaceDetailSchema spaceDetailFromSessionDetailSchema(
   SessionDetailSchema session,
 ) {
   return MobileSpaceDetailSchema(
@@ -68,7 +69,7 @@ class SpaceCard extends StatelessWidget {
     double? aspectRatio = 1.38,
   }) {
     return SpaceCard(
-      space: _spaceDetailFromSessionDetailSchema(session),
+      space: spaceDetailFromSessionDetailSchema(session),
       compact: compact,
       onTap: onTap,
       aspectRatio: aspectRatio,
@@ -295,7 +296,7 @@ class SmallSpaceCard extends StatelessWidget {
     VoidCallback? onTap,
   }) {
     return SmallSpaceCard(
-      space: _spaceDetailFromSessionDetailSchema(session),
+      space: spaceDetailFromSessionDetailSchema(session),
       onTap: onTap,
     );
   }

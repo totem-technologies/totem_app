@@ -55,6 +55,7 @@ Components/
 Screens/
   auth                AuthFlow (18 states)
   session/:slug       PreJoinView (ready and waiting states using production views)
+                      SessionDisconnectedView (one story; args are the states)
   session/landscape   SessionLandscape
   spaces              SessionsScreen (4 states)
   spaces/event/:slug  SessionDetailsPage (4 states)
