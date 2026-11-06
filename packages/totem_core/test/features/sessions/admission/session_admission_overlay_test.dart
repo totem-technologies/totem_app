@@ -629,6 +629,9 @@ void main() {
       check(roster.revision).equals(2);
       check(roster.members).contains('guest');
       check(roster.awaitingReadiness).contains('guest');
+      restored.dispose();
+      // Flush Riverpod's scheduled auto-disposal after the final read.
+      await tester.pump();
     },
   );
 
