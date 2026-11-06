@@ -19,18 +19,24 @@ import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/permissions/ui/priming_sheet.dart';
 import 'package:totem_core/features/permissions/ui/recovery.dart';
+import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_preview_card.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_view.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
-import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
+import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
+import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
+import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 import 'package:totem_core/shared/router.dart';
 
 import '../../../auth/controllers/auth_controller_mock.dart';
@@ -107,6 +113,76 @@ const _sessionState = SessionRoomState(
   ),
 );
 
+class _WaitingAdmissionFlowController extends PreJoinFlowController {
+  _WaitingAdmissionFlowController(this.keeperAvailability);
+
+  final AdmissionKeeperAvailability keeperAvailability;
+
+  @override
+  PreJoinFlowState build(String sessionSlug) => PreJoinFlowState(
+    phase: PreJoinFlowPhase.pending,
+    admissionStatus: AdmissionStatus.pending,
+    keeperAvailability: keeperAvailability,
+  );
+}
+
+class _BlockingAdmissionFlowController extends PreJoinFlowController {
+  _BlockingAdmissionFlowController(this.cancelGate);
+
+  final Completer<void> cancelGate;
+  int cancellationCount = 0;
+
+  @override
+  PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState(
+    phase: PreJoinFlowPhase.pending,
+    admissionStatus: AdmissionStatus.pending,
+  );
+
+  @override
+  Future<void> cancelAdmission() async {
+    cancellationCount++;
+    await cancelGate.future;
+  }
+}
+
+class _RecordingTotemRouter extends FakeTotemRouter {
+  bool? tabCloseConfirmationEnabled;
+  int popOrHomeCount = 0;
+
+  @override
+  void setTabCloseConfirmationEnabled(bool enabled) {
+    tabCloseConfirmationEnabled = enabled;
+  }
+
+  @override
+  void popOrHome([BuildContext? context]) {
+    popOrHomeCount++;
+  }
+}
+
+class _MutableFlowController extends PreJoinFlowController {
+  @override
+  PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState();
+
+  void setPhase(PreJoinFlowPhase phase, {AdmissionStatus? admissionStatus}) {
+    state = PreJoinFlowState(
+      phase: phase,
+      admissionStatus: admissionStatus,
+    );
+  }
+}
+
+class _TerminalAdmissionFlowController extends PreJoinFlowController {
+  _TerminalAdmissionFlowController(this.status, {this.error});
+
+  final AdmissionStatus status;
+  final Object? error;
+
+  @override
+  PreJoinFlowState build(String sessionSlug) =>
+      PreJoinFlowState(admissionStatus: status, error: error);
+}
+
 class _SuccessfulSessionController extends SessionController {
   @override
   SessionRoomState build(SessionOptions options) => _sessionState;
@@ -127,7 +203,10 @@ class _PendingSessionController extends SessionController {
       joinCompleter!.future;
 }
 
-SessionDetailSchema _event() => SessionDetailSchema(
+SessionDetailSchema _event({
+  DateTime? start,
+  List<NextSessionSchema>? nextEvents,
+}) => SessionDetailSchema(
   slug: _slug,
   title: 'Test session',
   space: MobileSpaceDetailSchema(
@@ -139,17 +218,19 @@ SessionDetailSchema _event() => SessionDetailSchema(
     author: PublicUserSchema(
       profileAvatarType: ProfileAvatarTypeEnum.td,
       dateCreated: DateTime(2024),
+      slug: const Omittable('keeper'),
+      name: const Omittable('Morgan Keeper'),
     ),
     category: null,
     subscribers: 0,
     recurring: null,
     price: 0,
-    nextEvents: const [],
+    nextEvents: nextEvents ?? const [],
   ),
-  content: '',
+  content: 'A quiet space to connect and reflect.',
   seatsLeft: 4,
   duration: 60,
-  start: DateTime(2024),
+  start: start ?? DateTime.now().add(const Duration(minutes: 5)),
   attending: true,
   open: true,
   started: true,
@@ -164,6 +245,22 @@ SessionDetailSchema _event() => SessionDetailSchema(
   userTimezone: null,
   meetingProvider: MeetingProviderEnum.livekit,
 );
+
+NextSessionSchema _nextSession({String slug = 'next-session'}) =>
+    NextSessionSchema(
+      slug: slug,
+      start: DateTime.now().add(const Duration(days: 1)),
+      link: '',
+      title: 'Next session',
+      seatsLeft: 4,
+      duration: 60,
+      meetingProvider: MeetingProviderEnum.livekit,
+      calLink: '',
+      attending: false,
+      cancelled: false,
+      open: true,
+      joinable: true,
+    );
 
 void main() {
   late VoidCallback restoreWebRtcChannels;
@@ -196,9 +293,19 @@ void main() {
     bool successfulJoin = false,
     bool pendingJoin = false,
     bool initiallyOffline = false,
+    bool earlyParticipant = false,
+    bool waitingForAdmission = false,
+    AdmissionKeeperAvailability keeperAvailability =
+        AdmissionKeeperAvailability.checking,
+    AdmissionStatus? terminalAdmissionStatus,
+    Object? terminalAdmissionError,
+
     Future<JoinResponse> Function()? getSessionToken,
     Future<SessionDetailSchema> Function()? getSession,
+    Future<bool> Function()? confirmRsvp,
+    DateTime Function()? now,
     PreJoinPreviewTrackFactory? trackFactory,
+    PreJoinFlowController Function()? flowController,
     FakeMediaPermissionAdapter? adapter,
     PlatformInfo platform = const IosApp(),
   }) async {
@@ -210,7 +317,18 @@ void main() {
             adapter ?? FakeMediaPermissionAdapter(),
           ),
           authControllerProvider.overrideWith(
-            () => FakeAuthController(AuthState.unauthenticated()),
+            () => FakeAuthController(
+              AuthState.authenticated(
+                user: UserSchema(
+                  profileAvatarType: ProfileAvatarTypeEnum.td,
+                  circleCount: 0,
+                  email: 'user@example.com',
+                  dateCreated: DateTime(2024),
+                  name: const Omittable('Test User'),
+                  slug: Omittable(earlyParticipant ? 'participant' : 'keeper'),
+                ),
+              ),
+            ),
           ),
           preJoinPreviewTrackFactoryProvider.overrideWithValue(
             trackFactory ?? _TrackFactory(),
@@ -219,6 +337,10 @@ void main() {
             (ref) => Stream.value(initiallyOffline),
           ),
           getRecommendedSessionsProvider(limit: 1).overrideWith((_) => []),
+          if (confirmRsvp != null)
+            rsvpConfirmProvider('next-session').overrideWith(
+              (_) => confirmRsvp(),
+            ),
           sessionTokenProvider(_slug).overrideWith((_) {
             if (getSessionToken != null) return getSessionToken();
             // ApiError is the generated client's failure value and deliberately
@@ -232,21 +354,44 @@ void main() {
           sessionProvider(_slug).overrideWith(
             (_) =>
                 getSession?.call() ??
-                Future.value(_event().copyWith(ended: sessionEnded)),
+                Future.value(
+                  _event(
+                    start: earlyParticipant
+                        ? DateTime.now().add(const Duration(hours: 1))
+                        : null,
+                  ).copyWith(ended: sessionEnded),
+                ),
           ),
-          if (successfulJoin) ...[
+          if (waitingForAdmission)
+            preJoinFlowControllerProvider(
+              _slug,
+            ).overrideWith(
+              () => _WaitingAdmissionFlowController(keeperAvailability),
+            ),
+          if (terminalAdmissionStatus != null)
+            preJoinFlowControllerProvider(_slug).overrideWith(
+              () => _TerminalAdmissionFlowController(
+                terminalAdmissionStatus,
+                error: terminalAdmissionError,
+              ),
+            ),
+          if (flowController != null)
+            preJoinFlowControllerProvider(_slug).overrideWith(flowController),
+
+          if (successfulJoin)
             sessionControllerProvider(
               _options,
             ).overrideWith(_SuccessfulSessionController.new),
-          ],
           if (pendingJoin) ...[
             sessionControllerProvider(
               _options,
             ).overrideWith(_PendingSessionController.new),
           ],
         ],
-        child: const SentryDisplayWidget(
-          child: MaterialApp(home: PreJoinScreen(sessionSlug: _slug)),
+        child: SentryDisplayWidget(
+          child: MaterialApp(
+            home: PreJoinScreen(sessionSlug: _slug, now: now ?? DateTime.now),
+          ),
         ),
       ),
     );
@@ -257,16 +402,22 @@ void main() {
   testWidgets('shows a disabled pre-join shell while checking eligibility', (
     tester,
   ) async {
-    final token = Completer<JoinResponse>();
+    var tokenRequests = 0;
     final session = Completer<SessionDetailSchema>();
     final factory = _TrackFactory();
     await pumpScreen(
       tester,
       trackFactory: factory,
-      getSessionToken: () => token.future,
+      getSessionToken: () {
+        tokenRequests++;
+        return Future.value(
+          const JoinResponse(token: 'token', isAlreadyPresent: false),
+        );
+      },
       getSession: () => session.future,
     );
 
+    check(tokenRequests).equals(0);
     check(factory.videoTracks).isEmpty();
     check(factory.audioTracks).isEmpty();
     check(tester.widgetList(find.byType(PreJoinView))).length.equals(1);
@@ -306,20 +457,21 @@ void main() {
     ).length.equals(1);
   });
 
-  testWidgets('terminal token errors do not create preview tracks', (
+  testWidgets('terminal session errors do not create preview tracks', (
     tester,
   ) async {
     final factory = _TrackFactory();
     await pumpScreen(
       tester,
       trackFactory: factory,
-      tokenError: const ApiError<JoinResponse, RoomErrorResponse>(
-        statusCode: 409,
-        error: RoomErrorResponse(
-          code: ErrorCode.notJoinable,
-          message: 'Session is not joinable',
-        ),
-      ),
+      getSession: () async =>
+          throw const ApiError<JoinResponse, RoomErrorResponse>(
+            statusCode: 409,
+            error: RoomErrorResponse(
+              code: ErrorCode.notJoinable,
+              message: 'Session is not joinable',
+            ),
+          ),
     );
 
     check(factory.videoTracks).isEmpty();
@@ -329,27 +481,27 @@ void main() {
     ).length.equals(1);
   });
 
-  testWidgets('terminal token error releases active preview tracks', (
+  testWidgets('terminal session error releases active preview tracks', (
     tester,
   ) async {
-    Object? tokenError;
+    Object? sessionError;
     final factory = _TrackFactory();
     await pumpScreen(
       tester,
       trackFactory: factory,
-      getSessionToken: () async {
+      getSession: () async {
         // ApiError is the generated client's failure value and deliberately
         // does not implement Exception.
         // ignore: only_throw_errors
-        if (tokenError != null) throw tokenError;
-        return const JoinResponse(token: 'token', isAlreadyPresent: false);
+        if (sessionError != null) throw sessionError;
+        return _event();
       },
     );
 
     check(factory.videoTracks).length.equals(1);
     check(factory.audioTracks).length.equals(1);
 
-    tokenError = const ApiError<JoinResponse, RoomErrorResponse>(
+    sessionError = const ApiError<JoinResponse, RoomErrorResponse>(
       statusCode: 409,
       error: RoomErrorResponse(
         code: ErrorCode.roomAlreadyEnded,
@@ -358,7 +510,7 @@ void main() {
     );
     ProviderScope.containerOf(
       tester.element(find.byType(PreJoinScreen)),
-    ).invalidate(sessionTokenProvider(_slug));
+    ).invalidate(sessionProvider(_slug));
     await tester.pump();
     await tester.pump();
 
@@ -374,19 +526,443 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('renders declarative pre-join controls', (tester) async {
-    await pumpScreen(tester);
+  testWidgets('early participant can join when the T-10 window opens', (
+    tester,
+  ) async {
+    var now = DateTime(2030, 1, 1, 12);
+    final start = now.add(const Duration(minutes: 11));
+    var tokenRequests = 0;
+    final factory = _TrackFactory();
+    await pumpScreen(
+      tester,
+      earlyParticipant: true,
 
-    check(tester.widgetList(find.byType(ActionBar))).length.equals(1);
-    check(tester.widgetList(find.byType(ActionSliderButton))).length.equals(1);
-    check(tester.widgetList(find.text('Welcome'))).length.equals(1);
+      now: () => now,
+      getSession: () async => _event(start: start).copyWith(started: false),
+      trackFactory: factory,
+      getSessionToken: () {
+        tokenRequests++;
+        return Future.value(
+          const JoinResponse(token: 'token', isAlreadyPresent: false),
+        );
+      },
+    );
+
+    check(tokenRequests).equals(0);
+    check(factory.videoTracks).length.equals(1);
+    check(factory.audioTracks).length.equals(1);
+    check(find.byType(PreJoinView).evaluate()).isNotEmpty();
+    check(find.text('Join opens at 12:01 PM.').evaluate()).isNotEmpty();
+    check(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .enabled,
+    ).isFalse();
+
+    now = now.add(const Duration(minutes: 1));
+    await tester.pump(const Duration(minutes: 1));
+    await tester.pump();
+
+    check(tokenRequests).equals(0);
+    check(find.text('Join opens at 12:01 PM.').evaluate()).isEmpty();
+    check(find.byType(PreJoinView).evaluate()).isNotEmpty();
+    check(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .enabled,
+    ).isTrue();
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('Keeper can join directly before the participant window', (
+    tester,
+  ) async {
+    final now = DateTime(2030, 1, 1, 12);
+    var tokenRequests = 0;
+    await pumpScreen(
+      tester,
+      successfulJoin: true,
+      now: () => now,
+      getSession: () async => _event(start: now.add(const Duration(hours: 1))),
+      getSessionToken: () async {
+        tokenRequests++;
+        return const JoinResponse(token: 'token', isAlreadyPresent: false);
+      },
+    );
+
+    check(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .enabled,
+    ).isTrue();
+    check(find.byType(SessionWaitingView).evaluate()).isEmpty();
+    check(tokenRequests).equals(0);
+    unawaited(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted(),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    check(tokenRequests).equals(1);
+    check(find.byType(VideoSessionScreen).evaluate()).isNotEmpty();
+    check(find.byType(SessionWaitingView).evaluate()).isEmpty();
+  });
+
+  for (final leaveControl in <({String name, Finder Function() finder})>[
+    (name: 'waiting room card', finder: () => find.text('Leave waiting room')),
+    (name: 'pre-join back button', finder: () => find.byTooltip('Back')),
+  ]) {
+    testWidgets(
+      'leaving via the ${leaveControl.name} cancels before exiting once',
+      (tester) async {
+        final router = _RecordingTotemRouter();
+        TotemRouter.instance = router;
+        addTearDown(() => TotemRouter.instance = FakeTotemRouter());
+        final cancelGate = Completer<void>();
+        final flow = _BlockingAdmissionFlowController(cancelGate);
+        await pumpScreen(
+          tester,
+          earlyParticipant: true,
+          flowController: () => flow,
+        );
+
+        final control = leaveControl.finder();
+        check(control.evaluate()).length.equals(1);
+        await tester.tap(control);
+        await tester.pump();
+        await tester.tap(control);
+        await tester.pump();
+
+        check(flow.cancellationCount).equals(1);
+        check(router.popOrHomeCount).equals(0);
+        check(router.tabCloseConfirmationEnabled).isNull();
+
+        cancelGate.complete();
+        await tester.pump();
+
+        check(router.tabCloseConfirmationEnabled).equals(false);
+        check(router.popOrHomeCount).equals(1);
+        check(tester.takeException()).isNull();
+      },
+    );
+  }
+
+  testWidgets('pending admission shows a waiting room with local preview', (
+    tester,
+  ) async {
+    var tokenRequests = 0;
+    final factory = _TrackFactory();
+    await pumpScreen(
+      tester,
+      earlyParticipant: true,
+      waitingForAdmission: true,
+      trackFactory: factory,
+      getSessionToken: () {
+        tokenRequests++;
+        return Future.value(
+          const JoinResponse(token: 'token', isAlreadyPresent: false),
+        );
+      },
+    );
+
+    check(tokenRequests).equals(0);
+    check(factory.videoTracks).length.equals(1);
+    check(factory.audioTracks).length.equals(1);
+    check(tester.widgetList(find.byType(PreJoinView))).length.equals(1);
+    check(
+      find.bySemanticsLabel(RegExp('Your video preview, camera on')).evaluate(),
+    ).isNotEmpty();
+    check(find.byType(VideoSessionScreen).evaluate()).isEmpty();
+    check(tester.widgetList(find.text('Leave waiting room'))).length.equals(1);
+    check(tester.widgetList(find.byType(ActionSliderButton))).isEmpty();
+  });
+
+  for (final status
+      in <
+        ({
+          AdmissionKeeperAvailability availability,
+          String message,
+        })
+      >[
+        (
+          availability: AdmissionKeeperAvailability.absent,
+          message:
+              'The Keeper is not connected yet. You can keep waiting or leave and try again later.',
+        ),
+        (
+          availability: AdmissionKeeperAvailability.unresponsive,
+          message:
+              "The Keeper hasn't confirmed your request. Ask them to reconnect or update Totem, or leave and try again.",
+        ),
+      ]) {
+    testWidgets('pending admission shows ${status.message}', (tester) async {
+      await pumpScreen(
+        tester,
+        earlyParticipant: true,
+        waitingForAdmission: true,
+        keeperAvailability: status.availability,
+      );
+
+      check(find.text(status.message).evaluate()).length.equals(1);
+      check(find.text('Leave waiting room').evaluate()).length.equals(1);
+    });
+  }
+
+  testWidgets(
+    'keeps the preview and media controls mounted across joining states',
+    (tester) async {
+      final factory = _TrackFactory();
+      await pumpScreen(
+        tester,
+        trackFactory: factory,
+        flowController: _MutableFlowController.new,
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PreJoinScreen)),
+      );
+      final flow =
+          (container.read(
+                  preJoinFlowControllerProvider(_slug).notifier,
+                )
+                as _MutableFlowController)
+            ..setPhase(PreJoinFlowPhase.joining);
+      await tester.pump();
+      final preview = tester.element(find.byType(LocalParticipantCard));
+      final controls = tester.element(find.byType(SessionKeyboardShortcuts));
+      check(factory.videoTracks).length.equals(1);
+      check(factory.audioTracks).length.equals(1);
+
+      flow.setPhase(
+        PreJoinFlowPhase.pending,
+        admissionStatus: AdmissionStatus.pending,
+      );
+      await tester.pump();
+      check(tester.element(find.byType(LocalParticipantCard))).identicalTo(
+        preview,
+      );
+      check(tester.element(find.byType(SessionKeyboardShortcuts))).identicalTo(
+        controls,
+      );
+
+      flow.setPhase(
+        PreJoinFlowPhase.joining,
+        admissionStatus: AdmissionStatus.approved,
+      );
+      await tester.pump();
+      check(tester.element(find.byType(LocalParticipantCard))).identicalTo(
+        preview,
+      );
+      check(tester.element(find.byType(SessionKeyboardShortcuts))).identicalTo(
+        controls,
+      );
+      check(factory.videoTracks).length.equals(1);
+      check(factory.audioTracks).length.equals(1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
+
+  for (final status in [AdmissionStatus.denied, AdmissionStatus.expired]) {
+    testWidgets('$status shows a declined screen instead of a join action', (
+      tester,
+    ) async {
+      final factory = _TrackFactory();
+      await pumpScreen(
+        tester,
+        terminalAdmissionStatus: status,
+        trackFactory: factory,
+      );
+
+      check(find.byType(SessionDeclinedView).evaluate()).isNotEmpty();
+      check(find.text('Return to the Space').evaluate()).isNotEmpty();
+      check(find.text('Join session').evaluate()).isEmpty();
+      check(find.byType(VideoSessionScreen).evaluate()).isEmpty();
+      check(factory.videoTracks).isEmpty();
+    });
+  }
+
+  testWidgets('declined offer sign-up is busy then confirms its RSVP', (
+    tester,
+  ) async {
+    final confirmation = Completer<bool>();
+    var confirmations = 0;
+    var offer = _nextSession();
+    await pumpScreen(
+      tester,
+      terminalAdmissionStatus: AdmissionStatus.denied,
+      getSession: () async => _event(nextEvents: [offer]),
+      confirmRsvp: () {
+        confirmations++;
+        return confirmation.future;
+      },
+    );
+
+    await tester.tap(find.text('Sign up'));
+    await tester.pump();
+    await tester.tap(find.text('Signing up…'));
+
+    check(confirmations).equals(1);
+    check(find.text('Signing up…').evaluate()).isNotEmpty();
+
+    confirmation.complete(true);
+    await tester.pump();
+
+    check(find.text("You're signed up").evaluate()).isNotEmpty();
+
+    offer = _nextSession(slug: 'replacement-session');
+    ProviderScope.containerOf(
+      tester.element(find.byType(PreJoinScreen)),
+    ).invalidate(sessionProvider(_slug));
+    await tester.pump();
+    await tester.pump();
+
+    check(find.text("You're signed up").evaluate()).isEmpty();
+    check(find.text('Sign up').evaluate()).isNotEmpty();
+  });
+
+  testWidgets(
+    'declined offer sign-up failure shows an error and permits retry',
+    (
+      tester,
+    ) async {
+      var confirmations = 0;
+      await pumpScreen(
+        tester,
+        terminalAdmissionStatus: AdmissionStatus.denied,
+        getSession: () async => _event(nextEvents: [_nextSession()]),
+        confirmRsvp: () async {
+          confirmations++;
+          return false;
+        },
+      );
+
+      await tester.tap(find.text('Sign up'));
+      await tester.pump();
+
+      check(find.text('Failed to attend').evaluate()).isNotEmpty();
+      await tester.tap(find.text('Sign up'));
+      await tester.pump();
+
+      check(confirmations).equals(2);
+    },
+  );
+
+  testWidgets(
+    'declined offer sign-up exception shows an error and permits retry',
+    (tester) async {
+      var confirmations = 0;
+      await pumpScreen(
+        tester,
+        terminalAdmissionStatus: AdmissionStatus.denied,
+        getSession: () async => _event(nextEvents: [_nextSession()]),
+        confirmRsvp: () async {
+          confirmations++;
+          if (confirmations == 1) throw StateError('offline');
+          return true;
+        },
+      );
+
+      await tester.tap(find.text('Sign up'));
+      await tester.pump();
+
+      check(find.text('Failed to attend').evaluate()).isNotEmpty();
+      await tester.tap(find.text('Sign up'));
+      await tester.pump();
+
+      check(confirmations).equals(2);
+      check(find.text("You're signed up").evaluate()).isNotEmpty();
+    },
+  );
+
+  for (final size in [
+    const Size(360, 800),
+    const Size(900, 800),
+    const Size(1280, 720),
+    const Size(1024, 480),
+    const Size(700, 400),
+  ]) {
+    testWidgets('pre-join preview and controls fit at $size', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await pumpScreen(
+        tester,
+        flowController: _MutableFlowController.new,
+        getSessionToken: () async => throw Exception('join unavailable'),
+      );
+
+      check(find.byType(PreJoinView).evaluate()).isNotEmpty();
+      check(find.byType(LocalParticipantCard).evaluate()).isNotEmpty();
+      check(find.byType(ActionSliderButton).evaluate()).isNotEmpty();
+      check(tester.takeException()).isNull();
+      await tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted();
+      await tester.pump();
+      check(find.textContaining("We couldn't join").evaluate()).isNotEmpty();
+      check(tester.takeException()).isNull();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PreJoinScreen)),
+      );
+      (container.read(preJoinFlowControllerProvider(_slug).notifier)
+              as _MutableFlowController)
+          .setPhase(
+            PreJoinFlowPhase.pending,
+            admissionStatus: AdmissionStatus.pending,
+          );
+      await tester.pump();
+      check(find.text('Leave waiting room').evaluate()).isNotEmpty();
+      check(tester.takeException()).isNull();
+    });
+  }
+
+  testWidgets('pre-join preview defers the token until Join', (
+    tester,
+  ) async {
+    var tokenRequests = 0;
+    final token = Completer<JoinResponse>();
+    final factory = _TrackFactory();
+    await pumpScreen(
+      tester,
+      trackFactory: factory,
+      getSessionToken: () {
+        tokenRequests++;
+        return token.future;
+      },
+    );
+
+    check(find.byType(PreJoinView).evaluate()).isNotEmpty();
+    check(find.byType(LocalParticipantCard).evaluate()).isNotEmpty();
+    check(tokenRequests).equals(0);
+    check(factory.videoTracks).length.equals(1);
+    check(factory.audioTracks).length.equals(1);
+
+    final joining = tester
+        .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+        .onActionCompleted();
+    await tester.pump();
+    check(tokenRequests).equals(1);
+    token.completeError(StateError('Test token request canceled'));
+    await joining;
   });
 
   testWidgets(
     'locks media toggles during initial capture',
     (tester) async {
       final factory = _DelayedTrackFactory();
-      await pumpScreen(tester, successfulJoin: true, trackFactory: factory);
+      await pumpScreen(
+        tester,
+        waitingForAdmission: true,
+        trackFactory: factory,
+      );
 
       check(
         tester
@@ -657,10 +1233,16 @@ void main() {
       check(find.byType(MediaPrimingSheet).evaluate()).isEmpty();
     });
 
-    testWidgets('X2: a failed token shows no priming sheet', (tester) async {
+    testWidgets('X2: permission priming precedes the join token request', (
+      tester,
+    ) async {
+      var tokenRequests = 0;
       await pumpScreen(
         tester,
-        tokenError: Exception('token failed'),
+        getSessionToken: () {
+          tokenRequests++;
+          throw Exception('token failed');
+        },
         adapter: FakeMediaPermissionAdapter(
           camera: MediaPermission.unknown,
           microphone: MediaPermission.unknown,
@@ -668,7 +1250,8 @@ void main() {
       );
       await settle(tester);
 
-      check(find.byType(MediaPrimingSheet).evaluate()).isEmpty();
+      check(find.byType(MediaPrimingSheet).evaluate()).isNotEmpty();
+      check(tokenRequests).equals(0);
     });
 
     testWidgets('X2: an unanswered camera alone brings no sheet back', (
@@ -723,13 +1306,59 @@ void main() {
     });
   });
 
-  testWidgets('renders token failures through the session error screen', (
+  testWidgets('failed admission explains that the waiting room disconnected', (
     tester,
   ) async {
-    await pumpScreen(tester, tokenError: Exception('token failed'));
+    await pumpScreen(
+      tester,
+      terminalAdmissionStatus: AdmissionStatus.failed,
+      terminalAdmissionError: StateError('admission transport failed'),
+    );
 
-    check(tester.widgetList(find.byType(SessionErrorScreen))).length.equals(1);
-    check(tester.widgetList(find.text('Try Joining Again'))).length.equals(1);
+    check(
+      find
+          .text(
+            'Waiting room connection was lost. Check your connection and try again.',
+          )
+          .evaluate(),
+    ).length.equals(1);
+  });
+
+  testWidgets('token failures hide error details and offer a retry', (
+    tester,
+  ) async {
+    const sensitiveDetail = 'session-token=super-secret';
+    var tokenRequests = 0;
+    await pumpScreen(
+      tester,
+      getSessionToken: () async {
+        tokenRequests++;
+        throw StateError(sensitiveDetail);
+      },
+    );
+
+    check(tokenRequests).equals(0);
+    check(find.byType(PreJoinView).evaluate()).isNotEmpty();
+    final join = tester.widget<ActionSliderButton>(
+      find.byType(ActionSliderButton),
+    );
+    await join.onActionCompleted();
+    await tester.pump();
+    await tester.pump();
+
+    check(tokenRequests).equals(1);
+    check(find.textContaining("We couldn't join").evaluate()).length.equals(1);
+    check(find.textContaining(sensitiveDetail).evaluate()).isEmpty();
+    final retry = tester.widget<ActionSliderButton>(
+      find.byType(ActionSliderButton),
+    );
+    check(retry.enabled).isTrue();
+    await retry.onActionCompleted();
+    await tester.pump();
+    await tester.pump();
+    check(tokenRequests).equals(2);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
   });
 
   testWidgets('renders offline error when internet prevents joining', (
@@ -737,7 +1366,7 @@ void main() {
   ) async {
     await pumpScreen(
       tester,
-      tokenError: Exception('token failed'),
+      getSession: () async => throw Exception('session failed'),
       initiallyOffline: true,
     );
 
@@ -758,10 +1387,12 @@ void main() {
   ) async {
     await pumpScreen(tester, successfulJoin: true);
 
-    final join = tester.widget<ActionSliderButton>(
-      find.byType(ActionSliderButton),
+    unawaited(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted(),
     );
-    check(await join.onActionCompleted()).equals(true);
+    await tester.pump();
     await tester.pump();
 
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
@@ -771,24 +1402,27 @@ void main() {
     tester,
   ) async {
     _PendingSessionController.joinCompleter = Completer<SessionJoinResult>();
-    await pumpScreen(tester, pendingJoin: true);
-    final previewRenderer = tester.element(find.byType(VideoTrackRenderer));
+    final factory = _TrackFactory();
+    await pumpScreen(tester, pendingJoin: true, trackFactory: factory);
+    check(factory.videoTracks).length.equals(1);
 
-    final join = tester.widget<ActionSliderButton>(
-      find.byType(ActionSliderButton),
+    unawaited(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted(),
     );
-    final joinFuture = join.onActionCompleted();
+    await tester.pump();
     await tester.pump();
 
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
-    check(
-      tester.element(find.byType(VideoTrackRenderer)),
-    ).identicalTo(previewRenderer);
+    check(find.byType(VideoTrackRenderer).evaluate()).isNotEmpty();
+    check(factory.videoTracks).length.equals(1);
 
     _PendingSessionController.joinCompleter!.complete(
       SessionJoinResult.success,
     );
-    check(await joinFuture).equals(true);
+    await tester.pump();
+    check(factory.videoTracks).length.equals(1);
   });
 
   testWidgets('shows replacement confirmation only after joining', (
@@ -801,10 +1435,11 @@ void main() {
       tester.widgetList(find.text("You're already in this session")),
     ).length.equals(0);
 
-    final join = tester.widget<ActionSliderButton>(
-      find.byType(ActionSliderButton),
+    unawaited(
+      tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted(),
     );
-    final joinFuture = join.onActionCompleted();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -815,7 +1450,6 @@ void main() {
 
     await tester.tap(find.text('Join Here'));
     await tester.pump();
-    check(await joinFuture).equals(true);
     await tester.pump(const Duration(milliseconds: 300));
 
     check(

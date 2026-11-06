@@ -5,10 +5,15 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   validate_ios_signing:
     name: Validate iOS Signing Config
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: ./packages/totem_app
@@ -40,6 +45,7 @@ jobs:
   build_android_apk:
     name: Android ABI (${{ matrix.flavor }})
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     defaults:
       run:
@@ -60,8 +66,6 @@ jobs:
       - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
-          flutter-version: "3.44.9"
-          dart-version: "3.12.2"
           java: "true"
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           google_services_json: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
@@ -74,6 +78,7 @@ jobs:
   build_ios_ipa:
     name: iOS IPA (${{ matrix.flavor }})
     runs-on: macos-26
+    timeout-minutes: 60
     needs: validate_ios_signing
 
     defaults:
@@ -96,6 +101,7 @@ jobs:
         uses: ./.github/actions/setup-environment
         with:
           flutter-version: "3.44.9"
+          flutter-channel: stable
           dart-version: "3.12.2"
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           google_service_plist: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}

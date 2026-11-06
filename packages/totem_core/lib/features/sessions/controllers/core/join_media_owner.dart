@@ -35,6 +35,8 @@ class JoinMediaOwner {
     _tracks.removeWhere((owned) => identical(owned, track));
   }
 
+  Future<void> disposeTrack(LocalTrack track) => _dispose([track]);
+
   Future<void> disposeAll() => _dispose(_tracks.toList());
 
   bool _contains(LocalTrack track) =>

@@ -11,95 +11,57 @@ part of 'waiting_card.stories.dart';
 // StoryGenerator
 // **************************************************************************
 
-typedef _Component = Component<WaitingCard, StoryArgs<WaitingCard>>;
-typedef _Scenario = WaitingCardScenario;
-typedef _Defaults = WaitingCardDefaults;
-typedef _Story = WaitingCardStory;
-typedef _Args = WaitingCardArgs;
-final WaitingCardComponent = Component<WaitingCard, StoryArgs<WaitingCard>>(
-  name: component.name ?? 'WaitingCard',
-  path: component.path ?? 'components/sessions',
-  docsBuilder: component.docsBuilder,
-  docComment:
-      r'''Figma waiting-for-approval card (3796:9181): a white slab under the
-preview. Title, a short wait line, then whatever [action] the parent
-passes — usually the secondary Button.
+typedef _Component =
+    Component<JoinTransitionCard, StoryArgs<JoinTransitionCard>>;
+typedef _Scenario = JoinTransitionCardScenario;
+typedef _Defaults = JoinTransitionCardDefaults;
+typedef _Story = JoinTransitionCardStory;
+typedef _Args = JoinCardInputArgs;
+final JoinTransitionCardComponent =
+    Component<JoinTransitionCard, StoryArgs<JoinTransitionCard>>(
+      name: component.name ?? 'JoinTransitionCard',
+      path: component.path ?? 'components/sessions',
+      docsBuilder: component.docsBuilder,
+      docComment: null,
+      stories: [
+        $Default..$generatedName = 'Default',
+        $Waiting..$generatedName = 'Waiting',
+      ],
+    );
+typedef JoinTransitionCardScenario =
+    Scenario<JoinTransitionCard, JoinCardInputArgs>;
+typedef JoinTransitionCardDefaults =
+    Defaults<JoinTransitionCard, JoinCardInputArgs>;
 
-Figma frame is 366 × 214, radius 25, 20px vertical / 10px horizontal
-inset. The action is a slot so the parent can pass a Button, or
-nothing, without this card knowing.''',
-  stories: [
-    $Reviewing..$generatedName = 'Reviewing',
-    $Admitted..$generatedName = 'Admitted',
-  ],
-);
-typedef WaitingCardScenario = Scenario<WaitingCard, WaitingCardArgs>;
-typedef WaitingCardDefaults = Defaults<WaitingCard, WaitingCardArgs>;
-
-class WaitingCardStory extends Story<WaitingCard, WaitingCardArgs> {
-  WaitingCardStory({
+class JoinTransitionCardStory
+    extends Story<JoinTransitionCard, JoinCardInputArgs> {
+  JoinTransitionCardStory({
     super.name,
     super.designLink,
-    SetupBuilder<WaitingCard, WaitingCardArgs>? setup,
+    SetupBuilder<JoinTransitionCard, JoinCardInputArgs>? setup,
     super.modes,
-    required super.args,
-    StoryWidgetBuilder<WaitingCard, WaitingCardArgs>? builder,
+    JoinCardInputArgs? args,
+    StoryWidgetBuilder<JoinTransitionCard, JoinCardInputArgs>? builder,
     super.scenarios,
     super.excludeFromTests,
   }) : super(
-         builder:
-             builder ??
-             (context, args) => WaitingCard(
-               key: args.key,
-               title: args.title,
-               body: args.body,
-               action: args.action,
-             ),
+         args: args ?? JoinCardInputArgs(),
+         builder: builder ?? defaults.builder!,
          setup: setup ?? defaults.setup!,
        );
 }
 
-class WaitingCardArgs extends StoryArgs<WaitingCard> {
-  WaitingCardArgs({
-    Arg<Key?>? key,
-    Arg<String>? title,
-    required Arg<Widget> body,
-    Arg<Widget?>? action,
-  }) : this.keyArg = $initArg('key', key, null),
-       this.titleArg = $initArg('title', title, StringArg(''))!,
-       this.bodyArg = $initArg('body', body, null)!,
-       this.actionArg = $initArg('action', action, null);
+class JoinCardInputArgs extends StoryArgs<JoinTransitionCard> {
+  JoinCardInputArgs({Arg<bool>? waiting})
+    : this.waitingArg = $initArg('waiting', waiting, BoolArg(false))!;
 
-  WaitingCardArgs.fixed({
-    Key? key,
-    String title = '',
-    required Widget body,
-    Widget? action,
-  }) : this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
-       this.titleArg = $initArg('title', Arg.fixed(title), null)!,
-       this.bodyArg = $initArg('body', Arg.fixed(body), null)!,
-       this.actionArg = $initArg(
-         'action',
-         action == null ? null : Arg.fixed(action),
-         null,
-       );
+  JoinCardInputArgs.fixed({bool waiting = false})
+    : this.waitingArg = $initArg('waiting', Arg.fixed(waiting), null)!;
 
-  final Arg<Key?>? keyArg;
+  final Arg<bool> waitingArg;
 
-  final Arg<String> titleArg;
-
-  final Arg<Widget> bodyArg;
-
-  final Arg<Widget?>? actionArg;
-
-  Key? get key => keyArg?.value;
-
-  String get title => titleArg.value;
-
-  Widget get body => bodyArg.value;
-
-  Widget? get action => actionArg?.value;
+  bool get waiting => waitingArg.value;
 
   @override
-  List<Arg?> get list => [keyArg, titleArg, bodyArg, actionArg];
+  List<Arg?> get list => [waitingArg];
 }

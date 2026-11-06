@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
+import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -39,8 +41,7 @@ class _ParticipantReorderWidgetState
     extends ConsumerState<ParticipantReorderWidget> {
   String? _selectedIdentity;
 
-  bool _initialized = false;
-  late List<String> _localOrder;
+  List<String> _localOrder = [];
   var _loading = false;
 
   @override
@@ -51,26 +52,31 @@ class _ParticipantReorderWidgetState
         (state) => state == null
             ? null
             : (
-                participants: state.participantsList,
                 talkingOrder: state.roomState.talkingOrder,
+                sessionSlug: state.roomState.sessionSlug,
+                connected: state.participants.participants,
                 keeper: state.roomState.keeper,
                 speakingNow: state.speakingNow,
               ),
       ),
     );
+    final visibleParticipants = ref.watch(sessionParticipantsProvider);
     if (sessionState == null) return const SizedBox.shrink();
 
-    if (!_initialized) {
-      final roomParticipants = sessionState.participants
-          .map((p) => p.identity)
-          .toSet();
-      _localOrder = sessionState.talkingOrder.isEmpty
-          ? {sessionState.keeper, ...roomParticipants}.toList()
-          : Set<String>.from(
-              sessionState.talkingOrder.where(roomParticipants.contains),
-            ).toList();
-      _initialized = true;
-    }
+    final roster = ref.watch(
+      keeperAdmissionRosterProvider(
+        sessionState.sessionSlug,
+        sessionState.keeper,
+      ),
+    );
+    final visibleIdentities = visibleParticipants
+        .map((participant) => participant.identity)
+        .toSet();
+    _syncOrder(
+      visibleIdentities,
+      sessionState.talkingOrder,
+      sessionState.keeper,
+    );
 
     final participants = _localOrder;
     final keeperSlug = sessionState.keeper;
@@ -78,10 +84,16 @@ class _ParticipantReorderWidgetState
         .where((participant) => participant != keeperSlug)
         .toList();
 
-    if (participants.isEmpty) {
+    if (!visibleIdentities.contains(keeperSlug)) {
       return const Center(child: Text('No participants to reorder'));
     }
 
+    final canSave = _rosterReady(
+      roster,
+      sessionState.connected.map((participant) => participant.identity),
+      visibleIdentities,
+      keeperSlug,
+    );
     final viewportKind = ViewportResolver.getViewportKind(context);
 
     return PopScope(
@@ -143,10 +155,9 @@ class _ParticipantReorderWidgetState
                             child: _ParticipantReorderItem(
                               key: ValueKey(keeperSlug),
                               participantIdentity: keeperSlug,
-                              participant: sessionState.participants
-                                  .firstWhereOrNull(
-                                    (p) => p.identity == keeperSlug,
-                                  ),
+                              participant: visibleParticipants.firstWhereOrNull(
+                                (p) => p.identity == keeperSlug,
+                              ),
                               index: 0,
                               isSpeakingNow:
                                   keeperSlug == sessionState.speakingNow,
@@ -209,7 +220,7 @@ class _ParticipantReorderWidgetState
                               final participantIdentity =
                                   reorderableParticipants[index];
 
-                              final participant = sessionState.participants
+                              final participant = visibleParticipants
                                   .firstWhereOrNull(
                                     (p) => p.identity == participantIdentity,
                                   );
@@ -281,7 +292,7 @@ class _ParticipantReorderWidgetState
                                 ),
                                 Expanded(
                                   child: ElevatedButton(
-                                    onPressed: _loading
+                                    onPressed: _loading || !canSave
                                         ? null
                                         : () async {
                                             setState(() => _loading = true);
@@ -292,10 +303,55 @@ class _ParticipantReorderWidgetState
                                               setState(() => _loading = false);
                                               return;
                                             }
+                                            final latestState = ref.read(
+                                              currentSessionStateProvider,
+                                            );
+                                            final latestIdentities = ref
+                                                .read(
+                                                  sessionParticipantsProvider,
+                                                )
+                                                .map(
+                                                  (participant) =>
+                                                      participant.identity,
+                                                )
+                                                .toSet();
+                                            if (latestState == null ||
+                                                !_rosterReady(
+                                                  ref.read(
+                                                    keeperAdmissionRosterProvider(
+                                                      latestState
+                                                          .roomState
+                                                          .sessionSlug,
+                                                      latestState
+                                                          .roomState
+                                                          .keeper,
+                                                    ),
+                                                  ),
+                                                  latestState
+                                                      .participants
+                                                      .participants
+                                                      .map(
+                                                        (participant) =>
+                                                            participant
+                                                                .identity,
+                                                      ),
+                                                  latestIdentities,
+                                                  latestState.roomState.keeper,
+                                                )) {
+                                              setState(() => _loading = false);
+                                              return;
+                                            }
+                                            _syncOrder(
+                                              latestIdentities,
+                                              latestState
+                                                  .roomState
+                                                  .talkingOrder,
+                                              latestState.roomState.keeper,
+                                            );
                                             final wasSaved =
                                                 await _updateParticipantOrder(
                                                   session,
-                                                  _localOrder,
+                                                  List.of(_localOrder),
                                                 );
 
                                             if (!mounted) {
@@ -340,6 +396,41 @@ class _ParticipantReorderWidgetState
         ),
       ),
     );
+  }
+
+  bool _rosterReady(
+    AsyncValue<KeeperAdmissionRosterStore> roster,
+    Iterable<String> connected,
+    Set<String> visible,
+    String keeper,
+  ) {
+    final store = roster.value;
+    if (roster.isLoading || roster.hasError || store == null) return false;
+    final ready = store.members.toSet().difference(
+      store.awaitingReadiness.toSet(),
+    );
+    final expected = connected
+        .where((identity) => identity == keeper || ready.contains(identity))
+        .toSet();
+    return expected.contains(keeper) &&
+        const SetEquality<String>().equals(expected, visible);
+  }
+
+  void _syncOrder(
+    Set<String> visible,
+    List<String> talkingOrder,
+    String keeper,
+  ) {
+    final ordered = <String>{
+      if (visible.contains(keeper)) keeper,
+      ..._localOrder.where(visible.contains),
+      ...talkingOrder.where(visible.contains),
+      ...visible,
+    };
+    _localOrder = ordered.toList();
+    if (_selectedIdentity != null && !visible.contains(_selectedIdentity)) {
+      _selectedIdentity = null;
+    }
   }
 
   Future<bool> _updateParticipantOrder(

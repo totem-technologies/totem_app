@@ -8,8 +8,11 @@ WIDGETBOOK_DIR := packages/totem_widgetbook
 WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
 NATIVE_FLUTTER ?= fvm flutter
 NATIVE_DART ?= fvm dart
-WEB_FLUTTER ?= fvm spawn 3.50.0-0.2.pre
-WEB_DART ?= fvm dart
+WEB_FLUTTER ?= $(NATIVE_FLUTTER)
+WEB_DART ?= $(NATIVE_DART)
+IOS_FLUTTER ?= fvm spawn 3.44.9
+# CI resolves once with its selected SDK before invoking lint/test targets.
+PREPARE_PUB ?= true
 
 # Each Flutter suite also runs test files concurrently. Bound package-level
 # parallelism to avoid starting four compilers and their workers at once.
@@ -43,40 +46,46 @@ env-staging:
 env-prod:
 	$(NATIVE_DART) scripts/setup_env.dart production
 
-# The workspace has one active pubspec.lock. Web commands switch resolution
-# temporarily and always restore the native lockfile and .dart_tool afterwards.
+# One lockfile; each SDK may resolve its compatible dependencies without a clean.
 prepare-native:
-	rm -rf .dart_tool
-	$(NATIVE_FLUTTER) pub get --enforce-lockfile
+ifeq ($(PREPARE_PUB),true)
+	$(NATIVE_FLUTTER) pub get
+endif
 
 prepare-web:
-	./scripts/with_web_lockfile.sh true
+ifeq ($(PREPARE_PUB),true)
+	$(WEB_FLUTTER) pub get
+endif
 
-update-web-lockfile:
-	./scripts/with_web_lockfile.sh --update-lockfile
+prepare-ios:
+	$(IOS_FLUTTER) pub get
 
 run: prepare-native env-dev
 	@echo "Running app..."
 	cd $(APP_DIR) && $(NATIVE_FLUTTER) run
 
+# Use RUN_ARGS='-d <ios-device-id>' to select an iOS device.
+run-ios: prepare-ios env-dev
+	cd $(APP_DIR) && $(IOS_FLUTTER) run $(RUN_ARGS)
+
 # ASSET_BASE is empty in dev: the splash assets in web/index.html use the
 # {{ASSET_BASE}} placeholder, so define it (to "") here or the token leaks into
 # the splash <img>/background URLs. Empty means relative, which resolves fine
 # against the dev server's "/" base href.
-run-chrome: env-dev
+run-chrome: prepare-web env-dev
 	@echo "Running app in Chrome..."
-	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) run -d chrome $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"'
+	cd $(WEB_DIR) && $(WEB_FLUTTER) run -d chrome $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
 
-run-web: env-dev
+run-web: prepare-web env-dev
 	@echo "Running app in Web Server..."
-	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release'
+	cd $(WEB_DIR) && $(WEB_FLUTTER) run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
 
 # Build the web app the way it deploys: mounted at /room/, assets fetched from
 # a separate origin (here the local serve-web "CDN" on :5173). The `development`
 # flavor maps to that local CDN and composes the development .env.
-build-web-release: env-dev
+build-web-release: prepare-web env-dev
 	@echo "Building web app..."
-	./scripts/with_web_lockfile.sh env FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
+	FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
 	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
 
 # Serve the built bundle with CORS headers so an HTML document on another origin
@@ -88,13 +97,15 @@ serve-web:
 # Build with the staging worker as ASSET_BASE and deploy it to Cloudflare.
 # Requires wrangler auth (bunx wrangler login, or CLOUDFLARE_API_TOKEN +
 # CLOUDFLARE_ACCOUNT_ID).
-deploy-web-staging: env-staging
+deploy-web-staging: prepare-web env-staging
 	@echo "Building web app (staging)"
-	./scripts/with_web_lockfile.sh sh -c 'FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart && cd $(WEB_DIR) && bunx wrangler deploy --env staging'
+	FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
+	cd $(WEB_DIR) && bunx wrangler deploy --env staging
 
-deploy-web-production: env-prod
+deploy-web-production: prepare-web env-prod
 	@echo "Building web app (production)"
-	./scripts/with_web_lockfile.sh sh -c 'FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart && cd $(WEB_DIR) && bunx wrangler deploy --env production'
+	FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
+	cd $(WEB_DIR) && bunx wrangler deploy --env production
 
 build-runner:
 	@echo "Running build_runner for code generation..."
@@ -108,17 +119,16 @@ build-runner-watch:
 
 install: prepare-native
 
-test:
-	$(MAKE) test-native
-	$(MAKE) test-web
+test: prepare-native
+	$(MAKE) test-native test-web PREPARE_PUB=false TEST_PUB=--no-pub
 
 test-native: prepare-native
 	@echo "Running native/shared tests..."
 	$(MAKE) --jobs=$(TEST_JOBS) test-core test-app test-benchmark test-widgetbook test-scripts TEST_PUB=--no-pub
 
-test-web:
+test-web: prepare-web
 	@echo "Running web tests..."
-	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) test --no-pub --platform=chrome'
+	cd $(WEB_DIR) && $(WEB_FLUTTER) test --no-pub $(TEST_ARGS) --platform=chrome
 
 test-benchmark:
 	cd $(BENCHMARK_DIR) && $(NATIVE_FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
@@ -158,9 +168,8 @@ test-core:
 test-scripts:
 	$(NATIVE_FLUTTER) test scripts/test $(TEST_PUB) $(TEST_ARGS)
 
-lint:
-	$(MAKE) lint-native
-	$(MAKE) lint-web
+lint: prepare-native
+	$(MAKE) lint-native lint-web PREPARE_PUB=false
 
 lint-native: prepare-native
 	@echo "Running native/shared linter..."
@@ -171,9 +180,9 @@ lint-native: prepare-native
 	cd $(BENCHMARK_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
 	cd $(WIDGETBOOK_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
 
-lint-web:
+lint-web: prepare-web
 	@echo "Running Web linter..."
-	./scripts/with_web_lockfile.sh sh -c 'cd $(WEB_DIR) && $(WEB_FLUTTER) analyze --no-pub'
+	cd $(WEB_DIR) && $(WEB_FLUTTER) analyze --no-pub
 
 format:
 	@echo "Formatting code..."
@@ -184,7 +193,7 @@ lint-changed:
 	fvm dart scripts/git_checks.dart pre-commit
 
 test-changed:
-	fvm dart scripts/git_checks.dart pre-push
+	$(NATIVE_DART) scripts/git_checks.dart changed
 
 generate_api_models:
 	cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | $(NATIVE_DART) run degenerate -i - -o lib/core/api --verbose --clean; $(NATIVE_DART) format .

@@ -107,19 +107,17 @@ void main() {
   });
 
   group('ActionBar', () {
-    testWidgets('uses compact metrics on a phone-width surface', (
-      tester,
-    ) async {
+    testWidgets('uses phone metrics on a phone-width surface', (tester) async {
       await pumpWidget(
         tester,
         surfaceSize: const Size(390, 844),
         child: ActionBar(children: ghostButtons(5)),
       );
 
-      check(buttonWidthOf(tester)).equals(40);
+      check(buttonWidthOf(tester)).equals(48);
     });
 
-    testWidgets('uses compact metrics when nested in an unbounded Row', (
+    testWidgets('uses phone metrics when nested in an unbounded Row', (
       tester,
     ) async {
       await pumpWidget(
@@ -131,6 +129,23 @@ void main() {
             ActionBar(children: ghostButtons(5)),
             const Spacer(),
           ],
+        ),
+      );
+
+      check(buttonWidthOf(tester)).equals(48);
+    });
+
+    testWidgets('falls back to compact when phone width cannot fit children', (
+      tester,
+    ) async {
+      // phone.widthFor(5) = 276; compact.widthFor(5) = 224. Use a width
+      // between them so only the phone tier is rejected.
+      await pumpWidget(
+        tester,
+        surfaceSize: const Size(390, 844),
+        child: SizedBox(
+          width: 250,
+          child: ActionBar(children: ghostButtons(5)),
         ),
       );
 

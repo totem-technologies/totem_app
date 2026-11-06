@@ -1,58 +1,27 @@
 import 'package:flutter/widgets.dart';
-import 'package:totem_widgetbook/design/design.dart';
-import 'package:totem_widgetbook/figma.dart';
+import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:widgetbook/widgetbook.dart';
 
 part 'waiting_card.stories.g.dart';
 
-const meta = Meta(WaitingCard.new);
-
+const meta = Meta(JoinTransitionCard.new, argsType: JoinCardInput.new);
 const component = ComponentMeta(path: 'Components/Sessions');
+
+class JoinCardInput {
+  const JoinCardInput({this.waiting = false});
+
+  final bool waiting;
+}
 
 final defaults = _Defaults(
   setup: (context, child, args) =>
-      Padding(padding: const EdgeInsets.all(Spacing.s24), child: child),
-);
-
-/// Late arrival: the Keeper decides before the request expires.
-final $Reviewing = _Story(
-  designLink: figma('3796:9181'),
-  args: _Args(
-    title: StringArg('Keeper is reviewing your request to join'),
-    body: Arg.fixed(
-      const Text.rich(
-        TextSpan(
-          text: 'Please wait,\nwe will let you know in ',
-          children: [
-            TextSpan(
-              text: '1:47',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-            TextSpan(text: ' min'),
-          ],
-        ),
-      ),
-    ),
-    action: Arg.fixed(
-      Button(
-        onPressed: () {},
-        variant: ButtonVariant.secondary,
-        block: true,
-        child: const Text('Cancel request and leave'),
-      ),
-    ),
+      Padding(padding: const EdgeInsets.all(24), child: child),
+  builder: (context, args) => JoinTransitionCard(
+    onActionPressed: () async => true,
+    waiting: args.waiting,
+    onLeaveWaiting: () {},
   ),
 );
 
-/// Admitted before start. Nothing to do but wait, so no action.
-final $Admitted = _Story(
-  args: _Args(
-    title: StringArg("You're in."),
-    body: Arg.fixed(
-      const Text(
-        'Letting Shame Fall Away begins at 6:30 PM GMT. Settle in. '
-        'The circle opens then.',
-      ),
-    ),
-  ),
-);
+final $Default = _Story();
+final $Waiting = _Story(args: _Args(waiting: BoolArg(true)));

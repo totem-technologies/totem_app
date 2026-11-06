@@ -4,7 +4,6 @@ import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
-import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
@@ -69,26 +68,15 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
           final selfViewMessage = selfViewEnabled
               ? 'Your self-view will stay visible during your turn. Everyone else will still see you. You can disable your camera at any time.'
               : "We'll hide your self-view during your turn so you can stay in the moment. Everyone else will still see you. You can disable your camera at any time.";
-          final titleWidget = Column(
-            spacing: 16,
-            children: [
-              Padding(
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 50),
-                child: Text(
-                  'The totem is being passed to you.',
-                  style: theme.textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-                child: Text(
-                  selfViewMessage,
-                  style: theme.textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
+          // The receive pill already says the Totem is being passed, so
+          // phones only add the self-view note next to the video.
+          final selfViewNote = Padding(
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+            child: Text(
+              selfViewMessage,
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
           );
 
           final videoCard = Padding(
@@ -101,37 +89,55 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
             ),
           );
 
-          final receiveSlider = Padding(
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 30),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 20,
-              children: [
-                ?roundPromptText(roundPrompt),
-                SizedBox(
-                  height: 50,
-                  child: ActionSliderButton(
-                    text: 'Receive',
-                    onActionCompleted: onAccept,
-                    keepLoadingOnSuccess: true,
-                  ),
-                ),
-              ],
+          final receiveCard = ReceiveTransitionCard(
+            onActionPressed: onAccept,
+            keepActionLoadingOnSuccess: true,
+            // Phone layouts already pad the screen by 20.
+            margin: EdgeInsetsDirectional.symmetric(
+              horizontal: viewportKind.isSmall ? 10 : 30,
             ),
+          );
+          final promptText = roundPromptText(roundPrompt);
+
+          // Prompt, receive pill and dock read as one cluster.
+          final receiveCluster = Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 16,
+            children: [?promptText, receiveCard, const SessionActionBar()],
           );
 
           switch (viewportKind) {
             case ViewportKind.smallPortrait:
               return Padding(
                 padding: const EdgeInsetsDirectional.all(20),
-                child: Column(
-                  spacing: 40,
-                  children: [
-                    titleWidget,
-                    Expanded(child: videoCard),
-                    receiveSlider,
-                    const SessionActionBar(),
-                  ],
+                // Short phones or large text scroll the note and prompt
+                // (each capped at a fifth of the height), so the video gives
+                // way first and the pill and dock stay on screen.
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    Widget capped(Widget child) => ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: constraints.maxHeight / 5,
+                      ),
+                      child: SingleChildScrollView(child: child),
+                    );
+                    return Column(
+                      spacing: 40,
+                      children: [
+                        capped(selfViewNote),
+                        Expanded(child: videoCard),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: 16,
+                          children: [
+                            if (promptText != null) capped(promptText),
+                            receiveCard,
+                            const SessionActionBar(),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
               );
             case ViewportKind.smallLandscape:
@@ -143,12 +149,24 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
                     Expanded(child: videoCard),
                     Expanded(
                       flex: 2,
+                      // Short landscape screens scroll the note and prompt
+                      // and keep the pill and dock pinned, so the slider
+                      // never leaves the screen (TOT-983).
                       child: Column(
-                        spacing: 20,
+                        spacing: 16,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          titleWidget,
-                          receiveSlider,
+                          Flexible(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                spacing: 16,
+                                // Prompt first, so it stays next to the
+                                // pill when the note fills the space.
+                                children: [?promptText, selfViewNote],
+                              ),
+                            ),
+                          ),
+                          receiveCard,
                           const SessionActionBar(),
                         ],
                       ),
@@ -168,12 +186,7 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
                   children: [
                     const SizedBox(),
                     Expanded(child: videoCard),
-                    roundPromptText(roundPrompt) ?? const SizedBox(height: 10),
-                    ReceiveTransitionCard(
-                      onActionPressed: onAccept,
-                      keepActionLoadingOnSuccess: true,
-                    ),
-                    const SessionActionBar(),
+                    receiveCluster,
                   ],
                 ),
               );

@@ -18,8 +18,11 @@ import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/features/permissions/media_control.dart';
 import 'package:totem_core/features/permissions/media_permission_controller.dart';
 import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
@@ -30,6 +33,7 @@ import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
+import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -161,6 +165,10 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   RoomConnectionState connectionState = RoomConnectionState.connected,
   RoomStatus roomStatus = RoomStatus.active,
   DisconnectReason? disconnectReason,
+  bool showAdmissionOrientation = false,
+  bool admissionReady = false,
+  String? admissionPrompt,
+  bool isCurrentUserKeeper = false,
   List<Object?> extraOverrides = const [],
 }) async {
   final p1 = testParticipant('user-1');
@@ -206,8 +214,10 @@ Future<void> _pumpRoomScreenForResolvedScreen(
         ),
         connectionStateProvider.overrideWith((ref) => connectionState),
         roomStatusProvider.overrideWith((ref) => roomStatus),
-        isCurrentUserKeeperProvider.overrideWith((ref) => false),
-        currentSessionPromptProvider.overrideWith((ref) => null),
+        isCurrentUserKeeperProvider.overrideWith(
+          (ref) => isCurrentUserKeeper,
+        ),
+        currentSessionPromptProvider.overrideWith((ref) => admissionPrompt),
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
         userProfileProvider('user-1').overrideWith(
@@ -239,6 +249,8 @@ Future<void> _pumpRoomScreenForResolvedScreen(
           child: VideoSessionScreen(
             sessionSlug: 'test-session',
             loadingScreen: const SizedBox(key: ValueKey('loading-screen')),
+            showAdmissionOrientation: showAdmissionOrientation,
+            admissionReady: admissionReady,
             now: tester.binding.clock.now,
           ),
         ),
@@ -739,6 +751,34 @@ void main() {
       await _unmountRoomScreen(tester);
     });
 
+    testWidgets('clears admission panel state when the user is disconnected', (
+      tester,
+    ) async {
+      final screenProvider =
+          NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+            () => _RoomScreenOverrideNotifier(RoomScreen.listening),
+          );
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        roomScreenProvider: screenProvider,
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container.read(sessionAdmissionOpenProvider.notifier).open = true;
+      container.read(screenProvider.notifier).set(RoomScreen.disconnected);
+      await tester.pump();
+
+      check(container.read(sessionChatOpenProvider)).isFalse();
+      check(container.read(sessionPromptsOpenProvider)).isFalse();
+      check(container.read(sessionAdmissionOpenProvider)).isFalse();
+    });
+
     testWidgets('renders offline error screen for a network disconnection', (
       tester,
     ) async {
@@ -903,7 +943,7 @@ void main() {
       check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
     });
 
-    testWidgets('clears leftover chat UI state when a room is entered', (
+    testWidgets('clears leftover panel UI state when a room is entered', (
       tester,
     ) async {
       final event = _createSessionEventWithElapsed(
@@ -919,14 +959,16 @@ void main() {
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
         beforeMount: (container) async {
-          container.read(sessionChatOpenProvider.notifier).open = true;
+          container.read(sessionAdmissionOpenProvider.notifier).open = true;
           container.read(sessionChatThreadTargetProvider.notifier).target =
               'keeper-of-previous-circle';
         },
       );
 
-      expect(harness.container.read(sessionChatOpenProvider), isFalse);
-      expect(harness.container.read(sessionChatThreadTargetProvider), isNull);
+      check(harness.container.read(sessionChatOpenProvider)).isFalse();
+      check(harness.container.read(sessionPromptsOpenProvider)).isFalse();
+      check(harness.container.read(sessionAdmissionOpenProvider)).isFalse();
+      check(harness.container.read(sessionChatThreadTargetProvider)).isNull();
     });
 
     testWidgets('docks the chat sidebar on a wide viewport when open', (
@@ -961,6 +1003,124 @@ void main() {
 
       expect(find.byType(SessionChatPanel), findsOneWidget);
     });
+
+    testWidgets(
+      'docks the admission panel beside the room on a wide viewport',
+      (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          isCurrentUserKeeper: true,
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container.read(sessionAdmissionOpenProvider.notifier).open = true;
+        await tester.pumpAndSettle();
+
+        check(
+          tester.widgetList(find.byType(SessionAdmissionPanel)),
+        ).length.equals(1);
+        check(tester.getSize(find.byType(DockedSessionSidePanel)).width).equals(
+          sessionSidePanelWidth,
+        );
+      },
+    );
+
+    testWidgets(
+      'orients a late arrival once connected and lets them enter the room',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final screenProvider =
+            NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+              () => _RoomScreenOverrideNotifier(RoomScreen.loading),
+            );
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.loading,
+          roomScreenProvider: screenProvider,
+          showAdmissionOrientation: true,
+          admissionReady: true,
+          admissionPrompt: 'What brought you here?',
+        );
+
+        check(tester.widgetList(find.text('What brought you here?'))).isEmpty();
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container.read(screenProvider.notifier).set(RoomScreen.listening);
+        await tester.pump();
+        check(
+          container
+              .read(admittedSessionParticipantIdentitiesProvider)
+              .contains('user-1'),
+        ).isFalse();
+        check(
+          tester.widgetList(find.text('What brought you here?')),
+        ).length.equals(1);
+        await tester.tap(find.text('Got it'));
+        await tester.pump();
+
+        check(tester.widgetList(find.text('What brought you here?'))).isEmpty();
+        check(
+          tester.widgetList(find.byType(ListeningTurnScreen)),
+        ).length.equals(1);
+        await _unmountRoomScreen(tester);
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        PaintingBinding.instance.imageCache.clear();
+      },
+    );
+
+    testWidgets(
+      'does not expose the room before admission activation finishes',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          showAdmissionOrientation: true,
+          admissionPrompt: 'What brought you here?',
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container
+            .read(admittedSessionParticipantIdentitiesProvider.notifier)
+            .update(['user-1']);
+        await tester.pump();
+        check(
+          tester.widgetList(find.byKey(const ValueKey('loading-screen'))),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(ListeningTurnScreen))).isEmpty();
+        await _unmountRoomScreen(tester);
+      },
+    );
 
     testWidgets('renders not my turn screen for RoomScreen.listening', (
       tester,
@@ -1423,6 +1583,79 @@ void main() {
       );
     });
 
+    testWidgets('announces a change to the browser default output', (
+      tester,
+    ) async {
+      final outputs = StreamController<List<MediaDeviceInfo>>.broadcast();
+      addTearDown(outputs.close);
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        extraOverrides: [
+          sessionDeviceControllerProvider(
+            session,
+          ).overrideWith(_TestSessionDeviceController.new),
+          mediaDevicesProvider.overrideWith((ref) => outputs.stream),
+        ],
+      );
+      const headphones = MediaDeviceInfo(
+        id: 'default',
+        label: 'Headphones',
+        kind: MediaDeviceKind.audioOutput,
+      );
+      const speakers = MediaDeviceInfo(
+        id: 'default',
+        label: 'Speakers',
+        kind: MediaDeviceKind.audioOutput,
+      );
+      outputs.add([headphones]);
+      await tester.pump();
+      check(
+        tester.widgetList(find.text('Audio switched to another device')),
+      ).isEmpty();
+
+      outputs.add([speakers]);
+      await tester.pump();
+      await tester.pump();
+      check(
+        tester.widgetList(find.text('Audio switched to another device')),
+      ).length.equals(1);
+    }, skip: !kIsWeb);
+
+    testWidgets(
+      'shows a notification when a native route changes without a speaker state change',
+      (tester) async {
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          extraOverrides: [
+            sessionDeviceControllerProvider(
+              session,
+            ).overrideWith(_TestSessionDeviceController.new),
+          ],
+        );
+        _TestSessionDeviceController.lastInstance!.emit(
+          const SessionDeviceState(
+            selectedCameraDeviceId: null,
+            selectedAudioOutputDeviceId: null,
+            isSpeakerphoneEnabled: true,
+            isMicrophoneEnabled: false,
+            isCameraEnabled: false,
+            audioRouteRevision: 1,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        check(
+          tester.widgetList(find.text('Audio switched to another device')),
+        ).length.equals(1);
+      },
+    );
+
     testWidgets('shows notification when audio route changes', (tester) async {
       final event = _createSessionEventWithElapsed(
         _testNow(tester),
@@ -1442,7 +1675,7 @@ void main() {
       );
 
       check(
-        tester.widgetList(find.text('Audio route changed')),
+        tester.widgetList(find.text('Audio switched to another device')),
       ).length.equals(0);
 
       final controller = _TestSessionDeviceController.lastInstance;
@@ -1460,14 +1693,80 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       check(
-        tester.widgetList(find.text('Audio route changed')),
+        tester.widgetList(find.text('Audio switched to another device')),
       ).length.equals(1);
       check(
-        tester.widgetList(
-          find.text('Audio is now routed to another output device.'),
-        ),
+        tester.widgetList(find.text('Your audio output has changed.')),
       ).length.equals(1);
     });
+
+    testWidgets(
+      'preempts a device notice with the latest audio route change and resumes it afterward',
+      (tester) async {
+        final notices = StreamController<MediaKind>.broadcast();
+        addTearDown(notices.close);
+        devices.deviceNeedsAttentionStream = notices.stream;
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 5),
+          ),
+          screen: RoomScreen.listening,
+          extraOverrides: [
+            sessionDeviceControllerProvider(
+              session,
+            ).overrideWith(_TestSessionDeviceController.new),
+          ],
+        );
+
+        notices.add(MediaKind.microphone);
+        await tester.pump(const Duration(seconds: 1));
+
+        final controller = _TestSessionDeviceController.lastInstance!;
+        // A frame is pumped between route changes.
+        // ignore: cascade_invocations
+        controller.emit(
+          const SessionDeviceState(
+            selectedCameraDeviceId: null,
+            selectedAudioOutputDeviceId: 'headphones',
+            isSpeakerphoneEnabled: false,
+            isMicrophoneEnabled: false,
+            isCameraEnabled: false,
+          ),
+        );
+        await tester.pump();
+        controller.emit(
+          const SessionDeviceState(
+            selectedCameraDeviceId: null,
+            selectedAudioOutputDeviceId: null,
+            isSpeakerphoneEnabled: true,
+            isMicrophoneEnabled: false,
+            isCameraEnabled: false,
+          ),
+        );
+        await tester.pump();
+
+        check(
+          tester.widgetList(find.text("Your microphone isn't on")),
+        ).isEmpty();
+        check(
+          tester.widgetList(find.text('Audio switched to another device')),
+        ).isEmpty();
+        check(
+          tester.widgetList(find.text('Audio switched to speakers')),
+        ).length.equals(1);
+
+        await tester.pump(const Duration(seconds: 8));
+        await tester.pump(const Duration(milliseconds: 600));
+
+        check(
+          tester.widgetList(find.text("Your microphone isn't on")),
+        ).length.equals(1);
+      },
+    );
 
     for (final (kind, problem, title) in [
       (MediaKind.microphone, DeviceProblem.lost, 'Your microphone stopped'),
@@ -1617,7 +1916,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       check(
-        tester.widgetList(find.text('Audio route changed')),
+        tester.widgetList(find.text('Audio switched to another device')),
       ).length.equals(0);
     });
   });

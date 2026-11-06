@@ -174,15 +174,23 @@ class SessionErrorScreen extends ConsumerWidget {
                             InkWell(
                               onTap: pop,
                               borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsetsDirectional.symmetric(
-                                  horizontal: 20.0,
-                                  vertical: 8,
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  minHeight: 44,
                                 ),
-                                child: Text(
-                                  'Go back to session details',
-                                  style: theme.textTheme.bodySmall,
-                                  textAlign: TextAlign.center,
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                        horizontal: 20,
+                                        vertical: 8,
+                                      ),
+                                  child: Center(
+                                    child: Text(
+                                      'Go back to session details',
+                                      style: theme.textTheme.titleSmall,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),

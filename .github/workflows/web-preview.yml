@@ -21,6 +21,7 @@ jobs:
   deploy:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: web-preview-pr-${{ github.event.pull_request.number }}
       url: ${{ steps.preview.outputs.url }}
@@ -36,7 +37,6 @@ jobs:
           flutter-version: "3.50.0-0.2.pre"
           flutter-channel: beta
           dart-version: "3.14.0 (build 3.14.0-315.3.beta)"
-          lockfile-snapshot: pubspec.web.lock
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           flavor: staging
 

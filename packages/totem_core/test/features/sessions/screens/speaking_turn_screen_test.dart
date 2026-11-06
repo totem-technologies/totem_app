@@ -235,6 +235,14 @@ void main() {
             () => FakeAuthController(testAuthenticatedState()),
           ),
           currentSessionStateProvider.overrideWithValue(sessionState),
+          admittedSessionParticipantIdentitiesProvider.overrideWith(
+            () => TestAdmittedSessionParticipantIdentities({
+              sessionState.roomState.keeper,
+              ...sessionState.participantsList.map(
+                (participant) => participant.identity,
+              ),
+            }),
+          ),
           currentSessionProvider.overrideWith((ref) => session),
           currentSessionPromptProvider.overrideWith((ref) => currentPrompt),
           sessionPromptsControllerProvider('test-session').overrideWithValue(
@@ -439,6 +447,55 @@ void main() {
       check(tester.widgetList(find.text('Pass to User Two'))).length.equals(1);
       check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
     });
+
+    const longPrompt =
+        'Think of a moment this week when you felt truly heard by someone, '
+        'and share what they did that made the difference for you.';
+
+    for (final (label, size, textScale) in [
+      ('portrait phone', const Size(360, 740), 1.0),
+      ('short landscape phone', const Size(667, 375), 1.0),
+      ('short landscape phone at 1.5x text', const Size(667, 375), 1.5),
+    ]) {
+      for (final isKeeper in [true, false]) {
+        testWidgets(
+          'keeps the ${isKeeper ? 'keeper' : 'speaker'} pass slider on a $label',
+          (tester) async {
+            tester.view
+              ..physicalSize = size
+              ..devicePixelRatio = 1;
+            addTearDown(tester.view.reset);
+            tester.platformDispatcher.textScaleFactorTestValue = textScale;
+            addTearDown(
+              tester.platformDispatcher.clearTextScaleFactorTestValue,
+            );
+            final state = _buildState(
+              keeper: isKeeper ? 'user-1' : 'keeper-1',
+              currentSpeaker: 'user-1',
+              nextSpeaker: 'user-2',
+            );
+
+            await pumpSpeakingTurn(
+              tester,
+              sessionState: state,
+              isKeeper: isKeeper,
+              currentPrompt: longPrompt,
+            );
+
+            check(tester.takeException()).isNull();
+            final slider = tester.getRect(find.byType(ActionSlider));
+            check(slider.height).equals(48);
+            check(slider.top).isGreaterOrEqual(0);
+            check(slider.bottom).isLessOrEqual(size.height);
+            check(slider.left).isGreaterOrEqual(0);
+            check(slider.right).isLessOrEqual(size.width);
+            check(
+              tester.widgetList(find.byType(SessionActionBar)),
+            ).length.equals(1);
+          },
+        );
+      }
+    }
 
     testWidgets('shows the waiting receive card while the totem is passing', (
       tester,

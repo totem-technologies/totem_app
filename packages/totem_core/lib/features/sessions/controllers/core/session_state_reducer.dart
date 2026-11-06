@@ -31,9 +31,9 @@ class SessionStateReducer {
         final isEnded = event.roomState.status == RoomStatus.ended;
         final newSpeaker = SessionRoomState.speakerOf(event.roomState);
         final turnStartedAt =
-            newSpeaker.isNotEmpty &&
-                (current.speakingNow != newSpeaker ||
-                    current.turnStartedAt == null)
+            event.roomState.status != RoomStatus.active || newSpeaker.isEmpty
+            ? null
+            : current.speakingNow != newSpeaker || current.turnStartedAt == null
             ? DateTime.now()
             : current.turnStartedAt;
         return SessionRoomState(

@@ -10,6 +10,7 @@ import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/permissions/policy.dart';
 import 'package:totem_core/features/permissions/ui/recovery.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -21,6 +22,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camer
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_mic_button.dart';
+import 'package:totem_core/features/sessions/widgets/session_dock_surface.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
@@ -42,8 +44,12 @@ enum ActionBarButtonRole {
   }
 }
 
+/// Border width of [sessionDockDecoration]; counted in widthFor.
+const _pillBorderWidth = 1.5;
+
 @immutable
-// Two named layouts plus a derived width; not a closed token set.
+// Three named layouts (comfortable, phone, compact) plus a derived width;
+// not a closed token set.
 // ignore: use_enums
 class _ActionBarMetrics {
   const _ActionBarMetrics({
@@ -54,9 +60,20 @@ class _ActionBarMetrics {
     required this.verticalPadding,
   });
 
+  /// Tablets/desktop. Smaller than [phone] on purpose: pointer input does
+  /// not need the 48dp touch minimum.
   static const comfortable = _ActionBarMetrics(
     buttonSize: 44,
     iconSize: 22,
+    gap: 6,
+    horizontalPadding: 6,
+    verticalPadding: 6,
+  );
+
+  /// Phones: Material minimum touch (48) with proportionally larger icons.
+  static const phone = _ActionBarMetrics(
+    buttonSize: 48,
+    iconSize: 24,
     gap: 6,
     horizontalPadding: 6,
     verticalPadding: 6,
@@ -81,7 +98,8 @@ class _ActionBarMetrics {
     if (childCount <= 0) return 0;
     return childCount * buttonSize +
         (childCount - 1) * gap +
-        horizontalPadding * 2;
+        horizontalPadding * 2 +
+        _pillBorderWidth * 2;
   }
 }
 
@@ -266,6 +284,9 @@ class ActionBarShortcut {
     LogicalKeyboardKey.keyS,
     LogicalKeyboardKey.keyD,
     LogicalKeyboardKey.keyF,
+    LogicalKeyboardKey.keyG,
+    LogicalKeyboardKey.keyH,
+    LogicalKeyboardKey.keyJ,
   ];
 
   static const microphone = ActionBarShortcut(
@@ -365,14 +386,6 @@ class ActionBar extends StatelessWidget {
         final metrics = _resolveMetrics(context, constraints);
         final onLightBackground = _onLightBackground(context);
 
-        // 8% white glass disappears on the waiting-room cream gradient.
-        final pillFill = onLightBackground
-            ? AppTheme.slate.withValues(alpha: 0.12)
-            : AppTheme.white.withValues(alpha: 0.08);
-        final pillStroke = onLightBackground
-            ? AppTheme.slate.withValues(alpha: 0.22)
-            : AppTheme.white.withValues(alpha: 0.16);
-
         return _ActionBarScope(
           metrics: metrics,
           onLightBackground: onLightBackground,
@@ -382,10 +395,8 @@ class ActionBar extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsetsDirectional.only(bottom: 20),
                 child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: pillFill,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: pillStroke, width: 1.5),
+                  decoration: sessionDockDecoration(
+                    onLightBackground: onLightBackground,
                   ),
                   child: Padding(
                     padding: EdgeInsetsDirectional.symmetric(
@@ -414,27 +425,26 @@ class ActionBar extends StatelessWidget {
   /// LayoutBuilder reports incoming constraints. A non-flex Row child gets
   /// `maxWidth: infinity`, so we cannot key compact off that alone.
   ///
-  /// Phones always compact. Larger viewports use comfortable unless the
+  /// Phones prefer phone metrics (≥48dp touch targets). Tablets/desktop
+  /// prefer comfortable. Either falls back to compact only when the
   /// *finite* constraint (or the screen width, when unbounded) cannot fit
-  /// `children.length`.
+  /// `children.length` via widthFor.
   _ActionBarMetrics _resolveMetrics(
     BuildContext context,
     BoxConstraints constraints,
   ) {
-    final viewport = ViewportResolver.getViewportKind(context);
-    final isPhone =
-        viewport == ViewportKind.smallPortrait ||
-        viewport == ViewportKind.smallLandscape;
-    if (isPhone) return _ActionBarMetrics.compact;
+    final isPhone = ViewportResolver.getViewportKind(context).isSmall;
+    final preferred = isPhone
+        ? _ActionBarMetrics.phone
+        : _ActionBarMetrics.comfortable;
 
     final availableWidth = constraints.maxWidth.isFinite
         ? constraints.maxWidth
         : MediaQuery.sizeOf(context).width;
-    if (availableWidth <
-        _ActionBarMetrics.comfortable.widthFor(children.length)) {
+    if (availableWidth < preferred.widthFor(children.length)) {
       return _ActionBarMetrics.compact;
     }
-    return _ActionBarMetrics.comfortable;
+    return preferred;
   }
 }
 
@@ -480,17 +490,80 @@ class PrejoinActionBar extends ConsumerWidget {
     final cameraDevices = ref.watch(cameraDevicesProvider);
     final permissions = ref.watch(mediaPermissionControllerProvider);
     final platform = ref.watch(platformInfoProvider);
+    return PrejoinActionBarView(
+      locked: locked,
+      microphoneLevel: microphoneLevel,
+      microphoneNeedsAttention: needsAttention(
+        permissions?.microphone,
+        microphoneProblem,
+        platform,
+      ),
+      isMicOn: isMicOn,
+      onToggleMic: onToggleMic,
+      isSpeakerOn: isSpeakerOn,
+      onToggleSpeaker: onToggleSpeaker,
+      isCameraOn: isCameraOn,
+      onToggleCamera: onToggleCamera,
+      cameraFacing: cameraFacing,
+      availableCameraDevices: cameraDevices,
+      selectedCameraDeviceId: selectedCameraDeviceId,
+      onCameraFacingChanged: onCameraFacingChanged,
+      onCameraDeviceSelected: onCameraDeviceSelected,
+      cameraNeedsAttention: needsAttention(
+        permissions?.camera,
+        cameraProblem,
+        platform,
+      ),
+    );
+  }
+}
+
+/// Provider-free presentation for the pre-join media controls.
+class PrejoinActionBarView extends StatelessWidget {
+  const PrejoinActionBarView({
+    required this.locked,
+    required this.microphoneLevel,
+    required this.microphoneNeedsAttention,
+    required this.isMicOn,
+    required this.onToggleMic,
+    required this.isSpeakerOn,
+    required this.onToggleSpeaker,
+    required this.isCameraOn,
+    required this.onToggleCamera,
+    required this.cameraFacing,
+    required this.availableCameraDevices,
+    required this.selectedCameraDeviceId,
+    required this.onCameraFacingChanged,
+    required this.onCameraDeviceSelected,
+    required this.cameraNeedsAttention,
+    super.key,
+  });
+
+  final bool locked;
+  final MicrophoneLevelBuilder? microphoneLevel;
+  final bool microphoneNeedsAttention;
+  final bool isMicOn;
+  final AsyncCallback onToggleMic;
+  final bool isSpeakerOn;
+  final VoidCallback onToggleSpeaker;
+  final bool isCameraOn;
+  final VoidCallback onToggleCamera;
+  final CameraFacing cameraFacing;
+  final List<MediaDeviceInfo> availableCameraDevices;
+  final String? selectedCameraDeviceId;
+  final ValueChanged<CameraFacing> onCameraFacingChanged;
+  final ValueChanged<MediaDeviceInfo> onCameraDeviceSelected;
+  final bool cameraNeedsAttention;
+
+  @override
+  Widget build(BuildContext context) {
     final microphoneButton = ActionBarShortcutTooltip(
       shortcut: ActionBarShortcut.microphone,
       child: ActionBarMicButton(
         microphoneLevel: microphoneLevel,
         isMicOn: isMicOn,
         onToggle: !locked ? (v) => onToggleMic() : null,
-        needsAttention: needsAttention(
-          permissions?.microphone,
-          microphoneProblem,
-          platform,
-        ),
+        needsAttention: microphoneNeedsAttention,
       ),
     );
     final cameraButton = ActionBarShortcutTooltip(
@@ -499,16 +572,12 @@ class PrejoinActionBar extends ConsumerWidget {
         isCameraOn: isCameraOn,
         onToggle: locked ? null : onToggleCamera,
         cameraFacing: cameraFacing,
-        availableCameraDevices: cameraDevices,
+        availableCameraDevices: availableCameraDevices,
         selectedCameraDeviceId:
-            selectedCameraDeviceId ?? cameraDevices.firstOrNull?.id,
+            selectedCameraDeviceId ?? availableCameraDevices.firstOrNull?.id,
         onCameraFacingChanged: onCameraFacingChanged,
         onCameraDeviceSelected: onCameraDeviceSelected,
-        needsAttention: needsAttention(
-          permissions?.camera,
-          cameraProblem,
-          platform,
-        ),
+        needsAttention: cameraNeedsAttention,
       ),
     );
 
@@ -615,31 +684,37 @@ class SessionActionBar extends ConsumerWidget {
       case RoomScreen.loading:
         return const SizedBox.shrink();
       case RoomScreen.listening:
-        return ActionBar(
-          key: SessionActionBar.actionBarKey,
-          children: [
-            microphoneButton,
-            cameraButton,
-            emojiBarButton,
-            chatButton,
-            moreButton,
-          ],
+        return SessionAdmissionQueueControl(
+          child: ActionBar(
+            key: SessionActionBar.actionBarKey,
+            children: [
+              microphoneButton,
+              cameraButton,
+              emojiBarButton,
+              chatButton,
+              moreButton,
+            ],
+          ),
         );
       case RoomScreen.speaking:
       case RoomScreen.passing:
-        return ActionBar(
-          key: SessionActionBar.actionBarKey,
-          children: [microphoneButton, cameraButton, chatButton, moreButton],
+        return SessionAdmissionQueueControl(
+          child: ActionBar(
+            key: SessionActionBar.actionBarKey,
+            children: [microphoneButton, cameraButton, chatButton, moreButton],
+          ),
         );
       case RoomScreen.receiving:
-        return ActionBar(
-          key: SessionActionBar.actionBarKey,
-          children: [
-            if (currentUser?.isStaff == true) microphoneButton,
-            cameraButton,
-            chatButton,
-            moreButton,
-          ],
+        return SessionAdmissionQueueControl(
+          child: ActionBar(
+            key: SessionActionBar.actionBarKey,
+            children: [
+              if (currentUser?.isStaff == true) microphoneButton,
+              cameraButton,
+              chatButton,
+              moreButton,
+            ],
+          ),
         );
     }
   }
