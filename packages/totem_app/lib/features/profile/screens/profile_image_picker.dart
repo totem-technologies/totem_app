@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -38,23 +39,49 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
   var _loading = false;
 
   final _imagePicker = ImagePicker();
-  XFile? _pickedImage;
+  File? _pickedImage;
   Uint8List? _pickedImageBytes;
 
   static const _uuid = Uuid();
   String? _tieDyeSeed;
 
   Future<void> _pickImage() async {
-    final image = await _imagePicker.pickImage(source: ImageSource.gallery);
-    if (image == null || !mounted) return;
+    try {
+      final image = await _imagePicker.pickImage(source: ImageSource.gallery);
+      if (image == null || !mounted) return;
 
-    final bytes = await image.readAsBytes();
-    if (!mounted) return;
+      var pickedFile = File(image.path);
+      final extension = image.name.split('.').last.toLowerCase();
+      if ((Platform.isAndroid || Platform.isIOS) &&
+          (extension == 'heic' || extension == 'heif')) {
+        try {
+          final converted = await FlutterImageCompress.compressAndGetFile(
+            image.path,
+            '${image.path}.jpg',
+            format: CompressFormat.jpeg,
+            quality: 95,
+            autoCorrectionAngle: true,
+          );
+          if (converted != null) pickedFile = File(converted.path);
+        } catch (_) {
+          // Keep the original; the upload endpoint may accept HEIC/HEIF.
+        }
+      }
 
-    setState(() {
-      _pickedImage = image;
-      _pickedImageBytes = bytes;
-    });
+      final bytes = await pickedFile.readAsBytes();
+      if (!mounted) return;
+
+      setState(() {
+        _pickedImage = pickedFile;
+        _pickedImageBytes = bytes;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ErrorHandler.showErrorSnackBar(
+        context,
+        'Could not prepare this image. Try selecting another photo.',
+      );
+    }
   }
 
   void _randomizeTieDyeSeed() {
@@ -68,9 +95,8 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
         .read(userProfileControllerProvider.notifier)
         .updateUserProfile(
           profileAvatarType: _state,
-          profileImage:
-              _pickedImage != null && _state == ProfileAvatarTypeEnum.im
-              ? File(_pickedImage!.path)
+          profileImage: _state == ProfileAvatarTypeEnum.im
+              ? _pickedImage
               : null,
           avatarSeed: _state == ProfileAvatarTypeEnum.td ? _tieDyeSeed : null,
         );
@@ -85,7 +111,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
     } else {
       ErrorHandler.showErrorSnackBar(
         context,
-        'Failed to update profile. Try again later.',
+        'Could not upload your profile photo. Check your connection and try again.',
       );
     }
 
