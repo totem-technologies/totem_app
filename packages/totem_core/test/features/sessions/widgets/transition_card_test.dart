@@ -118,6 +118,32 @@ void main() {
       );
 
       autoSizeTest(
+        'join card stays in place when its shortcut becomes unavailable',
+        (tester) async {
+          Widget card({bool enabled = true, bool waiting = false}) =>
+              JoinTransitionCard(
+                onActionPressed: () async => true,
+                enabled: enabled,
+                waiting: waiting,
+              );
+
+          await pumpAtSize(tester, const Size(1280, 900), card());
+          final originalPosition = tester.getTopLeft(find.byType(Card));
+          check(find.text('press space bar to join').evaluate()).isNotEmpty();
+
+          await tester.pumpWidget(buildTestWidget(card(enabled: false)));
+          check(tester.getTopLeft(find.byType(Card))).equals(originalPosition);
+          check(find.text('press space bar to join').evaluate()).isEmpty();
+
+          await tester.pumpWidget(buildTestWidget(card(waiting: true)));
+          check(tester.getTopLeft(find.byType(Card))).equals(originalPosition);
+          check(find.text('press space bar to join').evaluate()).isEmpty();
+          check(find.text('Leave waiting room').evaluate()).isNotEmpty();
+        },
+        variant: desktop,
+      );
+
+      autoSizeTest(
         'small viewport keeps the space shortcut caption under the pill',
         (tester) async {
           await pumpAtSize(

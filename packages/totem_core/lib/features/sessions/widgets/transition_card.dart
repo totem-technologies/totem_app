@@ -244,11 +244,13 @@ class _TransitionCardBase extends StatefulWidget {
   const _TransitionCardBase({
     required this.childBuilder,
     this.keyboardShortcutText,
+    this.keyboardShortcutVisible = true,
   });
 
   final Widget Function(BuildContext context, bool hasMouseConnected)
   childBuilder;
   final String? keyboardShortcutText;
+  final bool keyboardShortcutVisible;
 
   @override
   State<_TransitionCardBase> createState() => _TransitionCardBaseState();
@@ -286,10 +288,16 @@ class _TransitionCardBaseState extends State<_TransitionCardBase> {
         spacing: 6,
         children: [
           card,
-          Text(
-            widget.keyboardShortcutText!,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF787D7E),
+          Visibility(
+            visible: widget.keyboardShortcutVisible,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: Text(
+              widget.keyboardShortcutText!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF787D7E),
+              ),
             ),
           ),
         ],
@@ -378,9 +386,8 @@ class JoinTransitionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return _TransitionCardBase(
-      keyboardShortcutText: enabled && !waiting
-          ? 'press space bar to join'
-          : null,
+      keyboardShortcutText: 'press space bar to join',
+      keyboardShortcutVisible: enabled && !waiting,
       childBuilder: (context, _) {
         return _TransitionCardContainer(
           margin: margin,
