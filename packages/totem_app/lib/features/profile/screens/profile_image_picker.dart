@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -61,16 +62,47 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
   ProfileAvatarTypeEnum? __state;
   ProfileAvatarTypeEnum get _state => __state!;
   var _loading = false;
+  var _picking = false;
+  var _uploadInProgress = false;
 
   final _imagePicker = ImagePicker();
   final _convertedImagePaths = <String>{};
+  final _deletingImagePaths = <String>{};
   File? _pickedImage;
   Uint8List? _pickedImageBytes;
 
   static const _uuid = Uuid();
   String? _tieDyeSeed;
 
+  Future<void> _deleteConvertedImages({String? keep}) async {
+    for (final path in _convertedImagePaths.toList()) {
+      if (path == keep || !_deletingImagePaths.add(path)) continue;
+      try {
+        await File(path).delete();
+        _convertedImagePaths.remove(path);
+      } catch (error, stackTrace) {
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Failed to delete converted profile image',
+        );
+      } finally {
+        _deletingImagePaths.remove(path);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    // An in-flight upload still needs its file; its completion handles cleanup.
+    if (!_uploadInProgress) unawaited(_deleteConvertedImages());
+    super.dispose();
+  }
+
   Future<void> _pickImage() async {
+    if (_picking || _loading) return;
+    setState(() => _picking = true);
+    String? convertedPath;
     try {
       final image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -85,14 +117,14 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
         try {
           final converted = await FlutterImageCompress.compressAndGetFile(
             image.path,
-            '${image.path}.jpg',
+            '${image.path}.${_uuid.v7()}.jpg',
             format: CompressFormat.jpeg,
             quality: 95,
             autoCorrectionAngle: true,
           );
           if (converted != null) {
             pickedFile = File(converted.path);
-            _convertedImagePaths.add(converted.path);
+            convertedPath = converted.path;
           }
         } catch (error, stackTrace) {
           ErrorHandler.logError(
@@ -111,6 +143,11 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
         _pickedImage = pickedFile;
         _pickedImageBytes = bytes;
       });
+      if (convertedPath != null) {
+        _convertedImagePaths.add(convertedPath);
+        convertedPath = null;
+      }
+      unawaited(_deleteConvertedImages(keep: pickedFile.path));
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -122,6 +159,18 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
         context,
         'Could not prepare this image. Try selecting another photo.',
       );
+    } finally {
+      if (mounted) {
+        setState(() => _picking = false);
+      } else {
+        _picking = false;
+      }
+      if (convertedPath != null) {
+        _convertedImagePaths.add(convertedPath);
+        unawaited(
+          _deleteConvertedImages(keep: mounted ? _pickedImage?.path : null),
+        );
+      }
     }
   }
 
@@ -130,31 +179,32 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
   }
 
   Future<void> _onSave() async {
+    if (_picking || _loading) return;
     setState(() => _loading = true);
-    final convertedImagePaths = Set<String>.of(_convertedImagePaths);
-
-    final updated = await ref
-        .read(userProfileControllerProvider.notifier)
-        .updateUserProfile(
-          profileAvatarType: _state,
-          profileImage: _state == ProfileAvatarTypeEnum.im
-              ? _pickedImage
-              : null,
-          avatarSeed: _state == ProfileAvatarTypeEnum.td ? _tieDyeSeed : null,
-        );
-
-    if (updated) {
-      for (final path in convertedImagePaths) {
-        try {
-          await File(path).delete();
-          _convertedImagePaths.remove(path);
-        } catch (error, stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            message: 'Failed to delete converted profile image',
+    _uploadInProgress = true;
+    var updated = false;
+    try {
+      updated = await ref
+          .read(userProfileControllerProvider.notifier)
+          .updateUserProfile(
+            profileAvatarType: _state,
+            profileImage: _state == ProfileAvatarTypeEnum.im
+                ? _pickedImage
+                : null,
+            avatarSeed: _state == ProfileAvatarTypeEnum.td ? _tieDyeSeed : null,
           );
-        }
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to update profile avatar',
+      );
+    } finally {
+      _uploadInProgress = false;
+      if (mounted) {
+        setState(() => _loading = false);
+      } else {
+        unawaited(_deleteConvertedImages());
       }
     }
     if (!mounted) return;
@@ -167,13 +217,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
     } else {
       ErrorHandler.showErrorSnackBar(
         context,
-        'Could not update your profile avatar. Check your connection and try again.',
+        'Could not update your profile avatar. Please try again.',
       );
     }
-
-    setState(() {
-      _loading = false;
-    });
   }
 
   @override
@@ -335,8 +381,8 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                 ),
               ),
               ElevatedButton(
-                onPressed: _loading ? () {} : _onSave,
-                child: _loading
+                onPressed: _loading || _picking ? () {} : _onSave,
+                child: _loading || _picking
                     ? const LoadingIndicator(size: 24, color: Colors.white)
                     : const Text('Save'),
               ),
