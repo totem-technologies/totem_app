@@ -20,19 +20,35 @@ class TotemUpgradeAlert extends UpgradeAlert {
          showIgnore: false,
        );
 
-  static final _sharedUpgrader = _MinorVersionUpgrader();
+  static final _sharedUpgrader = _MinorVersionUpgrader(
+    messages: TotemUpgraderMessages(),
+  );
 
   @override
   UpgradeAlertState createState() => _TotemUpgradeAlertState();
 }
 
-// Totem treats changes to the second version component as release updates,
-// including after the app reaches version 1.0.0.
+// Totem prompts for updates when the major or minor version changes.
+class TotemUpgraderMessages extends UpgraderMessages {
+  @override
+  String? message(UpgraderMessage messageKey) => switch (messageKey) {
+    UpgraderMessage.title => 'Update available',
+    UpgraderMessage.body =>
+      'A newer version of Totem is available. Update to get the latest '
+          'fixes and improvements.',
+    UpgraderMessage.prompt => 'Would you like to update now?',
+    UpgraderMessage.buttonTitleUpdate => 'Update',
+    UpgraderMessage.buttonTitleLater => 'Later',
+    _ => super.message(messageKey),
+  };
+}
+
 class _MinorVersionUpgrader extends Upgrader {
+  _MinorVersionUpgrader({super.messages});
   @override
   bool shouldDisplayUpgrade() {
     if (blocked()) return super.shouldDisplayUpgrade();
-    return hasMinorVersionUpdate(
+    return hasMajorOrMinorVersionUpdate(
           currentInstalledVersion,
           currentAppStoreVersion,
         ) &&
@@ -40,19 +56,24 @@ class _MinorVersionUpgrader extends Upgrader {
   }
 }
 
-bool hasMinorVersionUpdate(String? installedVersion, String? storeVersion) {
-  final installedMinor = _minorVersion(installedVersion);
-  final storeMinor = _minorVersion(storeVersion);
-  return installedMinor != null &&
-      storeMinor != null &&
-      installedMinor != storeMinor;
+@visibleForTesting
+bool hasMajorOrMinorVersionUpdate(
+  String? installedVersion,
+  String? storeVersion,
+) {
+  final installed = _majorMinorVersion(installedVersion);
+  final store = _majorMinorVersion(storeVersion);
+  return installed != null && store != null && installed != store;
 }
 
-int? _minorVersion(String? version) {
+(int, int)? _majorMinorVersion(String? version) {
   if (version == null) return null;
   final components = version.split('.');
   if (components.length < 2) return null;
-  return int.tryParse(components[1]);
+  final major = int.tryParse(components[0]);
+  final minor = int.tryParse(components[1]);
+  if (major == null || minor == null) return null;
+  return (major, minor);
 }
 
 class _TotemUpgradeAlertState extends UpgradeAlertState {
@@ -112,9 +133,12 @@ class _TotemUpgradeAlertState extends UpgradeAlertState {
       ),
     ).then((_) {
       if (!mounted || _closedByUser) return;
-      // The dialog is a pageless route, so GoRouter drops it when it replaces
-      // the page below (e.g. the splash redirect). Show it again on the new
-      // page instead of losing it until the next alert interval.
+      // Any close other than the dialog's own buttons reaches this path,
+      // including a Navigator pop or barrier tap. Today back is blocked and
+      // barrierDismissible is false, so this means GoRouter replaced the page
+      // below the pageless route. Re-show it on the new page rather than
+      // losing the alert until the next interval; keep barrier dismissal off
+      // unless that behavior is intentionally changed.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final navigatorContext = widget.navigatorKey?.currentContext;
@@ -160,11 +184,13 @@ class _TotemUpgradeAlertState extends UpgradeAlertState {
     final prompt = widget.showPrompt
         ? messages.message(UpgraderMessage.prompt)
         : null;
+    final dialogTitle = messages.message(UpgraderMessage.title) ?? title;
+    final dialogMessage = messages.message(UpgraderMessage.body) ?? message;
 
     return UpdateAvailableDialog(
       key: key,
-      title: title,
-      message: message,
+      title: dialogTitle,
+      message: dialogMessage,
       prompt: prompt,
       updateButtonText: updateButton,
       onUpdate: () => onUserUpdated(context, !isBlocked),

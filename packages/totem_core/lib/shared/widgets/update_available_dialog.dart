@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/totem_dialog_layout.dart';
@@ -49,7 +51,7 @@ class UpdateAvailableDialog extends StatelessWidget {
     final bodyStyle = TextStyle(color: theme.colorScheme.onSurface);
 
     return TotemDialogLayout(
-      bodyMaxHeight: 400,
+      bodyMaxHeight: math.min(400.0, MediaQuery.sizeOf(context).height * 0.35),
       // downloadApp (and similar) SVGs ship their own fills.
       icon: icon == null
           ? null

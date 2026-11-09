@@ -7,22 +7,28 @@ void main() {
   Future<void> pumpDialog(
     WidgetTester tester, {
     required UpdateAvailableDialog dialog,
+    double textScale = 1,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(splashFactory: NoSplash.splashFactory),
         home: Builder(
           builder: (context) {
-            return Scaffold(
-              body: Center(
-                child: ElevatedButton(
-                  onPressed: () {
-                    showDialog<void>(
-                      context: context,
-                      builder: (_) => dialog,
-                    );
-                  },
-                  child: const Text('Open'),
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(textScale),
+              ),
+              child: Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      showDialog<void>(
+                        context: context,
+                        builder: (_) => dialog,
+                      );
+                    },
+                    child: const Text('Open'),
+                  ),
                 ),
               ),
             );
@@ -69,19 +75,31 @@ void main() {
       check(later).isTrue();
     });
 
-    testWidgets('hides Later when not provided', (tester) async {
+    testWidgets('fits on a short screen with enlarged text', (tester) async {
+      tester.view.physicalSize = const Size(400, 360);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await pumpDialog(
         tester,
+        textScale: 1.5,
         dialog: UpdateAvailableDialog(
           title: 'Update available',
-          message: 'Please update to continue.',
+          message:
+              'A newer version of Totem is available. Update to get the latest '
+              'fixes and improvements.',
+          prompt: 'Would you like to update now?',
           updateButtonText: 'Update',
           onUpdate: () {},
+          laterButtonText: 'Later',
+          onLater: () {},
         ),
       );
 
+      check(tester.takeException()).isNull();
       check(tester.widgetList(find.text('Update'))).length.equals(1);
-      check(tester.widgetList(find.text('Later'))).length.equals(0);
+      check(tester.widgetList(find.text('Later'))).length.equals(1);
     });
 
     testWidgets('hides Later when callback is missing', (tester) async {
@@ -100,7 +118,7 @@ void main() {
       check(tester.widgetList(find.text('Later'))).length.equals(0);
     });
 
-    testWidgets('omits prompt when null', (tester) async {
+    testWidgets('hides Later and prompt when not provided', (tester) async {
       await pumpDialog(
         tester,
         dialog: UpdateAvailableDialog(
@@ -111,6 +129,8 @@ void main() {
         ),
       );
 
+      check(tester.widgetList(find.text('Update'))).length.equals(1);
+      check(tester.widgetList(find.text('Later'))).length.equals(0);
       check(
         tester.widgetList(find.text('Would you like to update now?')),
       ).length.equals(0);

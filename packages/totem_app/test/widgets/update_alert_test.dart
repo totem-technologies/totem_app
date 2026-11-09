@@ -6,9 +6,10 @@ import 'package:totem_core/shared/widgets/update_available_dialog.dart';
 import 'package:upgrader/upgrader.dart';
 
 class _FakeUpgrader extends Upgrader {
-  _FakeUpgrader({this.isBlocked = false});
+  _FakeUpgrader({this.isBlocked = false, this.shouldDisplay = false});
 
   final bool isBlocked;
+  final bool shouldDisplay;
   var initializeCount = 0;
   var sentToStore = 0;
 
@@ -20,6 +21,12 @@ class _FakeUpgrader extends Upgrader {
 
   @override
   bool blocked() => isBlocked;
+
+  @override
+  bool shouldDisplayUpgrade() => shouldDisplay;
+
+  @override
+  String body(UpgraderMessages messages) => 'A new version is available.';
 
   @override
   Future<void> sendUserToAppStore() async => sentToStore++;
@@ -70,21 +77,21 @@ class _HostState extends State<_Host> {
 }
 
 void main() {
-  group('hasMinorVersionUpdate', () {
-    test('prompts when the second version component changes', () {
-      check(hasMinorVersionUpdate('0.0.1', '0.1.0')).isTrue();
-      check(hasMinorVersionUpdate('0.1.10', '0.2.0')).isTrue();
-      check(hasMinorVersionUpdate('1.4.2', '1.5.0')).isTrue();
+  group('hasMajorOrMinorVersionUpdate', () {
+    test('prompts when the major or minor version changes', () {
+      check(hasMajorOrMinorVersionUpdate('0.0.1', '0.1.0')).isTrue();
+      check(hasMajorOrMinorVersionUpdate('0.1.10', '0.2.0')).isTrue();
+      check(hasMajorOrMinorVersionUpdate('1.4.2', '1.5.0')).isTrue();
     });
 
-    test('does not prompt for patch or first-component-only changes', () {
-      check(hasMinorVersionUpdate('0.1.10', '0.1.11')).isFalse();
-      check(hasMinorVersionUpdate('1.4.2', '2.4.0')).isFalse();
+    test('does not prompt for patch-only changes', () {
+      check(hasMajorOrMinorVersionUpdate('0.1.10', '0.1.11')).isFalse();
+      check(hasMajorOrMinorVersionUpdate('1.4.2', '2.4.0')).isTrue();
     });
 
     test('does not prompt when either version is unavailable or invalid', () {
-      check(hasMinorVersionUpdate(null, '0.1.0')).isFalse();
-      check(hasMinorVersionUpdate('0.1.0', 'invalid')).isFalse();
+      check(hasMajorOrMinorVersionUpdate(null, '0.1.0')).isFalse();
+      check(hasMajorOrMinorVersionUpdate('0.1.0', 'invalid')).isFalse();
     });
   });
 
@@ -105,7 +112,7 @@ void main() {
             message: 'A newer version is available.',
             releaseNotes: null,
             barrierDismissible: false,
-            messages: UpgraderMessages(code: 'en'),
+            messages: TotemUpgraderMessages(),
           );
       await tester.pumpAndSettle();
     }
@@ -113,10 +120,47 @@ void main() {
     Finder button<T extends Widget>(String text) =>
         find.widgetWithText(T, text);
 
-    test('keeps the same upgrader across rebuilds', () {
-      final widget = TotemUpgradeAlert(child: const SizedBox());
-      final rebuilt = TotemUpgradeAlert(child: const SizedBox());
-      check(identical(widget.upgrader, rebuilt.upgrader)).isTrue();
+    testWidgets('does not reinitialize the upgrader on rebuild', (
+      tester,
+    ) async {
+      final upgrader = _FakeUpgrader();
+      await tester.pumpWidget(
+        _Host(upgrader: upgrader, navigatorKey: navigatorKey),
+      );
+      await tester.pumpAndSettle();
+
+      check(upgrader.initializeCount).equals(1);
+
+      tester.state<_HostState>(find.byType(_Host)).replacePage('home');
+      await tester.pumpAndSettle();
+
+      check(upgrader.initializeCount).equals(1);
+    });
+
+    testWidgets('shows through checkVersion on the inner Navigator', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _Host(
+          upgrader: _FakeUpgrader(shouldDisplay: true),
+          navigatorKey: navigatorKey,
+        ),
+      );
+      tester
+          .state<UpgradeAlertState>(find.byType(TotemUpgradeAlert))
+          .checkVersion(
+            context: tester.element(find.byType(TotemUpgradeAlert)),
+          );
+      await tester.pumpAndSettle();
+
+      final dialog = find.byType(UpdateAvailableDialog);
+      check(tester.widgetList(dialog)).length.equals(1);
+      final navigator = find
+          .ancestor(of: dialog, matching: find.byType(Navigator))
+          .first;
+      check(
+        identical(tester.state(navigator), navigatorKey.currentState),
+      ).isTrue();
     });
 
     testWidgets('shows Update and Later but not Ignore when not blocked', (
@@ -129,14 +173,25 @@ void main() {
         tester.widgetList(find.byType(UpdateAvailableDialog)),
       ).length.equals(1);
       check(
-        tester.widgetList(button<ElevatedButton>('UPDATE NOW')),
+        tester.widgetList(button<ElevatedButton>('Update')),
       ).length.equals(1);
       check(
-        tester.widgetList(button<OutlinedButton>('LATER')),
+        tester.widgetList(button<OutlinedButton>('Later')),
       ).length.equals(1);
       check(tester.widgetList(find.text('IGNORE'))).isEmpty();
+      check(tester.widgetList(find.text('Update available'))).length.equals(1);
       check(
-        tester.widgetList(find.text('Would you like to update it now?')),
+        tester
+            .widgetList(
+              find.text(
+                'A newer version of Totem is available. Update to get the latest '
+                'fixes and improvements.',
+              ),
+            )
+            .length,
+      ).equals(1);
+      check(
+        tester.widgetList(find.text('Would you like to update now?')),
       ).length.equals(1);
     });
 
@@ -146,7 +201,7 @@ void main() {
       final upgrader = _FakeUpgrader();
       await pumpAndShow(tester, upgrader);
 
-      await tester.tap(button<ElevatedButton>('UPDATE NOW'));
+      await tester.tap(button<ElevatedButton>('Update'));
       await tester.pumpAndSettle();
 
       check(upgrader.sentToStore).equals(1);
@@ -157,9 +212,9 @@ void main() {
       final upgrader = _FakeUpgrader(isBlocked: true);
       await pumpAndShow(tester, upgrader);
 
-      check(tester.widgetList(button<OutlinedButton>('LATER'))).isEmpty();
+      check(tester.widgetList(button<OutlinedButton>('Later'))).isEmpty();
 
-      await tester.tap(button<ElevatedButton>('UPDATE NOW'));
+      await tester.tap(button<ElevatedButton>('Update'));
       await tester.pumpAndSettle();
 
       check(upgrader.sentToStore).equals(1);
@@ -185,7 +240,7 @@ void main() {
     testWidgets('does not reshow after the user closes it', (tester) async {
       await pumpAndShow(tester, _FakeUpgrader());
 
-      await tester.tap(button<OutlinedButton>('LATER'));
+      await tester.tap(button<OutlinedButton>('Later'));
       await tester.pumpAndSettle();
       tester.state<_HostState>(find.byType(_Host)).replacePage('home');
       await tester.pumpAndSettle();
