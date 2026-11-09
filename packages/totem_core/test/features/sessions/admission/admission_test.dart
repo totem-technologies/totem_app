@@ -208,6 +208,101 @@ String _roomMetadata(String status) => jsonEncode({
 });
 
 void main() {
+  test('decision returning metadata is optional and round trips', () {
+    for (final returning in [false, true]) {
+      final decision = AdmissionDecision(
+        id: 'request',
+        senderIdentity: 'keeper',
+        recipientIdentity: 'guest',
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
+        approved: true,
+        isReturningParticipant: returning,
+      );
+      final bytes = AdmissionProtocol.encode(decision);
+      final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+      check(payload.containsKey('returning')).equals(returning);
+      if (returning) check(payload['returning']).equals(true);
+      final decoded =
+          AdmissionProtocol.decode(
+                bytes,
+                senderIdentity: 'keeper',
+                now: _fixedNow,
+              )!
+              as AdmissionDecision;
+      check(decoded.isReturningParticipant).equals(returning);
+    }
+  });
+
+  test(
+    'pending admission only accepts returning metadata from a trusted approval',
+    () async {
+      final channel = _Channel('guest');
+      final guest = _pendingAdmissionController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+      );
+      addTearDown(() async {
+        await guest.dispose();
+        await channel.dispose();
+      });
+      final request = await guest.requestAdmission(displayName: 'Guest');
+      check(guest.isReturningParticipant).isFalse();
+      for (final decision in [
+        AdmissionDecision(
+          id: request.id,
+          senderIdentity: 'attacker',
+          recipientIdentity: 'guest',
+          expiresAt: request.expiresAt,
+          approved: true,
+          isReturningParticipant: true,
+        ),
+        AdmissionDecision(
+          id: 'other-request',
+          senderIdentity: 'keeper',
+          recipientIdentity: 'guest',
+          expiresAt: request.expiresAt,
+          approved: true,
+          isReturningParticipant: true,
+        ),
+      ]) {
+        channel.controller.add(AdmissionPacketReceived(decision));
+        check(guest.status).equals(AdmissionStatus.pending);
+        check(guest.isReturningParticipant).isFalse();
+      }
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionDecision(
+            id: request.id,
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: request.expiresAt,
+            approved: true,
+            isReturningParticipant: true,
+          ),
+        ),
+      );
+      check(guest.status).equals(AdmissionStatus.approved);
+      check(guest.isReturningParticipant).isTrue();
+
+      final next = await guest.requestAdmission(displayName: 'Guest');
+      check(guest.isReturningParticipant).isFalse();
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionDecision(
+            id: next.id,
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: next.expiresAt,
+            approved: false,
+            isReturningParticipant: true,
+          ),
+        ),
+      );
+      check(guest.status).equals(AdmissionStatus.denied);
+      check(guest.isReturningParticipant).isFalse();
+    },
+  );
+
   test(
     'protocol rejects unknown version and spoofed sender',
     () {
@@ -1556,16 +1651,36 @@ void main() {
       final first = await participant.requestAdmission(displayName: 'Guest');
       await pumpEventQueue();
       check(participant.status).equals(AdmissionStatus.approved);
+      check(participant.isReturningParticipant).isFalse();
+      check(
+        keeperChannel.sent
+            .whereType<AdmissionDecision>()
+            .last
+            .isReturningParticipant,
+      ).isFalse();
       await guestChannel.send(AdmissionProtocol.joined(first));
+      check(keeper.roster).deepEquals(['guest']);
+      keeperChannel.present.remove('guest');
+      keeperChannel.controller.add(
+        const AdmissionPresenceChanged('guest', false),
+      );
       check(keeper.roster).deepEquals(['guest']);
 
       keeper.setApprovalRequired(true);
       await participant.dispose();
       now = now.add(const Duration(milliseconds: 1));
+      keeperChannel.present.add('guest');
       participant = guest();
       final second = await participant.requestAdmission(displayName: 'Guest');
       await pumpEventQueue();
       check(participant.status).equals(AdmissionStatus.approved);
+      check(participant.isReturningParticipant).isTrue();
+      check(
+        keeperChannel.sent
+            .whereType<AdmissionDecision>()
+            .last
+            .isReturningParticipant,
+      ).isTrue();
       check(keeper.requests).isEmpty();
       check(keeper.roster).isEmpty();
       check(
@@ -1760,6 +1875,7 @@ void main() {
       final decision = channel.sent.whereType<AdmissionDecision>().last;
       check(decision.id).equals(blockedReturn.id);
       check(decision.approved).isFalse();
+      check(decision.isReturningParticipant).isFalse();
     },
   );
 

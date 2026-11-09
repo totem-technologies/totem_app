@@ -214,7 +214,9 @@ void main() {
         ),
       ),
     );
-    check(find.text('A live prompt').evaluate().length).equals(1);
+    check(
+      find.text('Current prompt: A live prompt').evaluate().length,
+    ).equals(1);
     await tester.tap(find.text('Got it'));
     check(closed).isTrue();
     await tester.pumpWidget(
@@ -222,7 +224,15 @@ void main() {
         home: Scaffold(body: SessionOrientationNotice(onDone: null)),
       ),
     );
-    check(find.text('CURRENT PROMPT').evaluate().isEmpty).isTrue();
+    check(find.textContaining('Current prompt:').evaluate().isEmpty).isTrue();
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SessionOrientationNotice(prompt: '   ', onDone: null),
+        ),
+      ),
+    );
+    check(find.textContaining('Current prompt:').evaluate().isEmpty).isTrue();
   });
 
   testWidgets('dismissed Keeper queue reopens without counting joined guests', (

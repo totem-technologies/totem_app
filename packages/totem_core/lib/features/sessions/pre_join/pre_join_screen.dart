@@ -553,6 +553,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         showAdmissionOrientation:
             flow.admissionStatus == AdmissionStatus.approved,
         admissionReady: flow.phase == PreJoinFlowPhase.joined,
+        isReturningParticipant: flow.isReturningParticipant,
       ),
     );
   }

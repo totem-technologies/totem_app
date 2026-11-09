@@ -37,6 +37,8 @@ abstract final class AdmissionProtocol {
       'expiresAt': packet.expiresAt.millisecondsSinceEpoch,
       if (packet case AdmissionRequest(:final displayName)) 'name': displayName,
       if (packet case AdmissionDecision(:final approved)) 'approved': approved,
+      if (packet case AdmissionDecision(isReturningParticipant: true))
+        'returning': true,
       if (packet case AdmissionRosterRequest(:final sessionIdentity))
         'session': sessionIdentity,
       if (packet case AdmissionRosterSnapshot(
@@ -193,6 +195,7 @@ abstract final class AdmissionProtocol {
           recipientIdentity: to,
           expiresAt: expiration,
           approved: value['approved'] as bool,
+          isReturningParticipant: value['returning'] == true,
         );
       }
       final session = value['session'];
@@ -341,9 +344,13 @@ final class AdmissionDecision extends AdmissionPacket {
     required super.recipientIdentity,
     required super.expiresAt,
     required this.approved,
+    this.isReturningParticipant = false,
   });
 
   final bool approved;
+
+  /// Presentation metadata from the Keeper's confirmed Session membership.
+  final bool isReturningParticipant;
 }
 
 /// Requests the current, session-bound admitted-participant roster.

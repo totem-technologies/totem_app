@@ -32,7 +32,9 @@ import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
+import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -164,9 +166,13 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>? roomScreenProvider,
   RoomConnectionState connectionState = RoomConnectionState.connected,
   RoomStatus roomStatus = RoomStatus.active,
+  NotifierProvider<_ConnectionStateOverrideNotifier, RoomConnectionState>?
+  connectionProvider,
+  NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>? statusProvider,
   DisconnectReason? disconnectReason,
   bool showAdmissionOrientation = false,
   bool admissionReady = false,
+  bool isReturningParticipant = false,
   String? admissionPrompt,
   bool isCurrentUserKeeper = false,
   List<Object?> extraOverrides = const [],
@@ -212,8 +218,15 @@ Future<void> _pumpRoomScreenForResolvedScreen(
               ? screen
               : ref.watch(roomScreenProvider),
         ),
-        connectionStateProvider.overrideWith((ref) => connectionState),
-        roomStatusProvider.overrideWith((ref) => roomStatus),
+        connectionStateProvider.overrideWith(
+          (ref) => connectionProvider == null
+              ? connectionState
+              : ref.watch(connectionProvider),
+        ),
+        roomStatusProvider.overrideWith(
+          (ref) =>
+              statusProvider == null ? roomStatus : ref.watch(statusProvider),
+        ),
         isCurrentUserKeeperProvider.overrideWith(
           (ref) => isCurrentUserKeeper,
         ),
@@ -251,6 +264,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
             loadingScreen: const SizedBox(key: ValueKey('loading-screen')),
             showAdmissionOrientation: showAdmissionOrientation,
             admissionReady: admissionReady,
+            isReturningParticipant: isReturningParticipant,
             now: tester.binding.clock.now,
           ),
         ),
@@ -1061,7 +1075,11 @@ void main() {
           admissionPrompt: 'What brought you here?',
         );
 
-        check(tester.widgetList(find.text('What brought you here?'))).isEmpty();
+        check(
+          tester.widgetList(
+            find.text('Current prompt: What brought you here?'),
+          ),
+        ).isEmpty();
 
         final container = ProviderScope.containerOf(
           tester.element(find.byType(VideoSessionScreen)),
@@ -1075,18 +1093,201 @@ void main() {
               .contains('user-1'),
         ).isFalse();
         check(
-          tester.widgetList(find.text('What brought you here?')),
+          tester.widgetList(
+            find.text('Current prompt: What brought you here?'),
+          ),
         ).length.equals(1);
         await tester.tap(find.text('Got it'));
         await tester.pump();
 
-        check(tester.widgetList(find.text('What brought you here?'))).isEmpty();
+        check(
+          tester.widgetList(
+            find.text('Current prompt: What brought you here?'),
+          ),
+        ).isEmpty();
         check(
           tester.widgetList(find.byType(ListeningTurnScreen)),
         ).length.equals(1);
         await _unmountRoomScreen(tester);
         PaintingBinding.instance.imageCache.clearLiveImages();
         PaintingBinding.instance.imageCache.clear();
+      },
+    );
+
+    testWidgets('returning participant skips orientation after admission', (
+      tester,
+    ) async {
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+        isReturningParticipant: true,
+      );
+
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+      check(
+        tester.widgetList(find.byType(ListeningTurnScreen)),
+      ).length.equals(1);
+    });
+
+    testWidgets(
+      'joining before the session starts does not show orientation later',
+      (tester) async {
+        final statusProvider =
+            NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>(
+              () => _RoomStatusOverrideNotifier(RoomStatus.waitingRoom),
+            );
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          statusProvider: statusProvider,
+          showAdmissionOrientation: true,
+          admissionReady: true,
+        );
+        check(
+          tester.widgetList(find.byType(SessionOrientationNotice)),
+        ).isEmpty();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container.read(statusProvider.notifier).set(RoomStatus.active);
+        await tester.pump();
+        check(
+          tester.widgetList(find.byType(SessionOrientationNotice)),
+        ).isEmpty();
+      },
+    );
+
+    testWidgets('orientation does not reappear after reconnecting', (
+      tester,
+    ) async {
+      final connectionProvider =
+          NotifierProvider<
+            _ConnectionStateOverrideNotifier,
+            RoomConnectionState
+          >(
+            () =>
+                _ConnectionStateOverrideNotifier(RoomConnectionState.connected),
+          );
+      final screenProvider =
+          NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+            () => _RoomScreenOverrideNotifier(RoomScreen.listening),
+          );
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        roomScreenProvider: screenProvider,
+        connectionProvider: connectionProvider,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+      );
+      check(
+        tester.widgetList(find.byType(SessionOrientationNotice)),
+      ).length.equals(1);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container
+          .read(connectionProvider.notifier)
+          .set(RoomConnectionState.disconnected);
+      container.read(screenProvider.notifier).set(RoomScreen.disconnected);
+      await tester.pump();
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+      container
+          .read(connectionProvider.notifier)
+          .set(RoomConnectionState.connected);
+      container.read(screenProvider.notifier).set(RoomScreen.listening);
+      await tester.pump();
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+      check(
+        tester.widgetList(find.byType(ListeningTurnScreen)),
+      ).length.equals(1);
+    });
+
+    testWidgets('mobile orientation leaves session controls uncovered', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+        admissionPrompt: 'What brought you here?',
+      );
+
+      final prompt = find.text('Current prompt: What brought you here?');
+      final notice = find.byType(SessionOrientationNotice);
+      final card = find.ancestor(of: notice, matching: find.byType(Card)).first;
+      final controls = find.byType(SessionActionBar);
+      check(tester.widgetList(prompt)).length.equals(1);
+      check(tester.widgetList(find.text('Got it'))).length.equals(1);
+      check(tester.getRect(card).overlaps(tester.getRect(controls))).isFalse();
+      check(
+        tester.getRect(notice).overlaps(tester.getRect(controls)),
+      ).isFalse();
+
+      await tester.tap(find.text('Got it'));
+      await tester.pump();
+      check(tester.widgetList(prompt)).isEmpty();
+      await _unmountRoomScreen(tester);
+    });
+
+    testWidgets(
+      'mobile orientation scrolls a long prompt and can be dismissed',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 700);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final prompt = List.filled(
+          40,
+          'What brought you here today?',
+        ).join(' ');
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          showAdmissionOrientation: true,
+          admissionReady: true,
+          admissionPrompt: prompt,
+        );
+
+        final notice = find.byType(SessionOrientationNotice);
+        check(
+          tester.widgetList(find.text('Current prompt: $prompt')),
+        ).length.equals(1);
+        check(find.text('Got it').hitTestable().evaluate()).length.equals(1);
+        final scrollable = find.descendant(
+          of: notice,
+          matching: find.byType(Scrollable),
+        );
+        await tester.drag(scrollable, const Offset(0, -300));
+        await tester.pump();
+        check(
+          tester.state<ScrollableState>(scrollable).position.pixels > 0,
+        ).isTrue();
+        await tester.tap(find.text('Got it'));
+        await tester.pump();
+        check(tester.widgetList(notice)).isEmpty();
+        await _unmountRoomScreen(tester);
       },
     );
 
@@ -1104,6 +1305,7 @@ void main() {
           event: _createSessionEventWithElapsed(_testNow(tester)),
           screen: RoomScreen.listening,
           showAdmissionOrientation: true,
+          isReturningParticipant: true,
           admissionPrompt: 'What brought you here?',
         );
         final container = ProviderScope.containerOf(

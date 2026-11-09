@@ -48,6 +48,7 @@ class PendingAdmissionController {
   Timer? _keeperAvailabilityTimer;
   AdmissionRequest? _request;
   AdmissionCancel? _cancellation;
+  bool _isReturningParticipant = false;
   AdmissionStatus _status;
   AdmissionKeeperAvailability _keeperAvailability =
       AdmissionKeeperAvailability.checking;
@@ -56,6 +57,7 @@ class PendingAdmissionController {
   Stream<AdmissionStatus> get changes => _changes.stream;
   AdmissionStatus get status => _status;
   AdmissionRequest? get request => _request;
+  bool get isReturningParticipant => _isReturningParticipant;
   AdmissionKeeperAvailability get keeperAvailability => _keeperAvailability;
 
   Future<AdmissionRequest> requestAdmission({
@@ -95,6 +97,7 @@ class PendingAdmissionController {
     }
     _expiration?.cancel();
     _cancellation = null;
+    _isReturningParticipant = false;
     final packet = AdmissionRequest(
       id: _newId(),
       senderIdentity: local,
@@ -184,6 +187,8 @@ class PendingAdmissionController {
           return;
         }
         _expiration?.cancel();
+        _isReturningParticipant =
+            decision.approved && decision.isReturningParticipant;
         _setStatus(
           decision.approved ? AdmissionStatus.approved : AdmissionStatus.denied,
         );
@@ -872,6 +877,7 @@ class KeeperAdmissionController {
         recipientIdentity: sender,
         expiresAt: request.expiresAt,
         approved: approved,
+        isReturningParticipant: approved && _roster.contains(sender),
       );
       await channel.send(decision);
       if (_disposed ||

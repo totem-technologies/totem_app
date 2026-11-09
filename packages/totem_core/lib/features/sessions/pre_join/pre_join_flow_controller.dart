@@ -100,6 +100,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       phase: PreJoinFlowPhase.joining,
       clearError: true,
       clearAdmissionStatus: true,
+      isReturningParticipant: false,
       keeperAvailability: AdmissionKeeperAvailability.checking,
     );
     _cancelRequested = false;
@@ -289,6 +290,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         state = state.copyWith(
           phase: PreJoinFlowPhase.joining,
           admissionStatus: status,
+          isReturningParticipant: admission.isReturningParticipant,
         );
         final connectedRoom = await _takeAdmissionRoom();
         if (connectedRoom == null) return;

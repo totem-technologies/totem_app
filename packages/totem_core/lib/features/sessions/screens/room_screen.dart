@@ -48,6 +48,7 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
     required this.loadingScreen,
     this.showAdmissionOrientation = false,
     this.admissionReady = false,
+    this.isReturningParticipant = false,
     this.now = DateTime.now,
     super.key,
   });
@@ -56,6 +57,7 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
   final Widget loadingScreen;
   final bool showAdmissionOrientation;
   final bool admissionReady;
+  final bool isReturningParticipant;
   final ValueGetter<DateTime> now;
 
   @override
@@ -138,6 +140,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   StreamSubscription<(MediaKind, TurnOnBlocker)>? _turnOnBlockedSubscription;
 
   bool _admissionOrientationDismissed = false;
+  bool? _admissionOrientationEligible;
 
   @override
   void initState() {
@@ -255,7 +258,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         maxHeight: size.height * (desktop ? 0.65 : 0.4),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(desktop ? 24 : 16),
         child: SessionOrientationNotice(
           prompt: prompt,
           onDone: () => setState(() => _admissionOrientationDismissed = true),
@@ -276,8 +279,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     return Positioned(
       left: 16,
       right: 16,
-      bottom: 16,
+      top: 8,
       child: SafeArea(
+        bottom: false,
         child: Center(child: Card(elevation: 8, child: content)),
       ),
     );
@@ -750,14 +754,27 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     // shown to other participants.
     final waitingForAdmission =
         widget.showAdmissionOrientation && !widget.admissionReady;
-    final showOrientation =
+    final readyForOrientation =
         !waitingForAdmission &&
-        widget.showAdmissionOrientation &&
-        !_admissionOrientationDismissed &&
         connectionState == RoomConnectionState.connected &&
-        roomStatus == RoomStatus.active &&
         !showingDisconnectedScreen &&
         currentRoomScreen != RoomScreen.loading;
+    if (_admissionOrientationEligible != null &&
+        connectionState != RoomConnectionState.connected) {
+      _admissionOrientationDismissed = true;
+    }
+    if (readyForOrientation) {
+      // Decide at entry, not when a session joined early starts later.
+      _admissionOrientationEligible ??=
+          widget.showAdmissionOrientation &&
+          !widget.isReturningParticipant &&
+          roomStatus == RoomStatus.active;
+    }
+    final showOrientation =
+        readyForOrientation &&
+        roomStatus == RoomStatus.active &&
+        _admissionOrientationEligible == true &&
+        !_admissionOrientationDismissed;
     final admissionPrompt = showOrientation
         ? ref.watch(currentSessionPromptProvider)
         : null;
