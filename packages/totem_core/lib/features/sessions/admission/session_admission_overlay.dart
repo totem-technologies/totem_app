@@ -418,9 +418,9 @@ class _SessionAdmissionOverlayState
     }
   }
 
-  Future<void> _admitAll() async {
+  Future<bool> _admitAll() async {
     final controller = _keeperController;
-    if (controller == null || _busy) return;
+    if (controller == null || _busy) return false;
     setState(() => _busy = true);
     var reportedError = false;
     try {
@@ -433,6 +433,10 @@ class _SessionAdmissionOverlayState
           reportError: !reportedError,
         );
       }
+      return mounted &&
+          identical(_keeperController, controller) &&
+          !reportedError &&
+          controller.requests.isEmpty;
     } finally {
       if (mounted && identical(_keeperController, controller)) {
         setState(() => _busy = false);
@@ -555,7 +559,7 @@ class _SessionAdmissionOverlayState
       onDecision: _decide,
       onDeclinePermanently: (request) =>
           _decide(request, false, permanently: true),
-      onAdmitAll: () => unawaited(_admitAll()),
+      onAdmitAll: _admitAll,
       child: widget.child,
     );
   }
@@ -585,13 +589,55 @@ class _SessionAdmissionScope extends InheritedWidget {
   final Future<void> Function()? onResetCorruptData;
   final Future<void> Function(AdmissionRequest, bool) onDecision;
   final Future<void> Function(AdmissionRequest) onDeclinePermanently;
-  final VoidCallback onAdmitAll;
+  final Future<bool> Function() onAdmitAll;
 
   static _SessionAdmissionScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_SessionAdmissionScope>();
 
   @override
   bool updateShouldNotify(_SessionAdmissionScope oldWidget) => true;
+}
+
+/// Confirms starting with the live admission queue before changing room state.
+class SessionStartConfirmationDialog extends StatelessWidget {
+  const SessionStartConfirmationDialog({required this.onStart, super.key});
+
+  final Future<bool> Function() onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final admission = _SessionAdmissionScope.maybeOf(context);
+    final count = admission?.requests.length ?? 0;
+
+    Future<void> start() async {
+      final success = await onStart();
+      if (success && context.mounted) Navigator.of(context).pop();
+    }
+
+    return ConfirmationDialog(
+      title: 'Start session',
+      content: count == 0
+          ? 'Are you sure you want to start the session?'
+          : 'You have $count ${count == 1 ? 'participant' : 'participants'} waiting. Would you like to let them in before starting?',
+      confirmButtonText: count == 0 ? 'Start session' : 'Admit all and start',
+      type: ConfirmationDialogType.standard,
+      scrollable: true,
+      onConfirm: () async {
+        if (count > 0) {
+          final admitted = await admission!.onAdmitAll();
+          if (!admitted || !context.mounted) return;
+        }
+        await start();
+      },
+      extraButtons: [
+        if (count > 0)
+          ConfirmationDialogButton.outlined(
+            onConfirm: start,
+            child: const Text('Start without admitting'),
+          ),
+      ],
+    );
+  }
 }
 
 /// A queue control in normal Session layout; it never positions itself over video.
@@ -759,7 +805,7 @@ class SessionAdmissionPanel extends ConsumerWidget {
           desktop: docked,
           onDecision: admission.onDecision,
           onDeclinePermanently: admission.onDeclinePermanently,
-          onAdmitAll: admission.onAdmitAll,
+          onAdmitAll: () => unawaited(admission.onAdmitAll()),
           onClose: close,
         ),
       ),

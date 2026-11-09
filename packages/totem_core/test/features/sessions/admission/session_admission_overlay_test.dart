@@ -379,6 +379,234 @@ void main() {
     tester.view.devicePixelRatio = 1;
   }
 
+  Future<void> openStartConfirmation(
+    WidgetTester tester,
+    Future<bool> Function() onStart,
+  ) async {
+    final navigator = tester.state<NavigatorState>(
+      find.byKey(const Key('room-navigator')),
+    );
+    showDialog<void>(
+      context: navigator.context,
+      useRootNavigator: false,
+      builder: (_) => SessionStartConfirmationDialog(onStart: onStart),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('admit all finishes sending approvals before starting', (
+    tester,
+  ) async {
+    final harness = _AdmissionHarness();
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+    await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.pump();
+    await harness.sendRequest(harness.request('first'));
+    await harness.sendRequest(harness.request('second', sender: 'other'));
+    await tester.pump();
+
+    final gate = Completer<void>();
+    harness.afterSend = (packet) async {
+      if (packet is AdmissionDecision && packet.id == 'first') {
+        await gate.future;
+      }
+    };
+    var starts = 0;
+    await openStartConfirmation(tester, () async {
+      starts++;
+      return true;
+    });
+    await tester.tap(find.text('Admit all and start'));
+    await tester.pump();
+    check(starts).equals(0);
+    check(harness.sent.whereType<AdmissionDecision>()).length.equals(1);
+    gate.complete();
+    await tester.pump();
+    await tester.pump();
+    await tester.pumpAndSettle();
+    check(
+      harness.sent.whereType<AdmissionDecision>().where((d) => d.approved),
+    ).length.equals(2);
+    check(starts).equals(1);
+    check(find.text('Admit all and start').evaluate()).isEmpty();
+  });
+
+  testWidgets(
+    'start without admitting leaves the queue intact and retries a failed start',
+    (tester) async {
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+      await pumpHost(tester, harness, videoBuilds: videoBuilds);
+      await tester.pump();
+      await harness.sendRequest(harness.request('waiting'));
+      await tester.pump();
+      var starts = 0;
+      await openStartConfirmation(tester, () async => ++starts > 1);
+      await tester.tap(find.text('Start without admitting'));
+      await tester.pump();
+      check(starts).equals(1);
+      check(find.text('Start without admitting').evaluate()).length.equals(1);
+      check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
+      await tester.tap(find.text('Start without admitting'));
+      await tester.pumpAndSettle();
+      check(starts).equals(2);
+      check(find.text('Start without admitting').evaluate()).isEmpty();
+      check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
+      await openStartConfirmation(tester, () async => true);
+      check(
+        find
+            .text(
+              'You have 1 participant waiting. Would you like to let them in before starting?',
+            )
+            .evaluate(),
+      ).length.equals(1);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets('cancel leaves pending requests untouched without starting', (
+    tester,
+  ) async {
+    final harness = _AdmissionHarness();
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+    await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.pump();
+    await harness.sendRequest(harness.request('waiting'));
+    await tester.pump();
+    var starts = 0;
+    await openStartConfirmation(tester, () async {
+      starts++;
+      return true;
+    });
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    check(starts).equals(0);
+    check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
+    await openStartConfirmation(tester, () async => true);
+    check(find.text('Start without admitting').evaluate()).length.equals(1);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+    'start confirmation follows live queue count and falls back when empty',
+    (tester) async {
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+      await pumpHost(tester, harness, videoBuilds: videoBuilds);
+      await tester.pump();
+      final first = harness.request('first');
+      await harness.sendRequest(first);
+      await tester.pump();
+      await openStartConfirmation(tester, () async => true);
+      check(
+        find
+            .text(
+              'You have 1 participant waiting. Would you like to let them in before starting?',
+            )
+            .evaluate(),
+      ).length.equals(1);
+      final second = harness.request('second', sender: 'other');
+      await harness.sendRequest(second);
+      await tester.pump();
+      check(
+        find
+            .text(
+              'You have 2 participants waiting. Would you like to let them in before starting?',
+            )
+            .evaluate(),
+      ).length.equals(1);
+      for (final request in [first, second]) {
+        await harness.sendPacket(
+          AdmissionCancel(
+            id: request.id,
+            senderIdentity: request.senderIdentity,
+            recipientIdentity: request.recipientIdentity,
+            expiresAt: request.expiresAt,
+          ),
+        );
+      }
+      await tester.pump();
+      check(
+        find.text('Are you sure you want to start the session?').evaluate(),
+      ).length.equals(1);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Start session'));
+      await tester.pumpAndSettle();
+      check(
+        find.text('Are you sure you want to start the session?').evaluate(),
+      ).isEmpty();
+    },
+  );
+
+  testWidgets('start confirmation works without an admission scope', (
+    tester,
+  ) async {
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      MaterialApp(navigatorKey: navigatorKey, home: const SizedBox()),
+    );
+    var starts = 0;
+    showDialog<void>(
+      context: navigatorKey.currentContext!,
+      builder: (_) => SessionStartConfirmationDialog(
+        onStart: () async {
+          starts++;
+          return true;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    check(
+      find.text('Are you sure you want to start the session?').evaluate(),
+    ).length.equals(1);
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Start session'));
+    await tester.pumpAndSettle();
+    check(starts).equals(1);
+    check(
+      find.text('Are you sure you want to start the session?').evaluate(),
+    ).isEmpty();
+  });
+
+  testWidgets(
+    'failed admission prevents starting and keeps confirmation open',
+    (tester) async {
+      setupAppConfig();
+      silenceLogger();
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+      await pumpHost(tester, harness, videoBuilds: videoBuilds);
+      await tester.pump();
+      await harness.sendRequest(harness.request('waiting'));
+      await tester.pump();
+      harness.afterSend = (packet) async {
+        if (packet is AdmissionDecision) throw StateError('offline');
+      };
+      var starts = 0;
+      await openStartConfirmation(tester, () async {
+        starts++;
+        return true;
+      });
+      await tester.tap(find.text('Admit all and start'));
+      await tester.pump();
+      await tester.pump();
+      check(starts).equals(0);
+      check(find.text('Admit all and start').evaluate()).length.equals(1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+    // auto_size_text's notification banner does not dispose its TextPainters.
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
+
   testWidgets('fails closed until persisted declines initialize', (
     tester,
   ) async {

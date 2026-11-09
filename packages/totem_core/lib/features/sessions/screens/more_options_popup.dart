@@ -10,6 +10,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
@@ -480,15 +481,8 @@ class MoreOptions extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       useRootNavigator: false,
-      builder: (context) => ConfirmationDialog(
-        title: 'Start session',
-        content: 'Are you sure you want to start the session?',
-        confirmButtonText: 'Start session',
-        type: ConfirmationDialogType.standard,
-        onConfirm: () async {
-          final success = await session.keeper.startSession();
-          if (success && context.mounted) Navigator.of(context).pop();
-        },
+      builder: (context) => SessionStartConfirmationDialog(
+        onStart: session.keeper.startSession,
       ),
     );
   }
