@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
+
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -15,6 +16,29 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:uuid/uuid.dart';
+
+bool isHeifImageHeader(List<int> header) {
+  if (header.length < 12 ||
+      String.fromCharCodes(header.sublist(4, 8)) != 'ftyp') {
+    return false;
+  }
+
+  const heifBrands = {'heic', 'heix', 'hevc', 'heim', 'heis', 'mif1', 'msf1'};
+  return heifBrands.contains(String.fromCharCodes(header.sublist(8, 12)));
+}
+
+Future<bool> _isHeifImage(XFile image) async {
+  final mimeType = image.mimeType?.toLowerCase();
+  if (mimeType == 'image/heic' || mimeType == 'image/heif') return true;
+
+  final extension = image.name.split('.').last.toLowerCase();
+  if (extension == 'heic' || extension == 'heif') return true;
+
+  final header = await image
+      .openRead(0, 12)
+      .fold<List<int>>([], (bytes, chunk) => bytes..addAll(chunk));
+  return isHeifImageHeader(header);
+}
 
 Future<void> showProfileImagePicker(BuildContext context) async {
   return showModalBottomSheet(
@@ -39,6 +63,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
   var _loading = false;
 
   final _imagePicker = ImagePicker();
+  final _convertedImagePaths = <String>{};
   File? _pickedImage;
   Uint8List? _pickedImageBytes;
 
@@ -47,13 +72,16 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
 
   Future<void> _pickImage() async {
     try {
-      final image = await _imagePicker.pickImage(source: ImageSource.gallery);
+      final image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
       if (image == null || !mounted) return;
 
       var pickedFile = File(image.path);
-      final extension = image.name.split('.').last.toLowerCase();
-      if ((Platform.isAndroid || Platform.isIOS) &&
-          (extension == 'heic' || extension == 'heif')) {
+      if ((Platform.isAndroid || Platform.isIOS) && await _isHeifImage(image)) {
         try {
           final converted = await FlutterImageCompress.compressAndGetFile(
             image.path,
@@ -62,8 +90,16 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
             quality: 95,
             autoCorrectionAngle: true,
           );
-          if (converted != null) pickedFile = File(converted.path);
-        } catch (_) {
+          if (converted != null) {
+            pickedFile = File(converted.path);
+            _convertedImagePaths.add(converted.path);
+          }
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Failed to convert HEIC profile image',
+          );
           // Keep the original; the upload endpoint may accept HEIC/HEIF.
         }
       }
@@ -75,7 +111,12 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
         _pickedImage = pickedFile;
         _pickedImageBytes = bytes;
       });
-    } catch (_) {
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to prepare profile image',
+      );
       if (!mounted) return;
       ErrorHandler.showErrorSnackBar(
         context,
@@ -90,6 +131,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
 
   Future<void> _onSave() async {
     setState(() => _loading = true);
+    final convertedImagePaths = Set<String>.of(_convertedImagePaths);
 
     final updated = await ref
         .read(userProfileControllerProvider.notifier)
@@ -101,6 +143,20 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
           avatarSeed: _state == ProfileAvatarTypeEnum.td ? _tieDyeSeed : null,
         );
 
+    if (updated) {
+      for (final path in convertedImagePaths) {
+        try {
+          await File(path).delete();
+          _convertedImagePaths.remove(path);
+        } catch (error, stackTrace) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stackTrace,
+            message: 'Failed to delete converted profile image',
+          );
+        }
+      }
+    }
     if (!mounted) return;
 
     if (updated) {
@@ -111,7 +167,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
     } else {
       ErrorHandler.showErrorSnackBar(
         context,
-        'Could not upload your profile photo. Check your connection and try again.',
+        'Could not update your profile avatar. Check your connection and try again.',
       );
     }
 
