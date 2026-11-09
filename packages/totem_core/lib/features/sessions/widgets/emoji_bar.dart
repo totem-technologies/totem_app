@@ -141,6 +141,7 @@ class EmojiBar extends StatelessWidget {
                     _EmojiReactionButton(
                       emoji: emoji,
                       size: buttonSize,
+                      buttonExtent: isCompact ? 40 : 44,
                       onPressed: () => onEmojiSelected(emoji),
                     ),
                 ],
@@ -157,11 +158,13 @@ class _EmojiReactionButton extends StatefulWidget {
   const _EmojiReactionButton({
     required this.emoji,
     required this.size,
+    required this.buttonExtent,
     required this.onPressed,
   });
 
   final Emoji emoji;
   final double size;
+  final double buttonExtent;
   final VoidCallback onPressed;
 
   @override
@@ -208,8 +211,8 @@ class _EmojiReactionButtonState extends State<_EmojiReactionButton> {
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
           child: SizedBox(
-            width: 44,
-            height: 44,
+            width: widget.buttonExtent,
+            height: widget.buttonExtent,
             child: AnimatedScale(
               key: ValueKey('emoji-reaction-${widget.emoji}'),
               scale: scale,
