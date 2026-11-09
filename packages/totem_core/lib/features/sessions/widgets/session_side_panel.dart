@@ -170,7 +170,7 @@ class _DockedSessionSidePanelState extends State<DockedSessionSidePanel>
           color: AppTheme.cream,
           foregroundDecoration: const BoxDecoration(
             border: BorderDirectional(
-              start: BorderSide(color: AppTheme.textMuted),
+              start: BorderSide(color: AppTheme.sessionPanelBorder),
             ),
           ),
           child: ClipRect(

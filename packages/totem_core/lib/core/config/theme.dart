@@ -14,6 +14,15 @@ class AppTheme {
   /// The soft mauve tint used at the bottom of the waiting room gradient.
   static const Color waitingRoomMauve = Color(0xFFCFC1D6);
 
+  /// Light [mauve] tint for the docked Session Prompts panel. Hue and the
+  /// [sessionPanelBorder] do most of the separation from the cream →
+  /// [waitingRoomMauve] waiting room; kept light so white prompt cards and
+  /// the [mauve] buttons still stand out.
+  static const Color sessionPanelSurface = Color(0xFFEEE5F1);
+
+  /// Leading edge of the docked session side panel.
+  static const Color sessionPanelBorder = mauve;
+
   static const Color slate = Color(0xFF262F37);
   static const Color deepGray = Color(0xFF514F4D);
   static const Color gray = Color(
