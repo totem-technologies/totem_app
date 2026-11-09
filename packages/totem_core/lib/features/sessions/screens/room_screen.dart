@@ -27,7 +27,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
-import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
+import 'package:totem_core/features/sessions/screens/options/more_options_popup.dart';
 import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';

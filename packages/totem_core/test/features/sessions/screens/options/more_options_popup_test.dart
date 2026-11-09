@@ -15,17 +15,18 @@ import 'package:totem_core/features/sessions/media/local_media.dart';
 import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
+import 'package:totem_core/features/sessions/screens/options/more_options_popup.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
-import '../../../auth/controllers/auth_controller_mock.dart';
-import '../../../setup.dart';
-import '../controllers/core/session_controller_mock.dart';
-import '../controllers/features/session_device_controller_mock.dart';
-import '../media/fake_local_media.dart';
-import '../media/test_participants.dart';
-import '../session_test_fixtures.dart';
-import '../session_test_mocks.dart';
+import '../../../../auth/controllers/auth_controller_mock.dart';
+import '../../../../setup.dart';
+import '../../controllers/core/session_controller_mock.dart';
+import '../../controllers/features/session_device_controller_mock.dart';
+import '../../media/fake_local_media.dart';
+import '../../media/test_participants.dart';
+import '../../session_test_fixtures.dart';
+import '../../session_test_mocks.dart';
 
 class _FakeSessionAdmissionPreferences implements SessionAdmissionPreferences {
   @override
@@ -308,6 +309,79 @@ void main() {
       check(tester.widgetList(find.text('Declined Participants'))).isEmpty();
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
+      await tester.pump();
+    });
+  });
+
+  group('session confirmation dialogs', () {
+    final state = _sessionState(
+      roomState: const RoomState(
+        keeper: 'keeper-1',
+        nextSpeaker: Omittable('user-2'),
+        currentSpeaker: Omittable('user-1'),
+        status: RoomStatus.active,
+        turnState: TurnState.idle,
+        sessionSlug: 'test-session',
+        statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+        talkingOrder: ['user-1', 'user-2'],
+        version: 1,
+        roundNumber: 1,
+      ),
+    );
+
+    for (final (label, expectedResult, endsSession) in [
+      ('Cancel', null, false),
+      ('Leave session', true, false),
+      ('End session and Leave', true, true),
+    ]) {
+      testWidgets('leave dialog: $label', (tester) async {
+        TotemRouter.instance = FakeTotemRouter();
+        when(() => keeper.endSession()).thenAnswer((_) async => true);
+        await _pumpMoreOptions(
+          tester,
+          session: session,
+          state: state,
+          deviceController: deviceController,
+        );
+
+        final result = MoreOptions.showLeaveDialog(
+          tester.element(find.byType(MoreOptions)),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(label).last);
+        await tester.pumpAndSettle();
+
+        check(await result).equals(expectedResult);
+        if (endsSession) {
+          verify(() => keeper.endSession()).called(1);
+        } else {
+          verifyNever(() => keeper.endSession());
+        }
+        verifyNever(() => session.leave());
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      });
+    }
+
+    testWidgets('confirming end session calls keeper and closes dialog', (
+      tester,
+    ) async {
+      when(() => keeper.endSession()).thenAnswer((_) async => true);
+      await _pumpMoreOptions(
+        tester,
+        session: session,
+        state: state,
+        deviceController: deviceController,
+      );
+
+      await tester.tap(find.text('End session'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'End session'));
+      await tester.pumpAndSettle();
+
+      verify(() => keeper.endSession()).called(1);
+      check(tester.widgetList(find.byType(ConfirmationDialog))).isEmpty();
+      await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
     });
   });

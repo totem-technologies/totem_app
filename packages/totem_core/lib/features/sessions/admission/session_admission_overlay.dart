@@ -14,17 +14,22 @@ import 'package:totem_core/features/sessions/admission/admission_transport.dart'
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_scope.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
+import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
-import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
+
+export 'session_admission_scope.dart';
+export 'session_start_confirmation_dialog.dart'
+    show SessionStartConfirmationDialog;
 
 /// Owns admission connections while the room renders queue controls and panels
 /// in its normal layout. Opening or closing a panel never recreates transport.
@@ -549,8 +554,9 @@ class _SessionAdmissionOverlayState
             )
             .toList() ??
         const <KeeperAdmissionAttempt>[];
-    return _SessionAdmissionScope(
-      requests: controller?.requests ?? const [],
+    final requests = controller?.requests ?? const <AdmissionRequest>[];
+    return SessionAdmissionScope(
+      requests: requests,
       attempts: attempts,
       enabled: controller?.approvalRequired ?? false,
       busy: _busy,
@@ -567,79 +573,6 @@ class _SessionAdmissionOverlayState
 
 const sessionAdmissionRouteName = 'session-admission';
 
-class _SessionAdmissionScope extends InheritedWidget {
-  const _SessionAdmissionScope({
-    required this.requests,
-    required this.attempts,
-    required this.enabled,
-    required this.busy,
-    required this.onDecision,
-    required this.onDeclinePermanently,
-    required this.onAdmitAll,
-    required this.onRetry,
-    required this.onResetCorruptData,
-    required super.child,
-  });
-
-  final List<AdmissionRequest> requests;
-  final List<KeeperAdmissionAttempt> attempts;
-  final bool enabled;
-  final bool busy;
-  final VoidCallback? onRetry;
-  final Future<void> Function()? onResetCorruptData;
-  final Future<void> Function(AdmissionRequest, bool) onDecision;
-  final Future<void> Function(AdmissionRequest) onDeclinePermanently;
-  final Future<bool> Function() onAdmitAll;
-
-  static _SessionAdmissionScope? maybeOf(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_SessionAdmissionScope>();
-
-  @override
-  bool updateShouldNotify(_SessionAdmissionScope oldWidget) => true;
-}
-
-/// Confirms starting with the live admission queue before changing room state.
-class SessionStartConfirmationDialog extends StatelessWidget {
-  const SessionStartConfirmationDialog({required this.onStart, super.key});
-
-  final Future<bool> Function() onStart;
-
-  @override
-  Widget build(BuildContext context) {
-    final admission = _SessionAdmissionScope.maybeOf(context);
-    final count = admission?.requests.length ?? 0;
-
-    Future<void> start() async {
-      final success = await onStart();
-      if (success && context.mounted) Navigator.of(context).pop();
-    }
-
-    return ConfirmationDialog(
-      title: 'Start session',
-      content: count == 0
-          ? 'Are you sure you want to start the session?'
-          : 'You have $count ${count == 1 ? 'participant' : 'participants'} waiting. Would you like to let them in before starting?',
-      confirmButtonText: count == 0 ? 'Start session' : 'Admit all and start',
-      type: ConfirmationDialogType.standard,
-      scrollable: true,
-      onConfirm: () async {
-        if (count > 0) {
-          final admitted = await admission!.onAdmitAll();
-          if (!admitted || !context.mounted) return;
-        }
-        await start();
-      },
-      extraButtons: [
-        if (count > 0)
-          ConfirmationDialogButton.outlined(
-            onConfirm: start,
-            child: const Text('Start without admitting'),
-          ),
-      ],
-    );
-  }
-}
-
 /// A queue control in normal Session layout; it never positions itself over video.
 class SessionAdmissionQueueControl extends ConsumerWidget {
   const SessionAdmissionQueueControl({this.child, super.key});
@@ -648,7 +581,7 @@ class SessionAdmissionQueueControl extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final admission = _SessionAdmissionScope.maybeOf(context);
+    final admission = SessionAdmissionScope.maybeOf(context);
     if (admission == null) return child ?? const SizedBox.shrink();
     final joining = admission.attempts.any(
       (attempt) => attempt.status == KeeperAdmissionStatus.joining,
@@ -724,7 +657,7 @@ class SessionAdmissionPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final admission = _SessionAdmissionScope.maybeOf(context);
+    final admission = SessionAdmissionScope.maybeOf(context);
     if (admission == null) return const SizedBox.shrink();
     void close() {
       if (docked) {

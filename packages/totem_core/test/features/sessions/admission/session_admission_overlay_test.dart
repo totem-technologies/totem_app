@@ -18,16 +18,18 @@ import 'package:totem_core/features/sessions/admission/declined_session_particip
 
 import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
+
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
+import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart'
     as session_state;
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
-import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 import '../../../setup.dart';
@@ -393,6 +395,45 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('session descendants observe live admission requests', (
+    tester,
+  ) async {
+    final harness = _AdmissionHarness();
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+    await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.pump();
+    await harness.sendRequest(harness.request('first', name: 'First'));
+    await tester.pump();
+
+    tester
+        .state<NavigatorState>(find.byKey(const Key('room-navigator')))
+        .push<void>(
+          MaterialPageRoute<void>(
+            builder: (context) {
+              final scope = SessionAdmissionScope.maybeOf(context);
+              return Text(
+                scope?.requests
+                        .map((request) => request.displayName)
+                        .join(', ') ??
+                    'No scope',
+              );
+            },
+          ),
+        );
+    await tester.pumpAndSettle();
+    check(find.text('First').evaluate()).length.equals(1);
+
+    await harness.sendRequest(
+      harness.request('second', sender: 'other', name: 'Second'),
+    );
+    await tester.pump();
+    check(find.text('First, Second').evaluate()).length.equals(1);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
 
   testWidgets('admit all finishes sending approvals before starting', (
     tester,

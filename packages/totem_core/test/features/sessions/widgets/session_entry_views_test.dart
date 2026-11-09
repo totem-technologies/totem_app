@@ -6,11 +6,11 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
-import 'package:totem_core/features/sessions/widgets/session_admission_list.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_list.dart';
+import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_info_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
-import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 
 void main() {
