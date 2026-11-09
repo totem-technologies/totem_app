@@ -846,6 +846,10 @@ void main() {
 
           ConfettiController.clear();
           await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          tester.binding.imageCache
+            ..clearLiveImages()
+            ..clear();
         },
         // AutoSizeText doesn't dispose the painters it measures with.
         experimentalLeakTesting: LeakTesting.settings.withIgnored(
