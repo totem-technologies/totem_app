@@ -6,7 +6,7 @@ import 'package:widgetbook/widgetbook.dart';
 
 part 'session_details.stories.g.dart';
 
-/// `RouteNames.spaceEvent(':slug')`. A separate design from SessionEntry
+/// `RouteNames.spaceEvent(':slug')`, separate from the pre-join screen
 /// under `Screens/session/:slug`.
 const component = ComponentMeta(path: 'Screens/spaces/event/:slug');
 

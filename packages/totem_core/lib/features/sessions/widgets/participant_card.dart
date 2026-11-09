@@ -42,6 +42,11 @@ class FeaturedParticipantCard extends ConsumerWidget {
       ),
     );
     final isCurrentUserKeeper = ref.watch(isCurrentUserKeeperProvider);
+    final isTurnHolder =
+        ref.watch(
+          currentSessionStateProvider.select((state) => state?.speakingNow),
+        ) ==
+        activeSpeaker?.identity;
 
     final theme = Theme.of(context);
     final speakerVideoBorderRadius = switch (MediaQuery.orientationOf(
@@ -168,7 +173,8 @@ class FeaturedParticipantCard extends ConsumerWidget {
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
                                     if (isCurrentUserKeeper &&
-                                        roomStatus == RoomStatus.active)
+                                        roomStatus == RoomStatus.active &&
+                                        isTurnHolder)
                                       const SessionElapsedTimer(),
                                     SpeakingIndicatorOrEmoji(
                                       participant: activeSpeaker,
@@ -258,9 +264,19 @@ class ParticipantCard extends ConsumerWidget {
                   PositionedDirectional(
                     top: overlayPadding,
                     start: overlayPadding,
-                    child: SpeakingIndicatorOrEmoji(
-                      participant: participant,
-                      metrics: overlay,
+                    child: Row(
+                      spacing: 8,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SpeakingIndicatorOrEmoji(
+                          participant: participant,
+                          metrics: overlay,
+                        ),
+                        if (isCurrentUserKeeper &&
+                            presentation.isSpeaking &&
+                            presentation.roomStatus == RoomStatus.active)
+                          const SessionElapsedTimer(),
+                      ],
                     ),
                   ),
                   if (presentation.hasSession &&

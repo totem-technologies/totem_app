@@ -86,7 +86,9 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
           ),
           (_, final iconWidget?) => SizedBox.square(
             dimension: iconSize,
-            child: Center(child: iconWidget),
+            child: Center(
+              child: FittedBox(fit: BoxFit.cover, child: iconWidget),
+            ),
           ),
           _ => null,
         },
@@ -241,6 +243,10 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const buttonTextStyle = TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+    );
     final backgroundColor = switch (widget.type) {
       ConfirmationDialogType.destructive => const Color(0xFFFF3B30),
       ConfirmationDialogType.standard => theme.colorScheme.primary,
@@ -272,7 +278,8 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: backgroundColor),
           foregroundColor: backgroundColor,
-          maximumSize: const Size(double.infinity, 52),
+          textStyle: buttonTextStyle,
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
           minimumSize: const Size(20, 52),
         ),
         child: child,
@@ -284,6 +291,8 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
+          textStyle: buttonTextStyle,
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
           maximumSize: Size.infinite,
           minimumSize: const Size(20, 52),
         ),

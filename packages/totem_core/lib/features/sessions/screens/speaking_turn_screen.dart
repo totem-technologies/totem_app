@@ -172,12 +172,18 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                     child: participantGrid,
                   ),
                 ),
-                ?promptText,
-                Transform.translate(
-                  offset: Offset(0, yOffset),
-                  child: passCard,
+                // Prompt, pass pill and dock read as one cluster.
+                Column(
+                  spacing: 16,
+                  children: [
+                    ?promptText,
+                    Transform.translate(
+                      offset: Offset(0, yOffset),
+                      child: passCard,
+                    ),
+                    const SessionActionBar(),
+                  ],
                 ),
-                const SessionActionBar(),
               ],
             );
           case ViewportKind.smallLandscape:
@@ -198,11 +204,16 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                         ),
                       ),
                       Flexible(
+                        // A long prompt scrolls so the pass pill and dock
+                        // stay on short landscape screens.
                         child: Column(
                           spacing: 16,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            ?promptText,
+                            if (promptText != null)
+                              Flexible(
+                                child: SingleChildScrollView(child: promptText),
+                              ),
                             Transform.translate(
                               offset: Offset(0, yOffset),
                               child: passCard,
@@ -282,9 +293,7 @@ class _SpeakingTurnGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final layout = ref.watch(
-      currentSessionStateProvider.select(sessionParticipantLayout),
-    );
+    final layout = ref.watch(visibleSessionParticipantLayoutProvider);
     final sortedParticipants = participantsSorting(
       originalParticipants: layout.participants,
       talkingOrder: layout.talkingOrder,
