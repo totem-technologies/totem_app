@@ -60,6 +60,7 @@ class PendingAdmissionController {
 
   Future<AdmissionRequest> requestAdmission({
     required String displayName,
+    DateTime? deadline,
   }) async {
     if (_disposed ||
         channel.hasEnded ||
@@ -78,9 +79,12 @@ class PendingAdmissionController {
         name.length > 120) {
       throw ArgumentError('Invalid admission identities or display name');
     }
-    final candidate = _now()
-        .add(AdmissionProtocol.requestLifetime)
-        .millisecondsSinceEpoch;
+    final now = _now();
+    final maxExpiration = now.add(AdmissionProtocol.requestLifetime);
+    final expiration = deadline != null && deadline.isBefore(maxExpiration)
+        ? deadline
+        : maxExpiration;
+    final candidate = expiration.millisecondsSinceEpoch;
     final previous = _request?.expiresAt.millisecondsSinceEpoch;
     final expirationMillis = previous != null && candidate <= previous
         ? previous + 1
@@ -99,6 +103,10 @@ class PendingAdmissionController {
       displayName: name,
     );
     _request = packet;
+    if (!now.isBefore(packet.expiresAt)) {
+      _setStatus(AdmissionStatus.expired);
+      return packet;
+    }
     _setStatus(AdmissionStatus.pending);
     _expiration = Timer(packet.expiresAt.difference(_now()), _expire);
     _startKeeperAvailabilityCheck();

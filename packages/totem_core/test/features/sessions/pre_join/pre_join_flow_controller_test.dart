@@ -36,44 +36,45 @@ import '../livekit_mocks.dart';
 
 const _slug = 'pre-join-flow-test';
 
-SessionDetailSchema _event({String? keeperSlug}) => SessionDetailSchema(
-  slug: _slug,
-  title: 'Test session',
-  space: MobileSpaceDetailSchema(
-    slug: 'test-space',
-    title: 'Test Space',
-    imageLink: null,
-    shortDescription: 'A test space.',
-    content: '',
-    author: PublicUserSchema(
-      slug: Omittable(keeperSlug),
-      profileAvatarType: ProfileAvatarTypeEnum.td,
-      dateCreated: DateTime(2024),
-    ),
-    category: null,
-    subscribers: 0,
-    recurring: null,
-    price: 0,
-    nextEvents: const [],
-  ),
-  content: '',
-  seatsLeft: 10,
-  duration: 60,
-  start: DateTime(2024),
-  attending: true,
-  open: true,
-  started: true,
-  cancelled: false,
-  joinable: true,
-  ended: false,
-  rsvpUrl: '',
-  joinUrl: null,
-  subscribeUrl: '',
-  calLink: '',
-  subscribed: false,
-  userTimezone: null,
-  meetingProvider: MeetingProviderEnum.livekit,
-);
+SessionDetailSchema _event({String? keeperSlug, DateTime? start}) =>
+    SessionDetailSchema(
+      slug: _slug,
+      title: 'Test session',
+      space: MobileSpaceDetailSchema(
+        slug: 'test-space',
+        title: 'Test Space',
+        imageLink: null,
+        shortDescription: 'A test space.',
+        content: '',
+        author: PublicUserSchema(
+          slug: Omittable(keeperSlug),
+          profileAvatarType: ProfileAvatarTypeEnum.td,
+          dateCreated: DateTime(2024),
+        ),
+        category: null,
+        subscribers: 0,
+        recurring: null,
+        price: 0,
+        nextEvents: const [],
+      ),
+      content: '',
+      seatsLeft: 10,
+      duration: 60,
+      start: start ?? DateTime.now(),
+      attending: true,
+      open: true,
+      started: true,
+      cancelled: false,
+      joinable: true,
+      ended: false,
+      rsvpUrl: '',
+      joinUrl: null,
+      subscribeUrl: '',
+      calLink: '',
+      subscribed: false,
+      userTimezone: null,
+      meetingProvider: MeetingProviderEnum.livekit,
+    );
 
 const _options = SessionOptions(
   sessionSlug: _slug,
@@ -444,6 +445,13 @@ class _RealSessionAdmissionFlow extends _AdmissionFlow {
 }
 
 class _AdmissionFlow extends PreJoinFlowController {
+  _AdmissionFlow({this.currentTime});
+
+  final DateTime Function()? currentTime;
+
+  @override
+  DateTime now() => currentTime?.call() ?? super.now();
+
   static _AdmissionTransport? transport;
   static void Function(_AdmissionTransport)? onTransportCreated;
   static int connections = 0;
@@ -491,6 +499,7 @@ ProviderContainer _container({
   SessionOptions sessionOptions = _options,
   bool Function()? shouldFailPrecache,
   String? keeperSlug,
+  DateTime? sessionStart,
   String userSlug = 'guest',
   PreJoinFlowController Function()? flowController,
   Future<void>? precacheGate,
@@ -512,7 +521,9 @@ ProviderContainer _container({
         ).overrideWith((_) => getToken?.call() ?? Future.value(response)),
         if (stableSession) ...[
           sessionProvider(_slug).overrideWithValue(
-            AsyncData(_event(keeperSlug: keeperSlug ?? userSlug)),
+            AsyncData(
+              _event(keeperSlug: keeperSlug ?? userSlug, start: sessionStart),
+            ),
           ),
           roomStateProvider(
             _slug,
@@ -523,7 +534,10 @@ ProviderContainer _container({
             if (shouldFailPrecache?.call() ?? false) {
               throw StateError('Precache failed');
             }
-            return _event(keeperSlug: keeperSlug ?? userSlug);
+            return _event(
+              keeperSlug: keeperSlug ?? userSlug,
+              start: sessionStart,
+            );
           }),
         sessionControllerProvider(
           sessionOptions,
@@ -642,6 +656,128 @@ void main() {
       check(_SuccessfulSessionController.receivedMedia).isNull();
       check(await flow.requestJoin()).equals(PreJoinJoinOutcome.ignored);
       check(tokenCalls).equals(1);
+    },
+  );
+
+  for (final minutesAfterStart in [0, 10, 21]) {
+    test(
+      'admission times out at scheduled start +20m when joining at +${minutesAfterStart}m',
+      () async {
+        final async = FakeAsync();
+        await runZoned(
+          () async {
+            final clock = async.getClock(
+              DateTime(2024).add(Duration(minutes: minutesAfterStart)),
+            );
+            final factory = _TrackFactory();
+            _SuccessfulSessionController.activationCalls = 0;
+            final container = _container(
+              factory: factory,
+              response: const JoinResponse(
+                token: 'token',
+                isAlreadyPresent: false,
+              ),
+              sessionController: _SuccessfulSessionController.new,
+              keeperSlug: 'keeper',
+              sessionStart: DateTime(2024),
+              flowController: () => _AdmissionFlow(currentTime: clock.now),
+            );
+            addTearDown(container.dispose);
+            await _waitForMedia(container);
+            final flow = container.read(
+              preJoinFlowControllerProvider(_slug).notifier,
+            );
+            await flow.requestJoin();
+            await pumpEventQueue();
+
+            if (minutesAfterStart < 20) {
+              check(
+                container.read(preJoinFlowControllerProvider(_slug)).phase,
+              ).equals(PreJoinFlowPhase.pending);
+              async.elapse(
+                Duration(minutes: 20 - minutesAfterStart) -
+                    const Duration(milliseconds: 1),
+              );
+              check(
+                container.read(preJoinFlowControllerProvider(_slug)).phase,
+              ).equals(PreJoinFlowPhase.pending);
+              async.elapse(const Duration(milliseconds: 1));
+              await pumpEventQueue();
+            }
+
+            check(
+              container
+                  .read(preJoinFlowControllerProvider(_slug))
+                  .admissionStatus,
+            ).equals(AdmissionStatus.expired);
+            check(_AdmissionFlow.room!.disconnected).isTrue();
+            check(_AdmissionFlow.room!.disposed).isTrue();
+            verify(factory.videoTracks.single.stop).called(1);
+            verify(factory.videoTracks.single.dispose).called(1);
+            verify(factory.audioTracks.single.stop).called(1);
+            verify(factory.audioTracks.single.dispose).called(1);
+            check(_SuccessfulSessionController.activationCalls).equals(0);
+            check(await flow.requestJoin()).equals(PreJoinJoinOutcome.ignored);
+          },
+          zoneSpecification: ZoneSpecification(
+            createTimer: (self, parent, zone, duration, callback) {
+              if (duration >= const Duration(minutes: 1)) {
+                return async.run((_) => Timer(duration, callback));
+              }
+              return parent.createTimer(zone, duration, callback);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  test(
+    'approval before the admission deadline is not interrupted by timeout',
+    () async {
+      final async = FakeAsync();
+      await runZoned(
+        () async {
+          final clock = async.getClock(DateTime(2024));
+          final container = _container(
+            factory: _TrackFactory(),
+            response: const JoinResponse(
+              token: 'token',
+              isAlreadyPresent: false,
+            ),
+            sessionController: _SuccessfulSessionController.new,
+            keeperSlug: 'keeper',
+            sessionStart: DateTime(2024),
+            flowController: () => _AdmissionFlow(currentTime: clock.now),
+          );
+          addTearDown(container.dispose);
+          await _waitForMedia(container);
+          final flow = container.read(
+            preJoinFlowControllerProvider(_slug).notifier,
+          );
+          await flow.requestJoin();
+          async.elapse(const Duration(minutes: 19, seconds: 59));
+          final room = _AdmissionFlow.room!;
+          _AdmissionFlow.transport!.decide(true);
+          await pumpEventQueue();
+          async.elapse(const Duration(seconds: 2));
+          await pumpEventQueue();
+
+          check(
+            container.read(preJoinFlowControllerProvider(_slug)).phase,
+          ).equals(PreJoinFlowPhase.joined);
+          check(room.disconnected).isFalse();
+          check(room.disposed).isFalse();
+        },
+        zoneSpecification: ZoneSpecification(
+          createTimer: (self, parent, zone, duration, callback) {
+            if (duration >= const Duration(minutes: 1)) {
+              return async.run((_) => Timer(duration, callback));
+            }
+            return parent.createTimer(zone, duration, callback);
+          },
+        ),
+      );
     },
   );
 

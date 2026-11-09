@@ -148,6 +148,12 @@ class _BlockingAdmissionFlowController extends PreJoinFlowController {
 class _RecordingTotemRouter extends FakeTotemRouter {
   bool? tabCloseConfirmationEnabled;
   int popOrHomeCount = 0;
+  HomeRoutes? homeRoute;
+
+  @override
+  void toHome([HomeRoutes route = HomeRoutes.initialRoute]) {
+    homeRoute = route;
+  }
 
   @override
   void setTabCloseConfirmationEnabled(bool enabled) {
@@ -787,12 +793,44 @@ void main() {
       );
 
       check(find.byType(SessionDeclinedView).evaluate()).isNotEmpty();
-      check(find.text('Return to the Space').evaluate()).isNotEmpty();
+      check(
+        find
+            .text(
+              status == AdmissionStatus.expired
+                  ? 'View sessions'
+                  : 'Return to the Space',
+            )
+            .evaluate(),
+      ).isNotEmpty();
       check(find.text('Join session').evaluate()).isEmpty();
       check(find.byType(VideoSessionScreen).evaluate()).isEmpty();
       check(factory.videoTracks).isEmpty();
     });
   }
+
+  testWidgets('expired admission offers a way back to the session schedule', (
+    tester,
+  ) async {
+    final router = _RecordingTotemRouter();
+    TotemRouter.instance = router;
+    addTearDown(() => TotemRouter.instance = FakeTotemRouter());
+    await pumpScreen(tester, terminalAdmissionStatus: AdmissionStatus.expired);
+
+    check(
+      find
+          .text(
+            'We’re sorry we couldn’t connect you to this session. Please return to the schedule to find another session.',
+          )
+          .evaluate(),
+    ).length.equals(1);
+    await tester.tap(find.text('View sessions'));
+    await tester.pump();
+
+    check(router.homeRoute).equals(HomeRoutes.spaces);
+    check(router.tabCloseConfirmationEnabled).equals(false);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
 
   testWidgets('declined offer sign-up is busy then confirms its RSVP', (
     tester,

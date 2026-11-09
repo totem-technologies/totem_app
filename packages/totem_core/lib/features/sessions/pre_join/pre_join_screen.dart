@@ -269,13 +269,15 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           event.slug != session.slug &&
           event.start.isAfter(widget.now()),
     );
-    final offer = next.isEmpty ? null : next.first;
+    final expired = flow.admissionStatus == AdmissionStatus.expired;
+    final offer = expired || next.isEmpty ? null : next.first;
     final message = isTerminalSessionJoinError(flow.error)
         ? 'The server is no longer allowing this Session to be joined.'
         : switch (flow.admissionStatus) {
             AdmissionStatus.denied => 'The Keeper was unable to admit you.',
             AdmissionStatus.ended => 'The Session has ended.',
-            _ => 'Your admission request has expired.',
+            _ =>
+              'We’re sorry we couldn’t connect you to this session. Please return to the schedule to find another session.',
           };
     return RoomBackground(
       status: RoomStatus.ended,
@@ -298,7 +300,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           onSignUp: offer == null || offer.attending || _signingUpForOffer
               ? null
               : () => unawaited(_signUpForOffer(offer.slug)),
-          onBackToSpace: () => TotemRouter.instance.popOrHome(context),
+          backActionLabel: expired ? 'View sessions' : 'Return to the Space',
+          onBackToSpace: () {
+            if (expired) {
+              TotemRouter.instance
+                ..setTabCloseConfirmationEnabled(false)
+                ..toHome(HomeRoutes.spaces);
+            } else {
+              TotemRouter.instance.popOrHome(context);
+            }
+          },
         ),
       ),
     );
