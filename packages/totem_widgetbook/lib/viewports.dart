@@ -49,4 +49,31 @@ abstract final class TotemViewports {
     pixelRatio: 1,
     platform: TargetPlatform.macOS,
   );
+
+  /// Browser windows from the TOT-1439 review, where the post-session card
+  /// was cut off: a short desktop, a short narrow window and a very short
+  /// landscape window.
+  static const shortDesktop = ViewportData(
+    name: 'Short Desktop (1702×650)',
+    width: 1702,
+    height: 650,
+    pixelRatio: 1,
+    platform: TargetPlatform.macOS,
+  );
+
+  static const shortTablet = ViewportData(
+    name: 'Short Window (812×650)',
+    width: 812,
+    height: 650,
+    pixelRatio: 1,
+    platform: TargetPlatform.macOS,
+  );
+
+  static const shortLandscape = ViewportData(
+    name: 'Short Landscape (906×339)',
+    width: 906,
+    height: 339,
+    pixelRatio: 1,
+    platform: TargetPlatform.macOS,
+  );
 }
