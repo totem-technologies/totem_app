@@ -165,10 +165,7 @@ class _MutableFlowController extends PreJoinFlowController {
   PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState();
 
   void setPhase(PreJoinFlowPhase phase, {AdmissionStatus? admissionStatus}) {
-    state = PreJoinFlowState(
-      phase: phase,
-      admissionStatus: admissionStatus,
-    );
+    state = PreJoinFlowState(phase: phase, admissionStatus: admissionStatus);
   }
 }
 
@@ -338,9 +335,9 @@ void main() {
           ),
           getRecommendedSessionsProvider(limit: 1).overrideWith((_) => []),
           if (confirmRsvp != null)
-            rsvpConfirmProvider('next-session').overrideWith(
-              (_) => confirmRsvp(),
-            ),
+            rsvpConfirmProvider(
+              'next-session',
+            ).overrideWith((_) => confirmRsvp()),
           sessionTokenProvider(_slug).overrideWith((_) {
             if (getSessionToken != null) return getSessionToken();
             // ApiError is the generated client's failure value and deliberately
@@ -363,9 +360,7 @@ void main() {
                 ),
           ),
           if (waitingForAdmission)
-            preJoinFlowControllerProvider(
-              _slug,
-            ).overrideWith(
+            preJoinFlowControllerProvider(_slug).overrideWith(
               () => _WaitingAdmissionFlowController(keeperAvailability),
             ),
           if (terminalAdmissionStatus != null)
@@ -397,6 +392,25 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
+  }
+
+  for (final isKeeper in [true, false]) {
+    testWidgets(
+      'welcomes ${isKeeper ? 'the Keeper' : 'a participant'} by name',
+      (
+        tester,
+      ) async {
+        await pumpScreen(tester, earlyParticipant: !isKeeper);
+
+        check(find.text('Welcome, Test User!').evaluate()).length.equals(1);
+        check(
+          find
+              .text('Please check your camera and mic before joining.')
+              .evaluate(),
+        ).length.equals(1);
+        check(find.text('Your session will start soon.').evaluate()).isEmpty();
+      },
+    );
   }
 
   testWidgets('shows a disabled pre-join shell while checking eligibility', (
@@ -681,24 +695,18 @@ void main() {
     check(tester.widgetList(find.byType(ActionSliderButton))).isEmpty();
   });
 
-  for (final status
-      in <
-        ({
-          AdmissionKeeperAvailability availability,
-          String message,
-        })
-      >[
-        (
-          availability: AdmissionKeeperAvailability.absent,
-          message:
-              'The Keeper is not connected yet. You can keep waiting or leave and try again later.',
-        ),
-        (
-          availability: AdmissionKeeperAvailability.unresponsive,
-          message:
-              "The Keeper hasn't confirmed your request. Ask them to reconnect or update Totem, or leave and try again.",
-        ),
-      ]) {
+  for (final status in <({AdmissionKeeperAvailability availability, String message})>[
+    (
+      availability: AdmissionKeeperAvailability.absent,
+      message:
+          'Please check your camera and mic while you wait. Your Keeper will let you into the session soon. No one can see or hear you until you’re admitted.',
+    ),
+    (
+      availability: AdmissionKeeperAvailability.unresponsive,
+      message:
+          "The Keeper hasn't confirmed your request. Ask them to reconnect or update Totem, or leave and try again.",
+    ),
+  ]) {
     testWidgets('pending admission shows ${status.message}', (tester) async {
       await pumpScreen(
         tester,
@@ -741,24 +749,24 @@ void main() {
         admissionStatus: AdmissionStatus.pending,
       );
       await tester.pump();
-      check(tester.element(find.byType(LocalParticipantCard))).identicalTo(
-        preview,
-      );
-      check(tester.element(find.byType(SessionKeyboardShortcuts))).identicalTo(
-        controls,
-      );
+      check(
+        tester.element(find.byType(LocalParticipantCard)),
+      ).identicalTo(preview);
+      check(
+        tester.element(find.byType(SessionKeyboardShortcuts)),
+      ).identicalTo(controls);
 
       flow.setPhase(
         PreJoinFlowPhase.joining,
         admissionStatus: AdmissionStatus.approved,
       );
       await tester.pump();
-      check(tester.element(find.byType(LocalParticipantCard))).identicalTo(
-        preview,
-      );
-      check(tester.element(find.byType(SessionKeyboardShortcuts))).identicalTo(
-        controls,
-      );
+      check(
+        tester.element(find.byType(LocalParticipantCard)),
+      ).identicalTo(preview);
+      check(
+        tester.element(find.byType(SessionKeyboardShortcuts)),
+      ).identicalTo(controls);
       check(factory.videoTracks).length.equals(1);
       check(factory.audioTracks).length.equals(1);
 
@@ -827,9 +835,7 @@ void main() {
 
   testWidgets(
     'declined offer sign-up failure shows an error and permits retry',
-    (
-      tester,
-    ) async {
+    (tester) async {
       var confirmations = 0;
       await pumpScreen(
         tester,
@@ -886,9 +892,7 @@ void main() {
     const Size(1024, 480),
     const Size(700, 400),
   ]) {
-    testWidgets('pre-join preview and controls fit at $size', (
-      tester,
-    ) async {
+    testWidgets('pre-join preview and controls fit at $size', (tester) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -912,7 +916,9 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(PreJoinScreen)),
       );
-      (container.read(preJoinFlowControllerProvider(_slug).notifier)
+      (container.read(
+                preJoinFlowControllerProvider(_slug).notifier,
+              )
               as _MutableFlowController)
           .setPhase(
             PreJoinFlowPhase.pending,
@@ -924,9 +930,7 @@ void main() {
     });
   }
 
-  testWidgets('pre-join preview defers the token until Join', (
-    tester,
-  ) async {
+  testWidgets('pre-join preview defers the token until Join', (tester) async {
     var tokenRequests = 0;
     final token = Completer<JoinResponse>();
     final factory = _TrackFactory();

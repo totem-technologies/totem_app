@@ -394,6 +394,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     PreJoinFlowState flow,
     SessionDetailSchema session, {
     required bool early,
+    required String? participantName,
   }) {
     final mediaController = ref.read(
       preJoinMediaControllerProvider(widget.sessionSlug).notifier,
@@ -423,7 +424,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     }
     final waitingMessage = switch (flow.keeperAvailability) {
       AdmissionKeeperAvailability.absent =>
-        'The Keeper is not connected yet. You can keep waiting or leave and try again later.',
+        'Please check your camera and mic while you wait. Your Keeper will let you into the session soon. No one can see or hear you until you’re admitted.',
       AdmissionKeeperAvailability.unresponsive =>
         "The Keeper hasn't confirmed your request. Ask them to reconnect or update Totem, or leave and try again.",
       _ => null,
@@ -469,6 +470,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         onActionPressed: early ? () async => false : _requestJoin,
         isSliderLoading: flow.phase == PreJoinFlowPhase.joining,
         note: joinNote,
+        welcomeName: participantName,
         waiting: pending,
         waitingMessage: waitingMessage,
         onLeaveWaiting: leaveWaiting,
@@ -496,9 +498,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     if (session == null) return _buildEligibilityLoading();
     _scheduleJoinWindow(session);
     final keeperIdentity = session.space.author.slug.value;
+    final user = ref.watch(authControllerProvider).user;
     final isKeeper =
-        keeperIdentity != null &&
-        keeperIdentity == ref.watch(authControllerProvider).user?.slug.value;
+        keeperIdentity != null && keeperIdentity == user?.slug.value;
+    final displayName = user?.name.value?.trim();
+    final participantName = displayName == null || displayName.isEmpty
+        ? null
+        : displayName;
     final early =
         !isKeeper &&
         widget.now().isBefore(
@@ -513,7 +519,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     final media = ref.watch(preJoinMediaControllerProvider(widget.sessionSlug));
     _joined = flow.phase == PreJoinFlowPhase.joined;
 
-    final preJoinView = _buildPreJoinView(media, flow, session, early: early);
+    final preJoinView = _buildPreJoinView(
+      media,
+      flow,
+      session,
+      early: early,
+      participantName: participantName,
+    );
     final hasStartedJoin =
         flow.phase != PreJoinFlowPhase.idle && flow.sessionOptions != null;
     if (!hasStartedJoin || loadingData) {
