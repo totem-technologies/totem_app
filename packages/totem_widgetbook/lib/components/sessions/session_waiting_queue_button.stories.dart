@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
+import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
 import 'package:widgetbook/widgetbook.dart';
 
 part 'session_waiting_queue_button.stories.g.dart';

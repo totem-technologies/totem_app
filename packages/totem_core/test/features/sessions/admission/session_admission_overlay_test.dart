@@ -18,6 +18,7 @@ import 'package:totem_core/features/sessions/admission/declined_session_particip
 
 import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_scope.dart';
 
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
@@ -26,6 +27,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_state.dart
     as session_state;
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/screens/options/session_start_confirmation_dialog.dart';
 
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';

@@ -27,10 +27,6 @@ import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
-export 'session_admission_scope.dart';
-export 'session_start_confirmation_dialog.dart'
-    show SessionStartConfirmationDialog;
-
 /// Owns admission connections while the room renders queue controls and panels
 /// in its normal layout. Opening or closing a panel never recreates transport.
 class SessionAdmissionOverlay extends ConsumerStatefulWidget {
