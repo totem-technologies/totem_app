@@ -45,6 +45,7 @@ class PendingAdmissionController {
   final _changes = StreamController<AdmissionStatus>.broadcast();
   late final StreamSubscription<AdmissionEvent> _subscription;
   Timer? _expiration;
+  late DateTime _waitingDeadline;
   Timer? _keeperAvailabilityTimer;
   AdmissionRequest? _request;
   AdmissionCancel? _cancellation;
@@ -84,11 +85,11 @@ class PendingAdmissionController {
       throw ArgumentError('Invalid admission identities or display name');
     }
     final now = _now();
-    final maxExpiration = now.add(AdmissionProtocol.requestLifetime);
-    final expiration = deadline != null && deadline.isBefore(maxExpiration)
-        ? deadline
-        : maxExpiration;
-    final candidate = expiration.millisecondsSinceEpoch;
+    // Protocol validity must outlive waiting so approved users can activate
+    // their room and send a joined receipt after the waiting deadline.
+    final candidate = now
+        .add(AdmissionProtocol.requestLifetime)
+        .millisecondsSinceEpoch;
     final previous = _request?.expiresAt.millisecondsSinceEpoch;
     final expirationMillis = previous != null && candidate <= previous
         ? previous + 1
@@ -109,12 +110,17 @@ class PendingAdmissionController {
       displayName: name,
     );
     _request = packet;
-    if (!now.isBefore(packet.expiresAt)) {
+    final waitingDeadline =
+        deadline != null && deadline.isBefore(packet.expiresAt)
+        ? deadline
+        : packet.expiresAt;
+    _waitingDeadline = waitingDeadline;
+    if (!now.isBefore(waitingDeadline)) {
       _setStatus(AdmissionStatus.expired);
       return packet;
     }
     _setStatus(AdmissionStatus.pending);
-    _expiration = Timer(packet.expiresAt.difference(_now()), _expire);
+    _expiration = Timer(waitingDeadline.difference(_now()), _expire);
     _startKeeperAvailabilityCheck();
     if (channel.isPresent(keeper)) await _sendBestEffort(packet);
     return packet;
@@ -175,7 +181,10 @@ class PendingAdmissionController {
       return;
     }
     final request = _request!;
-    if (!_now().isBefore(request.expiresAt)) {
+    final now = _now();
+    if (!now.isBefore(request.expiresAt) ||
+        (_status == AdmissionStatus.pending &&
+            !now.isBefore(_waitingDeadline))) {
       if (_status == AdmissionStatus.pending) _expire();
       return;
     }

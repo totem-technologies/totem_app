@@ -465,12 +465,46 @@ void main() {
     await tester.pump();
     check(starts).equals(0);
     check(harness.sent.whereType<AdmissionDecision>()).length.equals(1);
+    await tester.pump(const Duration(seconds: 11));
+    await tester.pump();
+    check(find.text('Something Went Wrong').evaluate()).isEmpty();
+    check(
+      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
+    ).isNull();
+    check(
+      tester
+          .widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, 'Start without admitting'),
+          )
+          .onPressed,
+    ).isNull();
+    check(
+      tester
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Cancel'))
+          .onPressed,
+    ).isNull();
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, 'Start without admitting'),
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel'));
+    await tester.pump();
+    check(starts).equals(0);
+    check(harness.sent.whereType<AdmissionDecision>()).length.equals(1);
     gate.complete();
     await tester.pump();
     await tester.pump();
     check(
       harness.sent.whereType<AdmissionDecision>().where((d) => d.approved),
     ).length.equals(2);
+    check(starts).equals(1);
+    await tester.pump(const Duration(seconds: 11));
+    await tester.pump();
+    check(find.text('Something Went Wrong').evaluate()).isEmpty();
+    check(
+      tester
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Cancel'))
+          .onPressed,
+    ).isNull();
     check(starts).equals(1);
     final navigator = tester.state<NavigatorState>(
       find.byKey(const Key('room-navigator')),
@@ -608,6 +642,54 @@ void main() {
       classes: <String>['TextPainter'],
     ),
   );
+
+  testWidgets('start without admitting stays busy until start completes', (
+    tester,
+  ) async {
+    final harness = _AdmissionHarness();
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+    await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.pump();
+    await harness.sendRequest(harness.request('waiting'));
+    await tester.pump();
+    final gate = Completer<bool>();
+    var starts = 0;
+    await openStartConfirmation(tester, () {
+      starts++;
+      return gate.future;
+    });
+    await tester.tap(find.text('Start without admitting'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 11));
+    await tester.pump();
+    check(find.text('Something Went Wrong').evaluate()).isEmpty();
+    check(
+      tester
+          .widget<ElevatedButton>(
+            find.widgetWithText(ElevatedButton, 'Admit all and start'),
+          )
+          .onPressed,
+    ).isNull();
+    check(
+      tester
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Cancel'))
+          .onPressed,
+    ).isNull();
+    await tester.tap(
+      find.widgetWithText(ElevatedButton, 'Admit all and start'),
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel'));
+    await tester.pump();
+    check(starts).equals(1);
+    check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
+    gate.complete(true);
+    await tester.pumpAndSettle();
+    check(starts).equals(1);
+    check(find.text('Start without admitting').evaluate()).isEmpty();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
 
   testWidgets(
     'start without admitting leaves the queue intact and retries a failed start',

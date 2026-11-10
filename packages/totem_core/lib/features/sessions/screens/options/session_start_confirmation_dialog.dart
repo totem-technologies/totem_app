@@ -42,6 +42,8 @@ class _SessionStartConfirmationDialogState
       confirmButtonText: count == 0 ? 'Start session' : 'Admit all and start',
       type: ConfirmationDialogType.standard,
       scrollable: true,
+      // A timed-out Future would keep admitting and could still start later.
+      actionTimeout: null,
       onConfirm: () =>
           _start(count, admitAll: count > 0 ? admission!.onAdmitAll : null),
       extraButtons: [

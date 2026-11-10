@@ -1272,6 +1272,127 @@ void main() {
   );
 
   test(
+    'approval before the waiting deadline permits a later joined receipt',
+    () {
+      fakeAsync((async) {
+        final clock = async.getClock(_fixedNow);
+        final guestChannel = _Channel('guest', now: clock.now)
+          ..present.add('keeper');
+        final keeperChannel = _Channel('keeper', now: clock.now)
+          ..present.add('guest');
+        guestChannel.peer = keeperChannel;
+        keeperChannel.peer = guestChannel;
+        final guest = _pendingAdmissionController(
+          channel: guestChannel,
+          keeperIdentity: () => 'keeper',
+          now: clock.now,
+        );
+        final keeper = _keeperAdmissionController(
+          channel: keeperChannel,
+          keeperIdentity: () => 'keeper',
+          now: clock.now,
+        );
+        AdmissionRequest? request;
+        unawaited(
+          guest
+              .requestAdmission(
+                displayName: 'Guest',
+                deadline: _fixedNow.add(const Duration(minutes: 20)),
+              )
+              .then((value) => request = value),
+        );
+        async.flushMicrotasks();
+        check(keeper.requests.single.id).equals(request!.id);
+
+        async.elapse(const Duration(minutes: 19, seconds: 59));
+        unawaited(keeper.approve(request!.id, 'guest'));
+        async.flushMicrotasks();
+        check(guest.status).equals(AdmissionStatus.approved);
+        check(keeper.attempts.single.joinDeadline).equals(
+          clock.now().add(AdmissionProtocol.lifetime),
+        );
+
+        async.elapse(const Duration(seconds: 2));
+        check(guest.status).equals(AdmissionStatus.approved);
+        final receipt = AdmissionProtocol.joined(request!);
+        check(
+          AdmissionProtocol.decode(
+            AdmissionProtocol.encode(receipt),
+            senderIdentity: 'guest',
+            now: clock.now(),
+          ),
+        ).isA<AdmissionJoined>();
+        unawaited(guestChannel.send(receipt));
+        async.flushMicrotasks();
+        check(
+          keeper.attempts.single.status,
+        ).equals(KeeperAdmissionStatus.joined);
+        check(keeper.roster).deepEquals(['guest']);
+
+        unawaited(guest.dispose());
+        unawaited(keeper.dispose());
+        unawaited(guestChannel.dispose());
+        unawaited(keeperChannel.dispose());
+        async.flushMicrotasks();
+      });
+    },
+  );
+
+  for (final offset in [Duration.zero, const Duration(seconds: 1)]) {
+    test(
+      'approval at waiting deadline + $offset expires without timer firing',
+      () {
+        fakeAsync((async) {
+          var now = _fixedNow;
+          final guestChannel = _Channel('guest', now: () => now)
+            ..present.add('keeper');
+          final keeperChannel = _Channel('keeper', now: () => now)
+            ..present.add('guest');
+          guestChannel.peer = keeperChannel;
+          keeperChannel.peer = guestChannel;
+          final guest = _pendingAdmissionController(
+            channel: guestChannel,
+            keeperIdentity: () => 'keeper',
+            now: () => now,
+          );
+          final keeper = _keeperAdmissionController(
+            channel: keeperChannel,
+            keeperIdentity: () => 'keeper',
+            now: () => now,
+          );
+          AdmissionRequest? request;
+          final deadline = _fixedNow.add(const Duration(minutes: 20));
+          unawaited(
+            guest
+                .requestAdmission(
+                  displayName: 'Guest',
+                  deadline: deadline,
+                )
+                .then((value) => request = value),
+          );
+          async.flushMicrotasks();
+          check(keeper.requests.single.id).equals(request!.id);
+          now = deadline.add(offset);
+          check(guest.status).equals(AdmissionStatus.pending);
+          unawaited(keeper.approve(request!.id, 'guest'));
+          async.flushMicrotasks();
+          check(
+            keeperChannel.sent.whereType<AdmissionDecision>().single.approved,
+          ).isTrue();
+          check(guest.status).equals(AdmissionStatus.expired);
+          check(keeper.roster).isEmpty();
+
+          unawaited(guest.dispose());
+          unawaited(keeper.dispose());
+          unawaited(guestChannel.dispose());
+          unawaited(keeperChannel.dispose());
+          async.flushMicrotasks();
+        });
+      },
+    );
+  }
+
+  test(
     'an unanswered first approval is retried once without another participant action',
     () {
       fakeAsync((async) {
