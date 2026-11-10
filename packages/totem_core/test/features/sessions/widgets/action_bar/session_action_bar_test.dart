@@ -19,7 +19,7 @@ import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
-import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
+import 'package:totem_core/features/sessions/screens/options/more_options_popup.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 

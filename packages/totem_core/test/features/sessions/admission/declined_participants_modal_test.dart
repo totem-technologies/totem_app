@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/sessions/admission/declined_participants_modal.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
-import 'package:totem_core/features/sessions/widgets/declined_participants_modal.dart';
 
 import '../../../setup.dart';
 

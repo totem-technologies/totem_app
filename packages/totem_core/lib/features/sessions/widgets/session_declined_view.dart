@@ -15,6 +15,7 @@ class SessionDeclinedView extends StatelessWidget {
     this.signedUp = false,
     this.onSignUp,
     this.onBackToSpace,
+    this.backActionLabel = 'Return to the Space',
   });
 
   final String message;
@@ -25,6 +26,7 @@ class SessionDeclinedView extends StatelessWidget {
   final bool signedUp;
   final VoidCallback? onSignUp;
   final VoidCallback? onBackToSpace;
+  final String backActionLabel;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -119,7 +121,7 @@ class SessionDeclinedView extends StatelessWidget {
                                   horizontal: 24,
                                 ),
                               ),
-                              child: const Text('Return to the Space'),
+                              child: Text(backActionLabel),
                             ),
                           ],
                         ),

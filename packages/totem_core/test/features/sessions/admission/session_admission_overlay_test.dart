@@ -18,16 +18,20 @@ import 'package:totem_core/features/sessions/admission/declined_session_particip
 
 import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_scope.dart';
+
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
+import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart'
     as session_state;
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/screens/options/session_start_confirmation_dialog.dart';
+
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
-import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 import '../../../setup.dart';
@@ -378,6 +382,500 @@ void main() {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
   }
+
+  Future<void> openStartConfirmation(
+    WidgetTester tester,
+    Future<bool> Function() onStart,
+  ) async {
+    final navigator = tester.state<NavigatorState>(
+      find.byKey(const Key('room-navigator')),
+    );
+    showDialog<void>(
+      context: navigator.context,
+      useRootNavigator: false,
+      builder: (_) => SessionStartConfirmationDialog(onStart: onStart),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('session descendants observe live admission requests', (
+    tester,
+  ) async {
+    final harness = _AdmissionHarness();
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+    await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.pump();
+    await harness.sendRequest(harness.request('first', name: 'First'));
+    await tester.pump();
+
+    tester
+        .state<NavigatorState>(find.byKey(const Key('room-navigator')))
+        .push<void>(
+          MaterialPageRoute<void>(
+            builder: (context) {
+              final scope = SessionAdmissionScope.maybeOf(context);
+              return Text(
+                scope?.requests
+                        .map((request) => request.displayName)
+                        .join(', ') ??
+                    'No scope',
+              );
+            },
+          ),
+        );
+    await tester.pumpAndSettle();
+    check(find.text('First').evaluate()).length.equals(1);
+
+    await harness.sendRequest(
+      harness.request('second', sender: 'other', name: 'Second'),
+    );
+    await tester.pump();
+    check(find.text('First, Second').evaluate()).length.equals(1);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('admit all finishes sending approvals before starting', (
+    tester,
+  ) async {
+    final harness = _AdmissionHarness();
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+    await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.pump();
+    await harness.sendRequest(harness.request('first'));
+    await harness.sendRequest(harness.request('second', sender: 'other'));
+    await tester.pump();
+
+    final gate = Completer<void>();
+    harness.afterSend = (packet) async {
+      if (packet is AdmissionDecision && packet.id == 'first') {
+        await gate.future;
+      }
+    };
+    var starts = 0;
+    final startGate = Completer<bool>();
+    await openStartConfirmation(tester, () async {
+      starts++;
+      return startGate.future;
+    });
+    await tester.tap(find.text('Admit all and start'));
+    await tester.pump();
+    check(starts).equals(0);
+    check(harness.sent.whereType<AdmissionDecision>()).length.equals(1);
+    await tester.pump(const Duration(seconds: 11));
+    await tester.pump();
+    check(find.text('Something Went Wrong').evaluate()).isEmpty();
+    check(
+      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
+    ).isNull();
+    check(
+      tester
+          .widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, 'Start without admitting'),
+          )
+          .onPressed,
+    ).isNull();
+    check(
+      tester
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Cancel'))
+          .onPressed,
+    ).isNull();
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, 'Start without admitting'),
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel'));
+    await tester.pump();
+    check(starts).equals(0);
+    check(harness.sent.whereType<AdmissionDecision>()).length.equals(1);
+    gate.complete();
+    await tester.pump();
+    await tester.pump();
+    check(
+      harness.sent.whereType<AdmissionDecision>().where((d) => d.approved),
+    ).length.equals(2);
+    check(starts).equals(1);
+    await tester.pump(const Duration(seconds: 11));
+    await tester.pump();
+    check(find.text('Something Went Wrong').evaluate()).isEmpty();
+    check(
+      tester
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Cancel'))
+          .onPressed,
+    ).isNull();
+    check(starts).equals(1);
+    final navigator = tester.state<NavigatorState>(
+      find.byKey(const Key('room-navigator')),
+    );
+    check(SessionAdmissionScope.maybeOf(navigator.context)!.requests).isEmpty();
+    check(
+      tester
+          .widget<ConfirmationDialog>(find.byType(ConfirmationDialog))
+          .confirmButtonText,
+    ).equals('Admit all and start');
+    startGate.complete(true);
+    await tester.pumpAndSettle();
+    check(find.text('Admit all and start').evaluate()).isEmpty();
+  });
+
+  testWidgets(
+    'admit all reports an admission already in progress without starting',
+    (tester) async {
+      setupAppConfig();
+      silenceLogger();
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+      await pumpHost(tester, harness, videoBuilds: videoBuilds);
+      final request = harness.request('first');
+      await harness.sendRequest(request);
+      await tester.pump();
+      final gate = Completer<void>();
+      harness.afterSend = (packet) async {
+        if (packet is AdmissionDecision) await gate.future;
+      };
+      final navigator = tester.state<NavigatorState>(
+        find.byKey(const Key('room-navigator')),
+      );
+      final decision = SessionAdmissionScope.maybeOf(
+        navigator.context,
+      )!.onDecision(request, true);
+      await tester.pump();
+      var starts = 0;
+      await openStartConfirmation(tester, () async {
+        starts++;
+        return true;
+      });
+      await tester.tap(find.text('Admit all and start'));
+      await tester.pump();
+      await tester.pump();
+      check(find.text('Admission in progress').evaluate()).length.equals(1);
+      check(
+        find
+            .text(
+              'Wait for the current admission decision to finish, then try again.',
+            )
+            .evaluate(),
+      ).length.equals(1);
+      check(starts).equals(0);
+      check(
+        harness.sent.whereType<AdmissionDecision>().where((d) => d.approved),
+      ).length.equals(1);
+      gate.complete();
+      await decision;
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+    // auto_size_text's notification banner does not dispose its TextPainters.
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
+
+  testWidgets(
+    'new arrivals prevent starting until the remaining queue is admitted',
+    (tester) async {
+      setupAppConfig();
+      silenceLogger();
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+      await pumpHost(tester, harness, videoBuilds: videoBuilds);
+      await harness.sendRequest(harness.request('first'));
+      await tester.pump();
+      final gate = Completer<void>();
+      harness.afterSend = (packet) async {
+        if (packet is AdmissionDecision && packet.id == 'first') {
+          await gate.future;
+        }
+      };
+      var starts = 0;
+      await openStartConfirmation(tester, () async {
+        starts++;
+        return true;
+      });
+      await tester.tap(find.text('Admit all and start'));
+      await tester.pump();
+      await harness.sendRequest(harness.request('second', sender: 'other'));
+      await tester.pump();
+      gate.complete();
+      await tester.pump();
+      await tester.pump();
+      check(find.text('New participants arrived').evaluate()).length.equals(1);
+      check(
+        find
+            .text('Review the waiting room and try again before starting.')
+            .evaluate(),
+      ).length.equals(1);
+      check(
+        find
+            .text(
+              'You have 1 participant waiting. Would you like to let them in before starting?',
+            )
+            .evaluate(),
+      ).length.equals(1);
+      check(starts).equals(0);
+      check(
+        harness.sent.whereType<AdmissionDecision>().where((d) => d.approved),
+      ).length.equals(1);
+      await tester.tap(find.text('Admit all and start'));
+      await tester.pump();
+      await tester.pump();
+      await tester.pumpAndSettle();
+      check(
+        harness.sent
+            .whereType<AdmissionDecision>()
+            .where((d) => d.approved)
+            .map((d) => d.id)
+            .toList(),
+      ).deepEquals(['first', 'second']);
+      check(starts).equals(1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+    // auto_size_text's notification banner does not dispose its TextPainters.
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
+
+  testWidgets('start without admitting stays busy until start completes', (
+    tester,
+  ) async {
+    final harness = _AdmissionHarness();
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+    await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.pump();
+    await harness.sendRequest(harness.request('waiting'));
+    await tester.pump();
+    final gate = Completer<bool>();
+    var starts = 0;
+    await openStartConfirmation(tester, () {
+      starts++;
+      return gate.future;
+    });
+    await tester.tap(find.text('Start without admitting'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 11));
+    await tester.pump();
+    check(find.text('Something Went Wrong').evaluate()).isEmpty();
+    check(
+      tester
+          .widget<ElevatedButton>(
+            find.widgetWithText(ElevatedButton, 'Admit all and start'),
+          )
+          .onPressed,
+    ).isNull();
+    check(
+      tester
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Cancel'))
+          .onPressed,
+    ).isNull();
+    await tester.tap(
+      find.widgetWithText(ElevatedButton, 'Admit all and start'),
+    );
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel'));
+    await tester.pump();
+    check(starts).equals(1);
+    check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
+    gate.complete(true);
+    await tester.pumpAndSettle();
+    check(starts).equals(1);
+    check(find.text('Start without admitting').evaluate()).isEmpty();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets(
+    'start without admitting leaves the queue intact and retries a failed start',
+    (tester) async {
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+      await pumpHost(tester, harness, videoBuilds: videoBuilds);
+      await tester.pump();
+      await harness.sendRequest(harness.request('waiting'));
+      await tester.pump();
+      var starts = 0;
+      await openStartConfirmation(tester, () async => ++starts > 1);
+      await tester.tap(find.text('Start without admitting'));
+      await tester.pump();
+      check(starts).equals(1);
+      check(find.text('Start without admitting').evaluate()).length.equals(1);
+      check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
+      await tester.tap(find.text('Start without admitting'));
+      await tester.pumpAndSettle();
+      check(starts).equals(2);
+      check(find.text('Start without admitting').evaluate()).isEmpty();
+      check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
+      await openStartConfirmation(tester, () async => true);
+      check(
+        find
+            .text(
+              'You have 1 participant waiting. Would you like to let them in before starting?',
+            )
+            .evaluate(),
+      ).length.equals(1);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets('cancel leaves pending requests untouched without starting', (
+    tester,
+  ) async {
+    final harness = _AdmissionHarness();
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+    await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.pump();
+    await harness.sendRequest(harness.request('waiting'));
+    await tester.pump();
+    var starts = 0;
+    await openStartConfirmation(tester, () async {
+      starts++;
+      return true;
+    });
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    check(starts).equals(0);
+    check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
+    await openStartConfirmation(tester, () async => true);
+    check(find.text('Start without admitting').evaluate()).length.equals(1);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+    'start confirmation follows live queue count and falls back when empty',
+    (tester) async {
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+      await pumpHost(tester, harness, videoBuilds: videoBuilds);
+      await tester.pump();
+      final first = harness.request('first');
+      await harness.sendRequest(first);
+      await tester.pump();
+      await openStartConfirmation(tester, () async => true);
+      check(
+        find
+            .text(
+              'You have 1 participant waiting. Would you like to let them in before starting?',
+            )
+            .evaluate(),
+      ).length.equals(1);
+      final second = harness.request('second', sender: 'other');
+      await harness.sendRequest(second);
+      await tester.pump();
+      check(
+        find
+            .text(
+              'You have 2 participants waiting. Would you like to let them in before starting?',
+            )
+            .evaluate(),
+      ).length.equals(1);
+      for (final request in [first, second]) {
+        await harness.sendPacket(
+          AdmissionCancel(
+            id: request.id,
+            senderIdentity: request.senderIdentity,
+            recipientIdentity: request.recipientIdentity,
+            expiresAt: request.expiresAt,
+          ),
+        );
+      }
+      await tester.pump();
+      check(
+        find.text('Are you sure you want to start the session?').evaluate(),
+      ).length.equals(1);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Start session'));
+      await tester.pumpAndSettle();
+      check(
+        find.text('Are you sure you want to start the session?').evaluate(),
+      ).isEmpty();
+    },
+  );
+
+  testWidgets('start confirmation works without an admission scope', (
+    tester,
+  ) async {
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      MaterialApp(navigatorKey: navigatorKey, home: const SizedBox()),
+    );
+    var starts = 0;
+    showDialog<void>(
+      context: navigatorKey.currentContext!,
+      builder: (_) => SessionStartConfirmationDialog(
+        onStart: () async {
+          starts++;
+          return true;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    check(
+      find.text('Are you sure you want to start the session?').evaluate(),
+    ).length.equals(1);
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Start session'));
+    await tester.pumpAndSettle();
+    check(starts).equals(1);
+    check(
+      find.text('Are you sure you want to start the session?').evaluate(),
+    ).isEmpty();
+  });
+
+  testWidgets(
+    'failed admission keeps confirmation open and allows retry',
+    (tester) async {
+      setupAppConfig();
+      silenceLogger();
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+      await pumpHost(tester, harness, videoBuilds: videoBuilds);
+      await tester.pump();
+      await harness.sendRequest(harness.request('waiting'));
+      await tester.pump();
+      harness.afterSend = (packet) async {
+        if (packet is AdmissionDecision) throw StateError('offline');
+      };
+      var starts = 0;
+      await openStartConfirmation(tester, () async {
+        starts++;
+        return true;
+      });
+      await tester.tap(find.text('Admit all and start'));
+      await tester.pump();
+      await tester.pump();
+      check(starts).equals(0);
+      check(find.text('Admit all and start').evaluate()).length.equals(1);
+
+      harness.afterSend = null;
+      harness.sent.clear();
+      await tester.tap(find.text('Admit all and start'));
+      await tester.pump();
+      await tester.pumpAndSettle();
+      check(
+        harness.sent.whereType<AdmissionDecision>().where((d) => d.approved),
+      ).length.equals(1);
+      check(starts).equals(1);
+      check(find.text('Admit all and start').evaluate()).isEmpty();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+    // auto_size_text's notification banner does not dispose its TextPainters.
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
 
   testWidgets('fails closed until persisted declines initialize', (
     tester,

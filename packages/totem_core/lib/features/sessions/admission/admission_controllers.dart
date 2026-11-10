@@ -45,9 +45,12 @@ class PendingAdmissionController {
   final _changes = StreamController<AdmissionStatus>.broadcast();
   late final StreamSubscription<AdmissionEvent> _subscription;
   Timer? _expiration;
+  late DateTime _waitingDeadline;
   Timer? _keeperAvailabilityTimer;
   AdmissionRequest? _request;
   AdmissionCancel? _cancellation;
+  bool _isReturningParticipant = false;
+  bool? _sessionStartedAtAdmission;
   AdmissionStatus _status;
   AdmissionKeeperAvailability _keeperAvailability =
       AdmissionKeeperAvailability.checking;
@@ -56,10 +59,13 @@ class PendingAdmissionController {
   Stream<AdmissionStatus> get changes => _changes.stream;
   AdmissionStatus get status => _status;
   AdmissionRequest? get request => _request;
+  bool get isReturningParticipant => _isReturningParticipant;
+  bool? get sessionStartedAtAdmission => _sessionStartedAtAdmission;
   AdmissionKeeperAvailability get keeperAvailability => _keeperAvailability;
 
   Future<AdmissionRequest> requestAdmission({
     required String displayName,
+    DateTime? deadline,
   }) async {
     if (_disposed ||
         channel.hasEnded ||
@@ -78,7 +84,10 @@ class PendingAdmissionController {
         name.length > 120) {
       throw ArgumentError('Invalid admission identities or display name');
     }
-    final candidate = _now()
+    final now = _now();
+    // Protocol validity must outlive waiting so approved users can activate
+    // their room and send a joined receipt after the waiting deadline.
+    final candidate = now
         .add(AdmissionProtocol.requestLifetime)
         .millisecondsSinceEpoch;
     final previous = _request?.expiresAt.millisecondsSinceEpoch;
@@ -91,6 +100,8 @@ class PendingAdmissionController {
     }
     _expiration?.cancel();
     _cancellation = null;
+    _isReturningParticipant = false;
+    _sessionStartedAtAdmission = null;
     final packet = AdmissionRequest(
       id: _newId(),
       senderIdentity: local,
@@ -99,8 +110,17 @@ class PendingAdmissionController {
       displayName: name,
     );
     _request = packet;
+    final waitingDeadline =
+        deadline != null && deadline.isBefore(packet.expiresAt)
+        ? deadline
+        : packet.expiresAt;
+    _waitingDeadline = waitingDeadline;
+    if (!now.isBefore(waitingDeadline)) {
+      _setStatus(AdmissionStatus.expired);
+      return packet;
+    }
     _setStatus(AdmissionStatus.pending);
-    _expiration = Timer(packet.expiresAt.difference(_now()), _expire);
+    _expiration = Timer(waitingDeadline.difference(_now()), _expire);
     _startKeeperAvailabilityCheck();
     if (channel.isPresent(keeper)) await _sendBestEffort(packet);
     return packet;
@@ -161,7 +181,10 @@ class PendingAdmissionController {
       return;
     }
     final request = _request!;
-    if (!_now().isBefore(request.expiresAt)) {
+    final now = _now();
+    if (!now.isBefore(request.expiresAt) ||
+        (_status == AdmissionStatus.pending &&
+            !now.isBefore(_waitingDeadline))) {
       if (_status == AdmissionStatus.pending) _expire();
       return;
     }
@@ -176,6 +199,11 @@ class PendingAdmissionController {
           return;
         }
         _expiration?.cancel();
+        _isReturningParticipant =
+            decision.approved && decision.isReturningParticipant;
+        _sessionStartedAtAdmission = decision.approved
+            ? decision.sessionStartedAtAdmission
+            : null;
         _setStatus(
           decision.approved ? AdmissionStatus.approved : AdmissionStatus.denied,
         );
@@ -328,6 +356,7 @@ class KeeperAdmissionController {
   KeeperAdmissionController({
     required this.channel,
     required this.keeperIdentity,
+    this.isSessionStarted,
     String? sessionIdentity,
     String? keeperGeneration,
     KeeperAdmissionRosterStore? rosterStore,
@@ -366,6 +395,7 @@ class KeeperAdmissionController {
 
   final AdmissionChannel channel;
   final String Function() keeperIdentity;
+  final bool Function()? isSessionStarted;
   final String _sessionIdentity;
   final KeeperAdmissionRosterStore? _rosterStore;
   final String _keeperGeneration;
@@ -864,6 +894,8 @@ class KeeperAdmissionController {
         recipientIdentity: sender,
         expiresAt: request.expiresAt,
         approved: approved,
+        isReturningParticipant: approved && _roster.contains(sender),
+        sessionStartedAtAdmission: approved ? isSessionStarted?.call() : null,
       );
       await channel.send(decision);
       if (_disposed ||

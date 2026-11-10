@@ -28,9 +28,7 @@ class _TransitionCardContainer extends StatelessWidget {
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(25),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
         child: Padding(
           padding: const EdgeInsetsDirectional.all(16),
           // Hug content so the slider stays its own height instead of
@@ -366,6 +364,7 @@ class JoinTransitionCard extends StatelessWidget {
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
     this.enabled = true,
     this.note,
+    this.welcomeName,
     this.waiting = false,
     this.waitingMessage,
     this.onLeaveWaiting,
@@ -378,6 +377,7 @@ class JoinTransitionCard extends StatelessWidget {
   final EdgeInsetsGeometry margin;
   final bool enabled;
   final String? note;
+  final String? welcomeName;
   final bool waiting;
   final String? waitingMessage;
   final VoidCallback? onLeaveWaiting;
@@ -385,6 +385,12 @@ class JoinTransitionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final welcomeTitle = welcomeName == null
+        ? 'Welcome'
+        : 'Welcome, $welcomeName!';
+    final welcomeMessage = welcomeName == null
+        ? 'Your session will start soon. Please check your audio and video before joining.'
+        : 'Please check your camera and mic before joining.';
     return _TransitionCardBase(
       keyboardShortcutText: 'press space bar to join',
       keyboardShortcutVisible: enabled && !waiting,
@@ -394,7 +400,7 @@ class JoinTransitionCard extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 366),
           children: [
             Text(
-              waiting ? 'Waiting to join' : 'Welcome',
+              waiting ? 'Waiting to join' : welcomeTitle,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 fontSize: 28,
@@ -404,8 +410,8 @@ class JoinTransitionCard extends StatelessWidget {
             Text(
               waiting
                   ? waitingMessage ??
-                        'The Keeper will let you in. Your camera and microphone are only a local preview.'
-                  : 'Your session will start soon. Please check your audio and video before joining.',
+                        'Please check your camera and mic while you wait. Your Keeper will let you into the session soon. No one can see or hear you until you’re admitted.'
+                  : welcomeMessage,
               textAlign: TextAlign.center,
             ),
             if (!waiting && note != null)

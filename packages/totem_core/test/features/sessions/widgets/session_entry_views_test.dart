@@ -6,11 +6,11 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
-import 'package:totem_core/features/sessions/widgets/session_admission_list.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_list.dart';
+import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_info_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
-import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 
 void main() {
@@ -214,7 +214,9 @@ void main() {
         ),
       ),
     );
-    check(find.text('A live prompt').evaluate().length).equals(1);
+    check(
+      find.text('Current prompt: A live prompt').evaluate().length,
+    ).equals(1);
     await tester.tap(find.text('Got it'));
     check(closed).isTrue();
     await tester.pumpWidget(
@@ -222,7 +224,15 @@ void main() {
         home: Scaffold(body: SessionOrientationNotice(onDone: null)),
       ),
     );
-    check(find.text('CURRENT PROMPT').evaluate().isEmpty).isTrue();
+    check(find.textContaining('Current prompt:').evaluate().isEmpty).isTrue();
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SessionOrientationNotice(prompt: '   ', onDone: null),
+        ),
+      ),
+    );
+    check(find.textContaining('Current prompt:').evaluate().isEmpty).isTrue();
   });
 
   testWidgets('dismissed Keeper queue reopens without counting joined guests', (

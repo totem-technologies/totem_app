@@ -17,7 +17,7 @@ import 'package:totem_core/features/sessions/media/local_media.dart';
 import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/features/sessions/media/room_media_providers.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
+import 'package:totem_core/features/sessions/screens/options/more_options_popup.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_camera_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_button.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
