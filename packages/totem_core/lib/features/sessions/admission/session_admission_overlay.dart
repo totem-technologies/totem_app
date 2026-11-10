@@ -428,7 +428,17 @@ class _SessionAdmissionOverlayState
 
   Future<bool> _admitAll() async {
     final controller = _keeperController;
-    if (controller == null || _busy) return false;
+    if (controller == null) return false;
+    if (_busy) {
+      _notificationController.showTimed(
+        context,
+        icon: TotemIcons.info,
+        title: 'Admission in progress',
+        message:
+            'Wait for the current admission decision to finish, then try again.',
+      );
+      return false;
+    }
     setState(() => _busy = true);
     var reportedError = false;
     try {
@@ -441,10 +451,19 @@ class _SessionAdmissionOverlayState
           reportError: !reportedError,
         );
       }
-      return mounted &&
-          identical(_keeperController, controller) &&
-          !reportedError &&
-          controller.requests.isEmpty;
+      if (!mounted ||
+          !identical(_keeperController, controller) ||
+          reportedError) {
+        return false;
+      }
+      if (controller.requests.isEmpty) return true;
+      _notificationController.showTimed(
+        context,
+        icon: TotemIcons.info,
+        title: 'New participants arrived',
+        message: 'Review the waiting room and try again before starting.',
+      );
+      return false;
     } finally {
       if (mounted && identical(_keeperController, controller)) {
         setState(() => _busy = false);

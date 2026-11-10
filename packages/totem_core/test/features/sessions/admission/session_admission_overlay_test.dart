@@ -474,6 +474,129 @@ void main() {
   });
 
   testWidgets(
+    'admit all reports an admission already in progress without starting',
+    (tester) async {
+      setupAppConfig();
+      silenceLogger();
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+      await pumpHost(tester, harness, videoBuilds: videoBuilds);
+      final request = harness.request('first');
+      await harness.sendRequest(request);
+      await tester.pump();
+      final gate = Completer<void>();
+      harness.afterSend = (packet) async {
+        if (packet is AdmissionDecision) await gate.future;
+      };
+      final navigator = tester.state<NavigatorState>(
+        find.byKey(const Key('room-navigator')),
+      );
+      final decision = SessionAdmissionScope.maybeOf(
+        navigator.context,
+      )!.onDecision(request, true);
+      await tester.pump();
+      var starts = 0;
+      await openStartConfirmation(tester, () async {
+        starts++;
+        return true;
+      });
+      await tester.tap(find.text('Admit all and start'));
+      await tester.pump();
+      await tester.pump();
+      check(find.text('Admission in progress').evaluate()).length.equals(1);
+      check(
+        find
+            .text(
+              'Wait for the current admission decision to finish, then try again.',
+            )
+            .evaluate(),
+      ).length.equals(1);
+      check(starts).equals(0);
+      check(
+        harness.sent.whereType<AdmissionDecision>().where((d) => d.approved),
+      ).length.equals(1);
+      gate.complete();
+      await decision;
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+    // auto_size_text's notification banner does not dispose its TextPainters.
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
+
+  testWidgets(
+    'new arrivals prevent starting until the remaining queue is admitted',
+    (tester) async {
+      setupAppConfig();
+      silenceLogger();
+      final harness = _AdmissionHarness();
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+      await pumpHost(tester, harness, videoBuilds: videoBuilds);
+      await harness.sendRequest(harness.request('first'));
+      await tester.pump();
+      final gate = Completer<void>();
+      harness.afterSend = (packet) async {
+        if (packet is AdmissionDecision && packet.id == 'first') {
+          await gate.future;
+        }
+      };
+      var starts = 0;
+      await openStartConfirmation(tester, () async {
+        starts++;
+        return true;
+      });
+      await tester.tap(find.text('Admit all and start'));
+      await tester.pump();
+      await harness.sendRequest(harness.request('second', sender: 'other'));
+      await tester.pump();
+      gate.complete();
+      await tester.pump();
+      await tester.pump();
+      check(find.text('New participants arrived').evaluate()).length.equals(1);
+      check(
+        find
+            .text('Review the waiting room and try again before starting.')
+            .evaluate(),
+      ).length.equals(1);
+      check(
+        find
+            .text(
+              'You have 1 participant waiting. Would you like to let them in before starting?',
+            )
+            .evaluate(),
+      ).length.equals(1);
+      check(starts).equals(0);
+      check(
+        harness.sent.whereType<AdmissionDecision>().where((d) => d.approved),
+      ).length.equals(1);
+      await tester.tap(find.text('Admit all and start'));
+      await tester.pump();
+      await tester.pump();
+      await tester.pumpAndSettle();
+      check(
+        harness.sent
+            .whereType<AdmissionDecision>()
+            .where((d) => d.approved)
+            .map((d) => d.id)
+            .toList(),
+      ).deepEquals(['first', 'second']);
+      check(starts).equals(1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.idle();
+    },
+    // auto_size_text's notification banner does not dispose its TextPainters.
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
+
+  testWidgets(
     'start without admitting leaves the queue intact and retries a failed start',
     (tester) async {
       final harness = _AdmissionHarness();
