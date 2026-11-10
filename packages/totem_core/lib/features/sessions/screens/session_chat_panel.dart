@@ -22,15 +22,18 @@ import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 const _headerHorizontalPadding = 20.0;
 const _recipientMenuRadius = 20.0;
-/// Inset from the menu card edges on every side. Adjacent pills therefore sit
-/// 2× this apart (12); that inter-row gap is intentional for the approved look.
+
+/// Horizontal inset from the menu card edges.
 const _recipientRowInset = 6.0;
+
 /// Concentric with the menu card: card radius minus the edge inset.
 const double _recipientRowRadius = _recipientMenuRadius - _recipientRowInset;
 const _recipientRowHorizontalPadding = 12.0;
 const _recipientRowVerticalPadding = 12.0;
+
 /// Leading offset so row content (inset + padding) lines up with the header.
-const double _recipientMenuLeading = _headerHorizontalPadding -
+const double _recipientMenuLeading =
+    _headerHorizontalPadding -
     (_recipientRowInset + _recipientRowHorizontalPadding);
 
 const _messageChromeGap = 12.0;
@@ -941,7 +944,7 @@ class _RecipientDropdownOverlay extends StatelessWidget {
               constraints: BoxConstraints(maxHeight: maxMenuHeight),
               child: ListView.builder(
                 shrinkWrap: true,
-                padding: EdgeInsetsDirectional.zero,
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 itemCount: rows.length + 1,
                 itemBuilder: (context, index) {
                   if (index == 0) {
@@ -995,10 +998,7 @@ class _RecipientRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Lavender pill inset from the menu card so selection reads against white
-    // siblings without fighting the card's rounded corners. Radius is
-    // concentric with the card (r20 − inset 6 → r14). Edge inset is 6; the
-    // 12px gap between adjacent pills is 6+6 and is intentional.
+    // Inset the selection from the menu card so it reads against white siblings.
     final fill = selected ? AppTheme.messagePurpleLight : AppTheme.white;
     const shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(_recipientRowRadius)),
@@ -1009,7 +1009,10 @@ class _RecipientRow extends StatelessWidget {
       selected: selected,
       inMutuallyExclusiveGroup: true,
       child: Padding(
-        padding: const EdgeInsets.all(_recipientRowInset),
+        padding: const EdgeInsets.symmetric(
+          horizontal: _recipientRowInset,
+          vertical: 2,
+        ),
         child: Material(
           color: fill,
           shape: shape,
