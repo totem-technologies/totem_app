@@ -456,9 +456,10 @@ void main() {
       }
     };
     var starts = 0;
+    final startGate = Completer<bool>();
     await openStartConfirmation(tester, () async {
       starts++;
-      return true;
+      return startGate.future;
     });
     await tester.tap(find.text('Admit all and start'));
     await tester.pump();
@@ -467,11 +468,21 @@ void main() {
     gate.complete();
     await tester.pump();
     await tester.pump();
-    await tester.pumpAndSettle();
     check(
       harness.sent.whereType<AdmissionDecision>().where((d) => d.approved),
     ).length.equals(2);
     check(starts).equals(1);
+    final navigator = tester.state<NavigatorState>(
+      find.byKey(const Key('room-navigator')),
+    );
+    check(SessionAdmissionScope.maybeOf(navigator.context)!.requests).isEmpty();
+    check(
+      tester
+          .widget<ConfirmationDialog>(find.byType(ConfirmationDialog))
+          .confirmButtonText,
+    ).equals('Admit all and start');
+    startGate.complete(true);
+    await tester.pumpAndSettle();
     check(find.text('Admit all and start').evaluate()).isEmpty();
   });
 

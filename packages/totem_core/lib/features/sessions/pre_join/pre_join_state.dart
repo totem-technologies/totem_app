@@ -163,7 +163,8 @@ class PreJoinFlowState {
           ? null
           : admissionStatus ?? this.admissionStatus,
       isReturningParticipant:
-          isReturningParticipant ?? this.isReturningParticipant,
+          !clearAdmissionStatus &&
+          (isReturningParticipant ?? this.isReturningParticipant),
       sessionStartedAtAdmission: clearAdmissionStatus
           ? null
           : sessionStartedAtAdmission ?? this.sessionStartedAtAdmission,

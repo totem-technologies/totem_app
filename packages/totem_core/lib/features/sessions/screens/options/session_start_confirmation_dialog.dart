@@ -3,20 +3,36 @@ import 'package:totem_core/features/sessions/admission/session_admission_scope.d
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 /// Confirms starting with the live admission queue before changing room state.
-class SessionStartConfirmationDialog extends StatelessWidget {
+class SessionStartConfirmationDialog extends StatefulWidget {
   const SessionStartConfirmationDialog({required this.onStart, super.key});
 
   final Future<bool> Function() onStart;
 
   @override
+  State<SessionStartConfirmationDialog> createState() =>
+      _SessionStartConfirmationDialogState();
+}
+
+class _SessionStartConfirmationDialogState
+    extends State<SessionStartConfirmationDialog> {
+  int? _actionCount;
+
+  Future<void> _start(int count, {Future<bool> Function()? admitAll}) async {
+    setState(() => _actionCount = count);
+    var started = false;
+    try {
+      if (admitAll != null && (!await admitAll() || !mounted)) return;
+      started = await widget.onStart();
+      if (started && mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted && !started) setState(() => _actionCount = null);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final admission = SessionAdmissionScope.maybeOf(context);
-    final count = admission?.requests.length ?? 0;
-
-    Future<void> start() async {
-      final success = await onStart();
-      if (success && context.mounted) Navigator.of(context).pop();
-    }
+    final count = _actionCount ?? admission?.requests.length ?? 0;
 
     return ConfirmationDialog(
       title: 'Start session',
@@ -26,17 +42,12 @@ class SessionStartConfirmationDialog extends StatelessWidget {
       confirmButtonText: count == 0 ? 'Start session' : 'Admit all and start',
       type: ConfirmationDialogType.standard,
       scrollable: true,
-      onConfirm: () async {
-        if (count > 0) {
-          final admitted = await admission!.onAdmitAll();
-          if (!admitted || !context.mounted) return;
-        }
-        await start();
-      },
+      onConfirm: () =>
+          _start(count, admitAll: count > 0 ? admission!.onAdmitAll : null),
       extraButtons: [
         if (count > 0)
           ConfirmationDialogButton.outlined(
-            onConfirm: start,
+            onConfirm: () => _start(count),
             child: const Text('Start without admitting'),
           ),
       ],

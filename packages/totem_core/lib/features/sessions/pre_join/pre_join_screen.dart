@@ -271,17 +271,25 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     );
     final expired = flow.admissionStatus == AdmissionStatus.expired;
     final offer = expired || next.isEmpty ? null : next.first;
-    final message = isTerminalSessionJoinError(flow.error)
+    final terminalError = isTerminalSessionJoinError(flow.error);
+    final admissionMessage = switch (flow.admissionStatus) {
+      AdmissionStatus.denied => 'The Keeper was unable to admit you.',
+      AdmissionStatus.ended => 'The Session has ended.',
+      AdmissionStatus.expired =>
+        'We’re sorry we couldn’t connect you to this session. Please return to the schedule to find another session.',
+      _ => null,
+    };
+    if (!terminalError && admissionMessage == null) {
+      ErrorHandler.logError(
+        StateError('Unexpected admission status: ${flow.admissionStatus}'),
+        message:
+            'Unexpected admission outcome for Session ${widget.sessionSlug}',
+      );
+    }
+    final message = terminalError
         ? 'The server is no longer allowing this Session to be joined.'
-        : switch (flow.admissionStatus) {
-            AdmissionStatus.denied => 'The Keeper was unable to admit you.',
-            AdmissionStatus.ended => 'The Session has ended.',
-            AdmissionStatus.expired =>
-              'We’re sorry we couldn’t connect you to this session. Please return to the schedule to find another session.',
-            _ => throw StateError(
-              'Unexpected admission status: ${flow.admissionStatus}',
-            ),
-          };
+        : admissionMessage ??
+              'This session is unavailable. Please try another session.';
     return RoomBackground(
       status: RoomStatus.ended,
       child: SafeArea(

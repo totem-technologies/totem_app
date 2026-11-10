@@ -4,7 +4,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
     as mobile_api
     show RoomStatus;
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/screens/options/end_session_confirmation_dialog.dart';
+import 'package:totem_core/features/sessions/screens/options/session_actions.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 

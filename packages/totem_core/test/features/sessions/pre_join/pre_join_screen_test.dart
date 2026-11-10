@@ -409,12 +409,6 @@ void main() {
         await pumpScreen(tester, earlyParticipant: !isKeeper);
 
         check(find.text('Welcome, Test User!').evaluate()).length.equals(1);
-        check(
-          find
-              .text('Please check your camera and mic before joining.')
-              .evaluate(),
-        ).length.equals(1);
-        check(find.text('Your session will start soon.').evaluate()).isEmpty();
       },
     );
   }

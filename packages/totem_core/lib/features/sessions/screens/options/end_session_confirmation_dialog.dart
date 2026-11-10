@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
+
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/screens/options/session_actions.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 class EndSessionConfirmationDialog extends StatelessWidget {
@@ -17,28 +18,6 @@ class EndSessionConfirmationDialog extends StatelessWidget {
       onConfirm: () async {
         await endSessionWithErrorHandling(context, session);
         if (context.mounted) Navigator.of(context).pop();
-      },
-    );
-  }
-}
-
-Future<void> endSessionWithErrorHandling(
-  BuildContext context,
-  SessionController session,
-) async {
-  try {
-    await session.keeper.endSession();
-  } catch (error) {
-    if (!context.mounted) return;
-    await ErrorHandler.handleApiError(
-      context,
-      error,
-      onRetry: () async {
-        try {
-          await session.keeper.endSession();
-        } catch (e) {
-          // Error already handled by handleApiError
-        }
       },
     );
   }

@@ -35,6 +35,7 @@ import '../../permissions/fake_media_permission_adapter.dart';
 import '../livekit_mocks.dart';
 
 const _slug = 'pre-join-flow-test';
+final _defaultTime = DateTime(2024);
 
 SessionDetailSchema _event({String? keeperSlug, DateTime? start}) =>
     SessionDetailSchema(
@@ -60,7 +61,7 @@ SessionDetailSchema _event({String? keeperSlug, DateTime? start}) =>
       content: '',
       seatsLeft: 10,
       duration: 60,
-      start: start ?? DateTime.now(),
+      start: start ?? _defaultTime,
       attending: true,
       open: true,
       started: true,
@@ -450,7 +451,12 @@ class _RealSessionAdmissionFlow extends _AdmissionFlow {
   Room createAdmissionRoom() => _AdmissionFlow.room = _ConnectedAdmissionRoom();
 }
 
-class _AdmissionFlow extends PreJoinFlowController {
+class _DefaultFlow extends PreJoinFlowController {
+  @override
+  DateTime now() => _defaultTime;
+}
+
+class _AdmissionFlow extends _DefaultFlow {
   _AdmissionFlow({this.currentTime});
 
   final DateTime Function()? currentTime;
@@ -548,8 +554,9 @@ ProviderContainer _container({
         sessionControllerProvider(
           sessionOptions,
         ).overrideWith(sessionController),
-        if (flowController != null)
-          preJoinFlowControllerProvider(_slug).overrideWith(flowController),
+        preJoinFlowControllerProvider(_slug).overrideWith(
+          flowController ?? _DefaultFlow.new,
+        ),
         authControllerProvider.overrideWith(
           () => FakeAuthController(
             AuthState.authenticated(
@@ -665,9 +672,14 @@ void main() {
     },
   );
 
-  for (final minutesAfterStart in [0, 10, 21]) {
+  for (final (minutesAfterStart, waitMinutes) in [
+    (-10, 30),
+    (0, 20),
+    (10, 20),
+    (30, 20),
+  ]) {
     test(
-      'admission times out at scheduled start +20m when joining at +${minutesAfterStart}m',
+      'admission waits ${waitMinutes}m when joining at ${minutesAfterStart}m from start',
       () async {
         final async = FakeAsync();
         await runZoned(
@@ -696,20 +708,17 @@ void main() {
             await flow.requestJoin();
             await pumpEventQueue();
 
-            if (minutesAfterStart < 20) {
-              check(
-                container.read(preJoinFlowControllerProvider(_slug)).phase,
-              ).equals(PreJoinFlowPhase.pending);
-              async.elapse(
-                Duration(minutes: 20 - minutesAfterStart) -
-                    const Duration(milliseconds: 1),
-              );
-              check(
-                container.read(preJoinFlowControllerProvider(_slug)).phase,
-              ).equals(PreJoinFlowPhase.pending);
-              async.elapse(const Duration(milliseconds: 1));
-              await pumpEventQueue();
-            }
+            check(
+              container.read(preJoinFlowControllerProvider(_slug)).phase,
+            ).equals(PreJoinFlowPhase.pending);
+            async.elapse(
+              Duration(minutes: waitMinutes) - const Duration(milliseconds: 1),
+            );
+            check(
+              container.read(preJoinFlowControllerProvider(_slug)).phase,
+            ).equals(PreJoinFlowPhase.pending);
+            async.elapse(const Duration(milliseconds: 1));
+            await pumpEventQueue();
 
             check(
               container
@@ -737,6 +746,117 @@ void main() {
       },
     );
   }
+
+  test(
+    'returning participant can be admitted 30 minutes after start',
+    () async {
+      final async = FakeAsync();
+      await runZoned(
+        () async {
+          final clock = async.getClock(DateTime(2024, 1, 1, 0, 30));
+          _AdmissionFlow.transport = null;
+          _SuccessfulSessionController.activationCalls = 0;
+          final container = _container(
+            factory: _TrackFactory(),
+            response: const JoinResponse(
+              token: 'token',
+              isAlreadyPresent: false,
+            ),
+            sessionController: _SuccessfulSessionController.new,
+            keeperSlug: 'keeper',
+            sessionStart: DateTime(2024),
+            flowController: () => _AdmissionFlow(currentTime: clock.now),
+          );
+          addTearDown(container.dispose);
+          await _waitForMedia(container);
+          final flow = container.read(
+            preJoinFlowControllerProvider(_slug).notifier,
+          );
+
+          check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+          final transport = _AdmissionFlow.transport!;
+          check(transport.request).isNotNull();
+          transport.decide(true, isReturningParticipant: true);
+          await pumpEventQueue();
+
+          final state = container.read(preJoinFlowControllerProvider(_slug));
+          check(state.phase).equals(PreJoinFlowPhase.joined);
+          check(state.isReturningParticipant).isTrue();
+          check(_SuccessfulSessionController.activationCalls).equals(1);
+        },
+        zoneSpecification: ZoneSpecification(
+          createTimer: (self, parent, zone, duration, callback) {
+            if (duration >= const Duration(minutes: 1)) {
+              return async.run((_) => Timer(duration, callback));
+            }
+            return parent.createTimer(zone, duration, callback);
+          },
+        ),
+      );
+    },
+  );
+
+  test(
+    'expired admission preflight releases media without creating a room',
+    () async {
+      final async = FakeAsync();
+      await runZoned(
+        () async {
+          final clock = async.getClock(DateTime(2024));
+          var clockReads = 0;
+          final factory = _TrackFactory();
+          _AdmissionFlow.room = null;
+          _AdmissionFlow.transport = null;
+          _AdmissionFlow.connections = 0;
+          final container = _container(
+            factory: factory,
+            response: const JoinResponse(
+              token: 'token',
+              isAlreadyPresent: false,
+            ),
+            sessionController: _SuccessfulSessionController.new,
+            keeperSlug: 'keeper',
+            sessionStart: DateTime(2024),
+            flowController: () => _AdmissionFlow(
+              currentTime: () => clock.now().add(
+                Duration(minutes: clockReads++ == 0 ? 0 : 20),
+              ),
+            ),
+          );
+          addTearDown(container.dispose);
+          await _waitForMedia(container);
+          final flow = container.read(
+            preJoinFlowControllerProvider(_slug).notifier,
+          );
+
+          await flow.requestJoin();
+          await pumpEventQueue();
+
+          check(
+            container
+                .read(preJoinFlowControllerProvider(_slug))
+                .admissionStatus,
+          ).equals(AdmissionStatus.expired);
+          check(_AdmissionFlow.room).isNull();
+          check(_AdmissionFlow.transport).isNull();
+          check(_AdmissionFlow.connections).equals(0);
+          verify(factory.videoTracks.single.stop).called(1);
+          verify(factory.videoTracks.single.dispose).called(1);
+          verify(factory.audioTracks.single.stop).called(1);
+          verify(factory.audioTracks.single.dispose).called(1);
+          check(await flow.requestJoin()).equals(PreJoinJoinOutcome.ignored);
+        },
+        zoneSpecification: ZoneSpecification(
+          createTimer: (self, parent, zone, duration, callback) {
+            if (duration >= const Duration(minutes: 1)) {
+              return async.run((_) => Timer(duration, callback));
+            }
+            return parent.createTimer(zone, duration, callback);
+          },
+        ),
+      );
+    },
+  );
 
   test(
     'approval before the admission deadline is not interrupted by timeout',
@@ -860,11 +980,9 @@ void main() {
         preJoinFlowControllerProvider(_slug),
       );
       check(approvedState.sessionStartedAtAdmission).equals(true);
-      check(
-        approvedState
-            .copyWith(clearAdmissionStatus: true)
-            .sessionStartedAtAdmission,
-      ).isNull();
+      final clearedState = approvedState.copyWith(clearAdmissionStatus: true);
+      check(clearedState.isReturningParticipant).isFalse();
+      check(clearedState.sessionStartedAtAdmission).isNull();
       check(_AdmissionFlow.connections).equals(1);
       check(tokenRequests).equals(1);
       check(_SuccessfulSessionController.activationCalls).equals(1);

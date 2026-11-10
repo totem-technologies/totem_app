@@ -214,8 +214,7 @@ class _SessionAdmissionOverlayState
         channel: transport,
         keeperIdentity: _currentKeeperIdentity,
         isSessionStarted: () =>
-            ref.read(currentSessionStateProvider)?.roomState.status ==
-            RoomStatus.active,
+            ref.read(roomStatusProvider) == RoomStatus.active,
         sessionIdentity: widget.sessionSlug,
         rosterStore: restoredRoster,
         approvalRequired: ref.read(sessionAdmissionSettingsProvider),

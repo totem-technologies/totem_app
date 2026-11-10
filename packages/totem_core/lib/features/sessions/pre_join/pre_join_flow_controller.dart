@@ -100,7 +100,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       phase: PreJoinFlowPhase.joining,
       clearError: true,
       clearAdmissionStatus: true,
-      isReturningParticipant: false,
       keeperAvailability: AdmissionKeeperAvailability.checking,
     );
     _cancelRequested = false;
@@ -139,11 +138,15 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         if (name == null || name.isEmpty) {
           throw StateError('A signed-in user is required for admission');
         }
+        final requestedAt = now();
+        final waitingStart = requestedAt.isAfter(event.start)
+            ? requestedAt
+            : event.start;
         _admissionSetup = _startAdmission(
           response.token,
           keeper,
           name,
-          event.start.add(const Duration(minutes: 20)),
+          waitingStart.add(const Duration(minutes: 20)),
         );
         await _admissionSetup;
         if (!ref.mounted || _cancelRequested) return PreJoinJoinOutcome.ignored;
@@ -211,6 +214,16 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     DateTime deadline,
   ) async {
     final attempt = ++_admissionAttempt;
+    if (!now().isBefore(deadline)) {
+      state = state.copyWith(
+        phase: PreJoinFlowPhase.idle,
+        admissionStatus: AdmissionStatus.expired,
+      );
+      await ref
+          .read(preJoinMediaControllerProvider(sessionSlug).notifier)
+          .releaseForTerminalOutcome();
+      return;
+    }
     final room = createAdmissionRoom();
     _admissionRoom = room;
     final transport = createAdmissionTransport(room);
