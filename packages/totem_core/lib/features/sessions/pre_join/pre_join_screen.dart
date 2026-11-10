@@ -276,8 +276,11 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         : switch (flow.admissionStatus) {
             AdmissionStatus.denied => 'The Keeper was unable to admit you.',
             AdmissionStatus.ended => 'The Session has ended.',
-            _ =>
+            AdmissionStatus.expired =>
               'We’re sorry we couldn’t connect you to this session. Please return to the schedule to find another session.',
+            _ => throw StateError(
+              'Unexpected admission status: ${flow.admissionStatus}',
+            ),
           };
     return RoomBackground(
       status: RoomStatus.ended,
@@ -434,8 +437,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           : "We couldn't join the session. Please try again.";
     }
     final waitingMessage = switch (flow.keeperAvailability) {
-      AdmissionKeeperAvailability.absent =>
-        'Please check your camera and mic while you wait. Your Keeper will let you into the session soon. No one can see or hear you until you’re admitted.',
       AdmissionKeeperAvailability.unresponsive =>
         "The Keeper hasn't confirmed your request. Ask them to reconnect or update Totem, or leave and try again.",
       _ => null,

@@ -186,6 +186,79 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyScreenCapturePolicy();
     });
+
+    ref
+      ..listenManual(
+        currentSessionProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(
+        currentSessionEventProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(
+        resolveCurrentScreenProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(
+        connectionStateProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(roomStatusProvider, (_, _) => _syncAdmissionOrientation());
+    _syncAdmissionOrientation(rebuild: false);
+  }
+
+  @override
+  void didUpdateWidget(covariant VideoSessionScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncAdmissionOrientation(rebuild: false);
+  }
+
+  void _syncAdmissionOrientation({bool rebuild = true}) {
+    final connection = ref.read(connectionStateProvider);
+    final status = ref.read(roomStatusProvider);
+    final screen = ref.read(resolveCurrentScreenProvider);
+    final event = ref.read(currentSessionEventProvider);
+    var eligible = _admissionOrientationEligible;
+    var dismissed = _admissionOrientationDismissed;
+
+    if (eligible != null && connection != RoomConnectionState.connected) {
+      dismissed = true;
+    }
+    final waitingForAdmission =
+        widget.showAdmissionOrientation && !widget.admissionReady;
+    if (eligible == null &&
+        !waitingForAdmission &&
+        connection == RoomConnectionState.connected &&
+        ref.read(currentSessionProvider) != null &&
+        event != null &&
+        !event.ended &&
+        status != RoomStatus.ended &&
+        screen != null &&
+        screen != RoomScreen.disconnected &&
+        screen != RoomScreen.error) {
+      // Keeper entry-time status survives delayed rendering and tab suspension.
+      // Legacy approvals fall back to the first connected room status.
+      eligible =
+          widget.showAdmissionOrientation &&
+          !widget.isReturningParticipant &&
+          (widget.sessionStartedAtAdmission ?? status == RoomStatus.active);
+    }
+    if (eligible == _admissionOrientationEligible &&
+        dismissed == _admissionOrientationDismissed) {
+      return;
+    }
+
+    void update() {
+      _admissionOrientationEligible = eligible;
+      _admissionOrientationDismissed = dismissed;
+    }
+
+    if (rebuild) {
+      setState(update);
+    } else {
+      update();
+    }
   }
 
   void _showDeviceNotice(MediaKind kind) {
@@ -762,18 +835,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         !showingDisconnectedScreen;
     final readyForOrientation =
         admissionEstablished && currentRoomScreen != RoomScreen.loading;
-    if (_admissionOrientationEligible != null &&
-        connectionState != RoomConnectionState.connected) {
-      _admissionOrientationDismissed = true;
-    }
-    if (admissionEstablished) {
-      // Keeper entry-time status survives delayed rendering and tab suspension.
-      // Legacy approvals fall back to the first connected room status.
-      _admissionOrientationEligible ??=
-          widget.showAdmissionOrientation &&
-          !widget.isReturningParticipant &&
-          (widget.sessionStartedAtAdmission ?? roomStatus == RoomStatus.active);
-    }
+
     final showOrientation =
         readyForOrientation &&
         roomStatus == RoomStatus.active &&

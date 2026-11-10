@@ -737,7 +737,7 @@ void main() {
   });
 
   testWidgets(
-    'failed admission prevents starting and keeps confirmation open',
+    'failed admission keeps confirmation open and allows retry',
     (tester) async {
       setupAppConfig();
       silenceLogger();
@@ -761,6 +761,17 @@ void main() {
       await tester.pump();
       check(starts).equals(0);
       check(find.text('Admit all and start').evaluate()).length.equals(1);
+
+      harness.afterSend = null;
+      harness.sent.clear();
+      await tester.tap(find.text('Admit all and start'));
+      await tester.pump();
+      await tester.pumpAndSettle();
+      check(
+        harness.sent.whereType<AdmissionDecision>().where((d) => d.approved),
+      ).length.equals(1);
+      check(starts).equals(1);
+      check(find.text('Admit all and start').evaluate()).isEmpty();
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
       await tester.idle();
