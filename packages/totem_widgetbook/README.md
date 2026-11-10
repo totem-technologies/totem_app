@@ -47,7 +47,7 @@ The catalog has exactly two roots:
 ```
 Components/
   Buttons/     CircleIconButton, Button
-  Dialogs/     ConfirmationDialog, ErrorDialog
+  Dialogs/     ConfirmationDialog, ErrorDialog, UpdateAvailableDialog
   Feedback/    EmptyIndicator, ErrorScreen, InfoText, LoadingIndicator, LoadingScreen
   Navigation/  PageIndicator, SheetDragHandle
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
@@ -55,6 +55,7 @@ Components/
 Screens/
   auth                AuthFlow (18 states)
   session/:slug       PreJoinView (ready and waiting states using production views)
+                      SessionDisconnectedView (one story; args are the states)
   session/landscape   SessionLandscape
   spaces              SessionsScreen (4 states)
   spaces/event/:slug  SessionDetailsPage (4 states)

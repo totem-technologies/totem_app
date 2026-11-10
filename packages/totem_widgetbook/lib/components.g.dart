@@ -14,6 +14,7 @@ import 'package:totem_widgetbook/components/buttons/button.stories.dart' as _tot
 import 'package:totem_widgetbook/components/buttons/circle_icon_button.stories.dart' as _totem_widgetbook_components_buttons_circle_icon_button_stories;
 import 'package:totem_widgetbook/components/dialogs/confirmation_dialog.stories.dart' as _totem_widgetbook_components_dialogs_confirmation_dialog_stories;
 import 'package:totem_widgetbook/components/dialogs/error_dialog.stories.dart' as _totem_widgetbook_components_dialogs_error_dialog_stories;
+import 'package:totem_widgetbook/components/dialogs/update_available_dialog.stories.dart' as _totem_widgetbook_components_dialogs_update_available_dialog_stories;
 import 'package:totem_widgetbook/components/feedback/empty_indicator.stories.dart' as _totem_widgetbook_components_feedback_empty_indicator_stories;
 import 'package:totem_widgetbook/components/feedback/error_screen.stories.dart' as _totem_widgetbook_components_feedback_error_screen_stories;
 import 'package:totem_widgetbook/components/feedback/info_text.stories.dart' as _totem_widgetbook_components_feedback_info_text_stories;
@@ -28,6 +29,7 @@ import 'package:totem_widgetbook/components/sessions/session_waiting_queue_butto
 import 'package:totem_widgetbook/components/sessions/waiting_card.stories.dart' as _totem_widgetbook_components_sessions_waiting_card_stories;
 import 'package:totem_widgetbook/screens/auth.stories.dart' as _totem_widgetbook_screens_auth_stories;
 import 'package:totem_widgetbook/screens/session_details.stories.dart' as _totem_widgetbook_screens_session_details_stories;
+import 'package:totem_widgetbook/screens/session_disconnected.stories.dart' as _totem_widgetbook_screens_session_disconnected_stories;
 import 'package:totem_widgetbook/screens/session_entry.stories.dart' as _totem_widgetbook_screens_session_entry_stories;
 import 'package:totem_widgetbook/screens/session_landscape.stories.dart' as _totem_widgetbook_screens_session_landscape_stories;
 import 'package:totem_widgetbook/screens/sessions.stories.dart' as _totem_widgetbook_screens_sessions_stories;
@@ -40,6 +42,7 @@ final components = <_widgetbook.Component>[
   _totem_widgetbook_components_buttons_circle_icon_button_stories.CircleIconButtonComponent,
   _totem_widgetbook_components_dialogs_confirmation_dialog_stories.ConfirmationDialogComponent,
   _totem_widgetbook_components_dialogs_error_dialog_stories.ErrorDialogComponent,
+  _totem_widgetbook_components_dialogs_update_available_dialog_stories.UpdateAvailableDialogComponent,
   _totem_widgetbook_components_feedback_empty_indicator_stories.EmptyIndicatorComponent,
   _totem_widgetbook_components_feedback_error_screen_stories.ErrorScreenComponent,
   _totem_widgetbook_components_feedback_info_text_stories.InfoTextComponent,
@@ -54,6 +57,7 @@ final components = <_widgetbook.Component>[
   _totem_widgetbook_components_sessions_waiting_card_stories.JoinTransitionCardComponent,
   _totem_widgetbook_screens_auth_stories.AuthFlowComponent,
   _totem_widgetbook_screens_session_details_stories.SessionDetailsPageComponent,
+  _totem_widgetbook_screens_session_disconnected_stories.SessionDisconnectedViewComponent,
   _totem_widgetbook_screens_session_entry_stories.PreJoinViewComponent,
   _totem_widgetbook_screens_session_landscape_stories.SessionLandscapeComponent,
   _totem_widgetbook_screens_sessions_stories.SessionsScreenComponent,
