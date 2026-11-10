@@ -156,6 +156,8 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
   @override
   Widget build(BuildContext context) {
     ref
+      // Fast path: when the shared flag clears, pop this overlay host. The room
+      // screen also removes chat routes after the frame; either path is enough.
       ..listen(sessionChatOpenProvider, (previous, next) {
         if (next || widget.embedded || !mounted) return;
         final route = ModalRoute.of(context);
