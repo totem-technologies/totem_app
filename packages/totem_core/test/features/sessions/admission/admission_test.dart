@@ -32,6 +32,7 @@ KeeperAdmissionController _keeperAdmissionController({
   String? keeperGeneration,
   KeeperAdmissionRosterStore? rosterStore,
   bool approvalRequired = true,
+  bool Function()? isSessionStarted,
   Set<String> declinedIdentities = const {},
   DateTime Function()? now,
   String Function()? newId,
@@ -42,6 +43,7 @@ KeeperAdmissionController _keeperAdmissionController({
   keeperGeneration: keeperGeneration,
   rosterStore: rosterStore,
   approvalRequired: approvalRequired,
+  isSessionStarted: isSessionStarted,
   declinedIdentities: declinedIdentities,
   now: now ?? _testNow,
   newId: newId,
@@ -233,6 +235,72 @@ void main() {
     }
   });
 
+  test('session start metadata is optional and round trips', () {
+    for (final started in <bool?>[null, false, true]) {
+      final decision = AdmissionDecision(
+        id: 'request',
+        senderIdentity: 'keeper',
+        recipientIdentity: 'guest',
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
+        approved: true,
+        sessionStartedAtAdmission: started,
+      );
+      final bytes = AdmissionProtocol.encode(decision);
+      final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+      check(payload.containsKey('sessionStarted')).equals(started != null);
+      if (started != null) check(payload['sessionStarted']).equals(started);
+      final decoded =
+          AdmissionProtocol.decode(
+                bytes,
+                senderIdentity: 'keeper',
+                now: _fixedNow,
+              )!
+              as AdmissionDecision;
+      check(decoded.sessionStartedAtAdmission).equals(started);
+    }
+  });
+
+  for (final startedAtApproval in [false, true]) {
+    test(
+      'keeper samples session start at approval: $startedAtApproval',
+      () async {
+        final guestChannel = _Channel('guest')..present.add('keeper');
+        final keeperChannel = _Channel('keeper')..present.add('guest');
+        guestChannel.peer = keeperChannel;
+        keeperChannel.peer = guestChannel;
+        var started = !startedAtApproval;
+        var reads = 0;
+        final guest = _pendingAdmissionController(
+          channel: guestChannel,
+          keeperIdentity: () => 'keeper',
+        );
+        final keeper = _keeperAdmissionController(
+          channel: keeperChannel,
+          keeperIdentity: () => 'keeper',
+          isSessionStarted: () {
+            reads++;
+            return started;
+          },
+        );
+        addTearDown(() async {
+          await guest.dispose();
+          await keeper.dispose();
+          await guestChannel.dispose();
+          await keeperChannel.dispose();
+        });
+        final request = await guest.requestAdmission(displayName: 'Guest');
+        await pumpEventQueue();
+        check(reads).equals(0);
+        started = startedAtApproval;
+        await keeper.approve(request.id, 'guest');
+        await pumpEventQueue();
+        check(reads).equals(1);
+        check(guest.status).equals(AdmissionStatus.approved);
+        check(guest.sessionStartedAtAdmission).equals(startedAtApproval);
+      },
+    );
+  }
+
   test(
     'pending admission only accepts returning metadata from a trusted approval',
     () async {
@@ -255,6 +323,7 @@ void main() {
           expiresAt: request.expiresAt,
           approved: true,
           isReturningParticipant: true,
+          sessionStartedAtAdmission: true,
         ),
         AdmissionDecision(
           id: 'other-request',
@@ -263,11 +332,13 @@ void main() {
           expiresAt: request.expiresAt,
           approved: true,
           isReturningParticipant: true,
+          sessionStartedAtAdmission: true,
         ),
       ]) {
         channel.controller.add(AdmissionPacketReceived(decision));
         check(guest.status).equals(AdmissionStatus.pending);
         check(guest.isReturningParticipant).isFalse();
+        check(guest.sessionStartedAtAdmission).isNull();
       }
       channel.controller.add(
         AdmissionPacketReceived(
@@ -278,14 +349,17 @@ void main() {
             expiresAt: request.expiresAt,
             approved: true,
             isReturningParticipant: true,
+            sessionStartedAtAdmission: true,
           ),
         ),
       );
       check(guest.status).equals(AdmissionStatus.approved);
       check(guest.isReturningParticipant).isTrue();
+      check(guest.sessionStartedAtAdmission).equals(true);
 
       final next = await guest.requestAdmission(displayName: 'Guest');
       check(guest.isReturningParticipant).isFalse();
+      check(guest.sessionStartedAtAdmission).isNull();
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionDecision(
@@ -295,11 +369,13 @@ void main() {
             expiresAt: next.expiresAt,
             approved: false,
             isReturningParticipant: true,
+            sessionStartedAtAdmission: true,
           ),
         ),
       );
       check(guest.status).equals(AdmissionStatus.denied);
       check(guest.isReturningParticipant).isFalse();
+      check(guest.sessionStartedAtAdmission).isNull();
     },
   );
 

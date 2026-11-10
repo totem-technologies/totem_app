@@ -49,6 +49,7 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
     this.showAdmissionOrientation = false,
     this.admissionReady = false,
     this.isReturningParticipant = false,
+    this.sessionStartedAtAdmission,
     this.now = DateTime.now,
     super.key,
   });
@@ -58,6 +59,7 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
   final bool showAdmissionOrientation;
   final bool admissionReady;
   final bool isReturningParticipant;
+  final bool? sessionStartedAtAdmission;
   final ValueGetter<DateTime> now;
 
   @override
@@ -754,21 +756,23 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     // shown to other participants.
     final waitingForAdmission =
         widget.showAdmissionOrientation && !widget.admissionReady;
-    final readyForOrientation =
+    final admissionEstablished =
         !waitingForAdmission &&
         connectionState == RoomConnectionState.connected &&
-        !showingDisconnectedScreen &&
-        currentRoomScreen != RoomScreen.loading;
+        !showingDisconnectedScreen;
+    final readyForOrientation =
+        admissionEstablished && currentRoomScreen != RoomScreen.loading;
     if (_admissionOrientationEligible != null &&
         connectionState != RoomConnectionState.connected) {
       _admissionOrientationDismissed = true;
     }
-    if (readyForOrientation) {
-      // Decide at entry, not when a session joined early starts later.
+    if (admissionEstablished) {
+      // Keeper entry-time status survives delayed rendering and tab suspension.
+      // Legacy approvals fall back to the first connected room status.
       _admissionOrientationEligible ??=
           widget.showAdmissionOrientation &&
           !widget.isReturningParticipant &&
-          roomStatus == RoomStatus.active;
+          (widget.sessionStartedAtAdmission ?? roomStatus == RoomStatus.active);
     }
     final showOrientation =
         readyForOrientation &&

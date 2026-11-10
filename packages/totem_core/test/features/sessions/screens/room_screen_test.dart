@@ -173,6 +173,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   bool showAdmissionOrientation = false,
   bool admissionReady = false,
   bool isReturningParticipant = false,
+  bool? sessionStartedAtAdmission,
   String? admissionPrompt,
   bool isCurrentUserKeeper = false,
   List<Object?> extraOverrides = const [],
@@ -265,6 +266,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
             showAdmissionOrientation: showAdmissionOrientation,
             admissionReady: admissionReady,
             isReturningParticipant: isReturningParticipant,
+            sessionStartedAtAdmission: sessionStartedAtAdmission,
             now: tester.binding.clock.now,
           ),
         ),
@@ -1163,6 +1165,181 @@ void main() {
         ).isEmpty();
       },
     );
+
+    testWidgets(
+      'joining before start while loading does not show orientation',
+      (tester) async {
+        addTearDown(() {
+          PaintingBinding.instance.imageCache.clearLiveImages();
+          PaintingBinding.instance.imageCache.clear();
+        });
+        final statusProvider =
+            NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>(
+              () => _RoomStatusOverrideNotifier(RoomStatus.waitingRoom),
+            );
+        final screenProvider =
+            NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+              () => _RoomScreenOverrideNotifier(RoomScreen.loading),
+            );
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.loading,
+          roomScreenProvider: screenProvider,
+          statusProvider: statusProvider,
+          showAdmissionOrientation: true,
+          admissionReady: true,
+        );
+        check(
+          tester.widgetList(find.byType(SessionOrientationNotice)),
+        ).isEmpty();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container.read(statusProvider.notifier).set(RoomStatus.active);
+        container.read(screenProvider.notifier).set(RoomScreen.listening);
+        await tester.pump();
+        check(
+          tester.widgetList(find.byType(SessionOrientationNotice)),
+        ).isEmpty();
+      },
+    );
+
+    testWidgets('admission before start stays ineligible across tab resume', (
+      tester,
+    ) async {
+      addTearDown(() {
+        if (tester.binding.lifecycleState == AppLifecycleState.hidden) {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.inactive,
+          );
+        }
+        if (tester.binding.lifecycleState == AppLifecycleState.inactive) {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+        }
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        PaintingBinding.instance.imageCache.clear();
+      });
+      final statusProvider =
+          NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>(
+            () => _RoomStatusOverrideNotifier(RoomStatus.active),
+          );
+      final screenProvider =
+          NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+            () => _RoomScreenOverrideNotifier(RoomScreen.loading),
+          );
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.loading,
+        roomScreenProvider: screenProvider,
+        statusProvider: statusProvider,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+        sessionStartedAtAdmission: false,
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container.read(statusProvider.notifier).set(RoomStatus.active);
+      container.read(screenProvider.notifier).set(RoomScreen.listening);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      check(
+        container.read(connectionStateProvider),
+      ).equals(RoomConnectionState.connected);
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+    });
+
+    testWidgets('returning participant sees no orientation on tab resume', (
+      tester,
+    ) async {
+      addTearDown(() {
+        if (tester.binding.lifecycleState == AppLifecycleState.hidden) {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.inactive,
+          );
+        }
+        if (tester.binding.lifecycleState == AppLifecycleState.inactive) {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+        }
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        PaintingBinding.instance.imageCache.clear();
+      });
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+        isReturningParticipant: true,
+        sessionStartedAtAdmission: true,
+      );
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      check(
+        container.read(connectionStateProvider),
+      ).equals(RoomConnectionState.connected);
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+    });
+
+    testWidgets('late admission survives initial waiting room fallback', (
+      tester,
+    ) async {
+      addTearDown(() {
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        PaintingBinding.instance.imageCache.clear();
+      });
+      final statusProvider =
+          NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>(
+            () => _RoomStatusOverrideNotifier(RoomStatus.waitingRoom),
+          );
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        statusProvider: statusProvider,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+        sessionStartedAtAdmission: true,
+      );
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container.read(statusProvider.notifier).set(RoomStatus.active);
+      await tester.pump();
+      check(
+        tester.widgetList(find.byType(SessionOrientationNotice)),
+      ).length.equals(1);
+      await tester.tap(find.text('Got it'));
+      await tester.pump();
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+    });
 
     testWidgets('orientation does not reappear after reconnecting', (
       tester,

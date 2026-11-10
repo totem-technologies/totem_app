@@ -554,6 +554,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
             flow.admissionStatus == AdmissionStatus.approved,
         admissionReady: flow.phase == PreJoinFlowPhase.joined,
         isReturningParticipant: flow.isReturningParticipant,
+        sessionStartedAtAdmission: flow.sessionStartedAtAdmission,
       ),
     );
   }

@@ -217,6 +217,9 @@ class _SessionAdmissionOverlayState
       final controller = KeeperAdmissionController(
         channel: transport,
         keeperIdentity: _currentKeeperIdentity,
+        isSessionStarted: () =>
+            ref.read(currentSessionStateProvider)?.roomState.status ==
+            RoomStatus.active,
         sessionIdentity: widget.sessionSlug,
         rosterStore: restoredRoster,
         approvalRequired: ref.read(sessionAdmissionSettingsProvider),

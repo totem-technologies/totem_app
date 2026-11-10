@@ -126,6 +126,7 @@ class PreJoinFlowState {
 
     this.admissionStatus,
     this.isReturningParticipant = false,
+    this.sessionStartedAtAdmission,
     this.keeperAvailability = AdmissionKeeperAvailability.checking,
     this.error,
   });
@@ -135,6 +136,7 @@ class PreJoinFlowState {
 
   final AdmissionStatus? admissionStatus;
   final bool isReturningParticipant;
+  final bool? sessionStartedAtAdmission;
   final AdmissionKeeperAvailability keeperAvailability;
   final Object? error;
 
@@ -146,6 +148,7 @@ class PreJoinFlowState {
     AdmissionStatus? admissionStatus,
     bool clearAdmissionStatus = false,
     bool? isReturningParticipant,
+    bool? sessionStartedAtAdmission,
     AdmissionKeeperAvailability? keeperAvailability,
     Object? error,
     bool clearError = false,
@@ -161,6 +164,9 @@ class PreJoinFlowState {
           : admissionStatus ?? this.admissionStatus,
       isReturningParticipant:
           isReturningParticipant ?? this.isReturningParticipant,
+      sessionStartedAtAdmission: clearAdmissionStatus
+          ? null
+          : sessionStartedAtAdmission ?? this.sessionStartedAtAdmission,
       keeperAvailability: keeperAvailability ?? this.keeperAvailability,
 
       error: clearError ? null : error ?? this.error,

@@ -49,6 +49,7 @@ class PendingAdmissionController {
   AdmissionRequest? _request;
   AdmissionCancel? _cancellation;
   bool _isReturningParticipant = false;
+  bool? _sessionStartedAtAdmission;
   AdmissionStatus _status;
   AdmissionKeeperAvailability _keeperAvailability =
       AdmissionKeeperAvailability.checking;
@@ -58,6 +59,7 @@ class PendingAdmissionController {
   AdmissionStatus get status => _status;
   AdmissionRequest? get request => _request;
   bool get isReturningParticipant => _isReturningParticipant;
+  bool? get sessionStartedAtAdmission => _sessionStartedAtAdmission;
   AdmissionKeeperAvailability get keeperAvailability => _keeperAvailability;
 
   Future<AdmissionRequest> requestAdmission({
@@ -98,6 +100,7 @@ class PendingAdmissionController {
     _expiration?.cancel();
     _cancellation = null;
     _isReturningParticipant = false;
+    _sessionStartedAtAdmission = null;
     final packet = AdmissionRequest(
       id: _newId(),
       senderIdentity: local,
@@ -189,6 +192,9 @@ class PendingAdmissionController {
         _expiration?.cancel();
         _isReturningParticipant =
             decision.approved && decision.isReturningParticipant;
+        _sessionStartedAtAdmission = decision.approved
+            ? decision.sessionStartedAtAdmission
+            : null;
         _setStatus(
           decision.approved ? AdmissionStatus.approved : AdmissionStatus.denied,
         );
@@ -341,6 +347,7 @@ class KeeperAdmissionController {
   KeeperAdmissionController({
     required this.channel,
     required this.keeperIdentity,
+    this.isSessionStarted,
     String? sessionIdentity,
     String? keeperGeneration,
     KeeperAdmissionRosterStore? rosterStore,
@@ -379,6 +386,7 @@ class KeeperAdmissionController {
 
   final AdmissionChannel channel;
   final String Function() keeperIdentity;
+  final bool Function()? isSessionStarted;
   final String _sessionIdentity;
   final KeeperAdmissionRosterStore? _rosterStore;
   final String _keeperGeneration;
@@ -878,6 +886,7 @@ class KeeperAdmissionController {
         expiresAt: request.expiresAt,
         approved: approved,
         isReturningParticipant: approved && _roster.contains(sender),
+        sessionStartedAtAdmission: approved ? isSessionStarted?.call() : null,
       );
       await channel.send(decision);
       if (_disposed ||

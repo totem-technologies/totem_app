@@ -373,7 +373,11 @@ class _AdmissionTransport extends LiveKitAdmissionTransport {
     }
   }
 
-  void decide(bool approved, {bool isReturningParticipant = false}) {
+  void decide(
+    bool approved, {
+    bool isReturningParticipant = false,
+    bool? sessionStartedAtAdmission,
+  }) {
     final packet = request!;
     eventsController.add(
       AdmissionPacketReceived(
@@ -384,6 +388,7 @@ class _AdmissionTransport extends LiveKitAdmissionTransport {
           expiresAt: packet.expiresAt,
           approved: approved,
           isReturningParticipant: isReturningParticipant,
+          sessionStartedAtAdmission: sessionStartedAtAdmission,
         ),
       ),
     );
@@ -840,13 +845,26 @@ void main() {
       ).equals(false);
 
       final room = _AdmissionFlow.room!;
-      _AdmissionFlow.transport!.decide(true, isReturningParticipant: true);
+      _AdmissionFlow.transport!.decide(
+        true,
+        isReturningParticipant: true,
+        sessionStartedAtAdmission: true,
+      );
       await pumpEventQueue();
       check(
         container
             .read(preJoinFlowControllerProvider(_slug))
             .isReturningParticipant,
       ).isTrue();
+      final approvedState = container.read(
+        preJoinFlowControllerProvider(_slug),
+      );
+      check(approvedState.sessionStartedAtAdmission).equals(true);
+      check(
+        approvedState
+            .copyWith(clearAdmissionStatus: true)
+            .sessionStartedAtAdmission,
+      ).isNull();
       check(_AdmissionFlow.connections).equals(1);
       check(tokenRequests).equals(1);
       check(_SuccessfulSessionController.activationCalls).equals(1);

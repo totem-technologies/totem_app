@@ -291,6 +291,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           phase: PreJoinFlowPhase.joining,
           admissionStatus: status,
           isReturningParticipant: admission.isReturningParticipant,
+          sessionStartedAtAdmission: admission.sessionStartedAtAdmission,
         );
         final connectedRoom = await _takeAdmissionRoom();
         if (connectedRoom == null) return;
