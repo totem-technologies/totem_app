@@ -13,7 +13,6 @@ part 'notification_permissions.g.dart';
 /// graph, so tree shaking couldn't remove it.
 // An interface, not a function, so the app can override the provider with
 // its Firebase implementation and tests with a fake.
-// ignore: one_member_abstracts
 abstract interface class NotificationPermissions {
   Future<void> request();
 }

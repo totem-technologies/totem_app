@@ -454,7 +454,7 @@ void main() {
     final startGate = Completer<bool>();
     await openStartConfirmation(tester, () async {
       starts++;
-      return startGate.future;
+      return await startGate.future;
     });
     await tester.tap(find.text('Admit all and start'));
     await tester.pump();

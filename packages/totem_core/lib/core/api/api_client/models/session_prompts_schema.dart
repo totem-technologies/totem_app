@@ -5,10 +5,7 @@ import 'session_prompt_schema.dart';
 
 @immutable
 final class SessionPromptsSchema {
-  const SessionPromptsSchema({
-    required this.revision,
-    required this.prompts,
-  });
+  const SessionPromptsSchema({required this.revision, required this.prompts});
 
   factory SessionPromptsSchema.fromJson(Map<String, dynamic> json) {
     return SessionPromptsSchema(

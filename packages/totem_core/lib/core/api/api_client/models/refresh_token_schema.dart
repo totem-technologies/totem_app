@@ -7,17 +7,13 @@ final class RefreshTokenSchema {
   const RefreshTokenSchema({required this.refreshToken});
 
   factory RefreshTokenSchema.fromJson(Map<String, dynamic> json) {
-    return RefreshTokenSchema(
-      refreshToken: json['refresh_token'] as String,
-    );
+    return RefreshTokenSchema(refreshToken: json['refresh_token'] as String);
   }
 
   final String refreshToken;
 
   Map<String, dynamic> toJson() {
-    return {
-      'refresh_token': refreshToken,
-    };
+    return {'refresh_token': refreshToken};
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -25,9 +21,7 @@ final class RefreshTokenSchema {
   }
 
   RefreshTokenSchema copyWith({String? refreshToken}) {
-    return RefreshTokenSchema(
-      refreshToken: refreshToken ?? this.refreshToken,
-    );
+    return RefreshTokenSchema(refreshToken: refreshToken ?? this.refreshToken);
   }
 
   @override

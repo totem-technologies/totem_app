@@ -18,9 +18,7 @@ final class ResolveConflictsSchema {
   final List<String> conflictingSessionSlugs;
 
   Map<String, dynamic> toJson() {
-    return {
-      'conflicting_session_slugs': conflictingSessionSlugs,
-    };
+    return {'conflicting_session_slugs': conflictingSessionSlugs};
   }
 
   static bool canParse(Map<String, dynamic> json) {

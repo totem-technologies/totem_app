@@ -390,9 +390,10 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           MediaKind.microphone => media.microphone.problem,
         },
       ),
-      turnOn: () async => mounted
-          ? ref.read(provider.notifier).turnOn(kind)
-          : const TurnOnSkipped(),
+      turnOn: () async {
+        if (mounted) return await ref.read(provider.notifier).turnOn(kind);
+        return const TurnOnSkipped();
+      },
     );
   }
 

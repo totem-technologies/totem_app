@@ -115,7 +115,7 @@ class SessionCuesService {
         }
       });
     });
-    return completer.future;
+    return await completer.future;
   }
 
   Future<void> playTotemReceivedCue() {

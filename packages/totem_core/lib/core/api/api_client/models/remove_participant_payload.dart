@@ -31,11 +31,7 @@ final class RemoveParticipantPayload {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'action': ?action,
-      'identity': identity,
-      'reason': reason.toJson(),
-    };
+    return {'action': ?action, 'identity': identity, 'reason': reason.toJson()};
   }
 
   static bool canParse(Map<String, dynamic> json) {

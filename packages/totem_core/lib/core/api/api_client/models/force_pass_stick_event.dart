@@ -9,9 +9,7 @@ final class ForcePassStickEvent {
   const ForcePassStickEvent({this.type});
 
   factory ForcePassStickEvent.fromJson(Map<String, dynamic> json) {
-    return ForcePassStickEvent(
-      type: json['type'] as String?,
-    );
+    return ForcePassStickEvent(type: json['type'] as String?);
   }
 
   final String? type;
@@ -22,9 +20,7 @@ final class ForcePassStickEvent {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': ?type,
-    };
+    return {'type': ?type};
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -32,9 +28,7 @@ final class ForcePassStickEvent {
   }
 
   ForcePassStickEvent copyWith({String? Function()? type}) {
-    return ForcePassStickEvent(
-      type: type != null ? type() : this.type,
-    );
+    return ForcePassStickEvent(type: type != null ? type() : this.type);
   }
 
   @override

@@ -7,9 +7,7 @@ final class WaitingRoomDetail {
   const WaitingRoomDetail({this.type});
 
   factory WaitingRoomDetail.fromJson(Map<String, dynamic> json) {
-    return WaitingRoomDetail(
-      type: json['type'] as String?,
-    );
+    return WaitingRoomDetail(type: json['type'] as String?);
   }
 
   final String? type;
@@ -20,9 +18,7 @@ final class WaitingRoomDetail {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': ?type,
-    };
+    return {'type': ?type};
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -30,9 +26,7 @@ final class WaitingRoomDetail {
   }
 
   WaitingRoomDetail copyWith({String? Function()? type}) {
-    return WaitingRoomDetail(
-      type: type != null ? type() : this.type,
-    );
+    return WaitingRoomDetail(type: type != null ? type() : this.type);
   }
 
   @override

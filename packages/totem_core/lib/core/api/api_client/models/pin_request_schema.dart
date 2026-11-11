@@ -4,10 +4,7 @@ import 'package:degenerate_runtime/degenerate_runtime.dart';
 
 @immutable
 final class PinRequestSchema {
-  const PinRequestSchema({
-    required this.email,
-    this.newsletterConsent,
-  });
+  const PinRequestSchema({required this.email, this.newsletterConsent});
 
   factory PinRequestSchema.fromJson(Map<String, dynamic> json) {
     return PinRequestSchema(
@@ -26,10 +23,7 @@ final class PinRequestSchema {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'email': email,
-      'newsletter_consent': ?newsletterConsent,
-    };
+    return {'email': email, 'newsletter_consent': ?newsletterConsent};
   }
 
   static bool canParse(Map<String, dynamic> json) {

@@ -5,10 +5,7 @@ import 'end_reason.dart';
 
 @immutable
 final class EndRoomEvent {
-  const EndRoomEvent({
-    required this.reason,
-    this.type,
-  });
+  const EndRoomEvent({required this.reason, this.type});
 
   factory EndRoomEvent.fromJson(Map<String, dynamic> json) {
     return EndRoomEvent(
@@ -27,20 +24,14 @@ final class EndRoomEvent {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': ?type,
-      'reason': reason.toJson(),
-    };
+    return {'type': ?type, 'reason': reason.toJson()};
   }
 
   static bool canParse(Map<String, dynamic> json) {
     return json.containsKey('reason');
   }
 
-  EndRoomEvent copyWith({
-    String? Function()? type,
-    EndReason? reason,
-  }) {
+  EndRoomEvent copyWith({String? Function()? type, EndReason? reason}) {
     return EndRoomEvent(
       type: type != null ? type() : this.type,
       reason: reason ?? this.reason,

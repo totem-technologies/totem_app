@@ -5,10 +5,7 @@ import 'blog_post_list_schema.dart';
 
 @immutable
 final class PagedBlogPostListSchema {
-  const PagedBlogPostListSchema({
-    required this.items,
-    required this.count,
-  });
+  const PagedBlogPostListSchema({required this.items, required this.count});
 
   factory PagedBlogPostListSchema.fromJson(Map<String, dynamic> json) {
     return PagedBlogPostListSchema(
@@ -24,10 +21,7 @@ final class PagedBlogPostListSchema {
   final int count;
 
   Map<String, dynamic> toJson() {
-    return {
-      'items': items.map((e) => e.toJson()).toList(),
-      'count': count,
-    };
+    return {'items': items.map((e) => e.toJson()).toList(), 'count': count};
   }
 
   static bool canParse(Map<String, dynamic> json) {

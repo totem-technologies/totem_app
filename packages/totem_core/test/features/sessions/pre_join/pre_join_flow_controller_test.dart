@@ -140,7 +140,7 @@ class _DelayedTrackFactory extends _TrackFactory {
   ) async {
     cameraStarted.complete();
     await cameraGate.future;
-    return super.createVideoTrack(cameraOptions);
+    return await super.createVideoTrack(cameraOptions);
   }
 }
 
@@ -419,7 +419,7 @@ class _AdmissionRoom extends Room {
   Future<bool> dispose() async {
     disposed = true;
     if (throwOnDispose) throw StateError('Admission room dispose failed');
-    return super.dispose();
+    return await super.dispose();
   }
 }
 

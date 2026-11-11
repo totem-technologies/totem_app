@@ -28,7 +28,7 @@ class _TestRoster extends KeeperAdmissionRoster {
   Future<KeeperAdmissionRosterStore> build(
     String sessionSlug,
     String keeperIdentity,
-  ) async => result;
+  ) async => await result;
 }
 
 class _ReorderTestHarness {

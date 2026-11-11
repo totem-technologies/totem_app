@@ -7,9 +7,7 @@ final class ActiveDetail {
   const ActiveDetail({this.type});
 
   factory ActiveDetail.fromJson(Map<String, dynamic> json) {
-    return ActiveDetail(
-      type: json['type'] as String?,
-    );
+    return ActiveDetail(type: json['type'] as String?);
   }
 
   final String? type;
@@ -20,9 +18,7 @@ final class ActiveDetail {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': ?type,
-    };
+    return {'type': ?type};
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -30,9 +26,7 @@ final class ActiveDetail {
   }
 
   ActiveDetail copyWith({String? Function()? type}) {
-    return ActiveDetail(
-      type: type != null ? type() : this.type,
-    );
+    return ActiveDetail(type: type != null ? type() : this.type);
   }
 
   @override
