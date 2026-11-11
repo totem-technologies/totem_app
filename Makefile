@@ -112,7 +112,7 @@ deploy-web-production: prepare-web env-prod
 	cd $(WEB_DIR) && bunx wrangler deploy --env production
 
 build-runner:
-	@echo "Running : for code generation..."
+	@echo "Running build_runner for code generation..."
 	cd $(CORE_DIR) && $(DART) run build_runner build --delete-conflicting-outputs
 	cd $(APP_DIR) && $(DART) run build_runner build --delete-conflicting-outputs
 # 	cd $(WEB_DIR) && dart run build_runner build --delete-conflicting-outputs
