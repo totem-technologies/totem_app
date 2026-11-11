@@ -1128,11 +1128,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         return const ReceiveTotemScreen();
       case RoomScreen.speaking:
       case RoomScreen.passing:
-        return Builder(
-          builder: (context) {
-            return SpeakingTurnScreen(session: session.session!);
-          },
-        );
+        return SpeakingTurnScreen(session: session.session!);
       case RoomScreen.listening:
         return ListeningTurnScreen(session: session.session!);
     }

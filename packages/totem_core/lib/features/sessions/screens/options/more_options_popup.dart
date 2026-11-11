@@ -686,7 +686,7 @@ class _AudioOutputTile extends ConsumerWidget {
         : null;
     final chooser = supportsOutputChooser
         ? MoreOptionsTile<void>(
-            title: 'Choose audio output',
+            title: 'Allow or choose audio output',
             icon: TotemIcons.speakerOn,
             onTap: onOutputChooserRequested,
           )
