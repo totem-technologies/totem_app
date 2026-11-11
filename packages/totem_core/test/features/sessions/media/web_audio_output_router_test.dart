@@ -237,7 +237,7 @@ class _FakeGateway implements WebAudioOutputGateway {
     audioOutputRequests++;
     if (!audioOutputsStarted.isCompleted) audioOutputsStarted.complete();
     final pendingAudioOutputs = this.pendingAudioOutputs;
-    return pendingAudioOutputs?.future ?? outputs;
+    return await (pendingAudioOutputs?.future ?? outputs);
   }
 
   @override

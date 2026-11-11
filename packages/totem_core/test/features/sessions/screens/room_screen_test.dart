@@ -228,9 +228,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
           (ref) =>
               statusProvider == null ? roomStatus : ref.watch(statusProvider),
         ),
-        isCurrentUserKeeperProvider.overrideWith(
-          (ref) => isCurrentUserKeeper,
-        ),
+        isCurrentUserKeeperProvider.overrideWith((ref) => isCurrentUserKeeper),
         currentSessionPromptProvider.overrideWith((ref) => admissionPrompt),
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
@@ -1434,9 +1432,7 @@ void main() {
 
     testWidgets(
       'docks the admission panel beside the room on a wide viewport',
-      (
-        tester,
-      ) async {
+      (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
@@ -1460,9 +1456,9 @@ void main() {
         check(
           tester.widgetList(find.byType(SessionAdmissionPanel)),
         ).length.equals(1);
-        check(tester.getSize(find.byType(DockedSessionSidePanel)).width).equals(
-          sessionSidePanelWidth,
-        );
+        check(
+          tester.getSize(find.byType(DockedSessionSidePanel)).width,
+        ).equals(sessionSidePanelWidth);
       },
     );
 

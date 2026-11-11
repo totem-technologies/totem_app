@@ -222,11 +222,7 @@ class _CountingRoom implements Room {
 }
 
 class _RemoteParticipantWithPublications extends MockRemoteParticipant {
-  _RemoteParticipantWithPublications(
-    super.id,
-    super.name,
-    this.publications,
-  );
+  _RemoteParticipantWithPublications(super.id, super.name, this.publications);
 
   final List<RemoteTrackPublication<RemoteTrack>> publications;
 
@@ -1159,9 +1155,9 @@ void main() {
           var pollStarted = false;
           final container = ProviderContainer(
             overrides: [
-              sessionProvider(eventSlug).overrideWithValue(
-                AsyncData(_createSessionEvent(eventSlug)),
-              ),
+              sessionProvider(
+                eventSlug,
+              ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
               roomStateProvider(eventSlug).overrideWith((_) {
                 pollStarted = true;
                 return poll.future;
@@ -1831,13 +1827,10 @@ void main() {
             sessionProvider(
               eventSlug,
             ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
-            roomStateProvider(
-              eventSlug,
-            ).overrideWith((_) async => roomState),
-            roomStateProvider(
-              eventSlug,
-              attemptReconcile: true,
-            ).overrideWith((_) async {
+            roomStateProvider(eventSlug).overrideWith((_) async => roomState),
+            roomStateProvider(eventSlug, attemptReconcile: true).overrideWith((
+              _,
+            ) async {
               reconcilePolls++;
               return roomState;
             }),
@@ -2062,9 +2055,7 @@ void main() {
           addTearDown(sub.close);
 
           final controller =
-              container.read(
-                    sessionControllerProvider(options).notifier,
-                  )
+              container.read(sessionControllerProvider(options).notifier)
                   as _DelayedInitializeSessionController;
           final localParticipant = MockLocalParticipant();
           when(

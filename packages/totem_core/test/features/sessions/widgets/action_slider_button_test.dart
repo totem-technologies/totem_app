@@ -233,54 +233,53 @@ void main() {
       check(calls).equals(1);
     });
 
-    autoSizeTest(
-      'keeps the app button label unless a label style is given',
-      (tester) async {
-        final theme = AppTheme.lightTheme;
-        const override = TextStyle(fontSize: 14, fontWeight: FontWeight.w500);
-        // Join and other sliders keep the ElevatedButton label; only the
-        // docked transition cards pass a smaller one.
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: theme,
-            home: Scaffold(
-              body: Center(
-                child: SizedBox(
-                  width: 320,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ActionSlider(
-                        text: 'Default',
-                        onActionCompleted: () async => true,
-                      ),
-                      ActionSlider(
-                        text: 'Override',
-                        labelStyle: override,
-                        onActionCompleted: () async => true,
-                      ),
-                    ],
-                  ),
+    autoSizeTest('keeps the app button label unless a label style is given', (
+      tester,
+    ) async {
+      final theme = AppTheme.lightTheme;
+      const override = TextStyle(fontSize: 14, fontWeight: FontWeight.w500);
+      // Join and other sliders keep the ElevatedButton label; only the
+      // docked transition cards pass a smaller one.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 320,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ActionSlider(
+                      text: 'Default',
+                      onActionCompleted: () async => true,
+                    ),
+                    ActionSlider(
+                      text: 'Override',
+                      labelStyle: override,
+                      onActionCompleted: () async => true,
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-        );
+        ),
+      );
 
-        TextStyle? labelOf(String text) => tester
-            .widget<AutoSizeText>(find.widgetWithText(AutoSizeText, text))
-            .style;
+      TextStyle? labelOf(String text) => tester
+          .widget<AutoSizeText>(find.widgetWithText(AutoSizeText, text))
+          .style;
 
-        final buttonLabel = theme.elevatedButtonTheme.style?.textStyle?.resolve(
-          {},
-        );
-        check(labelOf('Default')?.fontSize).equals(buttonLabel?.fontSize);
-        check(labelOf('Default')?.fontWeight).equals(buttonLabel?.fontWeight);
-        check(labelOf('Override')?.fontSize).equals(14);
-        check(labelOf('Override')?.fontWeight).equals(FontWeight.w500);
-        check(labelOf('Override')?.color).equals(AppTheme.white);
-      },
-    );
+      final buttonLabel = theme.elevatedButtonTheme.style?.textStyle?.resolve(
+        {},
+      );
+      check(labelOf('Default')?.fontSize).equals(buttonLabel?.fontSize);
+      check(labelOf('Default')?.fontWeight).equals(buttonLabel?.fontWeight);
+      check(labelOf('Override')?.fontSize).equals(14);
+      check(labelOf('Override')?.fontWeight).equals(FontWeight.w500);
+      check(labelOf('Override')?.color).equals(AppTheme.white);
+    });
 
     autoSizeTest('reflects external loading state', (tester) async {
       await pumpTestWidget(

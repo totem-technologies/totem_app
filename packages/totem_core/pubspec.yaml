@@ -34,7 +34,7 @@ dependencies:
   degenerate_runtime: ^0.5.0
 
   # Messaging
-  flutter_local_notifications: ^22.2.0
+  flutter_local_notifications: ^23.0.1
   posthog_flutter: ^5.25.1
   intl: ^0.20.2
   sentry_flutter: ^10.0.0
@@ -56,7 +56,7 @@ dependencies:
   audio_session: ^0.2.1
   audioplayers: ^6.7.0
   in_app_review: ^2.0.11
-  battery_plus: ^7.0.0
+  battery_plus: ^7.1.2
   permission_handler: ^13.0.0
   # 1.5.2+ adds Swift Package Manager support. Its Android build changes
   # broke some setups (issues #67 and #74); they build here with AGP 9 and
@@ -71,7 +71,7 @@ dependencies:
   flutter_html: ^3.0.0
   # flutter_native_splash: ^2.4.6
   flutter_boring_avatars: ^2.1.0
-  flutter_svg: ^2.2.4
+  flutter_svg: ^2.3.4
   flutter_confetti: ^0.9.0
   shimmer: ^4.0.0
   collection: ^1.19.1
@@ -93,7 +93,7 @@ dev_dependencies:
 
   # Linting
   flutter_lints: ^6.0.0
-  very_good_analysis: ^10.3.0
+  very_good_analysis: ^11.0.0
   riverpod_lint: ^3.1.4
 
   # Generators

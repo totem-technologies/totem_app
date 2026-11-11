@@ -1,4 +1,4 @@
-.PHONY: *
+.PHONY: clean env-dev env-staging env-prod setup doctor prepare-native prepare-web prepare-ios run run-ios run-chrome run-web build-web-release serve-web deploy-web-staging deploy-web-production build-runner build-runner-watch install test test-native test-web test-benchmark benchmark-build benchmark-serve benchmark widgetbook widgetbook-gen widgetbook-build test-widgetbook test-app test-core test-scripts lint lint-native lint-web format lint-changed test-changed generate_api_models githooks flutterfire release
 
 APP_DIR := packages/totem_app
 CORE_DIR := packages/totem_core
@@ -6,11 +6,8 @@ WEB_DIR := packages/totem_web
 BENCHMARK_DIR := packages/totem_benchmark
 WIDGETBOOK_DIR := packages/totem_widgetbook
 WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
-NATIVE_FLUTTER ?= fvm flutter
-NATIVE_DART ?= fvm dart
-WEB_FLUTTER ?= $(NATIVE_FLUTTER)
-WEB_DART ?= $(NATIVE_DART)
-IOS_FLUTTER ?= fvm spawn 3.44.9
+FLUTTER ?= flutter
+DART ?= dart
 # CI resolves once with its selected SDK before invoking lint/test targets.
 PREPARE_PUB ?= true
 
@@ -22,51 +19,58 @@ DART_FILES = git ls-files -z --cached --others --exclude-standard -- '*.dart' ':
 
 clean:
 	@echo "Cleaning build artifacts..."
-	cd $(CORE_DIR) && $(NATIVE_FLUTTER) clean
-	cd $(APP_DIR) && $(NATIVE_FLUTTER) clean
+	cd $(CORE_DIR) && $(FLUTTER) clean
+	cd $(APP_DIR) && $(FLUTTER) clean
 	rm -rf $(APP_DIR)/build/
 	rm -rf $(APP_DIR)/.dart_tool/build/
-	rm -rf ~/.gradle/caches/*
+
 	rm -rf $(APP_DIR)/ios/.symlinks
 	rm -rf $(APP_DIR)/ios/Flutter/Flutter.framework
 	rm -rf $(APP_DIR)/ios/Flutter/App.framework
 # 	rm -rf ~/Library/Developer/Xcode/DerivedData/*
-	cd $(WEB_DIR) && $(WEB_FLUTTER) clean
+	cd $(WEB_DIR) && $(FLUTTER) clean
 
 # Compose packages/*/.env from the layered sources in config/ for a flavor.
 # This is the single source of truth for runtime config; see config/README.md.
 # A deploy overwrites .env with the deployed flavor, so run `make env-dev` to
 # get back to your local development config.
 env-dev:
-	$(NATIVE_DART) scripts/setup_env.dart development
+	$(DART) scripts/setup_env.dart development
 
 env-staging:
-	$(NATIVE_DART) scripts/setup_env.dart staging
+	$(DART) scripts/setup_env.dart staging
 
 env-prod:
-	$(NATIVE_DART) scripts/setup_env.dart production
+	$(DART) scripts/setup_env.dart production
 
-# One lockfile; each SDK may resolve its compatible dependencies without a clean.
+setup:
+	$(DART) scripts/sdk_management.dart setup '$(FLUTTER)'
+	$(FLUTTER) pub get
+
+doctor:
+	$(DART) scripts/sdk_management.dart doctor '$(FLUTTER)'
+
+# Resolve dependencies using the selected Flutter SDK.
 prepare-native:
 ifeq ($(PREPARE_PUB),true)
-	$(NATIVE_FLUTTER) pub get
+	$(FLUTTER) pub get
 endif
 
 prepare-web:
 ifeq ($(PREPARE_PUB),true)
-	$(WEB_FLUTTER) pub get
+	$(FLUTTER) pub get
 endif
 
 prepare-ios:
-	$(IOS_FLUTTER) pub get
+	$(FLUTTER) pub get
 
-run: prepare-native env-dev
+run: prepare-native env-staging
 	@echo "Running app..."
-	cd $(APP_DIR) && $(NATIVE_FLUTTER) run
+	cd $(APP_DIR) && $(FLUTTER) run
 
 # Use RUN_ARGS='-d <ios-device-id>' to select an iOS device.
-run-ios: prepare-ios env-dev
-	cd $(APP_DIR) && $(IOS_FLUTTER) run $(RUN_ARGS)
+run-ios: prepare-ios env-staging
+	cd $(APP_DIR) && $(FLUTTER) run $(RUN_ARGS)
 
 # ASSET_BASE is empty in dev: the splash assets in web/index.html use the
 # {{ASSET_BASE}} placeholder, so define it (to "") here or the token leaks into
@@ -74,48 +78,48 @@ run-ios: prepare-ios env-dev
 # against the dev server's "/" base href.
 run-chrome: prepare-web env-dev
 	@echo "Running app in Chrome..."
-	cd $(WEB_DIR) && $(WEB_FLUTTER) run -d chrome $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
+	cd $(WEB_DIR) && $(FLUTTER) run -d chrome $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
 
 run-web: prepare-web env-dev
 	@echo "Running app in Web Server..."
-	cd $(WEB_DIR) && $(WEB_FLUTTER) run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
+	cd $(WEB_DIR) && $(FLUTTER) run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --wasm --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
 
 # Build the web app the way it deploys: mounted at /room/, assets fetched from
 # a separate origin (here the local serve-web "CDN" on :5173). The `development`
 # flavor maps to that local CDN and composes the development .env.
 build-web-release: prepare-web env-dev
 	@echo "Building web app..."
-	FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
+	$(DART) scripts/web_build.dart
 	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
 
 # Serve the built bundle with CORS headers so an HTML document on another origin
 # (e.g. Django at :8000) can fetch these assets via ASSET_BASE. Plain
 # `python3 -m http.server` can't set headers, so use the helper script.
 serve-web:
-	$(NATIVE_DART) scripts/serve_web.dart 5173 $(WEB_DIR)/build/web
+	$(DART) scripts/serve_web.dart 5173 $(WEB_DIR)/build/web
 
 # Build with the staging worker as ASSET_BASE and deploy it to Cloudflare.
 # Requires wrangler auth (bunx wrangler login, or CLOUDFLARE_API_TOKEN +
 # CLOUDFLARE_ACCOUNT_ID).
 deploy-web-staging: prepare-web env-staging
 	@echo "Building web app (staging)"
-	FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
+	$(DART) scripts/web_build.dart
 	cd $(WEB_DIR) && bunx wrangler deploy --env staging
 
 deploy-web-production: prepare-web env-prod
 	@echo "Building web app (production)"
-	FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
+	$(DART) scripts/web_build.dart
 	cd $(WEB_DIR) && bunx wrangler deploy --env production
 
 build-runner:
 	@echo "Running build_runner for code generation..."
-	cd $(CORE_DIR) && $(NATIVE_DART) run build_runner build --delete-conflicting-outputs
-	cd $(APP_DIR) && $(NATIVE_DART) run build_runner build --delete-conflicting-outputs
+	cd $(CORE_DIR) && $(DART) run build_runner build --delete-conflicting-outputs
+	cd $(APP_DIR) && $(DART) run build_runner build --delete-conflicting-outputs
 # 	cd $(WEB_DIR) && dart run build_runner build --delete-conflicting-outputs
 
 build-runner-watch:
 	@echo "Running build_runner in watch mode..."
-	cd $(APP_DIR) && $(NATIVE_DART) run build_runner watch --delete-conflicting-outputs
+	cd $(APP_DIR) && $(DART) run build_runner watch --delete-conflicting-outputs
 
 install: prepare-native
 
@@ -128,10 +132,10 @@ test-native: prepare-native
 
 test-web: prepare-web
 	@echo "Running web tests..."
-	cd $(WEB_DIR) && $(WEB_FLUTTER) test --no-pub $(TEST_ARGS) --platform=chrome
+	cd $(WEB_DIR) && $(FLUTTER) test --no-pub $(TEST_ARGS) --platform=chrome
 
 test-benchmark:
-	cd $(BENCHMARK_DIR) && $(NATIVE_FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
+	cd $(BENCHMARK_DIR) && $(FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
 	node --test scripts/benchmark/metrics.test.mjs
 
 benchmark-build:
@@ -146,58 +150,58 @@ benchmark:
 # Widgetbook catalog of totem_core widgets. Run `make widgetbook-gen` after
 # adding or changing a *.stories.dart file to regenerate the story code.
 widgetbook:
-	cd $(WIDGETBOOK_DIR) && $(NATIVE_FLUTTER) run -d chrome --web-port=5174
+	cd $(WIDGETBOOK_DIR) && $(FLUTTER) run -d chrome --web-port=5174
 
 widgetbook-gen:
-	cd $(WIDGETBOOK_DIR) && $(NATIVE_DART) run build_runner build
+	cd $(WIDGETBOOK_DIR) && $(DART) run build_runner build
 
 widgetbook-build:
-	cd $(WIDGETBOOK_DIR) && $(NATIVE_FLUTTER) build web --release
+	cd $(WIDGETBOOK_DIR) && $(FLUTTER) build web --release
 
 test-widgetbook:
-	cd $(WIDGETBOOK_DIR) && $(NATIVE_FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
+	cd $(WIDGETBOOK_DIR) && $(FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
 
 test-app:
 	@echo "Running app tests..."
-	cd $(APP_DIR) && $(NATIVE_FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
+	cd $(APP_DIR) && $(FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
 
 test-core:
 	@echo "Running core tests..."
-	cd $(CORE_DIR) && $(NATIVE_FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
+	cd $(CORE_DIR) && $(FLUTTER) test $(TEST_PUB) $(TEST_ARGS)
 
 test-scripts:
-	$(NATIVE_FLUTTER) test scripts/test $(TEST_PUB) $(TEST_ARGS)
+	$(FLUTTER) test scripts/test $(TEST_PUB) $(TEST_ARGS)
 
 lint: prepare-native
 	$(MAKE) lint-native lint-web PREPARE_PUB=false
 
 lint-native: prepare-native
 	@echo "Running native/shared linter..."
-	$(NATIVE_DART) run scripts/check_media_boundary.dart
-	$(NATIVE_DART) run scripts/check_omittable_interpolation.dart
-	cd $(APP_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
-	cd $(CORE_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
-	cd $(BENCHMARK_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
-	cd $(WIDGETBOOK_DIR) && $(NATIVE_FLUTTER) analyze --no-pub
+	$(DART) run scripts/check_media_boundary.dart
+	$(DART) run scripts/check_omittable_interpolation.dart
+	cd $(APP_DIR) && $(FLUTTER) analyze --no-pub
+	cd $(CORE_DIR) && $(FLUTTER) analyze --no-pub
+	cd $(BENCHMARK_DIR) && $(FLUTTER) analyze --no-pub
+	cd $(WIDGETBOOK_DIR) && $(FLUTTER) analyze --no-pub
 
 lint-web: prepare-web
 	@echo "Running Web linter..."
-	cd $(WEB_DIR) && $(WEB_FLUTTER) analyze --no-pub
+	cd $(WEB_DIR) && $(FLUTTER) analyze --no-pub
 
 format:
 	@echo "Formatting code..."
 	# Skip generated output and dependency caches even if they are accidentally tracked.
-	$(DART_FILES) | xargs -0 $(NATIVE_DART) format
+	$(DART_FILES) | xargs -0 $(DART) format
 
 lint-changed:
-	fvm dart scripts/git_checks.dart pre-commit
+	$(DART) scripts/git_checks.dart pre-commit
 
 test-changed:
-	$(NATIVE_DART) scripts/git_checks.dart changed
+	$(DART) scripts/git_checks.dart changed
 
 generate_api_models:
-	cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | $(NATIVE_DART) run degenerate -i - -o lib/core/api --verbose --clean; $(NATIVE_DART) format .
-	# cd $(CORE_DIR) && curl -L https://totem.org/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose --clean; dart format .
+	# cd $(CORE_DIR) && curl -L https://totem.local/api/mobile/openapi.json | $(DART) run degenerate -i - -o lib/core/api --verbose --clean; $(DART) format .
+	cd $(CORE_DIR) && curl -L https://totem.org/api/mobile/openapi.json | dart run degenerate -i - -o lib/core/api --verbose --clean; dart format .
 
 githooks:
 	@echo "Setting up git hooks..."
@@ -205,7 +209,7 @@ githooks:
 	@echo "Git hooks installed successfully!"
 
 flutterfire:
-	$(NATIVE_DART) pub global activate flutterfire_cli
+	$(DART) pub global activate flutterfire_cli
 	@command -v flutterfire >/dev/null 2>&1 || { echo "Error: flutterfire CLI not found. Install with: dart pub global activate flutterfire_cli"; exit 1; }
 	@test -d $(APP_DIR) || { echo "Error: $(APP_DIR) not found."; exit 1; }
 	@test -d $(WEB_DIR) || { echo "Error: $(WEB_DIR) not found."; exit 1; }
@@ -216,4 +220,4 @@ flutterfire:
 
 release:
 	@echo "Creating release..."
-	$(NATIVE_DART) scripts/release.dart
+	$(DART) scripts/release.dart

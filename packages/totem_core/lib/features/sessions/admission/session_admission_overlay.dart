@@ -335,9 +335,7 @@ class _SessionAdmissionOverlayState
       _admittedIdentities.update(roster);
       ref
           .read(currentSessionProvider)
-          ?.updateAdmittedMediaRecipients(
-            roster.toSet(),
-          );
+          ?.updateAdmittedMediaRecipients(roster.toSet());
     }
 
     if (WidgetsBinding.instance.schedulerPhase == SchedulerPhase.idle) {

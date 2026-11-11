@@ -124,7 +124,7 @@ class _UserFeedbackState extends ConsumerState<UserFeedback> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         if (_feedbackController.text.isNotEmpty) {
-          return showDialog(
+          return await showDialog(
             context: context,
             builder: (context) {
               return ConfirmationDialog(

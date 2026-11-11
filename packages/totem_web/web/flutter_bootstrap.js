@@ -12,8 +12,8 @@ window.totemEntrypointBaseUrl = new URL(
 const config = {
   wasmAllowList: {
     blink: true,
-    gecko: false,
-    webkit: false,
+    gecko: true,
+    webkit: true,
     unknown: false,
   },
   // assetBase only affects the engine's asset fetches (assets/, canvaskit);

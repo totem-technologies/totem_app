@@ -57,20 +57,17 @@ void main() {
   });
 
   for (final enabled in [true, false]) {
-    test(
-      'explicit $enabled survives a token refresh',
-      () {
-        check(container.read(sessionAdmissionSettingsProvider)).isTrue();
-        container
-            .read(sessionAdmissionSettingsProvider.notifier)
-            .setEnabled(enabled);
-        check(container.read(sessionAdmissionSettingsProvider)).equals(enabled);
-        container.read(_testSessionScopeProvider.notifier).scope = _options(
-          'session-a',
-          'new-token',
-        );
-        check(container.read(sessionAdmissionSettingsProvider)).equals(enabled);
-      },
-    );
+    test('explicit $enabled survives a token refresh', () {
+      check(container.read(sessionAdmissionSettingsProvider)).isTrue();
+      container
+          .read(sessionAdmissionSettingsProvider.notifier)
+          .setEnabled(enabled);
+      check(container.read(sessionAdmissionSettingsProvider)).equals(enabled);
+      container.read(_testSessionScopeProvider.notifier).scope = _options(
+        'session-a',
+        'new-token',
+      );
+      check(container.read(sessionAdmissionSettingsProvider)).equals(enabled);
+    });
   }
 }

@@ -1,8 +1,26 @@
 [
   {
     "label": "Set up new worktree",
-    "command": "make env-dev && cp \"$ZED_MAIN_GIT_WORKTREE/packages/totem_app/lib/firebase_options.dart\" \"$ZED_WORKTREE_ROOT/packages/totem_app/lib/\"",
+    "command": "if [ ! -e packages/totem_app/.env ] && [ ! -L packages/totem_app/.env ] && [ ! -e packages/totem_web/.env ] && [ ! -L packages/totem_web/.env ]; then make env-dev || exit; else echo 'Existing .env found; skipping environment generation.'; fi; if [ -e packages/totem_app/lib/firebase_options.dart ] || [ -L packages/totem_app/lib/firebase_options.dart ]; then echo 'Firebase options already exist; skipping copy.'; elif [ -f \"$ZED_MAIN_GIT_WORKTREE/packages/totem_app/lib/firebase_options.dart\" ]; then cp -n \"$ZED_MAIN_GIT_WORKTREE/packages/totem_app/lib/firebase_options.dart\" packages/totem_app/lib/firebase_options.dart; else echo 'Firebase options not found in main worktree; configure Firebase separately.'; fi; if [ -e packages/totem_app/ios/Runner/GoogleService-Info.plist ] || [ -L packages/totem_app/ios/Runner/GoogleService-Info.plist ]; then echo 'GoogleService-Info.plist already exists; skipping copy.'; elif [ -f \"$ZED_MAIN_GIT_WORKTREE/packages/totem_app/ios/Runner/GoogleService-Info.plist\" ]; then cp -n \"$ZED_MAIN_GIT_WORKTREE/packages/totem_app/ios/Runner/GoogleService-Info.plist\" packages/totem_app/ios/Runner/GoogleService-Info.plist; else echo 'GoogleService-Info.plist not found in main worktree; configure Firebase separately.'; fi; if [ -e packages/totem_app/android/app/google-services.json ] || [ -L packages/totem_app/android/app/google-services.json ]; then echo 'google-services.json already exists; skipping copy.'; elif [ -f \"$ZED_MAIN_GIT_WORKTREE/packages/totem_app/android/app/google-services.json\" ]; then cp -n \"$ZED_MAIN_GIT_WORKTREE/packages/totem_app/android/app/google-services.json\" packages/totem_app/android/app/google-services.json; else echo 'google-services.json not found in main worktree; configure Firebase separately.'; fi",
     "cwd": "$ZED_WORKTREE_ROOT",
     "hooks": ["create_worktree"]
-  }
+  },
+  { "label": "Setup", "command": "flutter pub get", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Doctor", "command": "flutter doctor", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Run iOS", "command": "make run-ios", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Run Android", "command": "make run", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Run web", "command": "make run-chrome", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Run Widgetbook", "command": "make widgetbook", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Format workspace", "command": "make format", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Format current file", "command": "dart format", "args": ["$ZED_FILE"], "cwd": "$ZED_WORKTREE_ROOT", "save": "current" },
+  { "label": "Lint workspace", "command": "make lint", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Lint changed (staged)", "command": "make lint-changed", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Analyze current file", "command": "dart analyze", "args": ["$ZED_FILE"], "cwd": "$ZED_WORKTREE_ROOT", "save": "current" },
+  { "label": "Test workspace", "command": "make test", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Test changed packages", "command": "make test-changed", "cwd": "$ZED_WORKTREE_ROOT" },
+  { "label": "Test current file (core)", "command": "flutter test --no-pub", "args": ["$ZED_FILE"], "cwd": "$ZED_WORKTREE_ROOT/packages/totem_core", "save": "current" },
+  { "label": "Test current file (app)", "command": "flutter test --no-pub", "args": ["$ZED_FILE"], "cwd": "$ZED_WORKTREE_ROOT/packages/totem_app", "save": "current" },
+  { "label": "Test current file (web)", "command": "flutter test --no-pub --platform=chrome", "args": ["$ZED_FILE"], "cwd": "$ZED_WORKTREE_ROOT/packages/totem_web", "save": "current" },
+  { "label": "Test current file (Widgetbook)", "command": "flutter test --no-pub", "args": ["$ZED_FILE"], "cwd": "$ZED_WORKTREE_ROOT/packages/totem_widgetbook", "save": "current" },
+  { "label": "Test current file (benchmark)", "command": "flutter test --no-pub", "args": ["$ZED_FILE"], "cwd": "$ZED_WORKTREE_ROOT/packages/totem_benchmark", "save": "current" }
 ]

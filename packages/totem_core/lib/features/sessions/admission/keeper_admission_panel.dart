@@ -114,9 +114,8 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
                         '${widget.onDeclinePermanently == null ? '' : "\n\nDecline Permanently also declines future requests for this Session. You can undo this in Declined Participants."}',
                     scrollable: true,
                     confirmButtonText: 'Decline',
-                    onConfirm: () async => Navigator.of(
-                      dialogContext,
-                    ).pop(_DeclineAction.once),
+                    onConfirm: () async =>
+                        Navigator.of(dialogContext).pop(_DeclineAction.once),
                     extraButtons: [
                       if (widget.onDeclinePermanently != null)
                         ConfirmationDialogButton.outlined(

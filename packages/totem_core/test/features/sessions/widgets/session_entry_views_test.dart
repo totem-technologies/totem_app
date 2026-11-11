@@ -47,10 +47,7 @@ void main() {
       String? admitted;
       String? declined;
       final guests = [
-        const SessionAdmissionGuest(
-          id: 'request-7',
-          name: 'Sara',
-        ),
+        const SessionAdmissionGuest(id: 'request-7', name: 'Sara'),
       ];
       Widget host(bool busy) => MaterialApp(
         home: Scaffold(

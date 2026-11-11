@@ -92,10 +92,7 @@ List<({int start, int end})> _frequencyBandRanges({
 }) {
   const minimumFrequency = 80.0;
   final maximumFrequency = math.min(4000.0, sampleRate / 2);
-  final bandRatio = math.pow(
-    maximumFrequency / minimumFrequency,
-    1 / barCount,
-  );
+  final bandRatio = math.pow(maximumFrequency / minimumFrequency, 1 / barCount);
   return [
     for (var index = 0; index < barCount; index++)
       (
