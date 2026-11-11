@@ -675,7 +675,7 @@ Future<void> checkStagedFormatting(
 /// Returns whether [source] exactly matches Dart's non-mutating formatter
 /// output for [file]. JSON avoids the status line included in `--output=show`.
 Future<bool> isDartFormatted(File file, List<int> source) async {
-  final result = await Process.run('dart', [
+  final result = await Process.run(Platform.resolvedExecutable, [
     'format',
     '--output=json',
     file.path,
@@ -706,7 +706,7 @@ Future<void> checkWorkingTreeFormatting(Iterable<String> paths) async {
   final sources = {
     for (final file in files) file.path: await file.readAsBytes(),
   };
-  final result = await Process.run('dart', [
+  final result = await Process.run(Platform.resolvedExecutable, [
     'format',
     '--output=json',
     ...files.map((file) => file.path),

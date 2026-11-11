@@ -13,6 +13,7 @@
 // OK to use print
 // ignore_for_file: avoid_print
 
+import 'dart:convert';
 import 'dart:io';
 
 // ENVIRONMENT -> the CDN the Flutter loader fetches assets from.
@@ -24,7 +25,6 @@ const _assetBase = {
 
 const _sourceMapMarker = '//# sourceMappingURL=flutter.js.map';
 const _cloudflareStaticAssetLimit = 25 * 1024 * 1024;
-const _defaultFlutterVersion = '3.50.0-0.2.pre';
 
 Future<void> main() async {
   // scripts/web_build.dart -> repo root is two levels up.
@@ -33,7 +33,7 @@ Future<void> main() async {
   final envFile = File('$webDir/.env');
 
   final flavor = _readEnvironment(envFile);
-  final defaultAssetBase = _assetBase[flavor];
+  final defaultAssetBase = assetBaseForEnvironment(flavor);
   if (defaultAssetBase == null) {
     stderr
       ..writeln(
@@ -67,30 +67,28 @@ Future<void> main() async {
     if (sentryDist != null && sentryDist.isNotEmpty)
       '--dart-define=SENTRY_DIST=$sentryDist',
   ];
-  final expectedFlutterVersion =
-      Platform.environment['WEB_FLUTTER_VERSION'] ?? _defaultFlutterVersion;
-  final fvmFlutterVersion = Platform.environment['FVM_FLUTTER_VERSION'];
-  if (fvmFlutterVersion != null &&
-      fvmFlutterVersion != expectedFlutterVersion) {
-    stderr.writeln(
-      'web_build: FVM_FLUTTER_VERSION must be $expectedFlutterVersion, '
-      'got $fvmFlutterVersion.',
+  final String expectedFlutterVersion;
+  final String flutterCommand;
+  try {
+    final config = File('$repoRoot/.fvmrc');
+    expectedFlutterVersion = expectedFlutterVersionFromConfig(
+      config.existsSync() ? config.readAsStringSync() : null,
     );
+    flutterCommand = flutterForDart(
+      Platform.resolvedExecutable,
+      (path) => File(path).existsSync(),
+    );
+  } on StateError catch (error) {
+    stderr.writeln('web_build: ${error.message}');
+    exit(1);
+  } on FileSystemException catch (error) {
+    stderr.writeln('web_build: cannot read root .fvmrc: ${error.message}');
     exit(1);
   }
-  final flutterCommand = fvmFlutterVersion == null ? 'flutter' : 'fvm';
-  final flutterArguments = [
-    if (fvmFlutterVersion != null) ...['spawn', fvmFlutterVersion],
-    ...arguments,
-  ];
-  await _verifyFlutterVersion(
-    flutterCommand,
-    fvmFlutterVersion,
-    expectedFlutterVersion,
-  );
+  await _verifyFlutterVersion(flutterCommand, expectedFlutterVersion);
   final build = await Process.start(
     flutterCommand,
-    flutterArguments,
+    arguments,
     workingDirectory: webDir,
     mode: ProcessStartMode.inheritStdio,
   );
@@ -102,23 +100,64 @@ Future<void> main() async {
   _stripInlinedSourceMap(File('${buildDirectory.path}/index.html'));
 }
 
+String? assetBaseForEnvironment(String? environment) => _assetBase[environment];
+
+String expectedFlutterVersionFromConfig(String? contents) {
+  Object? config;
+  try {
+    config = contents == null ? null : jsonDecode(contents);
+  } on FormatException {
+    throw StateError(
+      'root .fvmrc must contain valid JSON with a Flutter version.',
+    );
+  }
+  final version = config is Map ? config['flutter'] : null;
+  if (version is! String ||
+      !RegExp(
+        r'^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$',
+      ).hasMatch(version)) {
+    throw StateError(
+      'root .fvmrc must specify a valid Flutter version in "flutter".',
+    );
+  }
+  return version;
+}
+
+String flutterForDart(String dartExecutable, bool Function(String) exists) {
+  final dart = File(dartExecutable);
+  final dartBin = dart.parent;
+  final sdk = dartBin.parent;
+  final cache = sdk.parent;
+  final flutterBin = cache.parent;
+  final separator = Platform.pathSeparator;
+  if (!dartBin.path.endsWith('${separator}bin') ||
+      !sdk.path.endsWith('${separator}dart-sdk') ||
+      !cache.path.endsWith('${separator}cache') ||
+      !flutterBin.path.endsWith('${separator}bin')) {
+    throw StateError('Dart is not running from a Flutter SDK: $dartExecutable');
+  }
+  final flutter =
+      '${flutterBin.path}${separator}flutter${Platform.isWindows ? '.bat' : ''}';
+  if (!exists(flutter)) {
+    throw StateError('Flutter executable not found for Dart SDK: $flutter');
+  }
+  return flutter;
+}
+
 Future<void> _verifyFlutterVersion(
   String flutterCommand,
-  String? fvmFlutterVersion,
   String expectedFlutterVersion,
 ) async {
-  final version = await Process.run(flutterCommand, [
-    if (fvmFlutterVersion != null) ...['spawn', fvmFlutterVersion],
-    '--version',
-    '--machine',
-  ]);
-  final match = RegExp(
-    r'"flutterVersion":\s*"([^"]+)"',
-  ).firstMatch(version.stdout as String? ?? '');
-  if (version.exitCode != 0 || match?.group(1) != expectedFlutterVersion) {
+  final version = await Process.run(flutterCommand, ['--version', '--machine']);
+  final foundVersion = flutterVersion(version.stdout as String? ?? '');
+  if (!installedVersionMatches(
+    expectedFlutterVersion,
+    version.exitCode,
+    version.stdout as String? ?? '',
+  )) {
     stderr.writeln(
       'web_build: requires Flutter $expectedFlutterVersion; '
-      'found ${match?.group(1) ?? 'unknown'}.',
+      'found ${foundVersion ?? 'unknown'}.',
     );
     if (version.stderr.toString().isNotEmpty) {
       stderr.write(version.stderr);
@@ -127,9 +166,19 @@ Future<void> _verifyFlutterVersion(
   }
 }
 
+bool installedVersionMatches(String expected, int exitCode, String output) =>
+    exitCode == 0 && flutterVersion(output) == expected;
+
+String? flutterVersion(String output) =>
+    RegExp(r'"flutterVersion":\s*"([^"]+)"').firstMatch(output)?.group(1);
+
 String? _readEnvironment(File envFile) {
   if (!envFile.existsSync()) return null;
-  for (final line in envFile.readAsLinesSync()) {
+  return readEnvironment(envFile.readAsLinesSync());
+}
+
+String? readEnvironment(Iterable<String> lines) {
+  for (final line in lines) {
     if (!line.startsWith('ENVIRONMENT=')) continue;
     return line
         .substring('ENVIRONMENT='.length)

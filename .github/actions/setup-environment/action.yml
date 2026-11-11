@@ -3,25 +3,16 @@ description: >-
   One-stop build environment setup, run right after checkout by every Flutter CI
   job: installs Flutter and its bundled Dart SDK (optionally Java 17 for Android), composes
   the flavor's .env from config/, and decodes the Firebase/Google service
-  secrets. The Flutter/Dart versions are configured by inputs so Web and native
-  jobs can use their pinned toolchains without duplicating this setup.
+  secrets. Flutter SDK versions come from .fvmrc, including its iOS flavor.
 
 inputs:
   flavor:
     description: "Build flavor: 'development', 'staging' or 'production'."
     required: true
-  flutter-version:
-    description: "Flutter SDK version to install."
+  ios:
+    description: "Use the stable iOS-compatible Flutter SDK."
     required: false
-    default: "3.50.0-0.2.pre"
-  flutter-channel:
-    description: "Flutter channel containing the selected SDK."
-    required: false
-    default: "beta"
-  dart-version:
-    description: "Expected Dart SDK bundled with the selected Flutter SDK."
-    required: false
-    default: "3.14.0 (build 3.14.0-315.3.beta)"
+    default: "false"
   java:
     description: "Also install Java 17 + Gradle cache (needed for Android builds)."
     default: "false"
@@ -35,6 +26,11 @@ inputs:
     description: "Base64 encoded GoogleService-Info.plist (iOS)"
     required: false
 
+outputs:
+  flutter-version:
+    description: "Selected Flutter SDK version."
+    value: ${{ steps.sdk.outputs.version }}
+
 runs:
   using: "composite"
   steps:
@@ -46,11 +42,31 @@ runs:
         java-version: "17.x"
         cache: "gradle"
 
+    - name: Select Flutter SDK
+      id: sdk
+      shell: bash
+      env:
+        IOS: ${{ inputs.ios }}
+      run: |
+        set -euo pipefail
+        if [ "$IOS" = "true" ]; then
+          version="$(jq -er '.flavors.ios | select(type == "string" and length > 0)' .fvmrc)" || {
+            echo "::error::.fvmrc must define a non-empty flavors.ios Flutter version."
+            exit 1
+          }
+          channel="stable"
+        else
+          version="$(jq -er '.flutter | select(type == "string" and length > 0)' .fvmrc)"
+          channel="stable"
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "channel=$channel" >> "$GITHUB_OUTPUT"
+
     - name: Setup Flutter and Dart
       uses: subosito/flutter-action@v2.23.0
       with:
-        channel: ${{ inputs.flutter-channel }}
-        flutter-version: ${{ inputs.flutter-version }}
+        channel: ${{ steps.sdk.outputs.channel }}
+        flutter-version: ${{ steps.sdk.outputs.version }}
         cache: true
 
     - name: Verify Flutter and Dart versions
@@ -58,16 +74,25 @@ runs:
       run: |
         set -euo pipefail
         flutter --version
-        dart --version
+        dart_version="$(dart --version 2>&1)"
+        echo "$dart_version"
         version_json="$(flutter --version --machine)"
-        installed_flutter="$(printf '%s\n' "$version_json" | sed -nE 's/.*"flutterVersion": "([^"]+)".*/\1/p')"
-        installed_dart="$(printf '%s\n' "$version_json" | sed -nE 's/.*"dartSdkVersion": "([^"]+)".*/\1/p')"
-        if [ "$installed_flutter" != "${{ inputs.flutter-version }}" ]; then
-          echo "::error::Configured Flutter ${{ inputs.flutter-version }}, but installed ${installed_flutter:-unknown}."
+        installed_flutter="$(jq -er '.flutterVersion | select(type == "string" and length > 0)' <<< "$version_json")"
+        flutter_root="$(jq -er '.flutterRoot | select(type == "string" and length > 0)' <<< "$version_json")"
+        expected_dart="$(jq -er '.dartSdkVersion | select(type == "string" and length > 0) | if contains(" (build ") then capture("\\(build (?<version>[^)]+)\\)").version else split(" ")[0] end' <<< "$version_json")"
+        installed_dart="$(printf '%s\n' "$dart_version" | sed -nE 's/^Dart SDK version: ([^ ]+).*/\1/p')"
+
+        if [ "$installed_flutter" != "${{ steps.sdk.outputs.version }}" ]; then
+          echo "::error::Configured Flutter ${{ steps.sdk.outputs.version }}, but installed ${installed_flutter:-unknown}."
           exit 1
         fi
-        if [ "$installed_dart" != "${{ inputs.dart-version }}" ]; then
-          echo "::error::Flutter ${{ inputs.flutter-version }} must use bundled Dart ${{ inputs.dart-version }}, but installed ${installed_dart:-unknown}."
+        if [ "$installed_dart" != "$expected_dart" ]; then
+          echo "::error::Flutter bundles Dart $expected_dart, but dart on PATH reports ${installed_dart:-unknown}."
+          exit 1
+        fi
+        dart_path="$(command -v dart)"
+        if ! [ "$dart_path" -ef "$flutter_root/bin/dart" ] && ! [ "$dart_path" -ef "$flutter_root/bin/cache/dart-sdk/bin/dart" ]; then
+          echo "::error::Dart on PATH ($dart_path) is not from the selected Flutter SDK ($flutter_root)."
           exit 1
         fi
 

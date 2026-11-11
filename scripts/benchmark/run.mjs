@@ -65,7 +65,7 @@ async function build() {
   const flags = ['build', 'web', '--wasm', '--source-maps', '--no-web-resources-cdn',
     '--dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true', '--output', buildDir];
   if (options.profile) flags.push('--profile', '--dart-define=BENCHMARK_ATTRIBUTION=true');
-  await command('flutter', flags, resolve(root, 'packages/totem_benchmark'));
+  await command('fvm', ['flutter', ...flags], resolve(root, 'packages/totem_benchmark'));
   if (options.media) {
     await copyFile(resolve(options.media), resolve(buildDir, 'loop.mp4'));
   } else {
@@ -74,7 +74,8 @@ async function build() {
       '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
       '-pix_fmt', 'yuv420p', '-movflags', '+faststart', resolve(buildDir, 'loop.mp4')]);
   }
-  const sdk = JSON.parse(execFileSync('flutter', ['--version', '--machine'], {encoding: 'utf8'}));
+  const sdk = JSON.parse(execFileSync('fvm', ['flutter', '--version', '--machine'],
+      {cwd: resolve(root, 'packages/totem_benchmark'), encoding: 'utf8'}));
   const metadata = {
     builtAt: new Date().toISOString(), commit: git('rev-parse', 'HEAD'),
     trackedDiffSha256: hash(git('diff', 'HEAD')), status: git('status', '--short'),

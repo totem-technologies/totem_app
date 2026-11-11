@@ -1,4 +1,4 @@
-.PHONY: *
+.PHONY: clean env-dev env-staging env-prod setup doctor prepare-native prepare-web prepare-ios run run-ios run-chrome run-web build-web-release serve-web deploy-web-staging deploy-web-production build-runner build-runner-watch install test test-native test-web test-benchmark benchmark-build benchmark-serve benchmark widgetbook widgetbook-gen widgetbook-build test-widgetbook test-app test-core test-scripts lint lint-native lint-web format lint-changed test-changed generate_api_models githooks flutterfire release
 
 APP_DIR := packages/totem_app
 CORE_DIR := packages/totem_core
@@ -8,9 +8,9 @@ WIDGETBOOK_DIR := packages/totem_widgetbook
 WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
 NATIVE_FLUTTER ?= fvm flutter
 NATIVE_DART ?= fvm dart
-WEB_FLUTTER ?= $(NATIVE_FLUTTER)
+WEB_FLUTTER ?= flutter
 WEB_DART ?= $(NATIVE_DART)
-IOS_FLUTTER ?= fvm spawn 3.44.9
+IOS_FLUTTER ?= fvm flavor ios
 # CI resolves once with its selected SDK before invoking lint/test targets.
 PREPARE_PUB ?= true
 
@@ -26,7 +26,7 @@ clean:
 	cd $(APP_DIR) && $(NATIVE_FLUTTER) clean
 	rm -rf $(APP_DIR)/build/
 	rm -rf $(APP_DIR)/.dart_tool/build/
-	rm -rf ~/.gradle/caches/*
+
 	rm -rf $(APP_DIR)/ios/.symlinks
 	rm -rf $(APP_DIR)/ios/Flutter/Flutter.framework
 	rm -rf $(APP_DIR)/ios/Flutter/App.framework
@@ -45,6 +45,13 @@ env-staging:
 
 env-prod:
 	$(NATIVE_DART) scripts/setup_env.dart production
+
+setup:
+	python3 scripts/sdk_management.py setup
+	env -u FVM_FLUTTER_VERSION $(NATIVE_FLUTTER) pub get
+
+doctor:
+	python3 scripts/sdk_management.py doctor
 
 # One lockfile; each SDK may resolve its compatible dependencies without a clean.
 prepare-native:
@@ -78,14 +85,14 @@ run-chrome: prepare-web env-dev
 
 run-web: prepare-web env-dev
 	@echo "Running app in Web Server..."
-	cd $(WEB_DIR) && $(WEB_FLUTTER) run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
+	cd $(WEB_DIR) && $(WEB_FLUTTER) run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --wasm --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
 
 # Build the web app the way it deploys: mounted at /room/, assets fetched from
 # a separate origin (here the local serve-web "CDN" on :5173). The `development`
 # flavor maps to that local CDN and composes the development .env.
 build-web-release: prepare-web env-dev
 	@echo "Building web app..."
-	FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
+	$(WEB_DART) scripts/web_build.dart
 	@echo "Built $(WEB_DIR)/build/web — serve it with: make serve-web"
 
 # Serve the built bundle with CORS headers so an HTML document on another origin
@@ -99,12 +106,12 @@ serve-web:
 # CLOUDFLARE_ACCOUNT_ID).
 deploy-web-staging: prepare-web env-staging
 	@echo "Building web app (staging)"
-	FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
+	$(WEB_DART) scripts/web_build.dart
 	cd $(WEB_DIR) && bunx wrangler deploy --env staging
 
 deploy-web-production: prepare-web env-prod
 	@echo "Building web app (production)"
-	FVM_FLUTTER_VERSION=3.50.0-0.2.pre $(WEB_DART) scripts/web_build.dart
+	$(WEB_DART) scripts/web_build.dart
 	cd $(WEB_DIR) && bunx wrangler deploy --env production
 
 build-runner:
@@ -190,7 +197,7 @@ format:
 	$(DART_FILES) | xargs -0 $(NATIVE_DART) format
 
 lint-changed:
-	fvm dart scripts/git_checks.dart pre-commit
+	$(NATIVE_DART) scripts/git_checks.dart pre-commit
 
 test-changed:
 	$(NATIVE_DART) scripts/git_checks.dart changed
