@@ -7,13 +7,17 @@ final class FeedbackSchema {
   const FeedbackSchema({required this.message});
 
   factory FeedbackSchema.fromJson(Map<String, dynamic> json) {
-    return FeedbackSchema(message: json['message'] as String);
+    return FeedbackSchema(
+      message: json['message'] as String,
+    );
   }
 
   final String message;
 
   Map<String, dynamic> toJson() {
-    return {'message': message};
+    return {
+      'message': message,
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -21,7 +25,9 @@ final class FeedbackSchema {
   }
 
   FeedbackSchema copyWith({String? message}) {
-    return FeedbackSchema(message: message ?? this.message);
+    return FeedbackSchema(
+      message: message ?? this.message,
+    );
   }
 
   @override

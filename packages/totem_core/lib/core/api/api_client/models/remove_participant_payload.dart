@@ -1,7 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'package:degenerate_runtime/degenerate_runtime.dart';
-
 import 'remove_reason.dart';
 
 @immutable
@@ -32,7 +31,11 @@ final class RemoveParticipantPayload {
   }
 
   Map<String, dynamic> toJson() {
-    return {'action': ?action, 'identity': identity, 'reason': reason.toJson()};
+    return {
+      'action': ?action,
+      'identity': identity,
+      'reason': reason.toJson(),
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {

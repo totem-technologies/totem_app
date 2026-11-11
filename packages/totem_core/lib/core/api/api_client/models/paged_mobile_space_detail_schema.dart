@@ -1,7 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'package:degenerate_runtime/degenerate_runtime.dart';
-
 import 'mobile_space_detail_schema.dart';
 
 @immutable
@@ -27,7 +26,10 @@ final class PagedMobileSpaceDetailSchema {
   final int count;
 
   Map<String, dynamic> toJson() {
-    return {'items': items.map((e) => e.toJson()).toList(), 'count': count};
+    return {
+      'items': items.map((e) => e.toJson()).toList(),
+      'count': count,
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {

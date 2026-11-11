@@ -7,7 +7,9 @@ final class AcceptStickEvent {
   const AcceptStickEvent({this.type});
 
   factory AcceptStickEvent.fromJson(Map<String, dynamic> json) {
-    return AcceptStickEvent(type: json['type'] as String?);
+    return AcceptStickEvent(
+      type: json['type'] as String?,
+    );
   }
 
   final String? type;
@@ -18,7 +20,9 @@ final class AcceptStickEvent {
   }
 
   Map<String, dynamic> toJson() {
-    return {'type': ?type};
+    return {
+      'type': ?type,
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -26,7 +30,9 @@ final class AcceptStickEvent {
   }
 
   AcceptStickEvent copyWith({String? Function()? type}) {
-    return AcceptStickEvent(type: type != null ? type() : this.type);
+    return AcceptStickEvent(
+      type: type != null ? type() : this.type,
+    );
   }
 
   @override

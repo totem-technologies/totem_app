@@ -7,13 +7,17 @@ final class ErrorResponse {
   const ErrorResponse({required this.error});
 
   factory ErrorResponse.fromJson(Map<String, dynamic> json) {
-    return ErrorResponse(error: json['error'] as String);
+    return ErrorResponse(
+      error: json['error'] as String,
+    );
   }
 
   final String error;
 
   Map<String, dynamic> toJson() {
-    return {'error': error};
+    return {
+      'error': error,
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -21,7 +25,9 @@ final class ErrorResponse {
   }
 
   ErrorResponse copyWith({String? error}) {
-    return ErrorResponse(error: error ?? this.error);
+    return ErrorResponse(
+      error: error ?? this.error,
+    );
   }
 
   @override

@@ -2,9 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:degenerate_runtime/degenerate_runtime.dart';
-
 import '../models/error_response.dart';
 import '../models/fcm_token_register_schema.dart';
 import '../models/fcm_token_response_schema.dart';
@@ -74,7 +72,10 @@ final class DefaultApi with ApiExecutor {
       options: options,
     );
 
-    return await execute(request, onSuccess: (_) {});
+    return await execute(
+      request,
+      onSuccess: (_) {},
+    );
   }
 
   /// Onboard Get

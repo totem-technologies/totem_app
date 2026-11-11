@@ -2,9 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:degenerate_runtime/degenerate_runtime.dart';
-
 import '../models/feedback_schema.dart';
 import '../models/keeper_profile_schema.dart';
 import '../models/public_user_schema.dart';
@@ -112,7 +110,9 @@ final class UsersApi with ApiExecutor {
       method: 'POST',
       path: '/api/mobile/protected/users/update_image',
       headers: headers,
-      body: [ApiMultipartField.file('profile_image', body.profileImage)],
+      body: [
+        ApiMultipartField.file('profile_image', body.profileImage),
+      ],
       contentType: 'multipart/form-data',
       options: options,
     );

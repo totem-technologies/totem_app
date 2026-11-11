@@ -7,13 +7,17 @@ final class FcmTokenRegisterSchema {
   const FcmTokenRegisterSchema({required this.token});
 
   factory FcmTokenRegisterSchema.fromJson(Map<String, dynamic> json) {
-    return FcmTokenRegisterSchema(token: json['token'] as String);
+    return FcmTokenRegisterSchema(
+      token: json['token'] as String,
+    );
   }
 
   final String token;
 
   Map<String, dynamic> toJson() {
-    return {'token': token};
+    return {
+      'token': token,
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -21,7 +25,9 @@ final class FcmTokenRegisterSchema {
   }
 
   FcmTokenRegisterSchema copyWith({String? token}) {
-    return FcmTokenRegisterSchema(token: token ?? this.token);
+    return FcmTokenRegisterSchema(
+      token: token ?? this.token,
+    );
   }
 
   @override

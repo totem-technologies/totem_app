@@ -7,13 +7,17 @@ final class MessageResponse {
   const MessageResponse({required this.message});
 
   factory MessageResponse.fromJson(Map<String, dynamic> json) {
-    return MessageResponse(message: json['message'] as String);
+    return MessageResponse(
+      message: json['message'] as String,
+    );
   }
 
   final String message;
 
   Map<String, dynamic> toJson() {
-    return {'message': message};
+    return {
+      'message': message,
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {
@@ -21,7 +25,9 @@ final class MessageResponse {
   }
 
   MessageResponse copyWith({String? message}) {
-    return MessageResponse(message: message ?? this.message);
+    return MessageResponse(
+      message: message ?? this.message,
+    );
   }
 
   @override

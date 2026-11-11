@@ -1,12 +1,14 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'package:degenerate_runtime/degenerate_runtime.dart';
-
 import 'session_prompt_schema.dart';
 
 @immutable
 final class SessionPromptsSchema {
-  const SessionPromptsSchema({required this.revision, required this.prompts});
+  const SessionPromptsSchema({
+    required this.revision,
+    required this.prompts,
+  });
 
   factory SessionPromptsSchema.fromJson(Map<String, dynamic> json) {
     return SessionPromptsSchema(

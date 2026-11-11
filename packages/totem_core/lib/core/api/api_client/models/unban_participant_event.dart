@@ -5,7 +5,10 @@ import 'package:degenerate_runtime/degenerate_runtime.dart';
 /// Keeper lifts a ban, allowing the participant to rejoin.
 @immutable
 final class UnbanParticipantEvent {
-  const UnbanParticipantEvent({required this.participantSlug, this.type});
+  const UnbanParticipantEvent({
+    required this.participantSlug,
+    this.type,
+  });
 
   factory UnbanParticipantEvent.fromJson(Map<String, dynamic> json) {
     return UnbanParticipantEvent(
@@ -24,7 +27,10 @@ final class UnbanParticipantEvent {
   }
 
   Map<String, dynamic> toJson() {
-    return {'type': ?type, 'participantSlug': participantSlug};
+    return {
+      'type': ?type,
+      'participantSlug': participantSlug,
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {

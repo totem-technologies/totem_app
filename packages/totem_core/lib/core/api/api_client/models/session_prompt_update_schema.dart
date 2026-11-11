@@ -23,14 +23,20 @@ final class SessionPromptUpdateSchema {
   final String prompt;
 
   Map<String, dynamic> toJson() {
-    return {if (id.isPresent) 'id': id.value, 'prompt': prompt};
+    return {
+      if (id.isPresent) 'id': id.value,
+      'prompt': prompt,
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {
     return json.containsKey('prompt') && json['prompt'] is String;
   }
 
-  SessionPromptUpdateSchema copyWith({Omittable<int?>? id, String? prompt}) {
+  SessionPromptUpdateSchema copyWith({
+    Omittable<int?>? id,
+    String? prompt,
+  }) {
     return SessionPromptUpdateSchema(
       id: id ?? this.id,
       prompt: prompt ?? this.prompt,

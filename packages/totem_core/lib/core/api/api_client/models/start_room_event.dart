@@ -4,7 +4,10 @@ import 'package:degenerate_runtime/degenerate_runtime.dart';
 
 @immutable
 final class StartRoomEvent {
-  const StartRoomEvent({this.type, this.prompt = const Omittable.absent()});
+  const StartRoomEvent({
+    this.type,
+    this.prompt = const Omittable.absent(),
+  });
 
   factory StartRoomEvent.fromJson(Map<String, dynamic> json) {
     return StartRoomEvent(
@@ -25,7 +28,10 @@ final class StartRoomEvent {
   }
 
   Map<String, dynamic> toJson() {
-    return {'type': ?type, if (prompt.isPresent) 'prompt': prompt.value};
+    return {
+      'type': ?type,
+      if (prompt.isPresent) 'prompt': prompt.value,
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {

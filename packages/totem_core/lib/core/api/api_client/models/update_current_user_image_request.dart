@@ -2,7 +2,6 @@
 
 import 'dart:convert';
 import 'dart:typed_data';
-
 import 'package:degenerate_runtime/degenerate_runtime.dart';
 
 @immutable
@@ -18,7 +17,9 @@ final class UpdateCurrentUserImageRequest {
   final Uint8List profileImage;
 
   Map<String, dynamic> toJson() {
-    return {'profile_image': base64Encode(profileImage)};
+    return {
+      'profile_image': base64Encode(profileImage),
+    };
   }
 
   static bool canParse(Map<String, dynamic> json) {
