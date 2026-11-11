@@ -32,6 +32,7 @@ KeeperAdmissionController _keeperAdmissionController({
   String? keeperGeneration,
   KeeperAdmissionRosterStore? rosterStore,
   bool approvalRequired = true,
+  bool Function()? isSessionStarted,
   Set<String> declinedIdentities = const {},
   DateTime Function()? now,
   String Function()? newId,
@@ -42,6 +43,7 @@ KeeperAdmissionController _keeperAdmissionController({
   keeperGeneration: keeperGeneration,
   rosterStore: rosterStore,
   approvalRequired: approvalRequired,
+  isSessionStarted: isSessionStarted,
   declinedIdentities: declinedIdentities,
   now: now ?? _testNow,
   newId: newId,
@@ -208,6 +210,175 @@ String _roomMetadata(String status) => jsonEncode({
 });
 
 void main() {
+  test('decision returning metadata is optional and round trips', () {
+    for (final returning in [false, true]) {
+      final decision = AdmissionDecision(
+        id: 'request',
+        senderIdentity: 'keeper',
+        recipientIdentity: 'guest',
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
+        approved: true,
+        isReturningParticipant: returning,
+      );
+      final bytes = AdmissionProtocol.encode(decision);
+      final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+      check(payload.containsKey('returning')).equals(returning);
+      if (returning) check(payload['returning']).equals(true);
+      final decoded =
+          AdmissionProtocol.decode(
+                bytes,
+                senderIdentity: 'keeper',
+                now: _fixedNow,
+              )!
+              as AdmissionDecision;
+      check(decoded.isReturningParticipant).equals(returning);
+    }
+  });
+
+  test('session start metadata is optional and round trips', () {
+    for (final started in <bool?>[null, false, true]) {
+      final decision = AdmissionDecision(
+        id: 'request',
+        senderIdentity: 'keeper',
+        recipientIdentity: 'guest',
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
+        approved: true,
+        sessionStartedAtAdmission: started,
+      );
+      final bytes = AdmissionProtocol.encode(decision);
+      final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+      check(payload.containsKey('sessionStarted')).equals(started != null);
+      if (started != null) check(payload['sessionStarted']).equals(started);
+      final decoded =
+          AdmissionProtocol.decode(
+                bytes,
+                senderIdentity: 'keeper',
+                now: _fixedNow,
+              )!
+              as AdmissionDecision;
+      check(decoded.sessionStartedAtAdmission).equals(started);
+    }
+  });
+
+  for (final startedAtApproval in [false, true]) {
+    test(
+      'keeper samples session start at approval: $startedAtApproval',
+      () async {
+        final guestChannel = _Channel('guest')..present.add('keeper');
+        final keeperChannel = _Channel('keeper')..present.add('guest');
+        guestChannel.peer = keeperChannel;
+        keeperChannel.peer = guestChannel;
+        var started = !startedAtApproval;
+        var reads = 0;
+        final guest = _pendingAdmissionController(
+          channel: guestChannel,
+          keeperIdentity: () => 'keeper',
+        );
+        final keeper = _keeperAdmissionController(
+          channel: keeperChannel,
+          keeperIdentity: () => 'keeper',
+          isSessionStarted: () {
+            reads++;
+            return started;
+          },
+        );
+        addTearDown(() async {
+          await guest.dispose();
+          await keeper.dispose();
+          await guestChannel.dispose();
+          await keeperChannel.dispose();
+        });
+        final request = await guest.requestAdmission(displayName: 'Guest');
+        await pumpEventQueue();
+        check(reads).equals(0);
+        started = startedAtApproval;
+        await keeper.approve(request.id, 'guest');
+        await pumpEventQueue();
+        check(reads).equals(1);
+        check(guest.status).equals(AdmissionStatus.approved);
+        check(guest.sessionStartedAtAdmission).equals(startedAtApproval);
+      },
+    );
+  }
+
+  test(
+    'pending admission only accepts returning metadata from a trusted approval',
+    () async {
+      final channel = _Channel('guest');
+      final guest = _pendingAdmissionController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+      );
+      addTearDown(() async {
+        await guest.dispose();
+        await channel.dispose();
+      });
+      final request = await guest.requestAdmission(displayName: 'Guest');
+      check(guest.isReturningParticipant).isFalse();
+      for (final decision in [
+        AdmissionDecision(
+          id: request.id,
+          senderIdentity: 'attacker',
+          recipientIdentity: 'guest',
+          expiresAt: request.expiresAt,
+          approved: true,
+          isReturningParticipant: true,
+          sessionStartedAtAdmission: true,
+        ),
+        AdmissionDecision(
+          id: 'other-request',
+          senderIdentity: 'keeper',
+          recipientIdentity: 'guest',
+          expiresAt: request.expiresAt,
+          approved: true,
+          isReturningParticipant: true,
+          sessionStartedAtAdmission: true,
+        ),
+      ]) {
+        channel.controller.add(AdmissionPacketReceived(decision));
+        check(guest.status).equals(AdmissionStatus.pending);
+        check(guest.isReturningParticipant).isFalse();
+        check(guest.sessionStartedAtAdmission).isNull();
+      }
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionDecision(
+            id: request.id,
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: request.expiresAt,
+            approved: true,
+            isReturningParticipant: true,
+            sessionStartedAtAdmission: true,
+          ),
+        ),
+      );
+      check(guest.status).equals(AdmissionStatus.approved);
+      check(guest.isReturningParticipant).isTrue();
+      check(guest.sessionStartedAtAdmission).equals(true);
+
+      final next = await guest.requestAdmission(displayName: 'Guest');
+      check(guest.isReturningParticipant).isFalse();
+      check(guest.sessionStartedAtAdmission).isNull();
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionDecision(
+            id: next.id,
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: next.expiresAt,
+            approved: false,
+            isReturningParticipant: true,
+            sessionStartedAtAdmission: true,
+          ),
+        ),
+      );
+      check(guest.status).equals(AdmissionStatus.denied);
+      check(guest.isReturningParticipant).isFalse();
+      check(guest.sessionStartedAtAdmission).isNull();
+    },
+  );
+
   test(
     'protocol rejects unknown version and spoofed sender',
     () {
@@ -1101,6 +1272,127 @@ void main() {
   );
 
   test(
+    'approval before the waiting deadline permits a later joined receipt',
+    () {
+      fakeAsync((async) {
+        final clock = async.getClock(_fixedNow);
+        final guestChannel = _Channel('guest', now: clock.now)
+          ..present.add('keeper');
+        final keeperChannel = _Channel('keeper', now: clock.now)
+          ..present.add('guest');
+        guestChannel.peer = keeperChannel;
+        keeperChannel.peer = guestChannel;
+        final guest = _pendingAdmissionController(
+          channel: guestChannel,
+          keeperIdentity: () => 'keeper',
+          now: clock.now,
+        );
+        final keeper = _keeperAdmissionController(
+          channel: keeperChannel,
+          keeperIdentity: () => 'keeper',
+          now: clock.now,
+        );
+        AdmissionRequest? request;
+        unawaited(
+          guest
+              .requestAdmission(
+                displayName: 'Guest',
+                deadline: _fixedNow.add(const Duration(minutes: 20)),
+              )
+              .then((value) => request = value),
+        );
+        async.flushMicrotasks();
+        check(keeper.requests.single.id).equals(request!.id);
+
+        async.elapse(const Duration(minutes: 19, seconds: 59));
+        unawaited(keeper.approve(request!.id, 'guest'));
+        async.flushMicrotasks();
+        check(guest.status).equals(AdmissionStatus.approved);
+        check(keeper.attempts.single.joinDeadline).equals(
+          clock.now().add(AdmissionProtocol.lifetime),
+        );
+
+        async.elapse(const Duration(seconds: 2));
+        check(guest.status).equals(AdmissionStatus.approved);
+        final receipt = AdmissionProtocol.joined(request!);
+        check(
+          AdmissionProtocol.decode(
+            AdmissionProtocol.encode(receipt),
+            senderIdentity: 'guest',
+            now: clock.now(),
+          ),
+        ).isA<AdmissionJoined>();
+        unawaited(guestChannel.send(receipt));
+        async.flushMicrotasks();
+        check(
+          keeper.attempts.single.status,
+        ).equals(KeeperAdmissionStatus.joined);
+        check(keeper.roster).deepEquals(['guest']);
+
+        unawaited(guest.dispose());
+        unawaited(keeper.dispose());
+        unawaited(guestChannel.dispose());
+        unawaited(keeperChannel.dispose());
+        async.flushMicrotasks();
+      });
+    },
+  );
+
+  for (final offset in [Duration.zero, const Duration(seconds: 1)]) {
+    test(
+      'approval at waiting deadline + $offset expires without timer firing',
+      () {
+        fakeAsync((async) {
+          var now = _fixedNow;
+          final guestChannel = _Channel('guest', now: () => now)
+            ..present.add('keeper');
+          final keeperChannel = _Channel('keeper', now: () => now)
+            ..present.add('guest');
+          guestChannel.peer = keeperChannel;
+          keeperChannel.peer = guestChannel;
+          final guest = _pendingAdmissionController(
+            channel: guestChannel,
+            keeperIdentity: () => 'keeper',
+            now: () => now,
+          );
+          final keeper = _keeperAdmissionController(
+            channel: keeperChannel,
+            keeperIdentity: () => 'keeper',
+            now: () => now,
+          );
+          AdmissionRequest? request;
+          final deadline = _fixedNow.add(const Duration(minutes: 20));
+          unawaited(
+            guest
+                .requestAdmission(
+                  displayName: 'Guest',
+                  deadline: deadline,
+                )
+                .then((value) => request = value),
+          );
+          async.flushMicrotasks();
+          check(keeper.requests.single.id).equals(request!.id);
+          now = deadline.add(offset);
+          check(guest.status).equals(AdmissionStatus.pending);
+          unawaited(keeper.approve(request!.id, 'guest'));
+          async.flushMicrotasks();
+          check(
+            keeperChannel.sent.whereType<AdmissionDecision>().single.approved,
+          ).isTrue();
+          check(guest.status).equals(AdmissionStatus.expired);
+          check(keeper.roster).isEmpty();
+
+          unawaited(guest.dispose());
+          unawaited(keeper.dispose());
+          unawaited(guestChannel.dispose());
+          unawaited(keeperChannel.dispose());
+          async.flushMicrotasks();
+        });
+      },
+    );
+  }
+
+  test(
     'an unanswered first approval is retried once without another participant action',
     () {
       fakeAsync((async) {
@@ -1556,16 +1848,36 @@ void main() {
       final first = await participant.requestAdmission(displayName: 'Guest');
       await pumpEventQueue();
       check(participant.status).equals(AdmissionStatus.approved);
+      check(participant.isReturningParticipant).isFalse();
+      check(
+        keeperChannel.sent
+            .whereType<AdmissionDecision>()
+            .last
+            .isReturningParticipant,
+      ).isFalse();
       await guestChannel.send(AdmissionProtocol.joined(first));
+      check(keeper.roster).deepEquals(['guest']);
+      keeperChannel.present.remove('guest');
+      keeperChannel.controller.add(
+        const AdmissionPresenceChanged('guest', false),
+      );
       check(keeper.roster).deepEquals(['guest']);
 
       keeper.setApprovalRequired(true);
       await participant.dispose();
       now = now.add(const Duration(milliseconds: 1));
+      keeperChannel.present.add('guest');
       participant = guest();
       final second = await participant.requestAdmission(displayName: 'Guest');
       await pumpEventQueue();
       check(participant.status).equals(AdmissionStatus.approved);
+      check(participant.isReturningParticipant).isTrue();
+      check(
+        keeperChannel.sent
+            .whereType<AdmissionDecision>()
+            .last
+            .isReturningParticipant,
+      ).isTrue();
       check(keeper.requests).isEmpty();
       check(keeper.roster).isEmpty();
       check(
@@ -1760,6 +2072,7 @@ void main() {
       final decision = channel.sent.whereType<AdmissionDecision>().last;
       check(decision.id).equals(blockedReturn.id);
       check(decision.approved).isFalse();
+      check(decision.isReturningParticipant).isFalse();
     },
   );
 

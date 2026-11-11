@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
-import 'package:totem_core/features/sessions/widgets/session_admission_list.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_list.dart';
 
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';

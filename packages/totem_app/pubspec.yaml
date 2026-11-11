@@ -51,6 +51,7 @@ dependencies:
   collection: ^1.19.1
   meta: any
   upgrader: ^13.7.0
+  flutter_image_compress: ^2.5.1
 
 dev_dependencies:
   # Testing

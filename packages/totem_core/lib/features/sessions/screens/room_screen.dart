@@ -27,7 +27,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
-import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
+import 'package:totem_core/features/sessions/screens/options/more_options_popup.dart';
 import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
@@ -48,6 +48,8 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
     required this.loadingScreen,
     this.showAdmissionOrientation = false,
     this.admissionReady = false,
+    this.isReturningParticipant = false,
+    this.sessionStartedAtAdmission,
     this.now = DateTime.now,
     super.key,
   });
@@ -56,6 +58,8 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
   final Widget loadingScreen;
   final bool showAdmissionOrientation;
   final bool admissionReady;
+  final bool isReturningParticipant;
+  final bool? sessionStartedAtAdmission;
   final ValueGetter<DateTime> now;
 
   @override
@@ -138,6 +142,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   StreamSubscription<(MediaKind, TurnOnBlocker)>? _turnOnBlockedSubscription;
 
   bool _admissionOrientationDismissed = false;
+  bool? _admissionOrientationEligible;
 
   /// True while [showSessionChat] is awaiting dismissal of the overlay host.
   bool _overlayChatPresenting = false;
@@ -195,6 +200,79 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyScreenCapturePolicy();
     });
+
+    ref
+      ..listenManual(
+        currentSessionProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(
+        currentSessionEventProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(
+        resolveCurrentScreenProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(
+        connectionStateProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(roomStatusProvider, (_, _) => _syncAdmissionOrientation());
+    _syncAdmissionOrientation(rebuild: false);
+  }
+
+  @override
+  void didUpdateWidget(covariant VideoSessionScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncAdmissionOrientation(rebuild: false);
+  }
+
+  void _syncAdmissionOrientation({bool rebuild = true}) {
+    final connection = ref.read(connectionStateProvider);
+    final status = ref.read(roomStatusProvider);
+    final screen = ref.read(resolveCurrentScreenProvider);
+    final event = ref.read(currentSessionEventProvider);
+    var eligible = _admissionOrientationEligible;
+    var dismissed = _admissionOrientationDismissed;
+
+    if (eligible != null && connection != RoomConnectionState.connected) {
+      dismissed = true;
+    }
+    final waitingForAdmission =
+        widget.showAdmissionOrientation && !widget.admissionReady;
+    if (eligible == null &&
+        !waitingForAdmission &&
+        connection == RoomConnectionState.connected &&
+        ref.read(currentSessionProvider) != null &&
+        event != null &&
+        !event.ended &&
+        status != RoomStatus.ended &&
+        screen != null &&
+        screen != RoomScreen.disconnected &&
+        screen != RoomScreen.error) {
+      // Keeper entry-time status survives delayed rendering and tab suspension.
+      // Legacy approvals fall back to the first connected room status.
+      eligible =
+          widget.showAdmissionOrientation &&
+          !widget.isReturningParticipant &&
+          (widget.sessionStartedAtAdmission ?? status == RoomStatus.active);
+    }
+    if (eligible == _admissionOrientationEligible &&
+        dismissed == _admissionOrientationDismissed) {
+      return;
+    }
+
+    void update() {
+      _admissionOrientationEligible = eligible;
+      _admissionOrientationDismissed = dismissed;
+    }
+
+    if (rebuild) {
+      setState(update);
+    } else {
+      update();
+    }
   }
 
   void _showDeviceNotice(MediaKind kind) {
@@ -269,7 +347,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         maxHeight: size.height * (desktop ? 0.65 : 0.4),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(desktop ? 24 : 16),
         child: SessionOrientationNotice(
           prompt: prompt,
           onDone: () => setState(() => _admissionOrientationDismissed = true),
@@ -290,8 +368,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     return Positioned(
       left: 16,
       right: 16,
-      bottom: 16,
+      top: 8,
       child: SafeArea(
+        bottom: false,
         child: Center(child: Card(elevation: 8, child: content)),
       ),
     );
@@ -771,14 +850,18 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     // shown to other participants.
     final waitingForAdmission =
         widget.showAdmissionOrientation && !widget.admissionReady;
-    final showOrientation =
+    final admissionEstablished =
         !waitingForAdmission &&
-        widget.showAdmissionOrientation &&
-        !_admissionOrientationDismissed &&
         connectionState == RoomConnectionState.connected &&
+        !showingDisconnectedScreen;
+    final readyForOrientation =
+        admissionEstablished && currentRoomScreen != RoomScreen.loading;
+
+    final showOrientation =
+        readyForOrientation &&
         roomStatus == RoomStatus.active &&
-        !showingDisconnectedScreen &&
-        currentRoomScreen != RoomScreen.loading;
+        _admissionOrientationEligible == true &&
+        !_admissionOrientationDismissed;
     final admissionPrompt = showOrientation
         ? ref.watch(currentSessionPromptProvider)
         : null;

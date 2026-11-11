@@ -8,25 +8,30 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
     as mobile_api
     show RoomStatus, SessionDetailSchema, TurnState;
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
+
+import 'package:totem_core/features/sessions/admission/declined_participants_modal.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
+
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
 import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/features/sessions/media/media_platform.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/screens/options/end_session_confirmation_dialog.dart';
+import 'package:totem_core/features/sessions/screens/options/force_pass_confirmation_dialog.dart';
+import 'package:totem_core/features/sessions/screens/options/leave_session_confirmation_dialog.dart';
+import 'package:totem_core/features/sessions/screens/options/session_start_confirmation_dialog.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/banned_participants_modal.dart';
-import 'package:totem_core/features/sessions/widgets/declined_participants_modal.dart';
+
 import 'package:totem_core/features/sessions/widgets/participant_reorder_modal.dart';
 import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
-import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
@@ -382,42 +387,7 @@ class MoreOptions extends ConsumerWidget {
     return showDialog<bool>(
       context: context,
       useRootNavigator: false,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, child) {
-            final isKeeper = ref.watch(isCurrentUserKeeperProvider);
-            final isEnded = ref.watch(
-              currentSessionStateProvider.select(
-                (s) => s?.roomState.status == mobile_api.RoomStatus.ended,
-              ),
-            );
-            return ConfirmationDialog(
-              content: 'Are you sure you want to leave the session?',
-              confirmButtonText: 'Leave session',
-              onConfirm: () async {
-                TotemRouter.instance.setTabCloseConfirmationEnabled(false);
-                Navigator.of(context).pop(true);
-              },
-              extraButtons: [
-                if (isKeeper && !isEnded)
-                  ConfirmationDialogButton.outlined(
-                    onConfirm: () async {
-                      final currentSession = ref.read(currentSessionProvider);
-                      if (currentSession == null) return;
-                      await _endSession(context, currentSession);
-                      TotemRouter.instance.setTabCloseConfirmationEnabled(
-                        false,
-                      );
-                      if (context.mounted) Navigator.of(context).pop(true);
-                    },
-                    type: ConfirmationDialogType.destructive,
-                    child: const Text('End session and Leave'),
-                  ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (context) => const LeaveSessionConfirmationDialog(),
     );
   }
 
@@ -436,40 +406,10 @@ class MoreOptions extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       useRootNavigator: false,
-      builder: (context) {
-        final theme = Theme.of(context);
-
-        return Consumer(
-          builder: (context, ref, child) {
-            return ConfirmationDialog(
-              title: 'Are you sure?',
-              confirmButtonText: 'Force pass',
-              content:
-                  "This will end the current speaker's turn and give the totem to ${nextParticipantName ?? 'the next participant'}.",
-              contentStyle: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurface,
-              ),
-              type: ConfirmationDialogType.standard,
-              onConfirm: () async {
-                try {
-                  await session.keeper.forcePassTotem();
-                } catch (error) {
-                  if (context.mounted) {
-                    ErrorHandler.showErrorSnackBar(
-                      context,
-                      'Failed to perform next totem action',
-                    );
-                  }
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
-            );
-          },
-        );
-      },
+      builder: (context) => ForcePassConfirmationDialog(
+        session: session,
+        nextParticipantName: nextParticipantName,
+      ),
     );
   }
 
@@ -480,15 +420,8 @@ class MoreOptions extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       useRootNavigator: false,
-      builder: (context) => ConfirmationDialog(
-        title: 'Start session',
-        content: 'Are you sure you want to start the session?',
-        confirmButtonText: 'Start session',
-        type: ConfirmationDialogType.standard,
-        onConfirm: () async {
-          final success = await session.keeper.startSession();
-          if (success && context.mounted) Navigator.of(context).pop();
-        },
+      builder: (context) => SessionStartConfirmationDialog(
+        onStart: session.keeper.startSession,
       ),
     );
   }
@@ -500,40 +433,8 @@ class MoreOptions extends ConsumerWidget {
     return showDialog<void>(
       context: context,
       useRootNavigator: false,
-      builder: (context) {
-        return ConfirmationDialog(
-          title: 'End session',
-          content: 'Are you sure you want to end the session?',
-          confirmButtonText: 'End session',
-          onConfirm: () async {
-            await _endSession(context, session);
-            if (context.mounted) Navigator.of(context).pop();
-          },
-        );
-      },
+      builder: (context) => EndSessionConfirmationDialog(session: session),
     );
-  }
-
-  static Future<void> _endSession(
-    BuildContext context,
-    SessionController session,
-  ) async {
-    try {
-      await session.keeper.endSession();
-    } catch (error) {
-      if (!context.mounted) return;
-      await ErrorHandler.handleApiError(
-        context,
-        error,
-        onRetry: () async {
-          try {
-            await session.keeper.endSession();
-          } catch (e) {
-            // Error already handled by handleApiError
-          }
-        },
-      );
-    }
   }
 }
 

@@ -128,6 +128,7 @@ class _CountingRoom implements Room {
     this.emitDisconnectedOnDisconnect = false,
     this.disconnectedReason,
     this.remoteParticipantMap = const {},
+    this.metadata,
     this.disconnectAfterFirstConnectionStateRead = false,
   });
 
@@ -169,7 +170,7 @@ class _CountingRoom implements Room {
       UnmodifiableMapView(remoteParticipantMap);
 
   @override
-  String? get metadata => null;
+  final String? metadata;
 
   @override
   RoomOptions get roomOptions => const RoomOptions();
@@ -1127,6 +1128,89 @@ void main() {
           ).equals(RoomConnectionState.connected);
           verifyNever(() => participant.setCameraEnabled(any<bool>()));
           await controller.leave();
+        },
+      );
+
+      test(
+        'activation applies room metadata without waiting for server poll',
+        () async {
+          const eventSlug = 'test-session';
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          const roomState = RoomState(
+            keeper: 'keeper',
+            nextSpeaker: Omittable(''),
+            currentSpeaker: Omittable(''),
+            status: RoomStatus.active,
+            turnState: TurnState.idle,
+            sessionSlug: eventSlug,
+            statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+            talkingOrder: [],
+            version: 1,
+            roundNumber: 1,
+          );
+          final poll = Completer<RoomState>();
+          var pollStarted = false;
+          final container = ProviderContainer(
+            overrides: [
+              sessionProvider(eventSlug).overrideWithValue(
+                AsyncData(_createSessionEvent(eventSlug)),
+              ),
+              roomStateProvider(eventSlug).overrideWith((_) {
+                pollStarted = true;
+                return poll.future;
+              }),
+            ],
+          );
+          addTearDown(container.dispose);
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(subscription.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final participant = MockLocalParticipant();
+          when(participant.unpublishAllTracks).thenAnswer((_) async {});
+          when(
+            () => participant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => participant.setMicrophoneEnabled(
+              false,
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
+          ).thenAnswer((_) async => null);
+          final room = _CountingRoom(
+            participant,
+            metadata: jsonEncode(roomState.toJson()),
+          );
+          SessionJoinResult? result;
+          final activation = controller.activateConnectedRoom(room: room).then((
+            value,
+          ) {
+            result = value;
+          });
+          try {
+            await pumpEventQueue();
+            check(pollStarted).isTrue();
+            check(poll.isCompleted).isFalse();
+            check(result).equals(SessionJoinResult.success);
+            check(controller.state.roomState.status).equals(RoomStatus.active);
+            check(controller.state.roomState.version).equals(1);
+          } finally {
+            poll.complete(roomState);
+            await activation;
+            await controller.leave();
+          }
         },
       );
 

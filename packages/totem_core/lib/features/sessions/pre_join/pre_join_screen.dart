@@ -269,14 +269,27 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           event.slug != session.slug &&
           event.start.isAfter(widget.now()),
     );
-    final offer = next.isEmpty ? null : next.first;
-    final message = isTerminalSessionJoinError(flow.error)
+    final expired = flow.admissionStatus == AdmissionStatus.expired;
+    final offer = expired || next.isEmpty ? null : next.first;
+    final terminalError = isTerminalSessionJoinError(flow.error);
+    final admissionMessage = switch (flow.admissionStatus) {
+      AdmissionStatus.denied => 'The Keeper was unable to admit you.',
+      AdmissionStatus.ended => 'The Session has ended.',
+      AdmissionStatus.expired =>
+        'We’re sorry we couldn’t connect you to this session. Please return to the schedule to find another session.',
+      _ => null,
+    };
+    if (!terminalError && admissionMessage == null) {
+      ErrorHandler.logError(
+        StateError('Unexpected admission status: ${flow.admissionStatus}'),
+        message:
+            'Unexpected admission outcome for Session ${widget.sessionSlug}',
+      );
+    }
+    final message = terminalError
         ? 'The server is no longer allowing this Session to be joined.'
-        : switch (flow.admissionStatus) {
-            AdmissionStatus.denied => 'The Keeper was unable to admit you.',
-            AdmissionStatus.ended => 'The Session has ended.',
-            _ => 'Your admission request has expired.',
-          };
+        : admissionMessage ??
+              'This session is unavailable. Please try another session.';
     return RoomBackground(
       status: RoomStatus.ended,
       child: SafeArea(
@@ -298,7 +311,16 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           onSignUp: offer == null || offer.attending || _signingUpForOffer
               ? null
               : () => unawaited(_signUpForOffer(offer.slug)),
-          onBackToSpace: () => TotemRouter.instance.popOrHome(context),
+          backActionLabel: expired ? 'View sessions' : 'Return to the Space',
+          onBackToSpace: () {
+            if (expired) {
+              TotemRouter.instance
+                ..setTabCloseConfirmationEnabled(false)
+                ..toHome(HomeRoutes.spaces);
+            } else {
+              TotemRouter.instance.popOrHome(context);
+            }
+          },
         ),
       ),
     );
@@ -394,6 +416,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     PreJoinFlowState flow,
     SessionDetailSchema session, {
     required bool early,
+    required String? participantName,
   }) {
     final mediaController = ref.read(
       preJoinMediaControllerProvider(widget.sessionSlug).notifier,
@@ -422,8 +445,6 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
           : "We couldn't join the session. Please try again.";
     }
     final waitingMessage = switch (flow.keeperAvailability) {
-      AdmissionKeeperAvailability.absent =>
-        'The Keeper is not connected yet. You can keep waiting or leave and try again later.',
       AdmissionKeeperAvailability.unresponsive =>
         "The Keeper hasn't confirmed your request. Ask them to reconnect or update Totem, or leave and try again.",
       _ => null,
@@ -469,6 +490,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         onActionPressed: early ? () async => false : _requestJoin,
         isSliderLoading: flow.phase == PreJoinFlowPhase.joining,
         note: joinNote,
+        welcomeName: participantName,
         waiting: pending,
         waitingMessage: waitingMessage,
         onLeaveWaiting: leaveWaiting,
@@ -496,9 +518,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     if (session == null) return _buildEligibilityLoading();
     _scheduleJoinWindow(session);
     final keeperIdentity = session.space.author.slug.value;
+    final user = ref.watch(authControllerProvider).user;
     final isKeeper =
-        keeperIdentity != null &&
-        keeperIdentity == ref.watch(authControllerProvider).user?.slug.value;
+        keeperIdentity != null && keeperIdentity == user?.slug.value;
+    final displayName = user?.name.value?.trim();
+    final participantName = displayName == null || displayName.isEmpty
+        ? null
+        : displayName;
     final early =
         !isKeeper &&
         widget.now().isBefore(
@@ -513,7 +539,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     final media = ref.watch(preJoinMediaControllerProvider(widget.sessionSlug));
     _joined = flow.phase == PreJoinFlowPhase.joined;
 
-    final preJoinView = _buildPreJoinView(media, flow, session, early: early);
+    final preJoinView = _buildPreJoinView(
+      media,
+      flow,
+      session,
+      early: early,
+      participantName: participantName,
+    );
     final hasStartedJoin =
         flow.phase != PreJoinFlowPhase.idle && flow.sessionOptions != null;
     if (!hasStartedJoin || loadingData) {
@@ -530,6 +562,8 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         showAdmissionOrientation:
             flow.admissionStatus == AdmissionStatus.approved,
         admissionReady: flow.phase == PreJoinFlowPhase.joined,
+        isReturningParticipant: flow.isReturningParticipant,
+        sessionStartedAtAdmission: flow.sessionStartedAtAdmission,
       ),
     );
   }

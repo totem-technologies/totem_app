@@ -74,35 +74,44 @@ class SessionOrientationNotice extends StatelessWidget {
   final VoidCallback? onDone;
 
   @override
-  Widget build(BuildContext context) => SessionEntryNotice(
-    kicker: 'Joining',
-    title: "You're joining a session already in progress.",
-    onDone: onDone,
-    children: [
-      if (prompt != null && prompt!.isNotEmpty) ...[
+  Widget build(BuildContext context) {
+    final promptText = prompt?.trim();
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 8,
+      children: [
         const Text(
-          'CURRENT PROMPT',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.48,
-            color: Color(0xFF787D7E),
-          ),
+          "You're joining a session already in progress. You'll receive the talking piece when it's your turn to share.",
+          style: entryBody,
         ),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: entryCream,
-            borderRadius: BorderRadius.circular(12),
+        if (promptText != null && promptText.isNotEmpty)
+          Text.rich(
+            TextSpan(
+              text: 'Current prompt: ',
+              style: entryMuted.copyWith(fontWeight: FontWeight.w600),
+              children: [TextSpan(text: promptText, style: entryMuted)],
+            ),
           ),
-          child: Text(prompt!, style: entrySubtitle),
-        ),
       ],
-      const Text(
-        "You'll receive the talking piece when it's your turn to share.",
-        style: entryMuted,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 8,
+        children: [
+          if (constraints.hasBoundedHeight)
+            Flexible(child: SingleChildScrollView(child: content))
+          else
+            content,
+          SessionEntryAction(
+            label: 'Got it',
+            onPressed: onDone,
+            expand: MediaQuery.sizeOf(context).width < 640,
+          ),
+        ],
       ),
-    ],
-  );
+    );
+  }
 }

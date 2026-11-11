@@ -872,7 +872,7 @@ void main() {
       expect(find.text('Dropped message'), findsOneWidget);
     });
 
-    testWidgets('opens the recipient dropdown from the header', (tester) async {
+    testWidgets('selects a recipient from the header dropdown', (tester) async {
       await pumpChatSheet(
         tester,
         isKeeper: true,
@@ -896,6 +896,12 @@ void main() {
       expect(find.text('Lucas'), findsWidgets);
       expect(find.textContaining('only you can post'), findsOneWidget);
 
+      final everyoneOpen = tester.getSemantics(find.text('Everyone').last);
+      check(everyoneOpen.flagsCollection.isButton).isTrue();
+      check(
+        everyoneOpen.flagsCollection.isSelected.toBoolOrNull(),
+      ).equals(true);
+
       await tester.tap(find.text('Lucas').last);
       await tester.pumpAndSettle();
 
@@ -905,6 +911,19 @@ void main() {
       check(
         tester.widgetList(find.text('Private messages with Lucas')),
       ).length.equals(1);
+
+      // Re-open on the Lucas thread and confirm selection moved.
+      await tester.tap(find.text('Lucas').first);
+      await tester.pumpAndSettle();
+
+      final lucasRow = tester.getSemantics(find.text('Lucas').last);
+      check(lucasRow.flagsCollection.isButton).isTrue();
+      check(lucasRow.flagsCollection.isSelected.toBoolOrNull()).equals(true);
+
+      final everyoneRow = tester.getSemantics(find.text('Everyone').last);
+      check(
+        everyoneRow.flagsCollection.isSelected.toBoolOrNull(),
+      ).equals(false);
     });
 
     testWidgets(
