@@ -287,9 +287,8 @@ class _AdmissionHarness {
     displayName: name,
   );
 
-  DateTime _nextRequestExpiration() => _now().add(
-    Duration(minutes: 5, milliseconds: _requestCount++),
-  );
+  DateTime _nextRequestExpiration() =>
+      _now().add(Duration(minutes: 5, milliseconds: _requestCount++));
 
   DateTime expiration() => _now().add(const Duration(minutes: 5));
 
@@ -366,11 +365,7 @@ void main() {
     try {
       final provider = keeperAdmissionRosterProvider('session', 'keeper');
       final store = await container.read(provider.future);
-      store.replace(
-        members,
-        revision,
-        awaitingReadiness: awaitingReadiness,
-      );
+      store.replace(members, revision, awaitingReadiness: awaitingReadiness);
       await container.read(provider.notifier).persist();
       return store;
     } finally {
@@ -891,11 +886,7 @@ void main() {
     final videoBuilds = ValueNotifier(0);
     addTearDown(videoBuilds.dispose);
 
-    final container = await pumpHost(
-      tester,
-      harness,
-      videoBuilds: videoBuilds,
-    );
+    final container = await pumpHost(tester, harness, videoBuilds: videoBuilds);
     container.read(sessionAdmissionSettingsProvider.notifier).setEnabled(false);
     await harness.sendRequest(harness.request('before-preferences'));
     await tester.pump();
@@ -991,9 +982,9 @@ void main() {
       check(preferences.values[declinedKey]).equals(
         corruptStores.contains('declined') ? null : original[declinedKey],
       );
-      check(preferences.values[rosterKey]).equals(
-        corruptStores.contains('roster') ? null : original[rosterKey],
-      );
+      check(
+        preferences.values[rosterKey],
+      ).equals(corruptStores.contains('roster') ? null : original[rosterKey]);
       check(preferences.values['unrelated']).equals('keep');
       final declined = await container.read(
         declinedSessionParticipantsProvider('session', 'keeper').future,
@@ -1139,17 +1130,11 @@ void main() {
     final preferences = _AdmissionPreferences();
     await seedDeclined(preferences, 'guest');
     await seedRoster(preferences, members: ['guest'], revision: 2);
-    final harness = _AdmissionHarness(
-      preferences: preferences,
-    );
+    final harness = _AdmissionHarness(preferences: preferences);
     final videoBuilds = ValueNotifier(0);
     addTearDown(videoBuilds.dispose);
 
-    final container = await pumpHost(
-      tester,
-      harness,
-      videoBuilds: videoBuilds,
-    );
+    final container = await pumpHost(tester, harness, videoBuilds: videoBuilds);
     check(preferences.values).length.equals(2);
 
     when(() => harness.state.roomState).thenReturn(
@@ -1187,9 +1172,7 @@ void main() {
         members: ['guest', 'silent'],
         revision: 7,
       );
-      final firstHarness = _AdmissionHarness(
-        preferences: preferences,
-      );
+      final firstHarness = _AdmissionHarness(preferences: preferences);
       final videoBuilds = ValueNotifier(0);
       addTearDown(videoBuilds.dispose);
 
@@ -1199,9 +1182,7 @@ void main() {
       await tester.pump();
       await tester.idle();
 
-      final restoredHarness = _AdmissionHarness(
-        preferences: preferences,
-      );
+      final restoredHarness = _AdmissionHarness(preferences: preferences);
       restoredHarness.room.remotes['guest'] = _RemoteParticipant('guest');
       restoredHarness.room.remotes['silent'] = _RemoteParticipant('silent');
       final container = await pumpHost(
@@ -1316,71 +1297,66 @@ void main() {
     await tester.idle();
   });
 
-  testWidgets(
-    'does not restore pending or awaiting-readiness applicants',
-    (tester) async {
-      final preferences = _AdmissionPreferences();
-      final savedRoster = await seedRoster(
-        preferences,
-        members: ['guest'],
-        revision: 3,
-        awaitingReadiness: ['guest'],
-      );
-      final pendingHarness = _AdmissionHarness(
-        preferences: preferences,
-      );
-      final videoBuilds = ValueNotifier(0);
-      addTearDown(videoBuilds.dispose);
+  testWidgets('does not restore pending or awaiting-readiness applicants', (
+    tester,
+  ) async {
+    final preferences = _AdmissionPreferences();
+    final savedRoster = await seedRoster(
+      preferences,
+      members: ['guest'],
+      revision: 3,
+      awaitingReadiness: ['guest'],
+    );
+    final pendingHarness = _AdmissionHarness(preferences: preferences);
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
 
-      await pumpHost(tester, pendingHarness, videoBuilds: videoBuilds);
-      await pendingHarness.sendRequest(pendingHarness.request('pending'));
-      await tester.pump();
-      await tester.pump();
-      check(find.byType(SessionWaitingQueueButton).evaluate()).length.equals(1);
+    await pumpHost(tester, pendingHarness, videoBuilds: videoBuilds);
+    await pendingHarness.sendRequest(pendingHarness.request('pending'));
+    await tester.pump();
+    await tester.pump();
+    check(find.byType(SessionWaitingQueueButton).evaluate()).length.equals(1);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      await tester.idle();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.idle();
 
-      final restoredHarness = _AdmissionHarness(
-        preferences: preferences,
-      );
-      final container = await pumpHost(
-        tester,
-        restoredHarness,
-        videoBuilds: videoBuilds,
-      );
-      await tester.pump();
+    final restoredHarness = _AdmissionHarness(preferences: preferences);
+    final container = await pumpHost(
+      tester,
+      restoredHarness,
+      videoBuilds: videoBuilds,
+    );
+    await tester.pump();
 
-      check(find.byType(SessionWaitingQueueButton).evaluate()).isEmpty();
-      check(
-        container
-            .read(admittedSessionParticipantIdentitiesProvider)
-            .contains('guest'),
-      ).isFalse();
-      check(restoredHarness.mediaRecipients.last).isEmpty();
+    check(find.byType(SessionWaitingQueueButton).evaluate()).isEmpty();
+    check(
+      container
+          .read(admittedSessionParticipantIdentitiesProvider)
+          .contains('guest'),
+    ).isFalse();
+    check(restoredHarness.mediaRecipients.last).isEmpty();
 
-      final request = AdmissionRosterRequest(
-        id: 'awaiting-readiness',
-        senderIdentity: 'guest',
-        recipientIdentity: 'keeper',
-        expiresAt: restoredHarness.expiration(),
-        sessionIdentity: 'session',
-      );
-      await restoredHarness.sendPacket(request);
-      await tester.pump();
-      final snapshot = restoredHarness.sent
-          .whereType<AdmissionRosterSnapshot>()
-          .single;
-      check(snapshot.keeperGeneration).equals(savedRoster.keeperGeneration);
-      check(snapshot.revision).equals(3);
-      check(snapshot.members).isEmpty();
+    final request = AdmissionRosterRequest(
+      id: 'awaiting-readiness',
+      senderIdentity: 'guest',
+      recipientIdentity: 'keeper',
+      expiresAt: restoredHarness.expiration(),
+      sessionIdentity: 'session',
+    );
+    await restoredHarness.sendPacket(request);
+    await tester.pump();
+    final snapshot = restoredHarness.sent
+        .whereType<AdmissionRosterSnapshot>()
+        .single;
+    check(snapshot.keeperGeneration).equals(savedRoster.keeperGeneration);
+    check(snapshot.revision).equals(3);
+    check(snapshot.members).isEmpty();
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      await tester.idle();
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.idle();
+  });
 
   testWidgets(
     'shows live queue updates in a phone sheet above the toolbar without rebuilding video',
@@ -1401,9 +1377,9 @@ void main() {
       final queue = find.byType(SessionWaitingQueueButton);
       final toolbar = find.byKey(SessionActionBar.actionBarKey);
       check(queue.evaluate()).length.equals(1);
-      check(tester.getRect(queue).bottom).isLessOrEqual(
-        tester.getRect(toolbar).top,
-      );
+      check(
+        tester.getRect(queue).bottom,
+      ).isLessOrEqual(tester.getRect(toolbar).top);
       check(videoBuilds.value).equals(initialVideoBuilds);
 
       await tester.tap(queue);
@@ -1430,9 +1406,7 @@ void main() {
 
   testWidgets(
     'opens the tablet drawer from the room navigator and closes on back',
-    (
-      tester,
-    ) async {
+    (tester) async {
       setViewport(tester, const Size(800, 900));
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -1448,9 +1422,9 @@ void main() {
       await tester.tap(find.byType(SessionWaitingQueueButton));
       await tester.pumpAndSettle();
       check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
-      check(tester.getSize(find.byType(SessionAdmissionPanel)).width).equals(
-        sessionSidePanelWidth,
-      );
+      check(
+        tester.getSize(find.byType(SessionAdmissionPanel)).width,
+      ).equals(sessionSidePanelWidth);
 
       await tester
           .state<NavigatorState>(find.byKey(const Key('room-navigator')))
@@ -1511,61 +1485,60 @@ void main() {
     },
   );
 
-  testWidgets(
-    'admit all skips requests cancelled while deciding the batch',
-    (tester) async {
-      setViewport(tester, const Size(1200, 900));
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final harness = _AdmissionHarness();
-      final videoBuilds = ValueNotifier(0);
-      addTearDown(videoBuilds.dispose);
+  testWidgets('admit all skips requests cancelled while deciding the batch', (
+    tester,
+  ) async {
+    setViewport(tester, const Size(1200, 900));
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final harness = _AdmissionHarness();
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
 
-      await pumpHost(
-        tester,
-        harness,
-        videoBuilds: videoBuilds,
-        includeDock: true,
-      );
-      final first = harness.request('first', sender: 'alice', name: 'Alice');
-      final second = harness.request(
-        'second',
-        sender: 'bob',
-        name: 'Bob',
-        expiresAt: first.expiresAt.add(const Duration(seconds: 1)),
-      );
-      await harness.sendRequest(first);
-      await harness.sendRequest(second);
-      harness.afterSend = (packet) async {
-        if (packet is AdmissionDecision && packet.id == first.id) {
-          await harness.sendPacket(
-            AdmissionCancel(
-              id: second.id,
-              senderIdentity: second.senderIdentity,
-              recipientIdentity: second.recipientIdentity,
-              expiresAt: second.expiresAt,
-            ),
-          );
-        }
-      };
-      await tester.pump();
-      await tester.pump();
+    await pumpHost(
+      tester,
+      harness,
+      videoBuilds: videoBuilds,
+      includeDock: true,
+    );
+    final first = harness.request('first', sender: 'alice', name: 'Alice');
+    final second = harness.request(
+      'second',
+      sender: 'bob',
+      name: 'Bob',
+      expiresAt: first.expiresAt.add(const Duration(seconds: 1)),
+    );
+    await harness.sendRequest(first);
+    await harness.sendRequest(second);
+    harness.afterSend = (packet) async {
+      if (packet is AdmissionDecision && packet.id == first.id) {
+        await harness.sendPacket(
+          AdmissionCancel(
+            id: second.id,
+            senderIdentity: second.senderIdentity,
+            recipientIdentity: second.recipientIdentity,
+            expiresAt: second.expiresAt,
+          ),
+        );
+      }
+    };
+    await tester.pump();
+    await tester.pump();
 
-      await tester.tap(find.byType(SessionWaitingQueueButton));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Admit all'));
-      await tester.pump();
-      await tester.pump();
+    await tester.tap(find.byType(SessionWaitingQueueButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Admit all'));
+    await tester.pump();
+    await tester.pump();
 
-      final decisions = harness.sent.whereType<AdmissionDecision>().toList();
-      check(decisions).length.equals(1);
-      check(decisions.single.id).equals(first.id);
+    final decisions = harness.sent.whereType<AdmissionDecision>().toList();
+    check(decisions).length.equals(1);
+    check(decisions.single.id).equals(first.id);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      await tester.idle();
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.idle();
+  });
 
   testWidgets(
     'admit all shows one error notification when multiple sends fail',

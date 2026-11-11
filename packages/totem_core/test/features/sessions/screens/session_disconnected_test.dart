@@ -544,22 +544,19 @@ void main() {
         Size(700, 650),
         Size(906, 339),
       ]) {
-        testWidgets(
-          'shows the whole card and actions without scrolling at '
-          '${size.width.toInt()}x${size.height.toInt()}',
-          (tester) async {
-            await _pumpDisconnectedScreen(
-              tester,
-              size: size,
-              session: _sessionWithNextEvent(keeperName: keeper),
-            );
+        testWidgets('shows the whole card and actions without scrolling at '
+            '${size.width.toInt()}x${size.height.toInt()}', (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: size,
+            session: _sessionWithNextEvent(keeperName: keeper),
+          );
 
-            check(_isKeeperFullyVisible(tester, keeper)).isTrue();
-            check(_isFullyVisible(tester, find.byType(SpaceCard))).isTrue();
-            check(_isFullyVisible(tester, seeAllSessions)).isTrue();
-            check(_hasScrollableContent(tester)).isFalse();
-          },
-        );
+          check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+          check(_isFullyVisible(tester, find.byType(SpaceCard))).isTrue();
+          check(_isFullyVisible(tester, seeAllSessions)).isTrue();
+          check(_hasScrollableContent(tester)).isFalse();
+        });
       }
 
       for (final size in const [
@@ -569,39 +566,33 @@ void main() {
         Size(906, 339),
         Size(1280, 800),
       ]) {
-        testWidgets(
-          'places the card beside the header at '
-          '${size.width.toInt()}x${size.height.toInt()}',
-          (tester) async {
-            await _pumpDisconnectedScreen(
-              tester,
-              size: size,
-              session: _sessionWithNextEvent(keeperName: keeper),
-            );
+        testWidgets('places the card beside the header at '
+            '${size.width.toInt()}x${size.height.toInt()}', (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: size,
+            session: _sessionWithNextEvent(keeperName: keeper),
+          );
 
-            final headerRect = tester.getRect(find.text('Session Ended'));
-            final cardRect = tester.getRect(find.byType(SpaceCard));
-            check(cardRect.left).isGreaterOrEqual(headerRect.right);
-          },
-        );
+          final headerRect = tester.getRect(find.text('Session Ended'));
+          final cardRect = tester.getRect(find.byType(SpaceCard));
+          check(cardRect.left).isGreaterOrEqual(headerRect.right);
+        });
       }
 
       for (final size in const [Size(1440, 900), Size(1600, 1100)]) {
-        testWidgets(
-          'stacks the card below the header at '
-          '${size.width.toInt()}x${size.height.toInt()}',
-          (tester) async {
-            await _pumpDisconnectedScreen(
-              tester,
-              size: size,
-              session: _sessionWithNextEvent(keeperName: keeper),
-            );
+        testWidgets('stacks the card below the header at '
+            '${size.width.toInt()}x${size.height.toInt()}', (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: size,
+            session: _sessionWithNextEvent(keeperName: keeper),
+          );
 
-            final headerRect = tester.getRect(find.text('Session Ended'));
-            final cardRect = tester.getRect(find.byType(SpaceCard));
-            check(cardRect.top).isGreaterOrEqual(headerRect.bottom);
-          },
-        );
+          final headerRect = tester.getRect(find.text('Session Ended'));
+          final cardRect = tester.getRect(find.byType(SpaceCard));
+          check(cardRect.top).isGreaterOrEqual(headerRect.bottom);
+        });
       }
 
       testWidgets(
@@ -706,39 +697,37 @@ void main() {
         },
       );
 
-      testWidgets(
-        'right-to-left places the card before the header',
-        (tester) async {
-          await _pumpDisconnectedScreen(
-            tester,
-            size: const Size(1702, 650),
-            session: _sessionWithNextEvent(keeperName: keeper),
-            textDirection: TextDirection.rtl,
-          );
+      testWidgets('right-to-left places the card before the header', (
+        tester,
+      ) async {
+        await _pumpDisconnectedScreen(
+          tester,
+          size: const Size(1702, 650),
+          session: _sessionWithNextEvent(keeperName: keeper),
+          textDirection: TextDirection.rtl,
+        );
 
-          final headerRect = tester.getRect(find.text('Session Ended'));
-          final cardRect = tester.getRect(find.byType(SpaceCard));
-          check(cardRect.right).isLessOrEqual(headerRect.left);
-          check(_isKeeperFullyVisible(tester, keeper)).isTrue();
-          check(_hasScrollableContent(tester)).isFalse();
-        },
-      );
+        final headerRect = tester.getRect(find.text('Session Ended'));
+        final cardRect = tester.getRect(find.byType(SpaceCard));
+        check(cardRect.right).isLessOrEqual(headerRect.left);
+        check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+        check(_hasScrollableContent(tester)).isFalse();
+      });
 
-      testWidgets(
-        'short portrait scrolls the page to reveal the full card',
-        (tester) async {
-          await _pumpDisconnectedScreen(
-            tester,
-            size: const Size(390, 560),
-            session: _sessionWithNextEvent(keeperName: keeper),
-          );
+      testWidgets('short portrait scrolls the page to reveal the full card', (
+        tester,
+      ) async {
+        await _pumpDisconnectedScreen(
+          tester,
+          size: const Size(390, 560),
+          session: _sessionWithNextEvent(keeperName: keeper),
+        );
 
-          await tester.ensureVisible(_keeperText(keeper));
-          await tester.pump();
+        await tester.ensureVisible(_keeperText(keeper));
+        await tester.pump();
 
-          check(_isKeeperFullyVisible(tester, keeper)).isTrue();
-        },
-      );
+        check(_isKeeperFullyVisible(tester, keeper)).isTrue();
+      });
 
       testWidgets(
         'narrow phone with large text and a long title does not clip keeper',
@@ -857,19 +846,18 @@ void main() {
         ),
       );
 
-      testWidgets(
-        'tablet renders keeperEnded without session details',
-        (tester) async {
-          await _pumpDisconnectedScreen(
-            tester,
-            size: const Size(800, 1100),
-            session: null,
-          );
+      testWidgets('tablet renders keeperEnded without session details', (
+        tester,
+      ) async {
+        await _pumpDisconnectedScreen(
+          tester,
+          size: const Size(800, 1100),
+          session: null,
+        );
 
-          check(find.text('Session Ended').evaluate()).isNotEmpty();
-          check(seeAllSessions.evaluate()).isNotEmpty();
-        },
-      );
+        check(find.text('Session Ended').evaluate()).isNotEmpty();
+        check(seeAllSessions.evaluate()).isNotEmpty();
+      });
     });
   });
 }

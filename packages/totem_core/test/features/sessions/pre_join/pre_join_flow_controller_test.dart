@@ -554,9 +554,9 @@ ProviderContainer _container({
         sessionControllerProvider(
           sessionOptions,
         ).overrideWith(sessionController),
-        preJoinFlowControllerProvider(_slug).overrideWith(
-          flowController ?? _DefaultFlow.new,
-        ),
+        preJoinFlowControllerProvider(
+          _slug,
+        ).overrideWith(flowController ?? _DefaultFlow.new),
         authControllerProvider.overrideWith(
           () => FakeAuthController(
             AuthState.authenticated(
@@ -1337,93 +1337,90 @@ void main() {
     (true, false),
     (true, true),
   ]) {
-    test(
-      'approved session stays connected until pre-join flow is disposed '
-      '(camera: $camera, microphone: $microphone)',
-      () async {
-        final options = SessionOptions(
-          sessionSlug: _slug,
-          token: 'token',
-          cameraEnabled: camera,
-          microphoneEnabled: microphone,
-          speakerEnabled: true,
-          cameraOptions: SessionController.defaultCameraCaptureOptions,
-        );
-        _ObservedSessionController.instances.clear();
-        _AdmissionFlow.failConnection = false;
-        _AdmissionFlow.endWhenRequestSent = false;
-        _AdmissionFlow.onTransportCreated = null;
-        final factory = _TrackFactory();
-        final container = _container(
-          factory: factory,
-          response: const JoinResponse(token: 'token', isAlreadyPresent: false),
-          sessionController: _ObservedSessionController.new,
-          sessionOptions: options,
-          keeperSlug: 'keeper',
-          flowController: _RealSessionAdmissionFlow.new,
-          stableSession: true,
-        );
-        addTearDown(container.dispose);
-        await _waitForMedia(container);
-        await container.read(sessionProvider(_slug).future);
-        final media = container.read(
-          preJoinMediaControllerProvider(_slug).notifier,
-        );
-        if (!camera) await media.turnOff(MediaKind.camera);
-        if (!microphone) await media.turnOff(MediaKind.microphone);
-        final flow = container.read(
-          preJoinFlowControllerProvider(_slug).notifier,
-        );
-        check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
-        final room = _AdmissionFlow.room! as _ConnectedAdmissionRoom;
-        if (camera) {
-          when(
-            () => room.participant.publishVideoTrack(
-              factory.videoTracks.last,
-              publishOptions: SessionController.defaultVideoPublishOptions,
-            ),
-          ).thenAnswer((_) async => MockLocalTrackPublication());
-        }
-        if (microphone) {
-          when(
-            () => room.participant.publishAudioTrack(factory.audioTracks.last),
-          ).thenAnswer((_) async => MockLocalAudioTrackPublication());
-        }
-        when(room.participant.unpublishAllTracks).thenAnswer((_) async {});
+    test('approved session stays connected until pre-join flow is disposed '
+        '(camera: $camera, microphone: $microphone)', () async {
+      final options = SessionOptions(
+        sessionSlug: _slug,
+        token: 'token',
+        cameraEnabled: camera,
+        microphoneEnabled: microphone,
+        speakerEnabled: true,
+        cameraOptions: SessionController.defaultCameraCaptureOptions,
+      );
+      _ObservedSessionController.instances.clear();
+      _AdmissionFlow.failConnection = false;
+      _AdmissionFlow.endWhenRequestSent = false;
+      _AdmissionFlow.onTransportCreated = null;
+      final factory = _TrackFactory();
+      final container = _container(
+        factory: factory,
+        response: const JoinResponse(token: 'token', isAlreadyPresent: false),
+        sessionController: _ObservedSessionController.new,
+        sessionOptions: options,
+        keeperSlug: 'keeper',
+        flowController: _RealSessionAdmissionFlow.new,
+        stableSession: true,
+      );
+      addTearDown(container.dispose);
+      await _waitForMedia(container);
+      await container.read(sessionProvider(_slug).future);
+      final media = container.read(
+        preJoinMediaControllerProvider(_slug).notifier,
+      );
+      if (!camera) await media.turnOff(MediaKind.camera);
+      if (!microphone) await media.turnOff(MediaKind.microphone);
+      final flow = container.read(
+        preJoinFlowControllerProvider(_slug).notifier,
+      );
+      check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+      final room = _AdmissionFlow.room! as _ConnectedAdmissionRoom;
+      if (camera) {
         when(
-          () => room.participant.setMicrophoneEnabled(
-            false,
-            audioCaptureOptions: any(named: 'audioCaptureOptions'),
+          () => room.participant.publishVideoTrack(
+            factory.videoTracks.last,
+            publishOptions: SessionController.defaultVideoPublishOptions,
           ),
-        ).thenAnswer((_) async => null);
+        ).thenAnswer((_) async => MockLocalTrackPublication());
+      }
+      if (microphone) {
         when(
-          () => room.participant.publishData(
-            any(),
-            reliable: any(named: 'reliable'),
-            topic: any(named: 'topic'),
-            destinationIdentities: any(named: 'destinationIdentities'),
-          ),
-        ).thenAnswer((_) async {});
-        _AdmissionFlow.transport!.decide(true);
-        await pumpEventQueue();
-        final flowState = container.read(preJoinFlowControllerProvider(_slug));
-        check(flowState.phase).equals(PreJoinFlowPhase.joined);
-        check(flowState.sessionOptions).equals(options);
-        check(_ObservedSessionController.instances.length).equals(1);
-        final session = _ObservedSessionController.instances.single;
-        check(session.disposed).isFalse();
-        check(identical(session.room, room)).isTrue();
-        check(
-          session.state.connectionState,
-        ).equals(RoomConnectionState.connected);
-        check(room.disposed).isFalse();
+          () => room.participant.publishAudioTrack(factory.audioTracks.last),
+        ).thenAnswer((_) async => MockLocalAudioTrackPublication());
+      }
+      when(room.participant.unpublishAllTracks).thenAnswer((_) async {});
+      when(
+        () => room.participant.setMicrophoneEnabled(
+          false,
+          audioCaptureOptions: any(named: 'audioCaptureOptions'),
+        ),
+      ).thenAnswer((_) async => null);
+      when(
+        () => room.participant.publishData(
+          any(),
+          reliable: any(named: 'reliable'),
+          topic: any(named: 'topic'),
+          destinationIdentities: any(named: 'destinationIdentities'),
+        ),
+      ).thenAnswer((_) async {});
+      _AdmissionFlow.transport!.decide(true);
+      await pumpEventQueue();
+      final flowState = container.read(preJoinFlowControllerProvider(_slug));
+      check(flowState.phase).equals(PreJoinFlowPhase.joined);
+      check(flowState.sessionOptions).equals(options);
+      check(_ObservedSessionController.instances.length).equals(1);
+      final session = _ObservedSessionController.instances.single;
+      check(session.disposed).isFalse();
+      check(identical(session.room, room)).isTrue();
+      check(
+        session.state.connectionState,
+      ).equals(RoomConnectionState.connected);
+      check(room.disposed).isFalse();
 
-        container.invalidate(preJoinFlowControllerProvider(_slug));
-        await pumpEventQueue();
-        check(session.disposed).isTrue();
-        check(room.disposed).isTrue();
-      },
-    );
+      container.invalidate(preJoinFlowControllerProvider(_slug));
+      await pumpEventQueue();
+      check(session.disposed).isTrue();
+      check(room.disposed).isTrue();
+    });
   }
 
   test('camera-off approval enters the session with the same room', () async {

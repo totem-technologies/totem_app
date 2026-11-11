@@ -30,10 +30,7 @@ enum DeclineVariant { nextSession, related }
 
 @immutable
 class AdmissionRequest {
-  const AdmissionRequest({
-    required this.id,
-    required this.name,
-  });
+  const AdmissionRequest({required this.id, required this.name});
 
   final String id;
   final String name;
@@ -587,10 +584,7 @@ class _Admission extends StatelessWidget {
       child: SessionAdmissionList(
         guests: [
           for (final request in requests)
-            SessionAdmissionGuest(
-              id: request.id,
-              name: request.name,
-            ),
+            SessionAdmissionGuest(id: request.id, name: request.name),
         ],
         onAdmit: onAdmit,
         onAdmitAll: onAdmitAll,

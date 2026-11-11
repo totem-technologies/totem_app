@@ -319,11 +319,8 @@ void main() {
     verifyNever(() => harness.keeper.reorder(any()));
 
     completer.complete(
-      KeeperAdmissionRosterStore()..replace(
-        ['user-1', 'user-2'],
-        1,
-        awaitingReadiness: ['user-2'],
-      ),
+      KeeperAdmissionRosterStore()
+        ..replace(['user-1', 'user-2'], 1, awaitingReadiness: ['user-2']),
     );
     await tester.pump();
     check(saveEnabled()).isFalse();

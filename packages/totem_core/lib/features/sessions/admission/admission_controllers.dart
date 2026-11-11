@@ -15,12 +15,7 @@ enum AdmissionStatus {
   failed,
 }
 
-enum AdmissionKeeperAvailability {
-  checking,
-  absent,
-  unresponsive,
-  responsive,
-}
+enum AdmissionKeeperAvailability { checking, absent, unresponsive, responsive }
 
 /// The caller owns [channel] and must dispose this controller before the room.
 /// Changes are emitted for UI consumers; read [status] after subscribing.

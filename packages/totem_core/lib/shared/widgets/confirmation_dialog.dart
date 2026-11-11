@@ -148,10 +148,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
               },
               disabled: _anyButtonBusy,
               onConfirm: () async => Navigator.of(context).pop(),
-              child: const Text(
-                'Cancel',
-                textAlign: TextAlign.center,
-              ),
+              child: const Text('Cancel', textAlign: TextAlign.center),
             ),
         ],
       ),

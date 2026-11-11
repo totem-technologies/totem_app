@@ -15,9 +15,9 @@ void main() {
         home: Builder(
           builder: (context) {
             return MediaQuery(
-              data: MediaQuery.of(context).copyWith(
-                textScaler: TextScaler.linear(textScale),
-              ),
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(textScale)),
               child: Scaffold(
                 body: Center(
                   child: ElevatedButton(

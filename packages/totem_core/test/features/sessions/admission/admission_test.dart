@@ -379,126 +379,121 @@ void main() {
     },
   );
 
-  test(
-    'protocol rejects unknown version and spoofed sender',
-    () {
-      final now = DateTime.utc(2026);
-      final request = AdmissionRequest(
-        id: 'id',
+  test('protocol rejects unknown version and spoofed sender', () {
+    final now = DateTime.utc(2026);
+    final request = AdmissionRequest(
+      id: 'id',
+      senderIdentity: 'alice',
+      recipientIdentity: 'keeper',
+      expiresAt: now.add(const Duration(minutes: 2)),
+      displayName: 'Alice',
+    );
+    final payload = AdmissionProtocol.encode(request);
+    check(
+      AdmissionProtocol.decode(payload, senderIdentity: 'alice', now: now),
+    ).isA<AdmissionRequest>();
+    final sessionRequest = AdmissionRequest(
+      id: 'session-request',
+      senderIdentity: 'alice',
+      recipientIdentity: 'keeper',
+      expiresAt: now.add(AdmissionProtocol.requestLifetime),
+      displayName: 'Alice',
+    );
+    check(
+      AdmissionProtocol.decode(
+        AdmissionProtocol.encode(sessionRequest),
         senderIdentity: 'alice',
-        recipientIdentity: 'keeper',
-        expiresAt: now.add(const Duration(minutes: 2)),
-        displayName: 'Alice',
-      );
-      final payload = AdmissionProtocol.encode(request);
-      check(
-        AdmissionProtocol.decode(payload, senderIdentity: 'alice', now: now),
-      ).isA<AdmissionRequest>();
-      final sessionRequest = AdmissionRequest(
-        id: 'session-request',
+        now: now.add(const Duration(minutes: 3)),
+      ),
+    ).isA<AdmissionRequest>();
+    check(
+      AdmissionProtocol.decode(payload, senderIdentity: 'mallory', now: now),
+    ).isNull();
+    check(
+      AdmissionProtocol.decode(payload, senderIdentity: null, now: now),
+    ).isNull();
+    final cancel = AdmissionCancel(
+      id: request.id,
+      senderIdentity: request.senderIdentity,
+      recipientIdentity: request.recipientIdentity,
+      expiresAt: request.expiresAt,
+    );
+    check(
+      AdmissionProtocol.decode(
+        AdmissionProtocol.encode(cancel),
         senderIdentity: 'alice',
-        recipientIdentity: 'keeper',
-        expiresAt: now.add(AdmissionProtocol.requestLifetime),
-        displayName: 'Alice',
-      );
-      check(
-        AdmissionProtocol.decode(
-          AdmissionProtocol.encode(sessionRequest),
-          senderIdentity: 'alice',
-          now: now.add(const Duration(minutes: 3)),
-        ),
-      ).isA<AdmissionRequest>();
-      check(
-        AdmissionProtocol.decode(payload, senderIdentity: 'mallory', now: now),
-      ).isNull();
-      check(
-        AdmissionProtocol.decode(payload, senderIdentity: null, now: now),
-      ).isNull();
-      final cancel = AdmissionCancel(
-        id: request.id,
-        senderIdentity: request.senderIdentity,
-        recipientIdentity: request.recipientIdentity,
-        expiresAt: request.expiresAt,
-      );
-      check(
-        AdmissionProtocol.decode(
-          AdmissionProtocol.encode(cancel),
-          senderIdentity: 'alice',
-          now: now,
-        ),
-      ).isA<AdmissionCancel>();
-      check(
-        AdmissionProtocol.decode(
-          AdmissionProtocol.encode(cancel),
-          senderIdentity: 'mallory',
-          now: now,
-        ),
-      ).isNull();
-      final hello = AdmissionHello(
-        id: 'hello',
+        now: now,
+      ),
+    ).isA<AdmissionCancel>();
+    check(
+      AdmissionProtocol.decode(
+        AdmissionProtocol.encode(cancel),
+        senderIdentity: 'mallory',
+        now: now,
+      ),
+    ).isNull();
+    final hello = AdmissionHello(
+      id: 'hello',
+      senderIdentity: 'keeper',
+      recipientIdentity: 'alice',
+      expiresAt: now.subtract(const Duration(days: 1)),
+    );
+    check(
+      AdmissionProtocol.decode(
+        AdmissionProtocol.encode(hello),
         senderIdentity: 'keeper',
-        recipientIdentity: 'alice',
-        expiresAt: now.subtract(const Duration(days: 1)),
-      );
-      check(
-        AdmissionProtocol.decode(
-          AdmissionProtocol.encode(hello),
-          senderIdentity: 'keeper',
-          now: now,
+        now: now,
+      ),
+    ).isA<AdmissionHello>();
+    check(
+      AdmissionProtocol.decode(
+        AdmissionProtocol.encode(hello),
+        senderIdentity: 'mallory',
+        now: now,
+      ),
+    ).isNull();
+    final decoded = jsonDecode(utf8.decode(payload)) as Map<String, dynamic>;
+    check(
+      AdmissionProtocol.decode(
+        utf8.encode(jsonEncode({...decoded, 'to': 'x' * 257})),
+        senderIdentity: 'alice',
+        now: now,
+      ),
+    ).isNull();
+    final oversizedSender = 's' * 257;
+    check(
+      AdmissionProtocol.decode(
+        utf8.encode(jsonEncode({...decoded, 'from': oversizedSender})),
+        senderIdentity: oversizedSender,
+        now: now,
+      ),
+    ).isNull();
+    check(
+      AdmissionProtocol.decode(
+        utf8.encode(jsonEncode({...decoded, 'expiresAt': 9223372036854775807})),
+        senderIdentity: 'alice',
+        now: now,
+      ),
+    ).isNull();
+    check(
+      AdmissionProtocol.decode(
+        List<int>.filled(AdmissionProtocol.maxPayloadBytes + 1, 97),
+        senderIdentity: 'alice',
+        now: now,
+      ),
+    ).isNull();
+    check(
+      AdmissionProtocol.decode(
+        utf8.encode(
+          '{"v":2,"kind":"request","id":"id","from":"alice",'
+          '"to":"keeper","expiresAt":${request.expiresAt.millisecondsSinceEpoch},'
+          '"name":"Alice"}',
         ),
-      ).isA<AdmissionHello>();
-      check(
-        AdmissionProtocol.decode(
-          AdmissionProtocol.encode(hello),
-          senderIdentity: 'mallory',
-          now: now,
-        ),
-      ).isNull();
-      final decoded = jsonDecode(utf8.decode(payload)) as Map<String, dynamic>;
-      check(
-        AdmissionProtocol.decode(
-          utf8.encode(jsonEncode({...decoded, 'to': 'x' * 257})),
-          senderIdentity: 'alice',
-          now: now,
-        ),
-      ).isNull();
-      final oversizedSender = 's' * 257;
-      check(
-        AdmissionProtocol.decode(
-          utf8.encode(jsonEncode({...decoded, 'from': oversizedSender})),
-          senderIdentity: oversizedSender,
-          now: now,
-        ),
-      ).isNull();
-      check(
-        AdmissionProtocol.decode(
-          utf8.encode(
-            jsonEncode({...decoded, 'expiresAt': 9223372036854775807}),
-          ),
-          senderIdentity: 'alice',
-          now: now,
-        ),
-      ).isNull();
-      check(
-        AdmissionProtocol.decode(
-          List<int>.filled(AdmissionProtocol.maxPayloadBytes + 1, 97),
-          senderIdentity: 'alice',
-          now: now,
-        ),
-      ).isNull();
-      check(
-        AdmissionProtocol.decode(
-          utf8.encode(
-            '{"v":2,"kind":"request","id":"id","from":"alice",'
-            '"to":"keeper","expiresAt":${request.expiresAt.millisecondsSinceEpoch},'
-            '"name":"Alice"}',
-          ),
-          senderIdentity: 'alice',
-          now: now,
-        ),
-      ).isNull();
-    },
-  );
+        senderIdentity: 'alice',
+        now: now,
+      ),
+    ).isNull();
+  });
 
   test(
     'transport reads canonical room metadata and emits ended once',
@@ -927,24 +922,24 @@ void main() {
         ).equals(AdmissionKeeperAvailability.absent);
 
         channel.controller.add(const AdmissionPresenceChanged('keeper', true));
-        check(guest.keeperAvailability).equals(
-          AdmissionKeeperAvailability.checking,
-        );
+        check(
+          guest.keeperAvailability,
+        ).equals(AdmissionKeeperAvailability.checking);
         channel.present.add('keeper');
         async.elapse(const Duration(seconds: 10));
         check(guest.status).equals(AdmissionStatus.pending);
-        check(guest.keeperAvailability).equals(
-          AdmissionKeeperAvailability.unresponsive,
-        );
+        check(
+          guest.keeperAvailability,
+        ).equals(AdmissionKeeperAvailability.unresponsive);
         check(channel.sent.whereType<AdmissionRequest>()).length.equals(1);
         channel.controller.add(const AdmissionConnectionRestored());
-        check(guest.keeperAvailability).equals(
-          AdmissionKeeperAvailability.checking,
-        );
+        check(
+          guest.keeperAvailability,
+        ).equals(AdmissionKeeperAvailability.checking);
         async.elapse(const Duration(seconds: 10));
-        check(guest.keeperAvailability).equals(
-          AdmissionKeeperAvailability.unresponsive,
-        );
+        check(
+          guest.keeperAvailability,
+        ).equals(AdmissionKeeperAvailability.unresponsive);
 
         unawaited(guest.dispose());
         unawaited(channel.dispose());
@@ -975,14 +970,14 @@ void main() {
           ),
         ),
       );
-      check(guest.keeperAvailability).equals(
-        AdmissionKeeperAvailability.checking,
-      );
+      check(
+        guest.keeperAvailability,
+      ).equals(AdmissionKeeperAvailability.checking);
 
       async.elapse(const Duration(seconds: 10));
-      check(guest.keeperAvailability).equals(
-        AdmissionKeeperAvailability.unresponsive,
-      );
+      check(
+        guest.keeperAvailability,
+      ).equals(AdmissionKeeperAvailability.unresponsive);
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionHello(
@@ -994,9 +989,9 @@ void main() {
         ),
       );
       check(guest.status).equals(AdmissionStatus.pending);
-      check(guest.keeperAvailability).equals(
-        AdmissionKeeperAvailability.responsive,
-      );
+      check(
+        guest.keeperAvailability,
+      ).equals(AdmissionKeeperAvailability.responsive);
 
       unawaited(guest.dispose());
       unawaited(channel.dispose());
@@ -1004,62 +999,58 @@ void main() {
     });
   });
 
-  test(
-    'a confirmed request remains responsive after a quick reconnect',
-    () {
-      fakeAsync((async) {
-        final clock = async.getClock(_fixedNow);
-        final channel = _Channel('guest', now: clock.now)
-          ..present.add('keeper');
-        final guest = _pendingAdmissionController(
-          channel: channel,
-          keeperIdentity: () => 'keeper',
-          now: clock.now,
-        );
-        unawaited(guest.requestAdmission(displayName: 'Guest'));
-        async.flushMicrotasks();
-        channel.controller.add(
-          AdmissionPacketReceived(
-            AdmissionHello(
-              id: 'early',
-              senderIdentity: 'keeper',
-              recipientIdentity: 'guest',
-              expiresAt: _fixedNow,
-            ),
+  test('a confirmed request remains responsive after a quick reconnect', () {
+    fakeAsync((async) {
+      final clock = async.getClock(_fixedNow);
+      final channel = _Channel('guest', now: clock.now)..present.add('keeper');
+      final guest = _pendingAdmissionController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+        now: clock.now,
+      );
+      unawaited(guest.requestAdmission(displayName: 'Guest'));
+      async.flushMicrotasks();
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionHello(
+            id: 'early',
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: _fixedNow,
           ),
-        );
-        check(guest.keeperAvailability).equals(
-          AdmissionKeeperAvailability.responsive,
-        );
-        final sentBeforeReconnect = channel.sent.length;
-        channel.controller.add(const AdmissionConnectionRestored());
-        check(channel.sent).length.equals(sentBeforeReconnect + 1);
-        check(channel.sent.last).equals(channel.sent.first);
-        async.elapse(const Duration(seconds: 10));
-        check(guest.status).equals(AdmissionStatus.pending);
-        check(guest.keeperAvailability).equals(
-          AdmissionKeeperAvailability.responsive,
-        );
+        ),
+      );
+      check(
+        guest.keeperAvailability,
+      ).equals(AdmissionKeeperAvailability.responsive);
+      final sentBeforeReconnect = channel.sent.length;
+      channel.controller.add(const AdmissionConnectionRestored());
+      check(channel.sent).length.equals(sentBeforeReconnect + 1);
+      check(channel.sent.last).equals(channel.sent.first);
+      async.elapse(const Duration(seconds: 10));
+      check(guest.status).equals(AdmissionStatus.pending);
+      check(
+        guest.keeperAvailability,
+      ).equals(AdmissionKeeperAvailability.responsive);
 
-        channel.controller.add(const AdmissionPresenceChanged('keeper', false));
-        check(guest.keeperAvailability).equals(
-          AdmissionKeeperAvailability.absent,
-        );
-        channel.controller.add(const AdmissionPresenceChanged('keeper', true));
-        check(guest.keeperAvailability).equals(
-          AdmissionKeeperAvailability.checking,
-        );
-        async.elapse(const Duration(seconds: 10));
-        check(guest.keeperAvailability).equals(
-          AdmissionKeeperAvailability.unresponsive,
-        );
+      channel.controller.add(const AdmissionPresenceChanged('keeper', false));
+      check(
+        guest.keeperAvailability,
+      ).equals(AdmissionKeeperAvailability.absent);
+      channel.controller.add(const AdmissionPresenceChanged('keeper', true));
+      check(
+        guest.keeperAvailability,
+      ).equals(AdmissionKeeperAvailability.checking);
+      async.elapse(const Duration(seconds: 10));
+      check(
+        guest.keeperAvailability,
+      ).equals(AdmissionKeeperAvailability.unresponsive);
 
-        unawaited(guest.dispose());
-        unawaited(channel.dispose());
-        async.flushMicrotasks();
-      });
-    },
-  );
+      unawaited(guest.dispose());
+      unawaited(channel.dispose());
+      async.flushMicrotasks();
+    });
+  });
 
   test(
     'reconnect after cancellation does not create an availability timer',
@@ -1116,9 +1107,9 @@ void main() {
           async
             ..flushMicrotasks()
             ..elapse(const Duration(seconds: 10));
-          check(guest.keeperAvailability).equals(
-            AdmissionKeeperAvailability.checking,
-          );
+          check(
+            guest.keeperAvailability,
+          ).equals(AdmissionKeeperAvailability.checking);
           unawaited(guest.dispose());
           unawaited(channel.dispose());
           async.flushMicrotasks();
@@ -1308,9 +1299,9 @@ void main() {
         unawaited(keeper.approve(request!.id, 'guest'));
         async.flushMicrotasks();
         check(guest.status).equals(AdmissionStatus.approved);
-        check(keeper.attempts.single.joinDeadline).equals(
-          clock.now().add(AdmissionProtocol.lifetime),
-        );
+        check(
+          keeper.attempts.single.joinDeadline,
+        ).equals(clock.now().add(AdmissionProtocol.lifetime));
 
         async.elapse(const Duration(seconds: 2));
         check(guest.status).equals(AdmissionStatus.approved);
@@ -1364,10 +1355,7 @@ void main() {
           final deadline = _fixedNow.add(const Duration(minutes: 20));
           unawaited(
             guest
-                .requestAdmission(
-                  displayName: 'Guest',
-                  deadline: deadline,
-                )
+                .requestAdmission(displayName: 'Guest', deadline: deadline)
                 .then((value) => request = value),
           );
           async.flushMicrotasks();
@@ -2043,9 +2031,7 @@ void main() {
       check(
         keeper.attempts.single.status,
       ).equals(KeeperAdmissionStatus.joining);
-      check(
-        channel.sent.whereType<AdmissionDecision>().last.approved,
-      ).isTrue();
+      check(channel.sent.whereType<AdmissionDecision>().last.approved).isTrue();
       check(
         channel.sent
             .whereType<AdmissionRosterUpdated>()

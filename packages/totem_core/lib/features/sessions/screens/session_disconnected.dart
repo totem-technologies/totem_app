@@ -1071,11 +1071,7 @@ class _NextSessionsSection extends StatelessWidget {
         ? 'You may enjoy this space'
         : 'Sign up for the next session';
     final titleStyle = Theme.of(context).textTheme.titleMedium;
-    final header = Text(
-      title,
-      style: titleStyle,
-      textAlign: TextAlign.start,
-    );
+    final header = Text(title, style: titleStyle, textAlign: TextAlign.start);
     final minCardHeight = MediaQuery.textScalerOf(
       context,
     ).scale(_cardMinHeight);
@@ -1161,10 +1157,7 @@ class _ActionButtons extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       onPressed: onPressed,
-      child: const Text(
-        _label,
-        style: TextStyle(fontFeatures: []),
-      ),
+      child: const Text(_label, style: TextStyle(fontFeatures: [])),
     );
   }
 }

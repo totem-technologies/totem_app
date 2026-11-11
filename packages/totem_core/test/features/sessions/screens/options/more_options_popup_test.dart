@@ -268,9 +268,7 @@ void main() {
 
       check(
         tester.widgetList(find.text('Declined Participants')),
-      ).length.equals(
-        1,
-      );
+      ).length.equals(1);
       check(tester.widgetList(find.text('User user-1'))).length.equals(1);
 
       await tester.tap(

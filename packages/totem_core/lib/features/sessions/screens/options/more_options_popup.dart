@@ -420,9 +420,8 @@ class MoreOptions extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       useRootNavigator: false,
-      builder: (context) => SessionStartConfirmationDialog(
-        onStart: session.keeper.startSession,
-      ),
+      builder: (context) =>
+          SessionStartConfirmationDialog(onStart: session.keeper.startSession),
     );
   }
 

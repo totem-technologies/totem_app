@@ -56,35 +56,34 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets(
-    'does not fire waiting décor after unmount in the same frame',
-    (tester) async {
-      final received = <BoxDecoration>[];
-      RoomBackground.onBackgroundChanged = received.add;
-      addTearDown(() => RoomBackground.onBackgroundChanged = null);
+  testWidgets('does not fire waiting décor after unmount in the same frame', (
+    tester,
+  ) async {
+    final received = <BoxDecoration>[];
+    RoomBackground.onBackgroundChanged = received.add;
+    addTearDown(() => RoomBackground.onBackgroundChanged = null);
 
-      // Attach without pumping so initState can schedule its post-frame
-      // notify, then replace the tree before that callback runs. Use the
-      // same View wrapper as pumpWidget so leak tracking can unmount it.
-      // The mounted guard must drop the waiting décor; dispose may still
-      // restore cream synchronously.
-      tester.binding.attachRootWidget(
-        tester.binding.wrapWithDefaultView(
-          host(const RoomBackground(child: SizedBox.shrink())),
-        ),
-      );
-      tester.binding.attachRootWidget(
-        tester.binding.wrapWithDefaultView(const SizedBox.shrink()),
-      );
-      await tester.pump();
+    // Attach without pumping so initState can schedule its post-frame
+    // notify, then replace the tree before that callback runs. Use the
+    // same View wrapper as pumpWidget so leak tracking can unmount it.
+    // The mounted guard must drop the waiting décor; dispose may still
+    // restore cream synchronously.
+    tester.binding.attachRootWidget(
+      tester.binding.wrapWithDefaultView(
+        host(const RoomBackground(child: SizedBox.shrink())),
+      ),
+    );
+    tester.binding.attachRootWidget(
+      tester.binding.wrapWithDefaultView(const SizedBox.shrink()),
+    );
+    await tester.pump();
 
-      // Waiting/room décor must not be delivered after unmount. Dispose
-      // may still restore the default cream page chrome.
-      check(received.contains(RoomBackground.waitingDecoration)).isFalse();
-      check(received.contains(RoomBackground.roomDecoration)).isFalse();
+    // Waiting/room décor must not be delivered after unmount. Dispose
+    // may still restore the default cream page chrome.
+    check(received.contains(RoomBackground.waitingDecoration)).isFalse();
+    check(received.contains(RoomBackground.roomDecoration)).isFalse();
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
 }
