@@ -73,7 +73,7 @@ jobs:
 
       - name: Build ABI
         working-directory: ./packages/totem_app
-        run: ../../.github/scripts/retry-flutter-build.sh flutter build appbundle --verbose --flavor ${{ matrix.flavor }}
+        run: dart ../../.github/scripts/retry_flutter_build.dart flutter build appbundle --verbose --flavor ${{ matrix.flavor }}
 
   build_ios_ipa:
     name: iOS IPA (${{ matrix.flavor }})
@@ -107,4 +107,4 @@ jobs:
       - name: Build IPA
         working-directory: ./packages/totem_app
         # Wrapper retries transient Swift Package Manager download failures.
-        run: ../../.github/scripts/retry-flutter-build.sh flutter build ipa --verbose --no-codesign --flavor ${{ matrix.flavor }}
+        run: dart ../../.github/scripts/retry_flutter_build.dart flutter build ipa --verbose --no-codesign --flavor ${{ matrix.flavor }}

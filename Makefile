@@ -44,11 +44,11 @@ env-prod:
 	$(DART) scripts/setup_env.dart production
 
 setup:
-	python3 scripts/sdk_management.py setup '$(FLUTTER)'
+	$(DART) scripts/sdk_management.dart setup '$(FLUTTER)'
 	$(FLUTTER) pub get
 
 doctor:
-	python3 scripts/sdk_management.py doctor '$(FLUTTER)'
+	$(DART) scripts/sdk_management.dart doctor '$(FLUTTER)'
 
 # Resolve dependencies using the selected Flutter SDK.
 prepare-native:
