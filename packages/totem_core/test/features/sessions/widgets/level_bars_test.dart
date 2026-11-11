@@ -87,13 +87,9 @@ void main() {
       ),
     );
 
-    check(paintedBars(tester).map((bar) => bar.rect.height)).deepEquals([
-      81.5,
-      90.75,
-      100.0,
-      90.75,
-      81.5,
-    ]);
+    check(
+      paintedBars(tester).map((bar) => bar.rect.height),
+    ).deepEquals([81.5, 90.75, 100.0, 90.75, 81.5]);
     check(tester.binding.hasScheduledFrame).isFalse();
   });
 
@@ -155,9 +151,7 @@ void main() {
     },
   );
 
-  testWidgets('retargets from the shown height without a jump', (
-    tester,
-  ) async {
+  testWidgets('retargets from the shown height without a jump', (tester) async {
     const size = Size(10, 50);
     levels.value = const [0];
     await pumpBars(tester, size: size);

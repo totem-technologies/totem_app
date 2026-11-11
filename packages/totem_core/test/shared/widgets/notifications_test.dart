@@ -197,9 +197,7 @@ void main() {
 
     notificationTest(
       'urgent notice does not requeue an auto-dismissing banner',
-      (
-        tester,
-      ) async {
+      (tester) async {
         final context = await pumpHost(tester);
         final controller = createController(tester);
 
@@ -938,30 +936,29 @@ void main() {
       });
     });
 
-    notificationTest(
-      'handles long title and message without layout exceptions',
-      (tester) async {
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: SizedBox(
-                width: 220,
-                child: NotificationBanner(
-                  icon: TotemIcons.chat,
-                  title:
-                      'Very long notification title that must remain stable in UI',
-                  message:
-                      'Very long notification message that should be truncated '
-                      'safely without causing overflow exceptions during layout.',
-                ),
+    notificationTest('handles long title and message without layout exceptions', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 220,
+              child: NotificationBanner(
+                icon: TotemIcons.chat,
+                title:
+                    'Very long notification title that must remain stable in UI',
+                message:
+                    'Very long notification message that should be truncated '
+                    'safely without causing overflow exceptions during layout.',
               ),
             ),
           ),
-        );
+        ),
+      );
 
-        await tester.pumpAndSettle();
-        check(tester.takeException()).isNull();
-      },
-    );
+      await tester.pumpAndSettle();
+      check(tester.takeException()).isNull();
+    });
   });
 }

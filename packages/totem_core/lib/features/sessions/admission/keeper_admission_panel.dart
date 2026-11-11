@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
-import 'package:totem_core/features/sessions/widgets/session_admission_list.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_list.dart';
 
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
@@ -114,9 +114,8 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
                         '${widget.onDeclinePermanently == null ? '' : "\n\nDecline Permanently also declines future requests for this Session. You can undo this in Declined Participants."}',
                     scrollable: true,
                     confirmButtonText: 'Decline',
-                    onConfirm: () async => Navigator.of(
-                      dialogContext,
-                    ).pop(_DeclineAction.once),
+                    onConfirm: () async =>
+                        Navigator.of(dialogContext).pop(_DeclineAction.once),
                     extraButtons: [
                       if (widget.onDeclinePermanently != null)
                         ConfirmationDialogButton.outlined(

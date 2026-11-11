@@ -69,7 +69,9 @@ void main() {
     );
   }
 
-  testWidgets('shows pending badge and opens chat sheet', (tester) async {
+  testWidgets('shows pending badge and opens chat via the shared flag', (
+    tester,
+  ) async {
     await pumpWidget(
       tester,
       child: const ActionBarChatButton(),
@@ -108,17 +110,17 @@ void main() {
     check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
 
     await tester.tap(find.bySemanticsLabel('Chat'));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
-    check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
-    check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
+    // Button only toggles the shared flag; the room screen presents chat.
+    check(container.read(sessionChatOpenProvider)).isTrue();
+    check(tester.widgetList(find.textContaining('New message'))).length.equals(
+      0,
+    );
 
-    Navigator.of(
-      tester.element(find.byType(ActionBarChatButton)),
-      rootNavigator: true,
-    ).pop();
-    await tester.pumpAndSettle();
-
+    // Unread clears when the open panel marks the thread read.
+    container.read(sessionChatUnreadThreadsProvider.notifier).markRead(null);
+    await tester.pump();
     check(tester.widgetList(findPendingBadge())).length.equals(0);
   });
 
@@ -177,12 +179,11 @@ void main() {
       ],
     );
 
-    await tester.tap(find.bySemanticsLabel('Chat'));
-    await tester.pumpAndSettle();
-    check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
-
     final context = tester.element(find.byType(ActionBarChatButton));
     final container = ProviderScope.containerOf(context, listen: false);
+    container.read(sessionChatOpenProvider.notifier).open = true;
+    await tester.pump();
+
     container
         .read(_testLastMessageProvider.notifier)
         .set(
@@ -218,13 +219,11 @@ void main() {
       ],
     );
 
-    // Keeper is reading Everyone with the panel open...
-    await tester.tap(find.bySemanticsLabel('Chat'));
-    await tester.pumpAndSettle();
-    expect(find.byType(SessionChatPanel), findsOneWidget);
-
     final context = tester.element(find.byType(ActionBarChatButton));
     final container = ProviderScope.containerOf(context, listen: false);
+    // Keeper is reading Everyone with chat marked open...
+    container.read(sessionChatOpenProvider.notifier).open = true;
+    await tester.pump();
 
     // ...when a private support request arrives on another thread.
     container
@@ -310,49 +309,6 @@ void main() {
     },
   );
 
-  testWidgets('a docked flag on a narrow viewport still opens the sheet', (
-    tester,
-  ) async {
-    // Docked on a wide window, then resized below the dock threshold: the
-    // stale flag must not make the first tap a no-op.
-    tester.view.physicalSize = const Size(1200, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    await pumpWidget(
-      tester,
-      child: const ActionBarChatButton(),
-      overrides: [
-        authControllerProvider.overrideWith(
-          () => FakeAuthController(AuthState.unauthenticated()),
-        ),
-        lastSessionMessageProvider.overrideWith(
-          (ref) => ref.watch(_testLastMessageProvider),
-        ),
-        sessionMessagesProvider.overrideWith((ref) => const []),
-        isCurrentUserKeeperProvider.overrideWith((ref) => false),
-        currentSessionEventProvider.overrideWith((ref) => null),
-      ],
-    );
-
-    final context = tester.element(find.byType(ActionBarChatButton));
-    final container = ProviderScope.containerOf(context, listen: false);
-    container.read(sessionChatOpenProvider.notifier).open = true;
-    await tester.pumpAndSettle();
-
-    tester.view.physicalSize = const Size(600, 900);
-    await tester.pump();
-
-    // The previously docked flag must not render a panel after narrowing.
-    check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
-
-    await tester.tap(find.bySemanticsLabel('Chat'));
-    await tester.pumpAndSettle();
-
-    check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
-  });
-
   testWidgets('Chat opens the private thread that sent the notification', (
     tester,
   ) async {
@@ -404,10 +360,10 @@ void main() {
     ).length.equals(1);
 
     await tester.tap(find.bySemanticsLabel('Chat'));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
+    expect(container.read(sessionChatOpenProvider), isTrue);
     expect(container.read(sessionChatThreadTargetProvider), 'bruno-test');
-    expect(find.byType(SessionChatPanel), findsOneWidget);
   });
 
   testWidgets('Chat opens the sender thread for an incoming private message', (
@@ -457,8 +413,9 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.bySemanticsLabel('Chat'));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
+    expect(container.read(sessionChatOpenProvider), isTrue);
     expect(container.read(sessionChatThreadTargetProvider), 'keeper-1');
   });
 }

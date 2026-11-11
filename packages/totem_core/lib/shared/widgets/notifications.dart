@@ -443,13 +443,7 @@ class NotificationController {
   }) {
     final view = View.of(context);
     final dedupeKey =
-        urgentLatestWinsCategory ??
-        (
-          'notification',
-          icon,
-          title,
-          message,
-        );
+        urgentLatestWinsCategory ?? ('notification', icon, title, message);
     return _show(
       context,
       dedupeKey: dedupeKey,

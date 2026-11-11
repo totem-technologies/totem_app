@@ -89,11 +89,7 @@ class LiveKitMicrophoneLevel extends StatelessWidget {
           );
         }
         if (kIsWeb) {
-          return _WebWaveform(
-            track: track,
-            barCount: barCount,
-            color: color,
-          );
+          return _WebWaveform(track: track, barCount: barCount, color: color);
         }
         return SoundWaveformWidget(
           audioTrack: track,
@@ -134,11 +130,8 @@ class _WebWaveformState extends State<_WebWaveform> {
     unawaited(_subscription?.cancel());
     _levels.value = _silence;
     _isSpeaking = false;
-    _subscription =
-        localAudioLevels(
-          widget.track,
-          barCount: widget.barCount,
-        ).listen((levels) {
+    _subscription = localAudioLevels(widget.track, barCount: widget.barCount)
+        .listen((levels) {
           final isSpeaking = webWaveformIsActive(
             levels,
             wasActive: _isSpeaking,

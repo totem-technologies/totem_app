@@ -23,6 +23,7 @@ class ConfirmationDialog extends StatefulWidget {
     this.extraButtons = const [],
     this.contentWidget,
     this.scrollable = false,
+    this.actionTimeout = const Duration(seconds: 10),
     super.key,
   }) : assert(
          content != null || contentSpan != null,
@@ -55,6 +56,9 @@ class ConfirmationDialog extends StatefulWidget {
 
   /// Whether the dialog content should scroll when the viewport is too short.
   final bool scrollable;
+
+  /// Maximum time to wait for an action, or null to wait until it completes.
+  final Duration? actionTimeout;
 
   @override
   State<ConfirmationDialog> createState() => ConfirmationDialogState();
@@ -117,6 +121,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
             onBusyChanged: _onBusyChanged,
             disabled: _anyButtonBusy,
             onConfirm: widget.onConfirm,
+            actionTimeout: widget.actionTimeout,
             type: widget.type,
             autofocus: switch (widget.type) {
               ConfirmationDialogType.standard => true,
@@ -132,6 +137,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
             (b) => b._withBusyChanged(
               onBusyChanged: _onBusyChanged,
               disabled: _anyButtonBusy,
+              actionTimeout: widget.actionTimeout,
             ),
           ),
           if (widget.showCancel)
@@ -142,10 +148,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
               },
               disabled: _anyButtonBusy,
               onConfirm: () async => Navigator.of(context).pop(),
-              child: const Text(
-                'Cancel',
-                textAlign: TextAlign.center,
-              ),
+              child: const Text('Cancel', textAlign: TextAlign.center),
             ),
         ],
       ),
@@ -157,6 +160,7 @@ class ConfirmationDialogButton extends StatefulWidget {
   const ConfirmationDialogButton.elevated({
     required this.onConfirm,
     required this.child,
+    this.actionTimeout = const Duration(seconds: 10),
     this.onBusyChanged,
     this.disabled = false,
     this.type = ConfirmationDialogType.standard,
@@ -167,6 +171,7 @@ class ConfirmationDialogButton extends StatefulWidget {
   const ConfirmationDialogButton.outlined({
     required this.onConfirm,
     required this.child,
+    this.actionTimeout = const Duration(seconds: 10),
     this.onBusyChanged,
     this.disabled = false,
     this.type = ConfirmationDialogType.standard,
@@ -180,6 +185,7 @@ class ConfirmationDialogButton extends StatefulWidget {
   final ValueChanged<bool>? onBusyChanged;
   final bool disabled;
   final AsyncCallback onConfirm;
+  final Duration? actionTimeout;
 
   final ConfirmationDialogType type;
   final Widget child;
@@ -187,12 +193,14 @@ class ConfirmationDialogButton extends StatefulWidget {
   ConfirmationDialogButton _withBusyChanged({
     required ValueChanged<bool>? onBusyChanged,
     required bool disabled,
+    required Duration? actionTimeout,
   }) {
     if (_outlined) {
       return ConfirmationDialogButton.outlined(
         key: key,
         onBusyChanged: onBusyChanged,
         disabled: disabled,
+        actionTimeout: actionTimeout,
         onConfirm: onConfirm,
         autofocus: autofocus,
         type: type,
@@ -203,6 +211,7 @@ class ConfirmationDialogButton extends StatefulWidget {
       key: key,
       onBusyChanged: onBusyChanged,
       disabled: disabled,
+      actionTimeout: actionTimeout,
       onConfirm: onConfirm,
       autofocus: autofocus,
       type: type,
@@ -223,17 +232,23 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
     setState(() => _isLoading = true);
     widget.onBusyChanged?.call(true);
     try {
-      await widget.onConfirm().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          if (mounted) {
-            ErrorHandler.showErrorDialog(
-              context,
-              message: 'Something went wrong. Please try again.',
-            );
-          }
-        },
-      );
+      final action = widget.onConfirm();
+      final timeout = widget.actionTimeout;
+      if (timeout == null) {
+        await action;
+      } else {
+        await action.timeout(
+          timeout,
+          onTimeout: () {
+            if (mounted) {
+              ErrorHandler.showErrorDialog(
+                context,
+                message: 'Something went wrong. Please try again.',
+              );
+            }
+          },
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
       widget.onBusyChanged?.call(false);

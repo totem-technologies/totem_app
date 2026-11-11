@@ -18,8 +18,7 @@ import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/screens/chat.dart';
-import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
+import 'package:totem_core/features/sessions/screens/options/more_options_popup.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 
@@ -454,7 +453,9 @@ void main() {
       check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
     });
 
-    autoSizeTest('opens chat sheet and clears pending badge', (tester) async {
+    autoSizeTest('toggles the chat open flag when Chat is tapped with unread', (
+      tester,
+    ) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
       await tester.pump();
 
@@ -474,21 +475,20 @@ void main() {
 
       check(tester.widgetList(findPendingBadge())).length.equals(1);
 
+      // The action bar only toggles the shared open flag; the room screen
+      // owns sheet/dock presentation (and thus mark-as-read).
       await tester.tap(find.bySemanticsLabel('Chat'));
       await tester.pumpAndSettle();
+      check(container.read(sessionChatOpenProvider)).isTrue();
 
-      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
-      check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
-      check(tester.widgetList(findPendingBadge())).length.equals(0);
+      // Simulate the panel marking the visible thread read so the next tap is
+      // a plain close rather than another "open from unread".
+      container.read(sessionChatUnreadThreadsProvider.notifier).markRead(null);
+      await tester.pump();
 
-      Navigator.of(
-        tester.element(find.byType(SessionActionBar)),
-        rootNavigator: true,
-      ).pop();
+      await tester.tap(find.bySemanticsLabel('Chat'));
       await tester.pumpAndSettle();
-
-      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(0);
-      check(tester.widgetList(findPendingBadge())).length.equals(0);
+      check(container.read(sessionChatOpenProvider)).isFalse();
     });
   });
 }

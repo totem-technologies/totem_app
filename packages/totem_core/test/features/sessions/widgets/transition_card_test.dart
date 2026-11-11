@@ -290,65 +290,57 @@ void main() {
         variant: phones,
       );
 
-      autoSizeTest(
-        'receive slider still completes on swipe',
-        (tester) async {
-          var received = false;
+      autoSizeTest('receive slider still completes on swipe', (tester) async {
+        var received = false;
+        await pumpAtSize(
+          tester,
+          portrait,
+          ReceiveTransitionCard(
+            onActionPressed: () async {
+              received = true;
+              return true;
+            },
+          ),
+        );
+
+        await tester.drag(
+          find.byKey(ActionSlider.thumbKey),
+          const Offset(400, 0),
+        );
+        await tester.pump();
+
+        check(received).isTrue();
+      }, variant: phones);
+
+      autoSizeTest('does not show the space bar caption without a keyboard', (
+        tester,
+      ) async {
+        await pumpAtSize(
+          tester,
+          portrait,
+          PassTransitionCard(onActionPressed: () async => true),
+        );
+
+        check(find.textContaining('press space bar').evaluate()).isEmpty();
+      }, variant: phones);
+
+      autoSizeTest('stacks in the landscape side column and stays on screen', (
+        tester,
+      ) async {
+        for (final size in [landscape, const Size(667, 375)]) {
           await pumpAtSize(
             tester,
-            portrait,
-            ReceiveTransitionCard(
-              onActionPressed: () async {
-                received = true;
-                return true;
-              },
+            size,
+            landscapeSideColumn(
+              PassTransitionCard(onActionPressed: () async => true),
             ),
           );
 
-          await tester.drag(
-            find.byKey(ActionSlider.thumbKey),
-            const Offset(400, 0),
-          );
-          await tester.pump();
-
-          check(received).isTrue();
-        },
-        variant: phones,
-      );
-
-      autoSizeTest(
-        'does not show the space bar caption without a keyboard',
-        (tester) async {
-          await pumpAtSize(
-            tester,
-            portrait,
-            PassTransitionCard(onActionPressed: () async => true),
-          );
-
-          check(find.textContaining('press space bar').evaluate()).isEmpty();
-        },
-        variant: phones,
-      );
-
-      autoSizeTest(
-        'stacks in the landscape side column and stays on screen',
-        (tester) async {
-          for (final size in [landscape, const Size(667, 375)]) {
-            await pumpAtSize(
-              tester,
-              size,
-              landscapeSideColumn(
-                PassTransitionCard(onActionPressed: () async => true),
-              ),
-            );
-
-            checkStacked(tester, passInstruction);
-            checkFitsScreen(tester, find.byType(ActionSlider), size);
-            checkFitsScreen(tester, dockSurface(), size);
-          }
-        },
-        variant: phones,
-      );
+          checkStacked(tester, passInstruction);
+          checkFitsScreen(tester, find.byType(ActionSlider), size);
+          checkFitsScreen(tester, dockSurface(), size);
+        }
+      }, variant: phones);
 
       autoSizeTest(
         'stacks 400-500dp pills on small viewports so Pass text has room',
@@ -367,62 +359,54 @@ void main() {
         variant: phones,
       );
 
-      autoSizeTest(
-        'keeps the row once a small-viewport pill is 500dp wide',
-        (tester) async {
-          await pumpAtSize(
-            tester,
-            landscape,
-            SizedBox(
-              width: 560,
-              child: PassTransitionCard(onActionPressed: () async => true),
-            ),
-          );
+      autoSizeTest('keeps the row once a small-viewport pill is 500dp wide', (
+        tester,
+      ) async {
+        await pumpAtSize(
+          tester,
+          landscape,
+          SizedBox(
+            width: 560,
+            child: PassTransitionCard(onActionPressed: () async => true),
+          ),
+        );
 
-          checkInline(tester, passInstruction);
-        },
-        variant: phones,
-      );
+        checkInline(tester, passInstruction);
+      }, variant: phones);
 
-      autoSizeTest(
-        'keeps the row on a narrow medium viewport',
-        (tester) async {
-          // Shortest side 640: a medium viewport with a ~580dp pill.
-          await pumpAtSize(
-            tester,
-            const Size(640, 900),
-            PassTransitionCard(onActionPressed: () async => true),
-          );
+      autoSizeTest('keeps the row on a narrow medium viewport', (tester) async {
+        // Shortest side 640: a medium viewport with a ~580dp pill.
+        await pumpAtSize(
+          tester,
+          const Size(640, 900),
+          PassTransitionCard(onActionPressed: () async => true),
+        );
 
-          final text = tester.getRect(find.text(passInstruction));
-          final slider = tester.getRect(find.byType(ActionSlider));
-          check(slider.height).equals(44);
-          check(text.right).isLessOrEqual(slider.left);
-        },
-        variant: phones,
-      );
+        final text = tester.getRect(find.text(passInstruction));
+        final slider = tester.getRect(find.byType(ActionSlider));
+        check(slider.height).equals(44);
+        check(text.right).isLessOrEqual(slider.left);
+      }, variant: phones);
 
-      autoSizeTest(
-        'keeps the row for a ~421dp pill on a medium viewport',
-        (tester) async {
-          // The speaking screen's 60dp side padding leaves a 601dp window
-          // with a ~421dp pill; medium viewports must not stack it.
-          await pumpAtSize(
-            tester,
-            const Size(640, 900),
-            SizedBox(
-              width: 481,
-              child: PassTransitionCard(onActionPressed: () async => true),
-            ),
-          );
+      autoSizeTest('keeps the row for a ~421dp pill on a medium viewport', (
+        tester,
+      ) async {
+        // The speaking screen's 60dp side padding leaves a 601dp window
+        // with a ~421dp pill; medium viewports must not stack it.
+        await pumpAtSize(
+          tester,
+          const Size(640, 900),
+          SizedBox(
+            width: 481,
+            child: PassTransitionCard(onActionPressed: () async => true),
+          ),
+        );
 
-          check(tester.getSize(dockSurface()).width).equals(421);
-          final slider = tester.getRect(find.byType(ActionSlider));
-          check(slider.height).equals(44);
-          checkInline(tester, passInstruction);
-        },
-        variant: phones,
-      );
+        check(tester.getSize(dockSurface()).width).equals(421);
+        final slider = tester.getRect(find.byType(ActionSlider));
+        check(slider.height).equals(44);
+        checkInline(tester, passInstruction);
+      }, variant: phones);
 
       autoSizeTest(
         'waiting card is a single-row pill at the inline pill height',
@@ -442,34 +426,29 @@ void main() {
         variant: phones,
       );
 
-      autoSizeTest(
-        'prompt card stacks the field above a 48dp slider',
-        (tester) async {
-          await pumpAtSize(
-            tester,
-            portrait,
-            PromptTransitionCard(
-              initialPrompt: 'What are you grateful for?',
-              onManagePrompts: () {},
-              onActionPressed:
-                  ({
-                    customPrompt,
-                    sessionPromptId,
-                    clearPrompt = false,
-                  }) async => true,
-            ),
-          );
+      autoSizeTest('prompt card stacks the field above a 48dp slider', (
+        tester,
+      ) async {
+        await pumpAtSize(
+          tester,
+          portrait,
+          PromptTransitionCard(
+            initialPrompt: 'What are you grateful for?',
+            onManagePrompts: () {},
+            onActionPressed:
+                ({customPrompt, sessionPromptId, clearPrompt = false}) async =>
+                    true,
+          ),
+        );
 
-          check(find.byType(Card).evaluate()).isEmpty();
-          check(dockSurface().evaluate()).length.equals(1);
-          final field = tester.getRect(find.byType(TextField));
-          final slider = tester.getRect(find.byType(ActionSlider));
-          check(slider.height).equals(48);
-          check(field.bottom).isLessOrEqual(slider.top);
-          checkFitsScreen(tester, dockSurface(), portrait);
-        },
-        variant: phones,
-      );
+        check(find.byType(Card).evaluate()).isEmpty();
+        check(dockSurface().evaluate()).length.equals(1);
+        final field = tester.getRect(find.byType(TextField));
+        final slider = tester.getRect(find.byType(ActionSlider));
+        check(slider.height).equals(48);
+        check(field.bottom).isLessOrEqual(slider.top);
+        checkFitsScreen(tester, dockSurface(), portrait);
+      }, variant: phones);
 
       autoSizeTest(
         'docked sliders use the action bar label; Join keeps its own',

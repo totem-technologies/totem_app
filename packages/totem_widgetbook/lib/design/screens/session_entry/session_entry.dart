@@ -2,12 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:totem_core/features/sessions/widgets/session_admission_list.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_list.dart';
+import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
 
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_info_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
-import 'package:totem_core/features/sessions/widgets/session_waiting_queue_button.dart';
+
 import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
 
 import '../../components/button/button.dart';
@@ -29,10 +30,7 @@ enum DeclineVariant { nextSession, related }
 
 @immutable
 class AdmissionRequest {
-  const AdmissionRequest({
-    required this.id,
-    required this.name,
-  });
+  const AdmissionRequest({required this.id, required this.name});
 
   final String id;
   final String name;
@@ -586,10 +584,7 @@ class _Admission extends StatelessWidget {
       child: SessionAdmissionList(
         guests: [
           for (final request in requests)
-            SessionAdmissionGuest(
-              id: request.id,
-              name: request.name,
-            ),
+            SessionAdmissionGuest(id: request.id, name: request.name),
         ],
         onAdmit: onAdmit,
         onAdmitAll: onAdmitAll,

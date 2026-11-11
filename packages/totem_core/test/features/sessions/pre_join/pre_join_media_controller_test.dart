@@ -76,7 +76,7 @@ class _DelayedCameraFactory extends _PreviewTrackFactory {
   ) async {
     cameraRequested = true;
     await gate.future;
-    return super.createVideoTrack(cameraOptions);
+    return await super.createVideoTrack(cameraOptions);
   }
 }
 
@@ -88,7 +88,7 @@ class _DelayedMicrophoneFactory extends _PreviewTrackFactory {
   Future<LocalAudioTrack?> createAudioTrack() async {
     microphoneRequested = true;
     await gate.future;
-    return super.createAudioTrack();
+    return await super.createAudioTrack();
   }
 }
 

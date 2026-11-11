@@ -505,10 +505,9 @@ void main() {
           viewportSize: const Size(1600, 900),
           admittedIdentities: {'admitted'},
         );
-        check(_participantGridIdentities(tester)).deepEquals([
-          'keeper-1',
-          'admitted',
-        ]);
+        check(
+          _participantGridIdentities(tester),
+        ).deepEquals(['keeper-1', 'admitted']);
       });
 
       testWidgets('renders the participant grid for room sizes up to 12', (

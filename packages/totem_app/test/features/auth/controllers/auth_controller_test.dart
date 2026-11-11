@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -81,6 +83,7 @@ void main() {
   late MockLocalStorageService mockLocalStorageService;
   late MockCacheService mockCacheService;
   late ProviderContainer container;
+  late StreamController<String> registrations;
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -118,6 +121,12 @@ void main() {
     mockSecureStorage = MockSecureStorage();
     mockAnalyticsService = MockAnalyticsService();
     mockNotificationsService = MockNotificationsService();
+    registrations = StreamController<String>.broadcast(sync: true);
+    when(
+      () => mockNotificationsService.onRegistered,
+    ).thenAnswer((_) => registrations.stream);
+    when(() => mockNotificationsService.register()).thenAnswer((_) async {});
+    when(() => mockNotificationsService.unregister()).thenAnswer((_) async {});
     mockLocalStorageService = MockLocalStorageService();
     mockCacheService = MockCacheService();
 
@@ -149,6 +158,7 @@ void main() {
 
   tearDown(() {
     container.dispose();
+    registrations.close();
   });
 
   MobileAuthController getController() =>
@@ -169,7 +179,6 @@ void main() {
     String email = 'test@example.com',
     String accessToken = 'access',
     String refreshToken = 'refresh',
-    String? fcmToken,
   }) async {
     when(
       () => mockAuthRepository.requestPin(email, false),
@@ -198,9 +207,6 @@ void main() {
         parameters: any(named: 'parameters'),
       ),
     ).thenReturn(null);
-    when(
-      () => mockNotificationsService.fcmToken,
-    ).thenAnswer((_) async => fcmToken);
 
     await getController().requestPin(email);
     await getController().verifyPin('123456');
@@ -234,9 +240,6 @@ void main() {
       when(
         () => mockAnalyticsService.setUserId(refreshedUser),
       ).thenAnswer((_) async {});
-      when(
-        () => mockNotificationsService.fcmToken,
-      ).thenAnswer((_) async => null);
 
       await getController().checkExistingAuth();
 
@@ -282,9 +285,6 @@ void main() {
       ).thenAnswer((_) async {});
       when(() => mockLocalStorageService.clearUser()).thenAnswer((_) async {});
       when(() => mockCacheService.clearCache()).thenAnswer((_) async {});
-      when(
-        () => mockNotificationsService.fcmToken,
-      ).thenAnswer((_) async => null);
 
       await getController().checkExistingAuth();
 
@@ -374,12 +374,6 @@ void main() {
         when(
           () => mockAnalyticsService.logLogin(method: 'pin'),
         ).thenReturn(null);
-        when(
-          () => mockNotificationsService.fcmToken,
-        ).thenAnswer((_) async => 'fcm_token');
-        when(
-          () => mockAuthRepository.updateFcmToken('fcm_token'),
-        ).thenAnswer((_) async {});
 
         await getController().verifyPin(pin);
 
@@ -408,6 +402,77 @@ void main() {
   group('MobileAuthController - logout & deleteAccount', () {
     Future<void> authenticateUser() => stubAuthenticatedUser(
       user: testUserSchema(slug: '1', name: 'John'),
+    );
+
+    test(
+      'registration events update the backend and logout removes the identifier before credentials',
+      () async {
+        final updateStarted = Completer<void>();
+        final updateFinished = Completer<void>();
+        when(() => mockAuthRepository.updateFcmToken('fid')).thenAnswer((_) {
+          updateStarted.complete();
+          return updateFinished.future;
+        });
+        when(
+          () => mockAuthRepository.unregisterFcmToken('fid'),
+        ).thenAnswer((_) async {});
+        await authenticateUser();
+        verify(() => mockNotificationsService.register()).called(1);
+        registrations.add('fid');
+        await updateStarted.future;
+        verifyNever(() => mockNotificationsService.register());
+        when(
+          () => mockSecureStorage.read(key: AppConsts.refreshTokenKey),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockSecureStorage.delete(key: any(named: 'key')),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockLocalStorageService.clearUser(),
+        ).thenAnswer((_) async {});
+        when(() => mockCacheService.clearCache()).thenAnswer((_) async {});
+        when(() => mockAnalyticsService.logLogout()).thenAnswer((_) async {});
+        final logout = getController().logout();
+        registrations.add('late-fid');
+        verifyNever(() => mockAuthRepository.unregisterFcmToken(any()));
+        updateFinished.complete();
+        await logout;
+        verifyInOrder([
+          () => mockAuthRepository.unregisterFcmToken('fid'),
+          () => mockNotificationsService.unregister(),
+          () => mockSecureStorage.delete(key: AppConsts.accessTokenKey),
+        ]);
+        verifyNever(() => mockAuthRepository.updateFcmToken('late-fid'));
+        verifyNever(() => mockNotificationsService.register());
+        check(getState().status).equals(AuthStatus.unauthenticated);
+      },
+    );
+
+    test(
+      'registration failure does not prevent authentication or logout',
+      () async {
+        when(
+          () => mockNotificationsService.register(),
+        ).thenThrow(UnsupportedError('unsupported'));
+        when(
+          () => mockNotificationsService.unregister(),
+        ).thenThrow(UnsupportedError('unsupported'));
+        await authenticateUser();
+        check(getState().status).equals(AuthStatus.authenticated);
+        when(
+          () => mockSecureStorage.read(key: AppConsts.refreshTokenKey),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockSecureStorage.delete(key: any(named: 'key')),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockLocalStorageService.clearUser(),
+        ).thenAnswer((_) async {});
+        when(() => mockCacheService.clearCache()).thenAnswer((_) async {});
+        when(() => mockAnalyticsService.logLogout()).thenAnswer((_) async {});
+        await getController().logout();
+        check(getState().status).equals(AuthStatus.unauthenticated);
+      },
     );
 
     test('logout successfully clears tokens and resets state', () async {

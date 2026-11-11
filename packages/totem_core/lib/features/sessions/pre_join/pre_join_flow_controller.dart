@@ -59,6 +59,9 @@ class PreJoinFlowController extends _$PreJoinFlowController {
   int? _handledAdmissionAttempt;
 
   @visibleForTesting
+  DateTime now() => DateTime.now();
+
+  @visibleForTesting
   Room createAdmissionRoom() {
     final preferences = ref
         .read(preJoinMediaControllerProvider(sessionSlug))
@@ -135,12 +138,22 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         if (name == null || name.isEmpty) {
           throw StateError('A signed-in user is required for admission');
         }
-        _admissionSetup = _startAdmission(response.token, keeper, name);
+        final requestedAt = now();
+        final waitingStart = requestedAt.isAfter(event.start)
+            ? requestedAt
+            : event.start;
+        _admissionSetup = _startAdmission(
+          response.token,
+          keeper,
+          name,
+          waitingStart.add(const Duration(minutes: 20)),
+        );
         await _admissionSetup;
         if (!ref.mounted || _cancelRequested) return PreJoinJoinOutcome.ignored;
         final admission = _admission;
         if (admission == null) return PreJoinJoinOutcome.ignored;
         if (admission.status == AdmissionStatus.ended ||
+            admission.status == AdmissionStatus.expired ||
             admission.status == AdmissionStatus.failed) {
           await _handleAdmissionStatus(
             admission.status,
@@ -194,8 +207,23 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     }
   }
 
-  Future<void> _startAdmission(String token, String keeper, String name) async {
+  Future<void> _startAdmission(
+    String token,
+    String keeper,
+    String name,
+    DateTime deadline,
+  ) async {
     final attempt = ++_admissionAttempt;
+    if (!now().isBefore(deadline)) {
+      state = state.copyWith(
+        phase: PreJoinFlowPhase.idle,
+        admissionStatus: AdmissionStatus.expired,
+      );
+      await ref
+          .read(preJoinMediaControllerProvider(sessionSlug).notifier)
+          .releaseForTerminalOutcome();
+      return;
+    }
     final room = createAdmissionRoom();
     _admissionRoom = room;
     final transport = createAdmissionTransport(room);
@@ -211,6 +239,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     final admission = PendingAdmissionController(
       channel: transport,
       keeperIdentity: () => keeper,
+      now: now,
     );
     _admission = admission;
     _admissionSubscription = admission.changes.listen((status) {
@@ -221,7 +250,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       }
     });
     if (admission.status == AdmissionStatus.ended) return;
-    await admission.requestAdmission(displayName: name);
+    await admission.requestAdmission(displayName: name, deadline: deadline);
     if (!ref.mounted || _cancelRequested) return;
     if (admission.status == AdmissionStatus.pending) {
       state = state.copyWith(
@@ -274,6 +303,8 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         state = state.copyWith(
           phase: PreJoinFlowPhase.joining,
           admissionStatus: status,
+          isReturningParticipant: admission.isReturningParticipant,
+          sessionStartedAtAdmission: admission.sessionStartedAtAdmission,
         );
         final connectedRoom = await _takeAdmissionRoom();
         if (connectedRoom == null) return;
@@ -394,10 +425,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       }
     } catch (error, stackTrace) {
       if (ref.mounted) {
-        state = state.copyWith(
-          phase: PreJoinFlowPhase.idle,
-          error: error,
-        );
+        state = state.copyWith(phase: PreJoinFlowPhase.idle, error: error);
       }
       ErrorHandler.logError(
         error,

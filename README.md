@@ -5,22 +5,24 @@ guided group introspection. It supports iOS, Android, and web.
 
 ## Install
 
-Install [FVM](https://fvm.app/). Flutter **3.50.0-0.2.pre** (bundled Dart
-3.14.0 beta) is the default for Android, web, desktop, and shared development.
-iOS uses **3.44.9** (bundled Dart 3.12.2) and requires macOS and Xcode.
+Install Flutter **3.50.0** (stable) using the [official installation guide](https://docs.flutter.dev/get-started/install),
+and add its `bin` directory to your PATH. This SDK and its bundled Dart are used
+for every platform; iOS builds also require macOS and Xcode. The required Flutter
+version is recorded in `.flutter-version`.
 
 ```sh
 git clone https://github.com/totem-technologies/totem_app.git
 cd totem_app
-fvm install 3.44.9
-fvm install 3.50.0-0.2.pre
-fvm flutter config --enable-swift-package-manager
-make prepare-native
-make githooks
+flutter --version
+flutter doctor
+flutter pub get
 ```
 
-`.fvmrc` pins the default beta SDK. Use `make run-ios RUN_ARGS='-d <device-id>'`
-for iOS, or `fvm spawn 3.44.9` for other iOS-specific Flutter commands.
+To opt in to the local Git hooks, run `make githooks` separately.
+
+Verify that `flutter --version` reports 3.50.0 and that `dart` on your PATH is
+the Dart SDK bundled with that Flutter installation. On macOS, enable Swift
+Package Manager if needed with `flutter config --enable-swift-package-manager`.
 
 Configure [Firebase](https://firebase.google.com/docs/flutter/setup) locally:
 
@@ -37,23 +39,47 @@ and set `MOBILE_API_URL`. Do not edit generated package `.env` files; see the
 ## Develop
 
 ```sh
-make run          # Android/desktop with the default beta SDK
-make run-ios      # iOS with Flutter 3.44.9 (use RUN_ARGS to select a device)
-make run-chrome   # Web client with the default beta SDK
+make run          # Android/desktop
+make run-ios      # iOS (use RUN_ARGS to select a device)
+make run-chrome   # Web client
 make build-web-release
 make lint
 make test
 ```
 
-There is one `pubspec.lock`. Run `make install` after changing SDKs so Pub can
-resolve dependencies compatible with the selected SDK. No lockfile swapping or
-`.dart_tool` deletion is required. `make test` resolves once, then runs all
-shared/native suites and Chrome web tests.
+Maintain the single root `pubspec.lock` with `flutter pub get`. `make test`
+runs the shared/native suites and Chrome web tests.
 
 The [Makefile](Makefile) contains additional commands. The codebase has a
 [mobile app](packages/totem_app), [web client](packages/totem_web), and
 [shared library](packages/totem_core). Follow the engineering and test
 conventions in [AGENTS.md](AGENTS.md).
+
+### Zed
+
+Install Zed's Dart extension and open the repository root. The project tasks
+include setup, doctor, iOS/Android/web runs, Widgetbook, formatting, linting,
+and tests. Open **task: spawn** to select one. **Run Android** uses `make run`,
+so select an Android device if Flutter prompts; for a specific iOS device use
+`make run-ios RUN_ARGS='-d <device-id>'` in a terminal. Workspace format, lint,
+and test tasks affect or validate the entire repository; changed and current-file
+alternatives are also available. Current-file test tasks require an open test
+file, the matching package task, and dependencies already resolved; web tests
+use Chrome. Ensure Zed can find the required Flutter SDK on its PATH; see
+[Zed's Dart documentation](https://zed.dev/docs/languages/dart) for SDK setup.
+
+The Zed `create_worktree` hook runs `make env-dev` only if neither package
+`.env` exists, because that command rewrites both files. It copies mobile
+`firebase_options.dart`, iOS `GoogleService-Info.plist`, and Android
+`google-services.json` from the main worktree only if each source exists and its
+destination does not; a missing
+source is reported but is not an error.
+Existing files are preserved. If either `.env` already exists, the hook skips
+both; configure missing files manually when appropriate. The hook requires the
+Flutter SDK for environment generation and does not copy local overrides or other
+Firebase files. Keep generated configuration and secrets out of version control.
+Run `flutter pub get` in the new worktree as needed; other run and environment
+targets may regenerate `.env` files.
 
 ### Git validation
 
@@ -131,38 +157,41 @@ information (read-only)** and **Release apps to testing tracks** permissions.
 
 ## Flutter SDK compatibility and lockfiles
 
-Shared packages keep `environment: sdk: ^3.12.2`; this is the Dart language
-baseline, not an instruction to replace Flutter's bundled Dart SDK or cap its
-upper bound. Shared and generated source must remain compatible with Dart 3.12
-and Flutter 3.44.9 APIs. Do not add newer Dart language features or Flutter APIs
-unavailable in 3.44.9 to shared code.
+Use Flutter 3.50.0 and its bundled Dart for all platforms. Package Dart SDK
+constraints specify language compatibility, not a separate SDK installation.
+Maintain the root `pubspec.lock` with `flutter pub get` and review its changes.
 
-| Platform | Flutter | Bundled Dart | Resolution |
-| --- | --- | --- | --- |
-| iOS | 3.44.9 | 3.12.2 | SDK-specific `pub get` |
-| Android / Web / desktop | 3.50.0-0.2.pre | 3.14.0 beta | `pubspec.lock` |
-
-The Web pin includes the CanvasKit/Skwasm context-loss recovery change from
+Flutter 3.50.0 includes the CanvasKit/Skwasm context-loss recovery change from
 [flutter/flutter#185116](https://github.com/flutter/flutter/pull/185116), which
 addresses the `LateInitializationError` reported in
 [flutter/flutter#190192](https://github.com/flutter/flutter/issues/190192).
-It does **not** prove that Totem's Safari failure is resolved. iOS remains on
-3.44.9 because Flutter 3.47 has the platform-view composition regression in
-[flutter/flutter#193363](https://github.com/flutter/flutter/issues/193363),
-where video platform views can appear above Flutter dialogs and sheets.
+It does **not** prove that Totem's Safari failure is resolved. Also check iOS
+video platform views beneath dialogs and sheets: Flutter has had a composition
+regression tracked in [flutter/flutter#193363](https://github.com/flutter/flutter/issues/193363).
 
-Only `pubspec.lock` is maintained, using `fvm flutter pub get` with the default
-beta SDK. CI runs ordinary `flutter pub get` once with each job's selected SDK;
-it may adjust SDK-pinned packages in that ephemeral checkout. A lockfile that
-needs an SDK-specific adjustment is not rejected with `--enforce-lockfile`.
-Dependency resolution errors still fail CI.
+### Cloud and Linux analysis
 
-For iOS development, run `make prepare-ios` before stable SDK commands and
-`make install` when returning to beta. Pub may update `pubspec.lock` when
-switching SDKs; commit dependency updates using the default beta resolution,
-not a second snapshot. CI runs the complete lint/test suite on beta and the
-shared/native compatibility checks on stable for iOS. Android and web builds
-use beta; iOS builds use stable.
+Linux and cloud development do not require Xcode for Dart/Flutter analysis;
+actual iOS builds require macOS and Xcode. Install the pinned SDK and run, for
+example:
+
+```sh
+flutter pub get
+dart analyze packages/totem_core/lib
+```
+
+Run targeted tests as needed; analysis on Linux is not a substitute for an iOS
+build or renderer check.
+
+### Upgrading the SDK
+
+Update `.flutter-version` deliberately along with documented SDK versions and
+CI configuration. Run `flutter doctor` and `flutter pub get`, review the
+lockfile, and use the targeted checks appropriate to the change. Before adopting
+a new renderer or SDK, manually exercise the Safari checklist below and test
+video platform views beneath Flutter dialogs and sheets on iOS. Record results;
+a successful build or analysis alone does not establish that either regression
+is fixed.
 
 ## Web hosting
 
@@ -221,7 +250,7 @@ a deployment.
 
 ### Safari regression checklist
 
-The Flutter 3.50.0-0.2.pre upgrade is a targeted mitigation, not confirmation
+The Flutter 3.50.0 upgrade is a targeted mitigation, not confirmation
 that the Safari incident is fixed. Before closing the incident, manually test Safari
 26.2 on Mac M1, Safari 27 on Mac M4, and Chrome on Mac M1. For each browser:
 

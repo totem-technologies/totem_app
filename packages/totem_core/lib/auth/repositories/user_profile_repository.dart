@@ -24,7 +24,7 @@ class UserRepository {
 
   Future<bool> updateCurrentUserProfilePicture(File file) async {
     final bytes = await file.readAsBytes();
-    return RepositoryUtils.handleApiCall<bool>(
+    return await RepositoryUtils.handleApiCall<bool>(
       apiCall: () => apiService.users.totemUsersMobileApiUpdateCurrentUserImage(
         body: UpdateCurrentUserImageRequest(profileImage: bytes),
       ),

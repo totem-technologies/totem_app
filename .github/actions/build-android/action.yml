@@ -36,6 +36,6 @@ runs:
       working-directory: ${{ inputs.working-directory }}/android
 
     - name: Build
-      run: '"${{ github.action_path }}/../../scripts/retry-flutter-build.sh" ${{ inputs.build-cmd }}'
+      run: dart "${{ github.action_path }}/../../scripts/retry_flutter_build.dart" ${{ inputs.build-cmd }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}

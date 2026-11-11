@@ -79,7 +79,7 @@ void main() {
       check(() => declined.add('participant-b')).throws<UnsupportedError>();
       subscription.close();
       await first.pump();
-      check(first.exists(provider)).isFalse();
+      check(first.read(provider.exists)).isFalse();
       first.dispose();
 
       final reloaded = _container(preferences);
@@ -122,10 +122,9 @@ void main() {
       firstWriteGate.complete(true);
       await Future.wait([first, second]);
       check(preferences.writes).length.equals(2);
-      check(container.read(provider).requireValue).deepEquals({
-        'participant-a',
-        'participant-b',
-      });
+      check(
+        container.read(provider).requireValue,
+      ).deepEquals({'participant-a', 'participant-b'});
 
       final lastWriteGate = Completer<bool>();
       preferences
