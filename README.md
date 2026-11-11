@@ -5,27 +5,24 @@ guided group introspection. It supports iOS, Android, and web.
 
 ## Install
 
-Install [FVM](https://fvm.app/). Flutter **3.50.0** (bundled Dart
-3.14.0) is the default for Android, web, desktop, and shared development.
-iOS uses **3.44.9** (bundled Dart 3.12.2) and requires macOS and Xcode.
+Install Flutter **3.50.0** (stable) using the [official installation guide](https://docs.flutter.dev/get-started/install),
+and add its `bin` directory to your PATH. This SDK and its bundled Dart are used
+for every platform; iOS builds also require macOS and Xcode. The required Flutter
+version is recorded in `.flutter-version`.
 
 ```sh
 git clone https://github.com/totem-technologies/totem_app.git
 cd totem_app
-make setup
-make doctor
+flutter --version
+flutter doctor
+flutter pub get
 ```
 
 To opt in to the local Git hooks, run `make githooks` separately.
 
-`make setup` installs the default and iOS SDKs from `.fvmrc`, initializes FVM
-for this checkout, and resolves dependencies with the default SDK. `make doctor`
-checks the installed SDKs and their bundled Dart versions. On macOS, enable
-Swift Package Manager if needed with `fvm flutter config --enable-swift-package-manager`.
-
-`.fvmrc` pins the default stable SDK. Use `make run-ios RUN_ARGS='-d <device-id>'`
-for iOS, or run `make prepare-ios` followed by `fvm flavor ios` for
-other iOS-specific Flutter commands.
+Verify that `flutter --version` reports 3.50.0 and that `dart` on your PATH is
+the Dart SDK bundled with that Flutter installation. On macOS, enable Swift
+Package Manager if needed with `flutter config --enable-swift-package-manager`.
 
 Configure [Firebase](https://firebase.google.com/docs/flutter/setup) locally:
 
@@ -42,18 +39,16 @@ and set `MOBILE_API_URL`. Do not edit generated package `.env` files; see the
 ## Develop
 
 ```sh
-make run          # Android/desktop with the default SDK
-make run-ios      # iOS with Flutter 3.44.9 (use RUN_ARGS to select a device)
-make run-chrome   # Web client with the default SDK
+make run          # Android/desktop
+make run-ios      # iOS (use RUN_ARGS to select a device)
+make run-chrome   # Web client
 make build-web-release
 make lint
 make test
 ```
 
-There is one `pubspec.lock`. Run `make prepare-ios` before iOS SDK work and
-`make install` to restore default SDK resolution afterward. No lockfile swapping or
-`.dart_tool` deletion is required. `make test` resolves once, then runs all
-shared/native suites and Chrome web tests.
+Maintain the single root `pubspec.lock` with `flutter pub get`. `make test`
+runs the shared/native suites and Chrome web tests.
 
 The [Makefile](Makefile) contains additional commands. The codebase has a
 [mobile app](packages/totem_app), [web client](packages/totem_web), and
@@ -70,38 +65,21 @@ so select an Android device if Flutter prompts; for a specific iOS device use
 and test tasks affect or validate the entire repository; changed and current-file
 alternatives are also available. Current-file test tasks require an open test
 file, the matching package task, and dependencies already resolved; web tests
-use Chrome. For the Dart language
-server, Zed supports selecting FVM in its user settings (use the absolute path
-reported by `which fvm` on your machine):
-
-```json
-{
-  "lsp": {
-    "dart": {
-      "binary": {
-        "path": "/opt/homebrew/bin/fvm",
-        "arguments": ["dart", "language-server", "--protocol=lsp"]
-      }
-    }
-  }
-}
-```
-
-See [Zed's Dart documentation](https://zed.dev/docs/languages/dart). FVM uses
-`.fvmrc` for the language server in this project; this does not switch iOS
-commands to the iOS SDK. For iOS, use the commands above. If Zed cannot find
-FVM, check its executable path and the environment available to Zed.
+use Chrome. Ensure Zed can find the required Flutter SDK on its PATH; see
+[Zed's Dart documentation](https://zed.dev/docs/languages/dart) for SDK setup.
 
 The Zed `create_worktree` hook runs `make env-dev` only if neither package
 `.env` exists, because that command rewrites both files. It copies mobile
-`firebase_options.dart` from the main worktree only if the source exists and
-the destination does not; a missing source is reported but is not an error.
+`firebase_options.dart`, iOS `GoogleService-Info.plist`, and Android
+`google-services.json` from the main worktree only if each source exists and its
+destination does not; a missing
+source is reported but is not an error.
 Existing files are preserved. If either `.env` already exists, the hook skips
-both; configure missing files manually when appropriate. The hook requires FVM
-for environment generation and does not copy local overrides or other Firebase
-files. Keep generated configuration and secrets out of version control. Run
-`make setup` in the new worktree as needed; other run and environment targets
-may regenerate `.env` files.
+both; configure missing files manually when appropriate. The hook requires the
+Flutter SDK for environment generation and does not copy local overrides or other
+Firebase files. Keep generated configuration and secrets out of version control.
+Run `flutter pub get` in the new worktree as needed; other run and environment
+targets may regenerate `.env` files.
 
 ### Git validation
 
@@ -179,81 +157,38 @@ information (read-only)** and **Release apps to testing tracks** permissions.
 
 ## Flutter SDK compatibility and lockfiles
 
-Shared packages keep `environment: sdk: ^3.12.2`; this is the Dart language
-baseline, not an instruction to replace Flutter's bundled Dart SDK or cap its
-upper bound. Shared and generated source must remain compatible with Dart 3.12
-and Flutter 3.44.9 APIs. Do not add newer Dart language features or Flutter APIs
-unavailable in 3.44.9 to shared code.
+Use Flutter 3.50.0 and its bundled Dart for all platforms. Package Dart SDK
+constraints specify language compatibility, not a separate SDK installation.
+Maintain the root `pubspec.lock` with `flutter pub get` and review its changes.
 
-| Platform | Flutter | Bundled Dart | Resolution |
-| --- | --- | --- | --- |
-| iOS | 3.44.9 | 3.12.2 | SDK-specific `pub get` |
-| Android / Web / desktop | 3.50.0 | 3.14.0 | `pubspec.lock` |
-
-The Web pin includes the CanvasKit/Skwasm context-loss recovery change from
+Flutter 3.50.0 includes the CanvasKit/Skwasm context-loss recovery change from
 [flutter/flutter#185116](https://github.com/flutter/flutter/pull/185116), which
 addresses the `LateInitializationError` reported in
 [flutter/flutter#190192](https://github.com/flutter/flutter/issues/190192).
-It does **not** prove that Totem's Safari failure is resolved. iOS remains on
-3.44.9 because Flutter 3.47 has the platform-view composition regression in
-[flutter/flutter#193363](https://github.com/flutter/flutter/issues/193363),
-where video platform views can appear above Flutter dialogs and sheets.
-
-Only `pubspec.lock` is maintained, using `fvm flutter pub get` with the default
-SDK. CI runs ordinary `flutter pub get` once with each job's selected SDK;
-it may adjust SDK-pinned packages in that ephemeral checkout. A lockfile that
-needs an SDK-specific adjustment is not rejected with `--enforce-lockfile`.
-Dependency resolution errors still fail CI.
-
-Default and iOS dependency resolution must run sequentially in a checkout:
-`make prepare-ios` and `make install` can each update the same root
-`pubspec.lock` and `.dart_tool/package_config.json`. Run `make install` after
-iOS SDK work and before committing, and review the lockfile diff; commit only
-default-SDK-resolved dependency updates. Separate Git worktrees are needed for
-simultaneous SDK work; separate SDK installations alone do not isolate Pub's
-workspace state.
-
-CI selects SDKs from `.fvmrc`: the default SDK Ubuntu job runs full `make lint` and
-`make test`, while a separate iOS compatibility Ubuntu job runs `make lint-native` and
-`make test-native` for iOS/shared compatibility. Android and web builds use
-3.50.0; iOS builds use 3.44.9. The Linux compatibility job does not build or run
-an iOS app.
+It does **not** prove that Totem's Safari failure is resolved. Also check iOS
+video platform views beneath dialogs and sheets: Flutter has had a composition
+regression tracked in [flutter/flutter#193363](https://github.com/flutter/flutter/issues/193363).
 
 ### Cloud and Linux analysis
 
 Linux and cloud development do not require Xcode for Dart/Flutter analysis;
-actual iOS builds require macOS and Xcode. For default-SDK-only work, install FVM and
-initialize only the default SDK instead of `make setup` (which installs both):
+actual iOS builds require macOS and Xcode. Install the pinned SDK and run, for
+example:
 
 ```sh
-fvm install --skip-pub-get
-make install
-fvm dart analyze packages/totem_core/lib
+flutter pub get
+dart analyze packages/totem_core/lib
 ```
 
-For a change that needs iOS compatibility analysis, install both SDKs with
-`make setup`, then from the repository root run these sequentially (substitute
-the affected package as appropriate):
+Run targeted tests as needed; analysis on Linux is not a substitute for an iOS
+build or renderer check.
 
-```sh
-make prepare-ios
-(cd packages/totem_core && fvm flavor ios analyze --no-pub)
-make install
-(cd packages/totem_core && fvm flutter analyze --no-pub)
-```
+### Upgrading the SDK
 
-The final `make install` restores default SDK resolution. Run targeted tests as needed;
-analysis on Linux is not a substitute for an iOS build or renderer check.
-
-### Upgrading the SDKs
-
-Update the default and/or `flavors.ios` pins in `.fvmrc` deliberately, check
-shared code against the oldest supported SDK, and update documented Flutter/Dart
-versions and CI channel assumptions if they change. Run `make setup` and
-`make doctor`, resolve and validate iOS compatibility where relevant, then
-run `make install` and review the default-SDK-resolved lockfile. Use the targeted
-checks appropriate to the change; CI runs the broader matrix. Before adopting a
-new renderer or iOS SDK, manually exercise the Safari checklist below and test
+Update `.flutter-version` deliberately along with documented SDK versions and
+CI configuration. Run `flutter doctor` and `flutter pub get`, review the
+lockfile, and use the targeted checks appropriate to the change. Before adopting
+a new renderer or SDK, manually exercise the Safari checklist below and test
 video platform views beneath Flutter dialogs and sheets on iOS. Record results;
 a successful build or analysis alone does not establish that either regression
 is fixed.

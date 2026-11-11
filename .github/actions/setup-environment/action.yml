@@ -3,16 +3,12 @@ description: >-
   One-stop build environment setup, run right after checkout by every Flutter CI
   job: installs Flutter and its bundled Dart SDK (optionally Java 17 for Android), composes
   the flavor's .env from config/, and decodes the Firebase/Google service
-  secrets. Flutter SDK versions come from .fvmrc, including its iOS flavor.
+  secrets. The Flutter SDK version comes from .flutter-version.
 
 inputs:
   flavor:
     description: "Build flavor: 'development', 'staging' or 'production'."
     required: true
-  ios:
-    description: "Use the stable iOS-compatible Flutter SDK."
-    required: false
-    default: "false"
   java:
     description: "Also install Java 17 + Gradle cache (needed for Android builds)."
     default: "false"
@@ -45,27 +41,19 @@ runs:
     - name: Select Flutter SDK
       id: sdk
       shell: bash
-      env:
-        IOS: ${{ inputs.ios }}
       run: |
         set -euo pipefail
-        if [ "$IOS" = "true" ]; then
-          version="$(jq -er '.flavors.ios | select(type == "string" and length > 0)' .fvmrc)" || {
-            echo "::error::.fvmrc must define a non-empty flavors.ios Flutter version."
-            exit 1
-          }
-          channel="stable"
-        else
-          version="$(jq -er '.flutter | select(type == "string" and length > 0)' .fvmrc)"
-          channel="stable"
+        version="$(cat .flutter-version)"
+        if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::error::.flutter-version must contain a stable Flutter version (e.g. 3.50.0)."
+          exit 1
         fi
         echo "version=$version" >> "$GITHUB_OUTPUT"
-        echo "channel=$channel" >> "$GITHUB_OUTPUT"
 
     - name: Setup Flutter and Dart
       uses: subosito/flutter-action@v2.23.0
       with:
-        channel: ${{ steps.sdk.outputs.channel }}
+        channel: stable
         flutter-version: ${{ steps.sdk.outputs.version }}
         cache: true
 

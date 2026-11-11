@@ -100,7 +100,6 @@ jobs:
       - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
-          ios: "true"
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           google_service_plist: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
           flavor: ${{ matrix.flavor }}

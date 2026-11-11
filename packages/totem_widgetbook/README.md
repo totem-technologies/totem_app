@@ -18,7 +18,7 @@ long-lived branch.
 
 ## Running
 
-All commands run from the repo root, using `fvm`:
+All commands run from the repo root with the pinned Flutter SDK:
 
 | Command                 | What it does                                               |
 | ----------------------- | ---------------------------------------------------------- |

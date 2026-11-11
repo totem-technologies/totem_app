@@ -54,7 +54,7 @@ make env-dev          # compose the development .env for both packages
 make env-staging
 make env-prod
 
-fvm dart scripts/setup_env.dart development   # what the make targets call
+dart scripts/setup_env.dart development        # compose development config directly
 
 # To override a value locally:
 cp config/development.local.env.example config/development.local.env

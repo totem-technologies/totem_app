@@ -16,7 +16,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        expected_flutter="$(jq -er '.flutter | select(type == "string" and length > 0)' .fvmrc)"
+        expected_flutter="$(cat .flutter-version)"
         installed_flutter="$(flutter --version --machine | sed -nE 's/.*"flutterVersion": "([^"]+)".*/\1/p')"
         if [ "$installed_flutter" != "$expected_flutter" ]; then
           echo "::error::Web builds require Flutter $expected_flutter, but installed ${installed_flutter:-unknown}."

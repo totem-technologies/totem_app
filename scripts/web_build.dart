@@ -13,7 +13,6 @@
 // OK to use print
 // ignore_for_file: avoid_print
 
-import 'dart:convert';
 import 'dart:io';
 
 // ENVIRONMENT -> the CDN the Flutter loader fetches assets from.
@@ -70,7 +69,7 @@ Future<void> main() async {
   final String expectedFlutterVersion;
   final String flutterCommand;
   try {
-    final config = File('$repoRoot/.fvmrc');
+    final config = File('$repoRoot/.flutter-version');
     expectedFlutterVersion = expectedFlutterVersionFromConfig(
       config.existsSync() ? config.readAsStringSync() : null,
     );
@@ -82,7 +81,9 @@ Future<void> main() async {
     stderr.writeln('web_build: ${error.message}');
     exit(1);
   } on FileSystemException catch (error) {
-    stderr.writeln('web_build: cannot read root .fvmrc: ${error.message}');
+    stderr.writeln(
+      'web_build: cannot read root .flutter-version: ${error.message}',
+    );
     exit(1);
   }
   await _verifyFlutterVersion(flutterCommand, expectedFlutterVersion);
@@ -103,21 +104,13 @@ Future<void> main() async {
 String? assetBaseForEnvironment(String? environment) => _assetBase[environment];
 
 String expectedFlutterVersionFromConfig(String? contents) {
-  Object? config;
-  try {
-    config = contents == null ? null : jsonDecode(contents);
-  } on FormatException {
-    throw StateError(
-      'root .fvmrc must contain valid JSON with a Flutter version.',
-    );
-  }
-  final version = config is Map ? config['flutter'] : null;
-  if (version is! String ||
+  final version = contents?.trim();
+  if (version == null ||
       !RegExp(
         r'^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$',
       ).hasMatch(version)) {
     throw StateError(
-      'root .fvmrc must specify a valid Flutter version in "flutter".',
+      'root .flutter-version must contain a valid Flutter version.',
     );
   }
   return version;

@@ -226,14 +226,10 @@ dependencies:
       ]);
       final commands = prePushCommands(plan, workspaceResolved: false);
 
-      check(commands.first.executable).equals('fvm');
-      check(commands.first.arguments).deepEquals(['flutter', 'pub', 'get']);
+      check(commands.first.executable).equals('flutter');
+      check(commands.first.arguments).deepEquals(['pub', 'get']);
       check(
-        commands.where(
-          (command) =>
-              command.executable == 'fvm' &&
-              command.arguments.first == 'flutter',
-        ),
+        commands.where((command) => command.executable == 'flutter'),
       ).length.equals(2);
     });
 
@@ -273,11 +269,7 @@ dependencies:
       );
 
       check(
-        runner.commands.where(
-          (command) =>
-              command.executable == 'fvm' &&
-              command.arguments.first == 'flutter',
-        ),
+        runner.commands.where((command) => command.executable == 'flutter'),
       ).length.equals(2);
       check(
         runner.commands.where((command) => command.executable == 'make'),

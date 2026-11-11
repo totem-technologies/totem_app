@@ -6,11 +6,11 @@ WEB_DIR := packages/totem_web
 BENCHMARK_DIR := packages/totem_benchmark
 WIDGETBOOK_DIR := packages/totem_widgetbook
 WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
-NATIVE_FLUTTER ?= fvm flutter
-NATIVE_DART ?= fvm dart
-WEB_FLUTTER ?= flutter
+NATIVE_FLUTTER ?= flutter
+NATIVE_DART ?= dart
+WEB_FLUTTER ?= $(NATIVE_FLUTTER)
 WEB_DART ?= $(NATIVE_DART)
-IOS_FLUTTER ?= fvm flavor ios
+IOS_FLUTTER ?= $(NATIVE_FLUTTER)
 # CI resolves once with its selected SDK before invoking lint/test targets.
 PREPARE_PUB ?= true
 
@@ -47,13 +47,13 @@ env-prod:
 	$(NATIVE_DART) scripts/setup_env.dart production
 
 setup:
-	python3 scripts/sdk_management.py setup
-	env -u FVM_FLUTTER_VERSION $(NATIVE_FLUTTER) pub get
+	python3 scripts/sdk_management.py setup '$(NATIVE_FLUTTER)'
+	$(NATIVE_FLUTTER) pub get
 
 doctor:
-	python3 scripts/sdk_management.py doctor
+	python3 scripts/sdk_management.py doctor '$(NATIVE_FLUTTER)'
 
-# One lockfile; each SDK may resolve its compatible dependencies without a clean.
+# Resolve dependencies using the selected Flutter SDK.
 prepare-native:
 ifeq ($(PREPARE_PUB),true)
 	$(NATIVE_FLUTTER) pub get
@@ -67,12 +67,12 @@ endif
 prepare-ios:
 	$(IOS_FLUTTER) pub get
 
-run: prepare-native env-dev
+run: prepare-native env-staging
 	@echo "Running app..."
 	cd $(APP_DIR) && $(NATIVE_FLUTTER) run
 
 # Use RUN_ARGS='-d <ios-device-id>' to select an iOS device.
-run-ios: prepare-ios env-dev
+run-ios: prepare-ios env-staging
 	cd $(APP_DIR) && $(IOS_FLUTTER) run $(RUN_ARGS)
 
 # ASSET_BASE is empty in dev: the splash assets in web/index.html use the

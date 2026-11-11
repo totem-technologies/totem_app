@@ -6,9 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import '../web_build.dart';
 
 void main() {
-  test('selects Flutter from the Dart SDK rather than PATH or FVM', () {
+  test('selects Flutter from the Dart SDK rather than PATH', () {
     final separator = Platform.pathSeparator;
-    for (final root in ['/ci/flutter', '/home/user/fvm/versions/3.50.0']) {
+    for (final root in ['/ci/flutter', '/home/user/custom/versions/3.50.0']) {
       final nativeRoot = root.replaceAll('/', separator);
       final dart =
           '$nativeRoot${separator}bin${separator}cache${separator}dart-sdk${separator}bin${separator}dart';
@@ -17,6 +17,7 @@ void main() {
       check(flutterForDart(dart, (path) => path == flutter)).equals(flutter);
       check(() => flutterForDart(dart, (_) => false)).throws<StateError>();
     }
+
     check(
       () => flutterForDart(
         '${separator}usr${separator}bin${separator}dart',
@@ -38,23 +39,15 @@ void main() {
     ).equals('https://totem-web-staging.lopkerk.workers.dev/');
   });
 
-  test('requires a valid Flutter version in the root FVM configuration', () {
-    check(
-      expectedFlutterVersionFromConfig('{"flutter":"3.50.0-0.2.pre"}'),
-    ).equals('3.50.0-0.2.pre');
+  test('requires a valid Flutter version in the root version file', () {
+    check(expectedFlutterVersionFromConfig('3.50.0\n')).equals('3.50.0');
     for (final config in <String?>[
       null,
       '',
-      '{',
-      'null',
-      '[]',
-      '{}',
-      '{"flutter":null}',
-      '{"flutter":123}',
-      '{"flutter":""}',
-      '{"flutter":"  "}',
-      '{"flutter":"stable"}',
-      '{"flutter":"3.50"}',
+      '{"flutter":"3.50.0"}',
+      '  ',
+      'stable',
+      '3.50',
     ]) {
       check(
         () => expectedFlutterVersionFromConfig(config),
@@ -62,8 +55,8 @@ void main() {
     }
   });
 
-  test('detects installed Flutter version mismatches against FVM config', () {
-    final expected = expectedFlutterVersionFromConfig('{"flutter":"3.50.0"}');
+  test('detects installed Flutter version mismatches against version file', () {
+    final expected = expectedFlutterVersionFromConfig('3.50.0');
     check(
       installedVersionMatches(expected, 0, '{"flutterVersion": "3.50.0"}'),
     ).isTrue();

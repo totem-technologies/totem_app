@@ -181,7 +181,7 @@ Set `API_URL=http://localhost:8000` in `packages/totem_app/.env`, then:
 
 ```sh
 cd packages/totem_app
-fvm flutter build apk --debug --flavor production
+flutter build apk --debug --flavor production
 adb install -r build/app/outputs/flutter-apk/app-production-debug.apk
 ```
 
@@ -259,9 +259,8 @@ uv run lan_forward.py $(ipconfig getifaddr en0) 8000 127.0.0.1 8000
 sign manually). Generate the config, then build with automatic signing:
 
 ```sh
-make prepare-ios
 cd packages/totem_app
-fvm flavor ios build ios --profile --flavor production --config-only
+flutter build ios --profile --flavor production --config-only
 cd ios && xcodebuild -workspace Runner.xcworkspace -scheme production \
   -configuration Profile-production -destination 'generic/platform=iOS' \
   -derivedDataPath ../build/ios_dd CODE_SIGN_STYLE=Automatic \

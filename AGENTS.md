@@ -57,22 +57,13 @@ Leak tracking is enabled through:
 
 ## SDK and dependency resolution
 
-- The default SDK in `.fvmrc` is Flutter 3.50.0 (stable) for Android,
-  web, desktop, and shared validation. Use `fvm flutter` / `fvm dart`.
-- Use `make setup` for initial setup and `make doctor` to check the environment.
-  For Zed's FVM language-server configuration and worktree hook, see README.md.
-- Only iOS uses Flutter 3.44.9 via `fvm flavor ios` or `make run-ios`;
-  run `make prepare-ios` before other iOS SDK commands, then `make install`
-  when returning to the default SDK.
-- Default and iOS `pub get` run sequentially in a checkout: both can change the
-  root `pubspec.lock` and `.dart_tool/package_config.json`. Run `make install`
-  to restore default resolution before committing; maintain only that lockfile.
-  Use separate worktrees for simultaneous SDK work, not concurrent resolution
-  in one checkout. Do not add lockfile snapshots, enforce the other SDK's
-  resolution, or delete `.dart_tool` when switching SDKs.
-- On cloud/Linux, Xcode is not needed for analysis; install the iOS SDK only when
-  checking iOS/shared compatibility. See README.md for default-only setup, exact
-  default/iOS analysis commands, CI SDK choices, and SDK upgrade checks.
+- Use Flutter 3.50.0 (stable), pinned in `.flutter-version`, for all platforms
+  and validation. Use `flutter` and its bundled `dart` directly.
+- Run `flutter pub get` to resolve dependencies and `flutter doctor` to check
+  the environment. Maintain the root `pubspec.lock`; see README.md for setup,
+  Zed's worktree hook, and SDK upgrade checks.
+- On cloud/Linux, Xcode is not needed for analysis; iOS builds require macOS
+  and Xcode.
 - Pre-push intentionally runs no tests or analysis. CI is the full-validation
   gate; do not restore expensive automatic push checks.
 
@@ -82,9 +73,9 @@ During implementation, use the narrowest validation that covers the change; do
 not run `make lint` or `make test` by default. They validate every workspace
 package and are intended for comprehensive local verification and CI.
 
-1. Format only modified Dart files with `fvm dart format <files>`.
-2. Run narrow analysis, for example `fvm dart analyze <files>` or
-   `cd packages/totem_app && fvm flutter analyze --no-pub` for app-wide changes.
+1. Format only modified Dart files with `dart format <files>`.
+2. Run narrow analysis, for example `dart analyze <files>` or
+   `cd packages/totem_app && flutter analyze --no-pub` for app-wide changes.
 3. Run the focused test file first after a lifecycle or timing fix.
 4. Run the affected package suite only when the focused test is insufficient:
    `make test-core`, `make test-app`, `make test-web`, `make test-benchmark`,
