@@ -298,9 +298,21 @@ class _CallLayoutDelegate extends MultiChildLayoutDelegate {
       }
     }
 
-    final g = m > 0
+    var g = m > 0
         ? _bestGrid(m, gridW, gridH, spacing, aspect)
         : const _Grid(0, 0, 0, 0);
+    if (isRow && !hasFeatured && m >= 5) {
+      final gallery = _bestGrid(
+        m,
+        gridW,
+        gridH,
+        spacing,
+        aspect,
+        maxColumns: (m / 2).ceil(),
+      );
+      // Keep a single row in short windows where two rows shrink tiles too much.
+      if (gallery.tileW >= g.tileW * 0.7) g = gallery;
+    }
 
     final tileW = g.tileW.floorToDouble();
     final tileH = g.tileH.floorToDouble();
@@ -323,11 +335,18 @@ class _CallLayoutDelegate extends MultiChildLayoutDelegate {
 
   /// Pick the column count that maximizes tile size while keeping the fixed
   /// aspect ratio and fitting `m` tiles within `W` x `H`.
-  static _Grid _bestGrid(int m, double W, double H, double gap, double aspect) {
+  static _Grid _bestGrid(
+    int m,
+    double W,
+    double H,
+    double gap,
+    double aspect, {
+    int? maxColumns,
+  }) {
     final w = math.max(0, W);
     final h = math.max(0, H);
     var best = _Grid(1, m, 0, 0);
-    for (var c = 1; c <= m; c++) {
+    for (var c = 1; c <= (maxColumns ?? m); c++) {
       final r = (m / c).ceil();
       final twByWidth = (w - (c - 1) * gap) / c;
       final twByHeight = ((h - (r - 1) * gap) / r) * aspect;
