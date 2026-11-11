@@ -44,6 +44,17 @@ class _TestMessagesNotifier extends Notifier<List<SessionChatMessage>> {
   }
 }
 
+class _TestParticipantsNotifier extends Notifier<List<ParticipantInfo>> {
+  _TestParticipantsNotifier(this.initial);
+
+  final List<ParticipantInfo> initial;
+
+  @override
+  List<ParticipantInfo> build() => initial;
+
+  void add(ParticipantInfo participant) => state = [...state, participant];
+}
+
 class _ChatSheetHarness {
   const _ChatSheetHarness({
     required this.container,
@@ -178,18 +189,26 @@ void main() {
     required AuthState authState,
     RoomScreen currentScreen = RoomScreen.listening,
     List<ParticipantInfo>? participants,
+    NotifierProvider<_TestParticipantsNotifier, List<ParticipantInfo>>?
+    participantsProvider,
     bool useScaffold = true,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: _sharedOverrides(
-          isKeeper: isKeeper,
-          messages: messages,
-          session: session,
-          authState: authState,
-          currentScreen: currentScreen,
-          participants: participants,
-        ).cast(),
+        overrides: [
+          ..._sharedOverrides(
+            isKeeper: isKeeper,
+            messages: messages,
+            session: session,
+            authState: authState,
+            currentScreen: currentScreen,
+            participants: participants,
+          ).cast(),
+          if (participantsProvider != null)
+            sessionParticipantsProvider.overrideWith(
+              (ref) => ref.watch(participantsProvider),
+            ),
+        ],
         child: MaterialApp(
           home: SessionKeyboardShortcuts(
             child: useScaffold
@@ -252,6 +271,11 @@ void main() {
   }
 
   group('SessionChatSheet', () {
+    final groupParticipants = [
+      testParticipant('keeper-1', name: 'Heather'),
+      testParticipant('lucas', name: 'Lucas'),
+      testParticipant('third', name: 'Third'),
+    ];
     late MockSessionController session;
     late MockSessionMessagingController messaging;
     late MockSessionDeviceController devices;
@@ -290,6 +314,226 @@ void main() {
       }
     }
 
+    for (final isKeeper in [true, false]) {
+      final role = isKeeper ? 'Keeper' : 'participant';
+      final localIdentity = isKeeper ? 'keeper-1' : 'lucas';
+      final recipient = isKeeper ? 'lucas' : 'keeper-1';
+      final recipientName = isKeeper ? 'Lucas' : 'Heather';
+
+      testWidgets('$role defaults to private chat in a two-person session', (
+        tester,
+      ) async {
+        await pumpChatSheet(
+          tester,
+          isKeeper: isKeeper,
+          messages: const [],
+          session: session,
+          authState: AuthState.authenticated(
+            user: UserSchema(
+              email: '$localIdentity@example.com',
+              slug: Omittable(localIdentity),
+              name: Omittable(role),
+              profileAvatarType: ProfileAvatarTypeEnum.td,
+              circleCount: 0,
+              dateCreated: DateTime(2024),
+            ),
+          ),
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SessionChatPanel)),
+        );
+        check(
+          container.read(sessionChatThreadTargetProvider),
+        ).equals(recipient);
+        await tester.enterText(find.byType(TextField), 'Private hello');
+        await tester.pump();
+        await tester.tap(find.byKey(const ValueKey('message-input-send')));
+        await tester.pump();
+        verify(
+          () => messaging.sendMessage(
+            'Private hello',
+            recipientIdentity: recipient,
+          ),
+        ).called(1);
+
+        await tester.tap(find.text(recipientName).first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Everyone').last);
+        await tester.pumpAndSettle();
+        check(
+          container.read(sessionChatThreadTargetProvider),
+        ).equals(recipient);
+      });
+
+      testWidgets('$role cannot select Everyone with two people', (
+        tester,
+      ) async {
+        await pumpChatSheet(
+          tester,
+          isKeeper: isKeeper,
+          messages: const [],
+          session: session,
+          authState: AuthState.authenticated(
+            user: UserSchema(
+              email: '$localIdentity@example.com',
+              slug: Omittable(localIdentity),
+              name: Omittable(role),
+              profileAvatarType: ProfileAvatarTypeEnum.td,
+              circleCount: 0,
+              dateCreated: DateTime(2024),
+            ),
+          ),
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SessionChatPanel)),
+        );
+        container.read(sessionChatThreadTargetProvider.notifier).target =
+            recipient;
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), 'Private hello');
+        await tester.pump();
+        await tester.tap(find.byKey(const ValueKey('message-input-send')));
+        await tester.pump();
+        verify(
+          () => messaging.sendMessage(
+            'Private hello',
+            recipientIdentity: recipient,
+          ),
+        ).called(1);
+        await tester.tap(find.text(recipientName).first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Everyone').last);
+        await tester.pumpAndSettle();
+        check(
+          container.read(sessionChatThreadTargetProvider),
+        ).equals(recipient);
+      });
+
+      testWidgets(
+        '$role defaults to Everyone when a third person joins before chat opens',
+        (
+          tester,
+        ) async {
+          final participantsProvider =
+              NotifierProvider<
+                _TestParticipantsNotifier,
+                List<ParticipantInfo>
+              >(
+                () => _TestParticipantsNotifier(
+                  groupParticipants.take(2).toList(),
+                ),
+              );
+          final container = ProviderContainer(
+            overrides: [
+              ..._sharedOverrides(
+                isKeeper: isKeeper,
+                messages: const [],
+                session: session,
+                participants: groupParticipants,
+                authState: AuthState.authenticated(
+                  user: UserSchema(
+                    email: '$localIdentity@example.com',
+                    slug: Omittable(localIdentity),
+                    name: Omittable(role),
+                    profileAvatarType: ProfileAvatarTypeEnum.td,
+                    circleCount: 0,
+                    dateCreated: DateTime(2024),
+                  ),
+                ),
+              ).cast(),
+              sessionParticipantsProvider.overrideWith(
+                (ref) => ref.watch(participantsProvider),
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+          check(container.read(sessionParticipantsProvider).length).equals(2);
+          container
+              .read(participantsProvider.notifier)
+              .add(groupParticipants[2]);
+
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: const MaterialApp(
+                home: SessionKeyboardShortcuts(
+                  child: Scaffold(body: SessionChatPanel()),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          check(container.read(sessionChatThreadTargetProvider)).isNull();
+          check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
+          if (isKeeper) {
+            await tester.enterText(find.byType(TextField), 'Hello everyone');
+            await tester.pump();
+            await tester.tap(find.byKey(const ValueKey('message-input-send')));
+            await tester.pump();
+            verify(
+              () => messaging.sendMessage(
+                'Hello everyone',
+                recipientIdentity: null,
+              ),
+            ).called(1);
+          }
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        },
+      );
+
+      testWidgets('$role can select Everyone after a third person joins', (
+        tester,
+      ) async {
+        final participantsProvider =
+            NotifierProvider<_TestParticipantsNotifier, List<ParticipantInfo>>(
+              () => _TestParticipantsNotifier([
+                testParticipant('keeper-1', name: 'Heather'),
+                testParticipant('lucas', name: 'Lucas'),
+              ]),
+            );
+        await pumpChatSheet(
+          tester,
+          isKeeper: isKeeper,
+          messages: const [],
+          session: session,
+          participantsProvider: participantsProvider,
+          authState: AuthState.authenticated(
+            user: UserSchema(
+              email: '$localIdentity@example.com',
+              slug: Omittable(localIdentity),
+              name: Omittable(role),
+              profileAvatarType: ProfileAvatarTypeEnum.td,
+              circleCount: 0,
+              dateCreated: DateTime(2024),
+            ),
+          ),
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SessionChatPanel)),
+        );
+        container.read(sessionChatThreadTargetProvider.notifier).target =
+            recipient;
+        await tester.pump();
+        container
+            .read(participantsProvider.notifier)
+            .add(
+              testParticipant('third', name: 'Third'),
+            );
+        await tester.pumpAndSettle();
+        check(
+          container.read(sessionChatThreadTargetProvider),
+        ).equals(recipient);
+        await tester.tap(find.text(recipientName).first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Everyone').last);
+        await tester.pumpAndSettle();
+        check(container.read(sessionChatThreadTargetProvider)).isNull();
+      });
+    }
+
     testWidgets(
       'shows the Everyone hint and private Keeper CTA for participants',
       (tester) async {
@@ -320,7 +564,9 @@ void main() {
         check(
           tester.widgetList(find.text('Message Keeper privately')),
         ).length.equals(1);
-        check(tester.widgetList(find.byType(MessageInputBar))).length.equals(0);
+        check(
+          tester.widget<TextField>(find.byType(TextField)).enabled,
+        ).equals(false);
         check(
           tester
               .widget<Material>(
@@ -472,6 +718,7 @@ void main() {
         isKeeper: true,
         messages: [group, private],
         session: session,
+        participants: groupParticipants,
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'keeper@example.com',
@@ -525,6 +772,7 @@ void main() {
         isKeeper: false,
         messages: const [],
         session: session,
+        participants: groupParticipants,
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'lucas@example.com',
@@ -537,9 +785,20 @@ void main() {
         ),
       );
 
+      final everyoneComposer = tester.getRect(find.byType(MessageInputBar));
+      check(
+        tester.widget<TextField>(find.byType(TextField)).enabled,
+      ).equals(false);
+
       await tester.tap(find.text('Message Keeper privately'));
       await tester.pumpAndSettle();
 
+      check(
+        tester.getRect(find.byType(MessageInputBar)),
+      ).equals(everyoneComposer);
+      check(
+        tester.widget<TextField>(find.byType(TextField)).enabled,
+      ).equals(true);
       check(
         tester.widgetList(find.text('View Everyone messages')),
       ).length.equals(1);
@@ -565,6 +824,12 @@ void main() {
       await tester.tap(find.text('View Everyone messages'));
       await tester.pumpAndSettle();
 
+      check(
+        tester.getRect(find.byType(MessageInputBar)),
+      ).equals(everyoneComposer);
+      check(
+        tester.widget<TextField>(find.byType(TextField)).enabled,
+      ).equals(false);
       check(
         tester.widgetList(find.text('Message Keeper privately')),
       ).length.equals(1);
@@ -697,6 +962,7 @@ void main() {
         isKeeper: false,
         messages: [message],
         session: session,
+        participants: groupParticipants,
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'lucas@example.com',
@@ -808,6 +1074,7 @@ void main() {
         isKeeper: true,
         messages: const [],
         session: session,
+        participants: groupParticipants,
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'keeper@example.com',
@@ -878,6 +1145,7 @@ void main() {
         isKeeper: true,
         messages: const [],
         session: session,
+        participants: groupParticipants,
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'keeper@example.com',

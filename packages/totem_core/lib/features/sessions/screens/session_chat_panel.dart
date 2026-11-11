@@ -151,10 +151,26 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     );
   }
 
+  String? _currentTwoPersonPeer() => _twoPersonPeer(
+    ref.read(sessionParticipantsProvider),
+    _localIdentity(),
+    _resolveKeeperIdentity(
+      roomKeeper: ref.read(keeperIdentityProvider),
+      spaceAuthor: ref
+          .read(currentSessionEventProvider)
+          ?.space
+          .author
+          .slug
+          .value,
+    ),
+  );
+
   void _markVisibleThreadRead() {
     ref
         .read(sessionChatUnreadThreadsProvider.notifier)
-        .markRead(ref.read(sessionChatThreadTargetProvider));
+        .markRead(
+          _currentTwoPersonPeer() ?? ref.read(sessionChatThreadTargetProvider),
+        );
   }
 
   void _closePanel() {
@@ -190,7 +206,9 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
         final message = next.last;
         final belongs = message.belongsToThread(
           localIdentity: _localIdentity(),
-          threadTarget: ref.read(sessionChatThreadTargetProvider),
+          threadTarget:
+              _currentTwoPersonPeer() ??
+              ref.read(sessionChatThreadTargetProvider),
         );
         if (belongs && _isNearBottom) unawaited(_scrollToBottom());
       })
@@ -203,7 +221,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       });
 
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
-    final threadTarget = ref.watch(sessionChatThreadTargetProvider);
+    final selectedTarget = ref.watch(sessionChatThreadTargetProvider);
     final participants = ref.watch(sessionParticipantsProvider);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
     final roomIdentity = ref.watch(localParticipantIdentityProvider);
@@ -219,6 +237,23 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
         ),
       ),
     );
+
+    final privatePeer = _twoPersonPeer(
+      participants,
+      localIdentity,
+      keeperIdentity,
+    );
+    final threadTarget = privatePeer ?? selectedTarget;
+    if (privatePeer != null && selectedTarget != privatePeer) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_currentTwoPersonPeer() == privatePeer &&
+            ref.read(sessionChatThreadTargetProvider) == selectedTarget) {
+          ref.read(sessionChatThreadTargetProvider.notifier).target =
+              privatePeer;
+        }
+      });
+    }
 
     final threadMessages = ref.watch(
       sessionThreadMessagesProvider((
@@ -366,13 +401,17 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                     keeperIdentity: keeperIdentity,
                     localIdentity: localIdentity,
                     participants: participants,
-                    onSelectEveryone: () {
-                      ref
-                              .read(sessionChatThreadTargetProvider.notifier)
-                              .target =
-                          null;
-                      _setDropdownOpen(false);
-                    },
+                    onSelectEveryone: privatePeer != null
+                        ? null
+                        : () {
+                            ref
+                                    .read(
+                                      sessionChatThreadTargetProvider.notifier,
+                                    )
+                                    .target =
+                                null;
+                            _setDropdownOpen(false);
+                          },
                     onSelectParticipant: (identity) {
                       ref
                               .read(sessionChatThreadTargetProvider.notifier)
@@ -384,7 +423,9 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                 ],
               ),
             ),
-            if (!isKeeper && (isPrivateThread || keeperIsPresent))
+            if (!isKeeper &&
+                privatePeer == null &&
+                (isPrivateThread || keeperIsPresent))
               _ParticipantThreadChip(
                 isPrivateThread: isPrivateThread,
                 onMessageKeeper: () {
@@ -400,20 +441,20 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                       null;
                 },
               ),
-            if (canCompose)
-              MessageInputBar(
-                // A fresh State per thread, so a private draft can
-                // never be sent to Everyone after a thread switch.
-                key: ValueKey(threadTarget),
-                hintText: _composerHint(
-                  isPrivateThread: isPrivateThread,
-                  threadTarget: threadTarget,
-                  participants: participants,
-                  keeperIdentity: keeperIdentity,
-                ),
-                autofocus: autofocus,
-                onSend: send,
+            MessageInputBar(
+              enabled: canCompose,
+              // A fresh State per thread, so a private draft can
+              // never be sent to Everyone after a thread switch.
+              key: ValueKey(threadTarget),
+              hintText: _composerHint(
+                isPrivateThread: isPrivateThread,
+                threadTarget: threadTarget,
+                participants: participants,
+                keeperIdentity: keeperIdentity,
               ),
+              autofocus: autofocus,
+              onSend: send,
+            ),
           ],
         ),
       ),
@@ -428,6 +469,25 @@ String? _resolveKeeperIdentity({
   if (roomKeeper != null && roomKeeper.isNotEmpty) return roomKeeper;
   if (spaceAuthor != null && spaceAuthor.isNotEmpty) return spaceAuthor;
   return null;
+}
+
+String? _twoPersonPeer(
+  List<ParticipantInfo> participants,
+  String? localIdentity,
+  String? keeperIdentity,
+) {
+  if (participants.length != 2 ||
+      localIdentity == null ||
+      keeperIdentity == null ||
+      _participantFor(participants, localIdentity) == null ||
+      _participantFor(participants, keeperIdentity) == null) {
+    return null;
+  }
+  final peer = participants.firstWhere(
+    (participant) => participant.identity != localIdentity,
+    orElse: () => participants.first,
+  );
+  return peer.identity == localIdentity ? null : peer.identity;
 }
 
 ParticipantInfo? _participantFor(
@@ -873,7 +933,7 @@ class _RecipientDropdownOverlay extends StatelessWidget {
   final String? keeperIdentity;
   final String? localIdentity;
   final List<ParticipantInfo> participants;
-  final VoidCallback onSelectEveryone;
+  final VoidCallback? onSelectEveryone;
   final ValueChanged<String> onSelectParticipant;
 
   @override
@@ -953,7 +1013,9 @@ class _RecipientDropdownOverlay extends StatelessWidget {
                     return _RecipientRow(
                       selected: threadTarget == null,
                       title: 'Everyone',
-                      subtitle: isKeeper
+                      subtitle: onSelectEveryone == null
+                          ? 'Available when more participants join'
+                          : isKeeper
                           ? '$countLabel · messages to everyone'
                           : '$countLabel · messages from the Keeper',
                       leading: const _EveryoneAvatar(),
@@ -996,7 +1058,7 @@ class _RecipientRow extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget leading;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1009,6 +1071,7 @@ class _RecipientRow extends StatelessWidget {
       container: true,
       button: true,
       selected: selected,
+      enabled: onTap != null,
       inMutuallyExclusiveGroup: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -1018,54 +1081,57 @@ class _RecipientRow extends StatelessWidget {
         child: Material(
           color: fill,
           shape: shape,
-          child: InkWell(
-            onTap: onTap,
-            customBorder: shape,
-            splashColor: AppTheme.mauve.withValues(alpha: 0.16),
-            highlightColor: AppTheme.mauve.withValues(alpha: 0.10),
-            hoverColor: AppTheme.mauve.withValues(alpha: 0.06),
-            focusColor: AppTheme.mauve.withValues(alpha: 0.10),
-            child: Padding(
-              padding: const EdgeInsetsDirectional.symmetric(
-                horizontal: _recipientRowHorizontalPadding,
-                vertical: _recipientRowVerticalPadding,
-              ),
-              child: Row(
-                children: [
-                  leading,
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 4,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            color: AppTheme.slate,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (subtitle != null)
+          child: Opacity(
+            opacity: onTap == null ? 0.5 : 1,
+            child: InkWell(
+              onTap: onTap,
+              customBorder: shape,
+              splashColor: AppTheme.mauve.withValues(alpha: 0.16),
+              highlightColor: AppTheme.mauve.withValues(alpha: 0.10),
+              hoverColor: AppTheme.mauve.withValues(alpha: 0.06),
+              focusColor: AppTheme.mauve.withValues(alpha: 0.10),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.symmetric(
+                  horizontal: _recipientRowHorizontalPadding,
+                  vertical: _recipientRowVerticalPadding,
+                ),
+                child: Row(
+                  children: [
+                    leading,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 4,
+                        children: [
                           Text(
-                            subtitle!,
+                            title,
                             style: const TextStyle(
-                              color: AppTheme.gray,
-                              fontSize: 11,
-                              height: 1.3,
+                              color: AppTheme.slate,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                      ],
+                          if (subtitle != null)
+                            Text(
+                              subtitle!,
+                              style: const TextStyle(
+                                color: AppTheme.gray,
+                                fontSize: 11,
+                                height: 1.3,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  if (selected)
-                    const TotemIcon(
-                      TotemIcons.checkmark,
-                      size: 16,
-                      color: AppTheme.mauve,
-                    ),
-                ],
+                    if (selected)
+                      const TotemIcon(
+                        TotemIcons.checkmark,
+                        size: 16,
+                        color: AppTheme.mauve,
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
