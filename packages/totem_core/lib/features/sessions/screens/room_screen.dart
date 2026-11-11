@@ -144,6 +144,20 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   bool _admissionOrientationDismissed = false;
   bool? _admissionOrientationEligible;
 
+  /// True while [showSessionChat] is awaiting dismissal of the overlay host.
+  bool _overlayChatPresenting = false;
+
+  /// Bumped when a layout handover (or a newer present) supersedes the
+  /// in-flight [showSessionChat] future so its `finally` does not clear the
+  /// open flag or block a later re-present.
+  int _overlayChatGeneration = 0;
+
+  bool _chatPresentationSyncScheduled = false;
+
+  /// Last dock layout seen by the presentation sync — used to detect resizes
+  /// without scheduling a sync on every unrelated rebuild.
+  bool? _lastSyncedDockChatSlot;
+
   @override
   void initState() {
     super.initState();
@@ -821,9 +835,16 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       );
     }
 
-    // Keep the rail mounted on wide windows even while closed so the
-    // close animation has a widget to slide out.
     final dockChatSlot = shouldDockSessionChat(context);
+    // Flag changes are handled via listen so opening/closing chat does not
+    // rebuild the whole room tree. Layout (resize) changes are detected here.
+    ref.listen(sessionChatOpenProvider, (previous, next) {
+      _scheduleChatPresentationSync();
+    });
+    if (_lastSyncedDockChatSlot != dockChatSlot) {
+      _lastSyncedDockChatSlot = dockChatSlot;
+      _scheduleChatPresentationSync();
+    }
     // The Keeper-approved, fully activated local connection can enter without
     // waiting for a separate roster packet. The roster still filters everyone
     // shown to other participants.
@@ -910,6 +931,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
                         ],
                       ),
                     ),
+                    // Keep the rail mounted on wide windows even while closed so
+                    // the close animation has a widget to slide out.
                     if (dockChatSlot)
                       _DockedSessionPanelsRail(sessionSlug: widget.sessionSlug),
                   ],
@@ -927,21 +950,93 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     );
   }
 
-  void _dismissSessionChat() {
-    if (_hasDismissedChatForDisconnect) return;
-    _hasDismissedChatForDisconnect = true;
-    ref
-      ..read(sessionChatOpenProvider.notifier).open = false
-      ..read(sessionPromptsOpenProvider.notifier).open = false
-      ..read(sessionAdmissionOpenProvider.notifier).open = false;
+  void _scheduleChatPresentationSync() {
+    if (_chatPresentationSyncScheduled) return;
+    _chatPresentationSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _chatPresentationSyncScheduled = false;
+      if (!mounted) return;
+      // Read live values — a prior frame's captured flag/layout can be stale
+      // (e.g. room-entry invalidate clearing the keepAlive flag).
+      _syncChatPresentation();
+    });
+  }
+
+  void _syncChatPresentation() {
+    final chatOpen = ref.read(sessionChatOpenProvider);
+    final dockChatSlot = shouldDockSessionChat(context);
+    final wantOverlay = chatOpen && !dockChatSlot;
+    final hasOverlayRoute = _roomNavigatorObserver.chatRoutes.any(
+      (route) => route.isActive,
+    );
+
+    if (wantOverlay && !hasOverlayRoute && !_overlayChatPresenting) {
+      unawaited(_presentOverlayChat());
+      return;
+    }
+
+    if (!wantOverlay && hasOverlayRoute) {
+      // Hand over to the dock when chat stays open across a widen; otherwise
+      // the flag was cleared and the overlay should go with it.
+      _removeChatOverlayRoutes(handover: chatOpen && dockChatSlot);
+    }
+  }
+
+  Future<void> _presentOverlayChat() async {
+    final navContext = _roomNavigatorKey.currentContext;
+    if (navContext == null || _overlayChatPresenting) return;
+
+    final generation = ++_overlayChatGeneration;
+    _overlayChatPresenting = true;
+    try {
+      await showSessionChat(navContext);
+    } finally {
+      // A layout handover (or a newer present) supersedes this call.
+      if (generation == _overlayChatGeneration) {
+        _overlayChatPresenting = false;
+        // User dismissed the sheet/drawer (swipe, barrier, or close).
+        if (mounted && ref.read(sessionChatOpenProvider)) {
+          ref.read(sessionChatOpenProvider.notifier).open = false;
+        }
+      }
+    }
+  }
+
+  void _removeChatOverlayRoutes({required bool handover}) {
     final navigator = _roomNavigatorKey.currentState;
     if (navigator == null) return;
 
-    final routes = [
-      ..._roomNavigatorObserver.chatRoutes,
-      ..._roomNavigatorObserver.admissionRoutes,
-    ];
-    for (final route in routes.reversed.toList()) {
+    final routes = List<Route<dynamic>>.of(
+      _roomNavigatorObserver.chatRoutes,
+    );
+    if (routes.isEmpty) return;
+
+    // Invalidate any in-flight showSessionChat before removing routes so a
+    // handover cannot leave presenting=true if removeRoute does not complete
+    // that future, and so a later dismiss finally cannot clear the open flag.
+    if (handover) {
+      _overlayChatGeneration++;
+      _overlayChatPresenting = false;
+    }
+
+    for (final route in routes.reversed) {
+      if (!route.isActive) continue;
+      // Instant removal on layout handover avoids a brief dual-panel flash
+      // while a pop animation and the dock slide run together. Instant on
+      // flag-clear too — SessionChatPanel also pops itself when the flag
+      // goes false, so this is usually a no-op cleanup.
+      navigator.removeRoute(route);
+    }
+  }
+
+  void _removeAdmissionOverlayRoutes() {
+    final navigator = _roomNavigatorKey.currentState;
+    if (navigator == null) return;
+
+    final routes = List<Route<dynamic>>.of(
+      _roomNavigatorObserver.admissionRoutes,
+    );
+    for (final route in routes.reversed) {
       if (!route.isActive) continue;
       if (route.isCurrent) {
         navigator.pop();
@@ -949,6 +1044,19 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         navigator.removeRoute(route);
       }
     }
+  }
+
+  void _dismissSessionChat() {
+    if (_hasDismissedChatForDisconnect) return;
+    _hasDismissedChatForDisconnect = true;
+    _overlayChatGeneration++;
+    _overlayChatPresenting = false;
+    ref
+      ..read(sessionChatOpenProvider.notifier).open = false
+      ..read(sessionPromptsOpenProvider.notifier).open = false
+      ..read(sessionAdmissionOpenProvider.notifier).open = false;
+    _removeChatOverlayRoutes(handover: false);
+    _removeAdmissionOverlayRoutes();
   }
 
   Future<void> _handleBackNavigation(

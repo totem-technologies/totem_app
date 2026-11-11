@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
@@ -7,7 +5,6 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart'
     show SessionChatMessage;
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -21,8 +18,6 @@ class ActionBarChatButton extends ConsumerStatefulWidget {
 }
 
 class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
-  bool _chatSheetOpen = false;
-
   final _notificationController = NotificationController();
   NotificationRequest? _notification;
 
@@ -60,7 +55,7 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
     super.dispose();
   }
 
-  Future<void> _openChat({required bool fromUnread, String? thread}) async {
+  void _toggleChat({required bool fromUnread, String? thread}) {
     if (!mounted) return;
     _notification?.dismissActive();
 
@@ -68,69 +63,41 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       ref.read(sessionChatThreadTargetProvider.notifier).target = thread;
     }
 
-    // Wide desktop docks the panel beside the video; everything else
-    // still opens the existing sheet / dialog.
-    if (shouldDockSessionChat(context)) {
-      final chat = ref.read(sessionChatOpenProvider.notifier);
-      if (fromUnread || !chat.open) {
-        chat.open = true;
-        ref.read(sessionPromptsOpenProvider.notifier).open = false;
-      } else {
-        chat.open = false;
-      }
-      return;
-    }
-
-    if (_chatSheetOpen) return;
-
-    setState(() => _chatSheetOpen = true);
-    ref.read(sessionChatOpenProvider.notifier).open = true;
-    try {
-      await showSessionChat(context);
-    } finally {
-      if (mounted) {
-        setState(() => _chatSheetOpen = false);
-        ref.read(sessionChatOpenProvider.notifier).open = false;
-      }
+    final chat = ref.read(sessionChatOpenProvider.notifier);
+    if (fromUnread || !chat.open) {
+      chat.open = true;
+    } else {
+      chat.open = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // The docked sidebar only actually renders on a wide viewport, so a stale
-    // flag from before a resize must not make the button read as open.
-    final dockedOpen =
-        ref.watch(sessionChatOpenProvider) && shouldDockSessionChat(context);
-    final isChatOpen = _chatSheetOpen || dockedOpen;
+    final isChatOpen = ref.watch(sessionChatOpenProvider);
     final visibleThread = ref.watch(sessionChatThreadTargetProvider);
     final hasUnreadThreads = ref.watch(
       sessionChatUnreadThreadsProvider.select((threads) => threads.isNotEmpty),
     );
 
-    ref
-      ..listen(sessionChatOpenProvider, (previous, next) {
-        if (!next || shouldDockSessionChat(context) || _chatSheetOpen) return;
-        unawaited(_openChat(fromUnread: false));
-      })
-      ..listen(lastSessionMessageProvider, (previous, next) {
-        if (next == null || identical(previous, next)) return;
-        if (!mounted || next.sender) return;
-        final thread = next.threadTargetFor(_localIdentity());
-        // Only the thread on screen is already "read"; anything else still
-        // needs to be announced even while the panel is open.
-        if (isChatOpen && thread == visibleThread) return;
-        _notification?.dismissActive();
-        _notification = _notificationController.showTimed(
-          context,
-          icon: TotemIcons.chat,
-          title: _notificationTitle(next),
-          message: next.message,
-          onTap: () {
-            unawaited(_openChat(thread: thread, fromUnread: true));
-          },
-        );
-        ref.read(sessionChatUnreadThreadsProvider.notifier).markUnread(thread);
-      });
+    ref.listen(lastSessionMessageProvider, (previous, next) {
+      if (next == null || identical(previous, next)) return;
+      if (!mounted || next.sender) return;
+      final thread = next.threadTargetFor(_localIdentity());
+      // Only the thread on screen is already "read"; anything else still
+      // needs to be announced even while the panel is open.
+      if (isChatOpen && thread == visibleThread) return;
+      _notification?.dismissActive();
+      _notification = _notificationController.showTimed(
+        context,
+        icon: TotemIcons.chat,
+        title: _notificationTitle(next),
+        message: next.message,
+        onTap: () {
+          _toggleChat(thread: thread, fromUnread: true);
+        },
+      );
+      ref.read(sessionChatUnreadThreadsProvider.notifier).markUnread(thread);
+    });
 
     return ActionBarTooltip(
       message: '${isChatOpen ? 'Close' : 'Open'} chat (C)',
@@ -141,11 +108,9 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
           final latestUnread = ref
               .read(sessionChatUnreadThreadsProvider.notifier)
               .latestUnreadThread;
-          unawaited(
-            _openChat(
-              thread: latestUnread?.thread,
-              fromUnread: latestUnread != null,
-            ),
+          _toggleChat(
+            thread: latestUnread?.thread,
+            fromUnread: latestUnread != null,
           );
         },
         child: Stack(

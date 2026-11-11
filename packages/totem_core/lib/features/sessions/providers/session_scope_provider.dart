@@ -318,10 +318,12 @@ List<SessionChatMessage> sessionThreadMessages(
       .toList(growable: false);
 }
 
-/// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
+/// Whether in-call chat is open.
 ///
-/// Reset on room entry, so a docked sidebar in one circle doesn't open the
-/// panel on entry to the next.
+/// Single source of truth for both the docked desktop rail and the phone /
+/// tablet overlay. The room screen watches this flag plus the layout
+/// breakpoint and presents exactly one host. Reset on room entry so a panel
+/// open in one circle does not carry into the next.
 @Riverpod(keepAlive: true)
 class SessionChatOpen extends _$SessionChatOpen {
   @override
