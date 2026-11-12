@@ -57,13 +57,37 @@ void main() {
       await tester.pumpAndSettle();
       final renderer = tester.element(find.byType(VideoTrackRenderer));
 
+      void checkAvatarLayer({required bool coversVideo}) {
+        final stack = tester.widget<Stack>(
+          find
+              .descendant(
+                of: find.byType(LocalParticipantCardView),
+                matching: find.byType(Stack),
+              )
+              .first,
+        );
+        final videoIndex = stack.children.indexWhere(
+          (child) => child.key == const ValueKey('prejoin-video-renderer'),
+        );
+        final avatarIndex = stack.children.indexWhere(
+          (child) =>
+              child is Positioned &&
+              child.child is IgnorePointer &&
+              (child.child as IgnorePointer).child is UserAvatar,
+        );
+        check(videoIndex).isGreaterThan(-1);
+        check(avatarIndex).isGreaterThan(-1);
+        check(avatarIndex > videoIndex).equals(coversVideo);
+      }
+
+      checkAvatarLayer(coversVideo: false);
       cameraOn.value = false;
       await tester.pump();
 
       check(
         tester.element(find.byType(VideoTrackRenderer)),
       ).identicalTo(renderer);
-      check(tester.widgetList(find.byType(UserAvatar))).length.equals(2);
+      checkAvatarLayer(coversVideo: true);
 
       cameraOn.value = true;
       await tester.pump();
@@ -71,7 +95,7 @@ void main() {
       check(
         tester.element(find.byType(VideoTrackRenderer)),
       ).identicalTo(renderer);
-      check(tester.widgetList(find.byType(UserAvatar))).length.equals(1);
+      checkAvatarLayer(coversVideo: false);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();

@@ -169,7 +169,10 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
     return PopScope(
       canPop: !saving,
       child: Material(
-        type: MaterialType.transparency,
+        // The docked panel sits on the room background, so it paints its
+        // own surface; sheets and dialogs already get one from the route.
+        type: widget.embedded ? MaterialType.canvas : MaterialType.transparency,
+        color: widget.embedded ? AppTheme.sessionPanelSurface : null,
         child: SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.max,
@@ -278,17 +281,31 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                               ? const LoadingIndicator(
                                   semanticsLabel: 'Loading prompts',
                                 )
-                              : ErrorScreen(
-                                  hideAppBar: true,
-                                  showHomeButton: false,
-                                  title: 'Failed to load the prompts',
-                                  onRetry: () => ref
-                                      .read(
-                                        sessionPromptsControllerProvider(
-                                          widget.sessionSlug,
-                                        ).notifier,
-                                      )
-                                      .refresh(),
+                              // RoomBackground forces white body text during a
+                              // live session; keep the error title readable on
+                              // the cream / tinted panel surface.
+                              : Theme(
+                                  data: theme.copyWith(
+                                    textTheme: theme.textTheme.apply(
+                                      bodyColor: Colors.black,
+                                      displayColor: Colors.black,
+                                    ),
+                                  ),
+                                  child: DefaultTextStyle.merge(
+                                    style: const TextStyle(color: Colors.black),
+                                    child: ErrorScreen(
+                                      hideAppBar: true,
+                                      showHomeButton: false,
+                                      title: 'Failed to load the prompts',
+                                      onRetry: () => ref
+                                          .read(
+                                            sessionPromptsControllerProvider(
+                                              widget.sessionSlug,
+                                            ).notifier,
+                                          )
+                                          .refresh(),
+                                    ),
+                                  ),
                                 ),
                         ),
                       )
@@ -421,7 +438,11 @@ class _PromptTile extends StatelessWidget {
             Text(
               'Current prompt',
               style: theme.textTheme.labelSmall?.copyWith(
-                color: AppTheme.mauve,
+                // Mauve on the tinted current-card wash fails AA; use the
+                // darker messaging purple on the docked panel.
+                color: panelLayout
+                    ? AppTheme.messagePurpleText
+                    : AppTheme.mauve,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -432,7 +453,11 @@ class _PromptTile extends StatelessWidget {
           if (!current && prompt.consumedRoundNumbers.isNotEmpty)
             Text(
               'Used in round${prompt.consumedRoundNumbers.length == 1 ? '' : 's'} ${prompt.consumedRoundNumbers.length < 3 ? prompt.consumedRoundNumbers.join(' and ') : '${prompt.consumedRoundNumbers.take(prompt.consumedRoundNumbers.length - 1).join(', ')}, and ${prompt.consumedRoundNumbers.last}'}',
-              style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.mauve),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: panelLayout
+                    ? AppTheme.messagePurpleText
+                    : AppTheme.mauve,
+              ),
             ),
         ],
       ),
@@ -494,13 +519,22 @@ class _PromptTile extends StatelessWidget {
         color: current
             ? AppTheme.mauve.withValues(alpha: 0.16)
             : prompt.consumedRoundNumbers.isNotEmpty
-            ? AppTheme.mauve.withValues(alpha: 0.05)
+            // On the tinted panel a mauve wash would vanish, so used
+            // prompts read as faded cards instead.
+            ? panelLayout
+                  ? Colors.white.withValues(alpha: 0.6)
+                  : AppTheme.mauve.withValues(alpha: 0.05)
             : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: current
             ? Border.all(color: AppTheme.mauve)
             : prompt.consumedRoundNumbers.isNotEmpty
-            ? Border.all(color: AppTheme.mauve.withValues(alpha: 0.12))
+            // 12% mauve vanishes against the tinted panel; bump it there.
+            ? Border.all(
+                color: AppTheme.mauve.withValues(
+                  alpha: panelLayout ? 0.3 : 0.12,
+                ),
+              )
             : null,
       ),
       child: panelLayout

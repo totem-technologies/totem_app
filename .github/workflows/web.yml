@@ -10,7 +10,9 @@ name: Web
 #
 #   PR / push to main  -> build the staging bundle (validation only, no deploy)
 #   push tag v*        -> build + deploy the STAGING environment
-#   release published  -> build + deploy the PRODUCTION environment
+#   release published  -> build + deploy the PRODUCTION environment, only for a
+#                         non-prerelease with a v* tag; any other release (e.g.
+#                         one made to host PR screenshots) skips the job
 #
 # One job handles all of these: the flavor (and whether to deploy) is derived
 # from the triggering event, so the build+deploy steps aren't duplicated.
@@ -44,6 +46,9 @@ jobs:
   web:
     # Production on a published release; staging for PRs, main, tags, dispatch.
     name: Web (${{ github.event_name == 'release' && 'production' || 'staging' }})
+    if: >-
+      github.event_name != 'release' ||
+      (startsWith(github.event.release.tag_name, 'v') && !github.event.release.prerelease)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -60,16 +65,11 @@ jobs:
       - name: Setup build environment
         uses: ./.github/actions/setup-environment
         with:
-          flutter-version: "3.50.0-0.2.pre"
-          flutter-channel: beta
-          dart-version: "3.14.0 (build 3.14.0-315.3.beta)"
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           flavor: ${{ env.FLAVOR }}
 
       - name: Build web
         uses: ./.github/actions/build-web
-        with:
-          flutter-version: "3.50.0-0.2.pre"
 
       - name: Upload Sentry source maps
         if: ${{ github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') }}

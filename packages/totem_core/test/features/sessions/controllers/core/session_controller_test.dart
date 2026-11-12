@@ -7,12 +7,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
+import 'package:livekit_client/livekit_client.dart'
+    as livekit
+    show ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
 import '../../../../setup.dart';
@@ -123,6 +127,9 @@ class _CountingRoom implements Room {
     this.disconnectError,
     this.emitDisconnectedOnDisconnect = false,
     this.disconnectedReason,
+    this.remoteParticipantMap = const {},
+    this.metadata,
+    this.disconnectAfterFirstConnectionStateRead = false,
   });
 
   final MockLocalParticipant participant;
@@ -133,23 +140,37 @@ class _CountingRoom implements Room {
   final Exception? disconnectError;
   final bool emitDisconnectedOnDisconnect;
   final DisconnectReason? disconnectedReason;
+  final Map<String, RemoteParticipant> remoteParticipantMap;
+  final bool disconnectAfterFirstConnectionStateRead;
   final _CountingRoomEventsListener listener = _CountingRoomEventsListener();
 
   int prepareConnectionCount = 0;
   int connectCount = 0;
   int disconnectCount = 0;
   int disposeCount = 0;
+  int _connectionStateReads = 0;
+  livekit.ConnectionState _connectionState = livekit.ConnectionState.connected;
   FastConnectOptions? lastFastConnectOptions;
+
+  @override
+  livekit.ConnectionState get connectionState {
+    final currentState = _connectionState;
+    if (disconnectAfterFirstConnectionStateRead &&
+        _connectionStateReads++ == 0) {
+      _connectionState = livekit.ConnectionState.disconnected;
+    }
+    return currentState;
+  }
 
   @override
   LocalParticipant get localParticipant => participant;
 
   @override
   UnmodifiableMapView<String, RemoteParticipant> get remoteParticipants =>
-      UnmodifiableMapView(const {});
+      UnmodifiableMapView(remoteParticipantMap);
 
   @override
-  String? get metadata => null;
+  final String? metadata;
 
   @override
   RoomOptions get roomOptions => const RoomOptions();
@@ -198,6 +219,17 @@ class _CountingRoom implements Room {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _RemoteParticipantWithPublications extends MockRemoteParticipant {
+  _RemoteParticipantWithPublications(super.id, super.name, this.publications);
+
+  final List<RemoteTrackPublication<RemoteTrack>> publications;
+
+  @override
+  List<RemoteTrackPublication<RemoteTrack>> getTrackPublications() {
+    return publications;
+  }
 }
 
 class _DelayedInitializeSessionController extends SessionController {
@@ -1031,6 +1063,832 @@ void main() {
         },
       );
 
+      test(
+        'camera-off activation publishes existing microphone and becomes connected',
+        () async {
+          const eventSlug = 'test-session';
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final participant = MockLocalParticipant();
+          final microphoneTrack = MockLocalAudioTrack();
+          final publication =
+              Completer<LocalTrackPublication<LocalAudioTrack>>();
+          when(participant.isMicrophoneEnabled).thenReturn(true);
+          when(
+            () => participant.publishAudioTrack(microphoneTrack),
+          ).thenAnswer((_) => publication.future);
+          when(
+            () => participant.setMicrophoneEnabled(
+              false,
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
+          ).thenAnswer((_) async => null);
+          when(participant.unpublishAllTracks).thenAnswer((_) async {});
+          final room = _CountingRoom(participant);
+
+          final activation = controller.activateConnectedRoom(
+            room: room,
+            joinMedia: SessionJoinMedia(microphoneTrack: microphoneTrack),
+          );
+          await pumpEventQueue();
+          verify(
+            () => participant.publishAudioTrack(microphoneTrack),
+          ).called(1);
+          verifyNever(
+            () => participant.setMicrophoneEnabled(
+              false,
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
+          );
+          publication.complete(MockLocalAudioTrackPublication());
+          check(await activation).equals(SessionJoinResult.success);
+          check(
+            controller.state.connectionState,
+          ).equals(RoomConnectionState.connected);
+          verifyNever(() => participant.setCameraEnabled(any<bool>()));
+          await controller.leave();
+        },
+      );
+
+      test(
+        'activation applies room metadata without waiting for server poll',
+        () async {
+          const eventSlug = 'test-session';
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          const roomState = RoomState(
+            keeper: 'keeper',
+            nextSpeaker: Omittable(''),
+            currentSpeaker: Omittable(''),
+            status: RoomStatus.active,
+            turnState: TurnState.idle,
+            sessionSlug: eventSlug,
+            statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+            talkingOrder: [],
+            version: 1,
+            roundNumber: 1,
+          );
+          final poll = Completer<RoomState>();
+          var pollStarted = false;
+          final container = ProviderContainer(
+            overrides: [
+              sessionProvider(
+                eventSlug,
+              ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+              roomStateProvider(eventSlug).overrideWith((_) {
+                pollStarted = true;
+                return poll.future;
+              }),
+            ],
+          );
+          addTearDown(container.dispose);
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(subscription.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final participant = MockLocalParticipant();
+          when(participant.unpublishAllTracks).thenAnswer((_) async {});
+          when(
+            () => participant.setCameraEnabled(any<bool>()),
+          ).thenAnswer((_) async => null);
+          when(
+            () => participant.setMicrophoneEnabled(
+              false,
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
+          ).thenAnswer((_) async => null);
+          final room = _CountingRoom(
+            participant,
+            metadata: jsonEncode(roomState.toJson()),
+          );
+          SessionJoinResult? result;
+          final activation = controller.activateConnectedRoom(room: room).then((
+            value,
+          ) {
+            result = value;
+          });
+          try {
+            await pumpEventQueue();
+            check(pollStarted).isTrue();
+            check(poll.isCompleted).isFalse();
+            check(result).equals(SessionJoinResult.success);
+            check(controller.state.roomState.status).equals(RoomStatus.active);
+            check(controller.state.roomState.version).equals(1);
+          } finally {
+            poll.complete(roomState);
+            await activation;
+            await controller.leave();
+          }
+        },
+      );
+
+      test('adopts an already-connected room only once', () async {
+        const eventSlug = 'test-session';
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(subscription.close);
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant();
+        when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+        final room = _CountingRoom(localParticipant);
+
+        check(
+          await controller.activateConnectedRoom(room: room),
+        ).equals(SessionJoinResult.success);
+        final initialListenerCount = room.listener.onCount;
+        check(
+          await controller.activateConnectedRoom(room: room),
+        ).equals(SessionJoinResult.success);
+
+        final rejectedRoom = _CountingRoom(MockLocalParticipant());
+        check(
+          await controller.activateConnectedRoom(room: rejectedRoom),
+        ).equals(SessionJoinResult.retryableFailure);
+
+        check(room.prepareConnectionCount).equals(0);
+        check(room.connectCount).equals(0);
+        check(room.listener.onCount).equals(initialListenerCount);
+        check(rejectedRoom.disconnectCount).equals(1);
+        check(rejectedRoom.disposeCount).equals(1);
+        check(room.disposeCount).equals(0);
+        await controller.leave();
+        check(room.disposeCount).equals(1);
+      });
+
+      test('claims an offered room before a prior leave finishes', () async {
+        const eventSlug = 'test-session';
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(subscription.close);
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final previousParticipant = MockLocalParticipant();
+        when(previousParticipant.unpublishAllTracks).thenAnswer((_) async {});
+        final disconnectGate = Completer<void>();
+        controller.room = _CountingRoom(
+          previousParticipant,
+          disconnectGate: disconnectGate,
+        );
+        final previousLeave = controller.leave();
+        await pumpEventQueue();
+
+        final publication = MockRemoteTrackPublication<RemoteTrack>();
+        when(publication.subscribe).thenAnswer((_) async {});
+        final offeredParticipant = _RemoteParticipantWithPublications(
+          'remote',
+          'Remote',
+          [publication],
+        );
+        final offeredLocalParticipant = MockLocalParticipant();
+        when(
+          offeredLocalParticipant.unpublishAllTracks,
+        ).thenAnswer((_) async {});
+        final offeredRoom = _CountingRoom(
+          offeredLocalParticipant,
+          remoteParticipantMap: {'remote': offeredParticipant},
+        );
+        final activation = controller.activateConnectedRoom(room: offeredRoom);
+        await pumpEventQueue();
+
+        final rejectedRoom = _CountingRoom(MockLocalParticipant());
+        check(
+          await controller.activateConnectedRoom(room: rejectedRoom),
+        ).equals(SessionJoinResult.retryableFailure);
+        verifyNever(publication.subscribe);
+        check(rejectedRoom.disposeCount).equals(1);
+
+        disconnectGate.complete();
+        await previousLeave;
+        check(await activation).equals(SessionJoinResult.success);
+        await pumpEventQueue();
+        verify(publication.subscribe).called(1);
+      });
+
+      test(
+        'caller cleans up a disconnected adopted room; unadopted rooms are released',
+        () async {
+          const eventSlug = 'test-session';
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(subscription.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+          final room = _CountingRoom(
+            localParticipant,
+            disconnectAfterFirstConnectionStateRead: true,
+          );
+
+          check(
+            await controller.activateConnectedRoom(room: room),
+          ).equals(SessionJoinResult.retryableFailure);
+          check(room.disposeCount).equals(0);
+          check(identical(controller.room, room)).isTrue();
+
+          await controller.resetAfterFailedJoin();
+          check(room.disposeCount).equals(1);
+          check(controller.room).isNull();
+
+          final unadoptedRoom = _CountingRoom(localParticipant)
+            .._connectionState = livekit.ConnectionState.disconnected;
+          check(
+            await controller.activateConnectedRoom(room: unadoptedRoom),
+          ).equals(SessionJoinResult.retryableFailure);
+          check(unadoptedRoom.disposeCount).equals(1);
+          check(controller.room).isNull();
+          await controller.resetAfterFailedJoin();
+          check(unadoptedRoom.disposeCount).equals(1);
+        },
+      );
+
+      test('leaves adopted room cleanup to the failed-join caller', () async {
+        const eventSlug = 'test-session';
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: true,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(subscription.close);
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant();
+        when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+        final room = _CountingRoom(localParticipant);
+
+        check(
+          await controller.activateConnectedRoom(room: room),
+        ).equals(SessionJoinResult.retryableFailure);
+
+        check(room.prepareConnectionCount).equals(0);
+        check(room.connectCount).equals(0);
+        check(room.disposeCount).equals(0);
+        check(identical(controller.room, room)).isTrue();
+
+        await controller.resetAfterFailedJoin();
+        check(room.disposeCount).equals(1);
+        check(controller.room).isNull();
+      });
+
+      test('subscribes once per publication until it is unpublished', () async {
+        const eventSlug = 'test-session';
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final existingPublication = MockRemoteTrackPublication<RemoteTrack>();
+        final publishedPublication = MockRemoteTrackPublication<RemoteTrack>();
+        when(existingPublication.subscribe).thenAnswer((_) async {});
+        when(publishedPublication.subscribe).thenAnswer((_) async {});
+        final participant = _RemoteParticipantWithPublications(
+          'remote',
+          'Remote',
+          [existingPublication],
+        );
+        final localParticipant = MockLocalParticipant();
+        when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+        final room = _CountingRoom(
+          localParticipant,
+          remoteParticipantMap: {'remote': participant},
+        );
+        final container = _createContainerWithEventOverride(eventSlug);
+        addTearDown(container.dispose);
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(subscription.close);
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+
+        check(
+          await controller.activateConnectedRoom(room: room),
+        ).equals(SessionJoinResult.success);
+        await pumpEventQueue();
+        await room.listener.trigger(
+          TrackPublishedEvent(
+            participant: participant,
+            publication: publishedPublication,
+          ),
+        );
+        await room.listener.trigger(
+          TrackPublishedEvent(
+            participant: participant,
+            publication: publishedPublication,
+          ),
+        );
+        await pumpEventQueue();
+
+        verify(existingPublication.subscribe).called(1);
+        verify(publishedPublication.subscribe).called(1);
+
+        await room.listener.trigger(
+          TrackUnpublishedEvent(
+            participant: participant,
+            publication: publishedPublication,
+          ),
+        );
+        await room.listener.trigger(
+          TrackPublishedEvent(
+            participant: participant,
+            publication: publishedPublication,
+          ),
+        );
+        await pumpEventQueue();
+        verify(publishedPublication.subscribe).called(1);
+      });
+
+      test(
+        'retries failed remote subscriptions without clearing a newer attempt',
+        () async {
+          const eventSlug = 'test-session';
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final firstAttempt = Completer<void>();
+          final secondAttempt = Completer<void>();
+          var subscribeAttempts = 0;
+          final publication = MockRemoteTrackPublication<RemoteTrack>();
+          when(publication.subscribe).thenAnswer((_) {
+            subscribeAttempts++;
+            return switch (subscribeAttempts) {
+              1 => firstAttempt.future,
+              2 => secondAttempt.future,
+              _ => Future.value(),
+            };
+          });
+          final participant = _RemoteParticipantWithPublications(
+            'remote',
+            'Remote',
+            [publication],
+          );
+          final localParticipant = MockLocalParticipant();
+          when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+          final room = _CountingRoom(
+            localParticipant,
+            remoteParticipantMap: {'remote': participant},
+          );
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(subscription.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+
+          check(
+            await controller.activateConnectedRoom(room: room),
+          ).equals(SessionJoinResult.success);
+          await pumpEventQueue();
+          check(subscribeAttempts).equals(1);
+
+          await room.listener.trigger(
+            TrackUnpublishedEvent(
+              participant: participant,
+              publication: publication,
+            ),
+          );
+          await room.listener.trigger(
+            TrackPublishedEvent(
+              participant: participant,
+              publication: publication,
+            ),
+          );
+          await pumpEventQueue();
+          check(subscribeAttempts).equals(2);
+
+          firstAttempt.completeError(StateError('first subscription failed'));
+          await pumpEventQueue();
+          await room.listener.trigger(
+            TrackPublishedEvent(
+              participant: participant,
+              publication: publication,
+            ),
+          );
+          await pumpEventQueue();
+          check(subscribeAttempts).equals(2);
+
+          secondAttempt.completeError(StateError('second subscription failed'));
+          await pumpEventQueue();
+          await room.listener.trigger(
+            TrackPublishedEvent(
+              participant: participant,
+              publication: publication,
+            ),
+          );
+          await pumpEventQueue();
+          check(subscribeAttempts).equals(3);
+        },
+      );
+
+      test(
+        'limits participant media to the keeper and admitted roster',
+        () async {
+          const eventSlug = 'test-session';
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(subscription.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant('participant');
+          when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+          final room = _CountingRoom(localParticipant);
+          controller.applyRoomState(
+            const RoomState(
+              keeper: 'keeper',
+              nextSpeaker: Omittable(''),
+              currentSpeaker: Omittable(''),
+              status: RoomStatus.waitingRoom,
+              turnState: TurnState.idle,
+              sessionSlug: eventSlug,
+              statusDetail: RoomStateStatusDetailWaitingRoom(
+                WaitingRoomDetail(),
+              ),
+              talkingOrder: [],
+              version: 1,
+              roundNumber: 0,
+            ),
+          );
+
+          check(
+            await controller.activateConnectedRoom(room: room),
+          ).equals(SessionJoinResult.success);
+          final initialPermissions =
+              verify(
+                    () => localParticipant.setTrackSubscriptionPermissions(
+                      allParticipantsAllowed: false,
+                      trackPermissions: captureAny(named: 'trackPermissions'),
+                    ),
+                  ).captured.single
+                  as List<ParticipantTrackPermission>;
+          check(
+            initialPermissions.map(
+              (permission) => permission.participantIdentity,
+            ),
+          ).unorderedEquals(['keeper']);
+          clearInteractions(localParticipant);
+
+          controller
+            ..updateAdmittedMediaRecipients({'admitted', 'participant'})
+            ..updateAdmittedMediaRecipients({'admitted', 'participant'});
+          final captured =
+              verify(
+                    () => localParticipant.setTrackSubscriptionPermissions(
+                      allParticipantsAllowed: false,
+                      trackPermissions: captureAny(named: 'trackPermissions'),
+                    ),
+                  ).captured.single
+                  as List<ParticipantTrackPermission>;
+          check(
+            captured.map((permission) => permission.participantIdentity),
+          ).unorderedEquals(['admitted', 'keeper']);
+
+          await room.listener.trigger(
+            LocalTrackPublishedEvent(
+              participant: localParticipant,
+              publication: MockLocalTrackPublication(),
+            ),
+          );
+          await room.listener.trigger(const RoomReconnectedEvent());
+
+          verify(
+            () => localParticipant.setTrackSubscriptionPermissions(
+              allParticipantsAllowed: false,
+              trackPermissions: any(named: 'trackPermissions'),
+            ),
+          ).called(2);
+        },
+      );
+
+      test(
+        'allows keeper media until authority loads, then restricts it',
+        () async {
+          const eventSlug = 'test-session';
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final container = ProviderContainer(
+            overrides: [
+              authControllerProvider.overrideWith(
+                () => FakeAuthController(AuthState.unauthenticated()),
+              ),
+              sessionProvider(
+                eventSlug,
+              ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+            ],
+          );
+          addTearDown(container.dispose);
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(subscription.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant('keeper');
+          when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+          final room = _CountingRoom(localParticipant);
+          controller.applyRoomState(
+            const RoomState(
+              keeper: 'keeper',
+              nextSpeaker: Omittable(''),
+              currentSpeaker: Omittable(''),
+              status: RoomStatus.waitingRoom,
+              turnState: TurnState.idle,
+              sessionSlug: eventSlug,
+              statusDetail: RoomStateStatusDetailWaitingRoom(
+                WaitingRoomDetail(),
+              ),
+              talkingOrder: [],
+              version: 1,
+              roundNumber: 0,
+            ),
+          );
+
+          check(
+            await controller.activateConnectedRoom(room: room),
+          ).equals(SessionJoinResult.success);
+          final initialPermissions =
+              verify(
+                    () => localParticipant.setTrackSubscriptionPermissions(
+                      allParticipantsAllowed: true,
+                      trackPermissions: captureAny(named: 'trackPermissions'),
+                    ),
+                  ).captured.single
+                  as List<ParticipantTrackPermission>;
+          check(initialPermissions).isEmpty();
+          clearInteractions(localParticipant);
+
+          await room.listener.trigger(
+            LocalTrackPublishedEvent(
+              participant: localParticipant,
+              publication: MockLocalTrackPublication(),
+            ),
+          );
+          await room.listener.trigger(const RoomReconnectedEvent());
+          final fallbackPermissions = verify(
+            () => localParticipant.setTrackSubscriptionPermissions(
+              allParticipantsAllowed: true,
+              trackPermissions: captureAny(named: 'trackPermissions'),
+            ),
+          ).captured.cast<List<ParticipantTrackPermission>>();
+          check(fallbackPermissions.length).equals(2);
+          for (final permissions in fallbackPermissions) {
+            check(permissions).isEmpty();
+          }
+          clearInteractions(localParticipant);
+
+          controller.updateAdmittedMediaRecipients({});
+          final emptyRosterPermissions =
+              verify(
+                    () => localParticipant.setTrackSubscriptionPermissions(
+                      allParticipantsAllowed: false,
+                      trackPermissions: captureAny(named: 'trackPermissions'),
+                    ),
+                  ).captured.single
+                  as List<ParticipantTrackPermission>;
+          check(emptyRosterPermissions).isEmpty();
+          clearInteractions(localParticipant);
+
+          controller.updateAdmittedMediaRecipients({'keeper', 'admitted'});
+          final admittedPermissions =
+              verify(
+                    () => localParticipant.setTrackSubscriptionPermissions(
+                      allParticipantsAllowed: false,
+                      trackPermissions: captureAny(named: 'trackPermissions'),
+                    ),
+                  ).captured.single
+                  as List<ParticipantTrackPermission>;
+          check(
+            admittedPermissions.map(
+              (permission) => permission.participantIdentity,
+            ),
+          ).unorderedEquals(['admitted']);
+        },
+      );
+
+      test('keeper reconciles admitted participant connections only', () async {
+        const eventSlug = 'test-session';
+        const options = SessionOptions(
+          sessionSlug: eventSlug,
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        const roomState = RoomState(
+          keeper: 'keeper',
+          nextSpeaker: Omittable(''),
+          currentSpeaker: Omittable(''),
+          status: RoomStatus.waitingRoom,
+          turnState: TurnState.idle,
+          sessionSlug: eventSlug,
+          statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+          talkingOrder: [],
+          version: 1,
+          roundNumber: 0,
+        );
+        var reconcilePolls = 0;
+        final container = ProviderContainer(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => FakeAuthController(
+                AuthState.authenticated(
+                  user: UserSchema(
+                    email: 'keeper@example.com',
+                    slug: const Omittable('keeper'),
+                    name: const Omittable('Keeper'),
+                    profileAvatarType: ProfileAvatarTypeEnum.td,
+                    circleCount: 0,
+                    dateCreated: DateTime(2024),
+                  ),
+                ),
+              ),
+            ),
+            sessionProvider(
+              eventSlug,
+            ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+            roomStateProvider(eventSlug).overrideWith((_) async => roomState),
+            roomStateProvider(eventSlug, attemptReconcile: true).overrideWith((
+              _,
+            ) async {
+              reconcilePolls++;
+              return roomState;
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(subscription.close);
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant('keeper');
+        final admittedParticipant = _RemoteParticipantWithPublications(
+          'admitted',
+          'Admitted',
+          const [],
+        );
+        when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+        final room = _CountingRoom(
+          localParticipant,
+          remoteParticipantMap: {'admitted': admittedParticipant},
+        );
+        controller.applyRoomState(roomState);
+
+        check(
+          await controller.activateConnectedRoom(room: room),
+        ).equals(SessionJoinResult.success);
+        await pumpEventQueue();
+        reconcilePolls = 0;
+        controller.updateAdmittedMediaRecipients({'admitted'});
+        await pumpEventQueue();
+        check(reconcilePolls).equals(1);
+
+        controller.updateAdmittedMediaRecipients({'admitted'});
+        await pumpEventQueue();
+        check(reconcilePolls).equals(1);
+
+        await room.listener.trigger(
+          ParticipantConnectedEvent(
+            participant: MockRemoteParticipant('pending', 'Pending'),
+          ),
+        );
+        await pumpEventQueue();
+        check(reconcilePolls).equals(1);
+
+        await room.listener.trigger(
+          ParticipantConnectedEvent(
+            participant: MockRemoteParticipant('admitted', 'Admitted'),
+          ),
+        );
+        await pumpEventQueue();
+        check(reconcilePolls).equals(2);
+      });
+
       test('join only calls room.connect once while connecting', () async {
         const eventSlug = 'test-session';
         final container = _createContainerWithEventOverride(eventSlug);
@@ -1197,9 +2055,7 @@ void main() {
           addTearDown(sub.close);
 
           final controller =
-              container.read(
-                    sessionControllerProvider(options).notifier,
-                  )
+              container.read(sessionControllerProvider(options).notifier)
                   as _DelayedInitializeSessionController;
           final localParticipant = MockLocalParticipant();
           when(
@@ -1330,6 +2186,87 @@ void main() {
 
           verifyNoMoreInteractions(cameraTrack);
           verifyNoMoreInteractions(microphoneTrack);
+        },
+      );
+
+      test(
+        'join releases transferred camera without publishing when disabled',
+        () async {
+          const eventSlug = 'test-session';
+          final container = _createContainerWithEventOverride(eventSlug);
+          addTearDown(container.dispose);
+
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final participant = MockLocalParticipant();
+          final cameraTrack = MockLocalVideoTrack();
+          when(
+            () => participant.publishVideoTrack(
+              cameraTrack,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          ).thenAnswer((_) async => MockLocalTrackPublication());
+          when(
+            () =>
+                participant.setCameraEnabled(false, cameraCaptureOptions: null),
+          ).thenAnswer((_) async => null);
+          when(
+            () => participant.setMicrophoneEnabled(
+              false,
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
+          ).thenAnswer((_) async => null);
+          when(
+            () => participant.unpublishAllTracks(notify: true),
+          ).thenAnswer((_) async {});
+          when(
+            () => participant.setTrackSubscriptionPermissions(
+              allParticipantsAllowed: false,
+              trackPermissions: any(named: 'trackPermissions'),
+            ),
+          ).thenAnswer((_) async {});
+          final room = _CountingRoom(participant, emitConnectedOnConnect: true);
+          controller.room = room;
+
+          var previewDetached = false;
+          final result = await controller.join(
+            joinMedia: SessionJoinMedia(
+              cameraTrack: cameraTrack,
+              onBeforeDispose: () => previewDetached = true,
+            ),
+          );
+
+          check(result).equals(SessionJoinResult.success);
+          check(previewDetached).isTrue();
+          check(room.lastFastConnectOptions).isNull();
+          verifyNever(
+            () => participant.publishVideoTrack(
+              cameraTrack,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          );
+          verifyNever(() => participant.setCameraEnabled(true));
+          verify(cameraTrack.stop).called(1);
+          verify(cameraTrack.dispose).called(1);
+          await controller.disposeConnection();
+          verifyNever(cameraTrack.stop);
+          verifyNever(cameraTrack.dispose);
         },
       );
 

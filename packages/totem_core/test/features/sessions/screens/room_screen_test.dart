@@ -18,6 +18,7 @@ import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/features/permissions/media_control.dart';
 import 'package:totem_core/features/permissions/media_permission_controller.dart';
 import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -31,7 +32,10 @@ import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
+import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
+import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -162,7 +166,16 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>? roomScreenProvider,
   RoomConnectionState connectionState = RoomConnectionState.connected,
   RoomStatus roomStatus = RoomStatus.active,
+  NotifierProvider<_ConnectionStateOverrideNotifier, RoomConnectionState>?
+  connectionProvider,
+  NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>? statusProvider,
   DisconnectReason? disconnectReason,
+  bool showAdmissionOrientation = false,
+  bool admissionReady = false,
+  bool isReturningParticipant = false,
+  bool? sessionStartedAtAdmission,
+  String? admissionPrompt,
+  bool isCurrentUserKeeper = false,
   List<Object?> extraOverrides = const [],
 }) async {
   final p1 = testParticipant('user-1');
@@ -206,10 +219,17 @@ Future<void> _pumpRoomScreenForResolvedScreen(
               ? screen
               : ref.watch(roomScreenProvider),
         ),
-        connectionStateProvider.overrideWith((ref) => connectionState),
-        roomStatusProvider.overrideWith((ref) => roomStatus),
-        isCurrentUserKeeperProvider.overrideWith((ref) => false),
-        currentSessionPromptProvider.overrideWith((ref) => null),
+        connectionStateProvider.overrideWith(
+          (ref) => connectionProvider == null
+              ? connectionState
+              : ref.watch(connectionProvider),
+        ),
+        roomStatusProvider.overrideWith(
+          (ref) =>
+              statusProvider == null ? roomStatus : ref.watch(statusProvider),
+        ),
+        isCurrentUserKeeperProvider.overrideWith((ref) => isCurrentUserKeeper),
+        currentSessionPromptProvider.overrideWith((ref) => admissionPrompt),
         sessionMessagesProvider.overrideWith((ref) => const []),
         lastSessionMessageProvider.overrideWith((ref) => null),
         userProfileProvider('user-1').overrideWith(
@@ -241,6 +261,10 @@ Future<void> _pumpRoomScreenForResolvedScreen(
           child: VideoSessionScreen(
             sessionSlug: 'test-session',
             loadingScreen: const SizedBox(key: ValueKey('loading-screen')),
+            showAdmissionOrientation: showAdmissionOrientation,
+            admissionReady: admissionReady,
+            isReturningParticipant: isReturningParticipant,
+            sessionStartedAtAdmission: sessionStartedAtAdmission,
             now: tester.binding.clock.now,
           ),
         ),
@@ -741,6 +765,34 @@ void main() {
       await _unmountRoomScreen(tester);
     });
 
+    testWidgets('clears admission panel state when the user is disconnected', (
+      tester,
+    ) async {
+      final screenProvider =
+          NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+            () => _RoomScreenOverrideNotifier(RoomScreen.listening),
+          );
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        roomScreenProvider: screenProvider,
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container.read(sessionAdmissionOpenProvider.notifier).open = true;
+      container.read(screenProvider.notifier).set(RoomScreen.disconnected);
+      await tester.pump();
+
+      check(container.read(sessionChatOpenProvider)).isFalse();
+      check(container.read(sessionPromptsOpenProvider)).isFalse();
+      check(container.read(sessionAdmissionOpenProvider)).isFalse();
+    });
+
     testWidgets('renders offline error screen for a network disconnection', (
       tester,
     ) async {
@@ -905,7 +957,7 @@ void main() {
       check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
     });
 
-    testWidgets('clears leftover chat UI state when a room is entered', (
+    testWidgets('clears leftover panel UI state when a room is entered', (
       tester,
     ) async {
       final event = _createSessionEventWithElapsed(
@@ -921,14 +973,16 @@ void main() {
         connectionState: RoomConnectionState.connected,
         roomStatus: RoomStatus.active,
         beforeMount: (container) async {
-          container.read(sessionChatOpenProvider.notifier).open = true;
+          container.read(sessionAdmissionOpenProvider.notifier).open = true;
           container.read(sessionChatThreadTargetProvider.notifier).target =
               'keeper-of-previous-circle';
         },
       );
 
-      expect(harness.container.read(sessionChatOpenProvider), isFalse);
-      expect(harness.container.read(sessionChatThreadTargetProvider), isNull);
+      check(harness.container.read(sessionChatOpenProvider)).isFalse();
+      check(harness.container.read(sessionPromptsOpenProvider)).isFalse();
+      check(harness.container.read(sessionAdmissionOpenProvider)).isFalse();
+      check(harness.container.read(sessionChatThreadTargetProvider)).isNull();
     });
 
     testWidgets('docks the chat sidebar on a wide viewport when open', (
@@ -961,8 +1015,899 @@ void main() {
       container.read(sessionChatOpenProvider.notifier).open = true;
       await tester.pumpAndSettle();
 
-      expect(find.byType(SessionChatPanel), findsOneWidget);
+      final panels = tester
+          .widgetList(find.byType(SessionChatPanel))
+          .whereType<SessionChatPanel>()
+          .toList();
+      check(panels).length.equals(1);
+      check(panels.single.embedded).isTrue();
     });
+
+    testWidgets(
+      'keeps a single docked chat when a phone sheet is open and the window widens',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.listening,
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+
+        container.read(sessionChatOpenProvider.notifier).open = true;
+        await tester.pumpAndSettle();
+        check(
+          tester.widgetList(find.byType(SessionChatPanel)),
+        ).length.equals(1);
+
+        tester.view.physicalSize = const Size(1600, 1200);
+        await tester.pump();
+        await tester.pump(sessionSidePanelDuration);
+        await tester.pumpAndSettle();
+
+        final panels = tester
+            .widgetList(find.byType(SessionChatPanel))
+            .whereType<SessionChatPanel>()
+            .toList();
+        check(panels).length.equals(1);
+        check(panels.single.embedded).isTrue();
+        check(container.read(sessionChatOpenProvider)).isTrue();
+      },
+    );
+
+    testWidgets(
+      'keeps a single docked chat when a tablet drawer is open and the window widens',
+      (tester) async {
+        // Tablet widths dock only at sessionSidePanelDockMinWidth (1100).
+        tester.view.physicalSize = const Size(900, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.listening,
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+
+        container.read(sessionChatOpenProvider.notifier).open = true;
+        await tester.pumpAndSettle();
+        check(
+          tester.widgetList(find.byType(SessionChatPanel)),
+        ).length.equals(1);
+
+        tester.view.physicalSize = const Size(1600, 1200);
+        await tester.pump();
+        await tester.pump(sessionSidePanelDuration);
+        await tester.pumpAndSettle();
+
+        final panels = tester
+            .widgetList(find.byType(SessionChatPanel))
+            .whereType<SessionChatPanel>()
+            .toList();
+        check(panels).length.equals(1);
+        check(panels.single.embedded).isTrue();
+        check(container.read(sessionChatOpenProvider)).isTrue();
+      },
+    );
+
+    testWidgets(
+      'keeps a single phone sheet when a docked chat is open and the window narrows',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.listening,
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+
+        container.read(sessionChatOpenProvider.notifier).open = true;
+        await tester.pumpAndSettle();
+        check(
+          tester.widgetList(find.byType(SessionChatPanel)),
+        ).length.equals(1);
+
+        tester.view.physicalSize = const Size(400, 900);
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        final panels = tester
+            .widgetList(find.byType(SessionChatPanel))
+            .whereType<SessionChatPanel>()
+            .toList();
+        check(panels).length.equals(1);
+        check(panels.single.embedded).isFalse();
+        check(container.read(sessionChatOpenProvider)).isTrue();
+      },
+    );
+
+    testWidgets(
+      'keeps chat open across a narrow → wide → narrow round trip',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.listening,
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+
+        container.read(sessionChatOpenProvider.notifier).open = true;
+        await tester.pumpAndSettle();
+        check(
+          tester.widgetList(find.byType(SessionChatPanel)),
+        ).length.equals(1);
+
+        tester.view.physicalSize = const Size(1600, 1200);
+        await tester.pump();
+        await tester.pump(sessionSidePanelDuration);
+        await tester.pumpAndSettle();
+        check(
+          tester
+              .widgetList(find.byType(SessionChatPanel))
+              .whereType<SessionChatPanel>()
+              .where((panel) => panel.embedded),
+        ).length.equals(1);
+
+        tester.view.physicalSize = const Size(400, 900);
+        await tester.pump();
+        await tester.pumpAndSettle();
+        final roundTripPanels = tester
+            .widgetList(find.byType(SessionChatPanel))
+            .whereType<SessionChatPanel>()
+            .toList();
+        check(roundTripPanels).length.equals(1);
+        check(roundTripPanels.single.embedded).isFalse();
+        check(container.read(sessionChatOpenProvider)).isTrue();
+
+        await tester.tap(find.bySemanticsLabel('Close chat'));
+        await tester.pumpAndSettle();
+        check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+        check(container.read(sessionChatOpenProvider)).isFalse();
+      },
+    );
+
+    testWidgets('dismissing the phone sheet clears the open flag', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+
+      container.read(sessionChatOpenProvider.notifier).open = true;
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
+
+      // Close via the panel close control (pops the overlay host).
+      await tester.tap(find.bySemanticsLabel('Close chat'));
+      await tester.pumpAndSettle();
+
+      check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+      check(container.read(sessionChatOpenProvider)).isFalse();
+    });
+
+    testWidgets('clearing the open flag closes the docked panel', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+
+      container.read(sessionChatOpenProvider.notifier).open = true;
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
+
+      // Embedded close writes this same flag; the room harness can leave an
+      // AbsorbPointer over the docked header, so drive the flag directly.
+      container.read(sessionChatOpenProvider.notifier).open = false;
+      await tester.pump();
+      await tester.pump(sessionSidePanelReverseDuration);
+      await tester.pumpAndSettle();
+
+      check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+    });
+
+    testWidgets('keyboard C toggles the open flag on a wide viewport', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.listening,
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+        await tester.pumpAndSettle();
+        check(container.read(sessionChatOpenProvider)).isTrue();
+        check(
+          tester.widgetList(find.byType(SessionChatPanel)),
+        ).length.equals(1);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+        await tester.pumpAndSettle();
+        check(container.read(sessionChatOpenProvider)).isFalse();
+        check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('keyboard C opens and closes the phone sheet', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        tester.view.physicalSize = const Size(600, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.listening,
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+        await tester.pumpAndSettle();
+        check(container.read(sessionChatOpenProvider)).isTrue();
+        check(
+          tester.widgetList(find.byType(SessionChatPanel)),
+        ).length.equals(1);
+        check(
+          tester
+              .widgetList(find.byType(SessionChatPanel))
+              .whereType<SessionChatPanel>()
+              .where((panel) => !panel.embedded),
+        ).length.equals(1);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+        await tester.pumpAndSettle();
+        check(container.read(sessionChatOpenProvider)).isFalse();
+        check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets(
+      'disconnect clears an open flag-driven phone sheet',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        );
+        final screenProvider =
+            NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+              () => _RoomScreenOverrideNotifier(RoomScreen.listening),
+            );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.listening,
+          roomScreenProvider: screenProvider,
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container.read(sessionChatOpenProvider.notifier).open = true;
+        await tester.pumpAndSettle();
+        check(
+          tester.widgetList(find.byType(SessionChatPanel)),
+        ).length.equals(1);
+
+        container.read(screenProvider.notifier).set(RoomScreen.disconnected);
+        await tester.pumpAndSettle();
+
+        check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+        check(container.read(sessionChatOpenProvider)).isFalse();
+      },
+    );
+
+    testWidgets(
+      'docks the admission panel beside the room on a wide viewport',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          isCurrentUserKeeper: true,
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container.read(sessionAdmissionOpenProvider.notifier).open = true;
+        await tester.pumpAndSettle();
+
+        check(
+          tester.widgetList(find.byType(SessionAdmissionPanel)),
+        ).length.equals(1);
+        check(
+          tester.getSize(find.byType(DockedSessionSidePanel)).width,
+        ).equals(sessionSidePanelWidth);
+      },
+    );
+
+    testWidgets(
+      'orients a late arrival once connected and lets them enter the room',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final screenProvider =
+            NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+              () => _RoomScreenOverrideNotifier(RoomScreen.loading),
+            );
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.loading,
+          roomScreenProvider: screenProvider,
+          showAdmissionOrientation: true,
+          admissionReady: true,
+          admissionPrompt: 'What brought you here?',
+        );
+
+        check(
+          tester.widgetList(
+            find.text('Current prompt: What brought you here?'),
+          ),
+        ).isEmpty();
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container.read(screenProvider.notifier).set(RoomScreen.listening);
+        await tester.pump();
+        check(
+          container
+              .read(admittedSessionParticipantIdentitiesProvider)
+              .contains('user-1'),
+        ).isFalse();
+        check(
+          tester.widgetList(
+            find.text('Current prompt: What brought you here?'),
+          ),
+        ).length.equals(1);
+        await tester.tap(find.text('Got it'));
+        await tester.pump();
+
+        check(
+          tester.widgetList(
+            find.text('Current prompt: What brought you here?'),
+          ),
+        ).isEmpty();
+        check(
+          tester.widgetList(find.byType(ListeningTurnScreen)),
+        ).length.equals(1);
+        await _unmountRoomScreen(tester);
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        PaintingBinding.instance.imageCache.clear();
+      },
+    );
+
+    testWidgets('returning participant skips orientation after admission', (
+      tester,
+    ) async {
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+        isReturningParticipant: true,
+      );
+
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+      check(
+        tester.widgetList(find.byType(ListeningTurnScreen)),
+      ).length.equals(1);
+    });
+
+    testWidgets(
+      'joining before the session starts does not show orientation later',
+      (tester) async {
+        final statusProvider =
+            NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>(
+              () => _RoomStatusOverrideNotifier(RoomStatus.waitingRoom),
+            );
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          statusProvider: statusProvider,
+          showAdmissionOrientation: true,
+          admissionReady: true,
+        );
+        check(
+          tester.widgetList(find.byType(SessionOrientationNotice)),
+        ).isEmpty();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container.read(statusProvider.notifier).set(RoomStatus.active);
+        await tester.pump();
+        check(
+          tester.widgetList(find.byType(SessionOrientationNotice)),
+        ).isEmpty();
+      },
+    );
+
+    testWidgets(
+      'joining before start while loading does not show orientation',
+      (tester) async {
+        addTearDown(() {
+          PaintingBinding.instance.imageCache.clearLiveImages();
+          PaintingBinding.instance.imageCache.clear();
+        });
+        final statusProvider =
+            NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>(
+              () => _RoomStatusOverrideNotifier(RoomStatus.waitingRoom),
+            );
+        final screenProvider =
+            NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+              () => _RoomScreenOverrideNotifier(RoomScreen.loading),
+            );
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.loading,
+          roomScreenProvider: screenProvider,
+          statusProvider: statusProvider,
+          showAdmissionOrientation: true,
+          admissionReady: true,
+        );
+        check(
+          tester.widgetList(find.byType(SessionOrientationNotice)),
+        ).isEmpty();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container.read(statusProvider.notifier).set(RoomStatus.active);
+        container.read(screenProvider.notifier).set(RoomScreen.listening);
+        await tester.pump();
+        check(
+          tester.widgetList(find.byType(SessionOrientationNotice)),
+        ).isEmpty();
+      },
+    );
+
+    testWidgets('admission before start stays ineligible across tab resume', (
+      tester,
+    ) async {
+      addTearDown(() {
+        if (tester.binding.lifecycleState == AppLifecycleState.hidden) {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.inactive,
+          );
+        }
+        if (tester.binding.lifecycleState == AppLifecycleState.inactive) {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+        }
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        PaintingBinding.instance.imageCache.clear();
+      });
+      final statusProvider =
+          NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>(
+            () => _RoomStatusOverrideNotifier(RoomStatus.active),
+          );
+      final screenProvider =
+          NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+            () => _RoomScreenOverrideNotifier(RoomScreen.loading),
+          );
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.loading,
+        roomScreenProvider: screenProvider,
+        statusProvider: statusProvider,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+        sessionStartedAtAdmission: false,
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container.read(statusProvider.notifier).set(RoomStatus.active);
+      container.read(screenProvider.notifier).set(RoomScreen.listening);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      check(
+        container.read(connectionStateProvider),
+      ).equals(RoomConnectionState.connected);
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+    });
+
+    testWidgets('returning participant sees no orientation on tab resume', (
+      tester,
+    ) async {
+      addTearDown(() {
+        if (tester.binding.lifecycleState == AppLifecycleState.hidden) {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.inactive,
+          );
+        }
+        if (tester.binding.lifecycleState == AppLifecycleState.inactive) {
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+        }
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        PaintingBinding.instance.imageCache.clear();
+      });
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+        isReturningParticipant: true,
+        sessionStartedAtAdmission: true,
+      );
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      check(
+        container.read(connectionStateProvider),
+      ).equals(RoomConnectionState.connected);
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+    });
+
+    testWidgets('late admission survives initial waiting room fallback', (
+      tester,
+    ) async {
+      addTearDown(() {
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        PaintingBinding.instance.imageCache.clear();
+      });
+      final statusProvider =
+          NotifierProvider<_RoomStatusOverrideNotifier, RoomStatus>(
+            () => _RoomStatusOverrideNotifier(RoomStatus.waitingRoom),
+          );
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        statusProvider: statusProvider,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+        sessionStartedAtAdmission: true,
+      );
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container.read(statusProvider.notifier).set(RoomStatus.active);
+      await tester.pump();
+      check(
+        tester.widgetList(find.byType(SessionOrientationNotice)),
+      ).length.equals(1);
+      await tester.tap(find.text('Got it'));
+      await tester.pump();
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+    });
+
+    testWidgets('orientation does not reappear after reconnecting', (
+      tester,
+    ) async {
+      final connectionProvider =
+          NotifierProvider<
+            _ConnectionStateOverrideNotifier,
+            RoomConnectionState
+          >(
+            () =>
+                _ConnectionStateOverrideNotifier(RoomConnectionState.connected),
+          );
+      final screenProvider =
+          NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+            () => _RoomScreenOverrideNotifier(RoomScreen.listening),
+          );
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        roomScreenProvider: screenProvider,
+        connectionProvider: connectionProvider,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+      );
+      check(
+        tester.widgetList(find.byType(SessionOrientationNotice)),
+      ).length.equals(1);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container
+          .read(connectionProvider.notifier)
+          .set(RoomConnectionState.disconnected);
+      container.read(screenProvider.notifier).set(RoomScreen.disconnected);
+      await tester.pump();
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+      container
+          .read(connectionProvider.notifier)
+          .set(RoomConnectionState.connected);
+      container.read(screenProvider.notifier).set(RoomScreen.listening);
+      await tester.pump();
+      check(tester.widgetList(find.byType(SessionOrientationNotice))).isEmpty();
+      check(
+        tester.widgetList(find.byType(ListeningTurnScreen)),
+      ).length.equals(1);
+    });
+
+    testWidgets('mobile orientation leaves session controls uncovered', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+        showAdmissionOrientation: true,
+        admissionReady: true,
+        admissionPrompt: 'What brought you here?',
+      );
+
+      final prompt = find.text('Current prompt: What brought you here?');
+      final notice = find.byType(SessionOrientationNotice);
+      final card = find.ancestor(of: notice, matching: find.byType(Card)).first;
+      final controls = find.byType(SessionActionBar);
+      check(tester.widgetList(prompt)).length.equals(1);
+      check(tester.widgetList(find.text('Got it'))).length.equals(1);
+      check(tester.getRect(card).overlaps(tester.getRect(controls))).isFalse();
+      check(
+        tester.getRect(notice).overlaps(tester.getRect(controls)),
+      ).isFalse();
+
+      await tester.tap(find.text('Got it'));
+      await tester.pump();
+      check(tester.widgetList(prompt)).isEmpty();
+      await _unmountRoomScreen(tester);
+    });
+
+    testWidgets(
+      'mobile orientation scrolls a long prompt and can be dismissed',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 700);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final prompt = List.filled(
+          40,
+          'What brought you here today?',
+        ).join(' ');
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          showAdmissionOrientation: true,
+          admissionReady: true,
+          admissionPrompt: prompt,
+        );
+
+        final notice = find.byType(SessionOrientationNotice);
+        check(
+          tester.widgetList(find.text('Current prompt: $prompt')),
+        ).length.equals(1);
+        check(find.text('Got it').hitTestable().evaluate()).length.equals(1);
+        final scrollable = find.descendant(
+          of: notice,
+          matching: find.byType(Scrollable),
+        );
+        await tester.drag(scrollable, const Offset(0, -300));
+        await tester.pump();
+        check(
+          tester.state<ScrollableState>(scrollable).position.pixels > 0,
+        ).isTrue();
+        await tester.tap(find.text('Got it'));
+        await tester.pump();
+        check(tester.widgetList(notice)).isEmpty();
+        await _unmountRoomScreen(tester);
+      },
+    );
+
+    testWidgets(
+      'does not expose the room before admission activation finishes',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.listening,
+          showAdmissionOrientation: true,
+          isReturningParticipant: true,
+          admissionPrompt: 'What brought you here?',
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoSessionScreen)),
+          listen: false,
+        );
+        container
+            .read(admittedSessionParticipantIdentitiesProvider.notifier)
+            .update(['user-1']);
+        await tester.pump();
+        check(
+          tester.widgetList(find.byKey(const ValueKey('loading-screen'))),
+        ).length.equals(1);
+        check(tester.widgetList(find.byType(ListeningTurnScreen))).isEmpty();
+        await _unmountRoomScreen(tester);
+      },
+    );
 
     testWidgets('renders not my turn screen for RoomScreen.listening', (
       tester,

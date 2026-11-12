@@ -259,9 +259,7 @@ void main() {
 
     testWidgets(
       'explains that self-view stays visible when the setting is enabled',
-      (
-        tester,
-      ) async {
+      (tester) async {
         await pumpReceiveTotem(tester, selfViewEnabled: true);
 
         check(

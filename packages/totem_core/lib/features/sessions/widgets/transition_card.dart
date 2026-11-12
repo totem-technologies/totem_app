@@ -28,9 +28,7 @@ class _TransitionCardContainer extends StatelessWidget {
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(25),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
         child: Padding(
           padding: const EdgeInsetsDirectional.all(16),
           // Hug content so the slider stays its own height instead of
@@ -244,11 +242,13 @@ class _TransitionCardBase extends StatefulWidget {
   const _TransitionCardBase({
     required this.childBuilder,
     this.keyboardShortcutText,
+    this.keyboardShortcutVisible = true,
   });
 
   final Widget Function(BuildContext context, bool hasMouseConnected)
   childBuilder;
   final String? keyboardShortcutText;
+  final bool keyboardShortcutVisible;
 
   @override
   State<_TransitionCardBase> createState() => _TransitionCardBaseState();
@@ -286,10 +286,16 @@ class _TransitionCardBaseState extends State<_TransitionCardBase> {
         spacing: 6,
         children: [
           card,
-          Text(
-            widget.keyboardShortcutText!,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF787D7E),
+          Visibility(
+            visible: widget.keyboardShortcutVisible,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: Text(
+              widget.keyboardShortcutText!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF787D7E),
+              ),
             ),
           ),
         ],
@@ -357,6 +363,11 @@ class JoinTransitionCard extends StatelessWidget {
     this.isSliderLoading,
     this.margin = const EdgeInsetsDirectional.symmetric(horizontal: 30),
     this.enabled = true,
+    this.note,
+    this.welcomeName,
+    this.waiting = false,
+    this.waitingMessage,
+    this.onLeaveWaiting,
     super.key,
   });
 
@@ -365,39 +376,65 @@ class JoinTransitionCard extends StatelessWidget {
   final bool? isSliderLoading;
   final EdgeInsetsGeometry margin;
   final bool enabled;
+  final String? note;
+  final String? welcomeName;
+  final bool waiting;
+  final String? waitingMessage;
+  final VoidCallback? onLeaveWaiting;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final welcomeTitle = welcomeName == null
+        ? 'Welcome'
+        : 'Welcome, $welcomeName!';
+    final welcomeMessage = welcomeName == null
+        ? 'Your session will start soon. Please check your audio and video before joining.'
+        : 'Please check your camera and mic before joining.';
     return _TransitionCardBase(
       keyboardShortcutText: 'press space bar to join',
+      keyboardShortcutVisible: enabled && !waiting,
       childBuilder: (context, _) {
         return _TransitionCardContainer(
           margin: margin,
           constraints: const BoxConstraints(maxWidth: 366),
           children: [
             Text(
-              'Welcome',
+              waiting ? 'Waiting to join' : welcomeTitle,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 fontSize: 28,
               ),
               textAlign: TextAlign.center,
             ),
-            const Text(
-              'Your session will start soon. Please check your audio and video before joining.',
+            Text(
+              waiting
+                  ? waitingMessage ??
+                        'Please check your camera and mic while you wait. Your Keeper will let you into the session soon. No one can see or hear you until you’re admitted.'
+                  : welcomeMessage,
               textAlign: TextAlign.center,
             ),
+            if (!waiting && note != null)
+              Text(
+                note!,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium,
+              ),
             SizedBox(
               height: 52,
-              child: ActionSliderButton(
-                text: 'Join',
-                onActionCompleted: onActionPressed,
-                keepLoadingOnSuccess: keepActionLoadingOnSuccess,
-                isLoading: isSliderLoading,
-                enabled: enabled,
-                height: 52,
-              ),
+              child: waiting
+                  ? OutlinedButton(
+                      onPressed: onLeaveWaiting,
+                      child: const Text('Leave waiting room'),
+                    )
+                  : ActionSliderButton(
+                      text: 'Join',
+                      onActionCompleted: onActionPressed,
+                      keepLoadingOnSuccess: keepActionLoadingOnSuccess,
+                      isLoading: isSliderLoading,
+                      enabled: enabled,
+                      height: 52,
+                    ),
             ),
           ],
         );

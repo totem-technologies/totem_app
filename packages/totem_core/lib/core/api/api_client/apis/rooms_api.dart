@@ -2,9 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:degenerate_runtime/degenerate_runtime.dart';
-
 import '../models/event_request.dart';
 import '../models/join_response.dart';
 import '../models/remove_participant_payload.dart';

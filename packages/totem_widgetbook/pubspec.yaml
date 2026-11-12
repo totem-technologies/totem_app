@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_riverpod: ^3.2.1
   flutter_svg: ^2.2.4
   material_ui: any
   totem_core:
@@ -20,7 +21,7 @@ dev_dependencies:
   checks: ^0.3.2
   flutter_test:
     sdk: flutter
-  very_good_analysis: ^10.3.0
+  very_good_analysis: ^11.0.0
 
 flutter:
   uses-material-design: true

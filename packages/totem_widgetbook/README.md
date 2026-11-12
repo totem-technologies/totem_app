@@ -18,7 +18,7 @@ long-lived branch.
 
 ## Running
 
-All commands run from the repo root, using `fvm`:
+All commands run from the repo root with the pinned Flutter SDK:
 
 | Command                 | What it does                                               |
 | ----------------------- | ---------------------------------------------------------- |
@@ -47,16 +47,17 @@ The catalog has exactly two roots:
 ```
 Components/
   Buttons/     CircleIconButton, Button
-  Dialogs/     ConfirmationDialog, ErrorDialog
+  Dialogs/     ConfirmationDialog, ErrorDialog, UpdateAvailableDialog
   Feedback/    EmptyIndicator, ErrorScreen, InfoText, LoadingIndicator, LoadingScreen
   Navigation/  PageIndicator, SheetDragHandle
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
-  Sessions/    SessionCard, SessionControls, WaitingCard, ParticipantCard
+  Sessions/    SessionCard, SessionControls, JoinTransitionCard, ParticipantCard, SessionWaitingQueueButton
 Screens/
-  auth            AuthFlow (18 states)
-  session/:slug   SessionEntry (one story; args are the states)
-  session/landscape    SessionLandscape
-  spaces          SessionsScreen (4 states)
+  auth                AuthFlow (18 states)
+  session/:slug       PreJoinView (ready and waiting states using production views)
+                      SessionDisconnectedView (one story; args are the states)
+  session/landscape   SessionLandscape
+  spaces              SessionsScreen (4 states)
   spaces/event/:slug  SessionDetailsPage (4 states)
 ```
 
@@ -96,8 +97,7 @@ navigation.
   `ComponentMeta(path: 'Screens/spaces/:slug')` for `RouteNames.space(':slug')`.
 - **Route params and query params become args.** They are the knobs.
 - **Each story is a meaningful screen state**, e.g. loaded, empty, error, or
-  keeper vs participant. Session entry is one story: those states are its
-  args, and the args panel is what changes the screen.
+  keeper vs participant. Use args for related variants of the same screen.
 - **Inject the data.** A screen takes its data and callbacks through
   constructor params, not providers or repositories. If a screen reads
   providers, split it into a thin route widget (reads providers, handles

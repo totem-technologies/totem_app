@@ -273,9 +273,11 @@ class NotificationsService {
     }
   }
 
-  Future<String?> get fcmToken {
-    return FirebaseMessaging.instance.getToken(
-      vapidKey: AppConfig.instance.vapidKey,
-    );
-  }
+  Stream<String> get onRegistered => FirebaseMessaging.instance.onRegistered;
+
+  Future<void> register() => FirebaseMessaging.instance.register(
+    vapidKey: AppConfig.instance.vapidKey,
+  );
+
+  Future<void> unregister() => FirebaseMessaging.instance.unregister();
 }

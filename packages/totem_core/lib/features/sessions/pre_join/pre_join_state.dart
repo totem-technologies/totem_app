@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' hide SessionOptions;
 import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
 enum PreJoinCapturePhase {
@@ -19,10 +20,11 @@ enum PreJoinCapturePhase {
   unavailable,
 }
 
-enum PreJoinFlowPhase { idle, joining, joined }
+enum PreJoinFlowPhase { idle, joining, pending, joined }
 
 enum PreJoinJoinOutcome {
   confirmationRequired,
+  pending,
   joined,
   retryableFailure,
   microphoneNeeded,
@@ -121,21 +123,54 @@ class PreJoinFlowState {
   const PreJoinFlowState({
     this.phase = PreJoinFlowPhase.idle,
     this.sessionOptions,
+
+    this.admissionStatus,
+    this.isReturningParticipant = false,
+    this.sessionStartedAtAdmission,
+    this.keeperAvailability = AdmissionKeeperAvailability.checking,
+    this.error,
   });
 
   final PreJoinFlowPhase phase;
   final SessionOptions? sessionOptions;
 
+  final AdmissionStatus? admissionStatus;
+  final bool isReturningParticipant;
+  final bool? sessionStartedAtAdmission;
+  final AdmissionKeeperAvailability keeperAvailability;
+  final Object? error;
+
   PreJoinFlowState copyWith({
     PreJoinFlowPhase? phase,
     SessionOptions? sessionOptions,
     bool clearSessionOptions = false,
+
+    AdmissionStatus? admissionStatus,
+    bool clearAdmissionStatus = false,
+    bool? isReturningParticipant,
+    bool? sessionStartedAtAdmission,
+    AdmissionKeeperAvailability? keeperAvailability,
+    Object? error,
+    bool clearError = false,
   }) {
     return PreJoinFlowState(
       phase: phase ?? this.phase,
       sessionOptions: clearSessionOptions
           ? null
           : sessionOptions ?? this.sessionOptions,
+
+      admissionStatus: clearAdmissionStatus
+          ? null
+          : admissionStatus ?? this.admissionStatus,
+      isReturningParticipant:
+          !clearAdmissionStatus &&
+          (isReturningParticipant ?? this.isReturningParticipant),
+      sessionStartedAtAdmission: clearAdmissionStatus
+          ? null
+          : sessionStartedAtAdmission ?? this.sessionStartedAtAdmission,
+      keeperAvailability: keeperAvailability ?? this.keeperAvailability,
+
+      error: clearError ? null : error ?? this.error,
     );
   }
 }

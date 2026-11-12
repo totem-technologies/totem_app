@@ -16,6 +16,7 @@ import 'package:totem_core/core/services/screen_protection_service.dart';
 import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/permissions/ui/recovery_content.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -26,15 +27,17 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
-import 'package:totem_core/features/sessions/screens/more_options_popup.dart';
+import 'package:totem_core/features/sessions/screens/options/more_options_popup.dart';
 import 'package:totem_core/features/sessions/screens/receive_totem_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
+
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
@@ -43,12 +46,20 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
   const VideoSessionScreen({
     required this.sessionSlug,
     required this.loadingScreen,
+    this.showAdmissionOrientation = false,
+    this.admissionReady = false,
+    this.isReturningParticipant = false,
+    this.sessionStartedAtAdmission,
     this.now = DateTime.now,
     super.key,
   });
 
   final String sessionSlug;
   final Widget loadingScreen;
+  final bool showAdmissionOrientation;
+  final bool admissionReady;
+  final bool isReturningParticipant;
+  final bool? sessionStartedAtAdmission;
   final ValueGetter<DateTime> now;
 
   @override
@@ -59,20 +70,28 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
 
 class _SessionChatRouteObserver extends NavigatorObserver {
   final List<Route<dynamic>> chatRoutes = [];
+  final List<Route<dynamic>> admissionRoutes = [];
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (route.settings.name == sessionChatRouteName) chatRoutes.add(route);
+    switch (route.settings.name) {
+      case sessionChatRouteName:
+        chatRoutes.add(route);
+      case sessionAdmissionRouteName:
+        admissionRoutes.add(route);
+    }
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     chatRoutes.remove(route);
+    admissionRoutes.remove(route);
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
     chatRoutes.remove(route);
+    admissionRoutes.remove(route);
   }
 }
 
@@ -86,13 +105,15 @@ class _DockedSessionPanelsRail extends ConsumerWidget {
     final chatOpen = ref.watch(sessionChatOpenProvider);
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
     final promptsOpen = isKeeper && ref.watch(sessionPromptsOpenProvider);
-    final Widget? panel = switch ((chatOpen, promptsOpen)) {
-      (true, _) => const SessionChatPanel(embedded: true),
-      (false, true) => SessionPromptsModal(
+    final admissionOpen = isKeeper && ref.watch(sessionAdmissionOpenProvider);
+    final Widget? panel = switch ((chatOpen, promptsOpen, admissionOpen)) {
+      (true, _, _) => const SessionChatPanel(embedded: true),
+      (false, true, _) => SessionPromptsModal(
         sessionSlug: sessionSlug,
         embedded: true,
       ),
-      (false, false) => null,
+      (false, false, true) => const SessionAdmissionPanel(docked: true),
+      (false, false, false) => null,
     };
 
     return DockedSessionSidePanel(open: panel != null, child: panel);
@@ -117,10 +138,30 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   bool? _lastKeeperDisconnectedState;
   RoomStatus? _lastKeeperDisconnectedRoomStatus;
   bool _hasDismissedChatForDisconnect = false;
+  StreamSubscription<MediaKind>? _deviceNoticeSubscription;
+  StreamSubscription<(MediaKind, TurnOnBlocker)>? _turnOnBlockedSubscription;
+
+  bool _admissionOrientationDismissed = false;
+  bool? _admissionOrientationEligible;
+
+  /// True while [showSessionChat] is awaiting dismissal of the overlay host.
+  bool _overlayChatPresenting = false;
+
+  /// Bumped when a layout handover (or a newer present) supersedes the
+  /// in-flight [showSessionChat] future so its `finally` does not clear the
+  /// open flag or block a later re-present.
+  int _overlayChatGeneration = 0;
+
+  bool _chatPresentationSyncScheduled = false;
+
+  /// Last dock layout seen by the presentation sync — used to detect resizes
+  /// without scheduling a sync on every unrelated rebuild.
+  bool? _lastSyncedDockChatSlot;
 
   @override
   void initState() {
     super.initState();
+
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     // In-call chat UI state is per-session. Clearing it on entry keeps a
@@ -131,6 +172,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       ref
         ..invalidate(sessionChatOpenProvider)
         ..invalidate(sessionPromptsOpenProvider)
+        ..invalidate(sessionAdmissionOpenProvider)
         ..invalidate(sessionChatThreadTargetProvider)
         ..invalidate(sessionChatUnreadThreadsProvider);
     });
@@ -158,13 +200,81 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyScreenCapturePolicy();
     });
+
+    ref
+      ..listenManual(
+        currentSessionProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(
+        currentSessionEventProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(
+        resolveCurrentScreenProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(
+        connectionStateProvider,
+        (_, _) => _syncAdmissionOrientation(),
+      )
+      ..listenManual(roomStatusProvider, (_, _) => _syncAdmissionOrientation());
+    _syncAdmissionOrientation(rebuild: false);
   }
 
-  StreamSubscription<MediaKind>? _deviceNoticeSubscription;
+  @override
+  void didUpdateWidget(covariant VideoSessionScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncAdmissionOrientation(rebuild: false);
+  }
 
-  /// Tells the user a device they rely on isn't working, such as one that
-  /// stopped mid-call (X13). Tapping it turns the device on, explaining the
-  /// fix first where the user has to leave the app, as the controls do.
+  void _syncAdmissionOrientation({bool rebuild = true}) {
+    final connection = ref.read(connectionStateProvider);
+    final status = ref.read(roomStatusProvider);
+    final screen = ref.read(resolveCurrentScreenProvider);
+    final event = ref.read(currentSessionEventProvider);
+    var eligible = _admissionOrientationEligible;
+    var dismissed = _admissionOrientationDismissed;
+
+    if (eligible != null && connection != RoomConnectionState.connected) {
+      dismissed = true;
+    }
+    final waitingForAdmission =
+        widget.showAdmissionOrientation && !widget.admissionReady;
+    if (eligible == null &&
+        !waitingForAdmission &&
+        connection == RoomConnectionState.connected &&
+        ref.read(currentSessionProvider) != null &&
+        event != null &&
+        !event.ended &&
+        status != RoomStatus.ended &&
+        screen != null &&
+        screen != RoomScreen.disconnected &&
+        screen != RoomScreen.error) {
+      // Keeper entry-time status survives delayed rendering and tab suspension.
+      // Legacy approvals fall back to the first connected room status.
+      eligible =
+          widget.showAdmissionOrientation &&
+          !widget.isReturningParticipant &&
+          (widget.sessionStartedAtAdmission ?? status == RoomStatus.active);
+    }
+    if (eligible == _admissionOrientationEligible &&
+        dismissed == _admissionOrientationDismissed) {
+      return;
+    }
+
+    void update() {
+      _admissionOrientationEligible = eligible;
+      _admissionOrientationDismissed = dismissed;
+    }
+
+    if (rebuild) {
+      setState(update);
+    } else {
+      update();
+    }
+  }
+
   void _showDeviceNotice(MediaKind kind) {
     final session = ref.read(currentSessionProvider);
     if (!mounted || session == null) return;
@@ -185,9 +295,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     );
   }
 
-  StreamSubscription<(MediaKind, TurnOnBlocker)>? _turnOnBlockedSubscription;
-
-  /// Explains why a device the user tried to turn on stayed off.
   void _showTurnOnBlocked((MediaKind, TurnOnBlocker) blocked) {
     if (!mounted) return;
     final (kind, blocker) = blocked;
@@ -230,6 +337,43 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       TotemRouter.instance.clearPageExitHandler(handler);
     }
     super.dispose();
+  }
+
+  Widget _buildAdmissionOrientation(String? prompt, {required bool desktop}) {
+    final size = MediaQuery.sizeOf(context);
+    final content = ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: 420,
+        maxHeight: size.height * (desktop ? 0.65 : 0.4),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(desktop ? 24 : 16),
+        child: SessionOrientationNotice(
+          prompt: prompt,
+          onDone: () => setState(() => _admissionOrientationDismissed = true),
+        ),
+      ),
+    );
+
+    if (desktop) {
+      return Positioned.fill(
+        child: Stack(
+          children: [
+            const ModalBarrier(dismissible: false, color: Colors.black54),
+            Center(child: Dialog(child: content)),
+          ],
+        ),
+      );
+    }
+    return Positioned(
+      left: 16,
+      right: 16,
+      top: 8,
+      child: SafeArea(
+        bottom: false,
+        child: Center(child: Card(elevation: 8, child: content)),
+      ),
+    );
   }
 
   void _setScreenProtection(bool enabled) {
@@ -691,74 +835,208 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       );
     }
 
-    // Keep the rail mounted on wide windows even while closed so the
-    // close animation has a widget to slide out.
     final dockChatSlot = shouldDockSessionChat(context);
+    // Flag changes are handled via listen so opening/closing chat does not
+    // rebuild the whole room tree. Layout (resize) changes are detected here.
+    ref.listen(sessionChatOpenProvider, (previous, next) {
+      _scheduleChatPresentationSync();
+    });
+    if (_lastSyncedDockChatSlot != dockChatSlot) {
+      _lastSyncedDockChatSlot = dockChatSlot;
+      _scheduleChatPresentationSync();
+    }
+    // The Keeper-approved, fully activated local connection can enter without
+    // waiting for a separate roster packet. The roster still filters everyone
+    // shown to other participants.
+    final waitingForAdmission =
+        widget.showAdmissionOrientation && !widget.admissionReady;
+    final admissionEstablished =
+        !waitingForAdmission &&
+        connectionState == RoomConnectionState.connected &&
+        !showingDisconnectedScreen;
+    final readyForOrientation =
+        admissionEstablished && currentRoomScreen != RoomScreen.loading;
 
-    return SessionKeyboardShortcuts(
-      navigatorKey: _roomNavigatorKey,
-      enableEmojiReactions: currentRoomScreen == RoomScreen.listening,
-      child: RoomBackground(
-        status: roomStatus,
-        child: Row(
-          children: [
-            Expanded(
-              child: Navigator(
-                key: _roomNavigatorKey,
-                observers: [_roomNavigatorObserver],
-                clipBehavior: Clip.none,
-                onDidRemovePage: (page) => {},
-                pages: [
-                  MaterialPage(
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: RepaintBoundary(
-                            child: PopScope(
-                              canPop: false,
-                              onPopInvokedWithResult: (didPop, result) async {
-                                await _handleBackNavigation(
-                                  currentSession,
-                                  connectionState,
-                                );
-                              },
-                              child: _buildBody(
-                                currentSession,
-                                currentRoomScreen,
-                                currentSessionEvent,
-                                disconnectReason,
-                                isOffline: isOffline ?? false,
-                              ),
+    final showOrientation =
+        readyForOrientation &&
+        roomStatus == RoomStatus.active &&
+        _admissionOrientationEligible == true &&
+        !_admissionOrientationDismissed;
+    final admissionPrompt = showOrientation
+        ? ref.watch(currentSessionPromptProvider)
+        : null;
+
+    return SessionAdmissionOverlay(
+      sessionSlug: widget.sessionSlug,
+      child: SessionKeyboardShortcuts(
+        navigatorKey: _roomNavigatorKey,
+        enableEmojiReactions:
+            !waitingForAdmission && currentRoomScreen == RoomScreen.listening,
+        child: RoomBackground(
+          status: roomStatus,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Navigator(
+                              key: _roomNavigatorKey,
+                              observers: [_roomNavigatorObserver],
+                              clipBehavior: Clip.none,
+                              onDidRemovePage: (page) => {},
+                              pages: [
+                                MaterialPage(
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: RepaintBoundary(
+                                          child: PopScope(
+                                            canPop: false,
+                                            onPopInvokedWithResult:
+                                                (didPop, result) async {
+                                                  await _handleBackNavigation(
+                                                    currentSession,
+                                                    connectionState,
+                                                  );
+                                                },
+                                            child: _buildBody(
+                                              currentSession,
+                                              waitingForAdmission
+                                                  ? RoomScreen.loading
+                                                  : currentRoomScreen,
+                                              currentSessionEvent,
+                                              disconnectReason,
+                                              isOffline: isOffline ?? false,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned.fill(
+                                        child: IgnorePointer(
+                                          child: Overlay(
+                                            key: EmojiReactions.emojiOverlayKey,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: Overlay(key: EmojiReactions.emojiOverlayKey),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    // Keep the rail mounted on wide windows even while closed so
+                    // the close animation has a widget to slide out.
+                    if (dockChatSlot)
+                      _DockedSessionPanelsRail(sessionSlug: widget.sessionSlug),
+                  ],
+                ),
               ),
-            ),
-            if (dockChatSlot)
-              _DockedSessionPanelsRail(sessionSlug: widget.sessionSlug),
-          ],
+              if (showOrientation)
+                _buildAdmissionOrientation(
+                  admissionPrompt,
+                  desktop: dockChatSlot,
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _dismissSessionChat() {
-    if (_hasDismissedChatForDisconnect) return;
-    _hasDismissedChatForDisconnect = true;
-    ref.read(sessionChatOpenProvider.notifier).open = false;
+  void _scheduleChatPresentationSync() {
+    if (_chatPresentationSyncScheduled) return;
+    _chatPresentationSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _chatPresentationSyncScheduled = false;
+      if (!mounted) return;
+      // Read live values — a prior frame's captured flag/layout can be stale
+      // (e.g. room-entry invalidate clearing the keepAlive flag).
+      _syncChatPresentation();
+    });
+  }
+
+  void _syncChatPresentation() {
+    final chatOpen = ref.read(sessionChatOpenProvider);
+    final dockChatSlot = shouldDockSessionChat(context);
+    final wantOverlay = chatOpen && !dockChatSlot;
+    final hasOverlayRoute = _roomNavigatorObserver.chatRoutes.any(
+      (route) => route.isActive,
+    );
+
+    if (wantOverlay && !hasOverlayRoute && !_overlayChatPresenting) {
+      unawaited(_presentOverlayChat());
+      return;
+    }
+
+    if (!wantOverlay && hasOverlayRoute) {
+      // Hand over to the dock when chat stays open across a widen; otherwise
+      // the flag was cleared and the overlay should go with it.
+      _removeChatOverlayRoutes(handover: chatOpen && dockChatSlot);
+    }
+  }
+
+  Future<void> _presentOverlayChat() async {
+    final navContext = _roomNavigatorKey.currentContext;
+    if (navContext == null || _overlayChatPresenting) return;
+
+    final generation = ++_overlayChatGeneration;
+    _overlayChatPresenting = true;
+    try {
+      await showSessionChat(navContext);
+    } finally {
+      // A layout handover (or a newer present) supersedes this call.
+      if (generation == _overlayChatGeneration) {
+        _overlayChatPresenting = false;
+        // User dismissed the sheet/drawer (swipe, barrier, or close).
+        if (mounted && ref.read(sessionChatOpenProvider)) {
+          ref.read(sessionChatOpenProvider.notifier).open = false;
+        }
+      }
+    }
+  }
+
+  void _removeChatOverlayRoutes({required bool handover}) {
     final navigator = _roomNavigatorKey.currentState;
     if (navigator == null) return;
 
-    for (final route in _roomNavigatorObserver.chatRoutes.reversed.toList()) {
+    final routes = List<Route<dynamic>>.of(
+      _roomNavigatorObserver.chatRoutes,
+    );
+    if (routes.isEmpty) return;
+
+    // Invalidate any in-flight showSessionChat before removing routes so a
+    // handover cannot leave presenting=true if removeRoute does not complete
+    // that future, and so a later dismiss finally cannot clear the open flag.
+    if (handover) {
+      _overlayChatGeneration++;
+      _overlayChatPresenting = false;
+    }
+
+    for (final route in routes.reversed) {
+      if (!route.isActive) continue;
+      // Instant removal on layout handover avoids a brief dual-panel flash
+      // while a pop animation and the dock slide run together. Instant on
+      // flag-clear too — SessionChatPanel also pops itself when the flag
+      // goes false, so this is usually a no-op cleanup.
+      navigator.removeRoute(route);
+    }
+  }
+
+  void _removeAdmissionOverlayRoutes() {
+    final navigator = _roomNavigatorKey.currentState;
+    if (navigator == null) return;
+
+    final routes = List<Route<dynamic>>.of(
+      _roomNavigatorObserver.admissionRoutes,
+    );
+    for (final route in routes.reversed) {
       if (!route.isActive) continue;
       if (route.isCurrent) {
         navigator.pop();
@@ -766,6 +1044,19 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         navigator.removeRoute(route);
       }
     }
+  }
+
+  void _dismissSessionChat() {
+    if (_hasDismissedChatForDisconnect) return;
+    _hasDismissedChatForDisconnect = true;
+    _overlayChatGeneration++;
+    _overlayChatPresenting = false;
+    ref
+      ..read(sessionChatOpenProvider.notifier).open = false
+      ..read(sessionPromptsOpenProvider.notifier).open = false
+      ..read(sessionAdmissionOpenProvider.notifier).open = false;
+    _removeChatOverlayRoutes(handover: false);
+    _removeAdmissionOverlayRoutes();
   }
 
   Future<void> _handleBackNavigation(

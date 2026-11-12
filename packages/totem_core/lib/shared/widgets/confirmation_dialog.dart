@@ -3,7 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
-import 'package:totem_core/shared/widgets/viewport_resolver.dart';
+import 'package:totem_core/shared/widgets/totem_dialog_layout.dart';
 
 enum ConfirmationDialogType { destructive, standard }
 
@@ -23,6 +23,7 @@ class ConfirmationDialog extends StatefulWidget {
     this.extraButtons = const [],
     this.contentWidget,
     this.scrollable = false,
+    this.actionTimeout = const Duration(seconds: 10),
     super.key,
   }) : assert(
          content != null || contentSpan != null,
@@ -56,6 +57,9 @@ class ConfirmationDialog extends StatefulWidget {
   /// Whether the dialog content should scroll when the viewport is too short.
   final bool scrollable;
 
+  /// Maximum time to wait for an action, or null to wait until it completes.
+  final Duration? actionTimeout;
+
   @override
   State<ConfirmationDialog> createState() => ConfirmationDialogState();
 }
@@ -73,133 +77,80 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
     final iconSize = MediaQuery.textScalerOf(context).scale(widget.iconSize);
     return PopScope(
       canPop: !_anyButtonBusy,
-      child: ViewportResolver(
-        builder: (context, viewportKind) {
-          final contentPadding = switch (viewportKind) {
-            ViewportKind.mediumSmall ||
-            ViewportKind.mediumPlus => const EdgeInsetsDirectional.symmetric(
-              horizontal: 40,
-              vertical: 24,
+      child: TotemDialogLayout(
+        scrollable: widget.scrollable,
+        icon: switch ((widget.icon, widget.iconWidget)) {
+          (final icon?, _) => TotemIcon(
+            icon,
+            size: iconSize,
+            color: switch (widget.type) {
+              ConfirmationDialogType.destructive => Colors.red,
+              ConfirmationDialogType.standard => theme.colorScheme.primary,
+            },
+          ),
+          (_, final iconWidget?) => SizedBox.square(
+            dimension: iconSize,
+            child: Center(
+              child: FittedBox(fit: BoxFit.cover, child: iconWidget),
             ),
-            _ => const EdgeInsetsDirectional.symmetric(
-              horizontal: 24,
-              vertical: 28,
-            ),
-          };
-          return AlertDialog(
-            scrollable: widget.scrollable,
-            constraints: const BoxConstraints(maxWidth: 480),
-            contentPadding: contentPadding,
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 20,
-              children: [
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: 10,
-                  children: [
-                    if (widget.icon != null)
-                      TotemIcon(
-                        widget.icon!,
-                        size: iconSize,
-                        color: switch (widget.type) {
-                          ConfirmationDialogType.destructive => Colors.red,
-                          ConfirmationDialogType.standard =>
-                            theme.colorScheme.primary,
-                        },
-                      )
-                    else if (widget.iconWidget != null)
-                      SizedBox.square(
-                        dimension: iconSize,
-                        child: Center(
-                          child: FittedBox(
-                            fit: BoxFit.cover,
-                            child: widget.iconWidget,
-                          ),
-                        ),
-                      ),
-                    Semantics(
-                      header: true,
-                      namesRoute: true,
-                      child: Text(
-                        widget.title,
-                        textAlign: TextAlign.center,
-                        style:
-                            (theme.dialogTheme.titleTextStyle ??
-                                    theme.textTheme.titleLarge)
-                                ?.copyWith(
-                                  color: theme.colorScheme.onSurface,
-                                  fontSize: 18,
-                                ),
-                      ),
-                    ),
-                    if (widget.contentSpan case final contentSpan?)
-                      Text.rich(
-                        contentSpan,
-                        textAlign: TextAlign.center,
-                        style: widget.contentStyle?.copyWith(
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      )
-                    else if (widget.content != null)
-                      Text(
-                        widget.content!,
-                        textAlign: TextAlign.center,
-                        style: widget.contentStyle?.copyWith(
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                    if (widget.contentWidget != null) widget.contentWidget!,
-                  ],
-                ),
-
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: 10,
-                  children: [
-                    ConfirmationDialogButton.elevated(
-                      onBusyChanged: _onBusyChanged,
-                      disabled: _anyButtonBusy,
-                      onConfirm: widget.onConfirm,
-                      type: widget.type,
-                      autofocus: switch (widget.type) {
-                        ConfirmationDialogType.standard => true,
-                        _ => false,
-                      },
-                      child: Text(
-                        widget.confirmButtonText,
-                        maxLines: 1,
-                        overflow: TextOverflow.fade,
-                      ),
-                    ),
-                    ...widget.extraButtons.map(
-                      (b) => b._withBusyChanged(
-                        onBusyChanged: _onBusyChanged,
-                        disabled: _anyButtonBusy,
-                      ),
-                    ),
-                    if (widget.showCancel)
-                      ConfirmationDialogButton.outlined(
-                        autofocus: switch (widget.type) {
-                          ConfirmationDialogType.destructive => true,
-                          _ => false,
-                        },
-                        disabled: _anyButtonBusy,
-                        onConfirm: () async => Navigator.of(context).pop(),
-                        child: const Text(
-                          'Cancel',
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          );
+          ),
+          _ => null,
         },
+        title: widget.title,
+        body: [
+          if (widget.contentSpan case final contentSpan?)
+            Text.rich(
+              contentSpan,
+              textAlign: TextAlign.center,
+              style: widget.contentStyle?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            )
+          else if (widget.content != null)
+            Text(
+              widget.content!,
+              textAlign: TextAlign.center,
+              style: widget.contentStyle?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          if (widget.contentWidget != null) widget.contentWidget!,
+        ],
+        actions: [
+          ConfirmationDialogButton.elevated(
+            onBusyChanged: _onBusyChanged,
+            disabled: _anyButtonBusy,
+            onConfirm: widget.onConfirm,
+            actionTimeout: widget.actionTimeout,
+            type: widget.type,
+            autofocus: switch (widget.type) {
+              ConfirmationDialogType.standard => true,
+              _ => false,
+            },
+            child: Text(
+              widget.confirmButtonText,
+              maxLines: 1,
+              overflow: TextOverflow.fade,
+            ),
+          ),
+          ...widget.extraButtons.map(
+            (b) => b._withBusyChanged(
+              onBusyChanged: _onBusyChanged,
+              disabled: _anyButtonBusy,
+              actionTimeout: widget.actionTimeout,
+            ),
+          ),
+          if (widget.showCancel)
+            ConfirmationDialogButton.outlined(
+              autofocus: switch (widget.type) {
+                ConfirmationDialogType.destructive => true,
+                _ => false,
+              },
+              disabled: _anyButtonBusy,
+              onConfirm: () async => Navigator.of(context).pop(),
+              child: const Text('Cancel', textAlign: TextAlign.center),
+            ),
+        ],
       ),
     );
   }
@@ -209,6 +160,7 @@ class ConfirmationDialogButton extends StatefulWidget {
   const ConfirmationDialogButton.elevated({
     required this.onConfirm,
     required this.child,
+    this.actionTimeout = const Duration(seconds: 10),
     this.onBusyChanged,
     this.disabled = false,
     this.type = ConfirmationDialogType.standard,
@@ -219,6 +171,7 @@ class ConfirmationDialogButton extends StatefulWidget {
   const ConfirmationDialogButton.outlined({
     required this.onConfirm,
     required this.child,
+    this.actionTimeout = const Duration(seconds: 10),
     this.onBusyChanged,
     this.disabled = false,
     this.type = ConfirmationDialogType.standard,
@@ -232,6 +185,7 @@ class ConfirmationDialogButton extends StatefulWidget {
   final ValueChanged<bool>? onBusyChanged;
   final bool disabled;
   final AsyncCallback onConfirm;
+  final Duration? actionTimeout;
 
   final ConfirmationDialogType type;
   final Widget child;
@@ -239,12 +193,14 @@ class ConfirmationDialogButton extends StatefulWidget {
   ConfirmationDialogButton _withBusyChanged({
     required ValueChanged<bool>? onBusyChanged,
     required bool disabled,
+    required Duration? actionTimeout,
   }) {
     if (_outlined) {
       return ConfirmationDialogButton.outlined(
         key: key,
         onBusyChanged: onBusyChanged,
         disabled: disabled,
+        actionTimeout: actionTimeout,
         onConfirm: onConfirm,
         autofocus: autofocus,
         type: type,
@@ -255,6 +211,7 @@ class ConfirmationDialogButton extends StatefulWidget {
       key: key,
       onBusyChanged: onBusyChanged,
       disabled: disabled,
+      actionTimeout: actionTimeout,
       onConfirm: onConfirm,
       autofocus: autofocus,
       type: type,
@@ -275,17 +232,23 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
     setState(() => _isLoading = true);
     widget.onBusyChanged?.call(true);
     try {
-      await widget.onConfirm().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          if (mounted) {
-            ErrorHandler.showErrorDialog(
-              context,
-              message: 'Something went wrong. Please try again.',
-            );
-          }
-        },
-      );
+      final action = widget.onConfirm();
+      final timeout = widget.actionTimeout;
+      if (timeout == null) {
+        await action;
+      } else {
+        await action.timeout(
+          timeout,
+          onTimeout: () {
+            if (mounted) {
+              ErrorHandler.showErrorDialog(
+                context,
+                message: 'Something went wrong. Please try again.',
+              );
+            }
+          },
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
       widget.onBusyChanged?.call(false);

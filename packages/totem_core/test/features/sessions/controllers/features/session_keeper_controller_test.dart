@@ -250,6 +250,114 @@ void main() {
         check(controller.keeperDisconnectedTimer).isNull();
       });
     });
+    group('removeParticipant', () {
+      test('does not remove while admission recovery is unavailable', () async {
+        final session = FakeSessionController()
+          ..isCurrentUserKeeperValue = true;
+        var backendCalls = 0;
+        final container = ProviderContainer(
+          overrides: [
+            removeParticipantProvider(
+              session.options.sessionSlug,
+              'user-2',
+            ).overrideWith((_) async {
+              backendCalls++;
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionKeeperControllerProvider(session).notifier,
+        );
+        await check(
+          controller.removeParticipant('user-2'),
+        ).throws<StateError>();
+        check(backendCalls).equals(0);
+      });
+
+      test('notifies once after backend removal succeeds', () async {
+        final session = FakeSessionController()
+          ..isCurrentUserKeeperValue = true;
+        final started = Completer<void>();
+        final backend = Completer<void>();
+        final removed = <String>[];
+        final container = ProviderContainer(
+          overrides: [
+            removeParticipantProvider(
+              session.options.sessionSlug,
+              'user-2',
+            ).overrideWith((_) async {
+              started.complete();
+              await backend.future;
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionKeeperControllerProvider(session).notifier,
+        );
+        controller.onParticipantRemoved = (slug) async => removed.add(slug);
+
+        final removal = controller.removeParticipant('user-2');
+        await started.future;
+        check(removed).isEmpty();
+        backend.complete();
+        await removal;
+
+        check(removed).deepEquals(['user-2']);
+      });
+
+      test('does not notify when backend removal fails', () async {
+        final session = FakeSessionController()
+          ..isCurrentUserKeeperValue = true;
+        final removed = <String>[];
+        final container = ProviderContainer(
+          overrides: [
+            removeParticipantProvider(
+              session.options.sessionSlug,
+              'user-2',
+            ).overrideWith((_) async => throw StateError('removal failed')),
+          ],
+        );
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionKeeperControllerProvider(session).notifier,
+        );
+        controller.onParticipantRemoved = (slug) async => removed.add(slug);
+
+        await check(
+          controller.removeParticipant('user-2'),
+        ).throws<StateError>();
+        check(removed).isEmpty();
+      });
+
+      test('non-keeper neither removes nor notifies', () async {
+        final session = FakeSessionController();
+        var backendCalls = 0;
+        final removed = <String>[];
+        final container = ProviderContainer(
+          overrides: [
+            removeParticipantProvider(
+              session.options.sessionSlug,
+              'user-2',
+            ).overrideWith((_) async {
+              backendCalls++;
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionKeeperControllerProvider(session).notifier,
+        );
+        controller.onParticipantRemoved = (slug) async => removed.add(slug);
+
+        await controller.removeParticipant('user-2');
+
+        check(backendCalls).equals(0);
+        check(removed).isEmpty();
+      });
+    });
+
     group('acceptTotem', () {
       Future<FakeSessionDeviceController> accept({
         required bool microphoneStarts,

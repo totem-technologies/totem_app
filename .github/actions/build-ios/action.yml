@@ -121,6 +121,6 @@ runs:
 
     - name: Build
       # Wrapper retries transient Swift Package Manager download failures.
-      run: ${{ github.action_path }}/../../scripts/retry-flutter-build.sh ${{ inputs.build-cmd }}
+      run: dart ${{ github.action_path }}/../../scripts/retry_flutter_build.dart ${{ inputs.build-cmd }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
