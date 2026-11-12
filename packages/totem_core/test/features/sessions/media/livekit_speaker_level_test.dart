@@ -86,9 +86,8 @@ void main() {
     when(() => publication.muted).thenReturn(false);
     when(() => track.muted).thenReturn(false);
     when(() => publication.track).thenReturn(track);
-    when(
-      () => participant.getTrackPublicationBySource(TrackSource.microphone),
-    ).thenReturn(publication);
+    when(() => participant.getTrackPublicationBySource(TrackSource.microphone))
+        .thenReturn(publication);
 
     await pump(tester);
 
@@ -118,10 +117,7 @@ void main() {
     await tester.pump();
     final second = List<double>.of(notifier.value);
     check(second).deepEquals(first);
-    level = 0.799;
-    changes.add(null);
-    await tester.pump();
-    check(notifier.value).deepEquals(first);
+
     level = 0.1;
     changes.add(null);
     await tester.pump();
@@ -140,13 +136,29 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     level = 0.8;
     await pump(tester);
-    check(
-      tester.widget<LevelBars>(find.byType(LevelBars)).levels.value,
-    ).deepEquals(first);
+    check(tester.widget<LevelBars>(find.byType(LevelBars)).levels.value)
+        .deepEquals(first);
     await tester.pumpWidget(const SizedBox.shrink());
     await pump(tester, identity: 'bob');
     final other = tester.widget<LevelBars>(find.byType(LevelBars)).levels.value;
     check(other.toString() == first.toString()).isFalse();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('waveform intensity increases with successive server levels', (
+    tester,
+  ) async {
+    await pump(tester);
+    final notifier = tester.widget<LevelBars>(find.byType(LevelBars)).levels;
+    var previous = 0.0;
+    for (final sample in [0.125, 0.25, 0.5, 1.0]) {
+      level = sample;
+      changes.add(null);
+      await tester.pump();
+      final intensity = notifier.value.reduce((a, b) => a + b);
+      check(intensity > previous).isTrue();
+      previous = intensity;
+    }
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/media/livekit_microphone_level.dart';
 import 'package:totem_core/features/sessions/media/livekit_selector.dart';
 import 'package:totem_core/features/sessions/media/livekit_support.dart';
-import 'package:totem_core/features/sessions/media/speech_level.dart';
+
 import 'package:totem_core/features/sessions/widgets/level_bars.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 
@@ -109,8 +109,7 @@ class _RemoteWaveform extends StatefulWidget {
 class _RemoteWaveformState extends State<_RemoteWaveform> {
   final _levels = ValueNotifier<List<double>>(const [0, 0, 0, 0, 0]);
   late StreamSubscription<void> _subscription;
-  late SpeechLevelMeter _meter;
-  double? _lastInput;
+
   double? _lastLevel;
   late double _phase;
 
@@ -120,26 +119,18 @@ class _RemoteWaveformState extends State<_RemoteWaveform> {
       hash = ((hash ^ unit) * 16777619) & 0x7fffffff;
     }
     _phase = hash / 0x7fffffff * 2 * math.pi;
-    _meter = SpeechLevelMeter();
-    _lastInput = null;
+
     _lastLevel = null;
   }
 
   void _update() {
     final input = widget.audioLevel();
     final amplitude = input.isFinite ? input.clamp(0.0, 1.0) : 0.0;
-    final last = _lastInput;
-    // Compare against the last accepted reading so small changes can accumulate.
-    if (last != null &&
-        amplitude != 0 &&
-        (amplitude - last).abs() < math.max(0.0001, last * 0.02)) {
-      return;
-    }
-    _lastInput = amplitude;
-    final db = amplitude > 0
-        ? 20 * math.log(amplitude) / math.ln10
-        : double.negativeInfinity;
-    final level = _meter.level(db);
+    // Gate below -50 dBFS and compress the remaining server amplitudes.
+    const noiseGate = 0.0031622776601683794;
+    final level = math.sqrt(
+      ((amplitude - noiseGate) / (1 - noiseGate)).clamp(0.0, 1.0),
+    );
     if (level == _lastLevel) return;
     _lastLevel = level;
     if (level == 0) {
@@ -148,14 +139,11 @@ class _RemoteWaveformState extends State<_RemoteWaveform> {
       }
       return;
     }
-    // A smooth, identity-specific contour changes gradually with loudness.
+    // A fixed, identity-specific contour preserves changes in loudness.
     const weights = [0.52, 0.86, 0.95, 0.86, 0.52];
     _levels.value = List<double>.generate(
       5,
-      (i) =>
-          level *
-          weights[i] *
-          (0.85 + 0.15 * math.sin(_phase + level * 3 + i * 1.1)),
+      (i) => level * weights[i] * (0.85 + 0.15 * math.sin(_phase + i * 1.1)),
       growable: false,
     );
   }
