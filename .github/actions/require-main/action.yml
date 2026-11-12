@@ -1,0 +1,37 @@
+name: "Require main"
+description: >-
+  Fails the job unless the given commit is on the main branch. Production
+  deploys are triggered by tags and releases, which can point at any commit, so
+  this guard ensures only code merged to main reaches production. Uses the
+  GitHub compare API, so it works with shallow checkouts.
+
+inputs:
+  ref:
+    description: Commit SHA, tag, or ref to verify.
+    required: true
+  token:
+    description: Token with contents:read on the repository.
+    default: ${{ github.token }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Verify commit is on main
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        REF: ${{ inputs.ref }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        # "identical" or "behind" means every commit in REF is already in main.
+        status="$(gh api "repos/$REPO/compare/main...$REF" --jq .status)"
+        case "$status" in
+          identical|behind)
+            echo "✓ $REF is on main"
+            ;;
+          *)
+            echo "::error::Production deploys must come from main, but $REF is $status relative to main."
+            exit 1
+            ;;
+        esac
