@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
@@ -5,6 +7,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -375,27 +378,133 @@ class SessionAdmissionOpen extends _$SessionAdmissionOpen {
   }
 }
 
+String? sessionChatKeeperIdentity({
+  required String? roomKeeper,
+  required String? spaceAuthor,
+}) {
+  if (roomKeeper != null && roomKeeper.isNotEmpty) return roomKeeper;
+  if (spaceAuthor != null && spaceAuthor.isNotEmpty) return spaceAuthor;
+  return null;
+}
+
+String? sessionChatTwoPersonPeer(
+  List<ParticipantInfo> participants,
+  String? localIdentity,
+  String? keeperIdentity,
+) {
+  if (participants.length != 2 ||
+      localIdentity == null ||
+      keeperIdentity == null ||
+      !participants.any(
+        (participant) => participant.identity == localIdentity,
+      ) ||
+      !participants.any(
+        (participant) => participant.identity == keeperIdentity,
+      )) {
+    return null;
+  }
+  return participants
+      .where((participant) => participant.identity != localIdentity)
+      .singleOrNull
+      ?.identity;
+}
+
 /// Current in-call thread. Null is the Everyone group thread.
 ///
 /// Reset alongside [SessionChatOpen]; a thread target from a previous circle
 /// names a keeper who isn't in this one, and every send would be rejected.
-@Riverpod(keepAlive: true)
+@Riverpod(
+  keepAlive: true,
+  dependencies: [
+    sessionParticipants,
+    localParticipantIdentity,
+    keeperIdentity,
+    currentSessionEvent,
+  ],
+)
 class SessionChatThreadTarget extends _$SessionChatThreadTarget {
   @override
-  String? build() => null;
+  String? build() {
+    ref.listen(sessionParticipantsProvider, (_, _) => _scheduleReconcile());
+    ref.listen(
+      localParticipantIdentityProvider,
+      (_, _) => _scheduleReconcile(),
+    );
+    ref.listen(
+      authControllerProvider.select((auth) => auth.user),
+      (_, _) => _scheduleReconcile(),
+    );
+    ref.listen(keeperIdentityProvider, (_, _) => _scheduleReconcile());
+    ref.listen(
+      currentSessionEventProvider.select(
+        (event) => event?.space.author.slug.value,
+      ),
+      (_, _) => _scheduleReconcile(),
+    );
+    final peer = _peer();
+    _automaticTarget = peer;
+    return peer;
+  }
 
   String? _automaticTarget;
+  bool _reconcileScheduled = false;
+
+  void _scheduleReconcile() {
+    // Coalesce dependent provider updates and reconcile against their latest values.
+    if (_reconcileScheduled) return;
+    _reconcileScheduled = true;
+    scheduleMicrotask(() {
+      _reconcileScheduled = false;
+      if (ref.mounted) _reconcile();
+    });
+  }
+
+  String? _peer() {
+    final user = ref.read(authControllerProvider).user;
+    final roomIdentity = ref.read(localParticipantIdentityProvider);
+    final localIdentity = roomIdentity != null && roomIdentity.isNotEmpty
+        ? roomIdentity
+        : user?.slug.value ?? user?.email;
+    return sessionChatTwoPersonPeer(
+      ref.read(sessionParticipantsProvider),
+      localIdentity,
+      sessionChatKeeperIdentity(
+        roomKeeper: ref.read(keeperIdentityProvider),
+        spaceAuthor: ref
+            .read(currentSessionEventProvider)
+            ?.space
+            .author
+            .slug
+            .value,
+      ),
+    );
+  }
+
+  void _reconcile() {
+    final peer = _peer();
+    if (peer != null && state != peer) {
+      _selectAutomatically(peer);
+    } else if (ref.read(sessionParticipantsProvider).length > 2 &&
+        _automaticTarget != null &&
+        state == _automaticTarget) {
+      target = null;
+    }
+  }
 
   /// Null is the Everyone thread.
   String? get target => state;
-  String? get automaticTarget => _automaticTarget;
 
   set target(String? identity) {
+    final peer = _peer();
+    if (peer != null && identity != peer) {
+      _selectAutomatically(peer);
+      return;
+    }
     _automaticTarget = null;
     state = identity;
   }
 
-  void selectAutomatically(String identity) {
+  void _selectAutomatically(String identity) {
     _automaticTarget = identity;
     state = identity;
   }

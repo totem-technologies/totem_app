@@ -146,31 +146,15 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
   String? _localIdentity() {
     final user = ref.read(authControllerProvider).user;
     return _resolveLocalIdentity(
-      ref.read(currentSessionProvider)?.room?.localParticipant?.identity,
+      ref.read(localParticipantIdentityProvider),
       user?.slug.value ?? user?.email,
     );
   }
 
-  String? _currentTwoPersonPeer() => _twoPersonPeer(
-    ref.read(sessionParticipantsProvider),
-    _localIdentity(),
-    _resolveKeeperIdentity(
-      roomKeeper: ref.read(keeperIdentityProvider),
-      spaceAuthor: ref
-          .read(currentSessionEventProvider)
-          ?.space
-          .author
-          .slug
-          .value,
-    ),
-  );
-
   void _markVisibleThreadRead() {
     ref
         .read(sessionChatUnreadThreadsProvider.notifier)
-        .markRead(
-          _currentTwoPersonPeer() ?? ref.read(sessionChatThreadTargetProvider),
-        );
+        .markRead(ref.read(sessionChatThreadTargetProvider));
   }
 
   void _closePanel() {
@@ -206,9 +190,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
         final message = next.last;
         final belongs = message.belongsToThread(
           localIdentity: _localIdentity(),
-          threadTarget:
-              _currentTwoPersonPeer() ??
-              ref.read(sessionChatThreadTargetProvider),
+          threadTarget: ref.read(sessionChatThreadTargetProvider),
         );
         if (belongs && _isNearBottom) unawaited(_scrollToBottom());
       })
@@ -221,7 +203,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       });
 
     final isKeeper = ref.watch(isCurrentUserKeeperProvider);
-    final selectedTarget = ref.watch(sessionChatThreadTargetProvider);
+    final threadTarget = ref.watch(sessionChatThreadTargetProvider);
     final participants = ref.watch(sessionParticipantsProvider);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
     final roomIdentity = ref.watch(localParticipantIdentityProvider);
@@ -229,7 +211,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       roomIdentity,
       user?.slug.value ?? user?.email,
     );
-    final keeperIdentity = _resolveKeeperIdentity(
+    final keeperIdentity = sessionChatKeeperIdentity(
       roomKeeper: ref.watch(keeperIdentityProvider),
       spaceAuthor: ref.watch(
         currentSessionEventProvider.select(
@@ -238,34 +220,11 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       ),
     );
 
-    final privatePeer = _twoPersonPeer(
+    final privatePeer = sessionChatTwoPersonPeer(
       participants,
       localIdentity,
       keeperIdentity,
     );
-    final targetNotifier = ref.read(sessionChatThreadTargetProvider.notifier);
-    final restoreEveryone =
-        privatePeer == null &&
-        targetNotifier.automaticTarget != null &&
-        targetNotifier.automaticTarget == selectedTarget;
-    final threadTarget =
-        privatePeer ?? (restoreEveryone ? null : selectedTarget);
-    if ((privatePeer != null && selectedTarget != privatePeer) ||
-        restoreEveryone) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (_currentTwoPersonPeer() != privatePeer ||
-            ref.read(sessionChatThreadTargetProvider) != selectedTarget) {
-          return;
-        }
-        final notifier = ref.read(sessionChatThreadTargetProvider.notifier);
-        if (privatePeer != null) {
-          notifier.selectAutomatically(privatePeer);
-        } else if (notifier.automaticTarget == selectedTarget) {
-          notifier.target = null;
-        }
-      });
-    }
 
     final threadMessages = ref.watch(
       sessionThreadMessagesProvider((
@@ -472,34 +431,6 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       ),
     );
   }
-}
-
-String? _resolveKeeperIdentity({
-  required String? roomKeeper,
-  required String? spaceAuthor,
-}) {
-  if (roomKeeper != null && roomKeeper.isNotEmpty) return roomKeeper;
-  if (spaceAuthor != null && spaceAuthor.isNotEmpty) return spaceAuthor;
-  return null;
-}
-
-String? _twoPersonPeer(
-  List<ParticipantInfo> participants,
-  String? localIdentity,
-  String? keeperIdentity,
-) {
-  if (participants.length != 2 ||
-      localIdentity == null ||
-      keeperIdentity == null ||
-      _participantFor(participants, localIdentity) == null ||
-      _participantFor(participants, keeperIdentity) == null) {
-    return null;
-  }
-  final peer = participants.firstWhere(
-    (participant) => participant.identity != localIdentity,
-    orElse: () => participants.first,
-  );
-  return peer.identity == localIdentity ? null : peer.identity;
 }
 
 ParticipantInfo? _participantFor(
