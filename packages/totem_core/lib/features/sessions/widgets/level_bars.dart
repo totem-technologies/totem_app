@@ -18,6 +18,7 @@ class LevelBars extends StatefulWidget {
     required this.levels,
     required this.color,
     this.releaseDuration,
+    this.animateInitial = false,
     super.key,
   });
 
@@ -32,6 +33,9 @@ class LevelBars extends StatefulWidget {
 
   /// Optional transition duration when the overall level decreases.
   final Duration? releaseDuration;
+
+  /// Whether to animate from silence to the initial levels.
+  final bool animateInitial;
 
   static const _spacing = 2.5;
 
@@ -133,12 +137,15 @@ class _LevelBarsState extends State<LevelBars>
   @override
   void initState() {
     super.initState();
-    _from = List.of(widget.levels.value, growable: false);
+    _from = widget.animateInitial
+        ? List<double>.filled(widget.levels.value.length, 0)
+        : List.of(widget.levels.value, growable: false);
     _to = List.of(_from, growable: false);
     _shown = List.of(_from, growable: false);
     _fromColor = _toColor = _shownColor = widget.color;
     _ticker = createTicker(_tick);
     widget.levels.addListener(_retarget);
+    if (widget.animateInitial) _retarget();
   }
 
   @override

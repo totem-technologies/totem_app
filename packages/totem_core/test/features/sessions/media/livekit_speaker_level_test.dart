@@ -18,6 +18,16 @@ class _MockParticipant extends Mock implements RemoteParticipant {}
 
 class _MockRemoteAudioTrack extends Mock implements RemoteAudioTrack {}
 
+class _BarCanvas implements Canvas {
+  final heights = <double>[];
+
+  @override
+  void drawRRect(RRect rrect, Paint paint) => heights.add(rrect.height);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   late _MockParticipant participant;
   late StreamController<void> changes;
@@ -40,16 +50,19 @@ void main() {
   }) {
     return tester.pumpWidget(
       MaterialApp(
-        home: SizedBox(
-          height: 20,
-          child: LiveKitSpeakerLevel(
-            identity: identity,
-            participant: lookup ?? () => participant,
-            changes: changes.stream,
-            audioLevel: () => level,
-            audioLevelChanges: changes.stream,
-            color: Colors.white,
-            iconSize: 20,
+        home: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: LiveKitSpeakerLevel(
+              identity: identity,
+              participant: lookup ?? () => participant,
+              changes: changes.stream,
+              audioLevel: () => level,
+              audioLevelChanges: changes.stream,
+              color: Colors.white,
+              iconSize: 20,
+            ),
           ),
         ),
       ),
@@ -86,8 +99,9 @@ void main() {
     when(() => publication.muted).thenReturn(false);
     when(() => track.muted).thenReturn(false);
     when(() => publication.track).thenReturn(track);
-    when(() => participant.getTrackPublicationBySource(TrackSource.microphone))
-        .thenReturn(publication);
+    when(
+      () => participant.getTrackPublicationBySource(TrackSource.microphone),
+    ).thenReturn(publication);
 
     await pump(tester);
 
@@ -104,6 +118,38 @@ void main() {
     check(levels.toSet().length > 1).isTrue();
     check(find.byType(SoundWaveformWidget).evaluate()).isEmpty();
     check(find.byType(TotemIcon).evaluate()).isEmpty();
+  });
+
+  testWidgets('already speaking participant animates from idle on mount', (
+    tester,
+  ) async {
+    level = 0.8;
+    await pump(tester);
+
+    double paintedHeight() {
+      final finder = find.descendant(
+        of: find.byType(LevelBars),
+        matching: find.byType(CustomPaint),
+      );
+      final canvas = _BarCanvas();
+      tester
+          .widget<CustomPaint>(finder)
+          .painter!
+          .paint(canvas, tester.getSize(finder));
+      return canvas.heights[2];
+    }
+
+    final initial = paintedHeight();
+    await tester.pump(const Duration(milliseconds: 70));
+    final middle = paintedHeight();
+    await tester.pump(const Duration(milliseconds: 70));
+    final end = paintedHeight();
+    check(middle > initial).isTrue();
+    check(end > middle).isTrue();
+    await tester.pump(const Duration(milliseconds: 200));
+    check(paintedHeight()).equals(end);
+    check(tester.binding.hasScheduledFrame).isFalse();
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('waveform follows events, silence, and participant identity', (
@@ -136,8 +182,9 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     level = 0.8;
     await pump(tester);
-    check(tester.widget<LevelBars>(find.byType(LevelBars)).levels.value)
-        .deepEquals(first);
+    check(
+      tester.widget<LevelBars>(find.byType(LevelBars)).levels.value,
+    ).deepEquals(first);
     await tester.pumpWidget(const SizedBox.shrink());
     await pump(tester, identity: 'bob');
     final other = tester.widget<LevelBars>(find.byType(LevelBars)).levels.value;

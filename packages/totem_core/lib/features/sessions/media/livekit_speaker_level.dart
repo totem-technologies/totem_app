@@ -181,6 +181,7 @@ class _RemoteWaveformState extends State<_RemoteWaveform> {
   Widget build(BuildContext context) => LevelBars(
     levels: _levels,
     color: widget.color,
+    animateInitial: true,
     releaseDuration: const Duration(milliseconds: 200),
   );
 }
