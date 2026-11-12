@@ -7,6 +7,7 @@ import 'package:totem_core/features/sessions/admission/declined_session_particip
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
@@ -254,15 +255,13 @@ class _DeclinedParticipantItem extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
             child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
+              style: SessionButtonStyle.outlined(
+                compact: true,
                 foregroundColor: theme.colorScheme.onSurface,
                 side: BorderSide(color: theme.colorScheme.outline),
               ),
               onPressed: disabled ? null : () => onAllow(identity, name),
-              child: const Text(
-                'Allow',
-                style: TextStyle(decoration: TextDecoration.none),
-              ),
+              child: const Text('Allow'),
             ),
           ),
         ),

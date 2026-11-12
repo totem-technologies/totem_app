@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 import 'package:totem_core/shared/widgets/totem_dialog_layout.dart';
 
 enum ConfirmationDialogType { destructive, standard }
@@ -261,10 +262,6 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const buttonTextStyle = TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.w600,
-    );
     final backgroundColor = switch (widget.type) {
       ConfirmationDialogType.destructive => const Color(0xFFFF3B30),
       ConfirmationDialogType.standard => theme.colorScheme.primary,
@@ -293,12 +290,9 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
       return OutlinedButton(
         autofocus: widget.autofocus,
         onPressed: (widget.disabled || _isLoading) ? null : _onPressed,
-        style: OutlinedButton.styleFrom(
+        style: SessionButtonStyle.outlined(
           side: BorderSide(color: backgroundColor),
           foregroundColor: backgroundColor,
-          textStyle: buttonTextStyle,
-          padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-          minimumSize: const Size(20, 52),
         ),
         child: child,
       );
@@ -306,13 +300,10 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
       return ElevatedButton(
         autofocus: widget.autofocus,
         onPressed: (widget.disabled || _isLoading) ? null : _onPressed,
-        style: ElevatedButton.styleFrom(
+        style: SessionButtonStyle.filled(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
-          textStyle: buttonTextStyle,
-          padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
           maximumSize: Size.infinite,
-          minimumSize: const Size(20, 52),
         ),
         child: child,
       );

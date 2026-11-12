@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 
 // Entry visuals follow the catalog's cream / slate / mauve palette. Typography
 // inherits the host's font (Montserrat in Widgetbook, the app font in production).
@@ -49,13 +50,15 @@ class SessionEntryAction extends StatelessWidget {
     final child = Container(
       constraints: BoxConstraints(
         minHeight: compact
-            ? 36
+            ? SessionButtonStyle.compactHeight
             : quiet
             ? 44
-            : 52,
+            : SessionButtonStyle.height,
         minWidth: compact || quiet ? 0 : 140,
       ),
-      padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 20),
+      padding: compact
+          ? SessionButtonStyle.compactPadding
+          : const EdgeInsets.symmetric(horizontal: 20),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: quiet || secondary

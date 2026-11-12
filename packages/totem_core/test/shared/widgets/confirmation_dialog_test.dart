@@ -4,6 +4,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
@@ -49,6 +50,34 @@ void main() {
       check(tester.widgetList(find.text('Delete this item?'))).length.equals(1);
       check(tester.widgetList(find.text('Delete'))).length.equals(1);
       check(tester.widgetList(find.text('Cancel'))).length.equals(1);
+    });
+
+    testWidgets('renders confirm and cancel at one size in the app font', (
+      tester,
+    ) async {
+      await pumpDialog(
+        tester,
+        dialog: ConfirmationDialog(
+          content: 'Mute everyone?',
+          confirmButtonText: 'Mute',
+          onConfirm: () async {},
+        ),
+      );
+
+      // A button text style without a font family drops the app font.
+      TextStyle labelStyle(String text) =>
+          DefaultTextStyle.of(tester.element(find.text(text))).style;
+      Size buttonSize(String text) => tester.getSize(
+        find.ancestor(
+          of: find.text(text),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+        ),
+      );
+
+      check(labelStyle('Mute').fontFamily).equals(AppTheme.fontFamilySans);
+      check(labelStyle('Cancel').fontFamily).equals(AppTheme.fontFamilySans);
+      check(labelStyle('Mute').fontSize).equals(labelStyle('Cancel').fontSize);
+      check(buttonSize('Mute').height).equals(buttonSize('Cancel').height);
     });
 
     testWidgets('uses custom title and calls onConfirm once', (tester) async {

@@ -25,6 +25,7 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 /// Owns admission connections while the room renders queue controls and panels
@@ -698,9 +699,14 @@ class SessionAdmissionPanel extends ConsumerWidget {
                   'Could not load admission recovery data. Please retry.',
                   style: TextStyle(color: AppTheme.slate),
                 ),
-                OutlinedButton(onPressed: retry, child: const Text('Retry')),
+                OutlinedButton(
+                  onPressed: retry,
+                  style: SessionButtonStyle.outlined(),
+                  child: const Text('Retry'),
+                ),
                 if (admission.onResetCorruptData case final reset?)
                   OutlinedButton(
+                    style: SessionButtonStyle.outlined(),
                     onPressed: () => showDialog<void>(
                       context: context,
                       useRootNavigator: false,
@@ -735,7 +741,11 @@ class SessionAdmissionPanel extends ConsumerWidget {
                     ),
                     child: const Text('Reset admission data'),
                   ),
-                OutlinedButton(onPressed: close, child: const Text('Close')),
+                OutlinedButton(
+                  onPressed: close,
+                  style: SessionButtonStyle.outlined(),
+                  child: const Text('Close'),
+                ),
               ],
             ),
           ),

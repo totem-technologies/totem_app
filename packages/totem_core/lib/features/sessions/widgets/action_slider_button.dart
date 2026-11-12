@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 
 typedef OnActionPerformed = AsyncValueGetter<bool>;
 
@@ -256,10 +257,8 @@ class _ActionButtonState extends State<ActionButton> {
                           maxLines: 1,
                           style:
                               (widget.labelStyle ??
-                                      theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ))
-                                  ?.copyWith(color: foregroundColor),
+                                      SessionButtonStyle.heroLabel)
+                                  .copyWith(color: foregroundColor),
                         ),
                 ),
               ),
@@ -303,6 +302,9 @@ class ActionSlider extends StatefulWidget {
 
   @visibleForTesting
   static const thumbKey = Key('action_slider_thumb');
+
+  @visibleForTesting
+  static const labelKey = Key('action_slider_label');
 
   @override
   State<ActionSlider> createState() => ActionSliderState();
@@ -384,8 +386,6 @@ class ActionSliderState extends State<ActionSlider> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final trackWidth = constraints.maxWidth;
@@ -402,13 +402,7 @@ class ActionSliderState extends State<ActionSlider> {
         final backgroundColor = widget.backgroundColor ?? AppTheme.mauve;
         const foregroundColor = AppTheme.white;
 
-        final textStyle =
-            (widget.labelStyle ??
-                    theme.elevatedButtonTheme.style?.textStyle?.resolve({}) ??
-                    theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ))
-                ?.copyWith(color: foregroundColor);
+        final textStyle = widget.labelStyle ?? SessionButtonStyle.heroLabel;
 
         return CallbackShortcuts(
           bindings: <ShortcutActivator, VoidCallback>{
@@ -450,15 +444,16 @@ class ActionSliderState extends State<ActionSlider> {
                       child: Stack(
                         alignment: AlignmentDirectional.center,
                         children: [
-                          Padding(
-                            padding: EdgeInsetsDirectional.only(
-                              start: thumbSize + padding * 2,
-                              end: padding * 2,
-                            ),
-                            child: Center(
+                          Positioned.fill(
+                            child: CustomSingleChildLayout(
+                              delegate: _SliderLabelLayout(
+                                thumbEnd: thumbSize + padding * 2,
+                                endInset: padding * 2,
+                              ),
                               child: AutoSizeText(
                                 widget.text,
-                                style: textStyle?.copyWith(
+                                key: ActionSlider.labelKey,
+                                style: textStyle.copyWith(
                                   color: foregroundColor.withValues(
                                     alpha: 1.0 - progress,
                                   ),
@@ -525,4 +520,35 @@ class ActionSliderState extends State<ActionSlider> {
       },
     );
   }
+}
+
+/// Centers the slider label on the whole track, shifting it right only as far
+/// as needed to clear the resting thumb. The label may use all the width right
+/// of the thumb before it shrinks.
+class _SliderLabelLayout extends SingleChildLayoutDelegate {
+  const _SliderLabelLayout({required this.thumbEnd, required this.endInset});
+
+  /// Distance from the track's left edge to the resting thumb's right edge.
+  final double thumbEnd;
+  final double endInset;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final maxWidth = math.max(0.0, constraints.maxWidth - thumbEnd - endInset);
+    return BoxConstraints(maxWidth: maxWidth, maxHeight: constraints.maxHeight);
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final centered = (size.width - childSize.width) / 2;
+    final maxLeft = math.max(thumbEnd, size.width - endInset - childSize.width);
+    return Offset(
+      clampDouble(centered, thumbEnd, maxLeft),
+      (size.height - childSize.height) / 2,
+    );
+  }
+
+  @override
+  bool shouldRelayout(_SliderLabelLayout oldDelegate) =>
+      thumbEnd != oldDelegate.thumbEnd || endInset != oldDelegate.endInset;
 }
