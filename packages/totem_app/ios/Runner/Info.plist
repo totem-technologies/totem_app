@@ -93,6 +93,8 @@
 		<string>Turn on your camera so others can see you. It's optional, and you can turn it off any time.</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>Totem needs your microphone so others can hear you when it's your turn.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Choose a photo from your library to use as your profile picture.</string>
 		<key>NSCalendarsUsageDescription</key>
 		<string>This app would like to add events to your calendar so you don’t miss sessions.</string>
 		<key>NSRemindersUsageDescription</key>
