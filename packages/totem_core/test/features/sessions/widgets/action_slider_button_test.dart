@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 
 void main() {
   void autoSizeTest(String description, AsyncValueSetter<WidgetTester> body) {
@@ -233,13 +234,42 @@ void main() {
       check(calls).equals(1);
     });
 
-    autoSizeTest('keeps the app button label unless a label style is given', (
+    // TOT-1466: the label sits in the middle of the whole pill, not of the
+    // space beside the thumb, unless that would put it under the thumb.
+    for (final (label, width, text, centered) in [
+      ('centers the label on the full track', 320.0, 'Join', true),
+      ('keeps a long label clear of the thumb', 180.0, 'Start session', false),
+    ]) {
+      autoSizeTest(label, (tester) async {
+        await pumpTestWidget(
+          tester,
+          width: width,
+          child: ActionSlider(
+            text: text,
+            height: 52,
+            onActionCompleted: () async => true,
+          ),
+        );
+
+        final track = tester.getRect(find.byType(ActionSlider));
+        final thumb = tester.getRect(find.byKey(ActionSlider.thumbKey));
+        final labelRect = tester.getRect(find.byKey(ActionSlider.labelKey));
+
+        check(labelRect.left).isGreaterOrEqual(thumb.right);
+        check(labelRect.right).isLessOrEqual(track.right);
+        check(
+          (track.center.dx - labelRect.center.dx).abs() < 0.5,
+        ).equals(centered);
+      });
+    }
+
+    autoSizeTest('uses the hero label unless a label style is given', (
       tester,
     ) async {
       final theme = AppTheme.lightTheme;
       const override = TextStyle(fontSize: 14, fontWeight: FontWeight.w500);
-      // Join and other sliders keep the ElevatedButton label; only the
-      // docked transition cards pass a smaller one.
+      // Join and other sliders use the hero label; only the docked
+      // transition cards pass a smaller one.
       await tester.pumpWidget(
         MaterialApp(
           theme: theme,
@@ -271,11 +301,9 @@ void main() {
           .widget<AutoSizeText>(find.widgetWithText(AutoSizeText, text))
           .style;
 
-      final buttonLabel = theme.elevatedButtonTheme.style?.textStyle?.resolve(
-        {},
-      );
-      check(labelOf('Default')?.fontSize).equals(buttonLabel?.fontSize);
-      check(labelOf('Default')?.fontWeight).equals(buttonLabel?.fontWeight);
+      const hero = SessionButtonStyle.heroLabel;
+      check(labelOf('Default')?.fontSize).equals(hero.fontSize);
+      check(labelOf('Default')?.fontWeight).equals(hero.fontWeight);
       check(labelOf('Override')?.fontSize).equals(14);
       check(labelOf('Override')?.fontWeight).equals(FontWeight.w500);
       check(labelOf('Override')?.color).equals(AppTheme.white);
@@ -297,6 +325,36 @@ void main() {
         tester.widgetList(find.byType(CircularProgressIndicator)),
       ).length.equals(1);
     });
+  });
+
+  autoSizeTest('Join uses one label size on desktop and touch', (
+    tester,
+  ) async {
+    await pumpTestWidget(
+      tester,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ActionButton(text: 'Desktop', onActionCompleted: () async => true),
+          ActionSlider(text: 'Touch', onActionCompleted: () async => true),
+        ],
+      ),
+    );
+
+    TextStyle? labelOf(String text) => tester
+        .widget<AutoSizeText>(find.widgetWithText(AutoSizeText, text))
+        .style;
+
+    for (final text in ['Desktop', 'Touch']) {
+      check(labelOf(text))
+        ..has((style) => style?.fontSize, 'fontSize').equals(21)
+        ..has((style) => style?.fontWeight, 'fontWeight').equals(
+          FontWeight.w600,
+        )
+        ..has((style) => style?.fontFamily, 'fontFamily').equals(
+          AppTheme.fontFamilySans,
+        );
+    }
   });
 
   autoSizeTest('keeps Join usable with touch and desktop interactions', (
@@ -344,6 +402,14 @@ void main() {
 
         check(tester.widgetList(find.text('Join'))).length.equals(1);
         check(tester.widgetList(scenario.control)).length.equals(1);
+        if (scenario.platform == TargetPlatform.iOS) {
+          // Large text on a 320dp phone must not slide under the thumb.
+          check(
+            tester.getRect(find.byKey(ActionSlider.labelKey)).left,
+          ).isGreaterOrEqual(
+            tester.getRect(find.byKey(ActionSlider.thumbKey)).right,
+          );
+        }
 
         await scenario.interact(tester);
         await tester.pump();

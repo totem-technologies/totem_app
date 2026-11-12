@@ -11,6 +11,7 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
 // TODO(prompts): Improve overall error handling.
@@ -361,12 +362,9 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
                 ),
                 child: SizedBox(
                   width: double.infinity,
-                  height: 44,
                   child: ElevatedButton(
                     onPressed: saving ? null : _addOrEdit,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                    ),
+                    style: SessionButtonStyle.filled(),
                     child: const Text('Add Prompt'),
                   ),
                 ),
@@ -470,21 +468,13 @@ class _PromptTile extends StatelessWidget {
           if (prompt.consumedRoundNumbers.isNotEmpty)
             OutlinedButton(
               onPressed: saving ? null : onSelect,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 36),
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 10),
-                textStyle: theme.textTheme.labelSmall,
-              ),
+              style: SessionButtonStyle.outlined(compact: true),
               child: const Text('Use now'),
             )
           else
             ElevatedButton(
               onPressed: saving ? null : onSelect,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(0, 36),
-                padding: const EdgeInsetsDirectional.symmetric(horizontal: 10),
-                textStyle: theme.textTheme.labelSmall,
-              ),
+              style: SessionButtonStyle.filled(compact: true),
               child: const Text('Use now'),
             ),
         if (onEdit != null)
