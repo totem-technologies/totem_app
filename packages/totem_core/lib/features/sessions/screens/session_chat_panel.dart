@@ -243,14 +243,26 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       localIdentity,
       keeperIdentity,
     );
-    final threadTarget = privatePeer ?? selectedTarget;
-    if (privatePeer != null && selectedTarget != privatePeer) {
+    final targetNotifier = ref.read(sessionChatThreadTargetProvider.notifier);
+    final restoreEveryone =
+        privatePeer == null &&
+        targetNotifier.automaticTarget != null &&
+        targetNotifier.automaticTarget == selectedTarget;
+    final threadTarget =
+        privatePeer ?? (restoreEveryone ? null : selectedTarget);
+    if ((privatePeer != null && selectedTarget != privatePeer) ||
+        restoreEveryone) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        if (_currentTwoPersonPeer() == privatePeer &&
-            ref.read(sessionChatThreadTargetProvider) == selectedTarget) {
-          ref.read(sessionChatThreadTargetProvider.notifier).target =
-              privatePeer;
+        if (_currentTwoPersonPeer() != privatePeer ||
+            ref.read(sessionChatThreadTargetProvider) != selectedTarget) {
+          return;
+        }
+        final notifier = ref.read(sessionChatThreadTargetProvider.notifier);
+        if (privatePeer != null) {
+          notifier.selectAutomatically(privatePeer);
+        } else if (notifier.automaticTarget == selectedTarget) {
+          notifier.target = null;
         }
       });
     }

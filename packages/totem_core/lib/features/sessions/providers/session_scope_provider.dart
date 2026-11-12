@@ -384,10 +384,21 @@ class SessionChatThreadTarget extends _$SessionChatThreadTarget {
   @override
   String? build() => null;
 
+  String? _automaticTarget;
+
   /// Null is the Everyone thread.
   String? get target => state;
+  String? get automaticTarget => _automaticTarget;
 
-  set target(String? identity) => state = identity;
+  set target(String? identity) {
+    _automaticTarget = null;
+    state = identity;
+  }
+
+  void selectAutomatically(String identity) {
+    _automaticTarget = identity;
+    state = identity;
+  }
 }
 
 /// Threads with messages the user has not viewed in a mounted chat panel.
