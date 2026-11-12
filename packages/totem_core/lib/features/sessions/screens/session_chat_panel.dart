@@ -21,7 +21,20 @@ import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
 const _headerHorizontalPadding = 20.0;
-const _recipientRowHorizontalPadding = 16.0;
+const _recipientMenuRadius = 20.0;
+
+/// Horizontal inset from the menu card edges.
+const _recipientRowInset = 6.0;
+
+/// Concentric with the menu card: card radius minus the edge inset.
+const double _recipientRowRadius = _recipientMenuRadius - _recipientRowInset;
+const _recipientRowHorizontalPadding = 12.0;
+const _recipientRowVerticalPadding = 12.0;
+
+/// Leading offset so row content (inset + padding) lines up with the header.
+const double _recipientMenuLeading =
+    _headerHorizontalPadding -
+    (_recipientRowInset + _recipientRowHorizontalPadding);
 
 const _messageChromeGap = 12.0;
 const _messageEdgeFadeExtent = 16.0;
@@ -122,19 +135,12 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     _dropdownController.animateWith(simulation);
   }
 
-  /// LiveKit identity when the room is attached, else the account fallback the
-  /// rest of the panel uses. Shared by [build] and the message listener so
-  /// there is only one fallback chain.
-  static String? _resolveLocalIdentity(String? roomIdentity, String? fallback) {
-    if (roomIdentity != null && roomIdentity.isNotEmpty) return roomIdentity;
-    return fallback;
-  }
-
   String? _localIdentity() {
     final user = ref.read(authControllerProvider).user;
-    return _resolveLocalIdentity(
-      ref.read(currentSessionProvider)?.room?.localParticipant?.identity,
-      user?.slug.value ?? user?.email,
+    return sessionChatLocalIdentity(
+      roomIdentity: ref.read(localParticipantIdentityProvider),
+      userSlug: user?.slug.value,
+      userEmail: user?.email,
     );
   }
 
@@ -156,6 +162,8 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
   @override
   Widget build(BuildContext context) {
     ref
+      // Fast path: when the shared flag clears, pop this overlay host. The room
+      // screen also removes chat routes after the frame; either path is enough.
       ..listen(sessionChatOpenProvider, (previous, next) {
         if (next || widget.embedded || !mounted) return;
         final route = ModalRoute.of(context);
@@ -192,11 +200,12 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     final participants = ref.watch(sessionParticipantsProvider);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
     final roomIdentity = ref.watch(localParticipantIdentityProvider);
-    final localIdentity = _resolveLocalIdentity(
-      roomIdentity,
-      user?.slug.value ?? user?.email,
+    final localIdentity = sessionChatLocalIdentity(
+      roomIdentity: roomIdentity,
+      userSlug: user?.slug.value,
+      userEmail: user?.email,
     );
-    final keeperIdentity = _resolveKeeperIdentity(
+    final keeperIdentity = sessionChatKeeperIdentity(
       roomKeeper: ref.watch(keeperIdentityProvider),
       spaceAuthor: ref.watch(
         currentSessionEventProvider.select(
@@ -205,6 +214,18 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       ),
     );
 
+    final privatePeer = sessionChatTwoPersonPeer(
+      participants,
+      localIdentity,
+      keeperIdentity,
+    );
+
+    final hasEveryoneHistory = ref.watch(
+      sessionMessagesProvider.select(
+        (messages) => messages.any((message) => message.isEveryoneThread),
+      ),
+    );
+    final canViewEveryone = privatePeer == null || hasEveryoneHistory;
     final threadMessages = ref.watch(
       sessionThreadMessagesProvider((
         localIdentity: localIdentity,
@@ -351,13 +372,17 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                     keeperIdentity: keeperIdentity,
                     localIdentity: localIdentity,
                     participants: participants,
-                    onSelectEveryone: () {
-                      ref
-                              .read(sessionChatThreadTargetProvider.notifier)
-                              .target =
-                          null;
-                      _setDropdownOpen(false);
-                    },
+                    onSelectEveryone: !canViewEveryone
+                        ? null
+                        : () {
+                            ref
+                                    .read(
+                                      sessionChatThreadTargetProvider.notifier,
+                                    )
+                                    .target =
+                                null;
+                            _setDropdownOpen(false);
+                          },
                     onSelectParticipant: (identity) {
                       ref
                               .read(sessionChatThreadTargetProvider.notifier)
@@ -369,7 +394,9 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                 ],
               ),
             ),
-            if (!isKeeper && (isPrivateThread || keeperIsPresent))
+            if (!isKeeper &&
+                canViewEveryone &&
+                (isPrivateThread || keeperIsPresent))
               _ParticipantThreadChip(
                 isPrivateThread: isPrivateThread,
                 onMessageKeeper: () {
@@ -385,34 +412,25 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                       null;
                 },
               ),
-            if (canCompose)
-              MessageInputBar(
-                // A fresh State per thread, so a private draft can
-                // never be sent to Everyone after a thread switch.
-                key: ValueKey(threadTarget),
-                hintText: _composerHint(
-                  isPrivateThread: isPrivateThread,
-                  threadTarget: threadTarget,
-                  participants: participants,
-                  keeperIdentity: keeperIdentity,
-                ),
-                autofocus: autofocus,
-                onSend: send,
+            MessageInputBar(
+              enabled: canCompose,
+              // A fresh State per thread, so a private draft can
+              // never be sent to Everyone after a thread switch.
+              key: ValueKey(threadTarget),
+              hintText: _composerHint(
+                isPrivateThread: isPrivateThread,
+                threadTarget: threadTarget,
+                participants: participants,
+                keeperIdentity: keeperIdentity,
               ),
+              autofocus: autofocus,
+              onSend: send,
+            ),
           ],
         ),
       ),
     );
   }
-}
-
-String? _resolveKeeperIdentity({
-  required String? roomKeeper,
-  required String? spaceAuthor,
-}) {
-  if (roomKeeper != null && roomKeeper.isNotEmpty) return roomKeeper;
-  if (spaceAuthor != null && spaceAuthor.isNotEmpty) return spaceAuthor;
-  return null;
 }
 
 ParticipantInfo? _participantFor(
@@ -858,7 +876,7 @@ class _RecipientDropdownOverlay extends StatelessWidget {
   final String? keeperIdentity;
   final String? localIdentity;
   final List<ParticipantInfo> participants;
-  final VoidCallback onSelectEveryone;
+  final VoidCallback? onSelectEveryone;
   final ValueChanged<String> onSelectParticipant;
 
   @override
@@ -896,7 +914,7 @@ class _RecipientDropdownOverlay extends StatelessWidget {
         }
         return PositionedDirectional(
           top: 10,
-          start: _headerHorizontalPadding - _recipientRowHorizontalPadding,
+          start: _recipientMenuLeading,
           end: _headerHorizontalPadding,
           child: IgnorePointer(
             ignoring: !interactive || t < 0.5,
@@ -914,7 +932,7 @@ class _RecipientDropdownOverlay extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppTheme.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(_recipientMenuRadius),
           boxShadow: const [
             BoxShadow(
               color: Color.fromRGBO(0, 0, 0, 0.12),
@@ -924,22 +942,23 @@ class _RecipientDropdownOverlay extends StatelessWidget {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(_recipientMenuRadius),
           child: Material(
             color: AppTheme.white,
             child: ConstrainedBox(
               constraints: BoxConstraints(maxHeight: maxMenuHeight),
-              child: ListView.separated(
+              child: ListView.builder(
                 shrinkWrap: true,
-                padding: EdgeInsetsDirectional.zero,
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 itemCount: rows.length + 1,
-                separatorBuilder: (_, _) => const _RecipientHairline(),
                 itemBuilder: (context, index) {
                   if (index == 0) {
                     return _RecipientRow(
                       selected: threadTarget == null,
                       title: 'Everyone',
-                      subtitle: isKeeper
+                      subtitle: onSelectEveryone == null
+                          ? 'Available when more participants join'
+                          : isKeeper
                           ? '$countLabel · messages to everyone'
                           : '$countLabel · messages from the Keeper',
                       leading: const _EveryoneAvatar(),
@@ -969,19 +988,6 @@ class _RecipientDropdownOverlay extends StatelessWidget {
   }
 }
 
-/// 1px #E8E5E0 rule from the Figma recipient menu — not a Material hairline.
-class _RecipientHairline extends StatelessWidget {
-  const _RecipientHairline();
-
-  @override
-  Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: AppTheme.divider,
-      child: SizedBox(width: double.infinity, height: 1),
-    );
-  }
-}
-
 class _RecipientRow extends StatelessWidget {
   const _RecipientRow({
     required this.selected,
@@ -995,58 +1001,82 @@ class _RecipientRow extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget leading;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    // Highlight on press-down so the row feels grabbed, not "clicked".
-    return InkWell(
-      onTap: onTap,
-      splashColor: AppTheme.cream.withValues(alpha: 0.45),
-      highlightColor: AppTheme.cream.withValues(alpha: 0.35),
-      child: ColoredBox(
-        color: selected ? AppTheme.cream : AppTheme.white,
-        child: Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: _recipientRowHorizontalPadding,
-            vertical: 12,
-          ),
-          child: Row(
-            children: [
-              leading,
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 4,
+    // Inset the selection from the menu card so it reads against white siblings.
+    final fill = selected ? AppTheme.messagePurpleLight : AppTheme.white;
+    const shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(_recipientRowRadius)),
+    );
+    return Semantics(
+      container: true,
+      button: true,
+      selected: selected,
+      enabled: onTap != null,
+      inMutuallyExclusiveGroup: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: _recipientRowInset,
+          vertical: 2,
+        ),
+        child: Material(
+          color: fill,
+          shape: shape,
+          child: Opacity(
+            opacity: onTap == null ? 0.5 : 1,
+            child: InkWell(
+              onTap: onTap,
+              customBorder: shape,
+              splashColor: AppTheme.mauve.withValues(alpha: 0.16),
+              highlightColor: AppTheme.mauve.withValues(alpha: 0.10),
+              hoverColor: AppTheme.mauve.withValues(alpha: 0.06),
+              focusColor: AppTheme.mauve.withValues(alpha: 0.10),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.symmetric(
+                  horizontal: _recipientRowHorizontalPadding,
+                  vertical: _recipientRowVerticalPadding,
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: AppTheme.slate,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                    leading,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 4,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              color: AppTheme.slate,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (subtitle != null)
+                            Text(
+                              subtitle!,
+                              style: const TextStyle(
+                                color: AppTheme.gray,
+                                fontSize: 11,
+                                height: 1.3,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    if (subtitle != null)
-                      Text(
-                        subtitle!,
-                        style: const TextStyle(
-                          color: AppTheme.gray,
-                          fontSize: 11,
-                          height: 1.3,
-                        ),
+                    if (selected)
+                      const TotemIcon(
+                        TotemIcons.checkmark,
+                        size: 16,
+                        color: AppTheme.mauve,
                       ),
                   ],
                 ),
               ),
-              if (selected)
-                const TotemIcon(
-                  TotemIcons.checkmark,
-                  size: 16,
-                  color: AppTheme.mauve,
-                ),
-            ],
+            ),
           ),
         ),
       ),

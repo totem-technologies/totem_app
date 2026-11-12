@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 
 void main() {
   void autoSizeTest(String description, AsyncValueSetter<WidgetTester> body) {
@@ -261,6 +262,52 @@ void main() {
         ).equals(centered);
       });
     }
+
+    autoSizeTest('uses the hero label unless a label style is given', (
+      tester,
+    ) async {
+      final theme = AppTheme.lightTheme;
+      const override = TextStyle(fontSize: 14, fontWeight: FontWeight.w500);
+      // Join and other sliders use the hero label; only the docked
+      // transition cards pass a smaller one.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 320,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ActionSlider(
+                      text: 'Default',
+                      onActionCompleted: () async => true,
+                    ),
+                    ActionSlider(
+                      text: 'Override',
+                      labelStyle: override,
+                      onActionCompleted: () async => true,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      TextStyle? labelOf(String text) => tester
+          .widget<AutoSizeText>(find.widgetWithText(AutoSizeText, text))
+          .style;
+
+      const hero = SessionButtonStyle.heroLabel;
+      check(labelOf('Default')?.fontSize).equals(hero.fontSize);
+      check(labelOf('Default')?.fontWeight).equals(hero.fontWeight);
+      check(labelOf('Override')?.fontSize).equals(14);
+      check(labelOf('Override')?.fontWeight).equals(FontWeight.w500);
+      check(labelOf('Override')?.color).equals(AppTheme.white);
+    });
 
     autoSizeTest('reflects external loading state', (tester) async {
       await pumpTestWidget(

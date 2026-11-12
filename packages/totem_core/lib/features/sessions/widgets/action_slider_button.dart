@@ -207,10 +207,7 @@ class _ActionButtonState extends State<ActionButton> {
     return SizedBox(
       height: widget.height,
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: radius,
-        ),
+        decoration: BoxDecoration(color: backgroundColor, borderRadius: radius),
         child: Theme(
           data: theme.copyWith(
             focusColor: AppTheme.white.withValues(alpha: 0.28),

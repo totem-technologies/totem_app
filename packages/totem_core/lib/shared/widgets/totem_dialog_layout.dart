@@ -41,11 +41,8 @@ class TotemDialogLayout extends StatelessWidget {
     return ViewportResolver(
       builder: (context, viewportKind) {
         final contentPadding = switch (viewportKind) {
-          ViewportKind.mediumSmall ||
-          ViewportKind.mediumPlus => const EdgeInsetsDirectional.symmetric(
-            horizontal: 40,
-            vertical: 24,
-          ),
+          ViewportKind.mediumSmall || ViewportKind.mediumPlus =>
+            const EdgeInsetsDirectional.symmetric(horizontal: 40, vertical: 24),
           _ => const EdgeInsetsDirectional.symmetric(
             horizontal: 24,
             vertical: 28,

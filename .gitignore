@@ -59,9 +59,8 @@ app.*.map.json
 # VS Code
 .vscode/
 
-# FVM Version Cache
+# Ignore legacy local SDK caches.
 .fvm/
-!.fvmrc
 
 # Xcode
 **/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/

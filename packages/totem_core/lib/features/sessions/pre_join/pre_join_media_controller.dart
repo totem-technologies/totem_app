@@ -66,7 +66,7 @@ class PreJoinMediaOperationQueue {
         // A tail created by this class is non-throwing. This additionally
         // protects callers if the implementation changes in the future.
       }
-      return operation();
+      return await operation();
     }();
 
     _tail = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
@@ -219,7 +219,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
       await _disposeTrack(track, 'camera');
       // Abandoned by a hidden tab, not failed: it starts again when visible.
       if (!_isCurrent(generation)) return null;
-      return _permissions.recordCaptureFailure(
+      return await _permissions.recordCaptureFailure(
         MediaKind.camera,
         error,
         stackTrace,
@@ -250,7 +250,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     } catch (error, stackTrace) {
       await _disposeTrack(track, 'microphone');
       if (!_isLive) return null;
-      return _permissions.recordCaptureFailure(
+      return await _permissions.recordCaptureFailure(
         MediaKind.microphone,
         error,
         stackTrace,

@@ -1,7 +1,7 @@
 name: totem_app
 description: "Guided introspection groups."
 publish_to: "none"
-version: 0.0.94+94
+version: 0.0.95+95
 environment:
   sdk: ^3.12.2
 resolution: workspace
@@ -14,7 +14,7 @@ dependencies:
     path: ../totem_core
 
   # Firebase (used by generated firebase_options.dart)
-  firebase_core: ^4.9.0
+  firebase_core: ^5.1.0
 
   # State Management
   flutter_riverpod: ^3.3.1
@@ -31,8 +31,8 @@ dependencies:
   uuid: ^4.5.1
 
   # Messaging
-  firebase_messaging: ^16.0.0
-  flutter_local_notifications: ^22.2.0
+  firebase_messaging: ^17.0.1
+  flutter_local_notifications: ^23.0.1
   posthog_flutter: ^5.24.1
   intl: ^0.20.2
   sentry_flutter: ^10.0.0
@@ -44,7 +44,7 @@ dependencies:
   flutter_html: ^3.0.0
   # flutter_native_splash: ^2.4.6
   pinput: ^7.0.0
-  flutter_svg: ^2.2.4
+  flutter_svg: ^2.3.4
   image_picker: ^1.2.2
   timeago: ^3.7.1
   shimmer: ^4.0.0
@@ -64,7 +64,7 @@ dev_dependencies:
 
   # Linting
   flutter_lints: ^6.0.0
-  very_good_analysis: ^10.3.0
+  very_good_analysis: ^11.0.0
   riverpod_lint: ^3.1.4
 
   # Generators

@@ -420,9 +420,8 @@ class MoreOptions extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       useRootNavigator: false,
-      builder: (context) => SessionStartConfirmationDialog(
-        onStart: session.keeper.startSession,
-      ),
+      builder: (context) =>
+          SessionStartConfirmationDialog(onStart: session.keeper.startSession),
     );
   }
 
@@ -687,7 +686,7 @@ class _AudioOutputTile extends ConsumerWidget {
         : null;
     final chooser = supportsOutputChooser
         ? MoreOptionsTile<void>(
-            title: 'Choose audio output',
+            title: 'Allow or choose audio output',
             icon: TotemIcons.speakerOn,
             onTap: onOutputChooserRequested,
           )

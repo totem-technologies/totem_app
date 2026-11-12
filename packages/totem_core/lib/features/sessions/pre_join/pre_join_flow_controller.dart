@@ -425,10 +425,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       }
     } catch (error, stackTrace) {
       if (ref.mounted) {
-        state = state.copyWith(
-          phase: PreJoinFlowPhase.idle,
-          error: error,
-        );
+        state = state.copyWith(phase: PreJoinFlowPhase.idle, error: error);
       }
       ErrorHandler.logError(
         error,

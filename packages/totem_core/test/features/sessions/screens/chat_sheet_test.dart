@@ -44,6 +44,20 @@ class _TestMessagesNotifier extends Notifier<List<SessionChatMessage>> {
   }
 }
 
+class _TestParticipantsNotifier extends Notifier<List<ParticipantInfo>> {
+  _TestParticipantsNotifier(this.initial);
+
+  final List<ParticipantInfo> initial;
+
+  @override
+  List<ParticipantInfo> build() => initial;
+
+  void add(ParticipantInfo participant) => state = [...state, participant];
+
+  void remove(ParticipantInfo participant) =>
+      state = state.where((item) => item != participant).toList();
+}
+
 class _ChatSheetHarness {
   const _ChatSheetHarness({
     required this.container,
@@ -178,18 +192,26 @@ void main() {
     required AuthState authState,
     RoomScreen currentScreen = RoomScreen.listening,
     List<ParticipantInfo>? participants,
+    NotifierProvider<_TestParticipantsNotifier, List<ParticipantInfo>>?
+    participantsProvider,
     bool useScaffold = true,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: _sharedOverrides(
-          isKeeper: isKeeper,
-          messages: messages,
-          session: session,
-          authState: authState,
-          currentScreen: currentScreen,
-          participants: participants,
-        ).cast(),
+        overrides: [
+          ..._sharedOverrides(
+            isKeeper: isKeeper,
+            messages: messages,
+            session: session,
+            authState: authState,
+            currentScreen: currentScreen,
+            participants: participants,
+          ).cast(),
+          if (participantsProvider != null)
+            sessionParticipantsProvider.overrideWith(
+              (ref) => ref.watch(participantsProvider),
+            ),
+        ],
         child: MaterialApp(
           home: SessionKeyboardShortcuts(
             child: useScaffold
@@ -252,6 +274,11 @@ void main() {
   }
 
   group('SessionChatSheet', () {
+    final groupParticipants = [
+      testParticipant('keeper-1', name: 'Heather'),
+      testParticipant('lucas', name: 'Lucas'),
+      testParticipant('third', name: 'Third'),
+    ];
     late MockSessionController session;
     late MockSessionMessagingController messaging;
     late MockSessionDeviceController devices;
@@ -290,6 +317,464 @@ void main() {
       }
     }
 
+    for (final isKeeper in [true, false]) {
+      final role = isKeeper ? 'Keeper' : 'participant';
+      final localIdentity = isKeeper ? 'keeper-1' : 'lucas';
+      final recipient = isKeeper ? 'lucas' : 'keeper-1';
+      final recipientName = isKeeper ? 'Lucas' : 'Heather';
+
+      testWidgets(
+        '$role defaults to private chat and cannot select empty Everyone history',
+        (tester) async {
+          await pumpChatSheet(
+            tester,
+            isKeeper: isKeeper,
+            messages: const [],
+            session: session,
+            authState: AuthState.authenticated(
+              user: UserSchema(
+                email: '$localIdentity@example.com',
+                slug: Omittable(localIdentity),
+                name: Omittable(role),
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                circleCount: 0,
+                dateCreated: DateTime(2024),
+              ),
+            ),
+          );
+
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(SessionChatPanel)),
+          );
+          check(
+            container.read(sessionChatThreadTargetProvider),
+          ).equals(recipient);
+          await tester.enterText(find.byType(TextField), 'Private hello');
+          await tester.pump();
+          await tester.tap(find.byKey(const ValueKey('message-input-send')));
+          await tester.pump();
+          verify(
+            () => messaging.sendMessage(
+              'Private hello',
+              recipientIdentity: recipient,
+            ),
+          ).called(1);
+
+          await tester.tap(find.text(recipientName).first);
+          await tester.pumpAndSettle();
+          check(
+            tester.widgetList(
+              find.text('Available when more participants join'),
+            ),
+          ).length.equals(1);
+          await tester.tap(find.text('Everyone').last);
+          await tester.pumpAndSettle();
+          check(
+            container.read(sessionChatThreadTargetProvider),
+          ).equals(recipient);
+        },
+      );
+
+      testWidgets('$role can select unread Everyone history with two people', (
+        tester,
+      ) async {
+        await pumpChatSheet(
+          tester,
+          isKeeper: isKeeper,
+          messages: const [
+            SessionChatMessage(
+              id: 'group-history',
+              sender: false,
+              message: 'Earlier message to everyone',
+              timestamp: 1,
+            ),
+          ],
+          session: session,
+          authState: AuthState.authenticated(
+            user: UserSchema(
+              email: '$localIdentity@example.com',
+              slug: Omittable(localIdentity),
+              name: Omittable(role),
+              profileAvatarType: ProfileAvatarTypeEnum.td,
+              circleCount: 0,
+              dateCreated: DateTime(2024),
+            ),
+          ),
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SessionChatPanel)),
+        );
+        check(
+          container.read(sessionChatThreadTargetProvider),
+        ).equals(recipient);
+        container
+            .read(sessionChatUnreadThreadsProvider.notifier)
+            .markUnread(null);
+        await tester.pump();
+        check(
+          container.read(sessionChatUnreadThreadsProvider).contains(null),
+        ).isTrue();
+        check(
+          tester.widgetList(find.text('Earlier message to everyone')),
+        ).isEmpty();
+
+        await tester.tap(find.text(recipientName).first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Everyone').last);
+        await tester.pumpAndSettle();
+        check(container.read(sessionChatThreadTargetProvider)).isNull();
+        check(
+          tester.widgetList(find.text('Earlier message to everyone')),
+        ).length.equals(1);
+        check(
+          container.read(sessionChatUnreadThreadsProvider).contains(null),
+        ).isFalse();
+      });
+
+      testWidgets(
+        '$role defaults to Everyone when a third person joins before chat opens',
+        (tester) async {
+          final participantsProvider =
+              NotifierProvider<
+                _TestParticipantsNotifier,
+                List<ParticipantInfo>
+              >(
+                () => _TestParticipantsNotifier(
+                  groupParticipants.take(2).toList(),
+                ),
+              );
+          final container = ProviderContainer(
+            overrides: [
+              ..._sharedOverrides(
+                isKeeper: isKeeper,
+                messages: const [],
+                session: session,
+                participants: groupParticipants,
+                authState: AuthState.authenticated(
+                  user: UserSchema(
+                    email: '$localIdentity@example.com',
+                    slug: Omittable(localIdentity),
+                    name: Omittable(role),
+                    profileAvatarType: ProfileAvatarTypeEnum.td,
+                    circleCount: 0,
+                    dateCreated: DateTime(2024),
+                  ),
+                ),
+              ).cast(),
+              sessionParticipantsProvider.overrideWith(
+                (ref) => ref.watch(participantsProvider),
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+          check(container.read(sessionParticipantsProvider).length).equals(2);
+          container
+              .read(participantsProvider.notifier)
+              .add(groupParticipants[2]);
+
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: const MaterialApp(
+                home: SessionKeyboardShortcuts(
+                  child: Scaffold(body: SessionChatPanel()),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          check(container.read(sessionChatThreadTargetProvider)).isNull();
+          check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
+          if (isKeeper) {
+            await tester.enterText(find.byType(TextField), 'Hello everyone');
+            await tester.pump();
+            await tester.tap(find.byKey(const ValueKey('message-input-send')));
+            await tester.pump();
+            verify(
+              () => messaging.sendMessage(
+                'Hello everyone',
+                recipientIdentity: null,
+              ),
+            ).called(1);
+          }
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        },
+      );
+
+      testWidgets(
+        '$role switches from automatic private chat to Everyone when a third person joins',
+        (tester) async {
+          final participantsProvider =
+              NotifierProvider<
+                _TestParticipantsNotifier,
+                List<ParticipantInfo>
+              >(
+                () => _TestParticipantsNotifier([
+                  testParticipant('keeper-1', name: 'Heather'),
+                  testParticipant('lucas', name: 'Lucas'),
+                ]),
+              );
+          await pumpChatSheet(
+            tester,
+            isKeeper: isKeeper,
+            messages: const [],
+            session: session,
+            participantsProvider: participantsProvider,
+            authState: AuthState.authenticated(
+              user: UserSchema(
+                email: '$localIdentity@example.com',
+                slug: Omittable(localIdentity),
+                name: Omittable(role),
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                circleCount: 0,
+                dateCreated: DateTime(2024),
+              ),
+            ),
+          );
+
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(SessionChatPanel)),
+          );
+          check(
+            container.read(sessionChatThreadTargetProvider),
+          ).equals(recipient);
+          container
+              .read(participantsProvider.notifier)
+              .add(testParticipant('third', name: 'Third'));
+          await tester.pumpAndSettle();
+          check(container.read(sessionChatThreadTargetProvider)).isNull();
+          check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
+        },
+      );
+
+      for (final explicit in [false, true]) {
+        testWidgets(
+          '$role ${explicit ? 'keeps an explicitly selected' : 'clears the automatically selected'} peer when they leave',
+          (tester) async {
+            final participantsProvider =
+                NotifierProvider<
+                  _TestParticipantsNotifier,
+                  List<ParticipantInfo>
+                >(
+                  () => _TestParticipantsNotifier(
+                    groupParticipants.take(2).toList(),
+                  ),
+                );
+            await pumpChatSheet(
+              tester,
+              isKeeper: isKeeper,
+              messages: const [],
+              session: session,
+              participantsProvider: participantsProvider,
+              authState: AuthState.authenticated(
+                user: UserSchema(
+                  email: '$localIdentity@example.com',
+                  slug: Omittable(localIdentity),
+                  name: Omittable(role),
+                  profileAvatarType: ProfileAvatarTypeEnum.td,
+                  circleCount: 0,
+                  dateCreated: DateTime(2024),
+                ),
+              ),
+            );
+            final container = ProviderScope.containerOf(
+              tester.element(find.byType(SessionChatPanel)),
+            );
+            check(
+              container.read(sessionChatThreadTargetProvider),
+            ).equals(recipient);
+            if (explicit) {
+              await tester.tap(find.text(recipientName).first);
+              await tester.pumpAndSettle();
+              await tester.tap(find.text(recipientName).last);
+              await tester.pumpAndSettle();
+            }
+
+            container
+                .read(participantsProvider.notifier)
+                .remove(groupParticipants[isKeeper ? 1 : 0]);
+            await tester.pumpAndSettle();
+            if (explicit) {
+              check(
+                container.read(sessionChatThreadTargetProvider),
+              ).equals(recipient);
+            } else {
+              check(container.read(sessionChatThreadTargetProvider)).isNull();
+            }
+          },
+        );
+      }
+
+      testWidgets(
+        '$role reopens to Everyone after a third person joins while chat is closed',
+        (tester) async {
+          final participantsProvider =
+              NotifierProvider<
+                _TestParticipantsNotifier,
+                List<ParticipantInfo>
+              >(
+                () => _TestParticipantsNotifier(
+                  groupParticipants.take(2).toList(),
+                ),
+              );
+          final container = ProviderContainer(
+            overrides: [
+              ..._sharedOverrides(
+                isKeeper: isKeeper,
+                messages: const [],
+                session: session,
+                participants: groupParticipants,
+                authState: AuthState.authenticated(
+                  user: UserSchema(
+                    email: '$localIdentity@example.com',
+                    slug: Omittable(localIdentity),
+                    name: Omittable(role),
+                    profileAvatarType: ProfileAvatarTypeEnum.td,
+                    circleCount: 0,
+                    dateCreated: DateTime(2024),
+                  ),
+                ),
+              ).cast(),
+              sessionParticipantsProvider.overrideWith(
+                (ref) => ref.watch(participantsProvider),
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+          Widget host({required bool open}) => UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              home: SessionKeyboardShortcuts(
+                child: Scaffold(
+                  body: open
+                      ? const SessionChatPanel()
+                      : const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          );
+
+          await tester.pumpWidget(host(open: true));
+          await tester.pumpAndSettle();
+          check(
+            container.read(sessionChatThreadTargetProvider),
+          ).equals(recipient);
+          await tester.pumpWidget(host(open: false));
+          await tester.pumpAndSettle();
+          container
+              .read(participantsProvider.notifier)
+              .add(groupParticipants[2]);
+          await tester.pump();
+          await tester.pumpWidget(host(open: true));
+          await tester.pumpAndSettle();
+          check(container.read(sessionChatThreadTargetProvider)).isNull();
+          check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        },
+      );
+
+      testWidgets(
+        '$role keeps the auto-selected peer after explicitly selecting them and a third joins',
+        (tester) async {
+          final participantsProvider =
+              NotifierProvider<
+                _TestParticipantsNotifier,
+                List<ParticipantInfo>
+              >(
+                () => _TestParticipantsNotifier(
+                  groupParticipants.take(2).toList(),
+                ),
+              );
+          await pumpChatSheet(
+            tester,
+            isKeeper: isKeeper,
+            messages: const [],
+            session: session,
+            participants: groupParticipants,
+            participantsProvider: participantsProvider,
+            authState: AuthState.authenticated(
+              user: UserSchema(
+                email: '$localIdentity@example.com',
+                slug: Omittable(localIdentity),
+                name: Omittable(role),
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                circleCount: 0,
+                dateCreated: DateTime(2024),
+              ),
+            ),
+          );
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(SessionChatPanel)),
+          );
+          check(
+            container.read(sessionChatThreadTargetProvider),
+          ).equals(recipient);
+          await tester.tap(find.text(recipientName).first);
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(recipientName).last);
+          await tester.pumpAndSettle();
+          container
+              .read(participantsProvider.notifier)
+              .add(groupParticipants[2]);
+          await tester.pumpAndSettle();
+          check(
+            container.read(sessionChatThreadTargetProvider),
+          ).equals(recipient);
+          check(tester.widgetList(find.text(recipientName))).isNotEmpty();
+        },
+      );
+
+      testWidgets(
+        '$role keeps an explicitly selected private thread when the group grows',
+        (tester) async {
+          final participantsProvider =
+              NotifierProvider<
+                _TestParticipantsNotifier,
+                List<ParticipantInfo>
+              >(() => _TestParticipantsNotifier(groupParticipants));
+          await pumpChatSheet(
+            tester,
+            isKeeper: isKeeper,
+            messages: const [],
+            session: session,
+            participants: groupParticipants,
+            participantsProvider: participantsProvider,
+            authState: AuthState.authenticated(
+              user: UserSchema(
+                email: '$localIdentity@example.com',
+                slug: Omittable(localIdentity),
+                name: Omittable(role),
+                profileAvatarType: ProfileAvatarTypeEnum.td,
+                circleCount: 0,
+                dateCreated: DateTime(2024),
+              ),
+            ),
+          );
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(SessionChatPanel)),
+          );
+          await tester.tap(find.text('Everyone').first);
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(recipientName).last);
+          await tester.pumpAndSettle();
+          check(
+            container.read(sessionChatThreadTargetProvider),
+          ).equals(recipient);
+
+          container
+              .read(participantsProvider.notifier)
+              .add(testParticipant('fourth', name: 'Fourth'));
+          await tester.pumpAndSettle();
+          check(
+            container.read(sessionChatThreadTargetProvider),
+          ).equals(recipient);
+          check(tester.widgetList(find.text(recipientName))).isNotEmpty();
+        },
+      );
+    }
+
     testWidgets(
       'shows the Everyone hint and private Keeper CTA for participants',
       (tester) async {
@@ -320,7 +805,9 @@ void main() {
         check(
           tester.widgetList(find.text('Message Keeper privately')),
         ).length.equals(1);
-        check(tester.widgetList(find.byType(MessageInputBar))).length.equals(0);
+        check(
+          tester.widget<TextField>(find.byType(TextField)).enabled,
+        ).equals(false);
         check(
           tester
               .widget<Material>(
@@ -472,6 +959,7 @@ void main() {
         isKeeper: true,
         messages: [group, private],
         session: session,
+        participants: groupParticipants,
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'keeper@example.com',
@@ -525,6 +1013,7 @@ void main() {
         isKeeper: false,
         messages: const [],
         session: session,
+        participants: groupParticipants,
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'lucas@example.com',
@@ -537,9 +1026,20 @@ void main() {
         ),
       );
 
+      final everyoneComposer = tester.getRect(find.byType(MessageInputBar));
+      check(
+        tester.widget<TextField>(find.byType(TextField)).enabled,
+      ).equals(false);
+
       await tester.tap(find.text('Message Keeper privately'));
       await tester.pumpAndSettle();
 
+      check(
+        tester.getRect(find.byType(MessageInputBar)),
+      ).equals(everyoneComposer);
+      check(
+        tester.widget<TextField>(find.byType(TextField)).enabled,
+      ).equals(true);
       check(
         tester.widgetList(find.text('View Everyone messages')),
       ).length.equals(1);
@@ -565,6 +1065,12 @@ void main() {
       await tester.tap(find.text('View Everyone messages'));
       await tester.pumpAndSettle();
 
+      check(
+        tester.getRect(find.byType(MessageInputBar)),
+      ).equals(everyoneComposer);
+      check(
+        tester.widget<TextField>(find.byType(TextField)).enabled,
+      ).equals(false);
       check(
         tester.widgetList(find.text('Message Keeper privately')),
       ).length.equals(1);
@@ -697,6 +1203,7 @@ void main() {
         isKeeper: false,
         messages: [message],
         session: session,
+        participants: groupParticipants,
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'lucas@example.com',
@@ -808,6 +1315,7 @@ void main() {
         isKeeper: true,
         messages: const [],
         session: session,
+        participants: groupParticipants,
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'keeper@example.com',
@@ -872,12 +1380,13 @@ void main() {
       expect(find.text('Dropped message'), findsOneWidget);
     });
 
-    testWidgets('opens the recipient dropdown from the header', (tester) async {
+    testWidgets('selects a recipient from the header dropdown', (tester) async {
       await pumpChatSheet(
         tester,
         isKeeper: true,
         messages: const [],
         session: session,
+        participants: groupParticipants,
         authState: AuthState.authenticated(
           user: UserSchema(
             email: 'keeper@example.com',
@@ -896,6 +1405,12 @@ void main() {
       expect(find.text('Lucas'), findsWidgets);
       expect(find.textContaining('only you can post'), findsOneWidget);
 
+      final everyoneOpen = tester.getSemantics(find.text('Everyone').last);
+      check(everyoneOpen.flagsCollection.isButton).isTrue();
+      check(
+        everyoneOpen.flagsCollection.isSelected.toBoolOrNull(),
+      ).equals(true);
+
       await tester.tap(find.text('Lucas').last);
       await tester.pumpAndSettle();
 
@@ -905,6 +1420,19 @@ void main() {
       check(
         tester.widgetList(find.text('Private messages with Lucas')),
       ).length.equals(1);
+
+      // Re-open on the Lucas thread and confirm selection moved.
+      await tester.tap(find.text('Lucas').first);
+      await tester.pumpAndSettle();
+
+      final lucasRow = tester.getSemantics(find.text('Lucas').last);
+      check(lucasRow.flagsCollection.isButton).isTrue();
+      check(lucasRow.flagsCollection.isSelected.toBoolOrNull()).equals(true);
+
+      final everyoneRow = tester.getSemantics(find.text('Everyone').last);
+      check(
+        everyoneRow.flagsCollection.isSelected.toBoolOrNull(),
+      ).equals(false);
     });
 
     testWidgets(

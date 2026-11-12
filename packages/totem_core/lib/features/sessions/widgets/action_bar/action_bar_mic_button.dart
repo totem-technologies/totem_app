@@ -8,11 +8,7 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 /// Builds the live level indicator shown in the microphone button while the
 /// microphone is on.
 typedef MicrophoneLevelBuilder =
-    Widget Function(
-      Color color,
-      double iconSize,
-      int barCount,
-    );
+    Widget Function(Color color, double iconSize, int barCount);
 
 class ActionBarMicButton extends StatefulWidget {
   const ActionBarMicButton({

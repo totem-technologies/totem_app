@@ -130,9 +130,9 @@ class SessionAdmissionList extends StatelessWidget {
             guest.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: AppTheme.slate,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(color: AppTheme.slate),
           ),
         ),
       ],

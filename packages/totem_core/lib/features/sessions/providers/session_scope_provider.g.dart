@@ -1255,24 +1255,30 @@ final class SessionThreadMessagesFamily extends $Family
   String toString() => r'sessionThreadMessagesProvider';
 }
 
-/// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
+/// Whether in-call chat is open.
 ///
-/// Reset on room entry, so a docked sidebar in one circle doesn't open the
-/// panel on entry to the next.
+/// Single source of truth for both the docked desktop rail and the phone /
+/// tablet overlay. The room screen watches this flag plus the layout
+/// breakpoint and presents exactly one host. Reset on room entry so a panel
+/// open in one circle does not carry into the next.
 
 @ProviderFor(SessionChatOpen)
 final sessionChatOpenProvider = SessionChatOpenProvider._();
 
-/// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
+/// Whether in-call chat is open.
 ///
-/// Reset on room entry, so a docked sidebar in one circle doesn't open the
-/// panel on entry to the next.
+/// Single source of truth for both the docked desktop rail and the phone /
+/// tablet overlay. The room screen watches this flag plus the layout
+/// breakpoint and presents exactly one host. Reset on room entry so a panel
+/// open in one circle does not carry into the next.
 final class SessionChatOpenProvider
     extends $NotifierProvider<SessionChatOpen, bool> {
-  /// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
+  /// Whether in-call chat is open.
   ///
-  /// Reset on room entry, so a docked sidebar in one circle doesn't open the
-  /// panel on entry to the next.
+  /// Single source of truth for both the docked desktop rail and the phone /
+  /// tablet overlay. The room screen watches this flag plus the layout
+  /// breakpoint and presents exactly one host. Reset on room entry so a panel
+  /// open in one circle does not carry into the next.
   SessionChatOpenProvider._()
     : super(
         from: null,
@@ -1302,10 +1308,12 @@ final class SessionChatOpenProvider
 
 String _$sessionChatOpenHash() => r'3724669903597dbf53e14b93b24f58ec9fb33965';
 
-/// Docked desktop sidebar visibility. Modal sheets keep their own local flag.
+/// Whether in-call chat is open.
 ///
-/// Reset on room entry, so a docked sidebar in one circle doesn't open the
-/// panel on entry to the next.
+/// Single source of truth for both the docked desktop rail and the phone /
+/// tablet overlay. The room screen watches this flag plus the layout
+/// breakpoint and presents exactly one host. Reset on room entry so a panel
+/// open in one circle does not carry into the next.
 
 abstract class _$SessionChatOpen extends $Notifier<bool> {
   bool build();
@@ -1462,9 +1470,46 @@ final class SessionChatThreadTargetProvider
         retry: null,
         name: r'sessionChatThreadTargetProvider',
         isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[
+          sessionParticipantsProvider,
+          localParticipantIdentityProvider,
+          keeperIdentityProvider,
+          currentSessionEventProvider,
+          sessionMessagesProvider,
+        ],
+        $allTransitiveDependencies: <ProviderOrFamily>{
+          SessionChatThreadTargetProvider.$allTransitiveDependencies0,
+          SessionChatThreadTargetProvider.$allTransitiveDependencies1,
+          SessionChatThreadTargetProvider.$allTransitiveDependencies2,
+          SessionChatThreadTargetProvider.$allTransitiveDependencies3,
+          SessionChatThreadTargetProvider.$allTransitiveDependencies4,
+          SessionChatThreadTargetProvider.$allTransitiveDependencies5,
+          SessionChatThreadTargetProvider.$allTransitiveDependencies6,
+          SessionChatThreadTargetProvider.$allTransitiveDependencies7,
+          SessionChatThreadTargetProvider.$allTransitiveDependencies8,
+          SessionChatThreadTargetProvider.$allTransitiveDependencies9,
+          SessionChatThreadTargetProvider.$allTransitiveDependencies10,
+        },
       );
+
+  static final $allTransitiveDependencies0 = sessionParticipantsProvider;
+  static final $allTransitiveDependencies1 =
+      SessionParticipantsProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      SessionParticipantsProvider.$allTransitiveDependencies1;
+  static final $allTransitiveDependencies3 =
+      SessionParticipantsProvider.$allTransitiveDependencies2;
+  static final $allTransitiveDependencies4 =
+      SessionParticipantsProvider.$allTransitiveDependencies3;
+  static final $allTransitiveDependencies5 =
+      SessionParticipantsProvider.$allTransitiveDependencies4;
+  static final $allTransitiveDependencies6 = localParticipantIdentityProvider;
+  static final $allTransitiveDependencies7 =
+      LocalParticipantIdentityProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies8 =
+      LocalParticipantIdentityProvider.$allTransitiveDependencies2;
+  static final $allTransitiveDependencies9 = currentSessionEventProvider;
+  static final $allTransitiveDependencies10 = sessionMessagesProvider;
 
   @override
   String debugGetCreateSourceHash() => _$sessionChatThreadTargetHash();
@@ -1483,7 +1528,7 @@ final class SessionChatThreadTargetProvider
 }
 
 String _$sessionChatThreadTargetHash() =>
-    r'adf11fc3d780beaf532b047a1ab893c516798a0e';
+    r'6c00519f0e7e50a9bbc14c106a9414f5d3ab186f';
 
 /// Current in-call thread. Null is the Everyone group thread.
 ///
@@ -2033,7 +2078,7 @@ final class FeaturedTurnStartTimeProvider
 }
 
 String _$featuredTurnStartTimeHash() =>
-    r'e9777341fb62a82b48e9b9422e66e5cda8c0d1a9';
+    r'1627bec50b9acab8aceb8ae33e1c10063a7c89d4';
 
 /// Participant expected to speak next.
 

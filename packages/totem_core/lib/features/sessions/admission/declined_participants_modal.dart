@@ -134,9 +134,8 @@ class _DeclinedParticipantsState extends ConsumerState<DeclinedParticipants> {
         Flexible(
           child: identities == null
               ? declined.when(
-                  loading: () => const Center(
-                    child: CircularProgressIndicator.adaptive(),
-                  ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator.adaptive()),
                   error: (error, stackTrace) => ErrorScreen(
                     hideAppBar: true,
                     showHomeButton: false,

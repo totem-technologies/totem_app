@@ -1,7 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'package:degenerate_runtime/degenerate_runtime.dart';
-
 import 'event_request_event.dart';
 
 /// POST body. Includes the event and the client's last-seen version

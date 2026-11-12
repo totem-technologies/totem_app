@@ -74,7 +74,8 @@ async function build() {
       '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
       '-pix_fmt', 'yuv420p', '-movflags', '+faststart', resolve(buildDir, 'loop.mp4')]);
   }
-  const sdk = JSON.parse(execFileSync('flutter', ['--version', '--machine'], {encoding: 'utf8'}));
+  const sdk = JSON.parse(execFileSync('flutter', ['--version', '--machine'],
+      {cwd: resolve(root, 'packages/totem_benchmark'), encoding: 'utf8'}));
   const metadata = {
     builtAt: new Date().toISOString(), commit: git('rev-parse', 'HEAD'),
     trackedDiffSha256: hash(git('diff', 'HEAD')), status: git('status', '--short'),

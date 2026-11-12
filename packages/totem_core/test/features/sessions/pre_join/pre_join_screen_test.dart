@@ -403,9 +403,7 @@ void main() {
   for (final isKeeper in [true, false]) {
     testWidgets(
       'welcomes ${isKeeper ? 'the Keeper' : 'a participant'} by name',
-      (
-        tester,
-      ) async {
+      (tester) async {
         await pumpScreen(tester, earlyParticipant: !isKeeper);
 
         check(find.text('Welcome, Test User!').evaluate()).length.equals(1);
@@ -733,9 +731,7 @@ void main() {
         tester.element(find.byType(PreJoinScreen)),
       );
       final flow =
-          (container.read(
-                  preJoinFlowControllerProvider(_slug).notifier,
-                )
+          (container.read(preJoinFlowControllerProvider(_slug).notifier)
                 as _MutableFlowController)
             ..setPhase(PreJoinFlowPhase.joining);
       await tester.pump();
@@ -948,9 +944,7 @@ void main() {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(PreJoinScreen)),
       );
-      (container.read(
-                preJoinFlowControllerProvider(_slug).notifier,
-              )
+      (container.read(preJoinFlowControllerProvider(_slug).notifier)
               as _MutableFlowController)
           .setPhase(
             PreJoinFlowPhase.pending,

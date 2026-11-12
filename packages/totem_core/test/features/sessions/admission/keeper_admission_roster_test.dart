@@ -93,7 +93,7 @@ void main() {
       await first.read(provider.notifier).persist();
       subscription.close();
       await first.pump();
-      check(first.exists(provider)).isFalse();
+      check(first.read(provider.exists)).isFalse();
       first.dispose();
 
       final reloaded = _container(preferences);
@@ -101,10 +101,9 @@ void main() {
       final restored = await reloaded.read(provider.future);
       check(restored.keeperGeneration).equals(store.keeperGeneration);
       check(restored.revision).equals(4);
-      check(restored.members.toSet()).deepEquals({
-        'muted-participant',
-        'pending-participant',
-      });
+      check(
+        restored.members.toSet(),
+      ).deepEquals({'muted-participant', 'pending-participant'});
       check(
         restored.awaitingReadiness.toSet(),
       ).deepEquals({'pending-participant'});
@@ -121,28 +120,25 @@ void main() {
     },
   );
 
-  test(
-    'surfaces read and schema failures',
-    () async {
-      final provider = keeperAdmissionRosterProvider('session-a', 'keeper-a');
-      final readFailure = _container(_FakePreferences()..failedReads = 1);
-      addTearDown(readFailure.dispose);
+  test('surfaces read and schema failures', () async {
+    final provider = keeperAdmissionRosterProvider('session-a', 'keeper-a');
+    final readFailure = _container(_FakePreferences()..failedReads = 1);
+    addTearDown(readFailure.dispose);
 
-      await check(readFailure.read(provider.future)).throws<StateError>();
-      check(readFailure.read(provider).hasError).isTrue();
+    await check(readFailure.read(provider.future)).throws<StateError>();
+    check(readFailure.read(provider).hasError).isTrue();
 
-      final malformedPreferences = _FakePreferences()
-        ..values[_key('session-a', 'keeper-a')] = jsonEncode(
-          _payload(members: ['x'], awaitingReadiness: ['not-a-member']),
-        );
-      final malformed = _container(malformedPreferences);
-      addTearDown(malformed.dispose);
-      await check(
-        malformed.read(provider.future),
-      ).throws<CorruptSessionAdmissionData>();
-      check(malformed.read(provider).hasError).isTrue();
-    },
-  );
+    final malformedPreferences = _FakePreferences()
+      ..values[_key('session-a', 'keeper-a')] = jsonEncode(
+        _payload(members: ['x'], awaitingReadiness: ['not-a-member']),
+      );
+    final malformed = _container(malformedPreferences);
+    addTearDown(malformed.dispose);
+    await check(
+      malformed.read(provider.future),
+    ).throws<CorruptSessionAdmissionData>();
+    check(malformed.read(provider).hasError).isTrue();
+  });
 
   test('rejects invalid persisted roster data', () async {
     final provider = keeperAdmissionRosterProvider('session-a', 'keeper-a');

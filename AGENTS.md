@@ -57,12 +57,13 @@ Leak tracking is enabled through:
 
 ## SDK and dependency resolution
 
-- The default SDK in `.fvmrc` is Flutter 3.50.0-0.2.pre (beta) for Android,
-  web, desktop, and shared validation. Use `fvm flutter` / `fvm dart`.
-- Only iOS uses Flutter 3.44.9 via `fvm spawn 3.44.9` or `make run-ios`.
-- Maintain only `pubspec.lock`, resolved with the default beta SDK. Run ordinary
-  `pub get` with the selected SDK; do not add lockfile snapshots, enforce the
-  other SDK's resolution, or delete `.dart_tool` when switching SDKs.
+- Use Flutter 3.50.0 (stable), pinned in `.flutter-version`, for all platforms
+  and validation. Use `flutter` and its bundled `dart` directly.
+- Run `flutter pub get` to resolve dependencies and `flutter doctor` to check
+  the environment. Maintain the root `pubspec.lock`; see README.md for setup,
+  Zed's worktree hook, and SDK upgrade checks.
+- On cloud/Linux, Xcode is not needed for analysis; iOS builds require macOS
+  and Xcode.
 - Pre-push intentionally runs no tests or analysis. CI is the full-validation
   gate; do not restore expensive automatic push checks.
 

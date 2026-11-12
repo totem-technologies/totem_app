@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
+
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -19,6 +21,9 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
+import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
@@ -149,6 +154,18 @@ List<String> _participantGridIdentities(WidgetTester tester) {
       .toList();
 }
 
+class _MutableSessionState extends Notifier<SessionRoomState> {
+  _MutableSessionState(this.initial);
+
+  final SessionRoomState initial;
+
+  @override
+  SessionRoomState build() => initial;
+
+  SessionRoomState get value => state;
+  set value(SessionRoomState value) => state = value;
+}
+
 class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   @override
   SessionChatMessage? build() => null;
@@ -216,6 +233,7 @@ void main() {
     Size viewportSize = const Size(390, 844),
     RoomScreen currentScreen = RoomScreen.listening,
     FakeMediaPermissionAdapter? adapter,
+    NotifierProvider<_MutableSessionState, SessionRoomState>? mutableState,
   }) async {
     when(() => session.state).thenReturn(sessionState);
     tester.view
@@ -240,7 +258,12 @@ void main() {
               testAuthenticatedState(slug: currentUserSlug),
             ),
           ),
-          currentSessionStateProvider.overrideWithValue(sessionState),
+          if (mutableState == null)
+            currentSessionStateProvider.overrideWithValue(sessionState)
+          else
+            currentSessionStateProvider.overrideWith(
+              (ref) => ref.watch(mutableState),
+            ),
           admittedSessionParticipantIdentitiesProvider.overrideWith(
             () => TestAdmittedSessionParticipantIdentities({
               sessionState.roomState.keeper,
@@ -273,7 +296,14 @@ void main() {
             final state = ref.watch(currentSessionStateProvider);
             return state?.speakingNextParticipant();
           }),
-          resolveCurrentScreenProvider.overrideWith((ref) => currentScreen),
+          resolveCurrentScreenProvider.overrideWith((ref) {
+            if (mutableState == null) return currentScreen;
+            final state = ref.watch(mutableState);
+            return state.roomState.status == RoomStatus.active &&
+                    state.roomState.currentSpeaker.value == currentUserSlug
+                ? RoomScreen.speaking
+                : RoomScreen.listening;
+          }),
           lastSessionMessageProvider.overrideWith(
             (ref) => ref.watch(_testLastMessageProvider),
           ),
@@ -282,7 +312,18 @@ void main() {
         child: MaterialApp(
           home: SessionKeyboardShortcuts(
             child: Scaffold(
-              body: ListeningTurnScreen(session: _createTestSession()),
+              body: mutableState == null
+                  ? ListeningTurnScreen(session: _createTestSession())
+                  : Consumer(
+                      builder: (context, ref, child) {
+                        return ref.watch(resolveCurrentScreenProvider) ==
+                                RoomScreen.speaking
+                            ? SpeakingTurnScreen(session: _createTestSession())
+                            : ListeningTurnScreen(
+                                session: _createTestSession(),
+                              );
+                      },
+                    ),
             ),
           ),
         ),
@@ -302,6 +343,151 @@ void main() {
     }
 
     group('participant grid', () {
+      testWidgets(
+        'keeps participants and controls separate across turn transitions',
+        (tester) async {
+          final participants = [
+            testParticipant('user-1', name: 'Local', isLocal: true),
+            _mockRemote('user-2', 'Second'),
+            _mockRemote('user-3', 'Third'),
+            _mockRemote('user-4', 'Fourth'),
+            _mockRemote('user-5', 'Fifth'),
+            _mockRemote('user-6', 'Sixth'),
+            _mockRemote('keeper-1', 'Keeper'),
+          ];
+          final everyone = participants.map((p) => p.identity).toSet();
+          // The seventh participant joins after the six-person waiting grid.
+          final waitingParticipants = participants
+              .where((p) => p.identity != 'user-6')
+              .toList();
+          SessionRoomState state(RoomStatus status, String speaker) =>
+              _buildState(
+                status: status,
+                currentSpeaker: speaker,
+                nextSpeaker: 'user-2',
+                talkingOrder: const [
+                  'keeper-1',
+                  'user-1',
+                  'user-2',
+                  'user-3',
+                  'user-4',
+                  'user-5',
+                  'user-6',
+                ],
+                participants: status == RoomStatus.waitingRoom
+                    ? waitingParticipants
+                    : participants,
+              );
+          final mutable =
+              NotifierProvider<_MutableSessionState, SessionRoomState>(
+                () => _MutableSessionState(
+                  state(RoomStatus.waitingRoom, 'keeper-1'),
+                ),
+              );
+          await pumpListeningTurn(
+            tester,
+            sessionState: state(RoomStatus.waitingRoom, 'keeper-1'),
+            viewportSize: const Size(1600, 900),
+            admittedIdentities: everyone,
+            mutableState: mutable,
+          );
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(ListeningTurnScreen)),
+          );
+
+          Map<String, Rect> cards() => {
+            for (final element in find.byType(ParticipantCard).evaluate())
+              (element.widget as ParticipantCard).participant.identity: tester
+                  .getRect(find.byWidget(element.widget)),
+          };
+          void checkGeometry(Set<String> identities) {
+            final rects = cards();
+            check(rects.keys.toSet()).deepEquals(identities);
+            final controls = tester.getRect(find.byType(SessionActionBar));
+            const bounds = Rect.fromLTWH(0, 0, 1600, 900);
+            check(bounds.contains(controls.topLeft)).isTrue();
+            check(
+              controls.right <= bounds.right &&
+                  controls.bottom <= bounds.bottom,
+            ).isTrue();
+            for (final rect in rects.values) {
+              check(rect.width > 0 && rect.height > 0).isTrue();
+              check(bounds.contains(rect.topLeft)).isTrue();
+              check(
+                rect.right <= bounds.right && rect.bottom <= bounds.bottom,
+              ).isTrue();
+              check(rect.overlaps(controls)).isFalse();
+              for (final other in rects.values.where(
+                (other) => !identical(other, rect),
+              )) {
+                check(rect.overlaps(other)).isFalse();
+              }
+            }
+          }
+
+          void checkThreeByTwo(Iterable<Rect> rects) {
+            final rows = <double, int>{};
+            for (final rect in rects) {
+              rows.update(rect.top, (count) => count + 1, ifAbsent: () => 1);
+            }
+            check(rows.length).equals(2);
+            check(rows.values.toList()).deepEquals([3, 3]);
+            check(rects.map((rect) => rect.left).toSet().length).equals(3);
+          }
+
+          checkGeometry(everyone.difference({'user-6'}));
+          final waiting = cards();
+          checkThreeByTwo(waiting.values);
+          check(waiting['keeper-1']!.size).equals(waiting['user-1']!.size);
+
+          container.read(mutable.notifier).value = state(
+            RoomStatus.active,
+            'keeper-1',
+          );
+          await tester.pump();
+          checkGeometry(everyone);
+          final listening = cards();
+          check(
+            listening['keeper-1']!.width > listening['user-1']!.width,
+          ).isTrue();
+
+          container.read(mutable.notifier).value = state(
+            RoomStatus.active,
+            'user-1',
+          );
+          await tester.pump();
+          checkGeometry(everyone.difference({'user-1'}));
+          checkThreeByTwo(cards().values);
+          final pass = tester.getRect(find.byType(ActionSliderButton));
+          check(
+            pass.left >= 0 &&
+                pass.top >= 0 &&
+                pass.right <= 1600 &&
+                pass.bottom <= 900,
+          ).isTrue();
+          check(
+            pass.overlaps(tester.getRect(find.byType(SessionActionBar))),
+          ).isFalse();
+          for (final rect in cards().values) {
+            check(rect.overlaps(pass)).isFalse();
+          }
+
+          container.read(mutable.notifier).value = state(
+            RoomStatus.active,
+            'keeper-1',
+          );
+          await tester.pump();
+          checkGeometry(everyone);
+          check(cards()['keeper-1']!.width > cards()['user-1']!.width).isTrue();
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        },
+        // auto_size_text's _checkTextFits does not dispose its TextPainters.
+        experimentalLeakTesting: LeakTesting.settings.withIgnored(
+          classes: <String>['TextPainter'],
+        ),
+      );
+
       testWidgets('waiting applicants stay out of the Keeper grid', (
         tester,
       ) async {
@@ -324,10 +510,9 @@ void main() {
           viewportSize: const Size(1600, 900),
           admittedIdentities: {'admitted'},
         );
-        check(_participantGridIdentities(tester)).deepEquals([
-          'keeper-1',
-          'admitted',
-        ]);
+        check(
+          _participantGridIdentities(tester),
+        ).deepEquals(['keeper-1', 'admitted']);
       });
 
       testWidgets('renders the participant grid for room sizes up to 12', (

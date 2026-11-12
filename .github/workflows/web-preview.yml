@@ -32,11 +32,9 @@ jobs:
           persist-credentials: false
 
       - name: Setup build environment
+        id: setup
         uses: ./.github/actions/setup-environment
         with:
-          flutter-version: "3.50.0-0.2.pre"
-          flutter-channel: beta
-          dart-version: "3.14.0 (build 3.14.0-315.3.beta)"
           firebase_options: ${{ secrets.FIREBASE_OPTIONS_B64 }}
           flavor: staging
 
@@ -46,8 +44,6 @@ jobs:
 
       - name: Build preview
         uses: ./.github/actions/build-web
-        with:
-          flutter-version: "3.50.0-0.2.pre"
         env:
           WEB_ASSET_BASE: ${{ steps.preview.outputs.asset_base }}
 
@@ -77,7 +73,7 @@ jobs:
 
             [Open preview](${{ steps.preview.outputs.url }}) · Backend: https://totem.kbl.io
 
-            Built from ${{ github.event.pull_request.head.sha }} with Flutter 3.50.0-0.2.pre (beta).
+            Built from ${{ github.event.pull_request.head.sha }} with Flutter ${{ steps.setup.outputs.flutter-version }}.
             Staging selects this build for two hours. Open a session to test it.
 
             [Return to normal staging](https://totem.kbl.io/?room_preview=off)

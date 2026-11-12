@@ -268,9 +268,7 @@ void main() {
 
       check(
         tester.widgetList(find.text('Declined Participants')),
-      ).length.equals(
-        1,
-      );
+      ).length.equals(1);
       check(tester.widgetList(find.text('User user-1'))).length.equals(1);
 
       await tester.tap(
@@ -701,9 +699,9 @@ void main() {
       await tester.pump();
 
       check(
-        tester.widgetList(find.text('Choose audio output')),
+        tester.widgetList(find.text('Allow or choose audio output')),
       ).length.equals(1);
-      await tester.tap(find.text('Choose audio output'));
+      await tester.tap(find.text('Allow or choose audio output'));
       verify(() => devices.requestAudioOutputDevice()).called(1);
     });
 
@@ -750,7 +748,9 @@ void main() {
           find.text('Audio output — Controlled by your device'),
         ),
       ).length.equals(1);
-      check(tester.widgetList(find.text('Choose audio output'))).isEmpty();
+      check(
+        tester.widgetList(find.text('Allow or choose audio output')),
+      ).isEmpty();
     });
   });
 }

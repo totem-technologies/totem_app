@@ -82,10 +82,7 @@ void main() {
   });
 
   test('frequency bands preserve the microphone spectrum', () {
-    final levels = frequencyBandLevels(
-      const [-20, -26, -30, -40, -50],
-      0.8,
-    );
+    final levels = frequencyBandLevels(const [-20, -26, -30, -40, -50], 0.8);
 
     check(levels[0]).equals(0.8);
     check(levels[0]).isGreaterThan(levels[1]);
@@ -96,10 +93,7 @@ void main() {
   });
 
   test('frequency bands smooth a dominant middle band into its neighbors', () {
-    final levels = frequencyBandLevels(
-      const [-80, -80, -20, -80, -80],
-      0.8,
-    );
+    final levels = frequencyBandLevels(const [-80, -80, -20, -80, -80], 0.8);
 
     check(levels[1]).isGreaterThan(0);
     check(levels[1]).isLessThan(levels[2]);
