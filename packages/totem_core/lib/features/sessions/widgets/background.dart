@@ -81,10 +81,11 @@ class _RoomBackgroundState extends State<RoomBackground> {
     // mounted room (its notify is already scheduled) and the [mounted]
     // guard on [_notifyBackgroundChanged] would skip work we *do* want:
     // clearing slate/gradient once nothing in the tree owns the chrome.
-    if (_activeCount == 0) {
+    if (_activeCount <= 0) {
       RoomBackground.onBackgroundChanged?.call(
         RoomBackground.defaultPageDecoration,
       );
+      _activeCount = 0;
     }
     super.dispose();
   }

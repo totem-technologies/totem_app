@@ -16,6 +16,7 @@ import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
+import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -266,18 +267,21 @@ class _SessionDisconnectedScreenState
         session != null &&
         sessionReason == SessionDisconnectedReason.keeperEnded;
 
-    return PopScope(
-      canPop: false,
-      child: SessionDisconnectedView(
-        reason: sessionReason,
-        nextSession: sessionReason == SessionDisconnectedReason.banned
-            ? null
-            : _resolveNextSession(),
-        onLike: canGiveFeedback ? () => _sendLike(session) : null,
-        onDislike: canGiveFeedback
-            ? (message) => _sendDislike(session, message)
-            : null,
-        onGoHome: _goHome,
+    return RoomBackground(
+      status: RoomStatus.ended,
+      child: PopScope(
+        canPop: false,
+        child: SessionDisconnectedView(
+          reason: sessionReason,
+          nextSession: sessionReason == SessionDisconnectedReason.banned
+              ? null
+              : _resolveNextSession(),
+          onLike: canGiveFeedback ? () => _sendLike(session) : null,
+          onDislike: canGiveFeedback
+              ? (message) => _sendDislike(session, message)
+              : null,
+          onGoHome: _goHome,
+        ),
       ),
     );
   }

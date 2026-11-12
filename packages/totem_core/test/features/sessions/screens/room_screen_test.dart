@@ -853,7 +853,6 @@ void main() {
         check(
           tester.widgetList(find.byType(SessionErrorScreen)),
         ).length.equals(0);
-        check(tester.widgetList(find.byType(RoomBackground))).length.equals(1);
         await tester.pump(const Duration(seconds: 3));
         await _unmountRoomScreen(tester);
       },
@@ -1220,6 +1219,61 @@ void main() {
         check(container.read(sessionChatOpenProvider)).isFalse();
       },
     );
+
+    testWidgets('reentering a room after unmounting an open chat is safe', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.listening,
+      );
+      final scope = tester.widget<ProviderScope>(
+        find.byType(ProviderScope).first,
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+
+      container.read(sessionChatOpenProvider.notifier).open = true;
+      await tester.pump();
+      await tester.pump();
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: scope.overrides,
+          child: const SizedBox.shrink(),
+        ),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: scope.overrides,
+          child: MaterialApp(
+            home: VideoSessionScreen(
+              sessionSlug: 'another-session',
+              loadingScreen: const SizedBox.shrink(),
+              now: tester.binding.clock.now,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      container.read(sessionChatOpenProvider.notifier).open = true;
+      await tester.pumpAndSettle();
+
+      check(container.read(sessionChatOpenProvider)).isTrue();
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
+      check(tester.takeException()).isNull();
+      await _unmountRoomScreen(tester);
+    });
 
     testWidgets('dismissing the phone sheet clears the open flag', (
       tester,

@@ -14,6 +14,7 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_chat_
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
 import '../../media/test_participants.dart';
+import '../../session_test_fixtures.dart';
 
 class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
   @override
@@ -114,15 +115,101 @@ void main() {
 
     // Button only toggles the shared flag; the room screen presents chat.
     check(container.read(sessionChatOpenProvider)).isTrue();
-    check(tester.widgetList(find.textContaining('New message'))).length.equals(
-      0,
-    );
+    check(
+      tester.widgetList(find.textContaining('New message')),
+    ).length.equals(0);
 
     // Unread clears when the open panel marks the thread read.
     container.read(sessionChatUnreadThreadsProvider.notifier).markRead(null);
     await tester.pump();
     check(tester.widgetList(findPendingBadge())).length.equals(0);
   });
+
+  testWidgets(
+    'tapping an Everyone notification opens group history and clears unread',
+    (tester) async {
+      const message = SessionChatMessage(
+        id: 'group-history',
+        sender: false,
+        message: 'A message for everyone',
+        timestamp: 1,
+      );
+      await pumpWidget(
+        tester,
+        child: SizedBox(
+          height: 500,
+          child: Consumer(
+            builder: (context, ref, child) => Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (ref.watch(sessionChatOpenProvider))
+                  const Expanded(child: SessionChatPanel(embedded: true)),
+                const ActionBarChatButton(),
+              ],
+            ),
+          ),
+        ),
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => FakeAuthController(testAuthenticatedState(slug: 'lucas')),
+          ),
+          lastSessionMessageProvider.overrideWith(
+            (ref) => ref.watch(_testLastMessageProvider),
+          ),
+          sessionMessagesProvider.overrideWith((ref) => const [message]),
+          sessionParticipantsProvider.overrideWith(
+            (ref) => [
+              testParticipant('keeper-1', name: 'Heather'),
+              testParticipant('lucas', name: 'Lucas'),
+            ],
+          ),
+          keeperIdentityProvider.overrideWith((ref) => 'keeper-1'),
+          isCurrentUserKeeperProvider.overrideWith((ref) => false),
+          currentSessionEventProvider.overrideWith((ref) => null),
+        ],
+      );
+
+      try {
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ActionBarChatButton)),
+          listen: false,
+        );
+        await tester.pump();
+        check(
+          container.read(sessionChatThreadTargetProvider),
+        ).equals('keeper-1');
+        container.read(_testLastMessageProvider.notifier).set(message);
+        await tester.pump();
+        check(
+          container.read(sessionChatUnreadThreadsProvider).contains(null),
+        ).isTrue();
+        check(tester.widgetList(findPendingBadge())).length.equals(1);
+
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(find.text('A message for everyone'));
+        await tester.pump();
+        await tester.pump();
+
+        check(container.read(sessionChatOpenProvider)).isTrue();
+        check(container.read(sessionChatThreadTargetProvider)).isNull();
+        check(
+          tester.widgetList(
+            find.descendant(
+              of: find.byType(SessionChatPanel),
+              matching: find.text('A message for everyone'),
+            ),
+          ),
+        ).length.equals(1);
+        check(
+          container.read(sessionChatUnreadThreadsProvider).contains(null),
+        ).isFalse();
+        check(tester.widgetList(findPendingBadge())).isEmpty();
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      }
+    },
+  );
 
   testWidgets('does not show popup for identical message instance', (
     tester,

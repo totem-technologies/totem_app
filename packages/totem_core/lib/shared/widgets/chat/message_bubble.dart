@@ -80,7 +80,20 @@ class _MessageBubbleState extends State<MessageBubble> {
 
   _MessageAction? _actionFor(RegExpMatch match) {
     final rawText = match.group(0)!;
-    final displayText = rawText.replaceFirst(_trailingPunctuation, '');
+    var displayText = rawText.replaceFirst(_trailingPunctuation, '');
+    if (displayText.toLowerCase().startsWith('http')) {
+      const delimiters = {')': '(', ']': '[', '}': '{'};
+      while (displayText.isNotEmpty) {
+        final last = displayText[displayText.length - 1];
+        final opening = delimiters[last];
+        final unmatched =
+            opening != null &&
+            last.allMatches(displayText).length >
+                opening.allMatches(displayText).length;
+        if (!unmatched && !'''.,!?;:'"'''.contains(last)) break;
+        displayText = displayText.substring(0, displayText.length - 1);
+      }
+    }
     if (displayText.isEmpty) return null;
 
     final uri = switch (displayText) {
@@ -140,6 +153,7 @@ class _MessageBubbleState extends State<MessageBubble> {
           // TODO(totem): Use LinkSpan when available
           // https://github.com/flutter/flutter/issues/91600
           recognizer: _recognizers[index],
+          mouseCursor: SystemMouseCursors.click,
         ),
       );
       cursor = action.start + action.text.length;
