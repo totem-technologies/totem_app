@@ -131,7 +131,8 @@ class _RemoteWaveformState extends State<_RemoteWaveform> {
     final level = math.sqrt(
       ((amplitude - noiseGate) / (1 - noiseGate)).clamp(0.0, 1.0),
     );
-    if (level == _lastLevel) return;
+    final previous = _lastLevel;
+    if (level == previous) return;
     _lastLevel = level;
     if (level == 0) {
       if (_levels.value.any((value) => value != 0)) {
@@ -139,7 +140,9 @@ class _RemoteWaveformState extends State<_RemoteWaveform> {
       }
       return;
     }
-    // A fixed, identity-specific contour preserves changes in loudness.
+    // Advance the identity-specific contour only when the sound changes.
+    _phase =
+        (_phase + (level - (previous ?? level)).abs() * 1.5) % (2 * math.pi);
     const weights = [0.52, 0.86, 0.95, 0.86, 0.52];
     _levels.value = List<double>.generate(
       5,

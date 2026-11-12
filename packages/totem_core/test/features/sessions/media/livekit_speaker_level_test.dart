@@ -192,6 +192,38 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('waveform shape depends on level history without idle motion', (
+    tester,
+  ) async {
+    Future<List<double>> playSequence() async {
+      level = 0.6;
+      await pump(tester);
+      final notifier = tester.widget<LevelBars>(find.byType(LevelBars)).levels;
+      final first = List<double>.of(notifier.value);
+      level = 0.3;
+      changes.add(null);
+      level = 0.6;
+      changes.add(null);
+      final returned = List<double>.of(notifier.value);
+      check(returned.every((value) => value >= 0 && value <= 1)).isTrue();
+      check(returned.toString() == first.toString()).isFalse();
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      check(notifier.value).deepEquals(returned);
+      check(tester.binding.hasScheduledFrame).isFalse();
+      changes.add(null);
+      await tester.pump();
+      check(notifier.value).deepEquals(returned);
+      await tester.pumpWidget(const SizedBox.shrink());
+      return returned;
+    }
+
+    final first = await playSequence();
+    final repeated = await playSequence();
+    check(repeated).deepEquals(first);
+  });
+
   testWidgets('waveform intensity increases with successive server levels', (
     tester,
   ) async {
