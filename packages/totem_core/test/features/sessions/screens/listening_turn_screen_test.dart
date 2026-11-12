@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
@@ -481,6 +482,10 @@ void main() {
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
         },
+        // auto_size_text's _checkTextFits does not dispose its TextPainters.
+        experimentalLeakTesting: LeakTesting.settings.withIgnored(
+          classes: <String>['TextPainter'],
+        ),
       );
 
       testWidgets('waiting applicants stay out of the Keeper grid', (
