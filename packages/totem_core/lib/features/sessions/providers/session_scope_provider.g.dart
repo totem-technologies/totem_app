@@ -1475,6 +1475,7 @@ final class SessionChatThreadTargetProvider
           localParticipantIdentityProvider,
           keeperIdentityProvider,
           currentSessionEventProvider,
+          sessionMessagesProvider,
         ],
         $allTransitiveDependencies: <ProviderOrFamily>{
           SessionChatThreadTargetProvider.$allTransitiveDependencies0,
@@ -1487,6 +1488,7 @@ final class SessionChatThreadTargetProvider
           SessionChatThreadTargetProvider.$allTransitiveDependencies7,
           SessionChatThreadTargetProvider.$allTransitiveDependencies8,
           SessionChatThreadTargetProvider.$allTransitiveDependencies9,
+          SessionChatThreadTargetProvider.$allTransitiveDependencies10,
         },
       );
 
@@ -1507,6 +1509,7 @@ final class SessionChatThreadTargetProvider
   static final $allTransitiveDependencies8 =
       LocalParticipantIdentityProvider.$allTransitiveDependencies2;
   static final $allTransitiveDependencies9 = currentSessionEventProvider;
+  static final $allTransitiveDependencies10 = sessionMessagesProvider;
 
   @override
   String debugGetCreateSourceHash() => _$sessionChatThreadTargetHash();
@@ -1525,7 +1528,7 @@ final class SessionChatThreadTargetProvider
 }
 
 String _$sessionChatThreadTargetHash() =>
-    r'ac525a2e4b98377e0a59a668c0ce0563f61a04bd';
+    r'6c00519f0e7e50a9bbc14c106a9414f5d3ab186f';
 
 /// Current in-call thread. Null is the Everyone group thread.
 ///

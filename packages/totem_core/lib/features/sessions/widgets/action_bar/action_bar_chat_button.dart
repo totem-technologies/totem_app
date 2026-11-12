@@ -40,13 +40,11 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
 
   String? _localIdentity() {
     final user = ref.read(authControllerProvider).user;
-    final roomIdentity = ref
-        .read(currentSessionProvider)
-        ?.room
-        ?.localParticipant
-        ?.identity;
-    if (roomIdentity != null && roomIdentity.isNotEmpty) return roomIdentity;
-    return user?.slug.value ?? user?.email;
+    return sessionChatLocalIdentity(
+      roomIdentity: ref.read(localParticipantIdentityProvider),
+      userSlug: user?.slug.value,
+      userEmail: user?.email,
+    );
   }
 
   @override

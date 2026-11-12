@@ -378,6 +378,15 @@ class SessionAdmissionOpen extends _$SessionAdmissionOpen {
   }
 }
 
+String? sessionChatLocalIdentity({
+  required String? roomIdentity,
+  required String? userSlug,
+  required String? userEmail,
+}) {
+  if (roomIdentity != null && roomIdentity.isNotEmpty) return roomIdentity;
+  return userSlug ?? userEmail;
+}
+
 String? sessionChatKeeperIdentity({
   required String? roomKeeper,
   required String? spaceAuthor,
@@ -420,6 +429,7 @@ String? sessionChatTwoPersonPeer(
     localParticipantIdentity,
     keeperIdentity,
     currentSessionEvent,
+    sessionMessages,
   ],
 )
 class SessionChatThreadTarget extends _$SessionChatThreadTarget {
@@ -443,10 +453,12 @@ class SessionChatThreadTarget extends _$SessionChatThreadTarget {
     );
     final peer = _peer();
     _automaticTarget = peer;
+    _explicitEveryonePeer = null;
     return peer;
   }
 
   String? _automaticTarget;
+  String? _explicitEveryonePeer;
   bool _reconcileScheduled = false;
 
   void _scheduleReconcile() {
@@ -461,10 +473,11 @@ class SessionChatThreadTarget extends _$SessionChatThreadTarget {
 
   String? _peer() {
     final user = ref.read(authControllerProvider).user;
-    final roomIdentity = ref.read(localParticipantIdentityProvider);
-    final localIdentity = roomIdentity != null && roomIdentity.isNotEmpty
-        ? roomIdentity
-        : user?.slug.value ?? user?.email;
+    final localIdentity = sessionChatLocalIdentity(
+      roomIdentity: ref.read(localParticipantIdentityProvider),
+      userSlug: user?.slug.value,
+      userEmail: user?.email,
+    );
     return sessionChatTwoPersonPeer(
       ref.read(sessionParticipantsProvider),
       localIdentity,
@@ -482,9 +495,11 @@ class SessionChatThreadTarget extends _$SessionChatThreadTarget {
 
   void _reconcile() {
     final peer = _peer();
-    if (peer != null && state != peer) {
+    if (peer != null &&
+        state != peer &&
+        !(state == null && _explicitEveryonePeer == peer)) {
       _selectAutomatically(peer);
-    } else if (ref.read(sessionParticipantsProvider).length > 2 &&
+    } else if (peer == null &&
         _automaticTarget != null &&
         state == _automaticTarget) {
       target = null;
@@ -496,15 +511,22 @@ class SessionChatThreadTarget extends _$SessionChatThreadTarget {
 
   set target(String? identity) {
     final peer = _peer();
-    if (peer != null && identity != peer) {
+    if (peer != null &&
+        identity != peer &&
+        !(identity == null &&
+            ref
+                .read(sessionMessagesProvider)
+                .any((message) => message.isEveryoneThread))) {
       _selectAutomatically(peer);
       return;
     }
     _automaticTarget = null;
+    _explicitEveryonePeer = identity == null ? peer : null;
     state = identity;
   }
 
   void _selectAutomatically(String identity) {
+    _explicitEveryonePeer = null;
     _automaticTarget = identity;
     state = identity;
   }

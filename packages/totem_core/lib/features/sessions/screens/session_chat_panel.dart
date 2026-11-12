@@ -135,19 +135,12 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     _dropdownController.animateWith(simulation);
   }
 
-  /// LiveKit identity when the room is attached, else the account fallback the
-  /// rest of the panel uses. Shared by [build] and the message listener so
-  /// there is only one fallback chain.
-  static String? _resolveLocalIdentity(String? roomIdentity, String? fallback) {
-    if (roomIdentity != null && roomIdentity.isNotEmpty) return roomIdentity;
-    return fallback;
-  }
-
   String? _localIdentity() {
     final user = ref.read(authControllerProvider).user;
-    return _resolveLocalIdentity(
-      ref.read(localParticipantIdentityProvider),
-      user?.slug.value ?? user?.email,
+    return sessionChatLocalIdentity(
+      roomIdentity: ref.read(localParticipantIdentityProvider),
+      userSlug: user?.slug.value,
+      userEmail: user?.email,
     );
   }
 
@@ -207,9 +200,10 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
     final participants = ref.watch(sessionParticipantsProvider);
     final user = ref.watch(authControllerProvider.select((auth) => auth.user));
     final roomIdentity = ref.watch(localParticipantIdentityProvider);
-    final localIdentity = _resolveLocalIdentity(
-      roomIdentity,
-      user?.slug.value ?? user?.email,
+    final localIdentity = sessionChatLocalIdentity(
+      roomIdentity: roomIdentity,
+      userSlug: user?.slug.value,
+      userEmail: user?.email,
     );
     final keeperIdentity = sessionChatKeeperIdentity(
       roomKeeper: ref.watch(keeperIdentityProvider),
@@ -226,6 +220,12 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
       keeperIdentity,
     );
 
+    final hasEveryoneHistory = ref.watch(
+      sessionMessagesProvider.select(
+        (messages) => messages.any((message) => message.isEveryoneThread),
+      ),
+    );
+    final canViewEveryone = privatePeer == null || hasEveryoneHistory;
     final threadMessages = ref.watch(
       sessionThreadMessagesProvider((
         localIdentity: localIdentity,
@@ -372,7 +372,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                     keeperIdentity: keeperIdentity,
                     localIdentity: localIdentity,
                     participants: participants,
-                    onSelectEveryone: privatePeer != null
+                    onSelectEveryone: !canViewEveryone
                         ? null
                         : () {
                             ref
@@ -395,7 +395,7 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
               ),
             ),
             if (!isKeeper &&
-                privatePeer == null &&
+                canViewEveryone &&
                 (isPrivateThread || keeperIsPresent))
               _ParticipantThreadChip(
                 isPrivateThread: isPrivateThread,
