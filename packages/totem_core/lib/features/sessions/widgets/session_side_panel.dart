@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
@@ -53,17 +55,7 @@ class _SessionSidePanelDrawerRoute extends RawDialogRoute<void> {
            child: _slideFromTrailing(
              context: context,
              animation: animation,
-             child: Material(
-               color: AppTheme.cream,
-               elevation: 6,
-               shadowColor: const Color.fromRGBO(0, 0, 0, 0.16),
-               clipBehavior: Clip.antiAlias,
-               child: SizedBox(
-                 width: sessionSidePanelWidth,
-                 height: MediaQuery.sizeOf(context).height,
-                 child: child,
-               ),
-             ),
+             child: _SessionSidePanelSurface(child: child),
            ),
          ),
        );
@@ -88,6 +80,7 @@ Widget _slideFromTrailing({
 }) {
   if (MediaQuery.disableAnimationsOf(context)) return child;
   return SlideTransition(
+    textDirection: Directionality.of(context),
     position: animation.drive(
       Tween<Offset>(
         begin: const Offset(1, 0),
@@ -155,37 +148,111 @@ class _DockedSessionSidePanelState extends State<DockedSessionSidePanel>
 
   @override
   Widget build(BuildContext context) {
+    final child = _activeChild;
+    // Keep the AnimatedBuilder mounted even without a child: it first reads
+    // the lazy controller, which must exist before the panel opens.
     return AnimatedBuilder(
       animation: _controller,
-      builder: (context, _) {
-        if (_controller.value == 0 && !_controller.isAnimating) {
+      // Built once per open: only the rail's width animates, so the video
+      // column makes room while the fixed-size panel rides its leading edge.
+      // The repaint boundary inside lets the slide move the recorded layer
+      // instead of re-recording the shadow and content every frame.
+      child: child == null ? null : _SessionSidePanelSurface(child: child),
+      builder: (context, slot) {
+        if (slot == null ||
+            (_controller.value == 0 && !_controller.isAnimating)) {
           return const SizedBox.shrink();
         }
-        final child = _activeChild;
-        if (child == null) return const SizedBox.shrink();
-        // A border instead of a shadow: cheaper to paint every frame
-        // while the rail slides. Drawn in the foreground so opaque panel
-        // backgrounds do not cover it.
-        return Container(
-          color: AppTheme.cream,
-          foregroundDecoration: const BoxDecoration(
-            border: BorderDirectional(
-              start: BorderSide(color: AppTheme.sessionPanelBorder),
-            ),
-          ),
+        final width =
+            sessionSidePanelWidth *
+            sessionSidePanelCurve.transform(_controller.value);
+        return SizedBox(
+          width: width,
+          height: double.infinity,
+          // The shadow spills onto the video only as far as the panel has
+          // slid in, so it appears and leaves with the panel.
           child: ClipRect(
-            child: Align(
-              alignment: AlignmentDirectional.centerEnd,
-              widthFactor: sessionSidePanelCurve.transform(_controller.value),
-              child: SizedBox(
-                width: sessionSidePanelWidth,
-                height: MediaQuery.sizeOf(context).height,
-                child: child,
-              ),
+            clipper: _RailClipper(
+              shadowExtent: math.min(width, _sessionSidePanelShadowExtent),
+              textDirection: Directionality.of(context),
+            ),
+            child: OverflowBox(
+              alignment: AlignmentDirectional.centerStart,
+              minWidth: sessionSidePanelWidth,
+              maxWidth: sessionSidePanelWidth,
+              child: slot,
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// How far [AppTheme.sessionPanelShadow] reaches past the panel's edge.
+final double _sessionSidePanelShadowExtent = AppTheme.sessionPanelShadow.fold(
+  0,
+  (extent, shadow) => math.max(
+    extent,
+    shadow.blurRadius * 2 + shadow.offset.dx.abs() + shadow.spreadRadius,
+  ),
+);
+
+/// Clips the rail to its own bounds, plus room for the shadow on the
+/// leading side.
+class _RailClipper extends CustomClipper<Rect> {
+  const _RailClipper({required this.shadowExtent, required this.textDirection});
+
+  final double shadowExtent;
+  final TextDirection textDirection;
+
+  @override
+  Rect getClip(Size size) => switch (textDirection) {
+    TextDirection.ltr => Rect.fromLTRB(
+      -shadowExtent,
+      0,
+      size.width,
+      size.height,
+    ),
+    TextDirection.rtl => Rect.fromLTRB(
+      0,
+      0,
+      size.width + shadowExtent,
+      size.height,
+    ),
+  };
+
+  @override
+  bool shouldReclip(_RailClipper oldClipper) =>
+      oldClipper.shadowExtent != shadowExtent ||
+      oldClipper.textDirection != textDirection;
+}
+
+/// Full-height panel surface. A soft shadow separates its leading edge from
+/// the session; the room clips the shadow at the screen edges.
+///
+/// Expects a bounded height from its parent (the room Row or the drawer Align).
+class _SessionSidePanelSurface extends StatelessWidget {
+  const _SessionSidePanelSurface({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: DecoratedBox(
+        decoration: const BoxDecoration(boxShadow: AppTheme.sessionPanelShadow),
+        // A Material ancestor for drawer children's ink and text fields.
+        child: Material(
+          color: AppTheme.cream,
+          clipBehavior: Clip.hardEdge,
+          child: SizedBox(
+            width: sessionSidePanelWidth,
+            height: double.infinity,
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 }

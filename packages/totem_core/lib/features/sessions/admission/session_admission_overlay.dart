@@ -742,8 +742,6 @@ class SessionAdmissionPanel extends ConsumerWidget {
     }
     return Material(
       color: AppTheme.cream,
-      elevation: docked ? 6 : 0,
-      shadowColor: const Color.fromRGBO(0, 0, 0, 0.16),
       child: SafeArea(
         child: KeeperAdmissionPanel(
           requests: admission.requests,
