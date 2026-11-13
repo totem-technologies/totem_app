@@ -14,7 +14,13 @@ import 'package:totem_core/core/utils/frame_paced_ticker.dart';
 /// microphone costs no frames. The bars fill their constraints, which must be
 /// bounded.
 class LevelBars extends StatefulWidget {
-  const LevelBars({required this.levels, required this.color, super.key});
+  const LevelBars({
+    required this.levels,
+    required this.color,
+    this.releaseDuration,
+    this.animateInitial = false,
+    super.key,
+  });
 
   /// Bars that never move, such as idle dots for a silent microphone. Each
   /// rebuild passes a new listenable; equal levels leave the bars untouched.
@@ -24,6 +30,12 @@ class LevelBars extends StatefulWidget {
   /// One value between 0 and 1 per bar.
   final ValueListenable<List<double>> levels;
   final Color color;
+
+  /// Optional transition duration when the overall level decreases.
+  final Duration? releaseDuration;
+
+  /// Whether to animate from silence to the initial levels.
+  final bool animateInitial;
 
   static const _spacing = 2.5;
 
@@ -64,18 +76,21 @@ class _LevelBarsState extends State<LevelBars>
 
   /// Paced frames into the current transition.
   int _frame = 0;
+  int? _releaseFrames;
 
   /// Transitions are counted in paced frames rather than elapsed time, so
   /// every frame shows progress whatever the shared clock's phase. Five bars
   /// take two frames, each about as long as a Web microphone sample.
-  int get _transitionFrames => math.max(
-    1,
-    (LevelBars._transitionMilliseconds ~/
-            math.max(1, _to.length) *
-            1000 /
-            FramePacedTicker.interval.inMicroseconds)
-        .ceil(),
-  );
+  int get _transitionFrames =>
+      _releaseFrames ??
+      math.max(
+        1,
+        (LevelBars._transitionMilliseconds ~/
+                math.max(1, _to.length) *
+                1000 /
+                FramePacedTicker.interval.inMicroseconds)
+            .ceil(),
+      );
 
   void _retarget() {
     final next = widget.levels.value;
@@ -89,10 +104,21 @@ class _LevelBarsState extends State<LevelBars>
     _fromColor = _shownColor;
     _toColor = widget.color;
     if (_shown.length != _to.length) {
-      _shown = _from;
+      _shown = List.of(_from, growable: false);
       _repaint.value++;
     }
     _frame = 0;
+    final release = widget.releaseDuration;
+    final falling =
+        _to.fold<double>(0, (sum, value) => sum + value) <
+        _from.fold<double>(0, (sum, value) => sum + value);
+    _releaseFrames = release != null && falling
+        ? math.max(
+            1,
+            (release.inMicroseconds / FramePacedTicker.interval.inMicroseconds)
+                .ceil(),
+          )
+        : null;
     // A running ticker keeps its place on the shared clock; restarting it
     // could stop the clock and delay the next frame by a whole interval.
     if (!_ticker.isActive) _ticker.start();
@@ -100,9 +126,9 @@ class _LevelBarsState extends State<LevelBars>
 
   void _tick(Duration _) {
     final t = math.min(1.0, ++_frame / _transitionFrames);
-    _shown = [
-      for (var i = 0; i < _to.length; i++) _from[i] + (_to[i] - _from[i]) * t,
-    ];
+    for (var i = 0; i < _to.length; i++) {
+      _shown[i] = _from[i] + (_to[i] - _from[i]) * t;
+    }
     _shownColor = Color.lerp(_fromColor, _toColor, t)!;
     _repaint.value++;
     if (t >= 1) _ticker.stop();
@@ -111,10 +137,15 @@ class _LevelBarsState extends State<LevelBars>
   @override
   void initState() {
     super.initState();
-    _from = _to = _shown = List.of(widget.levels.value, growable: false);
+    _from = widget.animateInitial
+        ? List<double>.filled(widget.levels.value.length, 0)
+        : List.of(widget.levels.value, growable: false);
+    _to = List.of(_from, growable: false);
+    _shown = List.of(_from, growable: false);
     _fromColor = _toColor = _shownColor = widget.color;
     _ticker = createTicker(_tick);
     widget.levels.addListener(_retarget);
+    if (widget.animateInitial) _retarget();
   }
 
   @override
