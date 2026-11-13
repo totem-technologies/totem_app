@@ -22,11 +22,25 @@ const config = {
   ...(hasAssetBase
     ? { assetBase, entrypointBaseUrl: window.totemEntrypointBaseUrl }
     : {}),
-  // ?force_st runs skwasm single-threaded even when the page is
-  // cross-origin isolated, to compare against the multi-threaded renderer.
-  ...(new URLSearchParams(window.location.search).has("force_st")
-    ? { forceSingleThreadedSkwasm: true }
-    : {}),
+  // Run skwasm single-threaded even when the page is cross-origin isolated.
+  // Multi-threaded skwasm renders on a worker and hands each frame to the main
+  // thread via OffscreenCanvas.transferToImageBitmap, which costs frame rate:
+  // - Firefox: ImageBitmap transfer is slow, and frame rates are noticeably
+  //   better single-threaded.
+  //   https://github.com/flutter/flutter/issues/145420
+  //   https://bugzilla.mozilla.org/show_bug.cgi?id=1788206
+  // - Chrome 148+: the per-frame bitmap triggers a major V8 GC on the raster
+  //   worker every frame.
+  //   https://github.com/flutter/flutter/issues/196484
+  // - Safari: moving image sources between canvases (including
+  //   transferToImageBitmap) is slow, and WebKit has to fix that before
+  //   multi-threaded skwasm is viable there.
+  //   https://bugs.webkit.org/show_bug.cgi?id=267291
+  //   Safari also lacks `Cross-Origin-Embedder-Policy: credentialless`, so
+  //   cross-origin isolation there requires `require-corp`, which blocks any
+  //   cross-origin subresource that isn't served with CORP or CORS headers.
+  //   https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cross-Origin-Embedder-Policy#browser_compatibility
+  forceSingleThreadedSkwasm: true,
 };
 
 _flutter.loader.load({ config });
