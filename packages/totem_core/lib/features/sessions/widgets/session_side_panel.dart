@@ -190,7 +190,13 @@ class _DockedSessionSidePanelState extends State<DockedSessionSidePanel>
 }
 
 /// How far [AppTheme.sessionPanelShadow] reaches past the panel's edge.
-const double _sessionSidePanelShadowExtent = 48;
+final double _sessionSidePanelShadowExtent = AppTheme.sessionPanelShadow.fold(
+  0,
+  (extent, shadow) => math.max(
+    extent,
+    shadow.blurRadius * 2 + shadow.offset.dx.abs() + shadow.spreadRadius,
+  ),
+);
 
 /// Clips the rail to its own bounds, plus room for the shadow on the
 /// leading side.
@@ -224,6 +230,8 @@ class _RailClipper extends CustomClipper<Rect> {
 
 /// Full-height panel surface. A soft shadow separates its leading edge from
 /// the session; the room clips the shadow at the screen edges.
+///
+/// Expects a bounded height from its parent (the room Row or the drawer Align).
 class _SessionSidePanelSurface extends StatelessWidget {
   const _SessionSidePanelSurface({required this.child});
 

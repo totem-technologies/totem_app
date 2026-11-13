@@ -51,6 +51,8 @@ class AppTheme {
   ];
 
   /// Separates the session side panel's leading edge from the room.
+  /// The side panel rail's clip extent derives from this list, so the
+  /// shadow can change without being cut off.
   static const List<BoxShadow> sessionPanelShadow = [
     BoxShadow(
       color: Color(0x1F000000), // 12% black

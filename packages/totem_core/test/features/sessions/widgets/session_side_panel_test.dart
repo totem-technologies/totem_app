@@ -18,8 +18,15 @@ void main() {
   Widget dockedHost({
     required bool open,
     TextDirection textDirection = TextDirection.ltr,
+    bool disableAnimations = false,
   }) {
     return MaterialApp(
+      builder: (context, navigator) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(disableAnimations: disableAnimations),
+        child: navigator!,
+      ),
       home: Directionality(
         textDirection: textDirection,
         child: Row(
@@ -39,12 +46,20 @@ void main() {
   Future<void> openDrawer(
     WidgetTester tester, {
     TextDirection textDirection = TextDirection.ltr,
+    bool disableAnimations = false,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
-        // Above the navigator, so the pushed route sees it too.
-        builder: (context, navigator) =>
-            Directionality(textDirection: textDirection, child: navigator!),
+        // Above the navigator, so the pushed route sees them too.
+        builder: (context, navigator) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(disableAnimations: disableAnimations),
+          child: Directionality(
+            textDirection: textDirection,
+            child: navigator!,
+          ),
+        ),
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () => showSessionSidePanelDrawer(
@@ -152,5 +167,23 @@ void main() {
 
     await tester.pumpAndSettle();
     check(tester.getRect(find.byKey(_content)).left).equals(0);
+  });
+
+  testWidgets('opens at its final rect at once when animations are off', (
+    tester,
+  ) async {
+    useScreen(tester);
+    await tester.pumpWidget(dockedHost(open: false, disableAnimations: true));
+    await tester.pumpWidget(dockedHost(open: true, disableAnimations: true));
+
+    check(tester.getRect(find.byKey(_content))).equals(trailingRect);
+    check(
+      tester.getSize(find.byKey(_video)).width,
+    ).equals(_screen.width - sessionSidePanelWidth);
+
+    await tester.pumpWidget(Container());
+    await openDrawer(tester, disableAnimations: true);
+
+    check(tester.getRect(find.byKey(_content))).equals(trailingRect);
   });
 }
