@@ -58,7 +58,6 @@ Future<void> main() async {
     'web',
     '--wasm',
     if (hasSentryRelease) '--source-maps',
-    '--dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true',
     '--base-href',
     '/room/',
     '--web-define=ASSET_BASE=$assetBase',

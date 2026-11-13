@@ -200,9 +200,6 @@ origin; Cloudflare Workers serves its assets. Deployment configuration is in
 [wrangler.toml](packages/totem_web/wrangler.toml) and CI is in the
 [Web workflow](.github/workflows/web.yml).
 
-The Makefile applies `WEBRTC_USE_HTML_ELEMENT_VIEW=true` to web runs and builds.
-Pass the same `--dart-define` when invoking Flutter directly.
-
 | Trigger | Result |
 | --- | --- |
 | Pull request or push to `main` | Staging build validation |

@@ -5,7 +5,6 @@ CORE_DIR := packages/totem_core
 WEB_DIR := packages/totem_web
 BENCHMARK_DIR := packages/totem_benchmark
 WIDGETBOOK_DIR := packages/totem_widgetbook
-WEB_VIDEO_FLAGS := --dart-define=WEBRTC_USE_HTML_ELEMENT_VIEW=true
 FLUTTER ?= flutter
 DART ?= dart
 # CI resolves once with its selected SDK before invoking lint/test targets.
@@ -78,11 +77,11 @@ run-ios: prepare-ios env-staging
 # against the dev server's "/" base href.
 run-chrome: prepare-web env-dev
 	@echo "Running app in Chrome..."
-	cd $(WEB_DIR) && $(FLUTTER) run -d chrome $(WEB_VIDEO_FLAGS) --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
+	cd $(WEB_DIR) && $(FLUTTER) run -d chrome --web-port=5173 --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/"
 
 run-web: prepare-web env-dev
 	@echo "Running app in Web Server..."
-	cd $(WEB_DIR) && $(FLUTTER) run -d web-server $(WEB_VIDEO_FLAGS) --web-port=5173 --wasm --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
+	cd $(WEB_DIR) && $(FLUTTER) run -d web-server --web-port=5173 --wasm --web-hostname=0.0.0.0 --web-define=ASSET_BASE="http://localhost:5173/" --release
 
 # Build the web app the way it deploys: mounted at /room/, assets fetched from
 # a separate origin (here the local serve-web "CDN" on :5173). The `development`
