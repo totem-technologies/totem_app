@@ -836,6 +836,191 @@ void main() {
         },
       );
 
+      group('reconnecting', () {
+        const options = SessionOptions(
+          sessionSlug: 'test-session',
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+
+        Future<(SessionController, _CountingRoom)> connectedSession() async {
+          final container = _createContainerWithEventOverride('test-session');
+          addTearDown(container.dispose);
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final room = _CountingRoom(MockLocalParticipant('me', 'Me'));
+          controller.room = room;
+          await controller.initializeConnection(
+            roomOptions: const RoomOptions(),
+            url: 'wss://example.livekit.cloud',
+            token: options.token,
+          );
+          await room.listener.trigger(
+            RoomConnectedEvent(room: room, metadata: null),
+          );
+          check(
+            controller.state.connectionState,
+          ).equals(RoomConnectionState.connected);
+          return (controller, room);
+        }
+
+        test('ignores a first quick resume attempt', () async {
+          final (controller, room) = await connectedSession();
+
+          await room.listener.trigger(
+            const RoomAttemptReconnectEvent(
+              attempt: 1,
+              maxAttemptsRetry: 10,
+              nextRetryDelaysInMs: 0,
+            ),
+          );
+          check(controller.state.connection.isReconnecting).isFalse();
+
+          await room.listener.trigger(
+            const RoomAttemptReconnectEvent(
+              attempt: 2,
+              maxAttemptsRetry: 10,
+              nextRetryDelaysInMs: 300,
+            ),
+          );
+          check(controller.state.connection.isReconnecting).isTrue();
+
+          await room.listener.trigger(const RoomReconnectedEvent());
+          check(controller.state.connection.isReconnecting).isFalse();
+        });
+
+        test('tracks a reconnect until LiveKit recovers', () async {
+          final (controller, room) = await connectedSession();
+
+          await room.listener.trigger(const RoomReconnectingEvent());
+          check(controller.state.connection.isReconnecting).isTrue();
+          check(
+            controller.state.connectionState,
+          ).equals(RoomConnectionState.connected);
+
+          await room.listener.trigger(
+            const RoomAttemptReconnectEvent(
+              attempt: 2,
+              maxAttemptsRetry: 10,
+              nextRetryDelaysInMs: 1000,
+            ),
+          );
+          check(controller.state.connection.isReconnecting).isTrue();
+
+          await room.listener.trigger(const RoomReconnectedEvent());
+          check(controller.state.connection.isReconnecting).isFalse();
+        });
+
+        test(
+          'a reconnect that gives up leaves a technical disconnect',
+          () async {
+            final (controller, room) = await connectedSession();
+
+            await room.listener.trigger(const RoomReconnectingEvent());
+            await room.listener.trigger(
+              RoomDisconnectedEvent(reason: DisconnectReason.mediaFailure),
+            );
+
+            check(controller.state.connection.isReconnecting).isFalse();
+            check(
+              controller.state.connectionState,
+            ).equals(RoomConnectionState.disconnected);
+            check(
+              controller.state.disconnectReason,
+            ).equals(DisconnectReason.mediaFailure);
+            check(
+              isTechnicalDisconnectReason(controller.state.disconnectReason),
+            ).isTrue();
+          },
+        );
+      });
+
+      test('a failed rejoin from the error screen reports its cause', () async {
+        const options = SessionOptions(
+          sessionSlug: 'test-session',
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final container = _createContainerWithEventOverride('test-session');
+        addTearDown(container.dispose);
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final timeout = ConnectException(
+          'timed out',
+          reason: ConnectionErrorReason.Timeout,
+        );
+        controller.room = _CountingRoom(
+          MockLocalParticipant('me', 'Me'),
+          connectError: timeout,
+        );
+
+        await controller.rejoin();
+
+        // Not stuck connecting: the room shows its error screen again.
+        check(
+          controller.state.connectionState,
+        ).equals(RoomConnectionState.error);
+        check(controller.state.livekitError).identicalTo(timeout);
+      });
+
+      test('a failed join keeps its cause for the pre-join note', () async {
+        const options = SessionOptions(
+          sessionSlug: 'test-session',
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final container = _createContainerWithEventOverride('test-session');
+        addTearDown(container.dispose);
+        final sub = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(sub.close);
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final timeout = ConnectException(
+          'timed out',
+          reason: ConnectionErrorReason.Timeout,
+        );
+        controller.room = _CountingRoom(
+          MockLocalParticipant('me', 'Me'),
+          connectError: timeout,
+        );
+
+        check(
+          await controller.join(),
+        ).equals(SessionJoinResult.retryableFailure);
+        check(controller.lastJoinFailure).identicalTo(timeout);
+        check(
+          SessionJoinFailure(controller.lastJoinFailure).kind,
+        ).equals(SessionErrorCategory.serverUnreachable);
+      });
+
       test('a participant renaming themselves updates the list', () async {
         const eventSlug = 'test-session';
         final container = _createContainerWithEventOverride(eventSlug);

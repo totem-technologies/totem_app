@@ -123,6 +123,12 @@ class SessionController extends _$SessionController {
 
   final JoinMediaOwner _joinMediaOwner = JoinMediaOwner();
 
+  /// What made the latest join or activation fail, if it failed with an
+  /// error. Cleared when a new attempt starts, so the pre-join screen can
+  /// explain a failure that [join] only reports as a [SessionJoinResult].
+  Object? get lastJoinFailure => _lastJoinFailure;
+  Object? _lastJoinFailure;
+
   /// The sync timer periodically checks for changes in the room state
   /// and participants list, to keep the UI up to date.
   KeepAliveLink? _keepAliveLink;
@@ -394,6 +400,19 @@ class SessionController extends _$SessionController {
     _cleanUpInBackground('Failed to clean up disconnected session');
   }
 
+  /// Mirrors LiveKit's reconnect attempts into state so the room can tell the
+  /// user while the connection recovers. A disconnect clears it through
+  /// [ConnectionChanged].
+  void _setReconnecting({required bool isReconnecting}) {
+    if (!ref.mounted || _leaveFuture != null) return;
+    if (state.connection.isReconnecting == isReconnecting) return;
+    if (isReconnecting &&
+        state.connectionState != RoomConnectionState.connected) {
+      return;
+    }
+    _dispatch(ReconnectingChanged(isReconnecting: isReconnecting));
+  }
+
   void preventAutoDispose() {
     _keepAliveLink ??= ref.keepAlive();
   }
@@ -652,6 +671,7 @@ class SessionController extends _$SessionController {
       }
       return SessionJoinResult.success;
     } catch (error, stackTrace) {
+      _lastJoinFailure = error;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
@@ -663,6 +683,7 @@ class SessionController extends _$SessionController {
 
   Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
     await _waitForPreviousConnectionCleanup();
+    _lastJoinFailure = null;
 
     final retainedJoinMedia = _joinMediaOwner.retain(joinMedia);
 
@@ -732,6 +753,7 @@ class SessionController extends _$SessionController {
     // necessarily want to show an error message to the user.
     // https://github.com/livekit/client-sdk-flutter/issues/756#issuecomment-4565674372
     on ConnectException catch (error, stackTrace) {
+      _lastJoinFailure = error;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
@@ -751,6 +773,7 @@ class SessionController extends _$SessionController {
           return SessionJoinResult.retryableFailure;
       }
     } on MediaConnectException catch (error, stackTrace) {
+      _lastJoinFailure = error;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
@@ -760,6 +783,7 @@ class SessionController extends _$SessionController {
       // _onError(error);
       return SessionJoinResult.retryableFailure;
     } on LiveKitException catch (error, stackTrace) {
+      _lastJoinFailure = error;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
@@ -768,6 +792,7 @@ class SessionController extends _$SessionController {
       _onError(error);
       return SessionJoinResult.fatalFailure;
     } catch (error, stackTrace) {
+      _lastJoinFailure = error;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
@@ -828,6 +853,35 @@ class SessionController extends _$SessionController {
         ),
       );
     }
+  }
+
+  /// Joins again from the room's error screen.
+  ///
+  /// [join] leaves a failed attempt in the connecting state, which the room
+  /// renders as an endless loading screen. A failed rejoin is torn down and
+  /// reported instead, so the error screen comes back with its cause.
+  Future<void> rejoin() async {
+    final result = await join();
+    if (result == SessionJoinResult.success || !ref.mounted) return;
+    // Fatal failures already moved the session into its error state.
+    if (state.connectionState == RoomConnectionState.error) return;
+
+    final cause = _lastJoinFailure;
+    await resetAfterFailedJoin();
+    if (!ref.mounted) return;
+    _dispatch(
+      const ConnectionChanged(
+        RoomConnectionState.disconnected,
+        SessionPhase.disconnected,
+      ),
+    );
+    _dispatch(
+      SessionErrorChanged(
+        cause is LiveKitException
+            ? RoomLiveKitError(cause)
+            : const RoomDisconnectionError(DisconnectReason.joinFailure),
+      ),
+    );
   }
 
   Future<void> leave() {
@@ -952,6 +1006,7 @@ class SessionController extends _$SessionController {
     required Room room,
     SessionJoinMedia? joinMedia,
   }) async {
+    _lastJoinFailure = null;
     final retainedJoinMedia = _joinMediaOwner.retain(joinMedia);
     final pendingRoom = _pendingConnectedRoom;
     final hasActiveRoom =
@@ -1012,6 +1067,7 @@ class SessionController extends _$SessionController {
       _subscribeToExistingRemotePublications(room);
       return SessionJoinResult.success;
     } catch (error, stackTrace) {
+      _lastJoinFailure = error;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
@@ -1074,7 +1130,14 @@ class SessionController extends _$SessionController {
         if (ref.mounted) _updateRoomState();
       })
       ..on<RoomConnectedEvent>((_) => _onConnected())
+      ..on<RoomReconnectingEvent>((_) => _setReconnecting(isReconnecting: true))
+      // The first attempt is usually a sub-second resume; only tell the user
+      // once that failed and LiveKit is retrying.
+      ..on<RoomAttemptReconnectEvent>((event) {
+        if (event.attempt > 1) _setReconnecting(isReconnecting: true);
+      })
       ..on<RoomReconnectedEvent>((_) {
+        _setReconnecting(isReconnecting: false);
         _applyMediaSubscriptionPermissions(force: true);
       })
       ..on<RoomDisconnectedEvent>((event) {

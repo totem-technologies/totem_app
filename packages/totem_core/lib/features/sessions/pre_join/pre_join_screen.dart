@@ -61,6 +61,21 @@ Future<bool> showAlreadyPresentDialog(BuildContext context) async {
   }
 }
 
+/// The note under the join card after a join attempt failed with [error].
+String _joinFailureNote(Object? error) {
+  final kind = error is SessionJoinFailure ? error.kind : null;
+  return switch (kind) {
+    SessionErrorCategory.mediaDevice =>
+      "We couldn't start your camera or microphone. Check that Totem "
+          'can use them and no other app has them open, then try again.',
+    SessionErrorCategory.offline ||
+    SessionErrorCategory.serverUnreachable ||
+    SessionErrorCategory.connectionLost =>
+      "We couldn't join the session. Check your connection and try again.",
+    _ => "We couldn't join the session. Please try again.",
+  };
+}
+
 class PreJoinScreen extends ConsumerStatefulWidget {
   const PreJoinScreen({
     required this.sessionSlug,
@@ -443,7 +458,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     } else if (flow.error != null) {
       joinNote = flow.admissionStatus == AdmissionStatus.failed
           ? 'Waiting room connection was lost. Check your connection and try again.'
-          : "We couldn't join the session. Please try again.";
+          : _joinFailureNote(flow.error);
     }
     final waitingMessage = switch (flow.keeperAvailability) {
       AdmissionKeeperAvailability.unresponsive =>

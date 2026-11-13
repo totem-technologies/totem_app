@@ -102,6 +102,16 @@ RoomConnectionState connectionState(Ref ref) {
       RoomConnectionState.connecting;
 }
 
+/// Whether LiveKit is recovering a dropped connection for the current session.
+@Riverpod(dependencies: [currentSessionState])
+bool isSessionReconnecting(Ref ref) {
+  return ref.watch(
+    currentSessionStateProvider.select(
+      (s) => s?.connection.isReconnecting ?? false,
+    ),
+  );
+}
+
 /// The high-level lifecycle phase for the current session.
 @Riverpod(dependencies: [currentSessionState])
 SessionPhase sessionPhase(Ref ref) {

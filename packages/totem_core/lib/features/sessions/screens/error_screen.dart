@@ -85,17 +85,15 @@ class SessionErrorScreen extends ConsumerWidget {
       }
     }
 
-    final isOfflineFromProvider = ref.watch(isOfflineProvider).value ?? false;
-    final isOfflineFromError =
-        resolvedError is RoomDisconnectionError &&
-        isInternetDisconnectReason(resolvedError.reason);
-    final isOffline = isOfflineFromProvider || isOfflineFromError;
-    final title = isOffline ? "You're Offline" : 'Something went wrong';
-    final subtitle = isOffline
-        ? 'Video sessions require an active internet connection.\n'
-              'Check your Wi-Fi or mobile data, then tap below to rejoin.'
-        : "We couldn't connect you to this session. "
-              'Please check your internet connection or try again.';
+    final errorCategory = classifySessionError(
+      resolvedError,
+      isOffline: ref.watch(isOfflineProvider).value ?? false,
+    );
+    final isOffline = errorCategory == SessionErrorCategory.offline;
+    // Retrying reuses the same refused token, so send the user back instead.
+    final canRetry = errorCategory != SessionErrorCategory.accessDenied;
+    final title = errorCategory.title;
+    final subtitle = errorCategory.message;
 
     final theme = Theme.of(context);
 
@@ -166,11 +164,12 @@ class SessionErrorScreen extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            ConfirmationDialogButton.elevated(
-                              onConfirm: () async => await onRetry?.call(),
-                              disabled: onRetry == null,
-                              child: const Text('Try Joining Again'),
-                            ),
+                            if (canRetry)
+                              ConfirmationDialogButton.elevated(
+                                onConfirm: () async => await onRetry?.call(),
+                                disabled: onRetry == null,
+                                child: const Text('Try Joining Again'),
+                              ),
                             InkWell(
                               onTap: pop,
                               borderRadius: BorderRadius.circular(12),
