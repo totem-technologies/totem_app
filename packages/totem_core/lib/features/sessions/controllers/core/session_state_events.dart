@@ -19,6 +19,13 @@ class ConnectionChanged extends SessionEvent {
   final bool wasJoining;
 }
 
+/// LiveKit started or finished recovering a dropped connection.
+class ReconnectingChanged extends SessionEvent {
+  const ReconnectingChanged({required this.isReconnecting});
+
+  final bool isReconnecting;
+}
+
 class RoomStateChanged extends SessionEvent {
   const RoomStateChanged(this.roomState);
 

@@ -19,10 +19,23 @@ class SessionStateReducer {
                 event.connectionState == RoomConnectionState.connected ||
                 event.connectionState == RoomConnectionState.connecting,
             wasJoining: event.wasJoining,
+            // Any connection transition ends a reconnect attempt: it either
+            // recovered (connected) or gave up (disconnected/error).
+            isReconnecting: false,
           ),
           participants: event.connectionState == RoomConnectionState.connected
               ? current.participants.copyWith(removed: false)
               : current.participants,
+          chat: current.chat,
+          turn: current.turn,
+          turnStartedAt: current.turnStartedAt,
+        );
+      case ReconnectingChanged():
+        return SessionRoomState(
+          connection: current.connection.copyWith(
+            isReconnecting: event.isReconnecting,
+          ),
+          participants: current.participants,
           chat: current.chat,
           turn: current.turn,
           turnStartedAt: current.turnStartedAt,

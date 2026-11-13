@@ -371,6 +371,16 @@ class _KeeperDisconnectedOverrideNotifier extends Notifier<bool> {
   }
 }
 
+class _ReconnectingOverrideNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  // ignore: use_setters_to_change_properties
+  void set(bool value) {
+    state = value;
+  }
+}
+
 class _TestSessionDeviceController extends SessionDeviceController {
   static SessionDeviceState initialState = const SessionDeviceState(
     selectedCameraDeviceId: null,
@@ -426,6 +436,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   bool mountSession = false,
   RoomScreen roomScreen = RoomScreen.loading,
   List<Object?> extraOverrides = const [],
+  List<Object?>? nestedScopeOverrides,
   AsyncValueSetter<ProviderContainer>? beforeMount,
 }) async {
   final session = FakeSessionController();
@@ -486,12 +497,19 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
       getRecommendedSessionsProvider(limit: 1).overrideWith((ref) => []),
     ...extraOverrides,
   ];
+  final Widget sessionScreen = VideoSessionScreen(
+    sessionSlug: 'test-session',
+    loadingScreen: const SizedBox.shrink(),
+    now: tester.binding.clock.now,
+  );
   final child = MaterialApp(
-    home: VideoSessionScreen(
-      sessionSlug: 'test-session',
-      loadingScreen: const SizedBox.shrink(),
-      now: tester.binding.clock.now,
-    ),
+    // The app joins inside a ProviderScope below the navigator's overlay.
+    home: nestedScopeOverrides == null
+        ? sessionScreen
+        : ProviderScope(
+            overrides: nestedScopeOverrides.cast(),
+            child: sessionScreen,
+          ),
   );
 
   late final ProviderContainer container;
@@ -793,7 +811,7 @@ void main() {
       check(container.read(sessionAdmissionOpenProvider)).isFalse();
     });
 
-    testWidgets('renders offline error screen for a network disconnection', (
+    testWidgets('explains a dropped connection when LiveKit gives up online', (
       tester,
     ) async {
       final event = _createSessionEventWithElapsed(
@@ -816,57 +834,22 @@ void main() {
       check(
         tester.widgetList(find.byType(SessionDisconnectedScreen)),
       ).length.equals(0);
-      check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
-      check(
-        tester.widgetList(
-          find.text(
-            'Video sessions require an active internet connection.\n'
-            'Check your Wi-Fi or mobile data, then tap below to rejoin.',
-          ),
-        ),
-      ).length.equals(1);
+      // The device is online; only the video server was unreachable.
+      check(tester.widgetList(find.text("You're Offline"))).isEmpty();
+      check(tester.widgetList(find.text('Connection Lost'))).length.equals(1);
+      check(tester.widgetList(find.text('Try Joining Again'))).length.equals(1);
     });
 
-    testWidgets(
-      'does not infer internet loss from a generic disconnected reason',
-      (tester) async {
-        final event = _createSessionEventWithElapsed(
-          _testNow(tester),
-          elapsed: const Duration(minutes: 5),
-        );
-
-        await _pumpRoomScreenForResolvedScreen(
-          tester,
-          session: session,
-          event: event,
-          screen: RoomScreen.disconnected,
-          connectionState: RoomConnectionState.disconnected,
-          disconnectReason: DisconnectReason.disconnected,
-          extraOverrides: [
-            isOfflineProvider.overrideWith((ref) => Stream.value(false)),
-          ],
-        );
-
-        check(
-          tester.widgetList(find.byType(SessionDisconnectedScreen)),
-        ).length.equals(1);
-        check(
-          tester.widgetList(find.byType(SessionErrorScreen)),
-        ).length.equals(0);
-        await tester.pump(const Duration(seconds: 3));
-        await _unmountRoomScreen(tester);
-      },
-    );
-
     for (final reason in [
-      DisconnectReason.clientInitiated,
-      DisconnectReason.duplicateIdentity,
-      DisconnectReason.participantRemoved,
-      DisconnectReason.roomDeleted,
+      DisconnectReason.disconnected,
+      DisconnectReason.mediaFailure,
+      DisconnectReason.signalClose,
+      DisconnectReason.stateMismatch,
+      DisconnectReason.unknown,
+      DisconnectReason.serverShutdown,
     ]) {
-      testWidgets('preserves $reason messaging while device is offline', (
-        tester,
-      ) async {
+      testWidgets('offers a rejoin instead of "Session Ended" after a $reason '
+          'disconnect while online', (tester) async {
         final event = _createSessionEventWithElapsed(
           _testNow(tester),
           elapsed: const Duration(minutes: 5),
@@ -880,7 +863,55 @@ void main() {
           connectionState: RoomConnectionState.disconnected,
           disconnectReason: reason,
           extraOverrides: [
-            isOfflineProvider.overrideWith((ref) => Stream.value(true)),
+            isOfflineProvider.overrideWith((ref) => Stream.value(false)),
+          ],
+        );
+
+        check(
+          tester.widgetList(find.byType(SessionDisconnectedScreen)),
+        ).length.equals(0);
+        check(tester.widgetList(find.text('Session Ended'))).isEmpty();
+        // A closed connection alone doesn't prove the device is offline.
+        check(tester.widgetList(find.text("You're Offline"))).isEmpty();
+        check(
+          tester.widgetList(
+            find.text(SessionErrorCategory.connectionLost.title),
+          ),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.text('Try Joining Again')),
+        ).length.equals(1);
+        await tester.pump(const Duration(seconds: 3));
+        await _unmountRoomScreen(tester);
+      });
+    }
+
+    for (final (reason, offline) in [
+      for (final reason in [
+        DisconnectReason.clientInitiated,
+        DisconnectReason.duplicateIdentity,
+        DisconnectReason.participantRemoved,
+        DisconnectReason.roomDeleted,
+        DisconnectReason.roomClosed,
+      ])
+        for (final offline in [true, false]) (reason, offline),
+    ]) {
+      testWidgets('preserves $reason messaging while device is '
+          '${offline ? 'offline' : 'online'}', (tester) async {
+        final event = _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        );
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: event,
+          screen: RoomScreen.disconnected,
+          connectionState: RoomConnectionState.disconnected,
+          disconnectReason: reason,
+          extraOverrides: [
+            isOfflineProvider.overrideWith((ref) => Stream.value(offline)),
           ],
         );
 
@@ -1160,65 +1191,62 @@ void main() {
       },
     );
 
-    testWidgets(
-      'keeps chat open across a narrow → wide → narrow round trip',
-      (tester) async {
-        tester.view.physicalSize = const Size(400, 900);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets('keeps chat open across a narrow → wide → narrow round trip', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-        final event = _createSessionEventWithElapsed(
-          _testNow(tester),
-          elapsed: const Duration(minutes: 5),
-        );
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
+      );
 
-        await _pumpRoomScreenForResolvedScreen(
-          tester,
-          session: session,
-          event: event,
-          screen: RoomScreen.listening,
-        );
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+      );
 
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(VideoSessionScreen)),
-          listen: false,
-        );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
 
-        container.read(sessionChatOpenProvider.notifier).open = true;
-        await tester.pumpAndSettle();
-        check(
-          tester.widgetList(find.byType(SessionChatPanel)),
-        ).length.equals(1);
+      container.read(sessionChatOpenProvider.notifier).open = true;
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
 
-        tester.view.physicalSize = const Size(1600, 1200);
-        await tester.pump();
-        await tester.pump(sessionSidePanelDuration);
-        await tester.pumpAndSettle();
-        check(
-          tester
-              .widgetList(find.byType(SessionChatPanel))
-              .whereType<SessionChatPanel>()
-              .where((panel) => panel.embedded),
-        ).length.equals(1);
-
-        tester.view.physicalSize = const Size(400, 900);
-        await tester.pump();
-        await tester.pumpAndSettle();
-        final roundTripPanels = tester
+      tester.view.physicalSize = const Size(1600, 1200);
+      await tester.pump();
+      await tester.pump(sessionSidePanelDuration);
+      await tester.pumpAndSettle();
+      check(
+        tester
             .widgetList(find.byType(SessionChatPanel))
             .whereType<SessionChatPanel>()
-            .toList();
-        check(roundTripPanels).length.equals(1);
-        check(roundTripPanels.single.embedded).isFalse();
-        check(container.read(sessionChatOpenProvider)).isTrue();
+            .where((panel) => panel.embedded),
+      ).length.equals(1);
 
-        await tester.tap(find.bySemanticsLabel('Close chat'));
-        await tester.pumpAndSettle();
-        check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
-        check(container.read(sessionChatOpenProvider)).isFalse();
-      },
-    );
+      tester.view.physicalSize = const Size(400, 900);
+      await tester.pump();
+      await tester.pumpAndSettle();
+      final roundTripPanels = tester
+          .widgetList(find.byType(SessionChatPanel))
+          .whereType<SessionChatPanel>()
+          .toList();
+      check(roundTripPanels).length.equals(1);
+      check(roundTripPanels.single.embedded).isFalse();
+      check(container.read(sessionChatOpenProvider)).isTrue();
+
+      await tester.tap(find.bySemanticsLabel('Close chat'));
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+      check(container.read(sessionChatOpenProvider)).isFalse();
+    });
 
     testWidgets('reentering a room after unmounting an open chat is safe', (
       tester,
@@ -1441,48 +1469,45 @@ void main() {
       }
     });
 
-    testWidgets(
-      'disconnect clears an open flag-driven phone sheet',
-      (tester) async {
-        tester.view.physicalSize = const Size(400, 900);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets('disconnect clears an open flag-driven phone sheet', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-        final event = _createSessionEventWithElapsed(
-          _testNow(tester),
-          elapsed: const Duration(minutes: 5),
-        );
-        final screenProvider =
-            NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
-              () => _RoomScreenOverrideNotifier(RoomScreen.listening),
-            );
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
+      );
+      final screenProvider =
+          NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
+            () => _RoomScreenOverrideNotifier(RoomScreen.listening),
+          );
 
-        await _pumpRoomScreenForResolvedScreen(
-          tester,
-          session: session,
-          event: event,
-          screen: RoomScreen.listening,
-          roomScreenProvider: screenProvider,
-        );
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+        roomScreenProvider: screenProvider,
+      );
 
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(VideoSessionScreen)),
-          listen: false,
-        );
-        container.read(sessionChatOpenProvider.notifier).open = true;
-        await tester.pumpAndSettle();
-        check(
-          tester.widgetList(find.byType(SessionChatPanel)),
-        ).length.equals(1);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container.read(sessionChatOpenProvider.notifier).open = true;
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
 
-        container.read(screenProvider.notifier).set(RoomScreen.disconnected);
-        await tester.pumpAndSettle();
+      container.read(screenProvider.notifier).set(RoomScreen.disconnected);
+      await tester.pumpAndSettle();
 
-        check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
-        check(container.read(sessionChatOpenProvider)).isFalse();
-      },
-    );
+      check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+      check(container.read(sessionChatOpenProvider)).isFalse();
+    });
 
     testWidgets(
       'docks the admission panel beside the room on a wide viewport',
@@ -2759,6 +2784,194 @@ void main() {
       check(
         tester.widgetList(find.text('Audio switched to another device')),
       ).length.equals(0);
+    });
+  });
+
+  group('VideoRoomScreen - reconnecting notification', () {
+    Future<
+      (
+        _MutableRoomScreenHarness,
+        NotifierProvider<_ReconnectingOverrideNotifier, bool>,
+      )
+    >
+    pumpReconnectingRoom(WidgetTester tester, Stream<bool> connectivity) async {
+      final reconnecting =
+          NotifierProvider<_ReconnectingOverrideNotifier, bool>(
+            _ReconnectingOverrideNotifier.new,
+          );
+      final harness = await _pumpRoomScreenWithMutableState(
+        tester,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 1),
+        ),
+        connectionState: RoomConnectionState.connected,
+        roomStatus: RoomStatus.active,
+        mountSession: true,
+        extraOverrides: [
+          isOfflineProvider.overrideWith((ref) => connectivity),
+          isSessionReconnectingProvider.overrideWith(
+            (ref) => ref.watch(reconnecting),
+          ),
+        ],
+      );
+      return (harness, reconnecting);
+    }
+
+    testWidgets(
+      'tells the user while LiveKit reconnects, escalates, and clears on '
+      'recovery',
+      (tester) async {
+        final (harness, reconnecting) = await pumpReconnectingRoom(
+          tester,
+          Stream.value(false),
+        );
+
+        harness.container.read(reconnecting.notifier).set(true);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        check(tester.widgetList(find.text('Reconnecting…'))).length.equals(1);
+
+        await tester.pump(const Duration(seconds: 10));
+        await tester.pump(const Duration(milliseconds: 500));
+        check(tester.widgetList(find.text('Reconnecting…'))).isEmpty();
+        check(
+          tester.widgetList(find.text('Still trying to reconnect')),
+        ).length.equals(1);
+
+        harness.container.read(reconnecting.notifier).set(false);
+        await tester.pumpAndSettle();
+        check(tester.widgetList(find.byType(NotificationBanner))).isEmpty();
+      },
+    );
+
+    testWidgets('clears when the connection is lost instead of recovering', (
+      tester,
+    ) async {
+      final (harness, reconnecting) = await pumpReconnectingRoom(
+        tester,
+        Stream.value(false),
+      );
+
+      harness.container.read(reconnecting.notifier).set(true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      check(tester.widgetList(find.text('Reconnecting…'))).length.equals(1);
+
+      harness.container
+          .read(harness.connectionStateProvider.notifier)
+          .set(RoomConnectionState.disconnected);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('Reconnecting…'))).isEmpty();
+
+      // The escalation timer must not resurrect the banner.
+      await tester.pump(const Duration(seconds: 11));
+      await tester.pumpAndSettle();
+      check(
+        tester.widgetList(find.text('Still trying to reconnect')),
+      ).isEmpty();
+      harness.container.read(reconnecting.notifier).set(false);
+      await tester.pump();
+    });
+
+    testWidgets(
+      'shows the first banner when the flag changes inside the session scope',
+      (tester) async {
+        // The app runs the room inside a ProviderScope below the navigator's
+        // overlay, so Riverpod refreshes the flag while that scope builds and
+        // the banner can't be inserted then.
+        final reconnecting =
+            NotifierProvider<_ReconnectingOverrideNotifier, bool>(
+              _ReconnectingOverrideNotifier.new,
+            );
+        final harness = await _pumpRoomScreenWithMutableState(
+          tester,
+          event: _createSessionEventWithElapsed(
+            _testNow(tester),
+            elapsed: const Duration(minutes: 1),
+          ),
+          connectionState: RoomConnectionState.connected,
+          roomStatus: RoomStatus.active,
+          mountSession: true,
+          extraOverrides: [
+            isOfflineProvider.overrideWith((ref) => Stream.value(false)),
+          ],
+          nestedScopeOverrides: [
+            isSessionReconnectingProvider.overrideWith(
+              (ref) => ref.watch(reconnecting),
+            ),
+          ],
+        );
+
+        harness.container.read(reconnecting.notifier).set(true);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        check(tester.takeException()).isNull();
+        check(tester.widgetList(find.text('Reconnecting…'))).length.equals(1);
+      },
+    );
+
+    testWidgets('shows over the keeper-paused banner and restores it', (
+      tester,
+    ) async {
+      final (harness, reconnecting) = await pumpReconnectingRoom(
+        tester,
+        Stream.value(false),
+      );
+      harness.container
+          .read(harness.hasKeeperDisconnectedProvider.notifier)
+          .set(true);
+      await tester.pumpAndSettle();
+      check(
+        tester.widgetList(find.text('The session has been paused.')),
+      ).length.equals(1);
+
+      harness.container.read(reconnecting.notifier).set(true);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('Reconnecting…'))).length.equals(1);
+      check(
+        tester.widgetList(find.text('The session has been paused.')),
+      ).isEmpty();
+
+      harness.container.read(reconnecting.notifier).set(false);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('Reconnecting…'))).isEmpty();
+      check(
+        tester.widgetList(find.text('The session has been paused.')),
+      ).length.equals(1);
+    });
+
+    testWidgets('the offline banner takes precedence while offline', (
+      tester,
+    ) async {
+      final connectivity = StreamController<bool>();
+      addTearDown(connectivity.close);
+      final (harness, reconnecting) = await pumpReconnectingRoom(
+        tester,
+        connectivity.stream,
+      );
+      connectivity.add(false);
+      await tester.pump();
+
+      harness.container.read(reconnecting.notifier).set(true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      check(tester.widgetList(find.text('Reconnecting…'))).length.equals(1);
+
+      connectivity.add(true);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text("You're Offline"))).length.equals(1);
+      check(tester.widgetList(find.text('Reconnecting…'))).isEmpty();
+
+      connectivity.add(false);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text("You're Offline"))).isEmpty();
+      check(tester.widgetList(find.text('Reconnecting…'))).length.equals(1);
+
+      harness.container.read(reconnecting.notifier).set(false);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(NotificationBanner))).isEmpty();
     });
   });
 

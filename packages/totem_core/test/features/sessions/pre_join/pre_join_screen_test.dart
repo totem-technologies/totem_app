@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' show ClientException;
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
@@ -195,6 +196,23 @@ class _SuccessfulSessionController extends SessionController {
       SessionJoinResult.success;
 }
 
+class _FailingSessionController extends SessionController {
+  static Object? cause;
+
+  @override
+  SessionRoomState build(SessionOptions options) => _sessionState;
+
+  @override
+  Object? get lastJoinFailure => cause;
+
+  @override
+  Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async =>
+      SessionJoinResult.retryableFailure;
+
+  @override
+  Future<void> resetAfterFailedJoin() async {}
+}
+
 class _PendingSessionController extends SessionController {
   static Completer<SessionJoinResult>? joinCompleter;
 
@@ -295,6 +313,7 @@ void main() {
     bool alreadyPresent = false,
     bool successfulJoin = false,
     bool pendingJoin = false,
+    bool failingJoin = false,
     bool initiallyOffline = false,
     bool earlyParticipant = false,
     bool waitingForAdmission = false,
@@ -383,6 +402,10 @@ void main() {
             sessionControllerProvider(
               _options,
             ).overrideWith(_SuccessfulSessionController.new),
+          if (failingJoin)
+            sessionControllerProvider(
+              _options,
+            ).overrideWith(_FailingSessionController.new),
           if (pendingJoin) ...[
             sessionControllerProvider(
               _options,
@@ -398,6 +421,49 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
+  }
+
+  for (final (label, cause, note) in <(String, Object?, String)>[
+    (
+      'the camera or microphone',
+      TrackCreateException(),
+      "We couldn't start your camera or microphone.",
+    ),
+    (
+      'the connection',
+      ConnectException('timed out', reason: ConnectionErrorReason.Timeout),
+      'Check your connection and try again.',
+    ),
+    (
+      'an unreachable video server on web',
+      ClientException('Failed to fetch'),
+      'Check your connection and try again.',
+    ),
+    (
+      'an unknown cause',
+      null,
+      "We couldn't join the session. Please try again.",
+    ),
+  ]) {
+    testWidgets('explains a failed join caused by $label', (tester) async {
+      _FailingSessionController.cause = cause;
+      addTearDown(() => _FailingSessionController.cause = null);
+      await pumpScreen(tester, failingJoin: true);
+
+      await tester
+          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+          .onActionCompleted();
+      await tester.pump();
+      await tester.pump();
+
+      check(find.textContaining(note).evaluate()).length.equals(1);
+      check(find.byType(VideoSessionScreen).evaluate()).isEmpty();
+      check(
+        tester
+            .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+            .enabled,
+      ).isTrue();
+    });
   }
 
   for (final isKeeper in [true, false]) {

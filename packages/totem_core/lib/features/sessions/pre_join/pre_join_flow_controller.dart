@@ -649,13 +649,12 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       if (result == SessionJoinResult.retryableFailure ||
           (admissionRequest != null &&
               result == SessionJoinResult.fatalFailure)) {
+        // Keep the cause so the join note can say what went wrong; a failed
+        // join otherwise leaves the user on the join card with no feedback.
+        final failure = SessionJoinFailure(currentSession.lastJoinFailure);
         await sendFailureReceipt();
         await _resetAfterFailedJoin(currentSession);
-        if (ref.mounted && result == SessionJoinResult.fatalFailure) {
-          state = state.copyWith(
-            error: StateError('Failed to join the approved session'),
-          );
-        }
+        if (ref.mounted) state = state.copyWith(error: failure);
         return PreJoinJoinOutcome.retryableFailure;
       }
 

@@ -1,9 +1,12 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' show ClientException;
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/features/permissions/classify.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
@@ -37,6 +40,7 @@ class ConnectionState {
     required this.state,
     this.error,
     this.wasJoining = false,
+    this.isReconnecting = false,
   });
 
   final SessionPhase phase;
@@ -44,18 +48,25 @@ class ConnectionState {
   final RoomError? error;
   final bool wasJoining;
 
+  /// Whether LiveKit is recovering a dropped connection. The connection still
+  /// reads as connected meanwhile, so the UI can tell the user without leaving
+  /// the room.
+  final bool isReconnecting;
+
   ConnectionState copyWith({
     SessionPhase? phase,
     RoomConnectionState? state,
     RoomError? error,
     bool clearError = false,
     bool? wasJoining,
+    bool? isReconnecting,
   }) {
     return ConnectionState(
       phase: phase ?? this.phase,
       state: state ?? this.state,
       error: clearError ? null : error ?? this.error,
       wasJoining: wasJoining ?? this.wasJoining,
+      isReconnecting: isReconnecting ?? this.isReconnecting,
     );
   }
 
@@ -66,7 +77,8 @@ class ConnectionState {
         other.phase == phase &&
         other.state == state &&
         other.error?.toString() == error?.toString() &&
-        other.wasJoining == wasJoining;
+        other.wasJoining == wasJoining &&
+        other.isReconnecting == isReconnecting;
   }
 
   @override
@@ -74,7 +86,8 @@ class ConnectionState {
       phase.hashCode ^
       state.hashCode ^
       error.toString().hashCode ^
-      wasJoining.hashCode;
+      wasJoining.hashCode ^
+      isReconnecting.hashCode;
 }
 
 @immutable
@@ -378,4 +391,147 @@ bool canOfflineStateOverrideDisconnectReason(DisconnectReason? reason) {
     DisconnectReason.mediaFailure => true,
     _ => false,
   };
+}
+
+/// Returns true when [reason] is a real outcome for this participant: they
+/// left, were removed, moved to another device, or the room itself is gone.
+///
+/// Every other non-null reason is a technical failure that leaves the session
+/// running, so the user should be offered a way back in instead of being told
+/// the session ended.
+bool isSessionOutcomeDisconnectReason(DisconnectReason? reason) {
+  return switch (reason) {
+    DisconnectReason.clientInitiated ||
+    DisconnectReason.duplicateIdentity ||
+    DisconnectReason.participantRemoved ||
+    DisconnectReason.roomDeleted ||
+    DisconnectReason.roomClosed => true,
+    _ => false,
+  };
+}
+
+/// Returns true when [reason] is a technical failure (network, media, server)
+/// rather than a session outcome. See [isSessionOutcomeDisconnectReason].
+bool isTechnicalDisconnectReason(DisconnectReason? reason) {
+  return reason != null && !isSessionOutcomeDisconnectReason(reason);
+}
+
+/// What kind of problem a session error is, from the user's point of view.
+enum SessionErrorCategory {
+  /// The device has no internet connection.
+  offline,
+
+  /// The video server couldn't be reached or didn't answer in time.
+  serverUnreachable,
+
+  /// An established connection to the session dropped and didn't recover.
+  connectionLost,
+
+  /// The camera or microphone couldn't be started.
+  mediaDevice,
+
+  /// The server refused this participant's access to the room.
+  accessDenied,
+
+  /// Anything not recognised.
+  unknown;
+
+  /// The title shown to the user for this kind of problem.
+  String get title => switch (this) {
+    offline => "You're Offline",
+    serverUnreachable => "Couldn't Reach the Session",
+    connectionLost => 'Connection Lost',
+    mediaDevice => 'Camera or Microphone Problem',
+    accessDenied => "Couldn't Join This Session",
+    unknown => 'Something went wrong',
+  };
+
+  /// The message shown under [title], telling the user what to do next.
+  String get message => switch (this) {
+    offline =>
+      'Video sessions require an active internet connection.\n'
+          'Check your Wi-Fi or mobile data, then tap below to rejoin.',
+    serverUnreachable =>
+      "We couldn't reach the video server. "
+          'Check your connection, then try joining again.',
+    connectionLost =>
+      'Your connection to the session dropped. '
+          'The session may still be going, so try joining again.',
+    mediaDevice =>
+      "We couldn't start your camera or microphone. Check that Totem "
+          'can use them and no other app has them open, then try again.',
+    accessDenied =>
+      "We couldn't confirm your access to this session. "
+          'Go back and join again from the session details.',
+    unknown =>
+      "We couldn't connect you to this session. "
+          'Please check your internet connection or try again.',
+  };
+}
+
+/// Classifies a session [error] into a [SessionErrorCategory] for user-facing copy.
+///
+/// Accepts [RoomError]s, raw LiveKit exceptions, [MediaPublishException], and
+/// [SessionJoinFailure]. A confirmed offline device ([isOffline]) wins over
+/// ambiguous failures, but never over a session outcome.
+SessionErrorCategory classifySessionError(
+  Object? error, {
+  bool isOffline = false,
+}) {
+  final cause = switch (error) {
+    SessionJoinFailure(:final cause) => cause,
+    RoomLiveKitError(:final exception) => exception,
+    _ => error,
+  };
+
+  if (cause is RoomDisconnectionError) {
+    // LiveKit gives up with the same reasons whether the device or only the
+    // video server dropped, so only connectivity can say the user is offline.
+    if (isOffline && canOfflineStateOverrideDisconnectReason(cause.reason)) {
+      return SessionErrorCategory.offline;
+    }
+    return isTechnicalDisconnectReason(cause.reason)
+        ? SessionErrorCategory.connectionLost
+        : SessionErrorCategory.unknown;
+  }
+
+  final kind = switch (cause) {
+    ConnectException(reason: ConnectionErrorReason.NotAllowed) =>
+      SessionErrorCategory.accessDenied,
+    ConnectException() ||
+    MediaConnectException() ||
+    // On web, LiveKit's fallback validate request fails with "Failed to
+    // fetch" when the video server can't be reached.
+    ClientException() => SessionErrorCategory.serverUnreachable,
+    TrackCreateException() ||
+    AudioSessionException() => SessionErrorCategory.mediaDevice,
+    NegotiationError() ||
+    UnexpectedStateException() ||
+    TrackPublishException() ||
+    MediaPublishException() => SessionErrorCategory.connectionLost,
+    final Object other when captureErrorName(other) != null =>
+      SessionErrorCategory.mediaDevice,
+    _ => SessionErrorCategory.unknown,
+  };
+
+  if (isOffline &&
+      kind != SessionErrorCategory.mediaDevice &&
+      kind != SessionErrorCategory.accessDenied) {
+    return SessionErrorCategory.offline;
+  }
+  return kind;
+}
+
+/// A join attempt that failed without throwing, carrying the [cause] that
+/// `SessionController.join` saw (when there was one) so the UI can explain it.
+@immutable
+class SessionJoinFailure implements Exception {
+  const SessionJoinFailure([this.cause]);
+
+  final Object? cause;
+
+  SessionErrorCategory get kind => classifySessionError(cause);
+
+  @override
+  String toString() => 'SessionJoinFailure(${cause.runtimeType})';
 }

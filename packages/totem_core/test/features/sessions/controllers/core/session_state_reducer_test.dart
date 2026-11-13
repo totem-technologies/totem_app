@@ -42,6 +42,52 @@ void main() {
     const reducer = SessionStateReducer();
 
     group('ConnectionState', () {
+      group('ReconnectingChanged event', () {
+        SessionRoomState connected() => SessionRoomState(
+          connection: const ConnectionState(
+            phase: SessionPhase.connected,
+            state: RoomConnectionState.connected,
+          ),
+          participants: const ParticipantsState(),
+          chat: const ChatState(),
+          turn: SessionTurnState(roomState: _roomState()),
+        );
+
+        test('marks a connected session as reconnecting and back', () {
+          final reconnecting = reducer.reduceState(
+            connected(),
+            const ReconnectingChanged(isReconnecting: true),
+          );
+          check(reconnecting.connection.isReconnecting).isTrue();
+          check(
+            reconnecting.connection.state,
+          ).equals(RoomConnectionState.connected);
+
+          final recovered = reducer.reduceState(
+            reconnecting,
+            const ReconnectingChanged(isReconnecting: false),
+          );
+          check(recovered.connection.isReconnecting).isFalse();
+        });
+
+        test('a disconnect ends the reconnect attempt', () {
+          final reconnecting = reducer.reduceState(
+            connected(),
+            const ReconnectingChanged(isReconnecting: true),
+          );
+
+          final next = reducer.reduceState(
+            reconnecting,
+            const ConnectionChanged(
+              RoomConnectionState.disconnected,
+              SessionPhase.disconnected,
+            ),
+          );
+
+          check(next.connection.isReconnecting).isFalse();
+        });
+      });
+
       group('ConnectionChanged event', () {
         test('resets removed and clears error when connected', () {
           final current = _initialState();

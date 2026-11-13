@@ -66,12 +66,24 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
 class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   static var _didWarmEmojiGlyphs = false;
 
+  /// How long LiveKit may try to reconnect before the banner tells the user
+  /// it is taking longer than usual.
+  static const _reconnectingEscalationDelay = Duration(seconds: 10);
+  bool _reconnectingSyncScheduled = false;
+
+  /// Reconnecting replaces any banner already showing (such as the keeper
+  /// pause), which comes back once the connection recovers.
+  static const _reconnectingNotificationCategory = 'session-reconnecting';
+
   final _notificationController = NotificationController();
 
   /// The page exit handler this screen registered, if any.
   VoidCallback? _pageExitHandler;
   NotificationRequest? _closeKeeperLeftNotification;
   NotificationRequest? _offlineNotification;
+  NotificationRequest? _reconnectingNotification;
+  Timer? _reconnectingEscalationTimer;
+  bool _reconnectingEscalated = false;
   Timer? _timeRemainingWarningTimer;
   String? _timeRemainingWarningSessionSlug;
   bool _hasShownTimeRemainingWarning = false;
@@ -112,6 +124,8 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     _warmEmojiGlyphs();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyScreenCapturePolicy();
+      // The room may open while a reconnect is already under way.
+      _syncReconnectingNotification();
     });
 
     ref
@@ -241,6 +255,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     unawaited(_deviceNoticeSubscription?.cancel());
     unawaited(_turnOnBlockedSubscription?.cancel());
     _notificationController.dispose();
+    _reconnectingEscalationTimer?.cancel();
     _clearTimeRemainingWarningTimer();
     _setScreenProtection(false);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -386,6 +401,80 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       _offlineNotification?.dismissActive();
     }
     _offlineNotification = null;
+  }
+
+  /// Shows a banner while LiveKit recovers a dropped connection, escalating
+  /// it when recovery takes long. The offline banner already explains an
+  /// outage, so the two are never shown together.
+  /// These providers often change while this screen is building, and a
+  /// banner can't be inserted into the overlay mid-build, so sync after the
+  /// frame instead.
+  void _scheduleReconnectingNotificationSync() {
+    if (_reconnectingSyncScheduled) return;
+    _reconnectingSyncScheduled = true;
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) {
+        _reconnectingSyncScheduled = false;
+        _syncReconnectingNotification();
+      })
+      ..ensureVisualUpdate();
+  }
+
+  void _syncReconnectingNotification() {
+    if (!mounted) return;
+
+    final isReconnecting =
+        ref.read(isSessionReconnectingProvider) &&
+        ref.read(connectionStateProvider) == RoomConnectionState.connected;
+    if (!isReconnecting) {
+      _reconnectingEscalationTimer?.cancel();
+      _reconnectingEscalationTimer = null;
+      _reconnectingEscalated = false;
+      _dismissReconnectingNotification();
+      return;
+    }
+
+    _reconnectingEscalationTimer ??= Timer(_reconnectingEscalationDelay, () {
+      if (!mounted) return;
+      _reconnectingEscalated = true;
+      _dismissReconnectingNotification(immediately: true);
+      _syncReconnectingNotification();
+    });
+
+    final isOffline =
+        ref.read(isOfflineProvider).value ?? _lastIsOffline ?? false;
+    if (isOffline) {
+      _dismissReconnectingNotification(immediately: true);
+      return;
+    }
+    if (_reconnectingNotification != null) return;
+
+    _reconnectingNotification = _reconnectingEscalated
+        ? _notificationController.showPermanent(
+            context,
+            urgentLatestWinsCategory: _reconnectingNotificationCategory,
+            icon: TotemIcons.wifiOff,
+            title: 'Still trying to reconnect',
+            message:
+                'Check your Wi-Fi or mobile data. '
+                'You can leave and rejoin at any time.',
+          )
+        : _notificationController.showPermanent(
+            context,
+            urgentLatestWinsCategory: _reconnectingNotificationCategory,
+            icon: TotemIcons.wifi,
+            title: 'Reconnecting…',
+            message: 'Your connection dropped. Getting you back in.',
+          );
+  }
+
+  void _dismissReconnectingNotification({bool immediately = false}) {
+    if (immediately) {
+      _reconnectingNotification?.dismissImmediately();
+    } else {
+      _reconnectingNotification?.dismissActive();
+    }
+    _reconnectingNotification = null;
   }
 
   void _dismissKeeperLeftNotification() {
@@ -570,6 +659,10 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
     final disconnectReason = ref.watch(disconnectionReasonProvider);
+    final livekitError = ref.watch(sessionLivekitErrorProvider);
+    final wasRemoved = ref.watch(
+      currentSessionStateProvider.select((state) => state?.removed ?? false),
+    );
 
     final cuesService = ref.read(sessionCuesServiceProvider);
     final emojiNotifier = ref.read(emojiReactionsProvider.notifier);
@@ -643,6 +736,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         if (next == RoomScreen.disconnected || next == RoomScreen.error) {
           _clearTimeRemainingWarningTimer();
           _dismissOfflineNotification(immediately: true);
+          _dismissReconnectingNotification(immediately: true);
         }
       })
       ..listen(roomStatusProvider, (previous, next) {
@@ -668,10 +762,16 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
             next == RoomConnectionState.error) {
           _clearTimeRemainingWarningTimer();
         }
+        _scheduleReconnectingNotificationSync();
       })
+      ..listen(
+        isSessionReconnectingProvider,
+        (_, _) => _scheduleReconnectingNotificationSync(),
+      )
       ..listen(isOfflineProvider, (previous, next) {
         if (!next.hasValue) return;
         _onConnectivityChanged(next.value!, wasOffline: previous?.value);
+        _scheduleReconnectingNotificationSync();
       });
 
     final audioRouteNotifier = ref.read(
@@ -784,7 +884,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         waitingForAdmission ? RoomScreen.loading : currentRoomScreen,
         currentSessionEvent,
         disconnectReason,
+        livekitError: livekitError,
         isOffline: isOffline ?? false,
+        wasRemoved: wasRemoved,
       ),
     );
   }
@@ -794,12 +896,18 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     RoomScreen screen,
     SessionDetailSchema sessionEvent,
     DisconnectReason? disconnectReason, {
+    required LiveKitException? livekitError,
     required bool isOffline,
+    required bool wasRemoved,
   }) {
     final isInternetDisconnect =
         isInternetDisconnectReason(disconnectReason) ||
         (isOffline &&
             canOfflineStateOverrideDisconnectReason(disconnectReason));
+    // A network, media, or server failure leaves the session running, so offer
+    // a way back in instead of saying the session ended.
+    final isTechnicalDisconnect =
+        !wasRemoved && isTechnicalDisconnectReason(disconnectReason);
     final disconnectionError = disconnectReason == null
         ? null
         : RoomDisconnectionError(disconnectReason);
@@ -807,15 +915,15 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     switch (screen) {
       case RoomScreen.error:
         return SessionErrorScreen(
-          onRetry: session.join,
-          error: disconnectionError,
+          onRetry: session.rejoin,
+          error: livekitError ?? disconnectionError,
         );
       case RoomScreen.loading:
         return widget.loadingScreen;
       case RoomScreen.disconnected:
-        if (isInternetDisconnect) {
+        if (isInternetDisconnect || isTechnicalDisconnect) {
           return SessionErrorScreen(
-            onRetry: session.join,
+            onRetry: session.rejoin,
             error: disconnectionError,
           );
         }
