@@ -22,6 +22,11 @@ const config = {
   ...(hasAssetBase
     ? { assetBase, entrypointBaseUrl: window.totemEntrypointBaseUrl }
     : {}),
+  // ?force_st runs skwasm single-threaded even when the page is
+  // cross-origin isolated, to compare against the multi-threaded renderer.
+  ...(new URLSearchParams(window.location.search).has("force_st")
+    ? { forceSingleThreadedSkwasm: true }
+    : {}),
 };
 
 _flutter.loader.load({ config });
