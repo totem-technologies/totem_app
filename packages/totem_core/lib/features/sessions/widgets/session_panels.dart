@@ -106,7 +106,8 @@ class SessionPanels extends ConsumerStatefulWidget {
   ConsumerState<SessionPanels> createState() => _SessionPanelsState();
 }
 
-class _SessionPanelsState extends ConsumerState<SessionPanels> {
+class _SessionPanelsState extends ConsumerState<SessionPanels>
+    with WidgetsBindingObserver {
   final _roomNavigatorKey = GlobalKey<NavigatorState>();
   final _roomNavigatorObserver = _SessionPanelRouteObserver();
   bool _dismissedForDisconnect = false;
@@ -116,6 +117,8 @@ class _SessionPanelsState extends ConsumerState<SessionPanels> {
   int _presentationGeneration = 0;
   bool _presentationSyncScheduled = false;
   bool? _lastDocked;
+  int? _lastViewportTier;
+  SessionPresentationState? _resizeDismissal;
   SessionPanel? _presentedPanel;
   SessionPanel _renderedPanel = SessionPanel.none;
   bool _promptSaving = false;
@@ -127,6 +130,7 @@ class _SessionPanelsState extends ConsumerState<SessionPanels> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _roomNavigatorObserver.onRoutesChanged = _schedulePresentationSync;
     ref.listenManual(resolveCurrentScreenProvider, (previous, next) {
       if (next != RoomScreen.disconnected) {
@@ -144,6 +148,33 @@ class _SessionPanelsState extends ConsumerState<SessionPanels> {
     ref.listenManual(roomStatusProvider, (previous, next) {
       if (next == RoomStatus.ended) _dismissSessionPresentation();
     });
+  }
+
+  int _presentationTier(Size size) => size.shortestSide <= 600
+      ? 0
+      : size.width >= sessionSidePanelDockMinWidth
+      ? 2
+      : 1;
+
+  @override
+  void didChangeMetrics() {
+    if (!mounted) return;
+    final view = View.of(context);
+    final tier = _presentationTier(view.physicalSize / view.devicePixelRatio);
+    if (_lastViewportTier != null && tier != _lastViewportTier) {
+      _resizeDismissal = ref.read(sessionPresentationProvider);
+      // Metrics arrive before layout. Remove incompatible popup routes before
+      // they can lay out in a different presentation tier.
+      _syncPresentation();
+    }
+    _lastViewportTier = tier;
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _roomNavigatorObserver.onRoutesChanged = null;
+    super.dispose();
   }
 
   @override
@@ -169,6 +200,14 @@ class _SessionPanelsState extends ConsumerState<SessionPanels> {
         (_, _) => _schedulePresentationSync(),
       );
     }
+    // Changing presentation tier dismisses the current popup. Close it
+    // rather than silently opening a different kind of overlay.
+    final tier = _presentationTier(MediaQuery.sizeOf(context));
+    if (_lastViewportTier != null && tier != _lastViewportTier) {
+      _resizeDismissal = ref.read(sessionPresentationProvider);
+      _schedulePresentationSync();
+    }
+    _lastViewportTier = tier;
     final blocked = _hasChildRoute || _promptSaving;
     if (!blocked) _renderedPanel = desired;
     final dockChatSlot = blocked
@@ -268,6 +307,23 @@ class _SessionPanelsState extends ConsumerState<SessionPanels> {
   }
 
   void _syncPresentation() {
+    final resize = _resizeDismissal;
+    if (resize != null) {
+      // Keep an in-flight save mounted until its owner finishes the mutation.
+      if (_promptSaving && !_dismissedForDisconnect) return;
+      _resizeDismissal = null;
+      if (ref.read(sessionPresentationProvider).revision == resize.revision) {
+        _presentationGeneration++;
+        _overlayPresenting = false;
+        ref
+            .read(sessionPresentationProvider.notifier)
+            .closePanel(expectedRevision: resize.revision);
+        _renderedPanel = SessionPanel.none;
+        _removePanelRoutes(handover: false);
+        _schedulePresentationSync();
+        return;
+      }
+    }
     if ((_hasChildRoute || _promptSaving) && !_dismissedForDisconnect) {
       return;
     }

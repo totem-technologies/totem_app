@@ -999,87 +999,156 @@ void main() {
       ).equals('keeper-of-previous-circle');
     });
 
-    for (final panel in [SessionPanel.prompts, SessionPanel.admission]) {
-      testWidgets('$panel retains one host across phone desktop phone', (
-        tester,
-      ) async {
-        tester.view.physicalSize = const Size(400, 900);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        await _pumpRoomScreenForResolvedScreen(
-          tester,
-          session: session,
-          event: _createSessionEventWithElapsed(_testNow(tester)),
-          screen: RoomScreen.listening,
-          isCurrentUserKeeper: true,
-          extraOverrides: [
-            sessionPromptsControllerProvider(
-              'test-session',
-            ).overrideWith(_PresentationPrompts.new),
-          ],
-        );
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(VideoSessionScreen)),
-          listen: false,
-        );
-        final controller = container.read(sessionPresentationProvider.notifier);
-        container
-            .read(sessionChatUnreadThreadsProvider.notifier)
-            .markUnread('guest');
-        controller.openPanel(panel);
-        await tester.pumpAndSettle();
-        final finder = panel == SessionPanel.prompts
-            ? find.byType(SessionPromptsModal)
-            : find.byType(SessionAdmissionPanel);
-        check(finder.evaluate()).length.equals(1);
-        if (panel == SessionPanel.prompts) {
-          final prompts =
-              (container.read(
-                      sessionPromptsControllerProvider('test-session').notifier,
-                    )
-                    as _PresentationPrompts)
-                ..setSaving(true);
-          await tester.pump();
-          controller.closePanel();
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 320));
-          check(finder.evaluate()).length.equals(1);
-          prompts.setSaving(false);
-          await tester.pumpAndSettle();
-          check(finder.evaluate()).isEmpty();
+    for (final panel in [
+      SessionPanel.chat,
+      SessionPanel.prompts,
+      SessionPanel.admission,
+    ]) {
+      testWidgets(
+        '$panel closes on layout changes in both directions without losing unread state',
+        (tester) async {
+          tester.view.physicalSize = const Size(400, 900);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await _pumpRoomScreenForResolvedScreen(
+            tester,
+            session: session,
+            event: _createSessionEventWithElapsed(_testNow(tester)),
+            screen: RoomScreen.listening,
+            isCurrentUserKeeper: true,
+            extraOverrides: [
+              sessionPromptsControllerProvider(
+                'test-session',
+              ).overrideWith(_PresentationPrompts.new),
+            ],
+          );
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(VideoSessionScreen)),
+            listen: false,
+          );
+          final controller = container.read(
+            sessionPresentationProvider.notifier,
+          );
+          container
+              .read(sessionChatUnreadThreadsProvider.notifier)
+              .markUnread('guest');
           controller.openPanel(panel);
           await tester.pumpAndSettle();
-        }
-        for (final size in [const Size(1600, 1200), const Size(400, 900)]) {
-          if (panel == SessionPanel.prompts) {
-            await tester.tap(find.text('Add Prompt'));
-            await tester.pumpAndSettle();
-            await tester.enterText(
-              find.byType(TextFormField),
-              'A draft across resizing',
-            );
-          }
-          tester.view.physicalSize = size;
-          await tester.pumpAndSettle();
-          if (panel == SessionPanel.prompts) {
-            check(find.text('A draft across resizing').evaluate()).isNotEmpty();
-            await tester.tap(find.text('Cancel'));
-            await tester.pumpAndSettle();
-          }
+          final finder = switch (panel) {
+            SessionPanel.chat => find.byType(SessionChatPanel),
+            SessionPanel.prompts => find.byType(SessionPromptsModal),
+            _ => find.byType(SessionAdmissionPanel),
+          };
           check(finder.evaluate()).length.equals(1);
-          check(
-            container.read(sessionPresentationProvider).panel,
-          ).equals(panel);
-          check(
-            container.read(sessionChatUnreadThreadsProvider),
-          ).contains('guest');
-        }
-        controller.closePanel();
-        await tester.pumpAndSettle();
-        check(finder.evaluate()).isEmpty();
-        await _unmountRoomScreen(tester);
-      });
+          if (panel == SessionPanel.prompts) {
+            final prompts =
+                (container.read(
+                        sessionPromptsControllerProvider(
+                          'test-session',
+                        ).notifier,
+                      )
+                      as _PresentationPrompts)
+                  ..setSaving(true);
+            await tester.pump();
+            controller.closePanel();
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 320));
+            check(finder.evaluate()).length.equals(1);
+            prompts.setSaving(false);
+            await tester.pumpAndSettle();
+            check(finder.evaluate()).isEmpty();
+            controller.openPanel(panel);
+            await tester.pumpAndSettle();
+          }
+          for (final size in [
+            const Size(1600, 1200),
+            const Size(800, 900),
+            const Size(400, 900),
+          ]) {
+            if (panel == SessionPanel.prompts) {
+              await tester.tap(find.text('Add Prompt'));
+              await tester.pumpAndSettle();
+              await tester.enterText(
+                find.byType(TextFormField),
+                'A draft across resizing',
+              );
+            }
+            tester.view.physicalSize = size;
+            await tester.pumpAndSettle();
+            check(finder.evaluate()).isEmpty();
+            check(find.text('A draft across resizing').evaluate()).isEmpty();
+            check(
+              container.read(sessionPresentationProvider).panel,
+            ).equals(SessionPanel.none);
+            // Only a new explicit action opens a panel at the new size.
+            if (size.width != 400) {
+              controller.openPanel(panel);
+              await tester.pumpAndSettle();
+              check(finder.evaluate()).length.equals(1);
+            }
+            check(
+              container.read(sessionChatUnreadThreadsProvider),
+            ).contains('guest');
+          }
+          controller.closePanel();
+          await tester.pumpAndSettle();
+          check(finder.evaluate()).isEmpty();
+          await _unmountRoomScreen(tester);
+        },
+      );
+    }
+
+    for (final increasing in [false, true]) {
+      testWidgets(
+        '${increasing ? 'widening' : 'shrinking'} closes session popups and preserves app dialogs',
+        (tester) async {
+          tester.view.physicalSize = increasing
+              ? const Size(400, 900)
+              : const Size(1600, 1200);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await _pumpRoomScreenForResolvedScreen(
+            tester,
+            session: session,
+            event: _createSessionEventWithElapsed(_testNow(tester)),
+            screen: RoomScreen.listening,
+          );
+          final popupContext = tester.element(
+            find.byType(SessionActionBar).first,
+          );
+          showDialog<void>(
+            context: popupContext,
+            useRootNavigator: false,
+            builder: (_) => const AlertDialog(title: Text('Session popup')),
+          );
+          await tester.pumpAndSettle();
+          showDialog<void>(
+            context: popupContext,
+            useRootNavigator: true,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('App popup'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Acknowledge resize'),
+                ),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+          tester.view.physicalSize = increasing
+              ? const Size(1600, 1200)
+              : const Size(400, 900);
+          await tester.pumpAndSettle();
+          check(find.text('Session popup').evaluate()).isEmpty();
+          check(find.text('App popup').evaluate()).isNotEmpty();
+          await tester.tap(find.text('Acknowledge resize'));
+          await tester.pumpAndSettle();
+          await _unmountRoomScreen(tester);
+        },
+      );
     }
 
     testWidgets('docks the chat sidebar on a wide viewport when open', (
@@ -1122,151 +1191,7 @@ void main() {
       check(panels.single.embedded).isTrue();
     });
 
-    testWidgets(
-      'keeps a single docked chat when a phone sheet is open and the window widens',
-      (tester) async {
-        tester.view.physicalSize = const Size(400, 900);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-
-        final event = _createSessionEventWithElapsed(
-          _testNow(tester),
-          elapsed: const Duration(minutes: 5),
-        );
-
-        await _pumpRoomScreenForResolvedScreen(
-          tester,
-          session: session,
-          event: event,
-          screen: RoomScreen.listening,
-        );
-
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(VideoSessionScreen)),
-          listen: false,
-        );
-
-        container
-            .read(sessionPresentationProvider.notifier)
-            .openPanel(SessionPanel.chat);
-        await tester.pumpAndSettle();
-        check(
-          tester.widgetList(find.byType(SessionChatPanel)),
-        ).length.equals(1);
-
-        tester.view.physicalSize = const Size(1600, 1200);
-        await tester.pump();
-        await tester.pump(sessionSidePanelDuration);
-        await tester.pumpAndSettle();
-
-        final panels = tester
-            .widgetList(find.byType(SessionChatPanel))
-            .whereType<SessionChatPanel>()
-            .toList();
-        check(panels).length.equals(1);
-        check(panels.single.embedded).isTrue();
-        check(container.read(sessionChatSelectedProvider)).isTrue();
-      },
-    );
-
-    testWidgets(
-      'keeps a single docked chat when a tablet drawer is open and the window widens',
-      (tester) async {
-        // Tablet widths dock only at sessionSidePanelDockMinWidth (1100).
-        tester.view.physicalSize = const Size(900, 900);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-
-        final event = _createSessionEventWithElapsed(
-          _testNow(tester),
-          elapsed: const Duration(minutes: 5),
-        );
-
-        await _pumpRoomScreenForResolvedScreen(
-          tester,
-          session: session,
-          event: event,
-          screen: RoomScreen.listening,
-        );
-
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(VideoSessionScreen)),
-          listen: false,
-        );
-
-        container
-            .read(sessionPresentationProvider.notifier)
-            .openPanel(SessionPanel.chat);
-        await tester.pumpAndSettle();
-        check(
-          tester.widgetList(find.byType(SessionChatPanel)),
-        ).length.equals(1);
-
-        tester.view.physicalSize = const Size(1600, 1200);
-        await tester.pump();
-        await tester.pump(sessionSidePanelDuration);
-        await tester.pumpAndSettle();
-
-        final panels = tester
-            .widgetList(find.byType(SessionChatPanel))
-            .whereType<SessionChatPanel>()
-            .toList();
-        check(panels).length.equals(1);
-        check(panels.single.embedded).isTrue();
-        check(container.read(sessionChatSelectedProvider)).isTrue();
-      },
-    );
-
-    testWidgets(
-      'keeps a single phone sheet when a docked chat is open and the window narrows',
-      (tester) async {
-        tester.view.physicalSize = const Size(1600, 1200);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-
-        final event = _createSessionEventWithElapsed(
-          _testNow(tester),
-          elapsed: const Duration(minutes: 5),
-        );
-
-        await _pumpRoomScreenForResolvedScreen(
-          tester,
-          session: session,
-          event: event,
-          screen: RoomScreen.listening,
-        );
-
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(VideoSessionScreen)),
-          listen: false,
-        );
-
-        container
-            .read(sessionPresentationProvider.notifier)
-            .openPanel(SessionPanel.chat);
-        await tester.pumpAndSettle();
-        check(
-          tester.widgetList(find.byType(SessionChatPanel)),
-        ).length.equals(1);
-
-        tester.view.physicalSize = const Size(400, 900);
-        await tester.pump();
-        await tester.pumpAndSettle();
-
-        final panels = tester
-            .widgetList(find.byType(SessionChatPanel))
-            .whereType<SessionChatPanel>()
-            .toList();
-        check(panels).length.equals(1);
-        check(panels.single.embedded).isFalse();
-        check(container.read(sessionChatSelectedProvider)).isTrue();
-      },
-    );
-
-    testWidgets('keeps chat open across a narrow → wide → narrow round trip', (
+    testWidgets('closes the phone chat sheet when the window widens', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(400, 900);
@@ -1301,12 +1226,140 @@ void main() {
       await tester.pump();
       await tester.pump(sessionSidePanelDuration);
       await tester.pumpAndSettle();
-      check(
-        tester
-            .widgetList(find.byType(SessionChatPanel))
-            .whereType<SessionChatPanel>()
-            .where((panel) => panel.embedded),
-      ).length.equals(1);
+
+      final panels = tester
+          .widgetList(find.byType(SessionChatPanel))
+          .whereType<SessionChatPanel>()
+          .toList();
+      check(panels).isEmpty();
+      check(container.read(sessionChatSelectedProvider)).isFalse();
+    });
+
+    testWidgets('closes the tablet chat drawer when the window widens', (
+      tester,
+    ) async {
+      // Tablet widths dock only at sessionSidePanelDockMinWidth (1100).
+      tester.view.physicalSize = const Size(900, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.chat);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
+
+      tester.view.physicalSize = const Size(1600, 1200);
+      await tester.pump();
+      await tester.pump(sessionSidePanelDuration);
+      await tester.pumpAndSettle();
+
+      final panels = tester
+          .widgetList(find.byType(SessionChatPanel))
+          .whereType<SessionChatPanel>()
+          .toList();
+      check(panels).isEmpty();
+      check(container.read(sessionChatSelectedProvider)).isFalse();
+    });
+
+    testWidgets('closes docked chat when the window no longer fits the dock', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.chat);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
+
+      tester.view.physicalSize = const Size(400, 900);
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final panels = tester
+          .widgetList(find.byType(SessionChatPanel))
+          .whereType<SessionChatPanel>()
+          .toList();
+      check(panels).isEmpty();
+      check(container.read(sessionChatSelectedProvider)).isFalse();
+    });
+
+    testWidgets('does not reopen chat after a narrow wide narrow round trip', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final event = _createSessionEventWithElapsed(
+        _testNow(tester),
+        elapsed: const Duration(minutes: 5),
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: event,
+        screen: RoomScreen.listening,
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.chat);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
+
+      tester.view.physicalSize = const Size(1600, 1200);
+      await tester.pump();
+      await tester.pump(sessionSidePanelDuration);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+      check(container.read(sessionChatSelectedProvider)).isFalse();
 
       tester.view.physicalSize = const Size(400, 900);
       await tester.pump();
@@ -1315,14 +1368,11 @@ void main() {
           .widgetList(find.byType(SessionChatPanel))
           .whereType<SessionChatPanel>()
           .toList();
-      check(roundTripPanels).length.equals(1);
-      check(roundTripPanels.single.embedded).isFalse();
-      check(container.read(sessionChatSelectedProvider)).isTrue();
-
-      await tester.tap(find.bySemanticsLabel('Close chat'));
+      check(roundTripPanels).isEmpty();
+      check(container.read(sessionChatSelectedProvider)).isFalse();
+      tester.view.physicalSize = const Size(1600, 1200);
       await tester.pumpAndSettle();
       check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
-      check(container.read(sessionChatSelectedProvider)).isFalse();
     });
 
     testWidgets('reentering a room after unmounting an open chat is safe', (

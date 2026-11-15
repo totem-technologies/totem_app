@@ -1539,7 +1539,7 @@ void main() {
   );
 
   testWidgets(
-    'hands admission from dock to drawer and back without changing selection',
+    'closes admission when the dock no longer fits and keeps it closed on widening',
     (tester) async {
       setViewport(tester, const Size(1200, 900));
       addTearDown(tester.view.resetPhysicalSize);
@@ -1566,15 +1566,14 @@ void main() {
       setViewport(tester, const Size(800, 900));
       await tester.pump();
       check(find.byType(DockedSessionSidePanel).evaluate()).isEmpty();
-      check(container.read(sessionAdmissionSelectedProvider)).isTrue();
-
       await tester.pumpAndSettle();
-      check(container.read(sessionAdmissionSelectedProvider)).isTrue();
-      check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
+      check(container.read(sessionAdmissionSelectedProvider)).isFalse();
+      check(find.byType(SessionAdmissionPanel).evaluate()).isEmpty();
 
       setViewport(tester, const Size(1200, 900));
       await tester.pumpAndSettle();
-      check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
+      check(find.byType(SessionAdmissionPanel).evaluate()).isEmpty();
+      check(container.read(sessionAdmissionSelectedProvider)).isFalse();
 
       await tester.pump(const Duration(minutes: 5));
       await tester.pumpWidget(const SizedBox.shrink());
