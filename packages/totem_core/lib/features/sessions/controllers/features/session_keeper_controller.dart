@@ -20,8 +20,6 @@ class SessionKeeperController extends _$SessionKeeperController {
   @visibleForTesting
   Timer? keeperDisconnectedTimer;
 
-  Future<void> Function(String identity)? onParticipantRemoved;
-
   @override
   void build(SessionController session) {
     ref.onDispose(disposePresenceTracking);
@@ -217,10 +215,8 @@ class SessionKeeperController extends _$SessionKeeperController {
 
   Future<void> removeParticipant(String participantSlug) async {
     if (!session.isCurrentUserKeeper()) return;
-    final revokeAdmission = onParticipantRemoved;
-    if (revokeAdmission == null) {
-      throw StateError('Admission is not ready. Please try again.');
-    }
+    final admission = session.admission;
+    final revokeAdmission = await admission.prepareRemoval();
     await _run<void>(
       action: () => ref.read(
         removeParticipantProvider(_sessionSlug, participantSlug).future,

@@ -296,7 +296,8 @@ void main() {
         final controller = container.read(
           sessionKeeperControllerProvider(session).notifier,
         );
-        controller.onParticipantRemoved = (slug) async => removed.add(slug);
+        (session.admission as FakeAdmissionService).onRevoke = (slug) async =>
+            removed.add(slug);
 
         final removal = controller.removeParticipant('user-2');
         await started.future;
@@ -323,7 +324,8 @@ void main() {
         final controller = container.read(
           sessionKeeperControllerProvider(session).notifier,
         );
-        controller.onParticipantRemoved = (slug) async => removed.add(slug);
+        (session.admission as FakeAdmissionService).onRevoke = (slug) async =>
+            removed.add(slug);
 
         await check(
           controller.removeParticipant('user-2'),
@@ -349,7 +351,8 @@ void main() {
         final controller = container.read(
           sessionKeeperControllerProvider(session).notifier,
         );
-        controller.onParticipantRemoved = (slug) async => removed.add(slug);
+        (session.admission as FakeAdmissionService).onRevoke = (slug) async =>
+            removed.add(slug);
 
         await controller.removeParticipant('user-2');
 

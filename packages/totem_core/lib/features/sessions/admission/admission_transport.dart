@@ -53,14 +53,14 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
     _checkRoomEnded(room.metadata);
     _listener = room.createListener()
       ..on<DataReceivedEvent>((event) {
-        if (event.topic != AdmissionProtocol.topic) return;
+        if (_disposed || event.topic != AdmissionProtocol.topic) return;
         final packet = AdmissionProtocol.decode(
           event.data,
           senderIdentity: event.participant?.identity,
           now: _now(),
         );
         if (packet != null) {
-          _events.add(AdmissionPacketReceived(packet));
+          _emit(AdmissionPacketReceived(packet));
           if (packet is AdmissionHello &&
               packet.senderIdentity == _joinReceipt?.recipientIdentity &&
               packet.recipientIdentity == localIdentity) {
@@ -77,28 +77,27 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
         }
       })
       ..on<ParticipantConnectedEvent>((event) {
-        _events.add(AdmissionPresenceChanged(event.participant.identity, true));
+        _emit(AdmissionPresenceChanged(event.participant.identity, true));
         if (event.participant.identity == _joinReceipt?.recipientIdentity) {
           _retryJoinReceipt();
         }
       })
       ..on<ParticipantDisconnectedEvent>(
-        (event) => _events.add(
-          AdmissionPresenceChanged(event.participant.identity, false),
-        ),
+        (event) =>
+            _emit(AdmissionPresenceChanged(event.participant.identity, false)),
       )
       ..on<RoomMetadataChangedEvent>((event) => _checkRoomEnded(event.metadata))
       ..on<RoomConnectedEvent>((event) {
         _checkRoomEnded(event.metadata);
         if (!_ended) {
-          _events.add(const AdmissionConnectionRestored());
+          _emit(const AdmissionConnectionRestored());
           _retryJoinReceipt();
         }
       })
       ..on<RoomReconnectedEvent>((_) {
         _checkRoomEnded(room.metadata);
         if (!_ended) {
-          _events.add(const AdmissionConnectionRestored());
+          _emit(const AdmissionConnectionRestored());
           _retryJoinReceipt();
         }
       })
@@ -107,8 +106,12 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
         _joinReceiptRetry = null;
         _joinReceiptConfirmed = false;
         _joinReceipt = null;
-        if (!_ended) _events.add(AdmissionRoomDisconnected(event.reason));
+        if (!_ended) _emit(AdmissionRoomDisconnected(event.reason));
       });
+  }
+
+  void _emit(AdmissionEvent event) {
+    if (!_disposed) _events.add(event);
   }
 
   static const pendingConnectOptions = ConnectOptions(autoSubscribe: false);
@@ -142,7 +145,7 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
       _joinReceiptRetry = null;
       _joinReceiptConfirmed = false;
       _joinReceipt = null;
-      _events.add(const AdmissionRoomEnded());
+      _emit(const AdmissionRoomEnded());
     }
   }
 

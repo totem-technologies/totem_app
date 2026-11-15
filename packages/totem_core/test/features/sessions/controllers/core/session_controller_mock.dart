@@ -2,6 +2,8 @@ import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -22,6 +24,8 @@ const testSessionOptions = SessionOptions(
 );
 
 class MockSessionController extends Mock implements SessionController {
+  @override
+  final SessionAdmissionService admission = FakeAdmissionService();
   FakeLocalMedia mockLocalMedia = FakeLocalMedia();
   FakeRoomMedia mockRoomMedia = FakeRoomMedia();
 
@@ -71,6 +75,8 @@ SessionRoomState _createSessionState({
 }
 
 class FakeSessionController implements SessionController {
+  @override
+  SessionAdmissionService admission = FakeAdmissionService();
   SessionRoomState mockState = _createSessionState();
   SessionDeviceController mockDevices = FakeSessionDeviceController();
   bool disconnectFromRoomCalled = false;
@@ -136,4 +142,35 @@ class FakeSessionController implements SessionController {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeAdmissionService extends Fake implements SessionAdmissionService {
+  Future<void> Function(String)? onRevoke;
+  @override
+  bool get busy => false;
+  @override
+  Set<String> get admittedIdentities => const {};
+  @override
+  String? get error => null;
+  @override
+  KeeperAdmissionController? get keeperController => null;
+  @override
+  void addListener(void Function() listener) {}
+  @override
+  void removeListener(void Function() listener) {}
+  @override
+  void requireRemovalReady() {
+    if (onRevoke == null) throw StateError('Admission is not ready');
+  }
+
+  @override
+  Future<Future<void> Function(String)> prepareRemoval() async {
+    requireRemovalReady();
+    return revokeRemovedParticipant;
+  }
+
+  @override
+  Future<void> revokeRemovedParticipant(String identity) async {
+    await onRevoke!(identity);
+  }
 }

@@ -201,21 +201,33 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
   }
 }
 
-/// Authoritative identities admitted to the current room.
+/// Read-only presentation projection of the session admission roster.
 ///
 /// Before a client receives a roster, only the room state's keeper is visible.
-/// Room owners should call [update] with the current roster's members, or an
-/// empty iterable when no authoritative roster is available.
-@Riverpod(keepAlive: true, dependencies: [sessionScope, keeperIdentity])
+/// The Keeper remains visible while authoritative recovery is unavailable.
+@Riverpod(
+  keepAlive: true,
+  dependencies: [sessionScope, keeperIdentity, currentSession],
+)
 class AdmittedSessionParticipantIdentities
     extends _$AdmittedSessionParticipantIdentities {
   @override
   Set<String> build() {
     ref.watch(sessionScopeProvider);
     final keeperIdentity = ref.watch(keeperIdentityProvider);
-    return Set.unmodifiable({?keeperIdentity});
+    final service = ref.watch(currentSessionProvider)?.admission;
+    void changed() {
+      if (ref.mounted) {
+        state = _withKeeper(service?.admittedIdentities ?? const []);
+      }
+    }
+
+    service?.addListener(changed);
+    ref.onDispose(() => service?.removeListener(changed));
+    return Set.unmodifiable({?keeperIdentity, ...?service?.admittedIdentities});
   }
 
+  @visibleForTesting
   void update(Iterable<String> identities) {
     state = _withKeeper(identities);
   }

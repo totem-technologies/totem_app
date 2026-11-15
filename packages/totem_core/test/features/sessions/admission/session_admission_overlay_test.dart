@@ -10,16 +10,14 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
-
 import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_scope.dart';
-
+import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -28,7 +26,6 @@ import 'package:totem_core/features/sessions/controllers/core/session_state.dart
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/options/session_start_confirmation_dialog.dart';
-
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
@@ -46,6 +43,7 @@ class _AdmissionPreferences implements SessionAdmissionPreferences {
   Error? readError;
   final values = <String, String>{};
   int writeCount = 0;
+  bool writesSucceed = true;
 
   @override
   String? getString(String key) {
@@ -57,6 +55,7 @@ class _AdmissionPreferences implements SessionAdmissionPreferences {
   @override
   Future<bool> setString(String key, String value) async {
     writeCount++;
+    if (!writesSucceed) return false;
     values[key] = value;
     return true;
   }
@@ -71,6 +70,7 @@ class _AdmissionPreferences implements SessionAdmissionPreferences {
 class _AdmissionRoom extends FakeRoom {
   _AdmissionRoom(super.participant);
 
+  int transportCreations = 0;
   final listener = _AdmissionEvents();
   final remotes = <String, RemoteParticipant>{};
 
@@ -79,8 +79,10 @@ class _AdmissionRoom extends FakeRoom {
       UnmodifiableMapView(remotes);
 
   @override
-  EventsListener<RoomEvent> createListener({bool synchronized = true}) =>
-      listener;
+  EventsListener<RoomEvent> createListener({bool synchronized = true}) => (() {
+    transportCreations++;
+    return listener;
+  })();
 }
 
 class _AdmissionEvents implements EventsListener<RoomEvent> {
@@ -249,6 +251,7 @@ class _AdmissionHarness {
   final DateTime Function() _now = _testNow;
   var _requestCount = 0;
   final _AdmissionPreferences preferences;
+  late Ref serviceRef;
   final sent = <AdmissionPacket>[];
   final mediaRecipients = <Set<String>>[];
   Future<void> Function(AdmissionPacket packet)? afterSend;
@@ -262,7 +265,28 @@ class _AdmissionHarness {
     sessionAdmissionPreferencesProvider.overrideWith(
       _preferencesOverride ?? (ref) async => preferences,
     ),
-    currentSessionProvider.overrideWith((ref) => session),
+    currentSessionProvider.overrideWith((ref) {
+      serviceRef = ref;
+      final service = SessionAdmissionService(ref, session, now: _testNow);
+      when(() => session.admission).thenReturn(service);
+      when(() => session.admissionState).thenAnswer((_) => state);
+      when(() => session.options).thenReturn(
+        const session_state.SessionOptions(
+          sessionSlug: 'session',
+          token: '',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          speakerEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+        ),
+      );
+      when(() => session.session).thenReturn(null);
+      ref
+        ..onDispose(() => unawaited(service.close()))
+        ..listen(currentSessionStateProvider, (_, _) => service.sync());
+      service.sync();
+      return session;
+    }),
     currentSessionStateProvider.overrideWithValue(state),
     currentSessionEventProvider.overrideWith((ref) => null),
     isCurrentUserKeeperProvider.overrideWith((ref) => true),
@@ -304,6 +328,94 @@ class _AdmissionHarness {
 }
 
 void main() {
+  test(
+    'session owns admission and roster permissions without a widget',
+    () async {
+      final harness = _AdmissionHarness();
+      final container = ProviderContainer(overrides: harness.overrides);
+      final retained = container.listen(currentSessionProvider, (_, _) {});
+      final service = container.read(currentSessionProvider)!.admission;
+      try {
+        await container.read(
+          keeperAdmissionRosterProvider('session', 'keeper').future,
+        );
+        await container.read(
+          declinedSessionParticipantsProvider('session', 'keeper').future,
+        );
+        service.sync();
+        await service.synchronized;
+        final controller = service.keeperController!;
+        service
+          ..sync()
+          ..sync();
+        await service.synchronized;
+        check(identical(controller, service.keeperController)).isTrue();
+        check(harness.room.transportCreations).equals(1);
+        await harness.sendRequest(harness.request('headless'));
+        await Future<void>.value();
+        check(controller.requests).length.equals(1);
+        final request = controller.requests.single;
+        await service.decide(request, true);
+        await harness.sendPacket(AdmissionProtocol.joined(request));
+        await Future<void>.value();
+        check(
+          container.read(admittedSessionParticipantIdentitiesProvider),
+        ).contains('guest');
+        check(harness.mediaRecipients.last).contains('guest');
+        await service.revokeRemovedParticipant('guest');
+        await Future<void>.value();
+        check(
+          container
+              .read(admittedSessionParticipantIdentitiesProvider)
+              .contains('guest'),
+        ).isFalse();
+        check(harness.mediaRecipients.last.contains('guest')).isFalse();
+        setupAppConfig();
+        harness.preferences.writesSucceed = false;
+        await check(
+          service.revokeRemovedParticipant('guest'),
+        ).throws<StateError>();
+        check(service.requireRemovalReady).throws<StateError>();
+        check(harness.mediaRecipients.last.contains('guest')).isFalse();
+        harness.preferences.writesSucceed = true;
+        await service.retryRecovery();
+        service.requireRemovalReady();
+
+        final replacement = _AdmissionRoom(harness.room.participant);
+        when(() => harness.session.room).thenReturn(replacement);
+        service.sync();
+        await service.synchronized;
+        check(identical(controller, service.keeperController)).isFalse();
+        check(replacement.transportCreations).equals(1);
+        final before = harness.mediaRecipients.length;
+        await harness.sendRequest(harness.request('stale'));
+        await Future<void>.value();
+        check(harness.mediaRecipients.length).equals(before);
+        final completeRemoval = await service.prepareRemoval();
+        await service.close();
+        await check(completeRemoval('guest')).throws<StateError>();
+        check(
+          harness.preferences.values.keys.any(
+            (key) => key.startsWith('session_admission_revocations:'),
+          ),
+        ).isTrue();
+        await replacement.listener.trigger(
+          DataReceivedEvent(
+            data: AdmissionProtocol.encode(harness.request('disposed')),
+            participant: _RemoteParticipant('guest'),
+            topic: AdmissionProtocol.topic,
+          ),
+        );
+        await Future<void>.value();
+        check(harness.mediaRecipients.length).equals(before);
+      } finally {
+        await service.close();
+        retained.close();
+        container.dispose();
+      }
+    },
+  );
+
   Future<ProviderContainer> pumpHost(
     WidgetTester tester,
     _AdmissionHarness harness, {
@@ -1257,9 +1369,7 @@ void main() {
     await tester.pump();
     check(harness.mediaRecipients.last).deepEquals({'guest', 'silent'});
 
-    await container
-        .read(sessionKeeperControllerProvider(harness.session).notifier)
-        .onParticipantRemoved!('guest');
+    await harness.session.admission.revokeRemovedParticipant('guest');
     await tester.pump();
     check(
       container.read(admittedSessionParticipantIdentitiesProvider),
@@ -1289,11 +1399,26 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+    final controller = harness.session.admission.keeperController;
+    check(controller).isNotNull();
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: ThemeData(useMaterial3: false),
+          home: _AdmissionOverlayHost(videoBuilds: videoBuilds),
+        ),
+      ),
+    );
+    await tester.pump();
     check(
-      container
-          .read(sessionKeeperControllerProvider(harness.session).notifier)
-          .onParticipantRemoved,
-    ).isNull();
+      identical(harness.session.admission.keeperController, controller),
+    ).isTrue();
+    check(harness.room.transportCreations).equals(1);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    unawaited(harness.session.admission.close());
+    await tester.pump();
     await tester.idle();
   });
 

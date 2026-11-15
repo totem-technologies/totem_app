@@ -5,10 +5,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:livekit_client/livekit_client.dart'
-    hide ConnectionState, SessionOptions, logger;
-import 'package:livekit_client/livekit_client.dart'
     as livekit
     show ConnectionState;
+import 'package:livekit_client/livekit_client.dart'
+    hide ConnectionState, SessionOptions, logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -16,6 +16,7 @@ import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
@@ -96,6 +97,11 @@ enum SessionJoinResult { success, retryableFailure, fatalFailure }
 
 @riverpod
 class SessionController extends _$SessionController {
+  SessionRoomState get admissionState => state;
+  Future<void>? _admissionCleanup;
+  SessionAdmissionService? _admission;
+  SessionAdmissionService get admission =>
+      _admission ??= SessionAdmissionService(ref, this);
   Room? _room;
   Room? get room => _room;
   @visibleForTesting
@@ -261,13 +267,18 @@ class SessionController extends _$SessionController {
       ..listen(sessionKeeperControllerProvider(this), (_, _) {})
       ..listen(sessionMessagingControllerProvider(this), (_, _) {});
     // The device controls follow the session's state until tracks publish.
-    listenSelf((_, _) => devices.syncWithSession());
+    listenSelf((_, _) {
+      devices.syncWithSession();
+      admission.sync();
+    });
 
     ref
         .watch(sessionProvider(options.sessionSlug))
         .whenData((event) => session = event);
 
     ref.onDispose(() {
+      _admissionCleanup = _admission?.close();
+      _admission = null;
       final pendingRoom = _pendingConnectedRoom;
       _pendingConnectedRoom = null;
       if (pendingRoom != null && !identical(pendingRoom, _room)) {
@@ -1218,6 +1229,8 @@ class SessionController extends _$SessionController {
 
   @visibleForTesting
   Future<void> disposeConnection() async {
+    await _admissionCleanup;
+    await _admission?.disconnect();
     await _messaging?.disposeAdmissionTransport();
     await _disableLocalMediaTracks();
 
