@@ -83,3 +83,47 @@ The pre-join screen keys the nested `ProviderScope` by the identity of its join 
 `SessionNavigatorScope` directs session-owned dialogs, sheets, and responsive modals to the room navigator, including actions from docked content. Its observer tracks only routes in that navigator. Termination removes those specific transient routes, including covered confirmations; it does not pop parent application routes. Child panel widgets do not own modal cleanup. Standalone Prompts calls retain their explicit non-session fallback.
 
 Domain resources remain outside this presentation state: admission service/protocol, prompt repository/controller, chat messages, backend room state, and media ownership are unchanged. Tests cover atomic selection, stale close revisions, isolated replacement containers, existing chat reconciliation/unread behaviors, room termination with stacked dialogs, and responsive Chat/Prompts/Admission handoff.
+
+## Phase 4 transport migration status: incomplete
+
+`transport/session_transport.dart` defines application-owned connection state,
+disconnect reasons, failures with original diagnostic causes, participant and
+metadata events, immutable data packets, media access, and transport/factory
+interfaces. `media/livekit_session_transport.dart` implements those interfaces
+using private SDK room/listener ownership and the existing media adapters.
+`ConnectedSessionLease` supports one claim of an existing connected transport;
+disposing a consumed lease cannot dispose the claimed transport. The offering
+owner is responsible for cancelling its subscriptions before offering it.
+
+Configurable fake transports and factories live under
+`test/features/sessions/transport/`. Their controlled connection completion,
+publication failures, recorded permissions, and lifecycle counters support
+orchestration migration without a LiveKit backend.
+
+Milestone B1 is implemented: `SessionController` owns a `SessionTransport`,
+created by the generated `sessionTransportFactoryProvider`. The production
+factory creates `LiveKitSessionTransport`; preparation, connection, events,
+permissions, subscriptions, disconnection, and disposal cross that boundary.
+Factory-owned media facades remain stable across connection replacements, so
+existing device listeners and video consumers do not acquire a second capture
+or media surface. Connection failures are classified with application-owned
+failure types. The controller is removed from the direct SDK import allowlist.
+
+`media/session_transport_compatibility.dart` isolates the remaining bridges:
+
+- **B2:** messaging receives its original SDK data event through a weak-keyed
+  adapter cache, retaining sender information even if presence changes. The
+  controller's read-through `room` getter also supports existing messaging.
+- **C1:** pre-join capture options, retained-track publication, and the existing
+  SDK-shaped error presentation remain infrastructure integrations. The
+  existing state/error consumers are preserved, not migrated in B1.
+- **C2:** `activateConnectedRoom` accepts the existing raw-room offer, retained
+  by `LegacyConnectedRoomOffer` until prior cleanup completes. Only then does
+  it wrap the same room in the active transport and attach the existing media
+  facades. It never connects a second room. This compatibility offer is not the
+  `ConnectedSessionLease` migration. Admission and presentation consumers keep
+  read-through access until their remaining C1/C2 migrations remove the getter.
+
+Phase 4 remains incomplete until messaging, pre-join, admission, SDK-dependent
+state, and connected ownership transfer finish their later milestones. B1 does
+not introduce a second production connection path or a new SDK allowlist entry.

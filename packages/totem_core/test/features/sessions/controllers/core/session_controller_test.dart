@@ -6,21 +6,25 @@ import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
-    hide ConnectionState, SessionOptions;
-import 'package:livekit_client/livekit_client.dart'
     as livekit
     show ConnectionState;
+import 'package:livekit_client/livekit_client.dart'
+    hide ConnectionState, SessionOptions;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/media/session_transport_factory_provider.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
 import '../../../../setup.dart';
 import '../../livekit_mocks.dart';
+import '../../transport/fake_session_transport.dart';
 
 SessionDetailSchema _createSessionEvent(String eventSlug) {
   return SessionDetailSchema(
@@ -240,7 +244,7 @@ class _DelayedInitializeSessionController extends SessionController {
   RoomOptions? lastRoomOptions;
 
   @override
-  Future<Room> initializeConnection({
+  Future<SessionTransport> initializeConnection({
     required RoomOptions roomOptions,
     required String url,
     required String token,
@@ -252,7 +256,7 @@ class _DelayedInitializeSessionController extends SessionController {
     }
     await initializationGate.future;
     room = initializedRoom;
-    return initializedRoom;
+    return transport!;
   }
 }
 
@@ -266,6 +270,212 @@ void main() {
 
   group('SessionController', () {
     group('Connection Lifecycle', () {
+      test(
+        'production join uses the injected transport factory and typed lifecycle events',
+        () async {
+          const options = SessionOptions(
+            sessionSlug: 'transport-session',
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            speakerEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+          );
+          final factory = FakeSessionTransportFactory();
+          late SessionController controller;
+          final container = ProviderContainer(
+            overrides: [
+              sessionProvider(options.sessionSlug).overrideWithValue(
+                AsyncData(_createSessionEvent(options.sessionSlug)),
+              ),
+              sessionTransportFactoryProvider(
+                options,
+              ).overrideWithValue(factory),
+              roomStateProvider(
+                options.sessionSlug,
+              ).overrideWith((_) => controller.state.roomState),
+              authControllerProvider.overrideWith(
+                () => FakeAuthController(AuthState.unauthenticated()),
+              ),
+            ],
+          );
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+          );
+          controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          try {
+            check(factory.created).isEmpty();
+            check(await controller.join()).equals(SessionJoinResult.success);
+            final transport = factory.created.single;
+            check(identical(controller.transport, transport)).isTrue();
+            check(controller.room).isNull(); // No separate SDK room exists.
+            check(transport.connectCalls).equals(1);
+            check(
+              controller.state.connectionState,
+            ).equals(RoomConnectionState.connected);
+            check(await controller.join()).equals(SessionJoinResult.success);
+            check(factory.created).length.equals(1);
+            check(transport.connectCalls).equals(1);
+            const remote = ParticipantInfo(
+              sid: 'remote-sid',
+              identity: 'remote',
+              name: 'Participant',
+            );
+            transport.emit(
+              const TransportParticipantChanged(remote, present: true),
+            );
+            check(controller.state.participantsList).deepEquals([remote]);
+            final metadata = {
+              ...controller.state.roomState.toJson(),
+              'version': 23,
+            };
+            transport.emit(TransportMetadataChanged(jsonEncode(metadata)));
+            check(controller.state.roomState.version).equals(23);
+            final permissionUpdates = transport.permissionUpdates;
+            const <SessionTransportEvent>[
+              TransportConnectionChanged(
+                SessionTransportConnectionState.reconnecting,
+              ),
+              TransportConnectionChanged(
+                SessionTransportConnectionState.connected,
+                reconnected: true,
+              ),
+            ].forEach(transport.emit);
+            check(transport.permissionUpdates > permissionUpdates).isTrue();
+            check(transport.connectCalls).equals(1);
+            transport.emit(
+              const TransportParticipantChanged(remote, present: false),
+            );
+            check(controller.state.participantsList).isEmpty();
+            await controller.leave();
+            await controller.disposeConnection();
+            check(transport.disconnectCalls).equals(1);
+            check(transport.underlyingDisposals).equals(1);
+            check(controller.transport).isNull();
+          } finally {
+            subscription.close();
+            container.dispose();
+          }
+        },
+      );
+
+      test(
+        'transport connect failure retries through a new factory connection',
+        () async {
+          const options = SessionOptions(
+            sessionSlug: 'retry-transport',
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            speakerEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+          );
+          var attempts = 0;
+          final factory = FakeSessionTransportFactory(
+            configure: (transport) {
+              if (attempts++ != 0) return;
+              transport.connectFailure = const SessionTransportFailure(
+                SessionTransportFailureKind.connection,
+                'timeout',
+                cause: 'test timeout',
+                stackTrace: StackTrace.empty,
+                connectionFailure: SessionTransportConnectionFailure.timeout,
+              );
+            },
+          );
+          late SessionController controller;
+          final container = ProviderContainer(
+            overrides: [
+              sessionProvider(options.sessionSlug).overrideWithValue(
+                AsyncData(_createSessionEvent(options.sessionSlug)),
+              ),
+              sessionTransportFactoryProvider(
+                options,
+              ).overrideWithValue(factory),
+              roomStateProvider(
+                options.sessionSlug,
+              ).overrideWith((_) => controller.state.roomState),
+              authControllerProvider.overrideWith(
+                () => FakeAuthController(AuthState.unauthenticated()),
+              ),
+            ],
+          );
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+          );
+          controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          try {
+            check(
+              await controller.join(),
+            ).equals(SessionJoinResult.retryableFailure);
+            final failed = factory.created.single;
+            await controller.resetAfterFailedJoin();
+            check(failed.underlyingDisposals).equals(1);
+            check(await controller.join()).equals(SessionJoinResult.success);
+            check(factory.created).length.equals(2);
+            check(factory.created.last.connectCalls).equals(1);
+            await controller.leave();
+          } finally {
+            await controller.disposeConnection();
+            subscription.close();
+            container.dispose();
+          }
+        },
+      );
+
+      test('transport rejection retains diagnostics and is fatal', () async {
+        const options = SessionOptions(
+          sessionSlug: 'transport-rejected',
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          speakerEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+        );
+        final failure = SessionTransportFailure(
+          SessionTransportFailureKind.connection,
+          'denied',
+          cause: StateError('denied'),
+          stackTrace: StackTrace.current,
+          connectionFailure: SessionTransportConnectionFailure.notAllowed,
+        );
+        final factory = FakeSessionTransportFactory(
+          configure: (transport) => transport.connectFailure = failure,
+        );
+        final container = ProviderContainer(
+          overrides: [
+            sessionProvider(options.sessionSlug).overrideWithValue(
+              AsyncData(_createSessionEvent(options.sessionSlug)),
+            ),
+            sessionTransportFactoryProvider(options).overrideWithValue(factory),
+          ],
+        );
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+        );
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        try {
+          check(await controller.join()).equals(SessionJoinResult.fatalFailure);
+          final error =
+              controller.state.connection.error! as RoomTransportError;
+          check(error.failure).identicalTo(failure);
+          check(factory.created.single.connectCalls).equals(1);
+        } finally {
+          await controller.disposeConnection();
+          subscription.close();
+          container.dispose();
+        }
+      });
+
       test(
         'initializeConnection assigns room and returns same instance',
         () async {
@@ -306,7 +516,7 @@ void main() {
           );
 
           check(controller.room).isNotNull();
-          check(identical(controller.room, initializedRoom)).equals(true);
+          check(identical(controller.transport, initializedRoom)).equals(true);
         },
       );
 

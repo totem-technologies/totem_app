@@ -4,11 +4,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
-import 'package:livekit_client/livekit_client.dart'
-    as livekit
-    show ConnectionState;
-import 'package:livekit_client/livekit_client.dart'
-    hide ConnectionState, SessionOptions, logger;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -26,16 +21,17 @@ import 'package:totem_core/features/sessions/controllers/features/session_infra_
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/controllers/utils.dart';
-import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
-import 'package:totem_core/features/sessions/media/livekit_room_media.dart';
-import 'package:totem_core/features/sessions/media/livekit_support.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/media/room_media.dart';
+import 'package:totem_core/features/sessions/media/session_transport_compatibility.dart'
+    as compatibility;
+import 'package:totem_core/features/sessions/media/session_transport_factory_provider.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart'
     show sessionScopeProvider;
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 import 'package:totem_core/shared/logger.dart';
 
 export 'package:totem_core/features/sessions/controllers/core/session_state.dart';
@@ -69,7 +65,7 @@ enum RoomScreen {
 ///
 /// See also:
 ///
-///  * [DisconnectReason], the reason the user was disconnected from the livekit room.
+///  * [SessionTransportDisconnectReason], the transport disconnection reason.
 enum SessionDisconnectedReason {
   /// The same account joined from another device and replaced this device.
   movedToAnotherDevice,
@@ -102,27 +98,29 @@ class SessionController extends _$SessionController {
   SessionAdmissionService? _admission;
   SessionAdmissionService get admission =>
       _admission ??= SessionAdmissionService(ref, this);
-  Room? _room;
-  Room? get room => _room;
+  SessionTransport? _transport;
+  SessionTransport? get transport => _transport;
+  // B2/C2 compatibility only: this getter never owns the SDK room.
+  compatibility.LegacySessionRoom? get room =>
+      compatibility.legacyRoom(_transport);
   @visibleForTesting
-  set room(Room? value) {
-    _room = value;
-    _localMedia.attach(value);
-    _roomMedia.attach(value);
+  set room(compatibility.LegacySessionRoom? value) {
+    if (identical(room, value)) return;
+    _transport = value == null
+        ? null
+        : compatibility.wrapLegacyRoom(
+            value,
+            options.cameraOptions,
+            localMedia: localMedia,
+            roomMedia: roomMedia,
+          );
   }
 
-  final LiveKitLocalMedia _localMedia = LiveKitLocalMedia(
-    cameraCaptureOptions: defaultCameraCaptureOptions,
-  );
-  LocalMedia get localMedia => _localMedia;
-
-  final LiveKitRoomMedia _roomMedia = LiveKitRoomMedia();
-  RoomMedia get roomMedia => _roomMedia;
-
-  EventsListener<RoomEvent>? _listener;
-  Room? _pendingConnectedRoom;
-  bool _isAdoptingConnectedRoom = false;
-  final Map<Object, Object> _subscribedRemotePublications = Map.identity();
+  late SessionTransportFactory _transportFactory;
+  LocalMedia get localMedia => _transportFactory.localMedia;
+  RoomMedia get roomMedia => _transportFactory.roomMedia;
+  StreamSubscription<SessionTransportEvent>? _listener;
+  compatibility.LegacyConnectedRoomOffer? _pendingConnectedRoom;
   Set<String>? _admittedMediaRecipients;
   Set<String>? _appliedMediaRecipients;
   bool? _appliedAllParticipantsAllowed;
@@ -151,39 +149,25 @@ class SessionController extends _$SessionController {
 
   /// The capture framerate caps both the local self-view and the published
   /// stream (the camera is the single source for both).
-  static const defaultCameraCaptureOptions = CameraCaptureOptions(
-    params: VideoParameters(
-      dimensions: VideoDimensionsPresets.h720_43,
-      encoding: VideoEncoding(maxBitrate: 1300 * 1000, maxFramerate: 24),
-    ),
+  static const compatibility.LegacyCameraOptions defaultCameraCaptureOptions =
+      compatibility.defaultCameraCaptureOptions;
+  static final compatibility.LegacyVideoPublishOptions
+  defaultVideoPublishOptions = videoPublishOptionsForPlatform(
+    isWeb: kIsWeb,
+    isWasm: kIsWasm,
   );
-
-  /// h264 has hardware encode/decode on effectively every mobile device.
-  ///
-  /// Some Browsers have trouble encoding h265.
-  /// Prefer h265 on mobile devices.
-  static final VideoPublishOptions defaultVideoPublishOptions =
-      videoPublishOptionsForPlatform(isWeb: kIsWeb, isWasm: kIsWasm);
-
-  static VideoPublishOptions videoPublishOptionsForPlatform({
-    required bool isWeb,
-    required bool isWasm,
-  }) => VideoPublishOptions(
-    videoCodec: (isWeb || isWasm) ? 'h264' : 'h265',
-    backupVideoCodec: const BackupVideoCodec(codec: 'h264'),
-  );
-
-  static RoomOptions sessionRoomOptions({
-    required CameraCaptureOptions cameraOptions,
+  static compatibility.LegacyVideoPublishOptions
+  videoPublishOptionsForPlatform({required bool isWeb, required bool isWasm}) =>
+      compatibility.videoPublishOptionsForPlatform(
+        isWeb: isWeb,
+        isWasm: isWasm,
+      );
+  static compatibility.LegacyRoomOptions sessionRoomOptions({
+    required compatibility.LegacyCameraOptions cameraOptions,
     required bool speakerEnabled,
-  }) => LiveKitLocalMedia.applyCapturePolicy(
-    RoomOptions(
-      defaultCameraCaptureOptions: cameraOptions,
-      defaultAudioOutputOptions: AudioOutputOptions(speakerOn: speakerEnabled),
-      dynacast: true,
-      defaultVideoPublishOptions: defaultVideoPublishOptions,
-      adaptiveStream: true,
-    ),
+  }) => compatibility.sessionRoomOptions(
+    cameraOptions: cameraOptions,
+    speakerEnabled: speakerEnabled,
   );
 
   SessionDeviceController get devices {
@@ -236,9 +220,12 @@ class SessionController extends _$SessionController {
     _admittedMediaRecipients = Set.unmodifiable(identities);
     _applyMediaSubscriptionPermissions();
 
-    final remoteParticipants = room?.remoteParticipants;
+    final remoteParticipants = _transport?.participants
+        .where((p) => !p.isLocal)
+        .map((p) => p.identity)
+        .toSet();
     if (remoteParticipants != null &&
-        newlyAdmitted.any(remoteParticipants.containsKey)) {
+        newlyAdmitted.any(remoteParticipants.contains)) {
       _attemptReconcile();
     }
   }
@@ -261,6 +248,7 @@ class SessionController extends _$SessionController {
 
   @override
   SessionRoomState build(SessionOptions options) {
+    _transportFactory = ref.watch(sessionTransportFactoryProvider(options));
     ref
       ..listen(sessionDeviceControllerProvider(this), (_, _) {})
       ..listen(sessionInfraControllerProvider, (_, _) {})
@@ -281,8 +269,8 @@ class SessionController extends _$SessionController {
       _admission = null;
       final pendingRoom = _pendingConnectedRoom;
       _pendingConnectedRoom = null;
-      if (pendingRoom != null && !identical(pendingRoom, _room)) {
-        unawaited(_releaseOfferedRoom(pendingRoom));
+      if (pendingRoom != null && !identical(pendingRoom.room, room)) {
+        unawaited(pendingRoom.dispose());
       }
       _cleanUpInBackground('Failed to clean up session');
     });
@@ -344,14 +332,14 @@ class SessionController extends _$SessionController {
   }
 
   void _onConnected() {
-    if (room?.localParticipant == null) {
+    if (_transport?.localIdentity == null) {
       logger.i('Local participant is null on connected.');
       return;
     }
 
     logger.i(
       'Connected to LiveKit room as '
-      '"${room?.localParticipant?.identity}".',
+      '"${_transport?.localIdentity}".',
     );
 
     _updateRoomState();
@@ -363,8 +351,8 @@ class SessionController extends _$SessionController {
     // otherwise the room replaces it with an avatar-only tile before the
     // publication becomes available.
     final hasPendingPreJoinMedia =
-        _joinMediaOwner.track<LocalVideoTrack>() != null ||
-        _joinMediaOwner.track<LocalAudioTrack>() != null;
+        compatibility.cameraTrack(_joinMediaOwner) != null ||
+        compatibility.microphoneTrack(_joinMediaOwner) != null;
     if (!hasPendingPreJoinMedia) {
       _dispatch(
         const ConnectionChanged(
@@ -414,10 +402,8 @@ class SessionController extends _$SessionController {
     _keepAliveLink = null;
   }
 
-  void _onError(LiveKitException? error) {
-    if (error == null) return;
-    ErrorHandler.handleLivekitError(error);
-    _dispatch(SessionErrorChanged(RoomLiveKitError(error)));
+  void _onError(SessionTransportFailure error) {
+    _dispatch(SessionErrorChanged(compatibility.legacyCompatibleError(error)));
   }
 
   void _updateRoomState([RoomState? newSessionState]) {
@@ -441,7 +427,7 @@ class SessionController extends _$SessionController {
       sessionEnded = handleStateChange(newSessionState);
     } else {
       final metadataResult = resolveMetadataState(
-        metadata: room?.metadata,
+        metadata: _transport?.metadata,
         lastMetadata: _lastMetadata,
       );
       _lastMetadata = metadataResult.lastMetadata;
@@ -550,13 +536,13 @@ class SessionController extends _$SessionController {
     unawaited(_scheduleServerStatePoll(attemptReconcile: true));
   }
 
-  void _onParticipantDisconnected(ParticipantDisconnectedEvent event) {
+  void _onParticipantDisconnected(ParticipantInfo participant) {
     _attemptReconcile();
     _updateParticipantsList();
   }
 
-  void _onParticipantConnected(ParticipantConnectedEvent event) {
-    final identity = event.participant.identity;
+  void _onParticipantConnected(ParticipantInfo participant) {
+    final identity = participant.identity;
     if (_isMediaRecipientOrKeeper(identity)) _attemptReconcile();
     _updateParticipantsList();
   }
@@ -621,15 +607,18 @@ class SessionController extends _$SessionController {
   Future<SessionJoinResult> _publishInitialMedia(
     SessionJoinMedia? joinMedia,
   ) async {
-    final initialCameraTrack = _joinMediaOwner.track<LocalVideoTrack>();
-    final initialMicrophoneTrack = _joinMediaOwner.track<LocalAudioTrack>();
+    final initialCameraTrack = compatibility.cameraTrack(_joinMediaOwner);
+    final initialMicrophoneTrack = compatibility.microphoneTrack(
+      _joinMediaOwner,
+    );
 
     try {
       if (!_canPublishInitialMedia) return SessionJoinResult.retryableFailure;
       if (options.cameraEnabled) {
-        final published = await _localMedia.publishJoinCamera(
+        final published = await compatibility.publishCamera(
+          _transport!,
           initialCameraTrack,
-          publishOptions: defaultVideoPublishOptions,
+          defaultVideoPublishOptions,
         );
         if (!ref.mounted) return SessionJoinResult.retryableFailure;
         if (published) _joinMediaOwner.releaseToRoom(initialCameraTrack);
@@ -640,7 +629,8 @@ class SessionController extends _$SessionController {
 
       if (!_canPublishInitialMedia) return SessionJoinResult.retryableFailure;
       if (initialMicrophoneTrack != null || options.microphoneEnabled) {
-        final published = await _localMedia.publishJoinMicrophone(
+        final published = await compatibility.publishMicrophone(
+          _transport!,
           initialMicrophoneTrack,
           muted: !shouldEnableMicrophone(),
         );
@@ -711,71 +701,28 @@ class SessionController extends _$SessionController {
         return SessionJoinResult.retryableFailure;
       }
 
-      final connectOptions = defaultTargetPlatform == TargetPlatform.iOS
-          ? const ConnectOptions(
-              timeouts: Timeouts(
-                connection: Duration(seconds: 30),
-                debounce: Duration(milliseconds: 20),
-                publish: Duration(seconds: 10),
-                subscribe: Duration(seconds: 10),
-                peerConnection: Duration(seconds: 10),
-                iceRestart: Duration(seconds: 10),
-              ),
-            )
-          : null;
-
-      // FastConnect publishes supplied tracks asynchronously after connect
-      // completes. Publish explicitly so join cannot report a false success.
-      await _connect(
-        url: AppConfig.instance.liveKitUrl,
-        token: options.token,
-        connectOptions: connectOptions,
-      );
+      await _transport!.connect(AppConfig.instance.liveKitUrl, options.token);
       if (!ref.mounted) return SessionJoinResult.retryableFailure;
 
-      if (!_localMedia.isAvailable) {
+      if (!localMedia.isAvailable) {
         throw StateError('Room connected without a local participant');
       }
 
       return await _publishInitialMedia(joinMedia);
-    }
-    // For ConnectException and MediaConnectException, we log the error but don't
-    // necessarily want to show an error message to the user.
-    // https://github.com/livekit/client-sdk-flutter/issues/756#issuecomment-4565674372
-    on ConnectException catch (error, stackTrace) {
+    } on SessionTransportFailure catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
-        message:
-            '(${error.statusCode}) Error connecting to LiveKit room: ${error.reason}',
+        message: 'Session transport connection failed',
       );
-      switch (error.reason) {
-        case ConnectionErrorReason.NotAllowed:
-        case ConnectionErrorReason.InternalError:
-          // This error can occur when the token is invalid or doesn't have the right permissions.
-          // In this case, we want to show an error message to the user.
-          _onError(error);
-          return SessionJoinResult.fatalFailure;
-        case ConnectionErrorReason.Timeout:
-          // These errors can occur due to transient network issues or server problems.
-          // We can choose to retry the connection or show an error message.
-          return SessionJoinResult.retryableFailure;
+      if (error.connectionFailure ==
+              SessionTransportConnectionFailure.timeout ||
+          error.kind == SessionTransportFailureKind.mediaConnection) {
+        return SessionJoinResult.retryableFailure;
       }
-    } on MediaConnectException catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error establishing media connection to LiveKit room',
-      );
-      // We may want to catch this error in the future.
-      // _onError(error);
-      return SessionJoinResult.retryableFailure;
-    } on LiveKitException catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error connecting to LiveKit room',
-      );
+      if (error.kind == SessionTransportFailureKind.unexpected) {
+        return SessionJoinResult.retryableFailure;
+      }
       _onError(error);
       return SessionJoinResult.fatalFailure;
     } catch (error, stackTrace) {
@@ -876,11 +823,11 @@ class SessionController extends _$SessionController {
 
   /// Leaves while the page is unloading, such as when the user closes the
   /// tab. Nothing after the first await runs then, so [leave] would never
-  /// reach LiveKit. [Room.disconnect] sends its leave request before its
+  /// reach the transport. Its disconnect operation sends the leave request before its
   /// first await, so the server removes this participant at once instead of
   /// after its connection timeout. Capture stops with the page.
   void leaveOnPageExit() {
-    unawaited(_room?.disconnect());
+    unawaited(_transport?.disconnect());
   }
 
   void _cleanUpInBackground(String message) {
@@ -908,8 +855,6 @@ class SessionController extends _$SessionController {
   Future<void> _performCleanup() async {
     logger.d('Disposing SessionService and closing connections.');
 
-    _isAdoptingConnectedRoom = false;
-    _subscribedRemotePublications.clear();
     _admittedMediaRecipients = null;
     _appliedMediaRecipients = null;
     _appliedAllParticipantsAllowed = null;
@@ -960,18 +905,18 @@ class SessionController extends _$SessionController {
   }
 
   Future<SessionJoinResult> activateConnectedRoom({
-    required Room room,
+    required compatibility.LegacySessionRoom room,
     SessionJoinMedia? joinMedia,
   }) async {
     final retainedJoinMedia = _joinMediaOwner.retain(joinMedia);
     final pendingRoom = _pendingConnectedRoom;
     final hasActiveRoom =
         _leaveFuture == null &&
-        (_room != null ||
+        (_transport != null ||
             state.connectionState == RoomConnectionState.connected ||
             state.connectionState == RoomConnectionState.connecting);
     if (pendingRoom != null || hasActiveRoom) {
-      final existingRoom = pendingRoom ?? _room;
+      final existingRoom = pendingRoom?.room ?? this.room;
       if (retainedJoinMedia.hasOwnedTracks) {
         _detachJoinMediaPreview(joinMedia);
       }
@@ -983,7 +928,7 @@ class SessionController extends _$SessionController {
 
     // The caller transfers this room at invocation, before waiting for a
     // previous connection to finish cleaning up.
-    _pendingConnectedRoom = room;
+    _pendingConnectedRoom = compatibility.LegacyConnectedRoomOffer(room);
     _dispatch(
       const ConnectionChanged(
         RoomConnectionState.connecting,
@@ -993,21 +938,25 @@ class SessionController extends _$SessionController {
 
     try {
       await _waitForPreviousConnectionCleanup();
-      if (!identical(_pendingConnectedRoom, room)) {
+      if (!identical(_pendingConnectedRoom?.room, room)) {
         return SessionJoinResult.retryableFailure;
       }
       if (!_isRoomConnected(room)) {
         throw StateError('Connected room disconnected before activation');
       }
+      _transport = _pendingConnectedRoom!.adopt(
+        localMedia: localMedia,
+        roomMedia: roomMedia,
+        cameraOptions: options.cameraOptions,
+      );
       _pendingConnectedRoom = null;
-      this.room = room;
-      _registerRoomEventListeners(room);
+      _registerTransportEvents(_transport!);
       if (!await _initializeSessionInfrastructure()) {
         throw StateError(
           'Session controller was disposed during room activation',
         );
       }
-      if (!_localMedia.isAvailable) {
+      if (!localMedia.isAvailable) {
         throw StateError('Connected room has no local participant');
       }
       if (!_isRoomConnected(room)) {
@@ -1019,8 +968,7 @@ class SessionController extends _$SessionController {
       if (result != SessionJoinResult.success) return result;
       if (!_isRoomConnected(room)) return SessionJoinResult.retryableFailure;
 
-      _isAdoptingConnectedRoom = true;
-      _subscribeToExistingRemotePublications(room);
+      unawaited(_subscribeRemoteMedia());
       return SessionJoinResult.success;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -1028,7 +976,7 @@ class SessionController extends _$SessionController {
         stackTrace: stackTrace,
         message: 'Failed to activate connected session room',
       );
-      if (!identical(_room, room)) {
+      if (!identical(this.room, room)) {
         _pendingConnectedRoom = null;
         await _releaseOfferedRoom(room);
       }
@@ -1041,102 +989,118 @@ class SessionController extends _$SessionController {
     }
   }
 
-  bool _isRoomConnected(Room room) =>
-      room.connectionState == livekit.ConnectionState.connected;
-
-  Future<void> _releaseOfferedRoom(Room room) async {
-    try {
-      await room.disconnect();
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to disconnect rejected connected session room',
-      );
-    }
-    try {
-      await room.dispose();
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to dispose rejected connected session room',
-      );
-    }
-  }
+  bool _isRoomConnected(compatibility.LegacySessionRoom room) =>
+      compatibility.legacyRoomConnected(room);
+  Future<void> _releaseOfferedRoom(compatibility.LegacySessionRoom room) =>
+      compatibility.releaseRejectedLegacyRoom(room);
 
   @visibleForTesting
-  Future<Room> initializeConnection({
-    required RoomOptions roomOptions,
+  Future<SessionTransport> initializeConnection({
+    required compatibility.LegacyRoomOptions roomOptions,
     required String url,
     required String token,
   }) async {
-    final room = _room ??= Room(roomOptions: roomOptions);
-    _localMedia.attach(room);
-    _roomMedia.attach(room);
-    await room.prepareConnection(url, token);
-    _registerRoomEventListeners(room);
-    return room;
+    final transport = _transport ??= _transportFactory.create();
+    _registerTransportEvents(transport);
+    await transport.prepare(url, token);
+    return transport;
   }
 
-  void _registerRoomEventListeners(Room room) {
-    _listener ??= room.createListener()
-      ..on<RoomMetadataChangedEvent>((_) {
-        if (ref.mounted) _updateRoomState();
-      })
-      ..on<RoomConnectedEvent>((_) => _onConnected())
-      ..on<RoomReconnectedEvent>((_) {
-        _applyMediaSubscriptionPermissions(force: true);
-      })
-      ..on<RoomDisconnectedEvent>((event) {
-        logger.d('Disconnected from session. Reason: ${event.reason}');
-        if (event.reason != null) {
-          _dispatch(SessionErrorChanged(RoomDisconnectionError(event.reason!)));
+  void _registerTransportEvents(SessionTransport transport) {
+    _listener ??= transport.events.listen(
+      (event) {
+        if (!ref.mounted || !identical(_transport, transport)) return;
+        switch (event) {
+          case TransportMetadataChanged():
+            _updateRoomState();
+          case TransportConnectionChanged(
+            :final state,
+            :final reason,
+            :final reconnected,
+          ):
+            switch (state) {
+              case SessionTransportConnectionState.connected:
+                if (!reconnected) {
+                  _onConnected();
+                } else {
+                  _applyMediaSubscriptionPermissions(force: true);
+                }
+              case SessionTransportConnectionState.disconnected:
+                if (reason != null) {
+                  _dispatch(
+                    SessionErrorChanged(
+                      compatibility.legacyDisconnectError(reason),
+                    ),
+                  );
+                }
+                if (_leaveFuture != null) return;
+                if (this.state.connectionState ==
+                        RoomConnectionState.connecting &&
+                    {
+                      SessionTransportDisconnectReason.joinFailure,
+                      SessionTransportDisconnectReason.clientInitiated,
+                      SessionTransportDisconnectReason
+                          .signalingConnectionFailure,
+                    }.contains(reason)) {
+                  _dispatch(
+                    const ConnectionChanged(
+                      RoomConnectionState.disconnected,
+                      SessionPhase.disconnected,
+                      wasJoining: true,
+                    ),
+                  );
+                  return;
+                }
+                _onDisconnected();
+              default:
+                break;
+            }
+          case TransportPacketReceived(:final packet):
+            compatibility.deliverLegacyPacket(messaging, packet, transport);
+          case TransportParticipantChanged(:final participant, :final present):
+            if (present) {
+              _onParticipantConnected(participant);
+            } else {
+              _onParticipantDisconnected(participant);
+            }
+          case TransportParticipantUpdated():
+            _updateParticipantsList();
+          case TransportMediaChanged():
+            _applyMediaSubscriptionPermissions(force: true);
         }
-        if (_leaveFuture != null) return;
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!ref.mounted || !identical(_transport, transport)) return;
+        ErrorHandler.logError(
+          error,
+          stackTrace: stackTrace,
+          message: 'Session transport event failed',
+        );
+      },
+    );
+  }
 
-        final isTransientJoinDisconnect =
-            state.connectionState == RoomConnectionState.connecting &&
-            isTransientJoinDisconnectReason(event.reason);
-        if (isTransientJoinDisconnect) {
-          _dispatch(
-            const ConnectionChanged(
-              RoomConnectionState.disconnected,
-              SessionPhase.disconnected,
-              wasJoining: true,
-            ),
-          );
-          return;
-        }
-
-        _onDisconnected();
-      })
-      ..on<DataReceivedEvent>((data) {
-        if (ref.mounted) messaging.handleDataReceived(data);
-      })
-      ..on<ParticipantDisconnectedEvent>(_onParticipantDisconnected)
-      ..on<ParticipantConnectedEvent>(_onParticipantConnected)
-      ..on<ParticipantNameUpdatedEvent>((_) => _updateParticipantsList())
-      ..on<LocalTrackPublishedEvent>((_) {
-        _applyMediaSubscriptionPermissions(force: true);
-      })
-      ..on<TrackPublishedEvent>((event) {
-        _subscribeToRemotePublication(event.publication);
-      })
-      ..on<TrackUnpublishedEvent>((event) {
-        _subscribedRemotePublications.remove(event.publication);
-      });
+  Future<void> _subscribeRemoteMedia() async {
+    try {
+      await _transport?.subscribeToExistingMedia();
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Could not subscribe to remote session media',
+      );
+    }
   }
 
   bool get _isLocalUserKeeper {
     final keeperIdentity = state.roomState.keeper;
     return keeperIdentity.isNotEmpty &&
-        room?.localParticipant?.identity == keeperIdentity;
+        _transport?.localIdentity == keeperIdentity;
   }
 
   void _applyMediaSubscriptionPermissions({bool force = false}) {
-    final localParticipant = room?.localParticipant;
-    if (!ref.mounted || localParticipant == null) return;
+    final localIdentity = _transport?.localIdentity;
+    if (!ref.mounted || localIdentity == null) return;
 
     final isKeeper = _isLocalUserKeeper;
     final allParticipantsAllowed = isKeeper && _admittedMediaRecipients == null;
@@ -1145,7 +1109,7 @@ class SessionController extends _$SessionController {
     if (!isKeeper && keeperIdentity.isNotEmpty) {
       recipients.add(keeperIdentity);
     }
-    recipients.remove(localParticipant.identity);
+    recipients.remove(localIdentity);
     if (!force &&
         _appliedAllParticipantsAllowed == allParticipantsAllowed &&
         _appliedMediaRecipients != null &&
@@ -1154,11 +1118,9 @@ class SessionController extends _$SessionController {
     }
 
     try {
-      localParticipant.setTrackSubscriptionPermissions(
-        allParticipantsAllowed: allParticipantsAllowed,
-        trackPermissions: recipients
-            .map((identity) => ParticipantTrackPermission(identity, true, null))
-            .toList(growable: false),
+      _transport!.setSubscriptionPermissions(
+        allowEveryone: allParticipantsAllowed,
+        recipients: recipients,
       );
       _appliedMediaRecipients = Set.unmodifiable(recipients);
       _appliedAllParticipantsAllowed = allParticipantsAllowed;
@@ -1171,53 +1133,14 @@ class SessionController extends _$SessionController {
     }
   }
 
-  void _subscribeToExistingRemotePublications(Room room) {
-    room.remoteParticipants.values
-        .expand((participant) => participant.getTrackPublications())
-        .forEach(_subscribeToRemotePublication);
-  }
-
-  void _subscribeToRemotePublication(RemoteTrackPublication publication) {
-    if (!_isAdoptingConnectedRoom ||
-        _subscribedRemotePublications.containsKey(publication)) {
-      return;
-    }
-
-    final subscriptionToken = Object();
-    _subscribedRemotePublications[publication] = subscriptionToken;
-    unawaited(
-      publication.subscribe().catchError((Object error, StackTrace stackTrace) {
-        if (identical(
-          _subscribedRemotePublications[publication],
-          subscriptionToken,
-        )) {
-          _subscribedRemotePublications.remove(publication);
-        }
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to subscribe to an adopted room track',
-        );
-      }),
-    );
-  }
-
-  Future<void> _connect({
-    required String url,
-    required String token,
-    ConnectOptions? connectOptions,
-  }) async {
-    await _room?.connect(url, token, connectOptions: connectOptions);
-  }
-
   Future<void> _disconnect() async {
     await _disableLocalMediaTracks();
-    await _room?.disconnect();
+    await _transport?.disconnect();
   }
 
   Future<void> _disableLocalMediaTracks() async {
     try {
-      await _localMedia.release();
+      await localMedia.release();
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -1234,19 +1157,11 @@ class SessionController extends _$SessionController {
     await _messaging?.disposeAdmissionTransport();
     await _disableLocalMediaTracks();
 
-    try {
-      _listener
-        ?..cancelAll()
-        ..dispose();
-    } catch (_) {}
+    await _listener?.cancel();
     _listener = null;
-
-    try {
-      await _room?.dispose();
-    } catch (_) {}
-    _room = null;
-    _localMedia.attach(null);
-    _roomMedia.attach(null);
+    final transport = _transport;
+    _transport = null;
+    await transport?.dispose();
 
     await _joinMediaOwner.disposeAll();
   }
@@ -1258,7 +1173,7 @@ class SessionController extends _$SessionController {
       return options.microphoneEnabled;
     }
     if (state.roomState.status == RoomStatus.active) {
-      if (state.speakingNow == room?.localParticipant?.identity) {
+      if (state.speakingNow == _transport?.localIdentity) {
         return options.microphoneEnabled;
       }
       return false;
@@ -1267,8 +1182,7 @@ class SessionController extends _$SessionController {
   }
 
   Future<void> _applyJoinMediaState() async {
-    final currentRoom = room;
-    if (currentRoom == null) return;
+    if (_transport == null) return;
 
     if (!shouldEnableMicrophone()) {
       try {
@@ -1285,12 +1199,7 @@ class SessionController extends _$SessionController {
 
   @visibleForTesting
   List<ParticipantInfo> sortedParticipants() {
-    final participants = <ParticipantInfo>[
-      if (room != null) ...[
-        ...?room?.remoteParticipants.values.map((p) => p.toInfo()),
-        ?room?.localParticipant?.toInfo(),
-      ],
-    ];
+    final participants = _transport?.participants ?? const <ParticipantInfo>[];
 
     return participantsSorting(
       originalParticipants: participants,

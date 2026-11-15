@@ -5,6 +5,7 @@ import 'package:livekit_client/livekit_client.dart'
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
 
@@ -12,6 +13,13 @@ enum SessionPhase { idle, connecting, connected, disconnected, error, ended }
 
 sealed class RoomError {
   const RoomError();
+}
+
+class RoomTransportError extends RoomError {
+  const RoomTransportError(this.failure);
+  final SessionTransportFailure failure;
+  @override
+  String toString() => 'RoomTransportError: $failure';
 }
 
 class RoomLiveKitError extends RoomError {
