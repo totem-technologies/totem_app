@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/shared/widgets/update_available_dialog.dart';
 import 'package:upgrader/upgrader.dart';
 
@@ -20,7 +21,7 @@ class TotemUpgradeAlert extends UpgradeAlert {
          showIgnore: false,
        );
 
-  static final _sharedUpgrader = _MinorVersionUpgrader(
+  static final _sharedUpgrader = _EnvironmentUpgrader(
     messages: TotemUpgraderMessages(),
   );
 
@@ -28,7 +29,6 @@ class TotemUpgradeAlert extends UpgradeAlert {
   UpgradeAlertState createState() => _TotemUpgradeAlertState();
 }
 
-// Totem prompts for updates when the major or minor version changes.
 class TotemUpgraderMessages extends UpgraderMessages {
   @override
   String? message(UpgraderMessage messageKey) => switch (messageKey) {
@@ -43,37 +43,51 @@ class TotemUpgraderMessages extends UpgraderMessages {
   };
 }
 
-class _MinorVersionUpgrader extends Upgrader {
-  _MinorVersionUpgrader({super.messages});
+class _EnvironmentUpgrader extends Upgrader {
+  _EnvironmentUpgrader({super.messages});
   @override
   bool shouldDisplayUpgrade() {
     if (blocked()) return super.shouldDisplayUpgrade();
-    return hasMajorOrMinorVersionUpdate(
+    return hasVersionUpdate(
           currentInstalledVersion,
           currentAppStoreVersion,
+          AppConfig.instance.environment,
         ) &&
         super.shouldDisplayUpgrade();
   }
 }
 
 @visibleForTesting
-bool hasMajorOrMinorVersionUpdate(
+bool hasVersionUpdate(
   String? installedVersion,
   String? storeVersion,
+  Environment environment,
 ) {
-  final installed = _majorMinorVersion(installedVersion);
-  final store = _majorMinorVersion(storeVersion);
-  return installed != null && store != null && installed != store;
+  final componentCount = switch (environment) {
+    Environment.production => 1,
+    Environment.development => 2,
+    Environment.staging => 3,
+  };
+  final installed = _versionComponents(installedVersion, componentCount);
+  final store = _versionComponents(storeVersion, componentCount);
+  if (installed == null || store == null) return false;
+  for (var i = 0; i < componentCount; i++) {
+    if (installed[i] != store[i]) return true;
+  }
+  return false;
 }
 
-(int, int)? _majorMinorVersion(String? version) {
+List<int>? _versionComponents(String? version, int count) {
   if (version == null) return null;
   final components = version.split('.');
-  if (components.length < 2) return null;
-  final major = int.tryParse(components[0]);
-  final minor = int.tryParse(components[1]);
-  if (major == null || minor == null) return null;
-  return (major, minor);
+  if (components.length < count) return null;
+  final result = <int>[];
+  for (final component in components.take(count)) {
+    final value = int.tryParse(component);
+    if (value == null) return null;
+    result.add(value);
+  }
+  return result;
 }
 
 class _TotemUpgradeAlertState extends UpgradeAlertState {
