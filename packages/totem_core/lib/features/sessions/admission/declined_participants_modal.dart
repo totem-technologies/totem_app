@@ -4,6 +4,7 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
@@ -17,7 +18,7 @@ Future<void> showDeclinedParticipantsModal(
   required String keeperIdentity,
 }) {
   return showResponsiveModal<void>(
-    context: context,
+    context: sessionNavigatorContext(context),
     useRootNavigator: false,
     showDragHandle: false,
     bottomSheetBackgroundColor: AppTheme.cream,
@@ -74,7 +75,8 @@ class _DeclinedParticipantsState extends ConsumerState<DeclinedParticipants> {
       );
       if (mounted) {
         await ErrorHandler.showErrorDialog(
-          context,
+          sessionNavigatorContext(context),
+          useRootNavigator: false,
           message: 'Failed to allow ${name ?? identity}',
         );
       }

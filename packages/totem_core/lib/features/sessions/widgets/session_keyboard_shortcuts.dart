@@ -76,19 +76,21 @@ class _SessionKeyboardShortcutsState
 
     if (widget.enableChatShortcut &&
         event.logicalKey == ActionBarShortcut.chatKey) {
-      final chat = ref.read(sessionChatOpenProvider.notifier);
-      if (chat.open) {
-        chat.open = false;
+      final chat = ref.read(sessionPresentationProvider.notifier);
+      if (ref.read(sessionChatSelectedProvider)) {
+        chat.closePanel(expectedPanel: SessionPanel.chat);
         return true;
       }
       if (_hasBlockingNavigatorRoute()) return false;
-      ref.read(sessionPromptsOpenProvider.notifier).open = false;
-      chat.open = true;
+      ref
+          .read(sessionPresentationProvider.notifier)
+          .closePanel(expectedPanel: SessionPanel.prompts);
+      chat.openPanel(SessionPanel.chat);
       return true;
     }
 
     if (_hasBlockingNavigatorRoute() ||
-        (widget.enableChatShortcut && ref.read(sessionChatOpenProvider))) {
+        (widget.enableChatShortcut && ref.read(sessionChatSelectedProvider))) {
       return false;
     }
 

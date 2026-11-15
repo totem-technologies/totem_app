@@ -114,7 +114,7 @@ void main() {
     await tester.pump();
 
     // Button only toggles the shared flag; the room screen presents chat.
-    check(container.read(sessionChatOpenProvider)).isTrue();
+    check(container.read(sessionChatSelectedProvider)).isTrue();
     check(
       tester.widgetList(find.textContaining('New message')),
     ).length.equals(0);
@@ -142,7 +142,7 @@ void main() {
             builder: (context, ref, child) => Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (ref.watch(sessionChatOpenProvider))
+                if (ref.watch(sessionChatSelectedProvider))
                   const Expanded(child: SessionChatPanel(embedded: true)),
                 const ActionBarChatButton(),
               ],
@@ -190,7 +190,7 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        check(container.read(sessionChatOpenProvider)).isTrue();
+        check(container.read(sessionChatSelectedProvider)).isTrue();
         check(container.read(sessionChatThreadTargetProvider)).isNull();
         check(
           tester.widgetList(
@@ -268,7 +268,9 @@ void main() {
 
     final context = tester.element(find.byType(ActionBarChatButton));
     final container = ProviderScope.containerOf(context, listen: false);
-    container.read(sessionChatOpenProvider.notifier).open = true;
+    container
+        .read(sessionPresentationProvider.notifier)
+        .openPanel(SessionPanel.chat);
     await tester.pump();
 
     container
@@ -309,7 +311,9 @@ void main() {
     final context = tester.element(find.byType(ActionBarChatButton));
     final container = ProviderScope.containerOf(context, listen: false);
     // Keeper is reading Everyone with chat marked open...
-    container.read(sessionChatOpenProvider.notifier).open = true;
+    container
+        .read(sessionPresentationProvider.notifier)
+        .openPanel(SessionPanel.chat);
     await tester.pump();
 
     // ...when a private support request arrives on another thread.
@@ -366,7 +370,9 @@ void main() {
 
       final context = tester.element(find.byType(ActionBarChatButton));
       final container = ProviderScope.containerOf(context, listen: false);
-      container.read(sessionChatOpenProvider.notifier).open = true;
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.chat);
       await tester.pump();
 
       container
@@ -449,7 +455,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Chat'));
     await tester.pump();
 
-    expect(container.read(sessionChatOpenProvider), isTrue);
+    expect(container.read(sessionChatSelectedProvider), isTrue);
     expect(container.read(sessionChatThreadTargetProvider), 'bruno-test');
   });
 
@@ -502,7 +508,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Chat'));
     await tester.pump();
 
-    expect(container.read(sessionChatOpenProvider), isTrue);
+    expect(container.read(sessionChatSelectedProvider), isTrue);
     expect(container.read(sessionChatThreadTargetProvider), 'keeper-1');
   });
 }

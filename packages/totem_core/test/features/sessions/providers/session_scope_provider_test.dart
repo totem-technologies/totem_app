@@ -163,20 +163,26 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(sessionAdmissionOpenProvider.notifier).open = true;
-      check(container.read(sessionAdmissionOpenProvider)).isTrue();
-      check(container.read(sessionChatOpenProvider)).isFalse();
-      check(container.read(sessionPromptsOpenProvider)).isFalse();
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.admission);
+      check(container.read(sessionAdmissionSelectedProvider)).isTrue();
+      check(container.read(sessionChatSelectedProvider)).isFalse();
+      check(container.read(sessionPromptsSelectedProvider)).isFalse();
 
-      container.read(sessionChatOpenProvider.notifier).open = true;
-      check(container.read(sessionAdmissionOpenProvider)).isFalse();
-      check(container.read(sessionChatOpenProvider)).isTrue();
-      check(container.read(sessionPromptsOpenProvider)).isFalse();
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.chat);
+      check(container.read(sessionAdmissionSelectedProvider)).isFalse();
+      check(container.read(sessionChatSelectedProvider)).isTrue();
+      check(container.read(sessionPromptsSelectedProvider)).isFalse();
 
-      container.read(sessionPromptsOpenProvider.notifier).open = true;
-      check(container.read(sessionAdmissionOpenProvider)).isFalse();
-      check(container.read(sessionChatOpenProvider)).isFalse();
-      check(container.read(sessionPromptsOpenProvider)).isTrue();
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.prompts);
+      check(container.read(sessionAdmissionSelectedProvider)).isFalse();
+      check(container.read(sessionChatSelectedProvider)).isFalse();
+      check(container.read(sessionPromptsSelectedProvider)).isTrue();
     });
   });
 

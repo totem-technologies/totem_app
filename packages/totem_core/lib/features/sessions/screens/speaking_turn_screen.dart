@@ -15,8 +15,8 @@ import 'package:totem_core/features/sessions/providers/session_cues_provider.dar
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
-
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
@@ -45,7 +45,8 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
         !isKeeper ||
         (!(customPrompt != null) ||
             (await showDialog<bool>(
-                  context: context,
+                  context: sessionNavigatorContext(context),
+                  useRootNavigator: false,
                   builder: (context) => ConfirmationDialog(
                     title: 'Pass Totem',
                     content:
@@ -72,7 +73,11 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
         return true;
       } catch (error) {
         if (!mounted) return false;
-        ErrorHandler.handleApiError(context, error);
+        ErrorHandler.handleApiError(
+          sessionNavigatorContext(context),
+          error,
+          useRootNavigator: false,
+        );
         return false;
       }
     }

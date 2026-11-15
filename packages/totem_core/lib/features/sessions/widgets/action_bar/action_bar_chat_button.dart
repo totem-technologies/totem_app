@@ -61,17 +61,17 @@ class _ActionBarChatButtonState extends ConsumerState<ActionBarChatButton> {
       ref.read(sessionChatThreadTargetProvider.notifier).target = thread;
     }
 
-    final chat = ref.read(sessionChatOpenProvider.notifier);
-    if (fromUnread || !chat.open) {
-      chat.open = true;
+    final chat = ref.read(sessionPresentationProvider.notifier);
+    if (fromUnread || !ref.read(sessionChatSelectedProvider)) {
+      chat.openPanel(SessionPanel.chat);
     } else {
-      chat.open = false;
+      chat.closePanel(expectedPanel: SessionPanel.chat);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isChatOpen = ref.watch(sessionChatOpenProvider);
+    final isChatOpen = ref.watch(sessionChatSelectedProvider);
     final visibleThread = ref.watch(sessionChatThreadTargetProvider);
     final hasUnreadThreads = ref.watch(
       sessionChatUnreadThreadsProvider.select((threads) => threads.isNotEmpty),

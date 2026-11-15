@@ -27,7 +27,7 @@ import 'package:totem_core/features/sessions/controllers/features/session_keeper
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/options/session_start_confirmation_dialog.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
-import 'package:totem_core/features/sessions/widgets/background.dart';
+import 'package:totem_core/features/sessions/widgets/session_panels.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
@@ -150,41 +150,18 @@ class _AdmissionOverlayHost extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final admissionOpen = ref.watch(sessionAdmissionOpenProvider);
-    return SessionAdmissionOverlay(
+    return SessionPanels(
       sessionSlug: 'session',
-      now: _testNow,
-      child: RoomBackground(
-        status: RoomStatus.active,
-        child: Row(
-          children: [
-            Expanded(
-              child: Navigator(
-                key: const Key('room-navigator'),
-                onGenerateRoute: (_) => MaterialPageRoute<void>(
-                  builder: (_) => Column(
-                    children: [
-                      Expanded(child: _VideoPlaceholder(videoBuilds)),
-                      SessionAdmissionQueueControl(
-                        child: SizedBox(
-                          key: SessionActionBar.actionBarKey,
-                          height: 64,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (includeDock && shouldDockSessionSidePanel(context))
-              DockedSessionSidePanel(
-                open: admissionOpen,
-                child: admissionOpen
-                    ? const SessionAdmissionPanel(docked: true)
-                    : null,
-              ),
-          ],
-        ),
+      session: ref.watch(currentSessionProvider),
+      connectionState: RoomConnectionState.connected,
+      roomStatus: RoomStatus.active,
+      child: Column(
+        children: [
+          Expanded(child: _VideoPlaceholder(videoBuilds)),
+          SessionAdmissionQueueControl(
+            child: SizedBox(key: SessionActionBar.actionBarKey, height: 64),
+          ),
+        ],
       ),
     );
   }
@@ -288,6 +265,7 @@ class _AdmissionHarness {
       return session;
     }),
     currentSessionStateProvider.overrideWithValue(state),
+    resolveCurrentScreenProvider.overrideWith((ref) => RoomScreen.listening),
     currentSessionEventProvider.overrideWith((ref) => null),
     isCurrentUserKeeperProvider.overrideWith((ref) => true),
     userProfileProvider('guest').overrideWith(
@@ -494,9 +472,7 @@ void main() {
     WidgetTester tester,
     Future<bool> Function() onStart,
   ) async {
-    final navigator = tester.state<NavigatorState>(
-      find.byKey(const Key('room-navigator')),
-    );
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator).last);
     showDialog<void>(
       context: navigator.context,
       useRootNavigator: false,
@@ -517,7 +493,7 @@ void main() {
     await tester.pump();
 
     tester
-        .state<NavigatorState>(find.byKey(const Key('room-navigator')))
+        .state<NavigatorState>(find.byType(Navigator).last)
         .push<void>(
           MaterialPageRoute<void>(
             builder: (context) {
@@ -613,9 +589,7 @@ void main() {
           .onPressed,
     ).isNull();
     check(starts).equals(1);
-    final navigator = tester.state<NavigatorState>(
-      find.byKey(const Key('room-navigator')),
-    );
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator).last);
     check(SessionAdmissionScope.maybeOf(navigator.context)!.requests).isEmpty();
     check(
       tester
@@ -644,7 +618,7 @@ void main() {
         if (packet is AdmissionDecision) await gate.future;
       };
       final navigator = tester.state<NavigatorState>(
-        find.byKey(const Key('room-navigator')),
+        find.byType(Navigator).last,
       );
       final decision = SessionAdmissionScope.maybeOf(
         navigator.context,
@@ -1552,7 +1526,7 @@ void main() {
       ).equals(sessionSidePanelWidth);
 
       await tester
-          .state<NavigatorState>(find.byKey(const Key('room-navigator')))
+          .state<NavigatorState>(find.byType(Navigator).last)
           .maybePop();
       await tester.pumpAndSettle();
       check(find.byType(SessionAdmissionPanel).evaluate()).isEmpty();
@@ -1565,7 +1539,7 @@ void main() {
   );
 
   testWidgets(
-    'clears a dormant dock selection before opening a tablet drawer',
+    'hands admission from dock to drawer and back without changing selection',
     (tester) async {
       setViewport(tester, const Size(1200, 900));
       addTearDown(tester.view.resetPhysicalSize);
@@ -1586,21 +1560,20 @@ void main() {
 
       await tester.tap(find.byType(SessionWaitingQueueButton));
       await tester.pumpAndSettle();
-      check(container.read(sessionAdmissionOpenProvider)).isTrue();
+      check(container.read(sessionAdmissionSelectedProvider)).isTrue();
       check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
 
       setViewport(tester, const Size(800, 900));
       await tester.pump();
       check(find.byType(DockedSessionSidePanel).evaluate()).isEmpty();
-      check(container.read(sessionAdmissionOpenProvider)).isTrue();
+      check(container.read(sessionAdmissionSelectedProvider)).isTrue();
 
-      await tester.tap(find.byType(SessionWaitingQueueButton));
       await tester.pumpAndSettle();
-      check(container.read(sessionAdmissionOpenProvider)).isFalse();
+      check(container.read(sessionAdmissionSelectedProvider)).isTrue();
       check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
 
       setViewport(tester, const Size(1200, 900));
-      await tester.pump();
+      await tester.pumpAndSettle();
       check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
 
       await tester.pump(const Duration(minutes: 5));

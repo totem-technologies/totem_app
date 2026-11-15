@@ -145,6 +145,8 @@ class FakeSessionController implements SessionController {
 }
 
 class FakeAdmissionService extends Fake implements SessionAdmissionService {
+  @override
+  void setApprovalRequired(bool value) {}
   Future<void> Function(String)? onRevoke;
   @override
   bool get busy => false;

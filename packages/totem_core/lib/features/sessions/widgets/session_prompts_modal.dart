@@ -5,6 +5,7 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_prompts_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -13,6 +14,7 @@ import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/session_button_style.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
+import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 // TODO(prompts): Improve overall error handling.
 //                Display feedback to users when an error occurs.
@@ -26,16 +28,34 @@ Future<void> showSessionPromptsModal(
   final container = ProviderScope.containerOf(context, listen: false);
   if (!container.read(isCurrentUserKeeperProvider)) return Future.value();
 
-  if (shouldDockSessionSidePanel(context) &&
-      container.read(currentSessionProvider) != null) {
-    container.read(sessionPromptsOpenProvider.notifier).open = true;
-    container.read(sessionChatOpenProvider.notifier).open = false;
+  if (container.read(currentSessionProvider) != null) {
+    container
+        .read(sessionPresentationProvider.notifier)
+        .openPanel(SessionPanel.prompts);
     return Future.value();
   }
+  return presentSessionPrompts(context, sessionSlug: sessionSlug);
+}
 
+const sessionPromptsRouteName = 'session-prompts';
+Future<void> presentSessionPrompts(
+  BuildContext context, {
+  required String sessionSlug,
+  bool useDrawer = false,
+}) {
+  final kind = ViewportResolver.getViewportKind(context);
+  if (useDrawer &&
+      (kind == ViewportKind.mediumSmall || kind == ViewportKind.mediumPlus)) {
+    return showSessionSidePanelDrawer(
+      sessionNavigatorContext(context),
+      settings: const RouteSettings(name: sessionPromptsRouteName),
+      child: SessionPromptsModal(sessionSlug: sessionSlug),
+    );
+  }
   return showResponsiveModal<void>(
-    context: context,
+    context: sessionNavigatorContext(context),
     useRootNavigator: false,
+    routeSettings: const RouteSettings(name: sessionPromptsRouteName),
     showDragHandle: false,
     bottomSheetBackgroundColor: AppTheme.cream,
     dialogBackgroundColor: AppTheme.cream,
@@ -95,8 +115,10 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
   GlobalKey _promptKey(int id) => _promptKeys.putIfAbsent(id, GlobalKey.new);
 
   void _closePanel() {
-    if (widget.embedded) {
-      ref.read(sessionPromptsOpenProvider.notifier).open = false;
+    if (widget.embedded || ref.read(currentSessionProvider) != null) {
+      ref
+          .read(sessionPresentationProvider.notifier)
+          .closePanel(expectedPanel: SessionPanel.prompts);
       return;
     }
     Navigator.of(context).maybePop();
@@ -118,7 +140,12 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
       );
     } catch (error, stackTrace) {
       if (!mounted) return;
-      await ErrorHandler.handleApiError(context, error, stackTrace: stackTrace);
+      await ErrorHandler.handleApiError(
+        sessionNavigatorContext(context),
+        error,
+        useRootNavigator: false,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -548,7 +575,8 @@ class _PromptTile extends StatelessWidget {
 
 Future<bool?> _confirmPromptDeletion(BuildContext context) {
   return showDialog<bool>(
-    context: context,
+    context: sessionNavigatorContext(context),
+    useRootNavigator: false,
     builder: (context) => ConfirmationDialog(
       title: 'Delete Prompt?',
       content: 'Are you sure you want to delete this prompt?',
@@ -559,79 +587,94 @@ Future<bool?> _confirmPromptDeletion(BuildContext context) {
   );
 }
 
-Future<String?> _promptText(BuildContext context, {String? initialText}) async {
-  final controller = TextEditingController(text: initialText);
+Future<String?> _promptText(BuildContext context, {String? initialText}) =>
+    showDialog<String>(
+      context: sessionNavigatorContext(context),
+      useRootNavigator: false,
+      builder: (_) => _PromptEditorDialog(initialText: initialText),
+    );
+
+class _PromptEditorDialog extends StatefulWidget {
+  const _PromptEditorDialog({this.initialText});
+  final String? initialText;
+  @override
+  State<_PromptEditorDialog> createState() => _PromptEditorDialogState();
+}
+
+class _PromptEditorDialogState extends State<_PromptEditorDialog> {
+  late final controller = TextEditingController(text: widget.initialText);
   final focusNode = FocusNode();
   final formKey = GlobalKey<FormState>();
-  var focusScheduled = false;
-  try {
-    return await showDialog<String>(
-      context: context,
-      builder: (context) {
-        if (!focusScheduled) {
-          focusScheduled = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (focusNode.canRequestFocus) focusNode.requestFocus();
-          });
-        }
-        return ConfirmationDialog(
-          title: initialText == null ? 'Add prompt' : 'Edit prompt',
-          content: 'Enter a discussion prompt for this Session.',
-          confirmButtonText: 'Save',
-          type: ConfirmationDialogType.standard,
-          contentWidget: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: controller,
-              focusNode: focusNode,
-              maxLength: _maxPromptLength,
-              minLines: 3,
-              maxLines: 5,
-              style: const TextStyle(color: AppTheme.slate),
-              cursorColor: AppTheme.mauve,
-              decoration: InputDecoration(
-                hintText: 'Discussion prompt',
-                hintStyle: const TextStyle(color: AppTheme.gray),
-                filled: true,
-                fillColor: Colors.white,
-                counterStyle: const TextStyle(color: AppTheme.gray),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.gray),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.mauve),
-                ),
-                errorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.errorColor),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.errorColor),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Enter a prompt';
-                }
-                if (value.trim().length > _maxPromptLength) {
-                  return 'Prompts can be at most $_maxPromptLength characters';
-                }
-                return null;
-              },
-            ),
-          ),
-          onConfirm: () async {
-            if (!formKey.currentState!.validate()) return;
-            Navigator.of(context).pop(controller.text.trim());
-          },
-        );
-      },
-    );
-  } finally {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && focusNode.canRequestFocus) focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
     focusNode.dispose();
     controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ConfirmationDialog(
+      title: widget.initialText == null ? 'Add prompt' : 'Edit prompt',
+      content: 'Enter a discussion prompt for this Session.',
+      confirmButtonText: 'Save',
+      type: ConfirmationDialogType.standard,
+      contentWidget: Form(
+        key: formKey,
+        child: TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          maxLength: _maxPromptLength,
+          minLines: 3,
+          maxLines: 5,
+          style: const TextStyle(color: AppTheme.slate),
+          cursorColor: AppTheme.mauve,
+          decoration: InputDecoration(
+            hintText: 'Discussion prompt',
+            hintStyle: const TextStyle(color: AppTheme.gray),
+            filled: true,
+            fillColor: Colors.white,
+            counterStyle: const TextStyle(color: AppTheme.gray),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppTheme.gray),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppTheme.mauve),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppTheme.errorColor),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppTheme.errorColor),
+            ),
+          ),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Enter a prompt';
+            }
+            if (value.trim().length > _maxPromptLength) {
+              return 'Prompts can be at most $_maxPromptLength characters';
+            }
+            return null;
+          },
+        ),
+      ),
+      onConfirm: () async {
+        if (!formKey.currentState!.validate()) return;
+        Navigator.of(context).pop(controller.text.trim());
+      },
+    );
   }
 }

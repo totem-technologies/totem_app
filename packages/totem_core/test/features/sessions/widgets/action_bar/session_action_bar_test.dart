@@ -479,7 +479,7 @@ void main() {
       // owns sheet/dock presentation (and thus mark-as-read).
       await tester.tap(find.bySemanticsLabel('Chat'));
       await tester.pumpAndSettle();
-      check(container.read(sessionChatOpenProvider)).isTrue();
+      check(container.read(sessionChatSelectedProvider)).isTrue();
 
       // Simulate the panel marking the visible thread read so the next tap is
       // a plain close rather than another "open from unread".
@@ -488,7 +488,7 @@ void main() {
 
       await tester.tap(find.bySemanticsLabel('Chat'));
       await tester.pumpAndSettle();
-      check(container.read(sessionChatOpenProvider)).isFalse();
+      check(container.read(sessionChatSelectedProvider)).isFalse();
     });
   });
 }

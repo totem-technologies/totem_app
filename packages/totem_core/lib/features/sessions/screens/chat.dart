@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/screens/session_chat_panel.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
@@ -20,7 +21,7 @@ Future<void> showSessionChat(BuildContext context) {
     case ViewportKind.smallLandscape:
       // Phones already get the platform sheet slide; leave that path alone.
       return showResponsiveModal<void>(
-        context: context,
+        context: sessionNavigatorContext(context),
         useRootNavigator: false,
         routeSettings: const RouteSettings(name: sessionChatRouteName),
         showDragHandle: false,

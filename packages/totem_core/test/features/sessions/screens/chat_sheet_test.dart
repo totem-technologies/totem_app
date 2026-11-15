@@ -1595,7 +1595,9 @@ void main() {
           tester.element(find.byType(SessionChatPanel)),
           listen: false,
         );
-        container.read(sessionChatOpenProvider.notifier).open = true;
+        container
+            .read(sessionPresentationProvider.notifier)
+            .openPanel(SessionPanel.chat);
         FocusManager.instance.primaryFocus?.unfocus();
         await tester.pump();
 

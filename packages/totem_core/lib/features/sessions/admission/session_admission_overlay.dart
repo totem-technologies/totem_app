@@ -13,6 +13,7 @@ import 'package:totem_core/features/sessions/admission/session_admission_scope.d
 import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -197,16 +198,12 @@ class SessionAdmissionQueueControl extends ConsumerWidget {
 }
 
 Future<void> _showSessionAdmission(BuildContext context, WidgetRef ref) async {
-  final open = ref.read(sessionAdmissionOpenProvider.notifier);
-  if (shouldDockSessionSidePanel(context)) {
-    open.open = !open.open;
-    return;
-  }
-  // Clear any dormant dock selection left by a viewport resize before opening
-  // a modal, so widening the window cannot show a second panel beside it.
-  open.open = false;
-  ref.read(sessionChatOpenProvider.notifier).open = false;
-  ref.read(sessionPromptsOpenProvider.notifier).open = false;
+  ref
+      .read(sessionPresentationProvider.notifier)
+      .togglePanel(SessionPanel.admission);
+}
+
+Future<void> presentSessionAdmission(BuildContext context) async {
   final kind = ViewportResolver.getViewportKind(context);
   if (kind == ViewportKind.mediumSmall || kind == ViewportKind.mediumPlus) {
     await showSessionSidePanelDrawer(
@@ -217,7 +214,7 @@ Future<void> _showSessionAdmission(BuildContext context, WidgetRef ref) async {
     return;
   }
   await showResponsiveModal<void>(
-    context: context,
+    context: sessionNavigatorContext(context),
     useRootNavigator: false,
     routeSettings: const RouteSettings(name: sessionAdmissionRouteName),
     showDragHandle: true,
@@ -245,8 +242,10 @@ class SessionAdmissionPanel extends ConsumerWidget {
     final admission = SessionAdmissionScope.maybeOf(context);
     if (admission == null) return const SizedBox.shrink();
     void close() {
-      if (docked) {
-        ref.read(sessionAdmissionOpenProvider.notifier).open = false;
+      if (docked || ref.read(currentSessionProvider) != null) {
+        ref
+            .read(sessionPresentationProvider.notifier)
+            .closePanel(expectedPanel: SessionPanel.admission);
       } else {
         Navigator.of(context).maybePop();
       }
@@ -275,7 +274,7 @@ class SessionAdmissionPanel extends ConsumerWidget {
                   OutlinedButton(
                     style: SessionButtonStyle.outlined(),
                     onPressed: () => showDialog<void>(
-                      context: context,
+                      context: sessionNavigatorContext(context),
                       useRootNavigator: false,
                       builder: (dialogContext) => ConfirmationDialog(
                         title: 'Reset admission data?',
@@ -297,7 +296,8 @@ class SessionAdmissionPanel extends ConsumerWidget {
                             );
                             if (dialogContext.mounted) {
                               ErrorHandler.showErrorDialog(
-                                dialogContext,
+                                sessionNavigatorContext(dialogContext),
+                                useRootNavigator: false,
                                 message:
                                     'Could not reset admission data. Please try again.',
                               );

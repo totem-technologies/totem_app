@@ -7,6 +7,7 @@ import 'package:totem_core/features/sessions/media/room_media.dart';
 import 'package:totem_core/features/sessions/media/room_media_providers.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
@@ -201,7 +202,7 @@ class _ParticipantControlButtonState
 
   Future<void> _onMuteParticipant(BuildContext context) async {
     await showDialog<void>(
-      context: context,
+      context: sessionNavigatorContext(context),
       useRootNavigator: false,
       builder: (context) {
         return Consumer(
@@ -226,7 +227,11 @@ class _ParticipantControlButtonState
                       .muteParticipant(widget.participant.identity);
                 } catch (error) {
                   if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(context, error);
+                  await ErrorHandler.handleApiError(
+                    sessionNavigatorContext(context),
+                    error,
+                    useRootNavigator: false,
+                  );
                 } finally {
                   if (context.mounted) {
                     Navigator.of(context).pop();
@@ -243,7 +248,7 @@ class _ParticipantControlButtonState
 
   Future<void> _onDisableParticipantCamera(BuildContext context) async {
     await showDialog<void>(
-      context: context,
+      context: sessionNavigatorContext(context),
       useRootNavigator: false,
       builder: (context) {
         return Consumer(
@@ -268,7 +273,11 @@ class _ParticipantControlButtonState
                       .disableParticipantCamera(widget.participant.identity);
                 } catch (error) {
                   if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(context, error);
+                  await ErrorHandler.handleApiError(
+                    sessionNavigatorContext(context),
+                    error,
+                    useRootNavigator: false,
+                  );
                 } finally {
                   if (context.mounted) {
                     Navigator.of(context).pop();
@@ -285,7 +294,7 @@ class _ParticipantControlButtonState
 
   Future<void> _onRemoveParticipant(BuildContext context) async {
     await showDialog<void>(
-      context: context,
+      context: sessionNavigatorContext(context),
       useRootNavigator: false,
       builder: (context) {
         return Consumer(
@@ -311,7 +320,11 @@ class _ParticipantControlButtonState
                       .removeParticipant(widget.participant.identity);
                 } catch (error) {
                   if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(context, error);
+                  await ErrorHandler.handleApiError(
+                    sessionNavigatorContext(context),
+                    error,
+                    useRootNavigator: false,
+                  );
                 } finally {
                   if (context.mounted) {
                     Navigator.of(context).pop();
@@ -327,7 +340,7 @@ class _ParticipantControlButtonState
 
   Future<void> _onBanParticipant(BuildContext context) async {
     await showDialog<void>(
-      context: context,
+      context: sessionNavigatorContext(context),
       useRootNavigator: false,
       builder: (context) {
         return Consumer(
@@ -353,7 +366,11 @@ class _ParticipantControlButtonState
                       .banParticipant(widget.participant.identity);
                 } catch (error) {
                   if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(context, error);
+                  await ErrorHandler.handleApiError(
+                    sessionNavigatorContext(context),
+                    error,
+                    useRootNavigator: false,
+                  );
                 } finally {
                   if (context.mounted) {
                     Navigator.of(context).pop();
