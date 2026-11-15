@@ -13,6 +13,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
@@ -285,6 +286,7 @@ class _ParticipantReorderWidgetState
                               children: [
                                 Expanded(
                                   child: OutlinedButton(
+                                    style: SessionButtonStyle.outlined(),
                                     onPressed: () =>
                                         Navigator.of(context).pop(),
                                     child: const Text('Cancel'),
@@ -292,6 +294,7 @@ class _ParticipantReorderWidgetState
                                 ),
                                 Expanded(
                                   child: ElevatedButton(
+                                    style: SessionButtonStyle.filled(),
                                     onPressed: _loading || !canSave
                                         ? null
                                         : () async {
