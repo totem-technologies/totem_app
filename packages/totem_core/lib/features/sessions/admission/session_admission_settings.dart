@@ -17,7 +17,8 @@ class SessionAdmissionSettings extends _$SessionAdmissionSettings {
       _enabledOverride = null;
     }
 
-    final service = ref.watch(currentSessionProvider)?.admission;
+    final candidate = ref.watch(currentSessionProvider)?.admission;
+    final service = candidate?.mounted == true ? candidate : null;
     final enabled = _enabledOverride ?? service?.approvalRequired ?? true;
     return enabled;
   }
@@ -25,6 +26,9 @@ class SessionAdmissionSettings extends _$SessionAdmissionSettings {
   void setEnabled(bool enabled) {
     _enabledOverride = enabled;
     state = enabled;
-    ref.read(currentSessionProvider)?.admission.setApprovalRequired(enabled);
+    final candidate = ref.read(currentSessionProvider)?.admission;
+    if (candidate?.mounted == true) {
+      candidate!.setApprovalRequired(enabled);
+    }
   }
 }

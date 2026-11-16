@@ -470,7 +470,7 @@ class SessionRuntime {
   }
 
   void leaveOnPageExit() {
-    unawaited(_transport?.disconnect());
+    unawaited(_transport?.disconnect().catchError(onError));
   }
 
   Future<void> dispose() => _disposing ??= _dispose();

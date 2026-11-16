@@ -491,8 +491,8 @@ void main() {
 
           final accepted = await controller.sendMessage('Hello');
 
-          expect(accepted, isFalse);
-          expect(mockSession.addedChatMessages, isEmpty);
+          check(accepted).isFalse();
+          check(mockSession.addedChatMessages).isEmpty();
         },
       );
 
@@ -525,12 +525,13 @@ void main() {
 
         await controller.sendMessage('Hi Lucas', recipientIdentity: 'lucas');
 
-        expect(mockSession.addedChatMessages, hasLength(1));
-        expect(mockSession.addedChatMessages.first.recipientIdentity, 'lucas');
-        expect(
+        check(mockSession.addedChatMessages).length.equals(1);
+        check(
+          mockSession.addedChatMessages.first.recipientIdentity,
+        ).equals('lucas');
+        check(
           mockSession.addedChatMessages.first.toMap()['recipientIdentity'],
-          'lucas',
-        );
+        ).equals('lucas');
       });
 
       test('participant can send a private message to the keeper', () async {
@@ -558,11 +559,10 @@ void main() {
           recipientIdentity: 'keeper-1',
         );
 
-        expect(mockSession.addedChatMessages, hasLength(1));
-        expect(
+        check(mockSession.addedChatMessages).length.equals(1);
+        check(
           mockSession.addedChatMessages.first.recipientIdentity,
-          'keeper-1',
-        );
+        ).equals('keeper-1');
       });
 
       test('participant cannot DM another participant', () async {
@@ -581,8 +581,8 @@ void main() {
         );
 
         // The composer relies on this to keep the user's text.
-        expect(accepted, isFalse);
-        expect(mockSession.addedChatMessages, isEmpty);
+        check(accepted).isFalse();
+        check(mockSession.addedChatMessages).isEmpty();
       });
 
       DataReceivedEvent privateChatEvent({
@@ -624,7 +624,7 @@ void main() {
           ),
         );
 
-        expect(mockSession.addedChatMessages, isEmpty);
+        check(mockSession.addedChatMessages).isEmpty();
       });
 
       test('accepts a DM from the keeper', () async {
@@ -645,8 +645,10 @@ void main() {
           ),
         );
 
-        expect(mockSession.addedChatMessages, hasLength(1));
-        expect(mockSession.addedChatMessages.first.recipientIdentity, 'user-2');
+        check(mockSession.addedChatMessages).length.equals(1);
+        check(
+          mockSession.addedChatMessages.first.recipientIdentity,
+        ).equals('user-2');
       });
 
       test('ignores a keeper DM delivered to another participant', () async {
@@ -688,7 +690,7 @@ void main() {
           ),
         );
 
-        expect(mockSession.addedChatMessages, hasLength(1));
+        check(mockSession.addedChatMessages).length.equals(1);
       });
 
       test(
@@ -711,7 +713,7 @@ void main() {
             ),
           );
 
-          expect(mockSession.addedChatMessages, isEmpty);
+          check(mockSession.addedChatMessages).isEmpty();
         },
       );
 
@@ -779,34 +781,30 @@ void main() {
           participant: testParticipant('keeper-1', isLocal: true),
         );
 
-        expect(
+        check(
           everyone.belongsToThread(
             localIdentity: 'keeper-1',
             threadTarget: null,
           ),
-          isTrue,
-        );
-        expect(
+        ).isTrue();
+        check(
           private.belongsToThread(
             localIdentity: 'keeper-1',
             threadTarget: null,
           ),
-          isFalse,
-        );
-        expect(
+        ).isFalse();
+        check(
           private.belongsToThread(
             localIdentity: 'keeper-1',
             threadTarget: 'lucas',
           ),
-          isTrue,
-        );
-        expect(
+        ).isTrue();
+        check(
           everyone.belongsToThread(
             localIdentity: 'keeper-1',
             threadTarget: 'lucas',
           ),
-          isFalse,
-        );
+        ).isFalse();
       });
 
       test('threadTargetFor opens the other party, not Everyone', () {
@@ -841,11 +839,11 @@ void main() {
           participant: testParticipant('keeper-1', isLocal: true),
         );
 
-        expect(everyone.threadTargetFor('keeper-1'), isNull);
-        expect(incoming.threadTargetFor('keeper-1'), 'lucas');
-        expect(incoming.threadTargetFor('lucas'), 'keeper-1');
-        expect(echo.threadTargetFor('keeper-1'), 'lucas');
-        expect(sent.threadTargetFor('keeper-1'), 'lucas');
+        check(everyone.threadTargetFor('keeper-1')).isNull();
+        check(incoming.threadTargetFor('keeper-1')).equals('lucas');
+        check(incoming.threadTargetFor('lucas')).equals('keeper-1');
+        check(echo.threadTargetFor('keeper-1')).equals('lucas');
+        check(sent.threadTargetFor('keeper-1')).equals('lucas');
       });
     });
   });

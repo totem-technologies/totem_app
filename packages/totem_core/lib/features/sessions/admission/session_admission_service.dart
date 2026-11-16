@@ -14,6 +14,15 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/services/session_moderation_service.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
+class CorruptAdmissionRemovalJournal implements Exception {
+  const CorruptAdmissionRemovalJournal(this.cause);
+
+  final Object cause;
+
+  @override
+  String toString() => 'Corrupt admission removal journal: $cause';
+}
+
 /// Admission coordinator retained by the active session, independently of UI.
 class SessionAdmissionService extends ChangeNotifier {
   SessionAdmissionService(this.ref, this.session, {this.now});
@@ -52,6 +61,8 @@ class SessionAdmissionService extends ChangeNotifier {
   bool get mounted => !_disposed && ref.mounted;
   String? error;
   String? recoveryError;
+  bool _corruptRemovalJournal = false;
+  bool get hasCorruptRemovalJournal => _corruptRemovalJournal;
   bool _recoveryUnavailable = false;
   String? _revocationKeeper;
   final Set<String> _pendingRevocations = {};
@@ -596,8 +607,12 @@ class SessionAdmissionService extends ChangeNotifier {
     final transport = _transport;
     final keeperChanges = _keeperChanges;
     final clientChanges = _clientChanges;
+    final hasFinalRosterWrite = endSession
+        ? clearRoster != null
+        : persist != null;
     Object? failure;
     StackTrace? failureStack;
+    var rosterWriteFailed = false;
     void failed(Object error, StackTrace stack) {
       failure ??= error;
       failureStack ??= stack;
@@ -637,7 +652,10 @@ class SessionAdmissionService extends ChangeNotifier {
       while (_rosterWrites.isNotEmpty) {
         final results = await Future.wait(_rosterWrites.toList());
         if (results.contains(false) && _storageFailure != null) {
-          failed(_storageFailure!, _storageStack!);
+          rosterWriteFailed = true;
+          if (!hasFinalRosterWrite) {
+            failed(_storageFailure!, _storageStack!);
+          }
         }
       }
       // Enqueue the terminal writes synchronously, then fence the captured
@@ -660,6 +678,11 @@ class SessionAdmissionService extends ChangeNotifier {
           (persist != null || clearRoster != null || clearDeclined != null)) {
         _storageFailure = null;
         _storageStack = null;
+        if (rosterWriteFailed) {
+          _recoveryUnavailable = false;
+          recoveryError = null;
+          error = null;
+        }
       }
     } finally {
       // No future completion captured by this attachment can save a stale roster.
@@ -888,6 +911,12 @@ class SessionAdmissionService extends ChangeNotifier {
   Future<void> reconcileRemoval(
     String identity, {
     required bool backendRemoved,
+  }) =>
+      _track<void>(_reconcileRemoval(identity, backendRemoved: backendRemoved));
+
+  Future<void> _reconcileRemoval(
+    String identity, {
+    required bool backendRemoved,
   }) async {
     if (!mounted || _detaching || _disconnecting) {
       throw StateError('Admission is closing');
@@ -895,12 +924,99 @@ class SessionAdmissionService extends ChangeNotifier {
     if (!_unresolvedRevocations.contains(identity)) {
       throw StateError('No pending removal');
     }
+    final keeper = _keeperIdentity ?? _revocationKeeper;
+    if (keeper == null) {
+      throw StateError('Keeper identity is unavailable for removal recovery');
+    }
+    if (_keeperIdentity != keeper || _attachedKeeperRoster == null) {
+      await _reconcileDetachedRemoval(
+        identity,
+        keeper: keeper,
+        backendRemoved: backendRemoved,
+      );
+      return;
+    }
     final operation = await _preparedRemoval(identity, existing: true);
     if (backendRemoved) {
       await operation.commit();
     } else {
       await operation.reject();
     }
+  }
+
+  Future<void> _reconcileDetachedRemoval(
+    String identity, {
+    required String keeper,
+    required bool backendRemoved,
+  }) async {
+    final preferences = await ref.read(
+      sessionAdmissionPreferencesProvider.future,
+    );
+    final rosterProvider = keeperAdmissionRosterProvider(
+      session.options.sessionSlug,
+      keeper,
+    );
+    final store = await ref.read(rosterProvider.future);
+    final roster = ref.read(rosterProvider.notifier);
+    final key = _revocationKey(keeper);
+    final message = backendRemoved
+        ? 'Removal is confirmed, but admission recovery could not be saved. Retry reconciliation, not removal.'
+        : 'Removal was rejected, but admission recovery could not be cleared. Retry reconciliation, not removal.';
+
+    await _removalPersistence(
+      _serializeJournal(() async {
+        if (!mounted || _disconnecting) {
+          throw StateError('Admission is closing');
+        }
+        final records = _readRevocations(preferences.getString(key));
+        if (!records.containsKey(identity)) {
+          throw StateError('No durable removal recovery record');
+        }
+        if (backendRemoved) {
+          records[identity] = 'committed';
+          if (!await preferences.setString(key, jsonEncode(records))) {
+            throw StateError(message);
+          }
+          store.revoked.add(identity);
+          store.replace(
+            store.members.where((member) => member != identity).toList(),
+            store.revision + 1,
+            awaitingReadiness: store.awaitingReadiness
+                .where((member) => member != identity)
+                .toList(),
+          );
+          await roster.persistStore(store);
+        } else {
+          records[identity] = 'rejected';
+          if (!await preferences.setString(key, jsonEncode(records))) {
+            throw StateError(message);
+          }
+        }
+        records.remove(identity);
+        final saved = records.isEmpty
+            ? await preferences.remove(key)
+            : await preferences.setString(key, jsonEncode(records));
+        if (!saved) throw StateError(message);
+      }),
+      () => mounted && _revocationKeeper == keeper,
+      message,
+    );
+
+    if (!mounted || _revocationKeeper != keeper) return;
+    _unresolvedRevocations.remove(identity);
+    _pendingRevocations.remove(identity);
+    if (backendRemoved) {
+      _committedRevocations.add(identity);
+    } else {
+      _committedRevocations.remove(identity);
+      _rejectedRevocations.remove(identity);
+    }
+    if (_pendingRevocations.isEmpty) {
+      _recoveryUnavailable = false;
+      recoveryError = null;
+      error = null;
+    }
+    notifyListeners();
   }
 
   // Serialize journals across old/new service instances during entry handoff.
@@ -931,19 +1047,74 @@ class SessionAdmissionService extends ChangeNotifier {
 
   Map<String, String> _readRevocations(String? saved) {
     if (saved == null) return {};
-    final decoded = jsonDecode(saved);
-    // Compatibility with the previous post-commit journal format.
-    if (decoded is List) {
-      return {for (final id in decoded.cast<String>()) id: 'committed'};
+    try {
+      final decoded = jsonDecode(saved);
+      // Compatibility with the previous post-commit journal format.
+      if (decoded is List && decoded.every((value) => value is String)) {
+        return {for (final id in decoded.cast<String>()) id: 'committed'};
+      }
+      if (decoded is! Map) throw const FormatException('Invalid journal shape');
+      final records = <String, String>{};
+      for (final entry in decoded.entries) {
+        if (entry.key is! String || entry.value is! String) {
+          throw const FormatException('Invalid journal entry');
+        }
+        final identity = entry.key as String;
+        final status = entry.value as String;
+        if (identity.trim().isEmpty ||
+            (status != 'intent' &&
+                status != 'committed' &&
+                status != 'rejected')) {
+          throw const FormatException('Invalid journal entry');
+        }
+        records[identity] = status;
+      }
+      return records;
+    } catch (error) {
+      _corruptRemovalJournal = true;
+      throw CorruptAdmissionRemovalJournal(error);
     }
-    final records = (decoded as Map<String, dynamic>).cast<String, String>();
-    if (records.values.any(
-      (value) =>
-          value != 'intent' && value != 'committed' && value != 'rejected',
-    )) {
-      throw StateError('Invalid removal recovery data');
+  }
+
+  Future<void> resetCorruptRemovalJournal() async {
+    if (!_corruptRemovalJournal || !mounted || _detaching || _disconnecting) {
+      throw StateError('Removal recovery journal is not resettable');
     }
-    return records;
+    final keeper = session.admissionState.roomState.keeper;
+    final preferences = await ref.read(
+      sessionAdmissionPreferencesProvider.future,
+    );
+    // The journal may contain revocations that cannot be recovered from its
+    // corrupt bytes. Clear the saved roster first so removing the journal can
+    // never restore stale admission permissions.
+    await ref
+        .read(
+          keeperAdmissionRosterProvider(
+            session.options.sessionSlug,
+            keeper,
+          ).notifier,
+        )
+        .clear();
+    if (!mounted || session.admissionState.roomState.keeper != keeper) {
+      throw StateError('Keeper changed while resetting removal recovery');
+    }
+    await _serializeJournal(() async {
+      if (!await preferences.remove(_revocationKey(keeper))) {
+        throw StateError('Could not reset removal recovery journal');
+      }
+    });
+    _corruptRemovalJournal = false;
+    _pendingRevocations.clear();
+    _committedRevocations.clear();
+    _rejectedRevocations.clear();
+    _unresolvedRevocations.clear();
+    _storageFailure = null;
+    _storageStack = null;
+    recoveryError = null;
+    error = null;
+    _recoveryUnavailable = false;
+    sync();
+    await synchronized;
   }
 
   Future<PreparedAdmissionRemoval> prepareRemoval(String identity) async {
@@ -1026,6 +1197,7 @@ class SessionAdmissionService extends ChangeNotifier {
             _rejectedRevocations.remove(identity);
             if (_pendingRevocations.isEmpty) {
               error = null;
+              recoveryError = null;
               _recoveryUnavailable = false;
             }
             _syncAdmittedIdentities(_keeperController!.roster);
@@ -1087,6 +1259,7 @@ class SessionAdmissionService extends ChangeNotifier {
             _committedRevocations.remove(identity);
             if (_pendingRevocations.isEmpty) {
               error = null;
+              recoveryError = null;
               _recoveryUnavailable = false;
             }
             notifyListeners();
@@ -1109,8 +1282,10 @@ class SessionAdmissionService extends ChangeNotifier {
           _pendingRevocations.add(identity);
           _syncAdmittedIdentities(_keeperController!.roster);
           setState(() {
-            error =
+            _recoveryUnavailable = true;
+            recoveryError =
                 'Removal outcome unknown. Verify participant status, then reconcile admission recovery. Do not remove again.';
+            error = recoveryError;
           });
         }
       },
@@ -1128,6 +1303,7 @@ class SessionAdmissionService extends ChangeNotifier {
       if (current()) {
         setState(() {
           _recoveryUnavailable = true;
+          recoveryError = message;
           error = message;
         });
       }

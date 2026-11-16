@@ -15,6 +15,7 @@ class _Harness {
   final factory = FakeSessionTransportFactory();
   final events = <SessionTransportEvent>[];
   final errors = <Object>[];
+  final errorReported = Completer<void>();
   final activeInfrastructure = <Object>{};
   int joined = 0;
   int retained = 0;
@@ -28,7 +29,10 @@ class _Harness {
       await cleaning?.call();
     },
     onJoined: () => joined++,
-    onError: (error, _) => errors.add(error),
+    onError: (error, _) {
+      errors.add(error);
+      if (!errorReported.isCompleted) errorReported.complete();
+    },
     activateInfrastructure: (owner) async {
       activeInfrastructure.add(owner);
     },
@@ -260,6 +264,27 @@ void main() {
   );
 
   test(
+    'page exit reports disconnect failure without an uncaught future',
+    () async {
+      final h = _Harness();
+      check(
+        await h.runtime.join(operation: h.connect),
+      ).equals(SessionJoinResult.success);
+      final connection = h.factory.created.single;
+      await connection.dispose();
+
+      h.runtime.leaveOnPageExit();
+      await h.errorReported.future;
+
+      check(h.errors).length.equals(1);
+      check(h.errors.single).isA<StateError>();
+      await h.runtime.leave(disconnect: () async {});
+      await h.runtime.dispose();
+      check(connection.underlyingDisposals).equals(1);
+    },
+  );
+
+  test(
     'cleanup failures still release connection and infrastructure',
     () async {
       final h = _Harness();
@@ -334,6 +359,39 @@ void main() {
     ).equals(SessionJoinResult.success);
     await h.runtime.dispose();
   });
+
+  test(
+    'a failed fetch does not leak an error from its coalesced retry',
+    () async {
+      final scheduler = SessionPollScheduler();
+      final started = Completer<void>();
+      final firstFetch = Completer<void>();
+      var fetches = 0;
+      scheduler.start(
+        syncInterval: const Duration(minutes: 1),
+        pollInterval: const Duration(minutes: 1),
+        synchronize: () {},
+        fetch: (_) {
+          fetches++;
+          if (fetches == 1) {
+            started.complete();
+            return firstFetch.future;
+          }
+          throw StateError('coalesced retry failed');
+        },
+      );
+
+      final request = scheduler.request();
+      await started.future;
+      scheduler.request();
+      firstFetch.completeError(StateError('initial fetch failed'));
+      await check(request).throws<StateError>();
+      await pumpEventQueue();
+
+      check(fetches).equals(2);
+      scheduler.stop();
+    },
+  );
 
   test(
     'polling coalesces requests and replaces schedules without overlapping fetches',

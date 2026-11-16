@@ -38,7 +38,10 @@ class SessionPollScheduler {
       }
     } finally {
       _fetch = null;
-      if (_pending && _request != null) unawaited(request());
+      if (_pending && _request != null) {
+        // This coalesced background retry has no caller to receive its error.
+        unawaited(request().catchError((Object _, StackTrace _) {}));
+      }
     }
   }
 

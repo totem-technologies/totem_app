@@ -216,7 +216,8 @@ class AdmittedSessionParticipantIdentities
   Set<String> build() {
     ref.watch(sessionScopeProvider);
     final keeperIdentity = ref.watch(keeperIdentityProvider);
-    final service = ref.watch(currentSessionProvider)?.admission;
+    final candidate = ref.watch(currentSessionProvider)?.admission;
+    final service = candidate?.mounted == true ? candidate : null;
     void changed() {
       if (ref.mounted) {
         state = _withKeeper(service?.admittedIdentities ?? const []);

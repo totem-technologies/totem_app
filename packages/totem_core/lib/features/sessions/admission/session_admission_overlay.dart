@@ -81,7 +81,8 @@ class _SessionAdmissionOverlayState
 
   @override
   Widget build(BuildContext context) {
-    final service = ref.watch(currentSessionProvider)?.admission;
+    final candidate = ref.watch(currentSessionProvider)?.admission;
+    final service = candidate?.mounted == true ? candidate : null;
     if (!identical(service, _service)) {
       _service?.removeListener(_changed);
       _service = service;
@@ -145,6 +146,7 @@ class _SessionAdmissionOverlayState
         }),
       );
     }
+    final corruptRemovalJournal = service?.hasCorruptRemovalJournal ?? false;
     final controller = service?.keeperController;
     final attempts =
         controller?.attempts
@@ -159,6 +161,10 @@ class _SessionAdmissionOverlayState
     return SessionAdmissionScope(
       recoveryMessage: service?.recoveryError,
       unresolvedRemovals: service?.unresolvedRemovals ?? const {},
+      corruptRemovalJournal: corruptRemovalJournal,
+      onResetCorruptRemovalJournal: corruptRemovalJournal
+          ? service!.resetCorruptRemovalJournal
+          : null,
       onReconcileRemoval: (identity, removed) async {
         await service?.reconcileRemoval(identity, backendRemoved: removed);
       },
@@ -274,6 +280,7 @@ class SessionAdmissionPanel extends ConsumerWidget {
     }
 
     final retry = admission.onRetry;
+    final resetRemovalJournal = admission.onResetCorruptRemovalJournal;
     if (retry != null) {
       return Material(
         color: AppTheme.cream,
@@ -370,6 +377,45 @@ class SessionAdmissionPanel extends ConsumerWidget {
                       ),
                     ),
                     child: const Text('Reset admission data'),
+                  ),
+                if (admission.corruptRemovalJournal &&
+                    resetRemovalJournal != null)
+                  OutlinedButton(
+                    style: SessionButtonStyle.outlined(),
+                    onPressed: () => showDialog<void>(
+                      context: sessionNavigatorContext(context),
+                      useRootNavigator: false,
+                      builder: (dialogContext) => ConfirmationDialog(
+                        title: 'Reset removal recovery?',
+                        content:
+                            'The removal recovery journal is unreadable, so it is not possible to tell whether a participant removal completed. Resetting recovery clears the saved admitted roster to avoid restoring stale access. Participants will need to be admitted again.',
+                        confirmButtonText: 'Reset removal recovery',
+                        scrollable: true,
+                        onConfirm: () async {
+                          try {
+                            await resetRemovalJournal();
+                            if (dialogContext.mounted) {
+                              Navigator.of(dialogContext).pop();
+                            }
+                          } catch (error, stackTrace) {
+                            ErrorHandler.logError(
+                              error,
+                              stackTrace: stackTrace,
+                              message: 'Could not reset removal recovery',
+                            );
+                            if (dialogContext.mounted) {
+                              ErrorHandler.showErrorDialog(
+                                sessionNavigatorContext(dialogContext),
+                                useRootNavigator: false,
+                                message:
+                                    'Could not reset removal recovery. Please try again.',
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                    child: const Text('Reset removal recovery'),
                   ),
                 OutlinedButton(
                   onPressed: close,

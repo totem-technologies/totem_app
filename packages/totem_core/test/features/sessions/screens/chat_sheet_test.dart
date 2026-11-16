@@ -889,8 +889,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Welcome everyone'), findsOneWidget);
-      expect(find.text('Secret for Lucas'), findsNothing);
+      check(find.text('Welcome everyone').evaluate()).length.equals(1);
+      check(find.text('Secret for Lucas').evaluate()).isEmpty();
     });
 
     testWidgets('hides keeper thread affordances while the keeper is absent', (
@@ -990,7 +990,7 @@ void main() {
         check(
           tester.widgetList(find.text('Message Keeper privately')),
         ).length.equals(1);
-        expect(find.text('Everyone'), findsWidgets);
+        check(find.text('Everyone').evaluate()).isNotEmpty();
       },
     );
 
@@ -1271,7 +1271,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // A rejected send must not silently swallow what the user typed.
-      expect(find.text('Dropped message'), findsOneWidget);
+      check(find.text('Dropped message').evaluate()).length.equals(1);
     });
 
     testWidgets('selects a recipient from the header dropdown', (tester) async {
@@ -1296,8 +1296,10 @@ void main() {
       await tester.tap(find.text('Everyone').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Lucas'), findsWidgets);
-      expect(find.textContaining('only you can post'), findsOneWidget);
+      check(find.text('Lucas').evaluate()).isNotEmpty();
+      check(
+        find.textContaining('only you can post').evaluate(),
+      ).length.equals(1);
 
       final everyoneOpen = tester.getSemantics(find.text('Everyone').last);
       check(everyoneOpen.flagsCollection.isButton).isTrue();

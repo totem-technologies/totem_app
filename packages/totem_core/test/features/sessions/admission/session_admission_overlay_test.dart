@@ -586,6 +586,39 @@ void main() {
       },
     );
 
+    test(
+      'successful final save recovers an earlier in-flight roster write failure',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (harness, _, service) = await removalSession(preferences);
+        final firstWriteFailed = Completer<void>();
+        var rosterWrites = 0;
+        preferences.beforeSet = (key, _) async {
+          if (key != removalRosterKey) return true;
+          rosterWrites++;
+          if (rosterWrites == 1) {
+            firstWriteFailed.complete();
+            return false;
+          }
+          return true;
+        };
+
+        service.keeperController!.revoke('guest');
+        await firstWriteFailed.future;
+        await service.close();
+
+        check(service.keeperController).isNull();
+        check(service.recoveryError).isNull();
+        check(service.error).isNull();
+        check(rosterWrites).equals(2);
+
+        final (_, _, replacement) = await removalSession(preferences);
+        check(replacement.keeperController).isNotNull();
+        check(replacement.admittedIdentities.contains('guest')).isFalse();
+        check(harness.shutdownErrors).isEmpty();
+      },
+    );
+
     for (final failingKey in [
       removalRosterKey,
       'session_admission_declined_participants:session:keeper',
@@ -1011,6 +1044,51 @@ void main() {
     },
   );
 
+  test('verified removal reconciles after admission detaches', () async {
+    final preferences = _AdmissionPreferences();
+    final (_, container, service) = await removalSession(preferences);
+    final removal = await service.prepareRemoval('guest');
+    await removal.unknown();
+    await service.disconnect();
+
+    await service.reconcileRemoval('guest', backendRemoved: true);
+
+    final roster = await container.read(
+      keeperAdmissionRosterProvider('session', 'keeper').future,
+    );
+    check(roster.members).not((members) => members.contains('guest'));
+    check(roster.revoked).contains('guest');
+    check(preferences.values.containsKey(removalJournalKey)).isFalse();
+    check(service.unresolvedRemovals.contains('guest')).isFalse();
+    check(service.error).isNull();
+  });
+
+  test('detach waits for an in-flight removal reconciliation', () async {
+    final preferences = _AdmissionPreferences();
+    final (_, _, service) = await removalSession(preferences);
+    final removal = await service.prepareRemoval('guest');
+    await removal.unknown();
+    final savingRoster = Completer<void>();
+    final savedRoster = Completer<bool>();
+    preferences.beforeSet = (key, _) {
+      if (key != removalRosterKey) return Future.value(true);
+      if (!savingRoster.isCompleted) savingRoster.complete();
+      return savedRoster.future;
+    };
+
+    final reconciling = service.reconcileRemoval('guest', backendRemoved: true);
+    await savingRoster.future;
+    var detached = false;
+    final disconnecting = service.disconnect().then((_) => detached = true);
+    check(detached).isFalse();
+
+    savedRoster.complete(true);
+    await Future.wait([reconciling, disconnecting]);
+    check(detached).isTrue();
+    check(preferences.values.containsKey(removalJournalKey)).isFalse();
+    check(service.unresolvedRemovals.contains('guest')).isFalse();
+  });
+
   test(
     'consecutive removals persist both revocations and cannot be auto-admitted again',
     () async {
@@ -1096,6 +1174,44 @@ void main() {
       check(preferences.values.containsKey(removalJournalKey)).isFalse();
       check(service.admittedIdentities.contains('guest')).isFalse();
       service.requireRemovalReady();
+    },
+  );
+
+  test(
+    'corrupt removal journal can be explicitly reset and admission recovers',
+    () async {
+      final preferences = _AdmissionPreferences();
+      preferences.values[removalJournalKey] = '{not-json';
+      final (_, _, service) = await removalSession(preferences);
+
+      check(service.hasCorruptRemovalJournal).isTrue();
+      check(service.admittedIdentities).isEmpty();
+      check(preferences.values.containsKey(removalJournalKey)).isTrue();
+
+      await service.resetCorruptRemovalJournal();
+
+      check(service.hasCorruptRemovalJournal).isFalse();
+      check(service.recoveryError).isNull();
+      check(preferences.values.containsKey(removalJournalKey)).isFalse();
+      check(preferences.values.containsKey(removalRosterKey)).isFalse();
+      check(service.admittedIdentities).isEmpty();
+      service.requireRemovalReady();
+    },
+  );
+
+  test(
+    'failed corrupt journal reset preserves fail-closed admission',
+    () async {
+      final preferences = _AdmissionPreferences();
+      preferences.values[removalJournalKey] = '{not-json';
+      final (_, _, service) = await removalSession(preferences);
+      preferences.beforeRemove = (key) async => key != removalJournalKey;
+
+      await check(service.resetCorruptRemovalJournal()).throws<StateError>();
+
+      check(service.hasCorruptRemovalJournal).isTrue();
+      check(service.admittedIdentities).isEmpty();
+      check(preferences.values.containsKey(removalJournalKey)).isTrue();
     },
   );
 
@@ -1991,6 +2107,49 @@ void main() {
       await tester.idle();
     });
   }
+
+  testWidgets('keeper can explicitly reset a corrupt removal journal', (
+    tester,
+  ) async {
+    setupAppConfig();
+    final preferences = _AdmissionPreferences();
+    await seedDeclined(preferences, 'blocked');
+    await seedRoster(preferences, members: ['member'], revision: 2);
+    preferences.values[removalJournalKey] = '{';
+    final harness = _AdmissionHarness(
+      preferences: preferences,
+      preferencesOverride: (_) async => preferences,
+    );
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+
+    final container = await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.tap(find.byType(SessionWaitingQueueButton));
+    await tester.pumpAndSettle();
+    check(find.text('Reset removal recovery').evaluate()).length.equals(1);
+
+    await tester.tap(find.text('Reset removal recovery'));
+    await tester.pumpAndSettle();
+    check(find.byType(ConfirmationDialog).evaluate()).length.equals(1);
+    check(find.textContaining('journal is unreadable').evaluate()).isNotEmpty();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ConfirmationDialog),
+        matching: find.text('Reset removal recovery'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final service = container.read(currentSessionProvider)!.admission;
+    check(preferences.values.containsKey(removalJournalKey)).isFalse();
+    check(service.hasCorruptRemovalJournal).isFalse();
+    check(service.keeperController).isNotNull();
+    check(find.text('Retry').evaluate()).isEmpty();
+
+    await closeHost(tester);
+    await tester.pump();
+    await tester.idle();
+  });
 
   testWidgets('ordinary read errors offer retry without resetting data', (
     tester,

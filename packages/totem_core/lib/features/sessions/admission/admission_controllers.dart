@@ -687,8 +687,10 @@ class KeeperAdmissionController {
         _inFlight.contains(_key(identity, request.id))) {
       return;
     }
-    if (_rosterStore?.revoked.contains(identity) ?? false) return;
     final declined = isPermanentlyDeclined(identity);
+    if (!declined && (_rosterStore?.revoked.contains(identity) ?? false)) {
+      return;
+    }
     if (!declined && _approvalRequired && !_roster.contains(identity)) return;
     // A durable decline takes precedence over a previous admission. Returning
     // members still need a fresh joined receipt before appearing in the roster.

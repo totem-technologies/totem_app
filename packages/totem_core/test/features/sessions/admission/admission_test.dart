@@ -3308,4 +3308,36 @@ void main() {
       ).isEmpty();
     },
   );
+
+  test('permanent decline denies a participant who is also revoked', () async {
+    final channel = _Channel('keeper');
+    final store = KeeperAdmissionRosterStore()..revoked.add('guest');
+    final keeper = _keeperAdmissionController(
+      channel: channel,
+      keeperIdentity: () => 'keeper',
+      sessionIdentity: 'session',
+      rosterStore: store,
+    );
+    addTearDown(() async {
+      await keeper.dispose();
+      await channel.dispose();
+    });
+
+    keeper.setDeclinedIdentities({'guest'});
+    final request = AdmissionRequest(
+      id: 'revoked-and-declined',
+      senderIdentity: 'guest',
+      recipientIdentity: 'keeper',
+      expiresAt: _fixedNow.add(const Duration(minutes: 1)),
+      displayName: 'Guest',
+    );
+    channel.controller.add(AdmissionPacketReceived(request));
+    await pumpEventQueue();
+
+    final decision = channel.sent.whereType<AdmissionDecision>().single;
+    check(decision.id).equals(request.id);
+    check(decision.approved).isFalse();
+    check(keeper.requests).isEmpty();
+    check(keeper.attempts.single.status).equals(KeeperAdmissionStatus.denied);
+  });
 }

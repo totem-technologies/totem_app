@@ -17,12 +17,16 @@ class SessionAdmissionScope extends InheritedWidget {
     required super.child,
     this.recoveryMessage,
     this.unresolvedRemovals = const {},
+    this.corruptRemovalJournal = false,
     this.onReconcileRemoval,
+    this.onResetCorruptRemovalJournal,
     super.key,
   });
 
   final String? recoveryMessage;
   final Set<String> unresolvedRemovals;
+  final bool corruptRemovalJournal;
+  final Future<void> Function()? onResetCorruptRemovalJournal;
   final Future<void> Function(String identity, bool removed)?
   onReconcileRemoval;
   final List<AdmissionRequest> requests;
