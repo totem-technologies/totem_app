@@ -12,7 +12,7 @@ window.totemEntrypointBaseUrl = new URL(
 const config = {
   wasmAllowList: {
     blink: true,
-    gecko: true,
+    gecko: false,
     webkit: true,
     unknown: false,
   },
