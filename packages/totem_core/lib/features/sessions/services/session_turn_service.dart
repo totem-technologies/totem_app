@@ -95,8 +95,9 @@ class SessionTurnService {
       sessionPromptId: sessionPromptId,
     );
     _commit(response, current, commandVersion: version);
-    // A rejected pass leaves the current speaker's microphone untouched.
-    if (current() && !state().amSpeaking(localIdentity())) {
+    // A committed pass hands off the microphone even while room state is in
+    // the passing transition and still names the previous current speaker.
+    if (current()) {
       try {
         await disableMicrophone();
         if (current() && microphoneEnabled()) {

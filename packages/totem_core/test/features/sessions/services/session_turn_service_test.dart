@@ -64,7 +64,10 @@ class _Harness {
     room = accepting ? _room(speaker: 'other', next: 'participant') : _room();
     response = accepting
         ? _room(version: 11)
-        : _room(version: 11, speaker: 'other');
+        : _room(
+            version: 11,
+            speaker: 'participant',
+          ).copyWith(turnState: TurnState.passing);
     service = SessionTurnService(
       backend: _Backend((command, version) async {
         requests.add((command, version));
@@ -161,7 +164,7 @@ void main() {
 
       h.perform = null;
       await h.service.passTotem();
-      check(h.room.currentSpeaker.value).equals('other');
+      check(h.room.currentSpeaker.value).equals('participant');
       check(h.microphoneOn).isFalse();
       check(h.service.lastFailure).isNull();
     },
@@ -223,7 +226,7 @@ void main() {
           if (committed) {
             response.complete(h.response);
             await passing;
-            check(h.room.currentSpeaker.value).equals('other');
+            check(h.room.currentSpeaker.value).equals('participant');
             check(h.commits.single).identicalTo(h.response);
             check(h.microphoneOn).isFalse();
             check(h.effects).deepEquals(['backend:pass', 'commit', 'disable']);
@@ -278,7 +281,7 @@ void main() {
           h.muteApplies = false;
         }
         await check(h.service.passTotem()).throws<SessionCommandException>();
-        check(h.room.currentSpeaker.value).equals('other');
+        check(h.room.currentSpeaker.value).equals('participant');
         check(h.commits.single).identicalTo(h.response);
         check(h.microphoneOn).isTrue();
         check(
@@ -290,15 +293,17 @@ void main() {
   }
 
   test(
-    'a committed pass that keeps the local participant speaking does not mute them',
+    'a pass mutes while the authoritative room is still in passing state',
     () async {
-      final h = _Harness()..response = _room(version: 11);
+      final h = _Harness();
       addTearDown(h.service.dispose);
 
       await h.service.passTotem();
 
-      check(h.effects).deepEquals(['backend:pass', 'commit']);
-      check(h.microphoneOn).isTrue();
+      check(h.room.turnState).equals(TurnState.passing);
+      check(h.room.currentSpeaker.value).equals('participant');
+      check(h.effects).deepEquals(['backend:pass', 'commit', 'disable']);
+      check(h.microphoneOn).isFalse();
     },
   );
 
@@ -427,7 +432,10 @@ void main() {
       };
       final passing = h.service.passTotem();
       await started.future;
-      final observed = _room(version: 11, speaker: 'other');
+      final observed = _room(
+        version: 11,
+        speaker: 'participant',
+      ).copyWith(turnState: TurnState.passing);
       h.room = observed;
       response.complete(h.response);
       await passing;

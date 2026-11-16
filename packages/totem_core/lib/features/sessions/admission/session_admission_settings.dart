@@ -17,8 +17,8 @@ class SessionAdmissionSettings extends _$SessionAdmissionSettings {
       _enabledOverride = null;
     }
 
-    final enabled = _enabledOverride ?? true;
-    ref.watch(currentSessionProvider)?.admission.setApprovalRequired(enabled);
+    final service = ref.watch(currentSessionProvider)?.admission;
+    final enabled = _enabledOverride ?? service?.approvalRequired ?? true;
     return enabled;
   }
 

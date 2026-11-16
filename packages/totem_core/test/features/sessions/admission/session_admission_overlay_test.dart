@@ -470,6 +470,8 @@ void main() {
         await container.pump();
         check(completed).isFalse();
         check(controllerClosed.isCompleted).isFalse();
+        check(await service.admitAll()).isFalse();
+        await service.decide(harness.request('while-closing'), true);
         final published = harness.sent.length;
         await harness.sendRequest(harness.request('while-closing'));
         check(harness.sent.length).equals(published);

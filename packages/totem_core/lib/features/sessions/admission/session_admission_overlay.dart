@@ -125,7 +125,7 @@ class _SessionAdmissionOverlayState
         }
       }
     }
-    if (service?.error != null) {
+    if (service?.recoveryError != null) {
       retry ??= () => unawaited(
         service!.retryRecovery().catchError((Object error, StackTrace stack) {
           ErrorHandler.logError(
@@ -157,7 +157,7 @@ class _SessionAdmissionOverlayState
         const <KeeperAdmissionAttempt>[];
     final requests = controller?.requests ?? const <AdmissionRequest>[];
     return SessionAdmissionScope(
-      recoveryMessage: service?.error,
+      recoveryMessage: service?.recoveryError,
       unresolvedRemovals: service?.unresolvedRemovals ?? const {},
       onReconcileRemoval: (identity, removed) async {
         await service?.reconcileRemoval(identity, backendRemoved: removed);

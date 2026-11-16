@@ -302,6 +302,21 @@ void main() {
     },
   );
 
+  test(
+    'a failed previous runtime cleanup does not block a later join',
+    () async {
+      final previousCleanup = Future<void>.error(
+        StateError('disconnect failed'),
+      );
+      final next = _Harness(previousEntryCleanup: previousCleanup);
+      check(
+        await next.runtime.join(operation: next.connect),
+      ).equals(SessionJoinResult.success);
+      check(next.factory.created).length.equals(1);
+      await next.runtime.dispose();
+    },
+  );
+
   test('terminal failure requires an explicit reset before retry', () async {
     final h = _Harness();
     check(

@@ -268,7 +268,13 @@ class SessionRuntime {
     SessionAttempt? attempt;
     JoinMediaReceipt? receipt;
     try {
-      if (previousEntryCleanup case final previous?) await previous;
+      if (previousEntryCleanup case final previous?) {
+        try {
+          await previous;
+        } catch (error, stackTrace) {
+          onError(error, stackTrace);
+        }
+      }
       if (priorLeave != null) await priorLeave;
       if (priorCleanup != null) await priorCleanup;
       if (_disposed || !identical(_joining, flight)) {

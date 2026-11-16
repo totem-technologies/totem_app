@@ -273,7 +273,16 @@ class SessionController extends _$SessionController {
     );
     final infrastructure = ref.read(sessionInfraControllerProvider.notifier);
     // A provider rebuild must release the old media facades before reusing them.
-    final previousEntryCleanup = _runtime?.dispose();
+    final previousEntryCleanup = _runtime?.dispose().catchError((
+      Object error,
+      StackTrace stackTrace,
+    ) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Previous session runtime cleanup failed before rebuild',
+      );
+    });
     late final SessionRuntime ownedRuntime;
     _runtime = ownedRuntime = SessionRuntime(
       factory: _transportFactory,

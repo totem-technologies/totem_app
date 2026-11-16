@@ -44,16 +44,14 @@ class SessionAdmissionService extends ChangeNotifier {
   Set<String> get admittedIdentities => _admittedIdentities;
   bool approvalRequired = true;
   void setApprovalRequired(bool value) {
-    if (!mounted || _detaching || _disconnecting) {
-      throw StateError('Admission is closing');
-    }
     approvalRequired = value;
-    sync();
+    if (mounted && !_detaching && !_disconnecting) sync();
   }
 
   bool _disposed = false;
   bool get mounted => !_disposed && ref.mounted;
   String? error;
+  String? recoveryError;
   bool _recoveryUnavailable = false;
   String? _revocationKeeper;
   final Set<String> _pendingRevocations = {};
@@ -305,7 +303,7 @@ class SessionAdmissionService extends ChangeNotifier {
       }).catchError((Object failure, StackTrace stackTrace) {
         if (mounted) {
           _syncAdmittedIdentities(const []);
-          error = 'Admission unavailable. Retry recovery.';
+          recoveryError = 'Admission unavailable. Retry recovery.';
           notifyListeners();
         }
         ErrorHandler.logError(
@@ -528,6 +526,7 @@ class SessionAdmissionService extends ChangeNotifier {
         _recoveryUnavailable = false;
         _storageFailure = null;
         _storageStack = null;
+        recoveryError = null;
         error = null;
         notifyListeners();
       }
@@ -542,6 +541,8 @@ class SessionAdmissionService extends ChangeNotifier {
       );
       if (mounted && identical(owner, _keeperController)) {
         _recoveryUnavailable = true;
+        recoveryError =
+            'Admission recovery could not be saved. Retry recovery.';
         owner?.setApprovalRequired(true);
         error =
             'Admission recovery could not be saved. Keep this Session open and retry.';
@@ -603,6 +604,7 @@ class SessionAdmissionService extends ChangeNotifier {
       _storageFailure = error;
       _storageStack = stack;
       _recoveryUnavailable = true;
+      recoveryError = 'Admission recovery could not be saved. Retry recovery.';
       ErrorHandler.logError(
         error,
         stackTrace: stack,
@@ -692,7 +694,7 @@ class SessionAdmissionService extends ChangeNotifier {
     bool permanently = false,
   }) {
     if (!mounted || _detaching || _disconnecting) {
-      return Future.error(StateError('Admission is closing'));
+      return Future<void>.value();
     }
     return _track(_decideCommand(request, approve, permanently: permanently));
   }
@@ -726,7 +728,7 @@ class SessionAdmissionService extends ChangeNotifier {
 
   Future<bool> admitAll() {
     if (!mounted || _detaching || _disconnecting) {
-      return Future.error(StateError('Admission is closing'));
+      return Future<bool>.value(false);
     }
     return _track(_admitAllCommand());
   }
@@ -870,6 +872,7 @@ class SessionAdmissionService extends ChangeNotifier {
       if (mounted && _keeperIdentity == keeper) {
         if (_pendingRevocations.isEmpty) {
           _recoveryUnavailable = false;
+          recoveryError = null;
           error = null;
         }
         _syncAdmittedIdentities(_keeperController!.roster);
@@ -1184,6 +1187,7 @@ class SessionAdmissionService extends ChangeNotifier {
     if (records.isEmpty) {
       if (_recoveryUnavailable) await persist();
       _recoveryUnavailable = false;
+      recoveryError = null;
       error = null;
       return;
     }
@@ -1214,6 +1218,7 @@ class SessionAdmissionService extends ChangeNotifier {
     _rejectedRevocations.clear();
     _committedRevocations.removeAll(committed);
     _recoveryUnavailable = false;
+    recoveryError = null;
     _storageFailure = null;
     _storageStack = null;
     if (remaining.isNotEmpty) {
