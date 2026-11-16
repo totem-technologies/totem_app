@@ -811,6 +811,27 @@ void main() {
     verify(factory.audioTracks.single.dispose).called(1);
   });
 
+  test('concurrent transfer claims a preview capture only once', () async {
+    final factory = _PreviewTrackFactory();
+    final container = _createContainer(factory);
+    addTearDown(container.dispose);
+    final controller = container.read(
+      preJoinMediaControllerProvider(_sessionSlug).notifier,
+    );
+    await controller.settled();
+    final first = controller.takeForJoin();
+    final second = check(controller.takeForJoin()).throws<StateError>();
+    final media = await first;
+    await second;
+    check(media.cameraTrack).identicalTo(factory.videoTracks.single);
+    check(media.microphoneTrack).identicalTo(factory.audioTracks.single);
+    verifyNever(media.cameraTrack!.stop);
+    verifyNever(media.microphoneTrack!.stop);
+    media.onBeforeDispose?.call();
+    await media.cameraTrack?.dispose();
+    await media.microphoneTrack?.dispose();
+  });
+
   test('failed join reset creates a fresh sequential capture pair', () async {
     final factory = _PreviewTrackFactory();
     final container = _createContainer(factory);

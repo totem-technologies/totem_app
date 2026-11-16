@@ -308,12 +308,6 @@ class _PendingActivationSession extends _FailureReceiptSession {
   }
 }
 
-class _UninitializedSessionController extends _SuccessfulSessionController {
-  @override
-  void preventAutoDispose() =>
-      throw StateError('Session unavailable before media handoff');
-}
-
 class _FatalSessionController extends _RetryableSessionController {
   @override
   Future<SessionJoinResult> activateConnectedRoom({
@@ -1940,7 +1934,8 @@ void main() {
       final container = _container(
         factory: factory,
         response: const JoinResponse(token: 'token', isAlreadyPresent: false),
-        sessionController: _UninitializedSessionController.new,
+        sessionController: () =>
+            throw StateError('Session unavailable before media handoff'),
       );
       addTearDown(container.dispose);
       await _waitForMedia(container);

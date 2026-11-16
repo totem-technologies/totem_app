@@ -153,30 +153,21 @@ void deliverLegacyPacket(
   );
 }
 
-/// C2 compatibility: retain an offered raw room without attaching its media
-/// until the previous active transport has completed cleanup.
-class LegacyConnectedRoomOffer {
-  LegacyConnectedRoomOffer(this.room);
-  final LegacySessionRoom room;
-  bool _consumed = false;
-  SessionTransport adopt({
-    required LocalMedia localMedia,
-    required RoomMedia roomMedia,
-    required sdk.CameraCaptureOptions cameraOptions,
-  }) {
-    if (_consumed) throw StateError('Legacy room offer already consumed');
-    _consumed = true;
-    return wrapLegacyRoom(
-      room,
-      cameraOptions,
-      localMedia: localMedia,
-      roomMedia: roomMedia,
-    );
-  }
-
-  Future<void> dispose() async {
-    if (_consumed) return;
-    _consumed = true;
-    await releaseRejectedLegacyRoom(room);
-  }
-}
+/// A deferred application lease owns the existing room without attaching media
+/// until the runtime has awaited the previous connection's cleanup.
+ConnectedSessionLease offerConnectedRoom(
+  LegacySessionRoom room, {
+  required LocalMedia localMedia,
+  required RoomMedia roomMedia,
+  required sdk.CameraCaptureOptions cameraOptions,
+}) => ConnectedSessionLease.deferred(
+  identity: room,
+  connected: () => legacyRoomConnected(room),
+  claim: () => wrapLegacyRoom(
+    room,
+    cameraOptions,
+    localMedia: localMedia,
+    roomMedia: roomMedia,
+  ),
+  release: () => releaseRejectedLegacyRoom(room),
+);

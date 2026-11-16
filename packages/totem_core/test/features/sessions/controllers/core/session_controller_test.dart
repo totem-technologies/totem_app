@@ -16,6 +16,7 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/media/session_transport_factory_provider.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
@@ -248,6 +249,7 @@ class _DelayedInitializeSessionController extends SessionController {
     required RoomOptions roomOptions,
     required String url,
     required String token,
+    SessionAttempt? attempt,
   }) async {
     initializationCount++;
     lastRoomOptions = roomOptions;
@@ -255,6 +257,7 @@ class _DelayedInitializeSessionController extends SessionController {
       initializationStarted.complete();
     }
     await initializationGate.future;
+    attempt?.requireCurrent();
     room = initializedRoom;
     return transport!;
   }
@@ -415,9 +418,11 @@ void main() {
               await controller.join(),
             ).equals(SessionJoinResult.retryableFailure);
             final failed = factory.created.single;
-            await controller.resetAfterFailedJoin();
+            final resetting = controller.resetAfterFailedJoin();
+            final retrying = controller.join();
+            await resetting;
             check(failed.underlyingDisposals).equals(1);
-            check(await controller.join()).equals(SessionJoinResult.success);
+            check(await retrying).equals(SessionJoinResult.success);
             check(factory.created).length.equals(2);
             check(factory.created.last.connectCalls).equals(1);
             await controller.leave();
@@ -428,6 +433,93 @@ void main() {
           }
         },
       );
+
+      for (final fails in [false, true]) {
+        test(
+          'production joins share the final connection outcome (failure: $fails)',
+          () async {
+            const options = SessionOptions(
+              sessionSlug: 'single-flight',
+              token: 'token',
+              cameraEnabled: false,
+              microphoneEnabled: false,
+              speakerEnabled: true,
+              cameraOptions: SessionController.defaultCameraCaptureOptions,
+            );
+            final started = Completer<void>();
+            final gate = Completer<void>();
+            final factory = FakeSessionTransportFactory(
+              configure: (connection) {
+                connection
+                  ..connectStarted = started
+                  ..connectCompletion = gate
+                  ..connectFailure = fails
+                      ? SessionTransportFailure(
+                          SessionTransportFailureKind.connection,
+                          'timeout',
+                          cause: StateError('timeout'),
+                          stackTrace: StackTrace.current,
+                          connectionFailure:
+                              SessionTransportConnectionFailure.timeout,
+                        )
+                      : null;
+              },
+            );
+            final container = ProviderContainer(
+              overrides: [
+                authControllerProvider.overrideWith(
+                  () => FakeAuthController(AuthState.unauthenticated()),
+                ),
+                sessionProvider(options.sessionSlug).overrideWithValue(
+                  AsyncData(_createSessionEvent(options.sessionSlug)),
+                ),
+                sessionTransportFactoryProvider(
+                  options,
+                ).overrideWithValue(factory),
+                roomStateProvider(options.sessionSlug).overrideWith(
+                  (ref) =>
+                      ref.read(sessionControllerProvider(options)).roomState,
+                ),
+              ],
+            );
+            final subscription = container.listen(
+              sessionControllerProvider(options),
+              (_, _) {},
+            );
+            final controller = container.read(
+              sessionControllerProvider(options).notifier,
+            );
+            try {
+              final first = controller.join();
+              await started.future;
+              var completed = false;
+              final second = controller.join().then((result) {
+                completed = true;
+                return result;
+              });
+              await Future<void>.value();
+              check(completed).isFalse();
+              check(
+                controller.state.connectionState,
+              ).equals(RoomConnectionState.connecting);
+              check(factory.created).length.equals(1);
+              check(factory.created.single.connectCalls).equals(1);
+              gate.complete();
+              final result = fails
+                  ? SessionJoinResult.retryableFailure
+                  : SessionJoinResult.success;
+              check(await first).equals(result);
+              check(await second).equals(result);
+              if (fails) await controller.resetAfterFailedJoin();
+              await controller.leave();
+              check(factory.created.single.underlyingDisposals).equals(1);
+            } finally {
+              subscription.close();
+              container.dispose();
+            }
+          },
+        );
+      }
 
       test('transport rejection retains diagnostics and is fatal', () async {
         const options = SessionOptions(
@@ -1564,8 +1656,8 @@ void main() {
           check(
             await controller.activateConnectedRoom(room: room),
           ).equals(SessionJoinResult.retryableFailure);
-          check(room.disposeCount).equals(0);
-          check(identical(controller.room, room)).isTrue();
+          check(room.disposeCount).equals(1);
+          check(controller.room).isNull();
 
           await controller.resetAfterFailedJoin();
           check(room.disposeCount).equals(1);
@@ -2234,7 +2326,7 @@ void main() {
       });
 
       test(
-        'join is guarded while connecting before room initialization',
+        'concurrent joins share connection and wait for publication',
         () async {
           const eventSlug = 'test-session';
           const options = SessionOptions(
@@ -2303,23 +2395,26 @@ void main() {
 
           final secondCameraTrack = MockLocalVideoTrack();
           final secondMicrophoneTrack = MockLocalAudioTrack();
-          final secondResult = await controller.join(
+          var secondCompleted = false;
+          final secondResult = controller.join(
             joinMedia: SessionJoinMedia(
               cameraTrack: secondCameraTrack,
               microphoneTrack: secondMicrophoneTrack,
             ),
           );
 
-          check(secondResult).equals(SessionJoinResult.success);
+          unawaited(secondResult.then((_) => secondCompleted = true));
+          await Future<void>.value();
+          check(secondCompleted).isFalse();
           check(controller.initializationCount).equals(1);
           check(room.connectCount).equals(0);
+          controller.initializationGate.complete();
+          check(await firstJoin).equals(SessionJoinResult.success);
+          check(await secondResult).equals(SessionJoinResult.success);
           verify(secondCameraTrack.stop).called(1);
           verify(secondCameraTrack.dispose).called(1);
           verify(secondMicrophoneTrack.stop).called(1);
           verify(secondMicrophoneTrack.dispose).called(1);
-
-          controller.initializationGate.complete();
-          check(await firstJoin).equals(SessionJoinResult.success);
           check(room.connectCount).equals(1);
           check(room.lastFastConnectOptions).isNull();
           verify(
@@ -2369,7 +2464,10 @@ void main() {
             () => localParticipant.setCameraEnabled(any<bool>()),
           ).thenAnswer((_) async => null);
           when(
-            () => localParticipant.setMicrophoneEnabled(any<bool>()),
+            () => localParticipant.setMicrophoneEnabled(
+              any<bool>(),
+              audioCaptureOptions: any(named: 'audioCaptureOptions'),
+            ),
           ).thenAnswer((_) async => null);
           final room = _CountingRoom(localParticipant);
           controller.room = room;
@@ -2648,6 +2746,78 @@ void main() {
           verifyNever(
             () => localParticipant.publishAudioTrack(microphoneTrack),
           );
+        },
+      );
+
+      test(
+        'leave during publication waits for ownership and skips the next track',
+        () async {
+          const options = SessionOptions(
+            sessionSlug: 'test-session',
+            token: 'token',
+            cameraEnabled: true,
+            microphoneEnabled: true,
+            speakerEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+          );
+          final container = _createContainerWithEventOverride(
+            options.sessionSlug,
+          );
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+          );
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final participant = MockLocalParticipant();
+          final camera = MockLocalVideoTrack();
+          final microphone = MockLocalAudioTrack();
+          final started = Completer<void>();
+          final publication =
+              Completer<LocalTrackPublication<LocalVideoTrack>>();
+          var detached = false;
+          when(
+            () => participant.publishVideoTrack(
+              camera,
+              publishOptions: SessionController.defaultVideoPublishOptions,
+            ),
+          ).thenAnswer((_) {
+            started.complete();
+            return publication.future;
+          });
+          when(microphone.stop).thenAnswer((_) async {
+            check(detached).isTrue();
+            return true;
+          });
+          final room = _CountingRoom(participant);
+          controller.room = room;
+          final joining = controller.join(
+            joinMedia: SessionJoinMedia(
+              cameraTrack: camera,
+              microphoneTrack: microphone,
+              onBeforeDispose: () => detached = true,
+            ),
+          );
+          await started.future;
+          var left = false;
+          final leaving = controller.leave().then((_) => left = true);
+          await Future<void>.value();
+          check(left).isFalse();
+          check(room.disconnectCount).equals(0);
+          publication.complete(MockLocalTrackPublication());
+          check(await joining).equals(SessionJoinResult.retryableFailure);
+          await leaving;
+          check(room.disconnectCount).equals(1);
+          check(room.disposeCount).equals(1);
+          verifyNever(() => participant.publishAudioTrack(microphone));
+          verify(microphone.stop).called(1);
+          verify(microphone.dispose).called(1);
+          verifyNever(camera.stop);
+          verifyNever(camera.dispose);
+          verify(participant.unpublishAllTracks).called(1);
+          subscription.close();
+          container.dispose();
         },
       );
 

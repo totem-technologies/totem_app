@@ -162,9 +162,11 @@ class MoreOptions extends ConsumerWidget {
               onTap: () async {
                 final navigator = Navigator.of(context)..pop();
                 final shouldLeave = await showLeaveDialog(context) ?? false;
-                if (shouldLeave && navigator.mounted) {
-                  TotemRouter.instance.popOrHome(navigator.context);
-                  currentSession.leave();
+                if (shouldLeave) {
+                  await currentSession.leave();
+                  if (navigator.mounted) {
+                    TotemRouter.instance.popOrHome(navigator.context);
+                  }
                 }
               },
             ),

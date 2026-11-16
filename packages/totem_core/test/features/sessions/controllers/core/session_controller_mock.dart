@@ -5,6 +5,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
 import 'package:totem_core/features/sessions/media/room_media.dart';
@@ -75,6 +76,8 @@ SessionRoomState _createSessionState({
 }
 
 class FakeSessionController implements SessionController {
+  @override
+  SessionAttempt? activeAttempt;
   @override
   SessionAdmissionService admission = FakeAdmissionService();
   SessionRoomState mockState = _createSessionState();

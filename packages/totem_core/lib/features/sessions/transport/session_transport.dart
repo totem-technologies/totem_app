@@ -154,31 +154,45 @@ abstract interface class SessionTransportFactory {
 /// While offered, the lease is the sole owner. Claim consumes it synchronously;
 /// cleanup by the former owner then cannot dispose the claimed connection.
 class ConnectedSessionLease {
-  ConnectedSessionLease(SessionTransport transport) : _transport = transport {
-    if (transport.connectionState !=
-        SessionTransportConnectionState.connected) {
+  ConnectedSessionLease(SessionTransport transport)
+    : this.deferred(
+        identity: transport,
+        connected: () =>
+            transport.connectionState ==
+            SessionTransportConnectionState.connected,
+        claim: () => transport,
+        release: transport.dispose,
+      );
+  ConnectedSessionLease.deferred({
+    required this.identity,
+    required bool Function() connected,
+    required this._claim,
+    required this._release,
+  }) : _connected = connected {
+    if (!connected()) {
       throw StateError('Only connected transports can be offered');
     }
   }
-  SessionTransport? _transport;
+  final Object identity;
+  final bool Function() _connected;
+  final SessionTransport Function() _claim;
+  final Future<void> Function() _release;
+  bool _consumed = false;
   Future<void>? _disposal;
   SessionTransport claim() {
-    final transport = _transport;
-    if (transport == null) {
-      throw StateError('Connection lease already consumed');
-    }
-    if (transport.connectionState !=
-        SessionTransportConnectionState.connected) {
+    if (_consumed) throw StateError('Connection lease already consumed');
+    if (!_connected()) {
       throw StateError('Offered connection is no longer connected');
     }
-    _transport = null;
+    final transport = _claim();
+    _consumed = true;
     return transport;
   }
 
   Future<void> dispose() => _disposal ??= _dispose();
   Future<void> _dispose() async {
-    final transport = _transport;
-    _transport = null;
-    await transport?.dispose();
+    if (_consumed) return;
+    _consumed = true;
+    await _release();
   }
 }

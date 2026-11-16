@@ -7,10 +7,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/permissions/model.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 
 import '../../livekit_mocks.dart';
+import '../../transport/fake_session_transport.dart';
 import '../core/session_controller_mock.dart';
 import 'session_device_controller_mock.dart';
 
@@ -360,6 +362,58 @@ void main() {
         check(removed).isEmpty();
       });
     });
+
+    test(
+      'a late Keeper room-state response cannot update a replacement attempt',
+      () async {
+        final runtime = SessionRuntime(
+          factory: FakeSessionTransportFactory(),
+          onEvent: (_) {},
+          onCancel: () {},
+          onCleanup: () async {},
+          onJoined: () {},
+          onError: (_, _) {},
+          activateInfrastructure: (_) async {},
+          deactivateInfrastructure: (_) async {},
+          retainEntry: () => () {},
+        );
+        await runtime.join(operation: (_) async => SessionJoinResult.success);
+        final session = FakeSessionController()
+          ..isCurrentUserKeeperValue = true
+          ..activeAttempt = runtime.activeAttempt;
+        final previous = session.state.roomState;
+        final started = Completer<void>();
+        final response = Completer<RoomState>();
+        final container = ProviderContainer(
+          overrides: [
+            forcePassTotemProvider(
+              session.options.sessionSlug,
+              previous.version,
+            ).overrideWith((_) {
+              started.complete();
+              return response.future;
+            }),
+          ],
+        );
+        final subscription = container.listen(
+          sessionKeeperControllerProvider(session),
+          (_, _) {},
+        );
+        final command = container
+            .read(sessionKeeperControllerProvider(session).notifier)
+            .forcePassTotem();
+        final failed = check(command).throws<StateError>();
+        await started.future;
+        await runtime.cleanup();
+        await runtime.join(operation: (_) async => SessionJoinResult.success);
+        response.complete(previous.copyWith(version: previous.version + 10));
+        await failed;
+        check(session.state.roomState).identicalTo(previous);
+        await runtime.dispose();
+        subscription.close();
+        container.dispose();
+      },
+    );
 
     group('acceptTotem', () {
       Future<FakeSessionDeviceController> accept({

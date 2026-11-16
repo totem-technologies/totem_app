@@ -6,7 +6,7 @@ This document describes the target ownership model and records current gaps. It 
 
 | Concern | Authority / canonical owner | Current owner(s) and allowed mutation | Observers, lifetime, persistence |
 |---|---|---|---|
-| Connection lifecycle | Session connection coordinator; LiveKit is transport truth | `SessionController` and LiveKit adapter currently overlap join/leave; coordinator alone should serialize transitions | Screens observe; connection scoped to one session; never persisted |
+| Connection lifecycle | Session connection coordinator; LiveKit is transport truth | `SessionRuntime` alone owns active attempts and transport lifetime; `SessionController` reconciles feature state; the adapter owns SDK resources | Screens observe; connection scoped to one session; never persisted |
 | Server room state | Versioned backend room-state stream, reduced into `SessionRoomState` | `SessionStateReducer` is the client projection; only accepted server events mutate it | Controllers/widgets observe projection; reset on connection identity change; no local persistence |
 | Turn order, participants | Same canonical server room-state projection | Reducer applies authoritative updates; UI may issue commands, not edit roster/order | Widgets observe; no independent mirrored domain copy |
 | Capture | Local device / `LocalMedia` | `PreJoinMediaController` before handoff; room media owner after handoff; no widget capture ownership | Preview/room renderers observe; device scoped then session scoped; release exactly once |
@@ -42,12 +42,12 @@ Pre-join media has one owner at a time. Transfer to the room occurs once after s
 
 1. One authoritative owner per resource; projections are read-only. **Gap:** overlapping controller responsibilities; Phases 2–5.
 2. One canonical server room-state source; accepted version never rolls back. **Gap:** verify/strengthen reducer and stream contract in Phase 2.
-3. Concurrent same-connection joins deduplicate; success waits for required initialization. **Gap:** serialize lifecycle in Phase 2.
-4. Pre-join capture transfers exactly once. **Gap:** make transfer token/ownership explicit in Phase 4.
-5. Cleanup is idempotent; stale/disposed sessions cannot mutate newer sessions. **Gap:** generation fencing and owner teardown in Phases 2 and 4.
+3. Concurrent same-connection joins deduplicate; success waits for required initialization. **Implemented in Phase 5:** runtime single-flight joining waits for initialization and media publication.
+4. Pre-join capture transfers exactly once. **Implemented in Phase 5:** pre-join rejects repeated capture claims; `JoinMediaReceipt` tracks only unaccepted tracks and publication decisions.
+5. Cleanup is idempotent; stale/disposed sessions cannot mutate newer sessions. **Implemented in Phase 5:** scoped attempt validity, serialized cleanup, and entry-owned infrastructure prevent replacement races.
 6. Admission is independent of panel visibility and remains cooperative/client-side. Existing protocol tests cover recovery; preserve and extend in Phase 3.
-7. Each active session has isolated presentation state. **Gap:** scope panel state by session identity in Phase 5.
-8. Widgets do not own domain services that outlive them. **Gap:** extract and re-scope service ownership in Phase 5.
+7. Each active session has isolated presentation state. **Implemented in Phase 3:** presentation and chat UI state depend on the entry scope.
+8. Widgets do not own domain services that outlive them. **Implemented for admission in Phase 2:** the runtime retains its lifetime in Phase 5; feature separation continues in Phase 6.
 9. Media capture/publication goes through media abstractions, preserving Safari reuse and video safeguards. Existing guard checks capture calls; broaden only with reliable checks in Phase 4.
 
 ## Riverpod and lifetime
@@ -56,10 +56,10 @@ The session scope is a container for dependencies and presentation projections, 
 
 ## Phases 2–6 issues
 
-- **Phase 2:** single connection lifecycle owner; deduplicated join, initialization barrier, generation fencing, monotonic version reducer.
-- **Phase 3:** admission protocol/roster ownership independent of panel and explicit reconnect/recovery contract.
-- **Phase 4:** explicit one-time pre-join media transfer and adapter-only SDK access, retaining Safari safeguards.
-- **Phase 5:** session-keyed provider/presentation scopes; move domain services out of widget ownership.
+- **Phase 2 (implemented):** session-owned admission and roster recovery.
+- **Phase 3 (implemented):** entry-scoped presentation and room-owned transient routes.
+- **Phase 4 (partially implemented on this branch):** complete the remaining SDK integrations listed below; preserve the runtime ownership boundary.
+- **Phase 5 (implemented):** runtime attempts, single-flight joining, lease adoption, coordinated cleanup, and media/polling ownership.
 - **Phase 6:** consolidate remaining feature state ownership (messaging, prompts, reactions, timers, notifications, errors), remove obsolete mirrors, and validate teardown end to end.
 
 ## Phase 2 admission implementation
@@ -100,7 +100,7 @@ Configurable fake transports and factories live under
 publication failures, recorded permissions, and lifecycle counters support
 orchestration migration without a LiveKit backend.
 
-Milestone B1 is implemented: `SessionController` owns a `SessionTransport`,
+Milestone B1 is implemented; Phase 5 delegates ownership to `SessionRuntime`. `SessionController` uses a `SessionTransport`,
 created by the generated `sessionTransportFactoryProvider`. The production
 factory creates `LiveKitSessionTransport`; preparation, connection, events,
 permissions, subscriptions, disconnection, and disposal cross that boundary.
@@ -117,13 +117,128 @@ failure types. The controller is removed from the direct SDK import allowlist.
 - **C1:** pre-join capture options, retained-track publication, and the existing
   SDK-shaped error presentation remain infrastructure integrations. The
   existing state/error consumers are preserved, not migrated in B1.
-- **C2:** `activateConnectedRoom` accepts the existing raw-room offer, retained
-  by `LegacyConnectedRoomOffer` until prior cleanup completes. Only then does
-  it wrap the same room in the active transport and attach the existing media
-  facades. It never connects a second room. This compatibility offer is not the
-  `ConnectedSessionLease` migration. Admission and presentation consumers keep
-  read-through access until their remaining C1/C2 migrations remove the getter.
+- **C2:** `activateConnectedRoom` still accepts the existing raw room at the
+  pre-join boundary. Phase 5 replaced `LegacyConnectedRoomOffer` with
+  `ConnectedSessionLease.deferred`: after prior cleanup, its single claim wraps
+  that same room and attaches the stable media facades. No second connection is
+  made. The pending flow releases admission listeners before calling this path.
+  Remaining SDK migration must replace the raw argument and remove read-through
+  access in admission/presentation; it must preserve this ownership mechanism.
 
 Phase 4 remains incomplete until messaging, pre-join, admission, SDK-dependent
 state, and connected ownership transfer finish their later milestones. B1 does
 not introduce a second production connection path or a new SDK allowlist entry.
+
+
+## Phase 5: implemented lifecycle ownership
+
+`SessionRuntime` is a focused lifecycle coordinator created by the generated
+`SessionController` provider. It owns the active transport, typed event
+subscription, admission service lifetime, unaccepted media receipts, device-setup
+timer, polling scheduler, operation retention, and cancellation generation.
+`SessionController` remains the backend-state reconciliation facade; device,
+Keeper, messaging, prompts, and presentation retain their feature state.
+
+```mermaid
+flowchart TD
+  Preview[PreJoinMediaController: preview capture] -->|one transfer after capture settles| Receipt[JoinMediaOwner: unaccepted tracks]
+  Pending[PreJoinFlowController: pending admission connection] -->|cancel pending listeners; offer same room| Lease[ConnectedSessionLease: single claim]
+  Lease --> Runtime[SessionRuntime: entry + attempt identity]
+  Receipt --> Runtime
+  Runtime --> Transport[SessionTransport: one active connection]
+  Runtime --> Admission[SessionAdmissionService: protocol and roster]
+  Runtime --> Poll[SessionPollScheduler: one sync timer + one poll timer]
+  Runtime --> Infra[SessionInfraController: entry-owned foreground service]
+  Runtime -->|publication accepted| Media[LocalMedia adapter: published tracks]
+  Facade[SessionController: backend state and feature facade] --> Runtime
+  UI[Room UI: entry-scoped presentation] --> Facade
+```
+
+The runtime has a read-only entry identity. It remains stable during retries and
+reconnects, and rotates when joining after a completed leave. A newly constructed
+provider has a different identity even for the same slug. Attempt tokens are
+separate: each new operation or cleanup invalidates older callbacks. Room metadata
+updates use a provider listener and do not rebuild the runtime. If the provider
+itself is replaced, the replacement awaits its predecessor's final cleanup before
+it may attach the stable media facades. The runtime retains
+the Riverpod entry only while a join is in flight; the pre-join listener and room
+screen then retain it through normal provider subscriptions. The former imperative
+`preventAutoDispose`/`allowAutoDispose` handoff is removed. Provider teardown starts
+best-effort asynchronous disposal; normal navigation must await `leave()`.
+
+Admission remains orthogonal to connection state. Before active-room adoption,
+`PreJoinFlowPhase.pending` and `AdmissionStatus` describe the waiting connection;
+pre-join owns that connection. Approval releases the pending protocol listeners
+and offers the connected room. `activating` describes the runtime's single claim,
+infrastructure setup, metadata/presence initialization, and local publication.
+Declines, expiry, waiting retries, and recovery retain their client-side protocol.
+
+| Current lifecycle | Trigger | Result / completion rule |
+|---|---|---|
+| idle / reset failure | join | preparing, then connecting |
+| preparing / connecting / activating | same-attempt join | await the same final result; discard only newly offered unused media |
+| preparing | connected lease | claim once, then activating; never request a token or connect again |
+| connecting / activating | initialization and required publication succeed | connected; only now publish connected session state and resolve success |
+| connecting / activating | retryable error | recoverableFailure; invalidate attempt; reset or next join awaits cleanup |
+| connecting / activating | classified terminal error | terminalFailure; new joins return fatal until explicit reset |
+| connected | join for the same active connection | idempotent success |
+| connected | transport reconnecting / reconnected | reconnecting / connected; keep entry, listeners, capture, and schedules |
+| any live phase | leave / transport teardown | invalidate attempt and stop timers immediately; serialize cleanup; queued join awaits it |
+| leaving | another leave | same cleanup Future and outcome |
+| leaving | cleanup completed | idle, entry ended; next join receives a fresh entry identity |
+| any phase | dispose | terminal disposed; repeated disposal awaits the same Future; new joins are refused |
+
+A different offered connection while joining/connected is rejected and released,
+without changing the active owner. A consumed lease cannot claim again or dispose
+its adopted transport. If a lease disconnects before claim, it releases the room
+once. Adoption failure after claim belongs to runtime cleanup; the caller's reset
+awaits it. Unexpected failures retain diagnostics, while classified connection
+failures retain existing UI/retry behavior.
+
+Media receipts are transfer leases for tracks, not a second capture mechanism.
+The capture controller rechecks transfer eligibility after settling, preventing
+two concurrent claimants. The owner records a weak claim history so repeated
+commands cannot reclaim accepted/disposed tracks. Publication establishes a
+barrier: cleanup waits for acceptance, then the adapter owns accepted tracks.
+Unaccepted tracks detach preview renderers before stop/dispose, including when
+leave wins the race. Preview rendering is left intact during publication for
+Safari. No capture, codec, renderer, soft-mute, or audio-output policy changes.
+
+Normal leave cancels attempt/timers, invalidates device intents and Keeper
+presence timeout, closes admission while the connection is usable, waits for
+publication decisions, releases local media, and disconnects. Cleanup then
+cancels transport listeners, stops feature/device registrations, deactivates its
+infrastructure ownership, detaches admission, disposes the transport, and releases
+remaining media. Cleanup attempts every release even after an earlier failure and
+returns the original error. Admission close and transport disposal are idempotent.
+Entry-owned foreground-service registrations keep an old cleanup from stopping a
+new session. The browser unload path initiates transport disconnect synchronously
+without waiting; browser teardown cannot guarantee completion.
+
+Polling owns one 20-second metadata/presence schedule and one 15-second backend
+schedule. Requests coalesce, with reconciliation retained; identical fetches do
+not overlap. Replacing schedules stops old timers. A fetch already in flight can
+finish, but its captured runtime and generation must still match before it may
+apply state or failure diagnostics. Accepted backend versions never roll back.
+Device completions and Keeper room-state responses are likewise fenced; prepared
+moderation revocation journals still finish after backend success, even when the
+originating entry ends.
+
+### Manual compatibility smoke matrix (not executed here)
+
+Use a Keeper and at least two participants; inspect connection/capture counts and
+confirm audio/video continuity, roster recovery, turn controls, and clean re-entry.
+
+| Platform | Required manual scenarios |
+|---|---|
+| Safari macOS / iOS | Preview camera/mic, waiting approval, same-room approval handoff, immediate leave during publication; retain preview until accepted; one capture/connection |
+| Chrome desktop | Concurrent join actions, transient network loss/reconnect, Keeper leave/rejoin, decline/retry/expiry, leave and rejoin same slug; no duplicate polls/listeners |
+| Android physical device | Background/foreground, Bluetooth/headset route changes, leave while connecting, rapid A → B entry; foreground service stays for B and stops on final leave |
+| iPhone / iPad physical device | Background/foreground audio, camera switch/mute, interrupted connection/adoption, final release of tracks and audio route listeners |
+| Browser page close / refresh | Best-effort immediate disconnect; next entry recovers roster and identity without retaining previous local media |
+
+Automated tests use controlled Futures, fake transports, and fake clocks. They do
+not replace real-device Safari publication and mobile foreground-service checks.
+The existing raw-room compatibility boundary and SDK-shaped domain errors are
+remaining Phase 4 work on this branch. There is no extra SDK import exemption,
+backend change, new protocol, or competing active connection owner in Phase 5.

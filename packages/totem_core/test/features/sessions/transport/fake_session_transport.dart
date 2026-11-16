@@ -34,6 +34,7 @@ class FakeSessionTransport implements SessionTransport {
   bool _disposed = false;
   Future<void>? _disposal;
   Completer<void>? connectCompletion;
+  Completer<void>? connectStarted;
   Exception? connectFailure;
   Exception? publishFailure;
   int connectCalls = 0;
@@ -103,6 +104,7 @@ class FakeSessionTransport implements SessionTransport {
   }) async {
     _active();
     connectCalls++;
+    connectStarted?.complete();
     this.autoSubscribe = autoSubscribe;
     emit(
       const TransportConnectionChanged(

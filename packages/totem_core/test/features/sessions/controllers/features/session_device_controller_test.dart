@@ -309,6 +309,31 @@ void main() {
       },
     );
 
+    test(
+      'leaving invalidates queued device intents and late capture failures',
+      () async {
+        final started = Completer<void>();
+        final gate = Completer<void>();
+        media.onCameraCommand = (_) async {
+          started.complete();
+          await gate.future;
+          throw StateError('old camera failed');
+        };
+        final devices = controller();
+        final first = devices.turnOn(MediaKind.camera);
+        await started.future;
+        final queued = devices.turnOn(MediaKind.camera);
+        devices.cancelPendingOperations();
+        gate.complete();
+        check(await first).isA<TurnOnSkipped>();
+        check(await queued).isA<TurnOnSkipped>();
+        check(media.cameraCommands).deepEquals([true]);
+        check(deviceState().cameraProblem).isNull();
+        media.onCameraCommand = null;
+        check(await devices.turnOn(MediaKind.camera)).isA<TurnedOn>();
+      },
+    );
+
     test('recovers after a camera command fails', () async {
       media.isCameraEnabled = true;
       var shouldFail = true;

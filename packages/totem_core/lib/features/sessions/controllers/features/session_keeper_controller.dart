@@ -64,15 +64,24 @@ class SessionKeeperController extends _$SessionKeeperController {
     required String errorMessage,
     Duration? timeout,
   }) async {
+    final attempt = session.activeAttempt;
     try {
       final pending = action();
-      if (timeout == null) {
-        return await pending;
+      final result = timeout == null
+          ? await pending
+          : await pending.timeout(
+              timeout,
+              onTimeout: () => throw AppNetworkException.timeout(),
+            );
+      // Moderation revocation journals still complete after backend success.
+      // Room-state responses, however, cannot enter a replacement connection.
+      if (result is RoomState &&
+          (!ref.mounted || (attempt != null && !attempt.isCurrent))) {
+        throw StateError(
+          'Session command completed after its connection ended',
+        );
       }
-      return await pending.timeout(
-        timeout,
-        onTimeout: () => throw AppNetworkException.timeout(),
-      );
+      return result;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -103,7 +112,9 @@ class SessionKeeperController extends _$SessionKeeperController {
       );
     }
 
+    final attempt = session.activeAttempt;
     await session.devices.disableMicrophone();
+    attempt?.requireCurrent();
     final roomState = await _run(
       action: () => ref.read(
         passTotemProvider(
@@ -160,6 +171,7 @@ class SessionKeeperController extends _$SessionKeeperController {
       throw StateError('There is no Keeper in the session to accept the totem');
     }
 
+    final attempt = session.activeAttempt;
     final wasMicEnabled = session.devices.isMicrophoneEnabled;
     final micFuture = session.devices.turnOn(MediaKind.microphone);
 
@@ -173,13 +185,14 @@ class SessionKeeperController extends _$SessionKeeperController {
       // The totem is theirs either way; if the microphone didn't come on,
       // tell them how to fix it rather than failing the accept (X13). A
       // skipped turn-on was already explained by the session.
-      if (await micFuture is TurnOnFailed) {
+      if (await micFuture is TurnOnFailed &&
+          (attempt?.isCurrent ?? ref.mounted)) {
         session.devices.flagNeedsAttention(MediaKind.microphone);
       }
       logger.i('Accepted totem successfully');
     } catch (e) {
       await micFuture.catchError((Object _) => const TurnOnSkipped());
-      if (!wasMicEnabled) {
+      if (!wasMicEnabled && (attempt?.isCurrent ?? ref.mounted)) {
         await session.devices.disableMicrophone();
       }
       rethrow;

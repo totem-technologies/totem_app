@@ -72,15 +72,24 @@ class SessionInfraController extends _$SessionInfraController {
   Timer? _notificationTimer;
   Future<void> _operation = Future.value();
   bool _disposed = false;
+  final Set<Object> _owners = {};
+  static final Object _legacyOwner = Object();
 
   static const _notificationPeriod = Duration(minutes: 1);
 
-  Future<void> activate({SessionDetailSchema? event}) {
-    return _enqueue(() => _setupBackgroundMode(event));
+  Future<void> activate({SessionDetailSchema? event, Object? owner}) {
+    return _enqueue(() async {
+      if (_disposed) return;
+      _owners.add(owner ?? _legacyOwner);
+      await _setupBackgroundMode(event);
+    });
   }
 
-  Future<void> deactivate() {
-    return _enqueue(_endBackgroundMode);
+  Future<void> deactivate({Object? owner}) {
+    return _enqueue(() async {
+      _owners.remove(owner ?? _legacyOwner);
+      if (_owners.isEmpty) await _endBackgroundMode();
+    });
   }
 
   Future<void> _enqueue(AsyncCallback operation) =>
