@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -17,238 +18,199 @@ import '../../transport/fake_session_transport.dart';
 import '../core/session_controller_mock.dart';
 import 'session_device_controller_mock.dart';
 
+class _PresenceDevices extends FakeSessionDeviceController {
+  @override
+  Future<void> disableMicrophone() async {
+    await super.disableMicrophone();
+    microphoneOn = false;
+  }
+}
+
+/// Controllable connection/cleanup boundary for the real presence coordinator.
+class _PresenceSession extends FakeSessionController {
+  _PresenceSession() {
+    mockDevices = _PresenceDevices();
+  }
+  bool connectionOpen = true;
+  int cleanedConnections = 0;
+  final leaveStarted = Completer<void>();
+  Completer<void>? leaveGate;
+  Error? leaveFailure;
+  int leaveCalls = 0;
+
+  @override
+  Future<void> disconnectFromRoom() async {
+    leaveCalls++;
+    if (!leaveStarted.isCompleted) leaveStarted.complete();
+    await leaveGate?.future;
+    if (leaveFailure case final failure?) throw failure;
+    connectionOpen = false;
+    cleanedConnections++;
+    disconnectFromRoomCalled = true;
+  }
+}
+
+class _PresenceHarness {
+  _PresenceHarness() {
+    subscription = container.listen(
+      sessionKeeperControllerProvider(session),
+      (_, _) {},
+    );
+    controller = container.read(
+      sessionKeeperControllerProvider(session).notifier,
+    );
+    addTearDown(() {
+      subscription.close();
+      container.dispose();
+    });
+  }
+  final session = _PresenceSession();
+  final container = ProviderContainer();
+  late final ProviderSubscription<void> subscription;
+  late final SessionKeeperController controller;
+}
+
 void main() {
   group('SessionKeeperController', () {
-    group('Keeper Disconnection Handling', () {
+    group('Keeper presence lifecycle', () {
       test(
-        'onKeeperDisconnected marks keeper as disconnected when room active',
-        () async {
-          final mockSession = FakeSessionController();
-          final mockDevices = FakeSessionDeviceController();
-          mockSession.mockDevices = mockDevices;
+        'active loss mutes, repeated loss resets the deadline, and reconnect prevents exit',
+        () {
+          fakeAsync((clock) {
+            final h = _PresenceHarness();
+            h.controller.onKeeperDisconnected(RoomStatus.active);
+            clock.flushMicrotasks();
+            check(h.session.devices.isMicrophoneEnabled).isFalse();
 
-          final container = ProviderContainer();
-          addTearDown(container.dispose);
-          final controller = container.read(
-            sessionKeeperControllerProvider(mockSession).notifier,
-          );
-          controller.onKeeperDisconnected(RoomStatus.active);
+            clock.elapse(const Duration(minutes: 2));
+            h.controller.onKeeperDisconnected(RoomStatus.active);
+            clock.elapse(const Duration(minutes: 1));
+            clock.flushMicrotasks();
+            // The first deadline has passed, but the replacement grace period has not.
+            check(h.session.leaveCalls).equals(0);
+            check(h.session.connectionOpen).isTrue();
 
-          check(mockSession.state.hasKeeper).equals(true);
+            h.controller.onKeeperConnected();
+            h.controller.onKeeperConnected();
+            clock.elapse(const Duration(minutes: 4));
+            clock.flushMicrotasks();
+            check(h.session.leaveCalls).equals(0);
+            check(h.session.cleanedConnections).equals(0);
+          });
         },
       );
 
       test(
-        'onKeeperDisconnected disables microphone when keeper disconnects',
-        () async {
-          final mockSession = FakeSessionController();
-          final mockDevices = FakeSessionDeviceController();
-          mockSession.mockDevices = mockDevices;
+        'an expired active-room grace period disconnects and releases the connection once',
+        () {
+          fakeAsync((clock) {
+            final h = _PresenceHarness();
+            h.controller.onKeeperDisconnected(RoomStatus.active);
+            clock.elapse(
+              SessionKeeperController.keeperDisconnectionTimeout -
+                  const Duration(microseconds: 1),
+            );
+            clock.flushMicrotasks();
+            check(h.session.connectionOpen).isTrue();
+            check(h.session.leaveCalls).equals(0);
 
-          final container = ProviderContainer();
-          addTearDown(container.dispose);
-          final controller = container.read(
-            sessionKeeperControllerProvider(mockSession).notifier,
-          );
-          controller.onKeeperDisconnected(RoomStatus.active);
-
-          check(mockDevices.disableMicrophoneCalled).equals(true);
+            clock.elapse(const Duration(microseconds: 1));
+            clock.flushMicrotasks();
+            check(h.session.disconnectFromRoomCalled).isTrue();
+            check(h.session.connectionOpen).isFalse();
+            check(h.session.cleanedConnections).equals(1);
+            clock.elapse(SessionKeeperController.keeperDisconnectionTimeout);
+            clock.flushMicrotasks();
+            check(h.session.leaveCalls).equals(1);
+          });
         },
       );
-
-      test('onKeeperDisconnected starts timeout timer', () async {
-        final mockSession = FakeSessionController();
-        final mockDevices = FakeSessionDeviceController();
-        mockSession.mockDevices = mockDevices;
-
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(mockSession).notifier,
-        );
-        controller.onKeeperDisconnected(RoomStatus.active);
-
-        check(controller.keeperDisconnectedTimer).isNotNull();
-
-        controller.disposePresenceTracking();
-      });
 
       test(
-        'onKeeperDisconnected cancels previous timer before creating new one',
-        () async {
-          final mockSession = FakeSessionController();
-          final mockDevices = FakeSessionDeviceController();
-          mockSession.mockDevices = mockDevices;
+        'waiting-room absence and repeated cancellation cannot end the session',
+        () {
+          fakeAsync((clock) {
+            final h = _PresenceHarness();
+            h.controller.onKeeperDisconnected(RoomStatus.waitingRoom);
+            clock.elapse(SessionKeeperController.keeperDisconnectionTimeout);
+            clock.flushMicrotasks();
+            check(h.session.devices.isMicrophoneEnabled).isTrue();
+            check(h.session.leaveCalls).equals(0);
 
-          final container = ProviderContainer();
-          addTearDown(container.dispose);
-          final controller = container.read(
-            sessionKeeperControllerProvider(mockSession).notifier,
-          );
-          controller.onKeeperDisconnected(RoomStatus.active);
-          final firstTimer = controller.keeperDisconnectedTimer;
-
-          controller.onKeeperDisconnected(RoomStatus.active);
-          final secondTimer = controller.keeperDisconnectedTimer;
-
-          check(firstTimer != secondTimer).equals(true);
-          check(firstTimer!.isActive).equals(false);
-
-          controller.disposePresenceTracking();
+            h.controller.onKeeperDisconnected(RoomStatus.active);
+            h.controller.disposePresenceTracking();
+            h.controller.disposePresenceTracking();
+            clock.elapse(SessionKeeperController.keeperDisconnectionTimeout);
+            clock.flushMicrotasks();
+            check(h.session.leaveCalls).equals(0);
+            check(h.session.connectionOpen).isTrue();
+          });
         },
       );
-    });
 
-    group('Keeper Reconnection Handling', () {
-      test('onKeeperConnected marks keeper as connected', () async {
-        final mockSession = FakeSessionController();
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(mockSession).notifier,
-        );
-        controller.onKeeperConnected();
+      test(
+        'timeout completion awaits connection cleanup rather than only starting leave',
+        () async {
+          final h = _PresenceHarness();
+          final cleanup = h.session.leaveGate = Completer<void>();
+          h.controller.onKeeperDisconnected(RoomStatus.active);
+          var completed = false;
+          final leaving = h.controller.onKeeperDisconnectedTimeout().then(
+            (_) => completed = true,
+          );
+          await h.session.leaveStarted.future;
+          check(completed).isFalse();
+          check(h.session.connectionOpen).isTrue();
+          check(h.session.cleanedConnections).equals(0);
 
-        check(mockSession.state.hasKeeper).equals(true);
-      });
+          cleanup.complete();
+          await leaving;
+          check(completed).isTrue();
+          check(h.session.disconnectFromRoomCalled).isTrue();
+          check(h.session.cleanedConnections).equals(1);
+        },
+      );
 
-      test('onKeeperConnected cancels disconnection timer', () async {
-        final mockSession = FakeSessionController();
-        final mockDevices = FakeSessionDeviceController();
-        mockSession.mockDevices = mockDevices;
+      test(
+        'lifecycle cleanup failure is not a successful timeout and can be retried explicitly',
+        () async {
+          final h = _PresenceHarness();
+          final failure = StateError('connection cleanup failed');
+          h.session.leaveFailure = failure;
+          h.controller.onKeeperDisconnected(RoomStatus.active);
+          await check(
+            h.controller.onKeeperDisconnectedTimeout(),
+          ).throws<StateError>();
+          check(h.session.disconnectFromRoomCalled).isFalse();
+          check(h.session.connectionOpen).isTrue();
+          check(h.session.cleanedConnections).equals(0);
 
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(mockSession).notifier,
-        );
-        controller.onKeeperDisconnected(RoomStatus.active);
-        check(controller.keeperDisconnectedTimer).isNotNull();
+          h.session.leaveFailure = null;
+          await h.controller.onKeeperDisconnectedTimeout();
+          check(h.session.disconnectFromRoomCalled).isTrue();
+          check(h.session.cleanedConnections).equals(1);
+        },
+      );
 
-        controller.onKeeperConnected();
-        check(controller.keeperDisconnectedTimer).isNull();
-      });
-
-      test('onKeeperConnected is idempotent', () async {
-        final mockSession = FakeSessionController();
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(mockSession).notifier,
-        );
-        controller.onKeeperConnected();
-        controller.onKeeperConnected();
-
-        check(mockSession.state.hasKeeper).equals(true);
-      });
-    });
-
-    group('Keeper Disconnection Timeout', () {
-      test('onKeeperDisconnectedTimeout clears timer', () async {
-        final mockSession = FakeSessionController();
-
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(mockSession).notifier,
-        );
-        controller.onKeeperDisconnected(RoomStatus.active);
-
-        await controller.onKeeperDisconnectedTimeout();
-
-        check(controller.keeperDisconnectedTimer).isNull();
-      });
-
-      test('onKeeperDisconnectedTimeout disconnects from room', () async {
-        final mockSession = FakeSessionController();
-
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(mockSession).notifier,
-        );
-        await controller.onKeeperDisconnectedTimeout();
-
-        check(mockSession.disconnectFromRoomCalled).equals(true);
-      });
-    });
-
-    group('Presence Tracking Cleanup', () {
-      test('disposePresenceTracking cancels timer', () async {
-        final mockSession = FakeSessionController();
-        final mockDevices = FakeSessionDeviceController();
-        mockSession.mockDevices = mockDevices;
-
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(mockSession).notifier,
-        );
-        controller.onKeeperDisconnected(RoomStatus.active);
-        check(controller.keeperDisconnectedTimer).isNotNull();
-
-        controller.disposePresenceTracking();
-        check(controller.keeperDisconnectedTimer).isNull();
-      });
-
-      test('provider disposal cancels presence tracking', () async {
-        final mockSession = FakeSessionController();
-        mockSession.mockDevices = FakeSessionDeviceController();
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final provider = sessionKeeperControllerProvider(mockSession);
-        final subscription = container.listen(provider, (_, _) {});
-        final controller = container.read(provider.notifier)
-          ..onKeeperDisconnected(RoomStatus.active);
-        check(controller.keeperDisconnectedTimer).isNotNull();
-
-        subscription.close();
-        await container.pump();
-
-        check(controller.keeperDisconnectedTimer).isNull();
-      });
-
-      test('disposePresenceTracking is safe when no timer exists', () async {
-        final mockSession = FakeSessionController();
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(mockSession).notifier,
-        );
-        check(controller.keeperDisconnectedTimer).isNull();
-        controller.disposePresenceTracking();
-        check(controller.keeperDisconnectedTimer).isNull();
-      });
-
-      test('disposePresenceTracking is idempotent', () async {
-        final mockSession = FakeSessionController();
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(mockSession).notifier,
-        );
-        controller.disposePresenceTracking();
-        controller.disposePresenceTracking();
-        controller.disposePresenceTracking();
-
-        check(controller.keeperDisconnectedTimer).isNull();
-      });
-    });
-
-    group('Error Handling', () {
-      test('timeout method completes normally', () async {
-        final mockSession = FakeSessionController();
-
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(mockSession).notifier,
-        );
-
-        await controller.onKeeperDisconnectedTimeout();
-        check(mockSession.disconnectFromRoomCalled).equals(true);
-        check(controller.keeperDisconnectedTimer).isNull();
-      });
+      test(
+        'removing the final provider listener cancels its timeout without closing the session',
+        () async {
+          final h = _PresenceHarness();
+          final clock = FakeAsync();
+          clock.run(
+            (_) => h.controller.onKeeperDisconnected(RoomStatus.active),
+          );
+          clock.flushMicrotasks();
+          check(h.session.devices.isMicrophoneEnabled).isFalse();
+          h.subscription.close();
+          await h.container.pump();
+          clock.elapse(SessionKeeperController.keeperDisconnectionTimeout);
+          clock.flushMicrotasks();
+          check(h.session.leaveCalls).equals(0);
+          check(h.session.connectionOpen).isTrue();
+          check(h.session.cleanedConnections).equals(0);
+        },
+      );
     });
     group('removeParticipant', () {
       test('does not remove while admission recovery is unavailable', () async {

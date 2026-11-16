@@ -44,17 +44,31 @@ class SessionTurnService {
     }
   }
 
-  void _commit(RoomState response, bool Function() current) {
+  void _commit(
+    RoomState response,
+    bool Function() current, {
+    int? commandVersion,
+  }) {
     if (!current()) {
       throw SessionCommandException(
         SessionCommandFailureKind.superseded,
         'The command completed after this session connection ended',
       );
     }
-    if (response.version < state().roomState.version) {
+    final accepted = state().roomState;
+    final ending =
+        accepted.status != RoomStatus.ended &&
+        response.status == RoomStatus.ended;
+    final unchangedCommand =
+        commandVersion != null && response.version <= commandVersion && !ending;
+    if (unchangedCommand ||
+        response.version < accepted.version ||
+        (response.version == accepted.version &&
+            response != accepted &&
+            !ending)) {
       throw SessionCommandException(
         SessionCommandFailureKind.conflict,
-        'A newer room update has already been received',
+        'The command did not return a newer, consistent room state. Please try again.',
       );
     }
     applyState(response);
@@ -74,12 +88,13 @@ class SessionTurnService {
       throw ArgumentError('Choose one prompt');
     }
     if (customPrompt != null || sessionPromptId != null) _requireKeeper();
+    final version = state().roomState.version;
     final response = await backend.pass(
-      state().roomState.version,
+      version,
       customPrompt: customPrompt,
       sessionPromptId: sessionPromptId,
     );
-    _commit(response, current);
+    _commit(response, current, commandVersion: version);
     // A rejected pass leaves the current speaker's microphone untouched.
     if (current() && !state().amSpeaking(localIdentity())) {
       try {

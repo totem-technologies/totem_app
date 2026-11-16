@@ -140,7 +140,7 @@ class _Harness {
 
 void main() {
   test(
-    'a rejected pass preserves the speaking turn and microphone, then permits a successful retry',
+    'a network failure preserves the speaking turn and microphone, then permits a successful retry',
     () async {
       final h = _Harness();
       addTearDown(h.service.dispose);
@@ -166,6 +166,79 @@ void main() {
       check(h.service.lastFailure).isNull();
     },
   );
+
+  test('backend rejection preserves the current turn and microphone', () async {
+    final h = _Harness();
+    addTearDown(h.service.dispose);
+    final previous = h.room;
+    const rejection = ApiError<RoomState, RoomErrorResponse>(
+      statusCode: 409,
+      error: RoomErrorResponse(
+        code: ErrorCode.notCurrentSpeaker,
+        message: 'The speaking turn has changed',
+      ),
+    );
+    h.perform = (_, _) async => throw rejection;
+
+    await check(
+      h.service.passTotem(),
+    ).throws<ApiError<RoomState, RoomErrorResponse>>();
+
+    check(h.room).identicalTo(previous);
+    check(h.microphoneOn).isTrue();
+    check(h.commits).isEmpty();
+    check(h.effects).deepEquals(['backend:pass']);
+    check(h.service.lastFailure?.error).identicalTo(rejection);
+  });
+
+  for (final committed in [false, true]) {
+    for (final reenabled in [false, true]) {
+      test(
+        'pending pass respects manual microphone decisions (committed: $committed, reenabled: $reenabled)',
+        () async {
+          final h = _Harness();
+          addTearDown(h.service.dispose);
+          final previous = h.room;
+          final started = Completer<void>();
+          final response = Completer<RoomState>();
+          h.perform = (_, _) {
+            started.complete();
+            return response.future;
+          };
+          final passing = h.service.passTotem();
+          final rejected = committed
+              ? null
+              : check(passing).throws<AppNetworkException>();
+          await started.future;
+          h
+            ..microphoneOn = false
+            ..desired = false
+            ..revision = h.revision + 1;
+          if (reenabled) {
+            h
+              ..microphoneOn = true
+              ..desired = true
+              ..revision = h.revision + 1;
+          }
+          if (committed) {
+            response.complete(h.response);
+            await passing;
+            check(h.room.currentSpeaker.value).equals('other');
+            check(h.commits.single).identicalTo(h.response);
+            check(h.microphoneOn).isFalse();
+            check(h.effects).deepEquals(['backend:pass', 'commit', 'disable']);
+          } else {
+            response.completeError(AppNetworkException.noConnection());
+            await rejected;
+            check(h.room).identicalTo(previous);
+            check(h.commits).isEmpty();
+            check(h.microphoneOn).equals(reenabled);
+            check(h.effects).deepEquals(['backend:pass']);
+          }
+        },
+      );
+    }
+  }
 
   test(
     'a successful pass commits server state before muting the former speaker',
@@ -230,6 +303,26 @@ void main() {
   );
 
   test(
+    'an unchanged pass response cannot report a committed transition',
+    () async {
+      final h = _Harness();
+      addTearDown(h.service.dispose);
+      final previous = h.room;
+      h.response = previous;
+
+      await check(h.service.passTotem()).throws<SessionCommandException>();
+
+      check(h.room).identicalTo(previous);
+      check(h.commits).isEmpty();
+      check(h.microphoneOn).isTrue();
+      check(h.effects).deepEquals(['backend:pass']);
+      check(
+        h.service.lastFailure?.kind,
+      ).equals(SessionCommandFailureKind.conflict);
+    },
+  );
+
+  test(
     'overlapping turn commands are refused without duplicating backend or media work',
     () async {
       final h = _Harness();
@@ -252,31 +345,80 @@ void main() {
     },
   );
 
+  for (final acceptedVersion in [11, 20]) {
+    test(
+      'a conflicting response cannot replace an accepted room version $acceptedVersion or change media',
+      () async {
+        final h = _Harness();
+        addTearDown(h.service.dispose);
+        final gate = Completer<RoomState>();
+        final started = Completer<void>();
+        h.perform = (_, _) {
+          started.complete();
+          return gate.future;
+        };
+        final passing = h.service.passTotem();
+        final rejected = check(passing).throws<SessionCommandException>();
+        await started.future;
+        final accepted = _room(version: acceptedVersion);
+        h.room = accepted;
+        gate.complete(h.response);
+        await rejected;
+
+        check(h.room).identicalTo(accepted);
+        check(h.commits).isEmpty();
+        check(h.microphoneOn).isTrue();
+        check(
+          h.service.lastFailure?.kind,
+        ).equals(SessionCommandFailureKind.conflict);
+      },
+    );
+  }
+
   test(
-    'a response older than an accepted room update cannot commit or change media',
+    'an identical room update observed before the pass response still completes the pass',
     () async {
       final h = _Harness();
       addTearDown(h.service.dispose);
-      final gate = Completer<RoomState>();
       final started = Completer<void>();
+      final response = Completer<RoomState>();
       h.perform = (_, _) {
         started.complete();
-        return gate.future;
+        return response.future;
       };
       final passing = h.service.passTotem();
-      final rejected = check(passing).throws<SessionCommandException>();
       await started.future;
-      final newer = _room(version: 20);
-      h.room = newer;
-      gate.complete(h.response);
-      await rejected;
+      final observed = _room(version: 11, speaker: 'other');
+      h.room = observed;
+      response.complete(h.response);
+      await passing;
 
-      check(h.room).identicalTo(newer);
-      check(h.commits).isEmpty();
-      check(h.microphoneOn).isTrue();
-      check(
-        h.service.lastFailure?.kind,
-      ).equals(SessionCommandFailureKind.conflict);
+      check(h.room).equals(observed);
+      check(h.microphoneOn).isFalse();
+      check(h.requests).deepEquals([('pass', 10)]);
+      check(h.service.lastFailure).isNull();
+    },
+  );
+
+  test(
+    'the existing equal-version session-ending transition remains accepted',
+    () async {
+      final h = _Harness()..keeper = true;
+      addTearDown(h.service.dispose);
+      h.response = h.room.copyWith(
+        status: RoomStatus.ended,
+        statusDetail: const RoomStateStatusDetailEnded(
+          EndedDetail(reason: EndReason.keeperEnded),
+        ),
+      );
+
+      await h.service.end();
+
+      check(h.room.status).equals(RoomStatus.ended);
+      check(h.room.version).equals(10);
+      check(h.commits.single).identicalTo(h.response);
+      check(h.effects).deepEquals(['backend:end', 'commit']);
+      check(h.service.lastFailure).isNull();
     },
   );
 

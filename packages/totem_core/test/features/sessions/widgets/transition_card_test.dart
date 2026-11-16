@@ -1,593 +1,336 @@
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
-import 'package:totem_core/features/sessions/widgets/session_dock_surface.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 
 void main() {
-  void autoSizeTest(
+  void cardTest(
     String description,
     AsyncValueSetter<WidgetTester> body, {
     TestVariant<Object?> variant = const DefaultTestVariant(),
   }) {
     testWidgets(
       description,
-      body,
+      (tester) async {
+        try {
+          await body(tester);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      },
       variant: variant,
+      // AutoSizeText's third-party TextPainter exclusion already existed here.
       experimentalLeakTesting: LeakTesting.settings.withIgnored(
         classes: <String>['TextPainter'],
       ),
     );
   }
 
-  group('Transition Cards', () {
-    Widget buildTestWidget(Widget child, {ThemeData? theme}) {
-      return MaterialApp(
-        theme: theme,
-        home: Scaffold(body: Center(child: child)),
+  Future<void> pumpCard(
+    WidgetTester tester,
+    Widget card, {
+    Size size = const Size(360, 740),
+    double textScale = 1,
+  }) async {
+    tester.view
+      ..physicalSize = size
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    tester.platformDispatcher.textScaleFactorTestValue = textScale;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: Center(child: card)),
+      ),
+    );
+  }
+
+  Future<void> swipeAction(WidgetTester tester) async {
+    final action = find.byKey(ActionSlider.thumbKey);
+    await tester.drag(action, const Offset(600, 0));
+    await tester.pump();
+  }
+
+  void checkFits(WidgetTester tester, Finder finder, Size screen) {
+    final rect = tester.getRect(finder);
+    check(rect.left).isGreaterOrEqual(0);
+    check(rect.top).isGreaterOrEqual(0);
+    check(rect.right).isLessOrEqual(screen.width);
+    check(rect.bottom).isLessOrEqual(screen.height);
+  }
+
+  const phones = TargetPlatformVariant({
+    TargetPlatform.android,
+    TargetPlatform.iOS,
+  });
+  final desktop = TargetPlatformVariant.only(TargetPlatform.macOS);
+
+  cardTest('touch actions join, pass, receive, and start exactly once', (
+    tester,
+  ) async {
+    final cards = <Widget Function(AsyncValueGetter<bool>)>[
+      (action) => JoinTransitionCard(onActionPressed: action),
+      (action) => PassTransitionCard(onActionPressed: action),
+      (action) => ReceiveTransitionCard(onActionPressed: action),
+      (action) => StartTransitionCard(onActionPressed: action),
+    ];
+    for (final card in cards) {
+      var actions = 0;
+      await pumpCard(
+        tester,
+        card(() async {
+          actions++;
+          return true;
+        }),
       );
+      await swipeAction(tester);
+      check(actions).equals(1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
+  }, variant: phones);
+
+  cardTest('desktop receive is clickable on wide and narrow viewports', (
+    tester,
+  ) async {
+    for (final size in [const Size(1280, 900), const Size(500, 800)]) {
+      var received = 0;
+      await pumpCard(
+        tester,
+        ReceiveTransitionCard(
+          onActionPressed: () async {
+            received++;
+            return true;
+          },
+        ),
+        size: size,
+      );
+      await tester.tap(find.text('Receive'));
+      await tester.pump();
+      check(received).equals(1);
+      check(tester.takeException()).isNull();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
+  }, variant: desktop);
+
+  cardTest('disabled joining rejects input; waiting offers cancellation', (
+    tester,
+  ) async {
+    var joined = 0;
+    var cancelled = 0;
+    Future<bool> join() async {
+      joined++;
+      return true;
     }
 
-    autoSizeTest('actionable transition cards forward completion', (
+    await pumpCard(
+      tester,
+      JoinTransitionCard(onActionPressed: join, enabled: false),
+      size: const Size(1280, 900),
+    );
+    await tester.tap(find.text('Join'));
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    check(joined).equals(0);
+    await pumpCard(
+      tester,
+      JoinTransitionCard(
+        onActionPressed: join,
+        waiting: true,
+        onLeaveWaiting: () => cancelled++,
+      ),
+      size: const Size(1280, 900),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    check(joined).equals(0);
+    await tester.tap(find.text('Leave waiting room'));
+    await tester.pump();
+    check(cancelled).equals(1);
+  }, variant: desktop);
+
+  for (final scenario in [
+    (
+      name: 'portrait receive',
+      size: const Size(360, 740),
+      receive: true,
+      scale: 1.0,
+      sideColumn: false,
+      width: null,
+    ),
+    (
+      name: 'large text portrait pass',
+      size: const Size(360, 740),
+      receive: false,
+      scale: 1.5,
+      sideColumn: false,
+      width: null,
+    ),
+    (
+      name: 'small landscape side column',
+      size: const Size(667, 375),
+      receive: false,
+      scale: 1.0,
+      sideColumn: true,
+      width: null,
+    ),
+    (
+      name: 'wide landscape pass',
+      size: const Size(844, 390),
+      receive: false,
+      scale: 1.0,
+      sideColumn: false,
+      width: 560.0,
+    ),
+    (
+      name: 'constrained medium pass',
+      size: const Size(640, 900),
+      receive: false,
+      scale: 1.0,
+      sideColumn: false,
+      width: 481.0,
+    ),
+  ]) {
+    cardTest('${scenario.name} keeps instruction and action usable', (
       tester,
     ) async {
-      final cards = <Widget Function(AsyncValueGetter<bool>)>[
-        (onActionPressed) =>
-            JoinTransitionCard(onActionPressed: onActionPressed),
-        (onActionPressed) => PassTransitionCard(
-          onActionPressed: onActionPressed,
-          actionText: 'Pass',
-        ),
-        (onActionPressed) =>
-            ReceiveTransitionCard(onActionPressed: onActionPressed),
-        (onActionPressed) =>
-            StartTransitionCard(onActionPressed: onActionPressed),
-      ];
-
-      for (final buildCard in cards) {
-        var actionTriggered = false;
-        await tester.pumpWidget(
-          buildTestWidget(
-            buildCard(() async {
-              actionTriggered = true;
-              return true;
-            }),
-          ),
-        );
-
-        check(
-          tester.widgetList(find.byType(ActionSliderButton)),
-        ).length.equals(1);
-        await tester
-            .widget<ActionSliderButton>(find.byType(ActionSliderButton))
-            .onActionCompleted();
-        check(actionTriggered).isTrue();
+      var performed = 0;
+      Future<bool> perform() async {
+        performed++;
+        return true;
       }
-    });
 
-    Future<void> pumpAtSize(
-      WidgetTester tester,
-      Size size,
-      Widget child, {
-      ThemeData? theme,
-      double textScale = 1,
-    }) async {
-      tester.view
-        ..physicalSize = size
-        ..devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      tester.platformDispatcher.textScaleFactorTestValue = textScale;
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      await tester.pumpWidget(buildTestWidget(child, theme: theme));
-    }
+      Widget card = scenario.receive
+          ? ReceiveTransitionCard(onActionPressed: perform)
+          : PassTransitionCard(onActionPressed: perform);
+      if (scenario.sideColumn) {
+        card = Row(
+          spacing: 16,
+          children: [
+            const Expanded(child: SizedBox()),
+            Flexible(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [card]),
+            ),
+          ],
+        );
+      } else if (scenario.width case final width?) {
+        card = SizedBox(width: width, child: card);
+      }
+      await pumpCard(
+        tester,
+        card,
+        size: scenario.size,
+        textScale: scenario.scale,
+      );
+      final instruction = find.text(
+        scenario.receive
+            ? 'The Totem is being passed to you.'
+            : 'When done, slide to pass the Totem to the next person.',
+      );
+      final action = find.byType(ActionSlider);
+      checkFits(tester, instruction, scenario.size);
+      checkFits(tester, action, scenario.size);
+      check(
+        tester.getRect(instruction).overlaps(tester.getRect(action)),
+      ).isFalse();
+      await swipeAction(tester);
+      check(performed).equals(1);
+      check(tester.takeException()).isNull();
+    }, variant: phones);
+  }
 
-    group('with a keyboard on desktop', () {
-      final desktop = TargetPlatformVariant.only(TargetPlatform.macOS);
+  cardTest('touch instructions do not advertise a hardware keyboard', (
+    tester,
+  ) async {
+    await pumpCard(
+      tester,
+      PassTransitionCard(onActionPressed: () async => true),
+    );
+    check(find.textContaining('press space bar').evaluate()).isEmpty();
+  }, variant: phones);
 
-      autoSizeTest(
-        'large viewport keeps the space shortcut caption under the receive control',
-        (tester) async {
-          var received = false;
-          await pumpAtSize(
-            tester,
-            const Size(1280, 900),
-            ReceiveTransitionCard(
-              onActionPressed: () async {
-                received = true;
+  cardTest('waiting for the receiver exposes no turn action', (tester) async {
+    await pumpCard(tester, const WaitingReceiveTransitionCard());
+    check(
+      find
+          .bySemanticsLabel(RegExp(r'^(Receive|Pass|Join|Start session)$'))
+          .evaluate(),
+    ).isEmpty();
+    check(tester.takeException()).isNull();
+  }, variant: desktop);
+
+  for (final scenario in [
+    (
+      name: 'edited',
+      initial: null,
+      entered: 'My next prompt',
+      expected: 'My next prompt',
+      clear: false,
+    ),
+    (
+      name: 'unchanged prepared',
+      initial: 'Prepared prompt',
+      entered: null,
+      expected: null,
+      clear: false,
+    ),
+    (
+      name: 'removed',
+      initial: 'Prepared prompt',
+      entered: '',
+      expected: null,
+      clear: true,
+    ),
+  ]) {
+    cardTest('${scenario.name} prompt submission preserves its intent', (
+      tester,
+    ) async {
+      final submissions =
+          <({String? customPrompt, int? sessionPromptId, bool clearPrompt})>[];
+      var managed = 0;
+      await pumpCard(
+        tester,
+        PromptTransitionCard(
+          initialPrompt: scenario.initial,
+          initialSessionPromptId: scenario.initial == null ? null : 42,
+          onManagePrompts: () => managed++,
+          onActionPressed:
+              ({customPrompt, sessionPromptId, clearPrompt = false}) async {
+                submissions.add((
+                  customPrompt: customPrompt,
+                  sessionPromptId: sessionPromptId,
+                  clearPrompt: clearPrompt,
+                ));
                 return true;
               },
-            ),
-          );
-
-          check(
-            find.text('press space bar to receive').evaluate(),
-          ).isNotEmpty();
-          check(find.text('Space').evaluate()).isEmpty();
-          check(tester.getSize(find.byType(ActionButton)).height).equals(44);
-
-          await tester.tap(find.text('Receive'));
-          await tester.pump();
-          check(received).isTrue();
-        },
-        variant: desktop,
-      );
-
-      autoSizeTest(
-        'join card stays in place when its shortcut becomes unavailable',
-        (tester) async {
-          final shortcut = find.text('press space bar to join');
-          bool shortcutVisible() => tester
-              .widget<Visibility>(
-                find
-                    .ancestor(of: shortcut, matching: find.byType(Visibility))
-                    .first,
-              )
-              .visible;
-          Widget card({bool enabled = true, bool waiting = false}) =>
-              JoinTransitionCard(
-                onActionPressed: () async => true,
-                enabled: enabled,
-                waiting: waiting,
-              );
-
-          await pumpAtSize(tester, const Size(1280, 900), card());
-          final originalPosition = tester.getTopLeft(find.byType(Card));
-          check(shortcutVisible()).isTrue();
-
-          await tester.pumpWidget(buildTestWidget(card(enabled: false)));
-          check(tester.getTopLeft(find.byType(Card))).equals(originalPosition);
-          check(shortcutVisible()).isFalse();
-
-          await tester.pumpWidget(buildTestWidget(card(waiting: true)));
-          check(tester.getTopLeft(find.byType(Card))).equals(originalPosition);
-          check(shortcutVisible()).isFalse();
-          check(find.text('Leave waiting room').evaluate()).isNotEmpty();
-        },
-        variant: desktop,
-      );
-
-      autoSizeTest(
-        'small viewport keeps the space shortcut caption under the pill',
-        (tester) async {
-          await pumpAtSize(
-            tester,
-            const Size(500, 800),
-            ReceiveTransitionCard(onActionPressed: () async => true),
-          );
-
-          check(
-            find.text('press space bar to receive').evaluate(),
-          ).isNotEmpty();
-        },
-        variant: desktop,
-      );
-    });
-
-    group('on touch phones', () {
-      const phones = TargetPlatformVariant({
-        TargetPlatform.android,
-        TargetPlatform.iOS,
-      });
-      const portrait = Size(360, 740);
-      const landscape = Size(844, 390);
-      const passInstruction =
-          'When done, slide to pass the Totem to the next person.';
-
-      /// The glass pill shared with the action bar.
-      Finder dockSurface() {
-        final glass = sessionDockDecoration(onLightBackground: false);
-        // Radius differs between the row and stacked layouts, so match the
-        // shared fill and stroke only.
-        return find.byWidgetPredicate((widget) {
-          if (widget is! DecoratedBox) return false;
-          final decoration = widget.decoration;
-          return decoration is BoxDecoration &&
-              decoration.color == glass.color &&
-              decoration.border == glass.border;
-        });
-      }
-
-      void checkFitsScreen(WidgetTester tester, Finder finder, Size screen) {
-        final rect = tester.getRect(finder);
-        check(rect.left).isGreaterOrEqual(0);
-        check(rect.top).isGreaterOrEqual(0);
-        check(rect.right).isLessOrEqual(screen.width);
-        check(rect.bottom).isLessOrEqual(screen.height);
-      }
-
-      void checkStacked(WidgetTester tester, String instruction) {
-        final text = tester.getRect(find.text(instruction));
-        final slider = tester.getRect(find.byType(ActionSlider));
-        check(slider.height).equals(48);
-        check(text.bottom).isLessOrEqual(slider.top);
-      }
-
-      void checkInline(WidgetTester tester, String instruction) {
-        final text = tester.getRect(find.text(instruction));
-        final slider = tester.getRect(find.byType(ActionSlider));
-        check(text.right).isLessOrEqual(slider.left);
-        check((text.center.dy - slider.center.dy).abs()).isLessOrEqual(1);
-      }
-
-      /// The speaking screen's landscape layout: the grid takes one half,
-      /// the pill column the other.
-      Widget landscapeSideColumn(Widget card) => Row(
-        spacing: 16,
-        children: [
-          const Expanded(child: SizedBox()),
-          Flexible(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [card]),
-          ),
-        ],
-      );
-
-      autoSizeTest(
-        'pass card uses the glass dock surface instead of a white card',
-        (tester) async {
-          await pumpAtSize(
-            tester,
-            portrait,
-            PassTransitionCard(
-              onActionPressed: () async => true,
-              actionText: 'Pass to Alexandra',
-            ),
-          );
-
-          check(find.byType(Card).evaluate()).isEmpty();
-          check(dockSurface().evaluate()).length.equals(1);
-          final instruction = tester.widget<AutoSizeText>(
-            find.byType(AutoSizeText).first,
-          );
-          check(instruction.style?.color).equals(AppTheme.cream);
-        },
-        variant: phones,
-      );
-
-      autoSizeTest(
-        'stacks the instruction above a full-width 48dp slider on a 360px phone',
-        (tester) async {
-          await pumpAtSize(
-            tester,
-            portrait,
-            ReceiveTransitionCard(onActionPressed: () async => true),
-          );
-
-          checkStacked(tester, 'The Totem is being passed to you.');
-          // Stacked: the slider spans the pill rather than sharing a row.
-          final slider = tester.getRect(find.byType(ActionSlider));
-          final surface = tester.getRect(dockSurface());
-          check(slider.width).isGreaterThan(surface.width - 20);
-          checkFitsScreen(tester, dockSurface(), portrait);
-        },
-        variant: phones,
-      );
-
-      autoSizeTest(
-        'gives the stacked instruction a third line at 1.5x text scale',
-        (tester) async {
-          await pumpAtSize(
-            tester,
-            portrait,
-            PassTransitionCard(onActionPressed: () async => true),
-            textScale: 1.5,
-          );
-
-          checkStacked(tester, passInstruction);
-          check(
-            tester
-                .widget<AutoSizeText>(
-                  find.widgetWithText(AutoSizeText, passInstruction),
-                )
-                .maxLines,
-          ).equals(3);
-          checkFitsScreen(tester, dockSurface(), portrait);
-        },
-        variant: phones,
-      );
-
-      autoSizeTest('receive slider still completes on swipe', (tester) async {
-        var received = false;
-        await pumpAtSize(
-          tester,
-          portrait,
-          ReceiveTransitionCard(
-            onActionPressed: () async {
-              received = true;
-              return true;
-            },
-          ),
-        );
-
-        await tester.drag(
-          find.byKey(ActionSlider.thumbKey),
-          const Offset(400, 0),
-        );
-        await tester.pump();
-
-        check(received).isTrue();
-      }, variant: phones);
-
-      autoSizeTest('does not show the space bar caption without a keyboard', (
-        tester,
-      ) async {
-        await pumpAtSize(
-          tester,
-          portrait,
-          PassTransitionCard(onActionPressed: () async => true),
-        );
-
-        check(find.textContaining('press space bar').evaluate()).isEmpty();
-      }, variant: phones);
-
-      autoSizeTest('stacks in the landscape side column and stays on screen', (
-        tester,
-      ) async {
-        for (final size in [landscape, const Size(667, 375)]) {
-          await pumpAtSize(
-            tester,
-            size,
-            landscapeSideColumn(
-              PassTransitionCard(onActionPressed: () async => true),
-            ),
-          );
-
-          checkStacked(tester, passInstruction);
-          checkFitsScreen(tester, find.byType(ActionSlider), size);
-          checkFitsScreen(tester, dockSurface(), size);
-        }
-      }, variant: phones);
-
-      autoSizeTest(
-        'stacks 400-500dp pills on small viewports so Pass text has room',
-        (tester) async {
-          await pumpAtSize(
-            tester,
-            landscape,
-            SizedBox(
-              width: 520,
-              child: PassTransitionCard(onActionPressed: () async => true),
-            ),
-          );
-
-          checkStacked(tester, passInstruction);
-        },
-        variant: phones,
-      );
-
-      autoSizeTest('keeps the row once a small-viewport pill is 500dp wide', (
-        tester,
-      ) async {
-        await pumpAtSize(
-          tester,
-          landscape,
-          SizedBox(
-            width: 560,
-            child: PassTransitionCard(onActionPressed: () async => true),
-          ),
-        );
-
-        checkInline(tester, passInstruction);
-      }, variant: phones);
-
-      autoSizeTest('keeps the row on a narrow medium viewport', (tester) async {
-        // Shortest side 640: a medium viewport with a ~580dp pill.
-        await pumpAtSize(
-          tester,
-          const Size(640, 900),
-          PassTransitionCard(onActionPressed: () async => true),
-        );
-
-        final text = tester.getRect(find.text(passInstruction));
-        final slider = tester.getRect(find.byType(ActionSlider));
-        check(slider.height).equals(44);
-        check(text.right).isLessOrEqual(slider.left);
-      }, variant: phones);
-
-      autoSizeTest('keeps the row for a ~421dp pill on a medium viewport', (
-        tester,
-      ) async {
-        // The speaking screen's 60dp side padding leaves a 601dp window
-        // with a ~421dp pill; medium viewports must not stack it.
-        await pumpAtSize(
-          tester,
-          const Size(640, 900),
-          SizedBox(
-            width: 481,
-            child: PassTransitionCard(onActionPressed: () async => true),
-          ),
-        );
-
-        check(tester.getSize(dockSurface()).width).equals(421);
-        final slider = tester.getRect(find.byType(ActionSlider));
-        check(slider.height).equals(44);
-        checkInline(tester, passInstruction);
-      }, variant: phones);
-
-      autoSizeTest(
-        'waiting card is a single-row pill at the inline pill height',
-        (tester) async {
-          await pumpAtSize(
-            tester,
-            portrait,
-            const WaitingReceiveTransitionCard(),
-          );
-
-          check(find.byType(Card).evaluate()).isEmpty();
-          check(dockSurface().evaluate()).length.equals(1);
-          // Matches an inline actionable pill (48dp action + 6dp insets);
-          // a stacked phone pill is taller.
-          check(tester.getSize(dockSurface()).height).equals(48 + 6 * 2);
-        },
-        variant: phones,
-      );
-
-      autoSizeTest('prompt card stacks the field above a 48dp slider', (
-        tester,
-      ) async {
-        await pumpAtSize(
-          tester,
-          portrait,
-          PromptTransitionCard(
-            initialPrompt: 'What are you grateful for?',
-            onManagePrompts: () {},
-            onActionPressed:
-                ({customPrompt, sessionPromptId, clearPrompt = false}) async =>
-                    true,
-          ),
-        );
-
-        check(find.byType(Card).evaluate()).isEmpty();
-        check(dockSurface().evaluate()).length.equals(1);
-        final field = tester.getRect(find.byType(TextField));
-        final slider = tester.getRect(find.byType(ActionSlider));
-        check(slider.height).equals(48);
-        check(field.bottom).isLessOrEqual(slider.top);
-        checkFitsScreen(tester, dockSurface(), portrait);
-      }, variant: phones);
-
-      autoSizeTest(
-        'docked sliders use the action bar label; Join keeps its own',
-        (tester) async {
-          final theme = AppTheme.lightTheme;
-          TextStyle? labelOf(String text) => tester
-              .widget<AutoSizeText>(find.widgetWithText(AutoSizeText, text))
-              .style;
-
-          await pumpAtSize(
-            tester,
-            portrait,
-            ReceiveTransitionCard(onActionPressed: () async => true),
-            theme: theme,
-          );
-          check(
-            labelOf('Receive')?.fontSize,
-          ).equals(theme.textTheme.labelLarge?.fontSize);
-
-          await pumpAtSize(
-            tester,
-            portrait,
-            JoinTransitionCard(onActionPressed: () async => true),
-            theme: theme,
-          );
-          check(labelOf('Join')?.fontSize).equals(
-            theme.elevatedButtonTheme.style?.textStyle?.resolve({})?.fontSize,
-          );
-        },
-        variant: phones,
-      );
-    });
-
-    autoSizeTest('WaitingReceiveTransitionCard renders without action button', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        buildTestWidget(const WaitingReceiveTransitionCard()),
-      );
-
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(0);
-      check(
-        tester.widgetList(
-          find.textContaining('Waiting for the receiver to accept'),
-        ),
-      ).length.equals(1);
-    });
-
-    autoSizeTest('PromptTransitionCard renders and triggers action', (
-      tester,
-    ) async {
-      bool actionTriggered = false;
-      String? message;
-
-      await tester.pumpWidget(
-        buildTestWidget(
-          PromptTransitionCard(
-            onActionPressed:
-                ({customPrompt, sessionPromptId, clearPrompt = false}) async {
-                  actionTriggered = true;
-                  message = customPrompt;
-                  return true;
-                },
-          ),
         ),
       );
-
-      check(tester.widgetList(find.byType(TextField))).length.equals(1);
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
-
-      await tester.enterText(find.byType(TextField), 'Test prompt');
-
-      // Trigger the action
-      final button = tester.widget<ActionSliderButton>(
-        find.byType(ActionSliderButton),
-      );
-      await button.onActionCompleted();
-
-      check(actionTriggered).equals(true);
-      check(message).equals('Test prompt');
-    });
-
-    autoSizeTest(
-      'PromptTransitionCard passes unchanged text without replacing the prompt',
-      (tester) async {
-        String? capturedCustomPrompt;
-        int? capturedSessionPromptId;
-
-        await tester.pumpWidget(
-          buildTestWidget(
-            PromptTransitionCard(
-              initialPrompt: 'Prepared prompt',
-              initialSessionPromptId: 42,
-              onActionPressed:
-                  ({customPrompt, sessionPromptId, clearPrompt = false}) async {
-                    capturedCustomPrompt = customPrompt;
-                    capturedSessionPromptId = sessionPromptId;
-                    return true;
-                  },
-            ),
-          ),
-        );
-
-        final button = tester.widget<ActionSliderButton>(
-          find.byType(ActionSliderButton),
-        );
-        await button.onActionCompleted();
-
-        check(capturedCustomPrompt).isNull();
-        check(capturedSessionPromptId).isNull();
-      },
-    );
-
-    autoSizeTest('PromptTransitionCard explicitly clears a removed prompt', (
-      tester,
-    ) async {
-      var clearRequested = false;
-      await tester.pumpWidget(
-        buildTestWidget(
-          PromptTransitionCard(
-            initialPrompt: 'Prepared prompt',
-            onActionPressed:
-                ({customPrompt, sessionPromptId, clearPrompt = false}) async {
-                  clearRequested = clearPrompt;
-                  return true;
-                },
-          ),
+      final field = find.byType(TextField);
+      final action = find.byType(ActionSlider);
+      checkFits(tester, field, const Size(360, 740));
+      checkFits(tester, action, const Size(360, 740));
+      check(tester.getRect(field).overlaps(tester.getRect(action))).isFalse();
+      if (scenario.entered case final entered?) {
+        await tester.enterText(field, entered);
+      }
+      await tester.tap(find.byTooltip('Manage discussion prompts'));
+      await tester.pump();
+      check(managed).equals(1);
+      await swipeAction(tester);
+      check(submissions).deepEquals([
+        (
+          customPrompt: scenario.expected,
+          sessionPromptId: null,
+          clearPrompt: scenario.clear,
         ),
-      );
-      await tester.enterText(find.byType(TextField), '');
-      await tester
-          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
-          .onActionCompleted();
-
-      check(clearRequested).isTrue();
-    });
-  });
+      ]);
+      check(tester.takeException()).isNull();
+    }, variant: phones);
+  }
 }

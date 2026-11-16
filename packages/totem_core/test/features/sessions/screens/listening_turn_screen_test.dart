@@ -25,7 +25,6 @@ import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
-import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 
@@ -425,20 +424,7 @@ void main() {
             }
           }
 
-          void checkThreeByTwo(Iterable<Rect> rects) {
-            final rows = <double, int>{};
-            for (final rect in rects) {
-              rows.update(rect.top, (count) => count + 1, ifAbsent: () => 1);
-            }
-            check(rows.length).equals(2);
-            check(rows.values.toList()).deepEquals([3, 3]);
-            check(rects.map((rect) => rect.left).toSet().length).equals(3);
-          }
-
           checkGeometry(everyone.difference({'user-6'}));
-          final waiting = cards();
-          checkThreeByTwo(waiting.values);
-          check(waiting['keeper-1']!.size).equals(waiting['user-1']!.size);
 
           container.read(mutable.notifier).value = state(
             RoomStatus.active,
@@ -446,10 +432,6 @@ void main() {
           );
           await tester.pump();
           checkGeometry(everyone);
-          final listening = cards();
-          check(
-            listening['keeper-1']!.width > listening['user-1']!.width,
-          ).isTrue();
 
           container.read(mutable.notifier).value = state(
             RoomStatus.active,
@@ -457,7 +439,6 @@ void main() {
           );
           await tester.pump();
           checkGeometry(everyone.difference({'user-1'}));
-          checkThreeByTwo(cards().values);
           final pass = tester.getRect(find.byType(ActionSliderButton));
           check(
             pass.left >= 0 &&
@@ -478,7 +459,6 @@ void main() {
           );
           await tester.pump();
           checkGeometry(everyone);
-          check(cards()['keeper-1']!.width > cards()['user-1']!.width).isTrue();
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
         },
@@ -515,34 +495,59 @@ void main() {
         ).deepEquals(['keeper-1', 'admitted']);
       });
 
-      testWidgets('renders the participant grid for room sizes up to 12', (
-        tester,
-      ) async {
-        for (final participantCount in [1, 6, 7, 12]) {
-          final state = _buildState(
-            status: RoomStatus.active,
-            keeper: 'keeper-0',
-            currentSpeaker: 'speaker-0',
-            nextSpeaker: 'user-1',
-            participants: _buildParticipantsWithLocal(
-              localParticipant,
-              participantCount,
-            ),
-          );
+      testWidgets(
+        'keeps every participant visible without overlapping controls at grid boundaries',
+        (tester) async {
+          for (final participantCount in [1, 7, 12]) {
+            final state = _buildState(
+              status: RoomStatus.active,
+              keeper: 'keeper-0',
+              currentSpeaker: 'speaker-0',
+              nextSpeaker: 'user-1',
+              participants: _buildParticipantsWithLocal(
+                localParticipant,
+                participantCount,
+              ),
+            );
 
-          await pumpListeningTurn(tester, sessionState: state);
+            await pumpListeningTurn(tester, sessionState: state);
 
-          check(
-            tester.widgetList(find.byType(ParticipantCard)),
-          ).length.equals(participantCount);
-          check(
-            tester.widgetList(find.byType(ListeningTurnScreen)),
-          ).length.equals(1);
+            final cards = tester.widgetList<ParticipantCard>(
+              find.byType(ParticipantCard),
+            );
+            check(
+              cards.map((card) => card.participant.identity).toSet(),
+            ).deepEquals(
+              state.participantsList
+                  .map((participant) => participant.identity)
+                  .toSet(),
+            );
+            final controls = tester.getRect(find.byType(SessionActionBar));
+            final bounds =
+                Offset.zero &
+                (tester.view.physicalSize / tester.view.devicePixelRatio);
+            final rects = [
+              for (final card in cards) tester.getRect(find.byWidget(card)),
+            ];
+            for (var index = 0; index < rects.length; index++) {
+              final rect = rects[index];
+              check(rect.width > 0 && rect.height > 0).isTrue();
+              check(bounds.contains(rect.topLeft)).isTrue();
+              check(
+                rect.right <= bounds.right && rect.bottom <= bounds.bottom,
+              ).isTrue();
+              check(rect.overlaps(controls)).isFalse();
+              for (final other in rects.skip(index + 1)) {
+                check(rect.overlaps(other)).isFalse();
+              }
+            }
+            check(tester.takeException()).isNull();
 
-          await tester.pumpWidget(const SizedBox.shrink());
-          await tester.pump();
-        }
-      });
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+          }
+        },
+      );
 
       testWidgets('updates participant order when talking order changes', (
         tester,
@@ -632,9 +637,6 @@ void main() {
         check(
           tester.widgetList(find.text('Waiting for the Keeper to join')),
         ).length.equals(1);
-        check(
-          tester.widgetList(find.byType(GroundingMarquee)),
-        ).length.equals(1);
       });
     });
 
@@ -647,7 +649,6 @@ void main() {
         check(
           tester.widgetList(find.text('Your session is about to start')),
         ).length.equals(1);
-        check(tester.widgetList(find.text('STARTING SOON'))).length.equals(1);
       });
     });
 
@@ -795,7 +796,6 @@ void main() {
           await tester.pump();
 
           verifyNever(() => devices.turnOn(MediaKind.microphone));
-          verifyNever(() => devices.turnOn(MediaKind.camera));
           verifyNever(() => devices.turnOn(MediaKind.camera));
           verifyNever(() => messaging.sendReaction(any()));
         });

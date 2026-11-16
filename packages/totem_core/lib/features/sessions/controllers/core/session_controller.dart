@@ -231,17 +231,7 @@ class SessionController extends _$SessionController {
     }
   }
 
-  Future<void> disconnectFromRoom() async {
-    try {
-      await leave();
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to disconnect from session',
-      );
-    }
-  }
+  Future<void> disconnectFromRoom() => leave();
 
   void _dispatch(SessionEvent event) {
     state = _stateReducer.reduceState(state, event);
@@ -640,7 +630,7 @@ class SessionController extends _$SessionController {
         return SessionJoinResult.retryableFailure;
       }
       if (options.cameraEnabled) {
-        await _joinMediaOwner.publish(
+        final accepted = await _joinMediaOwner.publish(
           initialCameraTrack,
           () => compatibility.publishCamera(
             connection,
@@ -648,7 +638,7 @@ class SessionController extends _$SessionController {
             defaultVideoPublishOptions,
           ),
         );
-        if (!ref.mounted || !attempt.isCurrent) {
+        if (!accepted || !ref.mounted || !attempt.isCurrent) {
           return SessionJoinResult.retryableFailure;
         }
       } else if (initialCameraTrack != null) {
@@ -659,7 +649,7 @@ class SessionController extends _$SessionController {
         return SessionJoinResult.retryableFailure;
       }
       if (initialMicrophoneTrack != null || options.microphoneEnabled) {
-        await _joinMediaOwner.publish(
+        final accepted = await _joinMediaOwner.publish(
           initialMicrophoneTrack,
           () => compatibility.publishMicrophone(
             connection,
@@ -667,7 +657,7 @@ class SessionController extends _$SessionController {
             muted: !shouldEnableMicrophone(),
           ),
         );
-        if (!ref.mounted || !attempt.isCurrent) {
+        if (!accepted || !ref.mounted || !attempt.isCurrent) {
           return SessionJoinResult.retryableFailure;
         }
       }

@@ -10,17 +10,13 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/permissions/adapters/media_permission_adapter.dart';
 import 'package:totem_core/features/permissions/media_control.dart';
 import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/platform_info.dart';
-import 'package:totem_core/features/permissions/ui/recovery.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
-import 'package:totem_core/features/sessions/screens/options/more_options_popup.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
-import 'package:totem_core/features/sessions/widgets/action_bar/action_bar_emoji_button.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
 import '../../../permissions/fake_media_permission_adapter.dart';
@@ -38,8 +34,6 @@ class _TestLastMessageNotifier extends Notifier<SessionChatMessage?> {
     state = message;
   }
 }
-
-class _MockRoom extends Mock implements Room {}
 
 SessionRoomState _createSessionState() {
   return SessionRoomState(
@@ -121,7 +115,14 @@ void main() {
   void autoSizeTest(String description, AsyncValueSetter<WidgetTester> body) {
     testWidgets(
       description,
-      body,
+      (tester) async {
+        try {
+          await body(tester);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      },
       experimentalLeakTesting: LeakTesting.settings.withIgnored(
         classes: <String>['TextPainter'],
       ),
@@ -202,6 +203,8 @@ void main() {
       required RoomScreen screen,
       bool isStaff = false,
       FakeMediaPermissionAdapter? adapter,
+      bool hasSession = true,
+      bool hasIdentity = true,
     }) async {
       final authState = isStaff
           ? AuthState.authenticated(
@@ -221,7 +224,12 @@ void main() {
           authControllerProvider.overrideWith(
             () => FakeAuthController(authState),
           ),
-          currentSessionProvider.overrideWith((ref) => session),
+          currentSessionProvider.overrideWith(
+            (ref) => hasSession ? session : null,
+          ),
+          localParticipantIdentityProvider.overrideWith(
+            (ref) => hasIdentity ? 'user-2' : null,
+          ),
           lastSessionMessageProvider.overrideWith(
             (ref) => ref.watch(_testLastMessageProvider),
           ),
@@ -242,7 +250,7 @@ void main() {
     /// Taps the microphone, confirming the unmute when another participant
     /// has the totem.
     Future<void> tapMicrophone(WidgetTester tester) async {
-      await tester.tap(find.byType(ActionBarButton).first);
+      await tester.tap(find.bySemanticsLabel(RegExp('^Microphone (on|off)')));
       await tester.pumpAndSettle();
       if (find.text('Unmute Anyway').evaluate().isNotEmpty) {
         await tester.tap(find.text('Unmute Anyway'));
@@ -250,28 +258,28 @@ void main() {
       }
     }
 
-    Finder findPendingBadge() {
-      return find.byWidgetPredicate((widget) {
-        if (widget is! Container) return false;
-        final decoration = widget.decoration;
-        if (decoration is! BoxDecoration) return false;
-        return decoration.color == AppTheme.green &&
-            decoration.shape == BoxShape.circle;
-      });
-    }
-
-    autoSizeTest('is hidden on loading, disconnected, and error screens', (
+    autoSizeTest('session actions are unavailable before a usable connection', (
       tester,
     ) async {
-      for (final screen in [
-        RoomScreen.loading,
-        RoomScreen.disconnected,
-        RoomScreen.error,
+      for (final scenario in [
+        (screen: RoomScreen.loading, session: true, identity: true),
+        (screen: RoomScreen.disconnected, session: true, identity: true),
+        (screen: RoomScreen.error, session: true, identity: true),
+        (screen: RoomScreen.listening, session: false, identity: true),
+        (screen: RoomScreen.listening, session: true, identity: false),
       ]) {
-        await pumpSessionActionBar(tester, screen: screen);
+        await pumpSessionActionBar(
+          tester,
+          screen: scenario.screen,
+          hasSession: scenario.session,
+          hasIdentity: scenario.identity,
+        );
         await tester.pump();
-
-        check(tester.widgetList(find.byType(ActionBar))).length.equals(0);
+        for (final label in ['Microphone on', 'Chat', 'Send reaction']) {
+          check(find.bySemanticsLabel(label).evaluate()).isEmpty();
+        }
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
       }
     });
 
@@ -283,9 +291,9 @@ void main() {
           ..isMicrophoneEnabled = true;
         await pumpSessionActionBar(tester, screen: RoomScreen.listening);
 
-        await tester.tap(find.byType(ActionBarButton).first);
+        await tester.tap(find.bySemanticsLabel(RegExp('^Microphone (on|off)')));
         await tester.pumpAndSettle();
-        await tester.tap(find.byType(ActionBarButton).first);
+        await tester.tap(find.bySemanticsLabel(RegExp('^Microphone (on|off)')));
         await tester.pumpAndSettle();
 
         check(tester.widgetList(find.text('Stay Muted'))).length.equals(1);
@@ -297,7 +305,7 @@ void main() {
       },
     );
 
-    autoSizeTest('X6: the microphone asks for access, then unmutes', (
+    autoSizeTest('the microphone asks for access, then unmutes', (
       tester,
     ) async {
       session.mockLocalMedia.hasMicrophoneTrack = true;
@@ -318,21 +326,30 @@ void main() {
       check(session.mockLocalMedia.microphoneCommands).deepEquals([true]);
     });
 
-    autoSizeTest('X7: a blocked microphone explains the fix', (tester) async {
+    autoSizeTest('a blocked microphone offers recovery without unmuting', (
+      tester,
+    ) async {
       session.mockLocalMedia.hasMicrophoneTrack = true;
+      final adapter = FakeMediaPermissionAdapter(
+        microphone: MediaPermission.blocked,
+      );
       await pumpSessionActionBar(
         tester,
         screen: RoomScreen.listening,
-        adapter: FakeMediaPermissionAdapter(
-          microphone: MediaPermission.blocked,
-        ),
+        adapter: adapter,
       );
       await tester.pumpAndSettle();
 
       await tapMicrophone(tester);
 
       check(session.mockLocalMedia.microphoneCommands).isEmpty();
-      check(find.byType(MediaRecoveryDialog).evaluate()).length.equals(1);
+      await tester.tap(find.text('Open Settings'));
+      await tester.pumpAndSettle();
+      check(adapter.settingsOpened).equals(1);
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+      check(find.text('Close').evaluate()).isEmpty();
+      check(session.mockLocalMedia.microphoneCommands).isEmpty();
     });
 
     autoSizeTest(
@@ -346,7 +363,9 @@ void main() {
           );
 
           check(
-            tester.widgetList(find.bySemanticsLabel('Microphone on')),
+            tester.widgetList(
+              find.bySemanticsLabel(RegExp('^Microphone (on|off)')),
+            ),
           ).length.equals(isStaff ? 1 : 0);
 
           await tester.pumpWidget(const SizedBox.shrink());
@@ -366,129 +385,79 @@ void main() {
         await tester.pumpAndSettle();
 
         check(
-          tester.widgetList(find.byType(ActionBarEmojiButton)),
+          find.bySemanticsLabel('Send reaction').evaluate(),
         ).length.equals(scenario.showsReactions ? 1 : 0);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       }
     });
 
-    autoSizeTest('returns empty widget when session is null', (tester) async {
-      await pumpWidget(
-        tester,
-        child: const SessionActionBar(),
-        overrides: [
-          authControllerProvider.overrideWith(
-            () => FakeAuthController(AuthState.unauthenticated()),
-          ),
-          currentSessionProvider.overrideWith((ref) => null),
-          resolveCurrentScreenProvider.overrideWith(
-            (ref) => RoomScreen.listening,
-          ),
-        ],
-      );
+    autoSizeTest(
+      'More opens leave confirmation and cancellation keeps the session',
+      (tester) async {
+        await pumpSessionActionBar(tester, screen: RoomScreen.listening);
+        await tester.pumpAndSettle();
+        final moreLabel = MaterialLocalizations.of(
+          tester.element(find.byType(SessionActionBar)),
+        ).moreButtonTooltip;
+        await tester.tap(find.bySemanticsLabel(moreLabel));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Leave session'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        verifyNever(session.leave);
+        check(
+          find.bySemanticsLabel('Chat').hitTestable().evaluate(),
+        ).length.equals(1);
+      },
+    );
 
-      await tester.pump();
-      check(tester.widgetList(find.byType(ActionBar))).length.equals(0);
-    });
-
-    autoSizeTest('returns empty widget when local participant is null', (
-      tester,
-    ) async {
-      final roomWithoutUser = _MockRoom();
-      when(() => roomWithoutUser.localParticipant).thenReturn(null);
-      when(() => session.room).thenReturn(roomWithoutUser);
-
-      await pumpSessionActionBar(tester, screen: RoomScreen.listening);
-      await tester.pump();
-
-      check(tester.widgetList(find.byType(ActionBar))).length.equals(0);
-    });
-
-    autoSizeTest('opens options sheet when tapping more button', (
+    autoSizeTest('unread chat notifications and Chat select the shared panel', (
       tester,
     ) async {
       await pumpSessionActionBar(tester, screen: RoomScreen.listening);
-      await tester.pumpAndSettle();
-
-      await tester.tap(
-        find.bySemanticsLabel(
-          MaterialLocalizations.of(
-            tester.element(find.byType(SessionActionBar)),
-          ).moreButtonTooltip,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      check(tester.widgetList(find.byType(MoreOptions))).length.equals(1);
-    });
-
-    autoSizeTest('shows pending badge and notification on new chat message', (
-      tester,
-    ) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.listening);
-      await tester.pump();
-
-      check(tester.widgetList(findPendingBadge())).length.equals(0);
-
       final context = tester.element(find.byType(SessionActionBar));
       final container = ProviderScope.containerOf(context, listen: false);
-      container
-          .read(_testLastMessageProvider.notifier)
-          .set(
-            const SessionChatMessage(
-              id: 'msg-1',
-              sender: false,
-              message: 'hello from chat',
-              timestamp: 1,
-            ),
-          );
-
-      await tester.pump();
-
-      check(tester.widgetList(findPendingBadge())).length.equals(1);
-      check(
-        tester.widgetList(find.text('New message from Keeper')),
-      ).length.equals(1);
-      check(tester.widgetList(find.text('hello from chat'))).length.equals(1);
-    });
-
-    autoSizeTest('toggles the chat open flag when Chat is tapped with unread', (
-      tester,
-    ) async {
-      await pumpSessionActionBar(tester, screen: RoomScreen.listening);
-      await tester.pump();
-
-      final context = tester.element(find.byType(SessionActionBar));
-      final container = ProviderScope.containerOf(context, listen: false);
-      container
-          .read(_testLastMessageProvider.notifier)
-          .set(
-            const SessionChatMessage(
-              id: 'msg-2',
-              sender: false,
-              message: 'open chat now',
-              timestamp: 2,
-            ),
-          );
-      await tester.pump();
-
-      check(tester.widgetList(findPendingBadge())).length.equals(1);
-
-      // The action bar only toggles the shared open flag; the room screen
-      // owns sheet/dock presentation (and thus mark-as-read).
-      await tester.tap(find.bySemanticsLabel('Chat'));
-      await tester.pumpAndSettle();
-      check(container.read(sessionChatSelectedProvider)).isTrue();
-
-      // Simulate the panel marking the visible thread read so the next tap is
-      // a plain close rather than another "open from unread".
-      container.read(sessionChatUnreadThreadsProvider.notifier).markRead(null);
-      await tester.pump();
-
-      await tester.tap(find.bySemanticsLabel('Chat'));
-      await tester.pumpAndSettle();
-      check(container.read(sessionChatSelectedProvider)).isFalse();
+      check(container.read(sessionChatUnreadThreadsProvider)).isEmpty();
+      for (final fromNotification in [true, false]) {
+        final message = fromNotification
+            ? 'Read this notification'
+            : 'Open this chat';
+        container
+            .read(_testLastMessageProvider.notifier)
+            .set(
+              SessionChatMessage(
+                id: fromNotification ? 'notification' : 'chat-button',
+                sender: false,
+                message: message,
+                timestamp: fromNotification ? 1 : 2,
+              ),
+            );
+        await tester.pump();
+        check(container.read(sessionChatUnreadThreadsProvider)).contains(null);
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.tap(
+          fromNotification ? find.text(message) : find.bySemanticsLabel('Chat'),
+        );
+        await tester.pumpAndSettle();
+        check(
+          container.read(sessionPresentationProvider).panel,
+        ).equals(SessionPanel.chat);
+        check(container.read(sessionChatThreadTargetProvider)).isNull();
+        check(find.text(message).evaluate()).isEmpty();
+        // Only the room-owned panel marks its visible thread read.
+        container
+            .read(sessionChatUnreadThreadsProvider.notifier)
+            .markRead(null);
+        await tester.pump();
+        check(container.read(sessionChatUnreadThreadsProvider)).isEmpty();
+        await tester.tap(find.bySemanticsLabel('Chat'));
+        await tester.pump();
+        check(
+          container.read(sessionPresentationProvider).panel,
+        ).equals(SessionPanel.none);
+      }
     });
   });
 }

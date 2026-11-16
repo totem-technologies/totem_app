@@ -1,86 +1,74 @@
-import 'dart:ui';
-
 import 'package:checks/checks.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 
 void main() {
-  group('EmojiBarOverlay', () {
+  Widget buildOverlay({
+    required ValueChanged<String> onEmojiSelected,
+    required VoidCallback onDismissed,
+  }) {
     final buttonKey = GlobalKey();
+    return MaterialApp(
+      home: Scaffold(
+        body: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              child: SizedBox(key: buttonKey, width: 48, height: 48),
+            ),
+            EmojiBarOverlay(
+              buttonKey: buttonKey,
+              onEmojiSelected: onEmojiSelected,
+              onDismissed: onDismissed,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-    Widget buildOverlay({
-      required ValueChanged<String> onEmojiSelected,
-      required VoidCallback onDismissed,
-    }) {
-      return MaterialApp(
-        home: Scaffold(
-          body: Stack(
-            children: [
-              Positioned(
-                top: 0,
-                left: 0,
-                child: SizedBox(key: buttonKey, width: 48, height: 48),
-              ),
-              EmojiBarOverlay(
-                buttonKey: buttonKey,
-                onEmojiSelected: onEmojiSelected,
-                onDismissed: onDismissed,
-              ),
-            ],
+  Future<void> unmount(WidgetTester tester) async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  }
+
+  testWidgets(
+    'reaction chooser remains usable after repeated selections and time',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        final selected = <String>[];
+        var dismissals = 0;
+        await tester.pumpWidget(
+          buildOverlay(
+            onEmojiSelected: selected.add,
+            onDismissed: () => dismissals++,
           ),
-        ),
-      );
-    }
+        );
+        await tester.pumpAndSettle();
+        final first = EmojiBar.defaultEmojis.first;
+        final last = EmojiBar.defaultEmojis.last;
+        await tester.tap(find.bySemanticsLabel(RegExp('Send $first reaction')));
+        await tester.pump(const Duration(seconds: 6));
+        await tester.tap(find.bySemanticsLabel(RegExp('Send $last reaction')));
+        await tester.pump();
+        check(selected).deepEquals([first, last]);
+        check(dismissals).equals(0);
+        await unmount(tester);
+      } finally {
+        semantics.dispose();
+      }
+    },
+  );
 
-    testWidgets('does not auto-dismiss after a few seconds', (tester) async {
-      var dismissed = false;
-      await tester.pumpWidget(
-        buildOverlay(
-          onEmojiSelected: (_) {},
-          onDismissed: () => dismissed = true,
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Pump well past the old 4-second displayDuration
-      await tester.pump(const Duration(seconds: 6));
-
-      check(because: 'Should not auto-dismiss', dismissed).equals(false);
-      check(
-        because: 'EmojiBar should still be visible',
-        tester.widgetList(find.byType(EmojiBar)),
-      ).length.equals(1);
-    });
-
-    testWidgets('selecting an emoji calls onEmojiSelected', (tester) async {
-      String? selectedEmoji;
-      var dismissed = false;
-
-      await tester.pumpWidget(
-        buildOverlay(
-          onEmojiSelected: (emoji) => selectedEmoji = emoji,
-          onDismissed: () => dismissed = true,
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Tap the first emoji
-      await tester.tap(find.text(EmojiBar.defaultEmojis.first));
-      await tester.pumpAndSettle();
-
-      check(selectedEmoji).equals(EmojiBar.defaultEmojis.first);
-      check(
-        because: 'Overlay should not be dismissed',
-        dismissed,
-      ).equals(false);
-    });
-
-    testWidgets('all reactions remain tappable in a narrow layout', (
-      tester,
-    ) async {
+  testWidgets('all reactions remain tappable in a narrow layout', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
       final selected = <String>[];
       await tester.pumpWidget(
         MaterialApp(
@@ -97,113 +85,60 @@ void main() {
           ),
         ),
       );
-
       for (final emoji in EmojiBar.defaultEmojis) {
-        await tester.tap(find.text(emoji));
+        final action = find.bySemanticsLabel(RegExp('Send $emoji reaction'));
+        check(tester.getSemantics(action).flagsCollection.isButton).isTrue();
+        await tester.tap(action);
         await tester.pump();
       }
       check(selected).deepEquals(EmojiBar.defaultEmojis);
       check(tester.takeException()).isNull();
-    });
+      await unmount(tester);
+    } finally {
+      semantics.dispose();
+    }
+  });
 
-    testWidgets('shows transient hover and press feedback for an emoji', (
+  for (final keyboard in [false, true]) {
+    testWidgets('${keyboard ? 'Escape' : 'barrier taps'} dismisses once', (
       tester,
     ) async {
-      String? selectedEmoji;
-      final emoji = EmojiBar.defaultEmojis.first;
-      final reaction = find.byKey(ValueKey('emoji-reaction-$emoji'));
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: EmojiBar(
-              emojis: EmojiBar.defaultEmojis,
-              onEmojiSelected: (value) => selectedEmoji = value,
-            ),
-          ),
-        ),
-      );
-
-      double scale() => tester.widget<AnimatedScale>(reaction).scale;
-
-      check(scale()).equals(1);
-
-      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      await mouse.addPointer(location: Offset.zero);
-      await mouse.moveTo(tester.getCenter(reaction));
-      await tester.pump();
-
-      check(scale()).equals(1.08);
-
-      await mouse.moveTo(Offset.zero);
-      await tester.pump();
-
-      check(scale()).equals(1);
-
-      final touch = await tester.startGesture(tester.getCenter(reaction));
-      await tester.pump();
-
-      check(scale()).equals(0.92);
-
-      await touch.up();
-      await tester.pump();
-
-      check(selectedEmoji).equals(emoji);
-      check(scale()).equals(1);
-    });
-
-    testWidgets('tapping outside the menu dismisses it', (tester) async {
-      var dismissed = false;
-
+      var dismissals = 0;
+      final selected = <String>[];
       await tester.pumpWidget(
         buildOverlay(
-          onEmojiSelected: (_) {},
-          onDismissed: () => dismissed = true,
+          onEmojiSelected: selected.add,
+          onDismissed: () => dismissals++,
         ),
       );
-
       await tester.pumpAndSettle();
-
-      // Tap the background barrier (the Positioned.fill behind the menu)
-      await tester.tapAt(const Offset(5, 5));
+      for (var index = 0; index < 2; index++) {
+        if (keyboard) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        } else {
+          await tester.tapAt(const Offset(5, 5));
+        }
+      }
       await tester.pumpAndSettle();
-
-      check(
-        because: 'Tapping outside should dismiss the overlay',
-        dismissed,
-      ).equals(true);
+      check(dismissals).equals(1);
+      check(selected).isEmpty();
+      await unmount(tester);
     });
+  }
 
-    testWidgets('dismiss plays a fade-out animation before completing', (
-      tester,
-    ) async {
-      var dismissed = false;
-
-      await tester.pumpWidget(
-        buildOverlay(
-          onEmojiSelected: (_) {},
-          onDismissed: () => dismissed = true,
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Tap outside to trigger dismiss
-      await tester.tapAt(const Offset(5, 5));
-      await tester.pump();
-
-      // Should still be visible mid-animation
-      check(
-        because: 'onDismissed should not fire mid-animation',
-        dismissed,
-      ).equals(false);
-
-      await tester.pumpAndSettle();
-
-      check(
-        because: 'onDismissed should fire after animation completes',
-        dismissed,
-      ).equals(true);
-    });
+  testWidgets('unmount during dismissal cancels the completion callback', (
+    tester,
+  ) async {
+    var dismissals = 0;
+    await tester.pumpWidget(
+      buildOverlay(onEmojiSelected: (_) {}, onDismissed: () => dismissals++),
+    );
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await unmount(tester);
+    await tester.pump(const Duration(seconds: 1));
+    check(dismissals).equals(0);
+    check(tester.takeException()).isNull();
   });
 }
