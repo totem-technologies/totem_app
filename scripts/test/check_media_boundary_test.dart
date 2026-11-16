@@ -53,6 +53,22 @@ void main() {
     ).length.equals(1);
   });
 
+  for (final migrated in [
+    'controllers/features/session_messaging_controller.dart',
+    'admission/session_admission_service.dart',
+    'services/session_chat_service.dart',
+    'services/session_turn_service.dart',
+  ]) {
+    test('feature boundary rejects SDK imports in $migrated', () {
+      check(
+        findViolations({
+          'packages/totem_core/lib/features/sessions/$migrated':
+              "import 'package:livekit_client/livekit_client.dart';",
+        }),
+      ).length.equals(1);
+    });
+  }
+
   test('flags capture calls outside the media adapters', () {
     final violations = findViolations({
       screen: '''

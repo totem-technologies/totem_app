@@ -1093,12 +1093,12 @@ final class HasKeeperDisconnectedProvider
 String _$hasKeeperDisconnectedHash() =>
     r'd4368b63194733d75c4d556997e6f84e2b4f399c';
 
-/// All chat messages for the current session.
+/// All chat messages, projected from their session-owned service.
 
 @ProviderFor(sessionMessages)
 final sessionMessagesProvider = SessionMessagesProvider._();
 
-/// All chat messages for the current session.
+/// All chat messages, projected from their session-owned service.
 
 final class SessionMessagesProvider
     extends
@@ -1108,7 +1108,7 @@ final class SessionMessagesProvider
           List<SessionChatMessage>
         >
     with $Provider<List<SessionChatMessage>> {
-  /// All chat messages for the current session.
+  /// All chat messages, projected from their session-owned service.
   SessionMessagesProvider._()
     : super(
         from: null,
@@ -1116,16 +1116,16 @@ final class SessionMessagesProvider
         retry: null,
         name: r'sessionMessagesProvider',
         isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        dependencies: <ProviderOrFamily>[currentSessionProvider],
         $allTransitiveDependencies: <ProviderOrFamily>[
           SessionMessagesProvider.$allTransitiveDependencies0,
           SessionMessagesProvider.$allTransitiveDependencies1,
         ],
       );
 
-  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies0 = currentSessionProvider;
   static final $allTransitiveDependencies1 =
-      CurrentSessionStateProvider.$allTransitiveDependencies0;
+      CurrentSessionProvider.$allTransitiveDependencies0;
 
   @override
   String debugGetCreateSourceHash() => _$sessionMessagesHash();
@@ -1150,7 +1150,7 @@ final class SessionMessagesProvider
   }
 }
 
-String _$sessionMessagesHash() => r'fc346f31bc9ace6128030e70f72ae61264bb02db';
+String _$sessionMessagesHash() => r'1b1ec5587d9c490ce50392cf90d837b2bc2340a2';
 
 /// Messages visible in a single chat thread.
 

@@ -198,7 +198,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
       state: RoomConnectionState.connected,
     ),
     participants: ParticipantsState(participants: [p1, p2, keeper]),
-    chat: const ChatState(),
+
     turn: const SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',

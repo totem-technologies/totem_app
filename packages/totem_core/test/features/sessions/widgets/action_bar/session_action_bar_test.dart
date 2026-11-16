@@ -54,7 +54,7 @@ SessionRoomState _createSessionState() {
         testParticipant('keeper-1'),
       ],
     ),
-    chat: const ChatState(),
+
     turn: const SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',

@@ -53,7 +53,7 @@ SessionRoomState _createEndedState({
       removed: removed,
       removeReason: removeReason,
     ),
-    chat: const ChatState(),
+
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',

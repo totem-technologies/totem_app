@@ -3,7 +3,9 @@ import 'dart:convert';
 
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/core/api/api_client/models/room_state.dart';
+import 'package:totem_core/features/sessions/admission/admission_join_receipt.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 sealed class AdmissionEvent {
   const AdmissionEvent();
@@ -31,7 +33,7 @@ final class AdmissionRoomEnded extends AdmissionEvent {
 /// A terminal SDK disconnection, not RoomReconnectingEvent/RoomResumingEvent.
 final class AdmissionRoomDisconnected extends AdmissionEvent {
   const AdmissionRoomDisconnected(this.reason);
-  final DisconnectReason? reason;
+  final SessionTransportDisconnectReason? reason;
 }
 
 /// An admission-only channel; it does not own the room or publish local media.
@@ -50,6 +52,11 @@ abstract class AdmissionChannel {
 class LiveKitAdmissionTransport implements AdmissionChannel {
   LiveKitAdmissionTransport(this.room, {DateTime Function()? now})
     : _now = now ?? DateTime.now {
+    _receipts = AdmissionJoinReceipt(
+      localIdentity: () => localIdentity,
+      send: send,
+      now: _now,
+    );
     _checkRoomEnded(room.metadata);
     _listener = room.createListener()
       ..on<DataReceivedEvent>((event) {
@@ -61,26 +68,10 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
         );
         if (packet != null) {
           _emit(AdmissionPacketReceived(packet));
-          if (packet is AdmissionHello &&
-              packet.senderIdentity == _joinReceipt?.recipientIdentity &&
-              packet.recipientIdentity == localIdentity) {
-            _retryJoinReceipt();
-          }
-          if (packet is AdmissionRosterPacket &&
-              packet.senderIdentity == _joinReceipt?.recipientIdentity &&
-              packet.recipientIdentity == localIdentity &&
-              packet.members.contains(localIdentity)) {
-            _joinReceiptConfirmed = true;
-            _joinReceiptRetry?.cancel();
-            _joinReceiptRetry = null;
-          }
         }
       })
       ..on<ParticipantConnectedEvent>((event) {
         _emit(AdmissionPresenceChanged(event.participant.identity, true));
-        if (event.participant.identity == _joinReceipt?.recipientIdentity) {
-          _retryJoinReceipt();
-        }
       })
       ..on<ParticipantDisconnectedEvent>(
         (event) =>
@@ -91,27 +82,34 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
         _checkRoomEnded(event.metadata);
         if (!_ended) {
           _emit(const AdmissionConnectionRestored());
-          _retryJoinReceipt();
         }
       })
       ..on<RoomReconnectedEvent>((_) {
         _checkRoomEnded(room.metadata);
         if (!_ended) {
           _emit(const AdmissionConnectionRestored());
-          _retryJoinReceipt();
         }
       })
       ..on<RoomDisconnectedEvent>((event) {
-        _joinReceiptRetry?.cancel();
-        _joinReceiptRetry = null;
-        _joinReceiptConfirmed = false;
-        _joinReceipt = null;
-        if (!_ended) _emit(AdmissionRoomDisconnected(event.reason));
+        _receipts.stop();
+        if (!_ended) {
+          _emit(
+            AdmissionRoomDisconnected(
+              event.reason == null
+                  ? null
+                  : SessionTransportDisconnectReason.values.byName(
+                      event.reason!.name,
+                    ),
+            ),
+          );
+        }
       });
   }
 
   void _emit(AdmissionEvent event) {
-    if (!_disposed) _events.add(event);
+    if (_disposed) return;
+    _events.add(event);
+    _receipts.handle(event);
   }
 
   static const pendingConnectOptions = ConnectOptions(autoSubscribe: false);
@@ -121,9 +119,7 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
   final _events = StreamController<AdmissionEvent>.broadcast(sync: true);
   late final EventsListener<RoomEvent> _listener;
   bool _disposed = false;
-  AdmissionPacket? _joinReceipt;
-  Timer? _joinReceiptRetry;
-  bool _joinReceiptConfirmed = false;
+  late final AdmissionJoinReceipt _receipts;
 
   bool _ended = false;
 
@@ -141,10 +137,6 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
     }
     if (state.status == RoomStatus.ended) {
       _ended = true;
-      _joinReceiptRetry?.cancel();
-      _joinReceiptRetry = null;
-      _joinReceiptConfirmed = false;
-      _joinReceipt = null;
       _emit(const AdmissionRoomEnded());
     }
   }
@@ -200,56 +192,12 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
   Future<void> sendJoinOutcome(
     AdmissionRequest request, {
     bool joined = true,
-  }) async {
-    if (_disposed || _ended) {
-      throw StateError('Admission transport unavailable');
-    }
-    if (_joinReceipt != null) throw StateError('Join outcome already sent');
-    final receipt = joined
-        ? AdmissionProtocol.joined(request)
-        : AdmissionProtocol.joinFailed(request);
-    if (receipt.senderIdentity != localIdentity ||
-        receipt.recipientIdentity == localIdentity ||
-        AdmissionProtocol.decode(
-              AdmissionProtocol.encode(receipt),
-              senderIdentity: localIdentity,
-              now: _now(),
-            ) ==
-            null) {
-      throw ArgumentError('Invalid or expired admission receipt');
-    }
-    _joinReceipt = receipt;
-    _joinReceiptConfirmed = false;
-    try {
-      await send(receipt);
-    } finally {
-      if (!_disposed && !_ended && !_joinReceiptConfirmed) {
-        // A successful publish does not confirm delivery to the Keeper.
-        // Schedule one timed retry; room events may also trigger retries.
-        _joinReceiptRetry = Timer(
-          const Duration(seconds: 2),
-          _retryJoinReceipt,
-        );
-      }
-    }
-  }
-
-  void _retryJoinReceipt() {
-    final receipt = _joinReceipt;
-    if (_disposed || _ended || _joinReceiptConfirmed || receipt == null) return;
-    if (!_now().isBefore(receipt.expiresAt)) {
-      _joinReceipt = null;
-      return;
-    }
-    unawaited(send(receipt).catchError((Object _) {}));
-  }
+  }) => _receipts.sendOutcome(request, joined: joined);
 
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
-    _joinReceiptRetry?.cancel();
-    _joinReceiptRetry = null;
-    _joinReceipt = null;
+    _receipts.dispose();
     await _listener.dispose();
     await _events.close();
   }

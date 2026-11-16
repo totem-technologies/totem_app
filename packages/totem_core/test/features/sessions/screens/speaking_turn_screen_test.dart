@@ -142,7 +142,7 @@ SessionRoomState _buildState({
       state: RoomConnectionState.connected,
     ),
     participants: ParticipantsState(participants: defaultParticipants),
-    chat: const ChatState(),
+
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: keeper,

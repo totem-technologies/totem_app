@@ -92,7 +92,7 @@ const _sessionState = SessionRoomState(
     state: RoomConnectionState.connected,
   ),
   participants: ParticipantsState(),
-  chat: ChatState(),
+
   turn: SessionTurnState(
     roomState: RoomState(
       keeper: 'keeper',
@@ -1965,6 +1965,14 @@ void main() {
       factory: factory,
       response: const JoinResponse(token: 'token', isAlreadyPresent: false),
       sessionController: _SuccessfulSessionController.new,
+      sessionOptions: const SessionOptions(
+        sessionSlug: _slug,
+        token: 'token',
+        cameraEnabled: false,
+        microphoneEnabled: true,
+        speakerEnabled: true,
+        cameraOptions: SessionController.defaultCameraCaptureOptions,
+      ),
     );
     addTearDown(container.dispose);
     await _waitForMedia(container);

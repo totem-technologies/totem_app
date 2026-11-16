@@ -29,6 +29,10 @@ import 'package:totem_core/features/sessions/media/session_transport_compatibili
 import 'package:totem_core/features/sessions/media/session_transport_factory_provider.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
+import 'package:totem_core/features/sessions/services/session_chat_service.dart';
+import 'package:totem_core/features/sessions/services/session_packet_router.dart';
+import 'package:totem_core/features/sessions/services/session_reaction_buffer.dart';
+import 'package:totem_core/features/sessions/services/session_reactions_service.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
 import 'package:totem_core/shared/logger.dart';
 
@@ -190,9 +194,14 @@ class SessionController extends _$SessionController {
     return state.isKeeper(currentUserSlug);
   }
 
-  void addSessionChatMessage(SessionChatMessage message) {
-    _dispatch(SessionChatMessageAdded(message));
-  }
+  late SessionChatService _chat;
+  SessionChatService get chat => _chat;
+  late SessionReactionsService _reactions;
+  SessionReactionsService get reactions => _reactions;
+  SessionReactionBuffer? _reactionBuffer;
+  SessionReactionBuffer? get reactionBuffer => _reactionBuffer;
+  late SessionPacketRouter _packets;
+  void addSessionChatMessage(SessionChatMessage message) => chat.add(message);
 
   void markParticipantRemoved(RemoveReason reason) {
     _dispatch(ParticipantRemoved(reason));
@@ -241,6 +250,37 @@ class SessionController extends _$SessionController {
   @override
   SessionRoomState build(SessionOptions options) {
     _transportFactory = ref.watch(sessionTransportFactoryProvider(options));
+    _chat = SessionChatService(
+      transport: () => transport,
+      keeperIdentity: () => state.roomState.keeper,
+      isKeeper: isCurrentUserKeeper,
+    );
+    final ownedReactionBuffer = _reactionBuffer = SessionReactionBuffer(
+      now: ref.read(emojiReactionClockProvider),
+    );
+    _reactions = SessionReactionsService(
+      transport: () => transport,
+      hasKeeper: () => state.hasKeeper,
+      emit: ownedReactionBuffer.emitIncomingReaction,
+      onError: (error, stack) => ErrorHandler.logError(
+        error,
+        stackTrace: stack,
+        message: 'Session reaction failed',
+      ),
+    );
+    final ownedChat = chat;
+    final ownedReactions = reactions;
+    ref.onDispose(() {
+      ownedChat.dispose();
+      ownedReactions.dispose();
+      ownedReactionBuffer.dispose();
+    });
+    _packets = SessionPacketRouter(
+      chat: chat.receive,
+      reaction: reactions.receive,
+      removal: (packet) => keeper.moderation.receive(packet),
+      admission: (event) => admission.handleTransportEvent(event),
+    );
     final infrastructure = ref.read(sessionInfraControllerProvider.notifier);
     // A provider rebuild must release the old media facades before reusing them.
     final previousEntryCleanup = _runtime?.dispose();
@@ -253,6 +293,8 @@ class SessionController extends _$SessionController {
         if (!ref.mounted || !identical(_runtime, ownedRuntime)) return;
         keeper.disposePresenceTracking();
         devices.cancelPendingOperations();
+        chat.cancelPending();
+        reactions.cancelPending();
       },
       onCleanup: () => _performCleanup(ownedRuntime),
       activateInfrastructure: (owner) =>
@@ -332,7 +374,6 @@ class SessionController extends _$SessionController {
         state: RoomConnectionState.disconnected,
       ),
       participants: const ParticipantsState(),
-      chat: const ChatState(),
       turn: SessionTurnState(roomState: initialRoomState),
     );
   }
@@ -414,12 +455,9 @@ class SessionController extends _$SessionController {
       final isEnding =
           currentState.status != RoomStatus.ended &&
           nextState.status == RoomStatus.ended;
-      if (nextState.version < currentState.version ||
-          (nextState.version == currentState.version && !isEnding)) {
-        return false;
-      }
-
-      _dispatch(RoomStateChanged(nextState));
+      final previous = state;
+      _dispatch(RoomStateChanged(nextState, observedAt: DateTime.now()));
+      if (identical(state, previous)) return false;
       _applyMediaSubscriptionPermissions();
       return isEnding;
     }
@@ -791,11 +829,9 @@ class SessionController extends _$SessionController {
     _appliedMediaRecipients = null;
     _appliedAllParticipantsAllowed = null;
 
-    await _messaging?.disposeAdmissionTransport();
-
     if (ref.mounted && identical(runtime, owner)) {
       try {
-        ref.read(emojiReactionsProvider.notifier).clear();
+        reactionBuffer?.clear();
       } catch (_) {}
       if (session != null) {
         try {
@@ -899,6 +935,7 @@ class SessionController extends _$SessionController {
 
   void _onTransportEvent(SessionTransportEvent event) {
     if (!ref.mounted) return;
+    _packets.handle(event);
     switch (event) {
       case TransportMetadataChanged():
         _updateRoomState();
@@ -943,8 +980,8 @@ class SessionController extends _$SessionController {
           default:
             break;
         }
-      case TransportPacketReceived(:final packet):
-        compatibility.deliverLegacyPacket(messaging, packet, transport);
+      case TransportPacketReceived():
+        break;
       case TransportParticipantChanged(:final participant, :final present):
         if (present) {
           _onParticipantConnected(participant);

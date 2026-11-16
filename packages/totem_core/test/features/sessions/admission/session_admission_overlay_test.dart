@@ -33,6 +33,7 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 import '../../../setup.dart';
 import '../livekit_mocks.dart';
+import '../media/test_room_transport.dart';
 import '../session_test_mocks.dart';
 
 DateTime _testNow() => DateTime.utc(2026);
@@ -202,6 +203,9 @@ class _AdmissionHarness {
     });
     state = MockSessionRoomState();
     when(() => session.room).thenReturn(room);
+    when(
+      () => session.transport,
+    ).thenAnswer((_) => _transportFor(session.room!));
     when(() => state.connection).thenReturn(
       const session_state.ConnectionState(
         phase: session_state.SessionPhase.connected,
@@ -229,6 +233,22 @@ class _AdmissionHarness {
   var _requestCount = 0;
   final _AdmissionPreferences preferences;
   late Ref serviceRef;
+  final _transports = Map<Room, TestRoomTransport>.identity();
+  SessionAdmissionService? _admissionService;
+  TestRoomTransport _transportFor(Room room) =>
+      _transports.putIfAbsent(room, () {
+        final transport = TestRoomTransport(room);
+        final subscription = transport.events.listen((event) {
+          if (identical(session.transport, transport)) {
+            _admissionService?.handleTransportEvent(event);
+          }
+        });
+        addTearDown(() async {
+          await subscription.cancel();
+          await transport.dispose();
+        });
+        return transport;
+      });
   final sent = <AdmissionPacket>[];
   final mediaRecipients = <Set<String>>[];
   Future<void> Function(AdmissionPacket packet)? afterSend;
@@ -245,6 +265,7 @@ class _AdmissionHarness {
     currentSessionProvider.overrideWith((ref) {
       serviceRef = ref;
       final service = SessionAdmissionService(ref, session, now: _testNow);
+      _admissionService = service;
       when(() => session.admission).thenReturn(service);
       when(() => session.admissionState).thenAnswer((_) => state);
       when(() => session.options).thenReturn(

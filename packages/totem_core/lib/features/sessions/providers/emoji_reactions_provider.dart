@@ -1,10 +1,13 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:totem_core/features/sessions/models/session_emoji_reaction.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/services/session_reaction_buffer.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_core/shared/utils.dart';
-import 'package:uuid/uuid.dart';
+
+export 'package:totem_core/features/sessions/models/session_emoji_reaction.dart';
 
 part 'emoji_reactions_provider.g.dart';
 
@@ -12,82 +15,31 @@ final emojiReactionClockProvider = Provider<ValueGetter<DateTime>>(
   (ref) => DateTime.timestamp,
 );
 
-@immutable
-class SessionEmojiReaction {
-  const SessionEmojiReaction({
-    required this.timestamp,
-    required this.userIdentity,
-    required this.emoji,
-    required this.eventId,
-    required this.displayed,
-  });
-
-  final DateTime timestamp;
-  final String userIdentity;
-  final String emoji;
-  final String eventId;
-  final bool displayed;
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is SessionEmojiReaction && other.eventId == eventId;
-  }
-
-  @override
-  int get hashCode => eventId.hashCode;
-
-  SessionEmojiReaction copyWith({
-    DateTime? timestamp,
-    String? userIdentity,
-    String? emoji,
-    String? eventId,
-    bool? displayed,
-  }) {
-    return SessionEmojiReaction(
-      timestamp: timestamp ?? this.timestamp,
-      userIdentity: userIdentity ?? this.userIdentity,
-      emoji: emoji ?? this.emoji,
-      eventId: eventId ?? this.eventId,
-      displayed: displayed ?? this.displayed,
-    );
-  }
-}
-
-@Riverpod(keepAlive: true)
+@Riverpod(keepAlive: true, dependencies: [currentSession])
 class EmojiReactions extends _$EmojiReactions {
   static final emojiOverlayKey = GlobalKey<OverlayState>();
 
+  late SessionReactionBuffer _buffer;
   @override
-  List<SessionEmojiReaction> build() => <SessionEmojiReaction>[];
-
-  Future<bool> emitIncomingReaction(String userIdentity, String emoji) async {
-    final now = ref.read(emojiReactionClockProvider)();
-    final lastTime = state
-        .lastWhereOrNull((r) => r.userIdentity == userIdentity)
-        ?.timestamp;
-
-    // THROTTLE: If less than 0.3s has passed since this user's last emoji, ignore it.
-    if (lastTime != null &&
-        now.difference(lastTime) < const Duration(milliseconds: 300)) {
-      return false;
+  List<SessionEmojiReaction> build() {
+    final owned = ref.watch(currentSessionProvider)?.reactionBuffer;
+    final buffer = _buffer =
+        owned ??
+        SessionReactionBuffer(now: ref.read(emojiReactionClockProvider));
+    void update() {
+      if (ref.mounted) state = buffer.reactions;
     }
 
-    final entry = SessionEmojiReaction(
-      timestamp: now,
-      userIdentity: userIdentity,
-      emoji: emoji,
-      eventId: const Uuid().v1(),
-      displayed: false,
-    );
-
-    final newState = <SessionEmojiReaction>[...state, entry];
-    if (newState.length > 10) {
-      newState.removeAt(0);
-    }
-    state = newState;
-    return true;
+    buffer.addListener(update);
+    ref.onDispose(() {
+      buffer.removeListener(update);
+      if (owned == null) buffer.dispose();
+    });
+    return buffer.reactions;
   }
+
+  Future<bool> emitIncomingReaction(String identity, String emoji) =>
+      _buffer.emitIncomingReaction(identity, emoji);
 
   Future<void> displayReaction(
     BuildContext context,
@@ -97,17 +49,16 @@ class EmojiReactions extends _$EmojiReactions {
     /// The minimum amount of time the reaction will live before being removed.
     Duration minAliveDuration = const Duration(milliseconds: 4000),
   }) async {
+    final buffer = _buffer;
     // While the app is hidden (e.g. a backgrounded browser tab) no frames
     // are rendered, so overlay entries would accumulate unbuilt and all
     // animate at once on refocus. Nobody can see the reaction anyway.
     if (isAppHidden()) {
-      state = state.where((e) => e != reaction).toList();
+      buffer.remove(reaction);
       return;
     }
 
-    state = state
-        .map((r) => r == reaction ? r.copyWith(displayed: true) : r)
-        .toList();
+    buffer.markDisplayed(reaction);
     try {
       await Future.wait([
         presentEmojiReaction(
@@ -119,16 +70,16 @@ class EmojiReactions extends _$EmojiReactions {
         Future<void>.delayed(minAliveDuration),
       ]);
     } finally {
-      state = state.where((e) => e != reaction).toList();
+      buffer.remove(reaction);
     }
   }
 
   void clear() {
-    state = [];
+    _buffer.clear();
   }
 }
 
-@riverpod
+@Riverpod(dependencies: [EmojiReactions])
 List<String> participantEmojis(Ref ref, String participantIdentity) {
   return ref.watch(
     emojiReactionsProvider.select(

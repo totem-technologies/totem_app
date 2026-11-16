@@ -69,7 +69,7 @@ SessionRoomState _buildState({
         testParticipant('keeper-1', name: 'Keeper'),
       ],
     ),
-    chat: const ChatState(),
+
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',

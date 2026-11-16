@@ -1,27 +1,14 @@
-import 'dart:async';
 import 'dart:ui' as ui;
 
-import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide Session, SessionOptions;
 import 'package:material_ui/material_ui.dart';
-import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
-import 'package:totem_core/core/services/screen_protection_service.dart';
-import 'package:totem_core/features/permissions/model.dart';
-import 'package:totem_core/features/permissions/ui/recovery.dart';
-import 'package:totem_core/features/permissions/ui/recovery_content.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
-import 'package:totem_core/features/sessions/media/local_media.dart';
-import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
-import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
-import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
+import 'package:totem_core/features/sessions/presentation/session_presentation_effects.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
@@ -32,10 +19,6 @@ import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
 import 'package:totem_core/features/sessions/widgets/session_panels.dart';
-
-import 'package:totem_core/shared/router.dart';
-import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/notifications.dart';
 
 class VideoSessionScreen extends ConsumerStatefulWidget {
   const VideoSessionScreen({
@@ -66,21 +49,6 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
 class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   static var _didWarmEmojiGlyphs = false;
 
-  final _notificationController = NotificationController();
-
-  /// The page exit handler this screen registered, if any.
-  VoidCallback? _pageExitHandler;
-  NotificationRequest? _closeKeeperLeftNotification;
-  NotificationRequest? _offlineNotification;
-  Timer? _timeRemainingWarningTimer;
-  String? _timeRemainingWarningSessionSlug;
-  bool _hasShownTimeRemainingWarning = false;
-  bool? _lastIsOffline;
-  bool? _lastKeeperDisconnectedState;
-  RoomStatus? _lastKeeperDisconnectedRoomStatus;
-  StreamSubscription<MediaKind>? _deviceNoticeSubscription;
-  StreamSubscription<(MediaKind, TurnOnBlocker)>? _turnOnBlockedSubscription;
-
   bool _admissionOrientationDismissed = false;
   bool? _admissionOrientationEligible;
 
@@ -88,32 +56,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
   void initState() {
     super.initState();
 
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
-    ref.listenManual(currentSessionProvider, (_, session) {
-      // Permissions can change mid-call; tell the user when a device stops.
-      unawaited(_deviceNoticeSubscription?.cancel());
-      _deviceNoticeSubscription = session?.devices.deviceNeedsAttention.listen(
-        _showDeviceNotice,
-      );
-      unawaited(_turnOnBlockedSubscription?.cancel());
-      _turnOnBlockedSubscription = session?.devices.turnOnBlocked.listen(
-        _showTurnOnBlocked,
-      );
-
-      // Closing the tab skips the leave flow, so leave as the page unloads.
-      final handler = session?.leaveOnPageExit;
-      if (handler == _pageExitHandler) return;
-      _pageExitHandler = handler;
-      TotemRouter.instance.setPageExitHandler(handler);
-    }, fireImmediately: true);
-
-    _listenToBatteryChanges();
     _warmEmojiGlyphs();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _applyScreenCapturePolicy();
-    });
-
     ref
       ..listenManual(
         currentSessionProvider,
@@ -188,70 +131,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     }
   }
 
-  void _showDeviceNotice(MediaKind kind) {
-    final session = ref.read(currentSessionProvider);
-    if (!mounted || session == null) return;
-    final notice = deviceNotice(
-      kind,
-      ref.read(sessionDeviceControllerProvider(session)).problemOf(kind),
-    );
-    _notificationController.showTimed(
-      context,
-      icon: switch (kind) {
-        MediaKind.microphone => TotemIcons.microphoneOff,
-        MediaKind.camera => TotemIcons.cameraOff,
-      },
-      title: notice.title,
-      message: notice.message,
-      onTap: () =>
-          unawaited(turnOnMedia(context, ref, session.devices.control(kind))),
-    );
-  }
-
-  void _showTurnOnBlocked((MediaKind, TurnOnBlocker) blocked) {
-    if (!mounted) return;
-    final (kind, blocker) = blocked;
-    final device = switch (kind) {
-      MediaKind.microphone => 'microphone',
-      MediaKind.camera => 'camera',
-    };
-    final (title, message) = switch (blocker) {
-      TurnOnBlocker.keeperAway => (
-        "You can't unmute right now",
-        "The keeper is away. You can unmute once they're back.",
-      ),
-      TurnOnBlocker.connection => (
-        "Couldn't turn on your $device",
-        'Check your connection and try again.',
-      ),
-    };
-    _notificationController.showTimed(
-      context,
-      icon: switch (kind) {
-        MediaKind.microphone => TotemIcons.microphoneOff,
-        MediaKind.camera => TotemIcons.cameraOff,
-      },
-      title: title,
-      message: message,
-    );
-  }
-
-  @override
-  void dispose() {
-    unawaited(_deviceNoticeSubscription?.cancel());
-    unawaited(_turnOnBlockedSubscription?.cancel());
-    _notificationController.dispose();
-    _clearTimeRemainingWarningTimer();
-    _setScreenProtection(false);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    _batterySubscription?.cancel();
-    TotemRouter.instance.setTabCloseConfirmationEnabled(false);
-    if (_pageExitHandler case final handler?) {
-      TotemRouter.instance.clearPageExitHandler(handler);
-    }
-    super.dispose();
-  }
-
   Widget _buildAdmissionOrientation(String? prompt, {required bool desktop}) {
     final size = MediaQuery.sizeOf(context);
     final content = ConstrainedBox(
@@ -287,35 +166,6 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         child: Center(child: Card(elevation: 8, child: content)),
       ),
     );
-  }
-
-  void _setScreenProtection(bool enabled) {
-    try {
-      ScreenProtectionService.setCaptureProtectionEnabled(enabled);
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error setting screen capture policy to $enabled',
-      );
-    }
-  }
-
-  void _applyScreenCapturePolicy() {
-    if (!mounted) return;
-
-    try {
-      final email = ref.read(authControllerProvider).user?.email;
-      final shouldProtect =
-          !ScreenProtectionService.shouldAllowScreenCaptureForEmail(email);
-      _setScreenProtection(shouldProtect);
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Error applying screen capture policy',
-      );
-    }
   }
 
   void _warmEmojiGlyphs() {
@@ -356,203 +206,13 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     });
   }
 
-  void _onConnectivityChanged(bool isOffline, {bool? wasOffline}) {
-    if (!mounted) return;
-
-    final previousIsOffline = wasOffline ?? _lastIsOffline;
-    _lastIsOffline = isOffline;
-
-    if (!isOffline) {
-      _dismissOfflineNotification();
-      return;
-    }
-
-    if (previousIsOffline != false || _offlineNotification != null) {
-      return;
-    }
-
-    _offlineNotification = _notificationController.showPermanent(
-      context,
-      icon: TotemIcons.wifiOff,
-      title: "You're Offline",
-      message: 'Check your Wi-Fi or mobile data to continue.',
-    );
-  }
-
-  void _dismissOfflineNotification({bool immediately = false}) {
-    if (immediately) {
-      _offlineNotification?.dismissImmediately();
-    } else {
-      _offlineNotification?.dismissActive();
-    }
-    _offlineNotification = null;
-  }
-
-  void _dismissKeeperLeftNotification() {
-    _closeKeeperLeftNotification?.dismissActive();
-    _closeKeeperLeftNotification = null;
-  }
-
-  void _clearTimeRemainingWarningTimer() {
-    _timeRemainingWarningTimer?.cancel();
-    _timeRemainingWarningTimer = null;
-  }
-
-  void _scheduleTimeRemainingWarning(SessionDetailSchema sessionEvent) {
-    if (_timeRemainingWarningSessionSlug != sessionEvent.slug) {
-      _timeRemainingWarningSessionSlug = sessionEvent.slug;
-      _hasShownTimeRemainingWarning = false;
-      _clearTimeRemainingWarningTimer();
-    }
-
-    if (_hasShownTimeRemainingWarning ||
-        _timeRemainingWarningTimer?.isActive == true) {
-      return;
-    }
-
-    final endTime = sessionEvent.start.add(
-      Duration(minutes: sessionEvent.duration),
-    );
-    final warningTime = endTime.subtract(const Duration(minutes: 5));
-    final delay = warningTime.difference(widget.now());
-
-    _timeRemainingWarningTimer = Timer(
-      delay.isNegative ? Duration.zero : delay,
-      _showTimeRemainingWarning,
-    );
-  }
-
-  void _showTimeRemainingWarning() {
-    _timeRemainingWarningTimer = null;
-    if (!mounted || _hasShownTimeRemainingWarning) return;
-
-    _hasShownTimeRemainingWarning = true;
-    _notificationController.showTimed(
-      context,
-      icon: TotemIcons.clockCircle,
-      title: 'Time Remaining 5 min',
-      message: 'Thanks for your participation in this session today',
-    );
-  }
-
-  final battery = Battery();
-  bool _shouldShowLowBatteryWarning = false;
-  StreamSubscription<BatteryState>? _batterySubscription;
-  void _listenToBatteryChanges() {
-    try {
-      _batterySubscription = battery.onBatteryStateChanged.listen((
-        state,
-      ) async {
-        if (!mounted) return;
-        if (state == BatteryState.charging && _shouldShowLowBatteryWarning) {
-          setState(() => _shouldShowLowBatteryWarning = false);
-        } else if (state == BatteryState.discharging) {
-          try {
-            final level = await battery.batteryLevel;
-            if (level <= 20 && !_shouldShowLowBatteryWarning) {
-              _shouldShowLowBatteryWarning = true;
-              if (mounted) {
-                setState(() {});
-                _notificationController.showTimed(
-                  context,
-                  icon: TotemIcons.person,
-                  title: 'Your battery is running low',
-                  message: 'You might want to plug in.',
-                );
-              }
-            }
-          } catch (_) {
-            // Unable to get battery level
-          }
-        }
-      });
-    } catch (_) {
-      // Battery monitoring not available
-    }
-  }
-
-  void _onLivekitError(LiveKitException error) {
-    if (error is ConnectException ||
-        error is MediaConnectException ||
-        error is UnexpectedStateException ||
-        error is NegotiationError ||
-        error is TrackCreateException ||
-        error is TrackPublishException) {
-      // These errors are shown in the error screen
-    } else {
-      if (mounted) {
-        _notificationController.showError(
-          context,
-          icon: TotemIcons.errorOutlined,
-          title: 'Something went wrong',
-          message: 'Check your connection and try again.',
-        );
-      }
-    }
-  }
-
-  void _onAudioRouteChanged(
-    SessionDeviceState next, {
-    required bool speakerChanged,
-  }) {
-    _notificationController.showTimed(
-      context,
-      icon: next.isSpeakerphoneEnabled
-          ? TotemIcons.speakerOn
-          : TotemIcons.speakerOff,
-      title: speakerChanged && next.isSpeakerphoneEnabled
-          ? 'Audio switched to speakers'
-          : 'Audio switched to another device',
-      message: 'Your audio output has changed.',
-      urgentLatestWinsCategory: 'audio-route',
-    );
-  }
-
-  void _setKeeperDisconnectedNotification(
-    bool hasKeeperDisconnected,
-    RoomStatus roomStatus,
-  ) {
-    if (!mounted || !hasKeeperDisconnected || roomStatus != RoomStatus.active) {
-      _dismissKeeperLeftNotification();
-      return;
-    }
-
-    if (_closeKeeperLeftNotification != null) {
-      // do not show again
-      return;
-    }
-
-    _closeKeeperLeftNotification = _notificationController.showPermanent(
-      context,
-      icon: TotemIcons.pause,
-      title: 'The session has been paused.',
-      message: 'The keeper will be right back.',
-    );
-  }
-
-  void _syncKeeperDisconnectedNotification(
-    bool hasKeeperDisconnected,
-    RoomStatus roomStatus,
-  ) {
-    if (_lastKeeperDisconnectedState == hasKeeperDisconnected &&
-        _lastKeeperDisconnectedRoomStatus == roomStatus) {
-      return;
-    }
-
-    _lastKeeperDisconnectedState = hasKeeperDisconnected;
-    _lastKeeperDisconnectedRoomStatus = roomStatus;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (ref.read(connectionStateProvider) != RoomConnectionState.connected) {
-        return;
-      }
-      _setKeeperDisconnectedNotification(hasKeeperDisconnected, roomStatus);
-    });
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => SessionPresentationEffects(
+    now: widget.now,
+    child: _buildSession(context),
+  );
+
+  Widget _buildSession(BuildContext context) {
     final currentSession = ref.watch(currentSessionProvider);
     final currentRoomScreen = ref.watch(resolveCurrentScreenProvider);
     final currentSessionEvent = ref.watch(currentSessionEventProvider);
@@ -566,13 +226,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       );
     }
 
-    final hasKeeperDisconnected = ref.watch(hasKeeperDisconnectedProvider);
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
     final disconnectReason = ref.watch(disconnectionReasonProvider);
-
-    final cuesService = ref.read(sessionCuesServiceProvider);
-    final emojiNotifier = ref.read(emojiReactionsProvider.notifier);
 
     // Early transient join recovery check: keep showing the loading screen
     // when a join attempt failed transiently (e.g. signaling hiccup). This
@@ -596,143 +252,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         roomStatus == RoomStatus.ended ||
         currentRoomScreen == RoomScreen.disconnected ||
         currentRoomScreen == RoomScreen.error;
-    _notificationController.blocked = showingDisconnectedScreen;
-    TotemRouter.instance.setTabCloseConfirmationEnabled(
-      roomStatus != RoomStatus.waitingRoom && !showingDisconnectedScreen,
-    );
-
-    if (connectionState == RoomConnectionState.connected &&
-        roomStatus == RoomStatus.active &&
-        !currentSessionEvent.ended) {
-      _scheduleTimeRemainingWarning(currentSessionEvent);
-    } else {
-      _clearTimeRemainingWarningTimer();
-    }
-
-    if (connectionState == RoomConnectionState.connected &&
-        roomStatus != RoomStatus.ended) {
-      _syncKeeperDisconnectedNotification(hasKeeperDisconnected, roomStatus);
-    } else {
-      _dismissKeeperLeftNotification();
-    }
-
-    ref
-      ..listen(emojiReactionsProvider, (previous, next) {
-        if (!mounted) return;
-
-        final isListeningTurnScreen = currentRoomScreen == RoomScreen.listening;
-
-        for (final reaction in next.where((reaction) => !reaction.displayed)) {
-          emojiNotifier.displayReaction(
-            context,
-            reaction,
-            isListeningTurnScreen,
-          );
-        }
-      })
-      ..listen(sessionLivekitErrorProvider, (previous, next) {
-        if (next == null) return;
-        if (identical(previous, next)) return;
-        _onLivekitError(next);
-      })
-      ..listen(resolveCurrentScreenProvider, (previous, next) {
-        if (previous != RoomScreen.receiving && next == RoomScreen.receiving) {
-          cuesService.playTotemReceivedCue();
-        }
-
-        if (next == RoomScreen.disconnected || next == RoomScreen.error) {
-          _clearTimeRemainingWarningTimer();
-          _dismissOfflineNotification(immediately: true);
-        }
-      })
-      ..listen(roomStatusProvider, (previous, next) {
-        final isRoomOpeningTransition =
-            previous == RoomStatus.waitingRoom && next == RoomStatus.active;
-        final isRoomClosingTransition =
-            previous == RoomStatus.active && next == RoomStatus.ended;
-
-        if (isRoomOpeningTransition || isRoomClosingTransition) {
-          cuesService.playSessionTransitionCue();
-        }
-
-        switch (next) {
-          case RoomStatus.waitingRoom:
-          case RoomStatus.active:
-            break;
-          case RoomStatus.ended:
-            _clearTimeRemainingWarningTimer();
-        }
-      })
-      ..listen(connectionStateProvider, (previous, next) {
-        if (next == RoomConnectionState.disconnected ||
-            next == RoomConnectionState.error) {
-          _clearTimeRemainingWarningTimer();
-        }
-      })
-      ..listen(isOfflineProvider, (previous, next) {
-        if (!next.hasValue) return;
-        _onConnectivityChanged(next.value!, wasOffline: previous?.value);
-      });
-
-    final audioRouteNotifier = ref.read(
-      sessionDeviceControllerProvider(currentSession).notifier,
-    );
-
-    ref.listen(
-      sessionDeviceControllerProvider(currentSession).select(
-        (state) => (
-          speakerphone: state.isSpeakerphoneEnabled,
-          outputDeviceId: state.selectedAudioOutputDeviceId,
-          routeRevision: state.audioRouteRevision,
-        ),
-      ),
-      (previous, next) {
-        if (!mounted || previous == null || previous == next) return;
-        if (!audioRouteNotifier.audioRouteNotificationsEnabled) return;
-        if (ref.read(connectionStateProvider) !=
-            RoomConnectionState.connected) {
-          return;
-        }
-
-        _onAudioRouteChanged(
-          ref.read(sessionDeviceControllerProvider(currentSession)),
-          speakerChanged: previous.speakerphone != next.speakerphone,
-        );
-      },
-    );
-
-    if (kIsWeb) {
-      ref.listen(mediaDevicesProvider, (previous, next) {
-        if (!mounted ||
-            !audioRouteNotifier.audioRouteNotificationsEnabled ||
-            ref.read(connectionStateProvider) !=
-                RoomConnectionState.connected) {
-          return;
-        }
-        final deviceState = ref.read(
-          sessionDeviceControllerProvider(currentSession),
-        );
-        if (!deviceState.supportsAudioOutputSelection ||
-            deviceState.selectedAudioOutputDeviceId != null) {
-          return;
-        }
-        final oldOutputs = previous?.value;
-        final newOutputs = next.value;
-        if (oldOutputs == null || newOutputs == null) return;
-        final oldDefault = oldOutputs
-            .where((device) => device.kind == MediaDeviceKind.audioOutput)
-            .firstOrNull;
-        final newDefault = newOutputs
-            .where((device) => device.kind == MediaDeviceKind.audioOutput)
-            .firstOrNull;
-        if (oldDefault?.id != newDefault?.id ||
-            oldDefault?.label != newDefault?.label) {
-          _onAudioRouteChanged(deviceState, speakerChanged: false);
-        }
-      });
-    }
-
-    final isOffline = ref.watch(isOfflineProvider).value ?? _lastIsOffline;
+    final isOffline = ref.watch(isOfflineProvider).value ?? false;
 
     if (currentSessionEvent.ended || roomStatus == RoomStatus.ended) {
       return SessionPanels(
@@ -784,7 +304,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         waitingForAdmission ? RoomScreen.loading : currentRoomScreen,
         currentSessionEvent,
         disconnectReason,
-        isOffline: isOffline ?? false,
+        isOffline: isOffline,
       ),
     );
   }

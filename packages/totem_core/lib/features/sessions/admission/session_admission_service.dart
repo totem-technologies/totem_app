@@ -3,22 +3,21 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart'
-    hide Session, SessionOptions;
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
-import 'package:totem_core/features/sessions/admission/admission_transport.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_channel.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 /// Admission coordinator retained by the active session, independently of UI.
 class SessionAdmissionService extends ChangeNotifier {
   SessionAdmissionService(this.ref, this.session, {this.now});
 
-  LiveKitAdmissionTransport? _transport;
+  SessionAdmissionChannel? _transport;
   KeeperAdmissionController? _keeperController;
   ClientAdmissionRosterController? _clientController;
   // Cancelled by _detachAdmission.
@@ -28,7 +27,7 @@ class SessionAdmissionService extends ChangeNotifier {
   // ignore: cancel_subscriptions
   StreamSubscription<AdmissionRoster?>? _clientChanges;
 
-  Room? _room;
+  SessionTransport? _room;
   String? _keeperIdentity;
   KeeperAdmissionRosterStore? _attachedKeeperRoster;
   Future<void> Function()? _saveKeeperRoster;
@@ -55,6 +54,40 @@ class SessionAdmissionService extends ChangeNotifier {
   Future<void> disconnect() async {
     await _synchronization;
     await _detachAdmission();
+  }
+
+  void handleTransportEvent(SessionTransportEvent event) =>
+      _transport?.handle(event);
+
+  Future<void> sendAdmissionJoined(AdmissionRequest request) =>
+      _sendAdmissionOutcome(request, joined: true);
+  Future<void> sendAdmissionJoinFailed(AdmissionRequest request) =>
+      _sendAdmissionOutcome(request, joined: false);
+  Future<void> _sendAdmissionOutcome(
+    AdmissionRequest request, {
+    required bool joined,
+  }) async {
+    await _synchronization;
+    final connection = session.transport;
+    if (!mounted ||
+        connection == null ||
+        connection.connectionState !=
+            SessionTransportConnectionState.connected ||
+        connection.localIdentity != request.senderIdentity ||
+        (joined &&
+            session.admissionState.connectionState !=
+                RoomConnectionState.connected)) {
+      throw StateError('Admission sender is not connected to the session room');
+    }
+    if (_room != null && !identical(_room, connection)) {
+      await _detachAdmission();
+    }
+    final channel = _transport ??= SessionAdmissionChannel(
+      connection,
+      now: now,
+    );
+    _room = connection;
+    await channel.sendJoinOutcome(request, joined: joined);
   }
 
   KeeperAdmissionController? get keeperController => _keeperController;
@@ -114,7 +147,7 @@ class SessionAdmissionService extends ChangeNotifier {
     if (!mounted) return;
     final state = session.admissionState;
     final event = session.session;
-    final room = session.room;
+    final room = session.transport;
     final keeperIdentity = state.roomState.keeper;
     _sessionEnded =
         state.roomState.status == RoomStatus.ended || event?.ended == true;
@@ -132,7 +165,7 @@ class SessionAdmissionService extends ChangeNotifier {
       return;
     }
 
-    final isKeeper = room.localParticipant?.identity == keeperIdentity;
+    final isKeeper = room.localIdentity == keeperIdentity;
     final declinedIdentities = isKeeper
         ? ref
               .read(
@@ -191,7 +224,10 @@ class SessionAdmissionService extends ChangeNotifier {
       return;
     }
 
-    await _detachAdmission(clearAdmitted: !isKeeper);
+    await _detachAdmission(
+      clearAdmitted: !isKeeper,
+      disposeChannel: !identical(_room, room),
+    );
     if (!mounted) return;
     if (isKeeper) {
       await _recoverRevocations(
@@ -199,9 +235,9 @@ class SessionAdmissionService extends ChangeNotifier {
         restoredRoster!,
         ref.read(rosterProvider.notifier).persist,
       );
-      if (!mounted || !identical(session.room, room)) return;
+      if (!mounted || !identical(session.transport, room)) return;
     }
-    final transport = LiveKitAdmissionTransport(room, now: now);
+    final transport = _transport ?? SessionAdmissionChannel(room, now: now);
     _transport = transport;
     _room = room;
     _keeperIdentity = keeperIdentity;
@@ -336,6 +372,7 @@ class SessionAdmissionService extends ChangeNotifier {
 
   Future<void> _detachAdmission({
     bool clearAdmitted = true,
+    bool disposeChannel = true,
     bool endSession = false,
   }) {
     if (endSession && ref.mounted) {
@@ -358,10 +395,10 @@ class SessionAdmissionService extends ChangeNotifier {
     final clientChanges = _clientChanges;
     _keeperController = null;
     _clientController = null;
-    _transport = null;
+    if (disposeChannel) _transport = null;
     _keeperChanges = null;
     _clientChanges = null;
-    _room = null;
+    if (disposeChannel) _room = null;
     _keeperIdentity = null;
     _busy = false;
     if (clearAdmitted) _syncAdmittedIdentities(const []);
@@ -373,7 +410,7 @@ class SessionAdmissionService extends ChangeNotifier {
       if (clientChanges != null) clientChanges.cancel(),
       ?keeperDispose,
       ?clientDispose,
-    ]).then((_) => transport?.dispose());
+    ]).then((_) => disposeChannel ? transport?.dispose() : null);
   }
 
   Future<void> decide(

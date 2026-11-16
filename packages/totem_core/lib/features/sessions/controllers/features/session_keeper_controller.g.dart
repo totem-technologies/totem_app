@@ -8,12 +8,15 @@ part of 'session_keeper_controller.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Compatibility facade and composition boundary. Services own feature logic.
 
 @ProviderFor(SessionKeeperController)
 final sessionKeeperControllerProvider = SessionKeeperControllerFamily._();
 
+/// Compatibility facade and composition boundary. Services own feature logic.
 final class SessionKeeperControllerProvider
     extends $NotifierProvider<SessionKeeperController, void> {
+  /// Compatibility facade and composition boundary. Services own feature logic.
   SessionKeeperControllerProvider._({
     required SessionKeeperControllerFamily super.from,
     required SessionController super.argument,
@@ -60,7 +63,9 @@ final class SessionKeeperControllerProvider
 }
 
 String _$sessionKeeperControllerHash() =>
-    r'0ac211892ef86b1957fa27e2b84801a4f96c87b1';
+    r'24a99323a717fca444d13a7cb36254f60d18ed2c';
+
+/// Compatibility facade and composition boundary. Services own feature logic.
 
 final class SessionKeeperControllerFamily extends $Family
     with
@@ -80,12 +85,16 @@ final class SessionKeeperControllerFamily extends $Family
         isAutoDispose: true,
       );
 
+  /// Compatibility facade and composition boundary. Services own feature logic.
+
   SessionKeeperControllerProvider call(SessionController session) =>
       SessionKeeperControllerProvider._(argument: session, from: this);
 
   @override
   String toString() => r'sessionKeeperControllerProvider';
 }
+
+/// Compatibility facade and composition boundary. Services own feature logic.
 
 abstract class _$SessionKeeperController extends $Notifier<void> {
   late final _$args = ref.$arg as SessionController;

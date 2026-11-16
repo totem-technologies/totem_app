@@ -689,7 +689,7 @@ void main() {
               if (participant.identity != state.roomState.keeper) participant,
           ],
         ),
-        chat: state.chat,
+
         turn: SessionTurnState(
           roomState: state.roomState.copyWith(status: RoomStatus.active),
         ),

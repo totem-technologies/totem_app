@@ -3192,9 +3192,12 @@ void main() {
             ),
           );
 
-        final state = container.read(sessionControllerProvider(options));
-        check(state.messages).length.equals(1);
-        check(state.messages.first.message).equals('hello');
+        final messages = container
+            .read(sessionControllerProvider(options).notifier)
+            .chat
+            .messages;
+        check(messages).length.equals(1);
+        check(messages.first.message).equals('hello');
       });
 
       test('markParticipantRemoved updates removed flag', () {

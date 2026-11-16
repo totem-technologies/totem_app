@@ -16,8 +16,8 @@ class EndSessionConfirmationDialog extends StatelessWidget {
       content: 'Are you sure you want to end the session?',
       confirmButtonText: 'End session',
       onConfirm: () async {
-        await endSessionWithErrorHandling(context, session);
-        if (context.mounted) Navigator.of(context).pop();
+        final ended = await endSessionWithErrorHandling(context, session);
+        if (ended && context.mounted) Navigator.of(context).pop();
       },
     );
   }

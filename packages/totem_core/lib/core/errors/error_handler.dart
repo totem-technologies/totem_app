@@ -134,7 +134,9 @@ class ErrorHandler {
 
   /// Handle an exception and return a user-friendly error message
   static String getUserFriendlyErrorMessage(Object error) {
-    if (is404(error)) {
+    if (error is AppFeatureException) {
+      return error.message;
+    } else if (is404(error)) {
       return "This page doesn't exist";
     } else if (error is AppNetworkException ||
         error is DioException ||

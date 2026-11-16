@@ -1,6 +1,6 @@
 # Sessions architecture contract
 
-This document describes the target ownership model and records current gaps. It is a migration contract, not a claim that every boundary is implemented. Keep PR #190's `LocalMedia`/`RoomMedia` abstractions, client-side cooperative admission, Safari track reuse, and video rendering safeguards.
+This document describes the implemented ownership model through Phase 6 and records the remaining infrastructure compatibility boundaries. Historical phase notes below distinguish completed changes from remaining SDK migration work. Keep PR #190's `LocalMedia`/`RoomMedia` abstractions, client-side cooperative admission, Safari track reuse, and video rendering safeguards.
 
 ## Ownership matrix
 
@@ -8,18 +8,19 @@ This document describes the target ownership model and records current gaps. It 
 |---|---|---|---|
 | Connection lifecycle | Session connection coordinator; LiveKit is transport truth | `SessionRuntime` alone owns active attempts and transport lifetime; `SessionController` reconciles feature state; the adapter owns SDK resources | Screens observe; connection scoped to one session; never persisted |
 | Server room state | Versioned backend room-state stream, reduced into `SessionRoomState` | `SessionStateReducer` is the client projection; only accepted server events mutate it | Controllers/widgets observe projection; reset on connection identity change; no local persistence |
-| Turn order, participants | Same canonical server room-state projection | Reducer applies authoritative updates; UI may issue commands, not edit roster/order | Widgets observe; no independent mirrored domain copy |
+| Turn order | Backend `RoomState` | `SessionTurnService` issues commands; reducer accepts monotonic versions | Widgets observe selectors; no local order authority |
+| Participant presence/metadata | `SessionTransport` | `SessionController` maintains its immutable `ParticipantInfo` projection; admission derives visibility | Widgets observe; no independent presence authority |
 | Capture | Local device / `LocalMedia` | `PreJoinMediaController` before handoff; room media owner after handoff; no widget capture ownership | Preview/room renderers observe; device scoped then session scoped; release exactly once |
 | Publication | LiveKit transport, mediated by `RoomMedia`/adapter | `LiveKitLocalMedia` is the only publication boundary | Session controller and UI observe; release before disconnect |
 | Device selection | Local device preferences/provider | `SessionDeviceController` may select; media adapter applies | Controls observe; device lifetime; persistence only where explicit user preference exists |
 | Admission decisions | Cooperative client-side admission protocol | Admission controllers and keeper actions mutate decisions; panel is presentation only | Waiting/admitted/declined UI observes; session scoped, recoverable from protocol state; no backend authority implied |
 | Admitted roster | Admission protocol projection | `KeeperAdmissionRoster` currently owns a projection; must not become an independent competing room roster | Admission UI observes; reset per session |
-| Chat | Messaging service/protocol | `SessionMessagingController` sends and receives; widgets submit intents | Chat UI observes; session lifetime; persistence follows server history contract |
-| Reactions | Ephemeral client events | `emojiReactionsProvider`/controller owns transient events | UI observes; expire/clear on session end; not durable |
+| Chat | `SessionChatService` | Validates/encodes/decodes, deduplicates, sends, and appends immutable arrival-ordered messages | Read-only `sessionChatMessagesProvider` / `sessionMessagesProvider`; entry-local, no persistence |
+| Reactions | Entry-owned `SessionReactionBuffer` | `SessionReactionsService` adapts typed packets; scoped `EmojiReactions` projects the buffer and presents it | Per-entry throttle and maximum 10 pending entries; immutable snapshots, no persistence |
 | Prompts | Client session domain/controller | `SessionPromptsController` mutates prompt state from allowed actions/events | Prompt widgets observe; session scoped |
 | Panel visibility | Presentation state | Each active session presentation scope owns its own panel selection/visibility | Widgets only; reset with presentation/session; never server state |
 | Timers | Domain-specific timer owner (admission or turn) | Owning controller creates/cancels; widgets render remaining state | Session scoped; cancel on terminal transition; no persistence unless protocol defines it |
-| Notifications | Session notification owner | Controllers emit; presentation displays | Do not use widget lifetime as service lifetime; clear/cancel on session end |
+| Notifications and cues | Presentation effect owners | `SessionStatusEffects`, `SessionDeviceEffects`, `SessionEnvironmentEffects`; shared queue owned by `SessionPresentationEffects` | Registered once per mounted entry; cancel/dismiss on replacement or disposal; no domain resources |
 | Errors | Operation/connection owner creates typed error state | Controllers translate boundary failures; UI renders/retries via intents | Scoped to operation/session; clear only through defined recovery or reset |
 
 A derived view, selector, or immutable projection is legitimate when it has one upstream authority and cannot independently accept writes. Two writable copies of participants, connection status, room state, or admission state are a defect.
@@ -60,7 +61,7 @@ The session scope is a container for dependencies and presentation projections, 
 - **Phase 3 (implemented):** entry-scoped presentation and room-owned transient routes.
 - **Phase 4 (partially implemented on this branch):** complete the remaining SDK integrations listed below; preserve the runtime ownership boundary.
 - **Phase 5 (implemented):** runtime attempts, single-flight joining, lease adoption, coordinated cleanup, and media/polling ownership.
-- **Phase 6:** consolidate remaining feature state ownership (messaging, prompts, reactions, timers, notifications, errors), remove obsolete mirrors, and validate teardown end to end.
+- **Phase 6 (implemented):** typed packet routing, feature-owned chat/turn/moderation/presence, explicit command failure behavior, deterministic reduction, and separate presentation effect lifetimes.
 
 ## Phase 2 admission implementation
 
@@ -111,9 +112,9 @@ failure types. The controller is removed from the direct SDK import allowlist.
 
 `media/session_transport_compatibility.dart` isolates the remaining bridges:
 
-- **B2:** messaging receives its original SDK data event through a weak-keyed
-  adapter cache, retaining sender information even if presence changes. The
-  controller's read-through `room` getter also supports existing messaging.
+- **B2 (completed in Phase 6):** feature messaging uses typed transport packets.
+  The weak SDK-event cache and event-conversion bridge are removed. Chat,
+  reactions, moderation, and admission receipts do not use SDK event types.
 - **C1:** pre-join capture options, retained-track publication, and the existing
   SDK-shaped error presentation remain infrastructure integrations. The
   existing state/error consumers are preserved, not migrated in B1.
@@ -122,12 +123,14 @@ failure types. The controller is removed from the direct SDK import allowlist.
   `ConnectedSessionLease.deferred`: after prior cleanup, its single claim wraps
   that same room and attaches the stable media facades. No second connection is
   made. The pending flow releases admission listeners before calling this path.
-  Remaining SDK migration must replace the raw argument and remove read-through
-  access in admission/presentation; it must preserve this ownership mechanism.
+  Remaining SDK migration must replace the raw pending argument and the SDK-shaped
+  state/presentation types. Active admission no longer uses read-through SDK access;
+  it receives the runtime's typed events. Preserve the ownership mechanism.
 
-Phase 4 remains incomplete until messaging, pre-join, admission, SDK-dependent
-state, and connected ownership transfer finish their later milestones. B1 does
-not introduce a second production connection path or a new SDK allowlist entry.
+The remaining Phase 4 compatibility work on this branch is pending pre-join SDK
+construction/options and SDK-shaped state/error/presentation types. Active feature
+routing, admission, and receipts now use the application transport. No second
+production connection path or new SDK allowlist exemption was introduced.
 
 
 ## Phase 5: implemented lifecycle ownership
@@ -242,3 +245,117 @@ not replace real-device Safari publication and mobile foreground-service checks.
 The existing raw-room compatibility boundary and SDK-shaped domain errors are
 remaining Phase 4 work on this branch. There is no extra SDK import exemption,
 backend change, new protocol, or competing active connection owner in Phase 5.
+
+
+## Phase 6: implemented feature and effect separation
+
+| Concern | Authoritative owner / public interface | Dependency and lifetime contract |
+|---|---|---|
+| Packet dispatch | `SessionPacketRouter.handle(SessionTransportEvent)` | Stateless topic dispatch; fed once by the runtime's existing listener; no protocol validation or subscriptions |
+| Chat | `SessionChatService.send`, `receive`, immutable `messages` | Explicit connection/role getters and injected clock/ID generator; entry-owned, disposed by its session provider |
+| Reactions | `SessionReactionsService.receive/send` → `SessionReactionBuffer` | Explicit transport, Keeper-presence, and emission dependencies; entry-owned per-sender throttle/bounded state, read-only scoped presentation projection |
+| Turn commands | `SessionTurnService.passTotem/acceptTotem/start/end/reorder/forcePassTotem/setPrompt` | Explicit `SessionTurnBackend`, canonical state getter/commit callback, attempt-validity capture, and device operations; no SDK or widget dependencies |
+| Moderation | `SessionModerationService.removeParticipant/banParticipant/unbanParticipant/muteParticipant/disableParticipantCamera/muteEveryone/receive` | Explicit backend, admission revocation preparation, state commit, and removal/leave callbacks; prepared journal completes after backend success even if the service disposes |
+| Keeper presence | `SessionKeeperPresence.disconnected/connected/expired/cancel/dispose` | One owned timeout; explicit mute/leave dependencies; cancellation on reconnect/cleanup, terminal disposal |
+| Backend command boundary | `SessionCommandBackend` implements `SessionTurnBackend` and `SessionModerationBackend` | Existing generated repository endpoints retain version retry/reconciliation and error diagnostics; services never reach through another controller to invoke HTTP |
+| Admission and receipts | `SessionAdmissionService`, `SessionAdmissionChannel`, `AdmissionJoinReceipt` | Active channel receives typed events without a transport subscription; receipt recovery shared with the pending SDK adapter; channel cannot disconnect/dispose its connection |
+| Prepared prompts | Existing `SessionPromptsController` | Remains the only prepared-prompt owner; selecting an active prompt is a versioned room command, not a second prompt collection |
+| Presentation effects | `SessionPresentationEffects` plus status/device/environment widgets | Shared notification precedence; each owner registers, updates, and cancels its own timers/listeners; domain services never receive contexts or routes |
+
+`SessionMessagingController` and `SessionKeeperController` are thin compatibility
+facades. They delegate to these owners and hold no messages, receipt channel,
+transport listeners, turn business rules, or presence timer of their own.
+Session runtime still owns connection lifetime, not feature state. The composition
+boundary supplies explicit service dependencies; feature services can be tested
+without mounting widgets or constructing LiveKit rooms.
+
+### Protocol routing and state
+
+`lk-chat-topic`, `lk-emoji-topic`, `lk-participant-removed-topic`, and the existing
+admission topic retain their payloads and publication policies. The router sends
+only the matching topic to its owner; unknown topics are ignored. Admission also
+receives presence, metadata, and connection events. Active admission has no extra
+SDK listener. The pending adapter continues owning its distinct waiting connection
+until handoff; `AdmissionJoinReceipt` supplies the same two-second and event-driven
+retry/correlation/readiness-confirmation behavior on both paths.
+
+Chat enforces Keeper-only Everyone messages, participant-to-Keeper private sends,
+Keeper-to-participant private sends, presence validation on outgoing recipients,
+and matching role/local-recipient validation on receive. Chat is reliable and
+private sends target exactly one identity. Duplicate IDs never append or notify.
+Reliable transport arrival order remains canonical: peer timestamps are display
+data and cannot reorder history or unread arrivals. Malformed packets and wrong
+topics cannot enter chat. There is no persistent chat store.
+
+`ChatState`, the reducer chat event, and chat message storage in `SessionRoomState`
+are removed. Read-only provider projections subscribe directly to the chat owner;
+chat updates no longer reconstruct room/participant/turn state. Thread selection,
+unread identifiers, panel selection, and the responsive host remain presentation
+state. Existing two-person/Everyone reconciliation is preserved. Reactions also
+have an entry-owned buffer: neither an older connection's events nor its cleanup
+can change a newer entry's throttle or presentation state. The scoped reaction
+provider projects the buffer; it no longer supplies app-global active state.
+
+The reducer now owns monotonic version acceptance, including the existing special
+case for an equal-version ended transition. It uses the explicit
+`RoomStateChanged.observedAt` timestamp. Replaying the same state/event is
+deterministic; no reducer reads the wall clock. The backend model currently has
+no authoritative turn-start timestamp, so the controller supplies observation
+time at its boundary. `SessionOptions` equality/hash now includes camera,
+microphone, speaker, and capture options as well as slug/token, preventing a
+cached family from concealing changed join preferences. Runtime entry identity
+continues distinguishing leave/re-entry independently of configuration equality.
+
+### Command outcomes and partial failures
+
+Primary services return `Future<void>` on committed command success and preserve
+original backend exceptions on failure. `SessionCommandException` carries a typed
+failure kind and actionable feature message for invalid state, unauthorized work,
+conflict, superseded attempts, or partial success. `lastFailure` retains a
+classification plus original diagnostics. The old dialog Boolean callbacks remain
+compatibility adapters: they return true only on success and propagate failures.
+Chat uses `ChatSendOutcome`; its legacy composer Boolean means only whether to
+clear the draft. `TurnAcceptance` separately describes accepted turns with an
+unavailable device.
+
+| Operation | Ordering and recovery |
+|---|---|
+| Pass Totem | Validate → await backend → accept canonical version → mute if no longer speaking. Backend rejection never changes the microphone; no compensating unmute can override the user's choice. Failed muting after commit is explicit partial success with guidance to mute or leave. |
+| Accept Totem | Validate → await backend → commit accepted turn → attempt capture. A device failure flags the established device-attention mechanism and returns accepted-device-unavailable; it does not reject or undo the accepted turn. A changed microphone intent revision while pending suppresses automatic capture. |
+| Concurrent turn commands | One command per turn owner; overlapping intents are rejected deterministically. Every asynchronous commit checks the captured session attempt and server version. Stale responses cannot apply media policy. |
+| Start/end/reorder/force-pass/active prompt | Backend first, then versioned state; no speculative local-media mutation. Failures propagate to the existing error UI. End/leave confirmations stay open on failure; explicit Retry is awaited before completing the original action. |
+| Remove participant | Prepare admission recovery → backend removal → captured durable revocation journal. Backend success is not rolled back if persistence fails; partial success tells the user to keep the session open and retry admission recovery. |
+| Ban/unban/mute/camera restriction | Existing backend commands remain authoritative; versioned state is committed only for the active attempt. No optimistic local capture change is performed. |
+| Incoming removal | Validate Keeper/server sender and local target → mark removal once per connection → existing awaited lifecycle leave/cleanup path. Repeated packets cannot trigger duplicate removal cleanup. |
+
+A client cannot cancel an HTTP mutation already accepted by the backend or make
+it atomic with local storage/media. Timeouts and conflicts retain existing
+repository diagnostics and canonical polling recovery. This implementation makes
+those failures explicit and fences local effects; it does not promise rollback.
+Admission remains cooperative and client-side.
+
+### Presentation lifecycle and validation
+
+`VideoSessionScreen` now composes room views and admission orientation. Status
+notifications, offline/Keeper messages, time warnings, device recovery notices,
+audio route messages, battery monitoring, capture protection, page-exit
+registration, and cues have presentation owners. One shared notification queue
+preserves blocking/priority behavior. Device source generations reject callbacks
+from replaced sessions; source replacement and disposal cancel listeners. Battery
+and delayed notification work checks mounting after asynchronous boundaries.
+Only the entry change replaces effect owners; ordinary rebuilds do not register
+additional streams or remount media surfaces.
+
+New headless tests cover topic isolation, chat permissions/deduplication/arrival
+ordering, reactions with the real throttle, moderation/journal partial success,
+turn/media ordering, concurrent/stale commands, and admission channels without
+connection ownership. Existing fixtures now project chat from its owner. Reducer
+regressions prove deterministic timing and monotonic versions. Widget regressions
+cover effect registration/replacement/disposal and end/leave failure/retry flows.
+The SDK guard no longer allowlists messaging or the active admission service.
+
+Remaining limitations are the pre-existing Phase 4 SDK compatibility types and
+pending-room boundary described above, cooperative admission, and real-device
+validation in the Phase 5 smoke matrix. No task in this phase requires a backend
+change. Server-enforced admission or atomic backend/client persistence would be a
+separate product/backend contract, not an implied guarantee of this refactor.

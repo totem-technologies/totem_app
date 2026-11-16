@@ -3,347 +3,126 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_core/features/permissions/media_control.dart';
 import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/repositories/session_repository.dart';
-import 'package:totem_core/shared/logger.dart';
+import 'package:totem_core/features/sessions/repositories/session_command_backend.dart';
+import 'package:totem_core/features/sessions/services/session_keeper_presence.dart';
+import 'package:totem_core/features/sessions/services/session_moderation_service.dart';
+import 'package:totem_core/features/sessions/services/session_turn_service.dart';
 
 part 'session_keeper_controller.g.dart';
 
+/// Compatibility facade and composition boundary. Services own feature logic.
 @riverpod
 class SessionKeeperController extends _$SessionKeeperController {
   static const keeperDisconnectionTimeout = Duration(minutes: 3);
-
+  late SessionTurnService _turns;
+  SessionTurnService get turns => _turns;
+  late SessionModerationService _moderation;
+  SessionModerationService get moderation => _moderation;
+  late SessionKeeperPresence _presence;
+  SessionKeeperPresence get presence => _presence;
   @visibleForTesting
-  Timer? keeperDisconnectedTimer;
+  Timer? get keeperDisconnectedTimer => presence.timer;
 
   @override
   void build(SessionController session) {
-    ref.onDispose(disposePresenceTracking);
-  }
+    final backend = SessionCommandBackend(ref, session.options.sessionSlug);
+    bool Function() captureValidity() {
+      final attempt = session.activeAttempt;
+      return () => ref.mounted && (attempt?.isCurrent ?? true);
+    }
 
-  SessionRoomState get _state => session.state;
-
-  String get _sessionSlug => session.options.sessionSlug;
-
-  int get _roomVersion => _state.roomState.version;
-
-  void onKeeperDisconnected(RoomStatus status) {
-    if (status != RoomStatus.active) return;
-
-    unawaited(session.devices.disableMicrophone());
-
-    keeperDisconnectedTimer?.cancel();
-    keeperDisconnectedTimer = Timer(keeperDisconnectionTimeout, () {
-      unawaited(onKeeperDisconnectedTimeout());
+    _turns = SessionTurnService(
+      backend: backend,
+      state: () => session.state,
+      localIdentity: () => session.transport?.localIdentity,
+      isKeeper: session.isCurrentUserKeeper,
+      applyState: session.applyRoomState,
+      disableMicrophone: session.devices.disableMicrophone,
+      enableMicrophone: () => session.devices.turnOn(MediaKind.microphone),
+      microphoneRevision: () => session.devices.microphoneIntentRevision,
+      microphoneDesired: () => true,
+      microphoneEnabled: () => session.devices.isMicrophoneEnabled,
+      flagMicrophoneProblem: () =>
+          session.devices.flagNeedsAttention(MediaKind.microphone),
+      captureValidity: captureValidity,
+    );
+    _moderation = SessionModerationService(
+      backend: backend,
+      state: () => session.state,
+      isKeeper: session.isCurrentUserKeeper,
+      transport: () => session.transport,
+      applyState: session.applyRoomState,
+      prepareRemoval: () => session.admission.prepareRemoval(),
+      markRemoved: session.markParticipantRemoved,
+      leave: session.disconnectFromRoom,
+      onError: (error, stack) => ErrorHandler.logError(
+        error,
+        stackTrace: stack,
+        message: 'Session moderation failed',
+      ),
+      captureValidity: captureValidity,
+    );
+    _presence = SessionKeeperPresence(
+      mute: session.devices.disableMicrophone,
+      leave: session.disconnectFromRoom,
+      onError: (error, stack) => ErrorHandler.logError(
+        error,
+        stackTrace: stack,
+        message: 'Keeper presence operation failed',
+      ),
+    );
+    ref.onDispose(() {
+      turns.dispose();
+      moderation.dispose();
+      presence.dispose();
     });
   }
 
-  void onKeeperConnected() {
-    keeperDisconnectedTimer?.cancel();
-    keeperDisconnectedTimer = null;
+  void onKeeperDisconnected(RoomStatus status) => presence.disconnected(status);
+  void onKeeperConnected() => presence.connected();
+  Future<void> onKeeperDisconnectedTimeout() => presence.expired();
+  void disposePresenceTracking() => presence.cancel();
+  Future<void> passTotem({String? customPrompt, int? sessionPromptId}) => turns
+      .passTotem(customPrompt: customPrompt, sessionPromptId: sessionPromptId);
+  Future<void> acceptTotem() async {
+    await turns.acceptTotem();
   }
 
-  Future<void> onKeeperDisconnectedTimeout() async {
-    keeperDisconnectedTimer?.cancel();
-    keeperDisconnectedTimer = null;
-
-    await session.disconnectFromRoom();
-  }
-
-  void disposePresenceTracking() {
-    keeperDisconnectedTimer?.cancel();
-    keeperDisconnectedTimer = null;
-  }
-
-  Future<T> _run<T>({
-    required AsyncValueGetter<T> action,
-    required String errorMessage,
-    Duration? timeout,
-  }) async {
-    final attempt = session.activeAttempt;
-    try {
-      final pending = action();
-      final result = timeout == null
-          ? await pending
-          : await pending.timeout(
-              timeout,
-              onTimeout: () => throw AppNetworkException.timeout(),
-            );
-      // Moderation revocation journals still complete after backend success.
-      // Room-state responses, however, cannot enter a replacement connection.
-      if (result is RoomState &&
-          (!ref.mounted || (attempt != null && !attempt.isCurrent))) {
-        throw StateError(
-          'Session command completed after its connection ended',
-        );
-      }
-      return result;
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: errorMessage,
-      );
-      rethrow;
-    }
-  }
-
-  Future<void> passTotem({String? customPrompt, int? sessionPromptId}) async {
-    final room = session.room;
-    if (room == null || !_state.amSpeaking(room.localParticipant?.identity)) {
-      throw StateError("Not the user's turn to pass the totem");
-    }
-    if (!_state.hasKeeper) {
-      throw StateError('No keeper in the session to pass the totem');
-    }
-    if (customPrompt != null && sessionPromptId != null) {
-      throw ArgumentError(
-        'Choose either a custom prompt or a prepared prompt ID.',
-      );
-    }
-    if ((customPrompt != null || sessionPromptId != null) &&
-        !session.isCurrentUserKeeper()) {
-      throw StateError(
-        'Only the keeper can include a round message when passing the totem',
-      );
-    }
-
-    final attempt = session.activeAttempt;
-    await session.devices.disableMicrophone();
-    attempt?.requireCurrent();
-    final roomState = await _run(
-      action: () => ref.read(
-        passTotemProvider(
-          _sessionSlug,
-          _roomVersion,
-          roundMessage: customPrompt,
-          sessionPromptId: sessionPromptId,
-        ).future,
-      ),
-      errorMessage: 'Error passing totem',
-    );
-    session.applyRoomState(roomState);
-    logger.i('Passed totem successfully');
-  }
-
+  Future<void> reorder(List<String> order) => turns.reorder(order);
+  Future<void> forcePassTotem() => turns.forcePassTotem();
   Future<void> setPrompt({
     String? customPrompt,
     int? sessionPromptId,
     bool clearPrompt = false,
-  }) async {
-    if (!session.isCurrentUserKeeper()) return;
-    if ([
-          customPrompt != null,
-          sessionPromptId != null,
-          clearPrompt,
-        ].where((value) => value).length !=
-        1) {
-      throw ArgumentError('Choose one prompt action.');
-    }
-    final roomState = await _run(
-      action: () => ref.read(
-        setSessionPromptProvider(
-          _sessionSlug,
-          _roomVersion,
-          customPrompt: customPrompt,
-          sessionPromptId: sessionPromptId,
-          clearPrompt: clearPrompt,
-        ).future,
-      ),
-      errorMessage: 'Error setting session prompt',
-    );
-    session.applyRoomState(roomState);
-  }
-
-  /// Accepts the totem and enables the microphone.
-  ///
-  /// Throws a [StateError] if the user is not the next participant or there is no keeper.
-  Future<void> acceptTotem() async {
-    final room = session.room;
-    if (room == null || !_state.amNext(room.localParticipant?.identity)) {
-      throw StateError("Not the user's turn to accept the totem");
-    }
-    if (!_state.hasKeeper) {
-      throw StateError('There is no Keeper in the session to accept the totem');
-    }
-
-    final attempt = session.activeAttempt;
-    final wasMicEnabled = session.devices.isMicrophoneEnabled;
-    final micFuture = session.devices.turnOn(MediaKind.microphone);
-
-    try {
-      final roomState = await _run(
-        action: () =>
-            ref.read(acceptTotemProvider(_sessionSlug, _roomVersion).future),
-        errorMessage: 'Error accepting totem',
-      );
-      session.applyRoomState(roomState);
-      // The totem is theirs either way; if the microphone didn't come on,
-      // tell them how to fix it rather than failing the accept (X13). A
-      // skipped turn-on was already explained by the session.
-      if (await micFuture is TurnOnFailed &&
-          (attempt?.isCurrent ?? ref.mounted)) {
-        session.devices.flagNeedsAttention(MediaKind.microphone);
-      }
-      logger.i('Accepted totem successfully');
-    } catch (e) {
-      await micFuture.catchError((Object _) => const TurnOnSkipped());
-      if (!wasMicEnabled && (attempt?.isCurrent ?? ref.mounted)) {
-        await session.devices.disableMicrophone();
-      }
-      rethrow;
-    }
-  }
-
-  Future<void> reorder(List<String> newOrder) async {
-    if (!session.isCurrentUserKeeper()) return;
-    final roomState = await _run(
-      action: () => ref.read(
-        reorderParticipantsProvider(
-          _sessionSlug,
-          newOrder,
-          _roomVersion,
-        ).future,
-      ),
-      errorMessage: 'Error reordering participants',
-    );
-    session.applyRoomState(roomState);
-    logger.i('Reordered participants successfully');
-  }
-
-  Future<void> forcePassTotem() async {
-    if (!session.isCurrentUserKeeper()) return;
-    final roomState = await _run(
-      action: () =>
-          ref.read(forcePassTotemProvider(_sessionSlug, _roomVersion).future),
-      errorMessage: 'Error force passing totem',
-    );
-    session.applyRoomState(roomState);
-    logger.i('Force passed totem successfully');
-  }
-
-  Future<void> removeParticipant(String participantSlug) async {
-    if (!session.isCurrentUserKeeper()) return;
-    final admission = session.admission;
-    final revokeAdmission = await admission.prepareRemoval();
-    await _run<void>(
-      action: () => ref.read(
-        removeParticipantProvider(_sessionSlug, participantSlug).future,
-      ),
-      errorMessage: 'Error removing participant $participantSlug',
-      timeout: const Duration(seconds: 20),
-    );
-    await revokeAdmission(participantSlug);
-    logger.i('Removed participant $participantSlug successfully');
-  }
-
+  }) => turns.setPrompt(
+    customPrompt: customPrompt,
+    sessionPromptId: sessionPromptId,
+    clearPrompt: clearPrompt,
+  );
+  // Legacy dialog callbacks still accept bool: failure now propagates instead
+  // of silently returning false. The domain service has a void/exception API.
   Future<bool> startSession({String? prompt}) async {
-    if (!session.isCurrentUserKeeper()) return false;
-    try {
-      final roomState = await _run(
-        action: () => ref.read(
-          startSessionProvider(
-            _sessionSlug,
-            _roomVersion,
-            prompt: prompt,
-          ).future,
-        ),
-        errorMessage: 'Error starting session',
-        timeout: const Duration(seconds: 10),
-      );
-      session.applyRoomState(roomState);
-      return true;
-    } catch (_) {
-      return false;
-    }
+    await turns.start(prompt: prompt);
+    return true;
   }
 
   Future<bool> endSession() async {
-    if (!session.isCurrentUserKeeper()) return false;
-    try {
-      final roomState = await _run(
-        action: () =>
-            ref.read(endSessionProvider(_sessionSlug, _roomVersion).future),
-        errorMessage: 'Error ending session',
-        timeout: const Duration(seconds: 10),
-      );
-      session.applyRoomState(roomState);
-      return true;
-    } catch (_) {
-      return false;
-    }
+    await turns.end();
+    return true;
   }
 
-  Future<void> banParticipant(String participantSlug) async {
-    if (!session.isCurrentUserKeeper()) return;
-    final roomState = await _run(
-      action: () => ref.read(
-        banParticipantProvider(
-          _sessionSlug,
-          participantSlug,
-          _roomVersion,
-        ).future,
-      ),
-      errorMessage: 'Error banning participant $participantSlug',
-      timeout: const Duration(seconds: 20),
-    );
-    session.applyRoomState(roomState);
-
-    logger.i('Banned participant $participantSlug successfully');
-  }
-
-  Future<void> unbanParticipant(String participantSlug) async {
-    if (!session.isCurrentUserKeeper()) return;
-
-    final roomState = await _run(
-      action: () => ref.read(
-        unbanParticipantProvider(
-          _sessionSlug,
-          participantSlug,
-          _roomVersion,
-        ).future,
-      ),
-      errorMessage: 'Error unbanning participant $participantSlug',
-      timeout: const Duration(seconds: 20),
-    );
-    session.applyRoomState(roomState);
-    logger.i('Unbanned participant $participantSlug successfully');
-  }
-
-  Future<void> disableParticipantCamera(String participantSlug) async {
-    if (!session.isCurrentUserKeeper()) return;
-    await _run<void>(
-      action: () => ref.read(
-        disableParticipantCameraProvider(_sessionSlug, participantSlug).future,
-      ),
-      errorMessage: 'Error disable participant camera $participantSlug',
-      timeout: const Duration(seconds: 20),
-    );
-    logger.i('Disabled participant $participantSlug camera successfully');
-  }
-
-  Future<void> muteParticipant(String participantSlug) async {
-    if (!session.isCurrentUserKeeper()) return;
-    await _run<void>(
-      action: () => ref.read(
-        muteParticipantProvider(_sessionSlug, participantSlug).future,
-      ),
-      errorMessage: 'Error muting participant $participantSlug',
-      timeout: const Duration(seconds: 20),
-    );
-    logger.i('Muted participant $participantSlug successfully');
-  }
-
-  Future<void> muteEveryone() async {
-    if (!session.isCurrentUserKeeper()) return;
-    await _run<void>(
-      action: () => ref.read(muteEveryoneProvider(_sessionSlug).future),
-      errorMessage: 'Error muting everyone',
-      timeout: const Duration(seconds: 20),
-    );
-  }
+  Future<void> removeParticipant(String identity) =>
+      moderation.removeParticipant(identity);
+  Future<void> banParticipant(String identity) =>
+      moderation.banParticipant(identity);
+  Future<void> unbanParticipant(String identity) =>
+      moderation.unbanParticipant(identity);
+  Future<void> muteParticipant(String identity) =>
+      moderation.muteParticipant(identity);
+  Future<void> disableParticipantCamera(String identity) =>
+      moderation.disableParticipantCamera(identity);
+  Future<void> muteEveryone() => moderation.muteEveryone();
 }

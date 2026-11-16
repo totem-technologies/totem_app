@@ -25,13 +25,11 @@ const _allowedPaths = [
 const _existingSdkConsumers = {
   'controllers/core/session_state.dart',
   'controllers/core/join_media_owner.dart',
-  'controllers/features/session_messaging_controller.dart',
   'pre_join/pre_join_flow_controller.dart',
   'pre_join/pre_join_media_controller.dart',
   'pre_join/pre_join_state.dart',
   'pre_join/pre_join_preview_card.dart',
   'admission/admission_transport.dart',
-  'admission/session_admission_service.dart',
   'providers/session_scope_provider.dart',
   'screens/room_screen.dart',
   'screens/session_disconnected.dart',

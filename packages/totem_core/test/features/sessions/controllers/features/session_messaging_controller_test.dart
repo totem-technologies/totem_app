@@ -5,19 +5,23 @@ import 'dart:convert';
 
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:livekit_client/livekit_client.dart'
     as livekit
     show ConnectionState;
+import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
+import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/providers/emoji_reactions_provider.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 import '../../livekit_mocks.dart';
 import '../../media/test_participants.dart';
+import '../../media/test_room_transport.dart';
+import '../../transport/fake_session_transport.dart';
 import '../core/session_controller_mock.dart';
 
 void main() {
@@ -46,30 +50,33 @@ void main() {
       final controller = container.read(
         sessionMessagingControllerProvider(mockSession).notifier,
       );
-      final provider = emojiReactionsProvider;
 
       controller.handleDataReceived(
-        DataReceivedEvent(
-          data: utf8.encode('👍'),
-          participant: MockRemoteParticipant('participant-1', 'Participant'),
-          topic: SessionCommunicationTopics.emoji.topic,
+        packetFromSdk(
+          DataReceivedEvent(
+            data: utf8.encode('👍'),
+            participant: MockRemoteParticipant('participant-1', 'Participant'),
+            topic: SessionCommunicationTopics.emoji.topic,
+          ),
         ),
       );
 
-      final reactions = container.read(provider);
+      final reactions = mockSession.receivedReactions;
       check(reactions).length.equals(1);
-      check(reactions.single.userIdentity).equals('participant-1');
-      check(reactions.single.emoji).equals('👍');
+      check(reactions.single.$1).equals('participant-1');
+      check(reactions.single.$2).equals('👍');
 
       controller.handleDataReceived(
-        DataReceivedEvent(
-          data: utf8.encode('👎'),
-          participant: null,
-          topic: SessionCommunicationTopics.emoji.topic,
+        packetFromSdk(
+          DataReceivedEvent(
+            data: utf8.encode('👎'),
+            participant: null,
+            topic: SessionCommunicationTopics.emoji.topic,
+          ),
         ),
       );
 
-      check(container.read(provider)).length.equals(1);
+      check(mockSession.receivedReactions).length.equals(1);
     });
 
     group('Data Reception - Chat Events', () {
@@ -94,7 +101,7 @@ void main() {
           topic: SessionCommunicationTopics.chat.topic,
         );
 
-        controller.handleDataReceived(chatEvent);
+        controller.handleDataReceived(packetFromSdk(chatEvent));
 
         check(mockSession.addedChatMessages).isNotEmpty();
         check(mockSession.addedChatMessages.first.message).equals('Hello');
@@ -123,7 +130,7 @@ void main() {
             topic: SessionCommunicationTopics.participantRemoved.topic,
           );
 
-          controller.handleDataReceived(removedEvent);
+          controller.handleDataReceived(packetFromSdk(removedEvent));
 
           check(mockSession.disconnectFromRoomCalled).equals(true);
         },
@@ -148,7 +155,7 @@ void main() {
             topic: SessionCommunicationTopics.participantRemoved.topic,
           );
 
-          controller.handleDataReceived(removedEvent2);
+          controller.handleDataReceived(packetFromSdk(removedEvent2));
 
           check(mockSession.disconnectFromRoomCalled).equals(false);
         },
@@ -167,14 +174,16 @@ void main() {
             sessionMessagingControllerProvider(mockSession).notifier,
           );
 
-          final before = container.read(emojiReactionsProvider);
+          mockSession.mockTransport = FakeSessionTransport()
+            ..connectionState = SessionTransportConnectionState.connected;
+          final before = mockSession.receivedReactions.toList();
           check(before).isEmpty();
 
           await controller.sendReaction('👍');
 
-          final after = container.read(emojiReactionsProvider);
+          final after = mockSession.receivedReactions;
           check(after).length.equals(1);
-          check(after.first.emoji).equals('👍');
+          check(after.first.$2).equals('👍');
         },
       );
     });
@@ -215,6 +224,7 @@ void main() {
           final controller = container.read(
             sessionMessagingControllerProvider(session).notifier,
           );
+          _attachAdmission(container, session);
           final attempt = request();
 
           await controller.sendAdmissionJoined(attempt);
@@ -230,10 +240,12 @@ void main() {
           check(receipt?.id).equals(attempt.id);
           check(receipt?.recipientIdentity).equals('keeper-1');
           controller.handleDataReceived(
-            DataReceivedEvent(
-              data: published.single,
-              participant: MockRemoteParticipant('user-1', 'Guest'),
-              topic: AdmissionProtocol.topic,
+            packetFromSdk(
+              DataReceivedEvent(
+                data: published.single,
+                participant: MockRemoteParticipant('user-1', 'Guest'),
+                topic: AdmissionProtocol.topic,
+              ),
             ),
           );
           check(session.addedChatMessages).isEmpty();
@@ -263,9 +275,11 @@ void main() {
           ).throws<StateError>();
           check(room.listenerCount).equals(1);
 
-          await controller.disposeAdmissionTransport();
-          await controller.disposeAdmissionTransport();
-          check(room.listener.disposeCount).equals(1);
+          await session.admission.disconnect();
+          await session.admission.disconnect();
+          check(
+            room.listener.disposeCount,
+          ).equals(0); // Runtime still owns its listener.
           await room.listener.trigger(const RoomReconnectedEvent());
           check(published).length.equals(3);
         },
@@ -279,31 +293,36 @@ void main() {
         final controller = container.read(
           sessionMessagingControllerProvider(session).notifier,
         );
+        _attachAdmission(container, session);
         session.mockState = SessionRoomState(
           connection: session.state.connection.copyWith(
             state: RoomConnectionState.disconnected,
           ),
           participants: session.state.participants,
-          chat: session.state.chat,
+
           turn: session.state.turn,
         );
 
         await check(
           controller.sendAdmissionJoined(request()),
         ).throws<StateError>();
-        check(room.listenerCount).equals(0);
+        check(
+          room.listenerCount,
+        ).equals(1); // The fixture transport, not admission, owns the listener.
         session.mockState = SessionRoomState(
           connection: session.state.connection.copyWith(
             state: RoomConnectionState.connected,
           ),
           participants: session.state.participants,
-          chat: session.state.chat,
+
           turn: session.state.turn,
         );
         await check(
           controller.sendAdmissionJoined(request(sender: 'other')),
         ).throws<StateError>();
-        check(room.listenerCount).equals(0);
+        check(
+          room.listenerCount,
+        ).equals(1); // The fixture transport, not admission, owns the listener.
       });
 
       test(
@@ -328,7 +347,7 @@ void main() {
               state: RoomConnectionState.connecting,
             ),
             participants: session.state.participants,
-            chat: session.state.chat,
+
             turn: session.state.turn,
           );
           final container = ProviderContainer();
@@ -336,6 +355,7 @@ void main() {
           final controller = container.read(
             sessionMessagingControllerProvider(session).notifier,
           );
+          _attachAdmission(container, session);
           final attempt = request();
           await controller.sendAdmissionJoinFailed(attempt);
           final receipt = AdmissionProtocol.decode(
@@ -346,7 +366,7 @@ void main() {
           check(receipt).isA<AdmissionJoinFailed>();
           check(receipt?.id).equals(attempt.id);
           check(receipt?.recipientIdentity).equals('keeper-1');
-          await controller.disposeAdmissionTransport();
+          await session.admission.disconnect();
           room.connected = false;
           await check(
             controller.sendAdmissionJoinFailed(attempt),
@@ -368,14 +388,18 @@ void main() {
         final room = _ReceiptRoom(participant);
         final session = FakeSessionController()..mockRoom = room;
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionMessagingControllerProvider(session).notifier,
         );
 
+        _attachAdmission(container, session);
         await controller.sendAdmissionJoined(request());
         container.dispose();
-        await room.listener.disposed.future;
-        check(room.listener.disposeCount).equals(1);
+        await session.admission.close();
+        check(
+          room.listener.disposeCount,
+        ).equals(0); // Only the admission channel was closed.
         await check(
           controller.sendAdmissionJoined(request()),
         ).throws<StateError>();
@@ -399,6 +423,7 @@ void main() {
           ..mockRoom = FakeRoom(keeper);
 
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionMessagingControllerProvider(mockSession).notifier,
         );
@@ -485,7 +510,15 @@ void main() {
           ..isCurrentUserKeeperValue = true
           ..mockRoom = FakeRoom(keeper);
 
+        mockSession.mockTransport = FakeSessionTransport()
+          ..localIdentity = 'keeper-1'
+          ..connectionState = SessionTransportConnectionState.connected
+          ..participants = [
+            testParticipant('keeper-1', isLocal: true),
+            testParticipant('lucas'),
+          ];
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionMessagingControllerProvider(mockSession).notifier,
         );
@@ -515,6 +548,7 @@ void main() {
           ..mockRoom = FakeRoom(participant);
 
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionMessagingControllerProvider(mockSession).notifier,
         );
@@ -536,6 +570,7 @@ void main() {
         mockSession.isCurrentUserKeeperValue = false;
 
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionMessagingControllerProvider(mockSession).notifier,
         );
@@ -575,14 +610,17 @@ void main() {
         final mockSession = FakeSessionController()
           ..mockRoom = FakeRoom(MockLocalParticipant('user-2'));
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionMessagingControllerProvider(mockSession).notifier,
         );
 
         controller.handleDataReceived(
-          privateChatEvent(
-            senderIdentity: 'lucas',
-            recipientIdentity: 'user-2',
+          packetFromSdk(
+            privateChatEvent(
+              senderIdentity: 'lucas',
+              recipientIdentity: 'user-2',
+            ),
           ),
         );
 
@@ -593,14 +631,17 @@ void main() {
         final mockSession = FakeSessionController()
           ..mockRoom = FakeRoom(MockLocalParticipant('user-2'));
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionMessagingControllerProvider(mockSession).notifier,
         );
 
         controller.handleDataReceived(
-          privateChatEvent(
-            senderIdentity: 'keeper-1',
-            recipientIdentity: 'user-2',
+          packetFromSdk(
+            privateChatEvent(
+              senderIdentity: 'keeper-1',
+              recipientIdentity: 'user-2',
+            ),
           ),
         );
 
@@ -618,9 +659,11 @@ void main() {
         );
 
         controller.handleDataReceived(
-          privateChatEvent(
-            senderIdentity: 'keeper-1',
-            recipientIdentity: 'alice',
+          packetFromSdk(
+            privateChatEvent(
+              senderIdentity: 'keeper-1',
+              recipientIdentity: 'alice',
+            ),
           ),
         );
 
@@ -631,14 +674,17 @@ void main() {
         final mockSession = FakeSessionController()
           ..mockRoom = FakeRoom(MockLocalParticipant('keeper-1'));
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionMessagingControllerProvider(mockSession).notifier,
         );
 
         controller.handleDataReceived(
-          privateChatEvent(
-            senderIdentity: 'lucas',
-            recipientIdentity: 'keeper-1',
+          packetFromSdk(
+            privateChatEvent(
+              senderIdentity: 'lucas',
+              recipientIdentity: 'keeper-1',
+            ),
           ),
         );
 
@@ -657,9 +703,11 @@ void main() {
           );
 
           controller.handleDataReceived(
-            privateChatEvent(
-              senderIdentity: 'lucas',
-              recipientIdentity: 'keeper-1',
+            packetFromSdk(
+              privateChatEvent(
+                senderIdentity: 'lucas',
+                recipientIdentity: 'keeper-1',
+              ),
             ),
           );
 
@@ -670,6 +718,7 @@ void main() {
       test('ignores Everyone messages without a sender', () async {
         final mockSession = FakeSessionController();
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionMessagingControllerProvider(mockSession).notifier,
         );
@@ -686,7 +735,7 @@ void main() {
           topic: SessionCommunicationTopics.chat.topic,
         );
 
-        controller.handleDataReceived(chatEvent);
+        controller.handleDataReceived(packetFromSdk(chatEvent));
 
         check(mockSession.addedChatMessages).isEmpty();
       });
@@ -694,6 +743,7 @@ void main() {
       test('ignores Everyone messages from a non-keeper sender', () async {
         final mockSession = FakeSessionController();
         final container = ProviderContainer();
+        addTearDown(container.dispose);
         final controller = container.read(
           sessionMessagingControllerProvider(mockSession).notifier,
         );
@@ -706,7 +756,7 @@ void main() {
           topic: SessionCommunicationTopics.chat.topic,
         );
 
-        controller.handleDataReceived(chatEvent);
+        controller.handleDataReceived(packetFromSdk(chatEvent));
 
         check(mockSession.addedChatMessages).isEmpty();
       });
@@ -856,4 +906,22 @@ class _ReceiptEvents implements EventsListener<RoomEvent> {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+void _attachAdmission(
+  ProviderContainer container,
+  FakeSessionController session,
+) {
+  final provider = Provider<SessionAdmissionService>((ref) {
+    final service = SessionAdmissionService(ref, session);
+    final subscription = session.transport!.events.listen(
+      service.handleTransportEvent,
+    );
+    ref.onDispose(() {
+      unawaited(subscription.cancel());
+      unawaited(service.close());
+    });
+    return service;
+  });
+  session.admission = container.read(provider);
 }

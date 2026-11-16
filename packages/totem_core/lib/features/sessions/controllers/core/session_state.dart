@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
@@ -129,31 +128,6 @@ class ParticipantsState {
 }
 
 @immutable
-class ChatState {
-  const ChatState({this.messages = const []});
-
-  final List<SessionChatMessage> messages;
-
-  ChatState copyWith({List<SessionChatMessage>? messages}) {
-    return ChatState(messages: messages ?? this.messages);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is ChatState &&
-        const DeepCollectionEquality().equals(
-          other.messages.map((m) => m.id),
-          messages.map((m) => m.id),
-        );
-  }
-
-  @override
-  int get hashCode =>
-      const DeepCollectionEquality().hash(messages.map((m) => m.id));
-}
-
-@immutable
 class SessionTurnState {
   const SessionTurnState({required this.roomState});
 
@@ -197,11 +171,22 @@ class SessionOptions {
     if (identical(this, other)) return true;
     return other is SessionOptions &&
         other.sessionSlug == sessionSlug &&
-        other.token == token;
+        other.token == token &&
+        other.cameraEnabled == cameraEnabled &&
+        other.microphoneEnabled == microphoneEnabled &&
+        other.speakerEnabled == speakerEnabled &&
+        other.cameraOptions == cameraOptions;
   }
 
   @override
-  int get hashCode => sessionSlug.hashCode ^ token.hashCode;
+  int get hashCode => Object.hash(
+    sessionSlug,
+    token,
+    cameraEnabled,
+    microphoneEnabled,
+    speakerEnabled,
+    cameraOptions,
+  );
 }
 
 /// Pre-join media whose ownership is transferred to the session controller.
@@ -234,14 +219,12 @@ class SessionRoomState {
   const SessionRoomState({
     required this.connection,
     required this.participants,
-    required this.chat,
     required this.turn,
     this.turnStartedAt,
   });
 
   final ConnectionState connection;
   final ParticipantsState participants;
-  final ChatState chat;
   final SessionTurnState turn;
 
   /// Wall-clock time when the current turn began.
@@ -254,7 +237,6 @@ class SessionRoomState {
   RoomState get roomState => turn.roomState;
   List<ParticipantInfo> get participantsList => participants.participants;
   bool get removed => participants.removed;
-  List<SessionChatMessage> get messages => chat.messages;
 
   DisconnectReason? get disconnectReason {
     final error = connection.error;
@@ -326,7 +308,6 @@ class SessionRoomState {
         'error: ${connection.error}, '
         'participants: ${participants.participants.length}, '
         'removed: ${participants.removed}, '
-        'messages: ${chat.messages.length}'
         ')';
   }
 
@@ -336,7 +317,6 @@ class SessionRoomState {
     return other is SessionRoomState &&
         other.connection == connection &&
         other.participants == participants &&
-        other.chat == chat &&
         other.turn == turn &&
         other.turnStartedAt == turnStartedAt;
   }
@@ -345,7 +325,6 @@ class SessionRoomState {
   int get hashCode =>
       connection.hashCode ^
       participants.hashCode ^
-      chat.hashCode ^
       turn.hashCode ^
       turnStartedAt.hashCode;
 }

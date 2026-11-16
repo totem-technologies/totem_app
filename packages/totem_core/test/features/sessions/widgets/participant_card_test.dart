@@ -115,7 +115,7 @@ void main() {
           return SessionRoomState(
             connection: fakeSessionState.mockState.connection,
             participants: ParticipantsState(participants: [remoteParticipant]),
-            chat: const ChatState(),
+
             turn: SessionTurnState(
               roomState: RoomState(
                 keeper: 'keeper-1',
@@ -214,7 +214,7 @@ void main() {
       // Add keeper-1 as keeper to the room state
       fakeSessionState.mockState = SessionRoomState(
         connection: fakeSessionState.mockState.connection,
-        chat: fakeSessionState.mockState.chat,
+
         participants: fakeSessionState.mockState.participants,
         turn: const SessionTurnState(
           roomState: RoomState(
@@ -255,7 +255,7 @@ void main() {
       // Wait, _createRoomState has keeper: 'keeper-1'. Let's set it to null.
       fakeSessionState.mockState = SessionRoomState(
         connection: fakeSessionState.mockState.connection,
-        chat: fakeSessionState.mockState.chat,
+
         participants: fakeSessionState.mockState.participants,
         turn: const SessionTurnState(
           roomState: RoomState(
@@ -296,7 +296,7 @@ void main() {
       final speaker = testParticipant('user-1', name: 'Jane Doe');
       fakeSessionState.mockState = SessionRoomState(
         connection: fakeSessionState.mockState.connection,
-        chat: fakeSessionState.mockState.chat,
+
         participants: ParticipantsState(participants: [speaker]),
         turn: const SessionTurnState(
           roomState: RoomState(
@@ -384,7 +384,7 @@ void main() {
             participants: ParticipantsState(
               participants: [keeper, participant],
             ),
-            chat: const ChatState(),
+
             turn: SessionTurnState(
               roomState: RoomState(
                 keeper: keeper.identity,
@@ -496,7 +496,7 @@ void main() {
       final speaker = testParticipant('user-1', name: 'Jane Doe');
       fakeSessionState.mockState = SessionRoomState(
         connection: fakeSessionState.mockState.connection,
-        chat: fakeSessionState.mockState.chat,
+
         participants: ParticipantsState(participants: [speaker]),
         turn: const SessionTurnState(
           roomState: RoomState(

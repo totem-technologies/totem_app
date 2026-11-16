@@ -76,7 +76,7 @@ SessionRoomState _sessionState({
       state: RoomConnectionState.connected,
     ),
     participants: ParticipantsState(participants: participants),
-    chat: const ChatState(),
+
     turn: SessionTurnState(roomState: roomState),
   );
 }

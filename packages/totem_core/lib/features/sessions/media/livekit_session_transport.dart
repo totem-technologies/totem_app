@@ -92,7 +92,6 @@ class LiveKitSessionTransport implements SessionTransport {
           topic: event.topic ?? '',
           sender: event.participant?.toInfo(),
         );
-        _legacyPackets[packet] = event;
         _emit(TransportPacketReceived(packet));
       })
       ..on<sdk.LocalTrackPublishedEvent>(
@@ -120,11 +119,6 @@ class LiveKitSessionTransport implements SessionTransport {
 
   /// Infrastructure compatibility access only; remove with B2/C2 consumers.
   sdk.Room get legacyRoomForB2AndC2 => _room;
-  // B2 only: preserve the original sender even if presence changes before
-  // legacy messaging consumes the packet. Weak keys do not retain packets.
-  final _legacyPackets = Expando<sdk.DataReceivedEvent>('B2 packets');
-  sdk.DataReceivedEvent? legacyPacketForB2(SessionTransportPacket packet) =>
-      _legacyPackets[packet];
   late final sdk.EventsListener<sdk.RoomEvent> _listener;
   final _events = StreamController<SessionTransportEvent>.broadcast(sync: true);
   final Map<sdk.RemoteTrackPublication, Object> _subscriptions = Map.identity();

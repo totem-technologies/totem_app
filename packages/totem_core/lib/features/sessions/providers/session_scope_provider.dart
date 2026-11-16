@@ -13,6 +13,7 @@ import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/providers/session_chat_provider.dart';
 
 part 'session_scope_provider.g.dart';
 
@@ -307,13 +308,13 @@ bool hasKeeperDisconnected(Ref ref) {
       false;
 }
 
-/// All chat messages for the current session.
-@Riverpod(dependencies: [currentSessionState])
+/// All chat messages, projected from their session-owned service.
+@Riverpod(dependencies: [currentSession])
 List<SessionChatMessage> sessionMessages(Ref ref) {
-  return ref.watch(
-        currentSessionStateProvider.select((s) => s?.chat.messages),
-      ) ??
-      const [];
+  final session = ref.watch(currentSessionProvider);
+  return session == null
+      ? const []
+      : ref.watch(sessionChatMessagesProvider(session));
 }
 
 /// Messages visible in a single chat thread.

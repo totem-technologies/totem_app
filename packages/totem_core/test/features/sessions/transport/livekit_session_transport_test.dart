@@ -142,16 +142,12 @@ void main() {
         check(
           events.whereType<TransportPacketReceived>().single.packet.bytes,
         ).deepEquals([2]);
-        // Presence has already left and the SDK room map is empty. B2's
-        // compatibility path must still receive the original sender object.
+        // Sender identity survives presence removal without retaining SDK events.
         final received = events
             .whereType<TransportPacketReceived>()
             .single
             .packet;
         check(received.sender?.identity).equals('keeper');
-        check(
-          identical(transport.legacyPacketForB2(received), originalPacket),
-        ).isTrue();
         await transport.disconnect();
         await Future<void>.value();
         check(

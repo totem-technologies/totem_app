@@ -128,7 +128,6 @@ SessionRoomState _createSessionState({
             testParticipant('lucas', name: 'Lucas'),
           ],
     ),
-    chat: ChatState(messages: messages),
     turn: const SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',
@@ -151,12 +150,14 @@ List<Object?> _sharedOverrides({
   required List<SessionChatMessage> messages,
   required SessionController session,
   required AuthState authState,
+  bool overrideMessages = true,
   RoomScreen currentScreen = RoomScreen.listening,
   List<ParticipantInfo>? participants,
 }) {
   return [
     authControllerProvider.overrideWith(() => FakeAuthController(authState)),
     currentSessionProvider.overrideWith((ref) => session),
+    if (overrideMessages) sessionMessagesProvider.overrideWithValue(messages),
     currentSessionEventProvider.overrideWith((ref) => _createSessionEvent()),
     currentSessionStateProvider.overrideWithValue(
       _createSessionState(messages: messages, participants: participants),
@@ -244,6 +245,7 @@ void main() {
           ..._sharedOverrides(
             isKeeper: isKeeper,
             messages: messages,
+            overrideMessages: false,
             session: session,
             authState: authState,
             currentScreen: currentScreen,

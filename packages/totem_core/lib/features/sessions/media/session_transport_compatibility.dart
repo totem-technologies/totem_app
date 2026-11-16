@@ -7,7 +7,6 @@ import 'package:livekit_client/livekit_client.dart' as sdk;
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
 import 'package:totem_core/features/sessions/media/livekit_room_media.dart';
 import 'package:totem_core/features/sessions/media/livekit_session_transport.dart';
@@ -135,26 +134,6 @@ RoomDisconnectionError legacyDisconnectError(
   SessionTransportDisconnectReason reason,
 ) => RoomDisconnectionError(sdk.DisconnectReason.values.byName(reason.name));
 
-/// Only the B2 legacy messaging handler needs an SDK-shaped receive event.
-void deliverLegacyPacket(
-  SessionMessagingController messaging,
-  SessionTransportPacket packet,
-  SessionTransport? transport,
-) {
-  if (transport is LiveKitSessionTransport) {
-    final original = transport.legacyPacketForB2(packet);
-    if (original != null) {
-      messaging.handleDataReceived(original);
-      return;
-    }
-  }
-  throw UnsupportedError(
-    'Legacy SDK messaging receive requires LiveKit until B2',
-  );
-}
-
-/// A deferred application lease owns the existing room without attaching media
-/// until the runtime has awaited the previous connection's cleanup.
 ConnectedSessionLease offerConnectedRoom(
   LegacySessionRoom room, {
   required LocalMedia localMedia,

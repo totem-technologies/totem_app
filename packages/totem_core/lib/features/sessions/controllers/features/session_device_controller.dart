@@ -200,6 +200,8 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   int _request(MediaKind kind) => _requests[kind] = _requests[kind]! + 1;
 
+  int get microphoneIntentRevision => _requests[MediaKind.microphone]!;
+
   bool _isLatest(MediaKind kind, int request) => request == _requests[kind];
 
   /// Runs [command] after the device's earlier commands, or straight away

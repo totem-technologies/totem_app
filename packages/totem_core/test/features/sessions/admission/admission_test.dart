@@ -8,6 +8,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/admission_transport.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 final _fixedNow = DateTime.utc(2030);
 
@@ -790,7 +791,7 @@ void main() {
     check(received).length.equals(2);
     check(
       (received.last as AdmissionRoomDisconnected).reason,
-    ).equals(DisconnectReason.reconnectAttemptsExceeded);
+    ).equals(SessionTransportDisconnectReason.reconnectAttemptsExceeded);
   });
 
   test('pending fails on terminal disconnect and ends on metadata', () async {
@@ -810,7 +811,9 @@ void main() {
     check(guest.status).equals(AdmissionStatus.pending);
     final sentBeforeFailure = channel.sent.length;
     channel.controller.add(
-      const AdmissionRoomDisconnected(DisconnectReason.roomDeleted),
+      const AdmissionRoomDisconnected(
+        SessionTransportDisconnectReason.roomDeleted,
+      ),
     );
     check(guest.status).equals(AdmissionStatus.failed);
     channel.controller.add(const AdmissionPresenceChanged('keeper', true));
@@ -840,7 +843,9 @@ void main() {
       check(await changed).equals(AdmissionStatus.ended);
       check(guest.status).equals(AdmissionStatus.ended);
       channel.controller.add(
-        const AdmissionRoomDisconnected(DisconnectReason.roomDeleted),
+        const AdmissionRoomDisconnected(
+          SessionTransportDisconnectReason.roomDeleted,
+        ),
       );
       check(guest.status).equals(AdmissionStatus.ended);
       await check(
@@ -1090,7 +1095,9 @@ void main() {
               (_, channel) =>
                   channel.controller.add(const AdmissionRoomEnded()),
               (_, channel) => channel.controller.add(
-                const AdmissionRoomDisconnected(DisconnectReason.roomDeleted),
+                const AdmissionRoomDisconnected(
+                  SessionTransportDisconnectReason.roomDeleted,
+                ),
               ),
               (guest, _) => unawaited(guest.dispose()),
             ]) {
@@ -1741,7 +1748,9 @@ void main() {
       await guest.cancel();
       check(guest.status).equals(AdmissionStatus.cancelled);
       guestChannel.controller.add(
-        const AdmissionRoomDisconnected(DisconnectReason.clientInitiated),
+        const AdmissionRoomDisconnected(
+          SessionTransportDisconnectReason.clientInitiated,
+        ),
       );
       check(guest.status).equals(AdmissionStatus.cancelled);
       check(keeper.requests).isEmpty();

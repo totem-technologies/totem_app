@@ -10,6 +10,7 @@ import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
+import 'package:totem_core/features/sessions/services/session_commands.dart';
 
 import '../../livekit_mocks.dart';
 import '../../transport/fake_session_transport.dart';
@@ -151,10 +152,7 @@ void main() {
         final controller = container.read(
           sessionKeeperControllerProvider(mockSession).notifier,
         );
-        controller.keeperDisconnectedTimer = Timer(
-          const Duration(minutes: 3),
-          () {},
-        );
+        controller.onKeeperDisconnected(RoomStatus.active);
 
         await controller.onKeeperDisconnectedTimeout();
 
@@ -211,7 +209,7 @@ void main() {
       });
 
       test('disposePresenceTracking is safe when no timer exists', () async {
-        final mockSession = MockSessionController();
+        final mockSession = FakeSessionController();
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final controller = container.read(
@@ -223,7 +221,7 @@ void main() {
       });
 
       test('disposePresenceTracking is idempotent', () async {
-        final mockSession = MockSessionController();
+        final mockSession = FakeSessionController();
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final controller = container.read(
@@ -356,7 +354,9 @@ void main() {
         (session.admission as FakeAdmissionService).onRevoke = (slug) async =>
             removed.add(slug);
 
-        await controller.removeParticipant('user-2');
+        await check(
+          controller.removeParticipant('user-2'),
+        ).throws<SessionCommandException>();
 
         check(backendCalls).equals(0);
         check(removed).isEmpty();
@@ -402,7 +402,7 @@ void main() {
         final command = container
             .read(sessionKeeperControllerProvider(session).notifier)
             .forcePassTotem();
-        final failed = check(command).throws<StateError>();
+        final failed = check(command).throws<SessionCommandException>();
         await started.future;
         await runtime.cleanup();
         await runtime.join(operation: (_) async => SessionJoinResult.success);
@@ -430,7 +430,13 @@ void main() {
             acceptTotemProvider(
               session.options.sessionSlug,
               session.state.roomState.version,
-            ).overrideWith((_) async => session.state.roomState),
+            ).overrideWith(
+              (_) async => session.state.roomState.copyWith(
+                version: session.state.roomState.version + 1,
+                status: RoomStatus.active,
+                currentSpeaker: const Omittable('user-2'),
+              ),
+            ),
           ],
         );
         addTearDown(container.dispose);
