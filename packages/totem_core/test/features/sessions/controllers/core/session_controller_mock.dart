@@ -143,7 +143,7 @@ class FakeSessionController implements SessionController {
       isKeeper: isCurrentUserKeeper,
       transport: () => transport,
       applyState: applyRoomState,
-      prepareRemoval: () => admission.prepareRemoval(),
+      prepareRemoval: admission.prepareRemoval,
       markRemoved: markParticipantRemoved,
       leave: disconnectFromRoom,
       onError: (_, _) {},
@@ -237,6 +237,8 @@ class FakeAdmissionService extends Fake implements SessionAdmissionService {
   @override
   bool get busy => false;
   @override
+  Set<String> get unresolvedRemovals => const {};
+  @override
   Set<String> get admittedIdentities => const {};
   @override
   String? get error => null;
@@ -252,9 +254,13 @@ class FakeAdmissionService extends Fake implements SessionAdmissionService {
   }
 
   @override
-  Future<Future<void> Function(String)> prepareRemoval() async {
+  Future<PreparedAdmissionRemoval> prepareRemoval(String identity) async {
     requireRemovalReady();
-    return revokeRemovedParticipant;
+    return PreparedAdmissionRemoval(
+      commit: () => revokeRemovedParticipant(identity),
+      reject: () async {},
+      unknown: () async {},
+    );
   }
 
   @override

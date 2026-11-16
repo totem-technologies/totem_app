@@ -287,8 +287,12 @@ class PendingAdmissionController {
     _disposed = true;
     _expiration?.cancel();
     _keeperAvailabilityTimer?.cancel();
-    await _subscription.cancel();
-    await _changes.close();
+    await Future.wait<void>([
+      Future<void>.sync(() => _subscription.cancel()),
+      Future<void>.sync(() async {
+        await _changes.close();
+      }),
+    ]);
   }
 }
 
@@ -321,6 +325,7 @@ final class KeeperAdmissionRosterStore {
   final String _keeperGeneration;
   final _members = <String>{};
   final _awaitingReadiness = <String>{};
+  final revoked = <String>{};
   var _revision = 0;
 
   String get keeperGeneration => _keeperGeneration;
@@ -342,7 +347,10 @@ final class KeeperAdmissionRosterStore {
     _revision = revision;
   }
 
-  void clear() => replace(const [], 0);
+  void clear() {
+    revoked.clear();
+    replace(const [], 0);
+  }
 }
 
 /// Keeper-side queue with one decision per sender + request ID. Decisions are
@@ -383,6 +391,7 @@ class KeeperAdmissionController {
       ..addAll(rosterStore?.members ?? const [])
       ..remove(channel.localIdentity);
     _awaitingReadiness.addAll(rosterStore?.awaitingReadiness ?? const []);
+    _revoked.addAll(rosterStore?.revoked ?? const []);
     _rosterRevision = rosterStore?.revision ?? 0;
     _subscription = channel.events.listen(_onEvent);
     _advertise();
@@ -472,6 +481,7 @@ class KeeperAdmissionController {
   void revoke(String identity) {
     if (_disposed || _ended) return;
     _revoked.add(identity);
+    _rosterStore?.revoked.add(identity);
     _pending.remove(identity);
     _decisions.remove(identity);
     _decisionRetries.remove(identity)?.cancel();
@@ -677,6 +687,7 @@ class KeeperAdmissionController {
         _inFlight.contains(_key(identity, request.id))) {
       return;
     }
+    if (_rosterStore?.revoked.contains(identity) ?? false) return;
     final declined = isPermanentlyDeclined(identity);
     if (!declined && _approvalRequired && !_roster.contains(identity)) return;
     // A durable decline takes precedence over a previous admission. Returning
@@ -903,6 +914,7 @@ class KeeperAdmissionController {
           !_now().isBefore(request.expiresAt)) {
         throw StateError('Request changed while deciding');
       }
+      if (approved) _rosterStore?.revoked.remove(sender);
       _pending.remove(sender);
       _decisions[sender] = decision;
       final confirmationDeadline = _now().add(AdmissionProtocol.lifetime);
@@ -984,8 +996,12 @@ class KeeperAdmissionController {
     _roster.clear();
     _awaitingReadiness.clear();
     _inFlight.clear();
-    await _subscription.cancel();
-    await _changes.close();
+    await Future.wait<void>([
+      Future<void>.sync(() => _subscription.cancel()),
+      Future<void>.sync(() async {
+        await _changes.close();
+      }),
+    ]);
   }
 }
 
@@ -1213,7 +1229,11 @@ class ClientAdmissionRosterController {
     if (_disposed) return;
     _disposed = true;
     _snapshotRetry?.cancel();
-    await _subscription.cancel();
-    await _changes.close();
+    await Future.wait<void>([
+      Future<void>.sync(() => _subscription.cancel()),
+      Future<void>.sync(() async {
+        await _changes.close();
+      }),
+    ]);
   }
 }

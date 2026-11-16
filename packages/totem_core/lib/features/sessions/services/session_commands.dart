@@ -10,6 +10,8 @@ enum SessionCommandFailureKind {
   conflict,
   device,
   partialSuccess,
+  unknownOutcome,
+  recoveryRequired,
   superseded,
   unexpected,
 }

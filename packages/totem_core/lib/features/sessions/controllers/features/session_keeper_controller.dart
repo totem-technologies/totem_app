@@ -55,7 +55,7 @@ class SessionKeeperController extends _$SessionKeeperController {
       isKeeper: session.isCurrentUserKeeper,
       transport: () => session.transport,
       applyState: session.applyRoomState,
-      prepareRemoval: () => session.admission.prepareRemoval(),
+      prepareRemoval: session.admission.prepareRemoval,
       markRemoved: session.markParticipantRemoved,
       leave: session.disconnectFromRoom,
       onError: (error, stack) => ErrorHandler.logError(

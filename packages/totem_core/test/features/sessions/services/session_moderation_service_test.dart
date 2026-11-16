@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:checks/checks.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
@@ -97,9 +98,18 @@ class _Harness {
         applied.add(next);
         room = next;
       },
-      prepareRemoval: () async {
+      prepareRemoval: (identity) async {
         events.add('prepare');
-        return await prepare?.call() ?? _revoke;
+        final revoke = await prepare?.call() ?? _revoke;
+        return PreparedAdmissionRemoval(
+          commit: () => revoke(identity),
+          reject: () async {
+            events.add('rejected');
+          },
+          unknown: () async {
+            events.add('unknown');
+          },
+        );
       },
       markRemoved: removed.add,
       leave: () async {
@@ -263,13 +273,85 @@ void main() {
 
       await check(
         h.service.removeParticipant('participant'),
-      ).throws<AppNetworkException>();
+      ).throws<SessionCommandException>();
 
-      check(h.events).deepEquals(['prepare', 'backend:participant']);
+      check(h.events).deepEquals(['prepare', 'backend:participant', 'unknown']);
       check(
         h.service.lastFailure?.kind,
-      ).equals(SessionCommandFailureKind.network);
-      check(h.service.lastFailure?.error).identicalTo(failure);
+      ).equals(SessionCommandFailureKind.unknownOutcome);
+      check(
+        (h.service.lastFailure!.error as SessionCommandException).cause,
+      ).identicalTo(failure);
+    },
+  );
+
+  test(
+    'definitive backend rejection clears the prepared intent without revoking',
+    () async {
+      final h = _Harness();
+      addTearDown(h.dispose);
+      const failure = ApiError<RoomState, RoomErrorResponse>(
+        statusCode: 403,
+        error: RoomErrorResponse(
+          code: ErrorCode.notKeeper,
+          message: 'Rejected',
+        ),
+      );
+      h.remove = (_) async => throw failure;
+      await check(
+        h.service.removeParticipant('participant'),
+      ).throws<ApiError<RoomState, RoomErrorResponse>>();
+      check(
+        h.events,
+      ).deepEquals(['prepare', 'backend:participant', 'rejected']);
+    },
+  );
+
+  test(
+    'timeout retains unknown outcome and overlapping removal never resends',
+    () {
+      fakeAsync((clock) {
+        final h = _Harness();
+        addTearDown(h.dispose);
+        final backend = Completer<void>();
+        h.remove = (_) => backend.future;
+        Object? failure;
+        h.service
+            .removeParticipant('participant')
+            .then(
+              (_) {},
+              onError: (Object error) {
+                failure = error;
+              },
+            );
+        clock.flushMicrotasks();
+        Object? overlapping;
+        // Pump the first command before attempting the overlapping command.
+        h.service
+            .removeParticipant('participant')
+            .then(
+              (_) {},
+              onError: (Object error) {
+                overlapping = error;
+              },
+            );
+        clock.flushMicrotasks();
+        check(overlapping).isA<SessionCommandException>();
+        clock
+          ..elapse(const Duration(seconds: 20))
+          ..flushMicrotasks();
+        check(
+          (failure! as SessionCommandException).kind,
+        ).equals(SessionCommandFailureKind.unknownOutcome);
+        check(
+          h.events,
+        ).deepEquals(['prepare', 'backend:participant', 'unknown']);
+        backend.complete();
+        clock.flushMicrotasks();
+        check(
+          h.events,
+        ).deepEquals(['prepare', 'backend:participant', 'unknown']);
+      });
     },
   );
 

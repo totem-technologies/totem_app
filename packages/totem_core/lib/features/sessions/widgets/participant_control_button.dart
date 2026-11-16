@@ -303,6 +303,9 @@ class _ParticipantControlButtonState
               userProfileProvider(widget.participant.identity),
             );
             return ConfirmationDialog(
+              // Moderation owns the backend deadline and reports committed versus
+              // unknown outcomes; a second UI timeout would offer a false retry.
+              actionTimeout: null,
               iconWidget: user
                   .whenData(
                     (user) => UserAvatar.fromUserSchema(user, radius: 40),

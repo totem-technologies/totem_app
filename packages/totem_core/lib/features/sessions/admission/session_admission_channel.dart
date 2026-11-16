@@ -125,7 +125,11 @@ class SessionAdmissionChannel implements AdmissionChannel {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
-    _receipts.dispose();
-    await _events.close();
+    await Future.wait<void>([
+      Future<void>.sync(_receipts.dispose),
+      Future<void>.sync(() async {
+        await _events.close();
+      }),
+    ]);
   }
 }

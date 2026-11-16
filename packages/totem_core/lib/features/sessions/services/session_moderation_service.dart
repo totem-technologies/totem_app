@@ -8,6 +8,18 @@ import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 typedef AdmissionRevocation = Future<void> Function(String identity);
 
+/// A durable intent captured before sending the backend command.
+class PreparedAdmissionRemoval {
+  PreparedAdmissionRemoval({
+    required this.commit,
+    required this.reject,
+    required this.unknown,
+  });
+  final Future<void> Function() commit;
+  final Future<void> Function() reject;
+  final Future<void> Function() unknown;
+}
+
 class SessionModerationService {
   SessionModerationService({
     required this.backend,
@@ -26,7 +38,8 @@ class SessionModerationService {
   final bool Function() isKeeper;
   final SessionTransport? Function() transport;
   final void Function(RoomState) applyState;
-  final Future<AdmissionRevocation> Function() prepareRemoval;
+  final Future<PreparedAdmissionRemoval> Function(String identity)
+  prepareRemoval;
   final void Function(RemoveReason) markRemoved;
   final Future<void> Function() leave;
   final void Function(Object, StackTrace) onError;
@@ -67,18 +80,48 @@ class SessionModerationService {
     current,
   ) async {
     _requireKeeper();
-    final revoke = await prepareRemoval();
+    final removal = await prepareRemoval(identity);
     if (!current()) {
+      await removal.reject();
       throw SessionCommandException(
         SessionCommandFailureKind.superseded,
         'This connection ended before removal',
       );
     }
-    await backend.remove(identity).timeout(const Duration(seconds: 20));
+    try {
+      await backend.remove(identity).timeout(const Duration(seconds: 20));
+    } catch (error) {
+      if (error is ApiError &&
+          error.statusCode >= 400 &&
+          error.statusCode < 500 &&
+          error.statusCode != 408) {
+        try {
+          await removal.reject();
+        } catch (cleanup, stack) {
+          onError(cleanup, stack);
+          throw SessionCommandException(
+            SessionCommandFailureKind.recoveryRequired,
+            'The backend rejected removal. The participant was not removed, but admission recovery cleanup is pending. Retry admission recovery, not removal.',
+            cause: cleanup,
+          );
+        }
+        rethrow;
+      }
+      try {
+        await removal.unknown();
+      } catch (recovery, stack) {
+        onError(recovery, stack);
+      }
+      throw SessionCommandException(
+        SessionCommandFailureKind.unknownOutcome,
+        'Removal outcome is unknown. Do not remove again. Verify the participant status and reconcile admission recovery.',
+        cause: error,
+      );
+    }
     // Backend success cannot be rolled back. The captured recovery journal must
     // finish even if this service/session is disposed while removal is pending.
     try {
-      await revoke(identity);
+      await removal.commit();
     } catch (error) {
       _partialFailure = SessionCommandFailure(
         SessionCommandFailureKind.partialSuccess,

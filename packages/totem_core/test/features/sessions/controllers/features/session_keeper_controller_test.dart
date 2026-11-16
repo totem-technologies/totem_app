@@ -270,30 +270,36 @@ void main() {
         check(removed).deepEquals(['user-2']);
       });
 
-      test('does not notify when backend removal fails', () async {
-        final session = FakeSessionController()
-          ..isCurrentUserKeeperValue = true;
-        final removed = <String>[];
-        final container = ProviderContainer(
-          overrides: [
-            removeParticipantProvider(
-              session.options.sessionSlug,
-              'user-2',
-            ).overrideWith((_) async => throw StateError('removal failed')),
-          ],
-        );
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(session).notifier,
-        );
-        (session.admission as FakeAdmissionService).onRevoke = (slug) async =>
-            removed.add(slug);
+      test(
+        'reports an unknown backend outcome without claiming completed revocation',
+        () async {
+          final session = FakeSessionController()
+            ..isCurrentUserKeeperValue = true;
+          final removed = <String>[];
+          final container = ProviderContainer(
+            overrides: [
+              removeParticipantProvider(
+                session.options.sessionSlug,
+                'user-2',
+              ).overrideWith((_) async => throw StateError('removal failed')),
+            ],
+          );
+          addTearDown(container.dispose);
+          final controller = container.read(
+            sessionKeeperControllerProvider(session).notifier,
+          );
+          (session.admission as FakeAdmissionService).onRevoke = (slug) async =>
+              removed.add(slug);
 
-        await check(
-          controller.removeParticipant('user-2'),
-        ).throws<StateError>();
-        check(removed).isEmpty();
-      });
+          await check(
+            controller.removeParticipant('user-2'),
+          ).throws<SessionCommandException>();
+          check(removed).isEmpty();
+          check(
+            controller.moderation.lastFailure?.kind,
+          ).equals(SessionCommandFailureKind.unknownOutcome);
+        },
+      );
 
       test('non-keeper neither removes nor notifies', () async {
         final session = FakeSessionController();

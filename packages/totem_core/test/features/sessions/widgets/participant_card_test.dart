@@ -9,6 +9,7 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/media/room_media.dart';
 import 'package:totem_core/features/sessions/media/room_media_providers.dart';
@@ -27,6 +28,25 @@ import '../controllers/core/session_controller_mock.dart';
 import '../media/fake_room_media.dart';
 import '../media/test_participants.dart';
 import '../session_test_fixtures.dart';
+
+class _PendingRemovalKeeper extends Fake implements SessionKeeperController {
+  final completion = Completer<void>();
+  final removedIdentities = <String>[];
+
+  @override
+  Future<void> removeParticipant(String identity) {
+    removedIdentities.add(identity);
+    return completion.future;
+  }
+}
+
+class _PendingRemovalSession extends FakeSessionController {
+  _PendingRemovalSession(this.pendingKeeper);
+  final _PendingRemovalKeeper pendingKeeper;
+
+  @override
+  SessionKeeperController get keeper => pendingKeeper;
+}
 
 void main() {
   final remoteParticipant = testParticipant('user-2', name: 'John Doe');
@@ -592,6 +612,52 @@ void main() {
   });
 
   group('ParticipantControlButton', () {
+    testWidgets(
+      'removal confirmation waits for the command deadline without offering a premature retry',
+      (tester) async {
+        final keeper = _PendingRemovalKeeper();
+        final session = _PendingRemovalSession(keeper);
+        await pumpWidget(
+          tester,
+          authState: AuthState.unauthenticated(),
+          overrides: [currentSessionProvider.overrideWith((ref) => session)],
+          child: _MenuCloseTestWrapper(participant: remoteParticipant),
+        );
+        await tester.tap(find.byType(ParticipantControlButton));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Remove'));
+        await tester.pumpAndSettle();
+        final confirmPosition = tester.getCenter(find.text('Remove'));
+        await tester.tapAt(confirmPosition);
+        await tester.pump();
+        check(keeper.removedIdentities).deepEquals(['user-2']);
+
+        // The command service owns its backend deadline. Advancing beyond the
+        // generic dialog's old 10-second deadline must not create a retry path.
+        await tester.pump(const Duration(seconds: 11));
+        check(find.text('Something Went Wrong').evaluate()).isEmpty();
+        check(find.text('OK').evaluate()).isEmpty();
+        check(
+          find.text('Are you sure you want to remove John Doe?').evaluate(),
+        ).isNotEmpty();
+        await tester.tapAt(confirmPosition);
+        await tester.tap(find.text('Cancel'));
+        await tester.pump();
+        check(keeper.removedIdentities).deepEquals(['user-2']);
+        check(
+          find.text('Are you sure you want to remove John Doe?').evaluate(),
+        ).isNotEmpty();
+
+        keeper.completion.complete();
+        await tester.pumpAndSettle();
+        check(
+          find.text('Are you sure you want to remove John Doe?').evaluate(),
+        ).isEmpty();
+        check(keeper.removedIdentities).deepEquals(['user-2']);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
     testWidgets('updates mute action when participant audio changes', (
       tester,
     ) async {

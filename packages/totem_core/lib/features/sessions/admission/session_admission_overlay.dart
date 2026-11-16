@@ -126,7 +126,24 @@ class _SessionAdmissionOverlayState
       }
     }
     if (service?.error != null) {
-      retry ??= () => unawaited(service!.retryRecovery());
+      retry ??= () => unawaited(
+        service!.retryRecovery().catchError((Object error, StackTrace stack) {
+          ErrorHandler.logError(
+            error,
+            stackTrace: stack,
+            message: 'Admission recovery retry failed',
+          );
+          if (context.mounted) {
+            _notifications.showError(
+              context,
+              icon: TotemIcons.errorOutlined,
+              title: 'Admission recovery is still pending',
+              message:
+                  'Keep this session open and retry admission recovery. No removal request was sent.',
+            );
+          }
+        }),
+      );
     }
     final controller = service?.keeperController;
     final attempts =
@@ -140,6 +157,11 @@ class _SessionAdmissionOverlayState
         const <KeeperAdmissionAttempt>[];
     final requests = controller?.requests ?? const <AdmissionRequest>[];
     return SessionAdmissionScope(
+      recoveryMessage: service?.error,
+      unresolvedRemovals: service?.unresolvedRemovals ?? const {},
+      onReconcileRemoval: (identity, removed) async {
+        await service?.reconcileRemoval(identity, backendRemoved: removed);
+      },
       requests: requests,
       attempts: attempts,
       enabled: controller?.approvalRequired ?? false,
@@ -258,18 +280,59 @@ class SessionAdmissionPanel extends ConsumerWidget {
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            child: ListView(
+              shrinkWrap: true,
               children: [
-                const Text(
-                  'Could not load admission recovery data. Please retry.',
-                  style: TextStyle(color: AppTheme.slate),
+                Text(
+                  admission.recoveryMessage ??
+                      'Could not load admission recovery data. Please retry.',
+                  style: const TextStyle(color: AppTheme.slate),
                 ),
                 OutlinedButton(
                   onPressed: retry,
                   style: SessionButtonStyle.outlined(),
                   child: const Text('Retry'),
                 ),
+                for (final identity in admission.unresolvedRemovals)
+                  for (final removed in [true, false])
+                    OutlinedButton(
+                      onPressed: () => showDialog<void>(
+                        context: sessionNavigatorContext(context),
+                        useRootNavigator: false,
+                        builder: (dialogContext) => ConfirmationDialog(
+                          title: 'Reconcile removal of $identity?',
+                          content: removed
+                              ? 'Only confirm after verifying removal succeeded. This updates admission recovery without sending another removal request.'
+                              : 'Only confirm after verifying removal was rejected. This restores admission eligibility without sending another removal request.',
+                          confirmButtonText: 'Confirm verified outcome',
+                          type: ConfirmationDialogType.standard,
+                          onConfirm: () async {
+                            try {
+                              await admission.onReconcileRemoval?.call(
+                                identity,
+                                removed,
+                              );
+                              if (dialogContext.mounted) {
+                                Navigator.of(dialogContext).pop();
+                              }
+                            } catch (error) {
+                              if (dialogContext.mounted) {
+                                await ErrorHandler.handleApiError(
+                                  dialogContext,
+                                  error,
+                                  useRootNavigator: false,
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                      child: Text(
+                        removed
+                            ? 'Verified $identity was removed'
+                            : 'Verified $identity was not removed',
+                      ),
+                    ),
                 if (admission.onResetCorruptData case final reset?)
                   OutlinedButton(
                     style: SessionButtonStyle.outlined(),

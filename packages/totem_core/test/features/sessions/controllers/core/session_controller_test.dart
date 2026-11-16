@@ -15,6 +15,7 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
@@ -26,6 +27,25 @@ import '../../../../auth/controllers/auth_controller_mock.dart';
 import '../../../../setup.dart';
 import '../../livekit_mocks.dart';
 import '../../transport/fake_session_transport.dart';
+
+class _MemoryAdmissionPreferences implements SessionAdmissionPreferences {
+  final values = <String, String>{};
+
+  @override
+  String? getString(String key) => values[key];
+
+  @override
+  Future<bool> setString(String key, String value) async {
+    values[key] = value;
+    return true;
+  }
+
+  @override
+  Future<bool> remove(String key) async {
+    values.remove(key);
+    return true;
+  }
+}
 
 SessionDetailSchema _createSessionEvent(String eventSlug) {
   return SessionDetailSchema(
@@ -67,7 +87,10 @@ SessionDetailSchema _createSessionEvent(String eventSlug) {
   );
 }
 
-ProviderContainer _createContainerWithEventOverride(String eventSlug) {
+ProviderContainer _createContainerWithEventOverride(
+  String eventSlug, {
+  Future<SessionAdmissionPreferences>? admissionPreferences,
+}) {
   final waitingRoom = RoomState(
     keeper: '',
     nextSpeaker: const Omittable(''),
@@ -82,6 +105,10 @@ ProviderContainer _createContainerWithEventOverride(String eventSlug) {
   );
   return ProviderContainer(
     overrides: [
+      if (admissionPreferences != null)
+        sessionAdmissionPreferencesProvider.overrideWith(
+          (_) => admissionPreferences,
+        ),
       sessionProvider(
         eventSlug,
       ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
@@ -1933,7 +1960,10 @@ void main() {
             cameraOptions: SessionController.defaultCameraCaptureOptions,
             speakerEnabled: true,
           );
-          final container = _createContainerWithEventOverride(eventSlug);
+          final container = _createContainerWithEventOverride(
+            eventSlug,
+            admissionPreferences: Future.value(_MemoryAdmissionPreferences()),
+          );
           addTearDown(container.dispose);
           final subscription = container.listen(
             sessionControllerProvider(options),
@@ -1980,6 +2010,9 @@ void main() {
               (permission) => permission.participantIdentity,
             ),
           ).unorderedEquals(['keeper']);
+          // This tests the media permission projection independently of the
+          // admission protocol, which otherwise updates recipients on reconnect.
+          await controller.admission.close();
           clearInteractions(localParticipant);
 
           controller
@@ -2026,8 +2059,12 @@ void main() {
             cameraOptions: SessionController.defaultCameraCaptureOptions,
             speakerEnabled: true,
           );
+          final preferencesReady = Completer<SessionAdmissionPreferences>();
           final container = ProviderContainer(
             overrides: [
+              sessionAdmissionPreferencesProvider.overrideWith(
+                (_) => preferencesReady.future,
+              ),
               authControllerProvider.overrideWith(
                 () => FakeAuthController(AuthState.unauthenticated()),
               ),
@@ -2037,6 +2074,11 @@ void main() {
             ],
           );
           addTearDown(container.dispose);
+          addTearDown(() {
+            if (!preferencesReady.isCompleted) {
+              preferencesReady.complete(_MemoryAdmissionPreferences());
+            }
+          });
           final subscription = container.listen(
             sessionControllerProvider(options),
             (_, _) {},
@@ -2099,7 +2141,22 @@ void main() {
           }
           clearInteractions(localParticipant);
 
-          controller.updateAdmittedMediaRecipients({});
+          final authorityReady = Completer<void>();
+          void observeAuthority() {
+            if (controller.admission.keeperController != null &&
+                !authorityReady.isCompleted) {
+              authorityReady.complete();
+            }
+          }
+
+          controller.admission.addListener(observeAuthority);
+          try {
+            preferencesReady.complete(_MemoryAdmissionPreferences());
+            observeAuthority();
+            await authorityReady.future;
+          } finally {
+            controller.admission.removeListener(observeAuthority);
+          }
           final emptyRosterPermissions =
               verify(
                     () => localParticipant.setTrackSubscriptionPermissions(
@@ -2109,6 +2166,7 @@ void main() {
                   ).captured.single
                   as List<ParticipantTrackPermission>;
           check(emptyRosterPermissions).isEmpty();
+          await controller.admission.close();
           clearInteractions(localParticipant);
 
           controller.updateAdmittedMediaRecipients({'keeper', 'admitted'});
