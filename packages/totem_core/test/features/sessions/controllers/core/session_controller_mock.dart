@@ -232,6 +232,12 @@ class FakeSessionController implements SessionController {
 
 class FakeAdmissionService extends Fake implements SessionAdmissionService {
   @override
+  bool get approvalRequired => true;
+
+  @override
+  bool get mounted => true;
+
+  @override
   void setApprovalRequired(bool value) {}
   Future<void> Function(String)? onRevoke;
   @override
@@ -242,6 +248,10 @@ class FakeAdmissionService extends Fake implements SessionAdmissionService {
   Set<String> get admittedIdentities => const {};
   @override
   String? get error => null;
+  @override
+  String? get recoveryError => null;
+  @override
+  bool get hasCorruptRemovalJournal => false;
   @override
   KeeperAdmissionController? get keeperController => null;
   @override

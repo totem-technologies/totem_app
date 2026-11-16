@@ -315,6 +315,7 @@ class SessionAdmissionService extends ChangeNotifier {
         if (mounted) {
           _syncAdmittedIdentities(const []);
           recoveryError = 'Admission unavailable. Retry recovery.';
+          error = recoveryError;
           notifyListeners();
         }
         ErrorHandler.logError(
