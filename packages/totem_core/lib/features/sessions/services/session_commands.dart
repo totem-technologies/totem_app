@@ -47,23 +47,28 @@ class SessionCommandFailure {
   final Object error;
 }
 
-/// Rejects overlapping feature commands and fences their asynchronous results.
+/// Rejects overlapping commands sharing a key and fences asynchronous results.
 /// Backend errors retain their original types for the existing error UI.
 class SessionCommandGate {
   SessionCommandGate(this.captureValidity);
   final bool Function() Function() captureValidity;
-  bool _busy = false;
+  final _busy = <Object>{};
+  int _sequence = 0;
   bool _disposed = false;
   SessionCommandFailure? lastFailure;
 
-  Future<T> run<T>(Future<T> Function(bool Function() current) action) async {
-    if (_disposed || _busy) {
+  Future<T> run<T>(
+    Future<T> Function(bool Function() current) action, {
+    Object key = 'default',
+  }) async {
+    if (_disposed || _busy.contains(key)) {
       throw SessionCommandException(
         SessionCommandFailureKind.invalidState,
         'Another session command is running or this session has ended',
       );
     }
-    _busy = true;
+    _busy.add(key);
+    final sequence = ++_sequence;
     final valid = captureValidity();
     bool current() => !_disposed && valid();
     try {
@@ -74,13 +79,15 @@ class SessionCommandGate {
         );
       }
       final result = await action(current);
-      lastFailure = null;
+      if (sequence == _sequence) lastFailure = null;
       return result;
     } catch (error) {
-      lastFailure = SessionCommandFailure.from(error);
+      if (sequence == _sequence) {
+        lastFailure = SessionCommandFailure.from(error);
+      }
       rethrow;
     } finally {
-      _busy = false;
+      _busy.remove(key);
     }
   }
 

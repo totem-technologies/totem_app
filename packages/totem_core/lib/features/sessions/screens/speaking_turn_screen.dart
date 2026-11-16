@@ -13,6 +13,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/controllers/features/session_prompts_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/services/session_commands.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/adaptive_call_layout.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
@@ -61,16 +62,37 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
                 false));
 
     if (shouldPass) {
+      if (session == null || !mounted) return false;
+      final cues = ref.read(sessionCuesServiceProvider);
+      final messenger = ScaffoldMessenger.maybeOf(context);
       try {
-        ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
         if (clearPrompt) {
-          await session?.keeper.setPrompt(clearPrompt: true);
+          await session.keeper.setPrompt(clearPrompt: true);
         }
-        await session?.keeper.passTotem(
+        await session.keeper.passTotem(
           customPrompt: customPrompt,
           sessionPromptId: sessionPromptId,
         );
+        cues.pulseSwipeCompletion();
         return true;
+      } on SessionCommandException catch (error) {
+        if (error.kind == SessionCommandFailureKind.partialSuccess) {
+          cues.pulseSwipeCompletion();
+          if (messenger != null && messenger.mounted) {
+            messenger
+              ..clearSnackBars()
+              ..showSnackBar(SnackBar(content: Text(error.message)));
+          }
+          return true;
+        }
+        if (mounted && error.kind != SessionCommandFailureKind.superseded) {
+          ErrorHandler.handleApiError(
+            sessionNavigatorContext(context),
+            error,
+            useRootNavigator: false,
+          );
+        }
+        return false;
       } catch (error) {
         if (!mounted) return false;
         ErrorHandler.handleApiError(

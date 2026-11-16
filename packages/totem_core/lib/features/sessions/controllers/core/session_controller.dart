@@ -103,7 +103,7 @@ class SessionController extends _$SessionController {
       runtime.admission ??= SessionAdmissionService(ref, this);
   SessionTransport? get _transport => _runtime?.transport;
   set _transport(SessionTransport? value) {
-    if (value != null) runtime.installForAdapterTest(value);
+    if (value != null) runtime.installCompatibilityTransport(value);
   }
 
   SessionTransport? get transport => _transport;
@@ -239,7 +239,7 @@ class SessionController extends _$SessionController {
 
   @override
   SessionRoomState build(SessionOptions options) {
-    _transportFactory = ref.watch(sessionTransportFactoryProvider(options));
+    _transportFactory = ref.read(sessionTransportFactoryProvider(options));
     _chat = SessionChatService(
       transport: () => transport,
       keeperIdentity: () => state.roomState.keeper,
@@ -317,8 +317,26 @@ class SessionController extends _$SessionController {
       ..listen(sessionKeeperControllerProvider(this), (_, _) {})
       ..listen(sessionMessagingControllerProvider(this), (_, _) {});
     // The device controls follow the session's state until tracks publish.
-    listenSelf((_, _) {
+    SessionTransport? observedAdmissionTransport;
+    (RoomConnectionState, RoomStatus, String, bool?, String?, bool)?
+    admissionInputs;
+    listenSelf((_, next) {
       devices.syncWithSession();
+      final connection = transport;
+      final inputs = (
+        next.connection.state,
+        next.roomState.status,
+        next.roomState.keeper,
+        session?.ended,
+        connection?.localIdentity,
+        runtime.acceptsEvents,
+      );
+      if (inputs == admissionInputs &&
+          identical(connection, observedAdmissionTransport)) {
+        return;
+      }
+      admissionInputs = inputs;
+      observedAdmissionTransport = connection;
       if (runtime.acceptsEvents) {
         admission.sync();
       } else {
@@ -918,7 +936,7 @@ class SessionController extends _$SessionController {
   }) async {
     if (attempt != null) return await runtime.prepare(attempt, url, token);
     _transport ??= _transportFactory.create();
-    runtime.observeInstalled();
+    runtime.observeCompatibilityTransport();
     await _transport!.prepare(url, token);
     return _transport!;
   }

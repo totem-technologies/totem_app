@@ -71,6 +71,23 @@ class _PresenceHarness {
 }
 
 void main() {
+  Future<void> attachAttempt(FakeSessionController session) async {
+    final runtime = SessionRuntime(
+      factory: FakeSessionTransportFactory(),
+      onEvent: (_) {},
+      onCancel: () {},
+      onCleanup: () async {},
+      onJoined: () {},
+      onError: (_, _) {},
+      activateInfrastructure: (_) async {},
+      deactivateInfrastructure: (_) async {},
+      retainEntry: () => () {},
+    );
+    await runtime.join(operation: (_) async => SessionJoinResult.success);
+    session.activeAttempt = runtime.activeAttempt;
+    addTearDown(runtime.dispose);
+  }
+
   group('SessionKeeperController', () {
     group('Keeper presence lifecycle', () {
       test(
@@ -213,9 +230,39 @@ void main() {
       );
     });
     group('removeParticipant', () {
+      test(
+        'rejects commands without an active attempt before contacting the backend',
+        () async {
+          final session = FakeSessionController()
+            ..isCurrentUserKeeperValue = true;
+          var backendCalls = 0;
+          final container = ProviderContainer(
+            overrides: [
+              removeParticipantProvider(
+                session.options.sessionSlug,
+                'user-2',
+              ).overrideWith((_) async {
+                backendCalls++;
+              }),
+            ],
+          );
+          addTearDown(container.dispose);
+          final controller = container.read(
+            sessionKeeperControllerProvider(session).notifier,
+          );
+          await check(
+            controller.removeParticipant('user-2'),
+          ).throws<SessionCommandException>();
+          check(
+            controller.moderation.lastFailure?.kind,
+          ).equals(SessionCommandFailureKind.superseded);
+          check(backendCalls).equals(0);
+        },
+      );
       test('does not remove while admission recovery is unavailable', () async {
         final session = FakeSessionController()
           ..isCurrentUserKeeperValue = true;
+        await attachAttempt(session);
         var backendCalls = 0;
         final container = ProviderContainer(
           overrides: [
@@ -240,6 +287,7 @@ void main() {
       test('notifies once after backend removal succeeds', () async {
         final session = FakeSessionController()
           ..isCurrentUserKeeperValue = true;
+        await attachAttempt(session);
         final started = Completer<void>();
         final backend = Completer<void>();
         final removed = <String>[];
@@ -275,6 +323,7 @@ void main() {
         () async {
           final session = FakeSessionController()
             ..isCurrentUserKeeperValue = true;
+          await attachAttempt(session);
           final removed = <String>[];
           final container = ProviderContainer(
             overrides: [
@@ -303,6 +352,7 @@ void main() {
 
       test('non-keeper neither removes nor notifies', () async {
         final session = FakeSessionController();
+        await attachAttempt(session);
         var backendCalls = 0;
         final removed = <String>[];
         final container = ProviderContainer(
@@ -389,6 +439,7 @@ void main() {
       }) async {
         final session = FakeSessionController()
           ..mockRoom = FakeRoom(MockLocalParticipant('user-2'));
+        await attachAttempt(session);
         final devices = FakeSessionDeviceController()
           ..microphoneOn = false
           ..microphoneStarts = microphoneStarts;

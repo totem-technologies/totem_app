@@ -56,13 +56,13 @@ class SessionTurnService {
       );
     }
     final accepted = state().roomState;
+    if (response.version < accepted.version) return;
     final ending =
         accepted.status != RoomStatus.ended &&
         response.status == RoomStatus.ended;
     final unchangedCommand =
         commandVersion != null && response.version <= commandVersion && !ending;
     if (unchangedCommand ||
-        response.version < accepted.version ||
         (response.version == accepted.version &&
             response != accepted &&
             !ending)) {
@@ -111,6 +111,12 @@ class SessionTurnService {
           );
         }
       }
+    }
+    if (!current()) {
+      throw SessionCommandException(
+        SessionCommandFailureKind.superseded,
+        'This session connection has ended',
+      );
     }
   });
 
@@ -171,7 +177,7 @@ class SessionTurnService {
           .timeout(const Duration(seconds: 10)),
       current,
     );
-  });
+  }, key: 'end');
   Future<void> setPrompt({
     String? customPrompt,
     int? sessionPromptId,

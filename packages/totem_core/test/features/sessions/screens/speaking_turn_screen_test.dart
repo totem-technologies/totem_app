@@ -20,6 +20,7 @@ import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_core/features/sessions/services/session_commands.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
@@ -473,6 +474,55 @@ void main() {
         classes: <String>['TextPainter'],
       ),
     );
+
+    for (final committed in [false, true]) {
+      testWidgets(
+        committed
+            ? 'a committed pass warns about microphone failure'
+            : 'a rejected pass has no success cue',
+        (tester) async {
+          final cues = _TestSessionCuesService();
+          when(() => keeper.passTotem()).thenThrow(
+            SessionCommandException(
+              committed
+                  ? SessionCommandFailureKind.partialSuccess
+                  : SessionCommandFailureKind.conflict,
+              committed
+                  ? 'Mute the microphone or leave the session.'
+                  : 'The pass was rejected.',
+            ),
+          );
+          await pumpSpeakingTurn(
+            tester,
+            sessionState: _buildState(
+              keeper: 'keeper-1',
+              currentSpeaker: 'user-1',
+              nextSpeaker: 'user-2',
+            ),
+            isKeeper: false,
+            cuesService: cues,
+          );
+          await tester.drag(
+            find.byKey(ActionSlider.thumbKey),
+            const Offset(800, 0),
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+          verify(() => keeper.passTotem()).called(1);
+          check(cues.swipePulseCount).equals(committed ? 1 : 0);
+          if (committed) {
+            check(
+              find.text('Mute the microphone or leave the session.').evaluate(),
+            ).isNotEmpty();
+          }
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        },
+        experimentalLeakTesting: LeakTesting.settings.withIgnored(
+          classes: <String>['TextPainter'],
+        ),
+      );
+    }
 
     const longPrompt =
         'Think of a moment this week when you felt truly heard by someone, '

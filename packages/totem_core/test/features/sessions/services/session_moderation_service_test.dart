@@ -48,7 +48,8 @@ SessionTransportPacket _removal({
 );
 
 class _Backend implements SessionModerationBackend {
-  _Backend(this.removeAction, this.banAction);
+  _Backend(this.removeAction, this.banAction, this.events);
+  final List<String> events;
   final Future<void> Function(String) removeAction;
   final Future<RoomState> Function(int, String) banAction;
   @override
@@ -60,9 +61,15 @@ class _Backend implements SessionModerationBackend {
   Future<RoomState> unban(int version, String identity) =>
       banAction(version, identity);
   @override
-  Future<void> mute(String identity) async {}
+  Future<void> mute(String identity) async {
+    events.add('mute:$identity');
+  }
+
   @override
-  Future<void> disableCamera(String identity) async {}
+  Future<void> disableCamera(String identity) async {
+    events.add('camera:$identity');
+  }
+
   @override
   Future<void> muteEveryone() async {}
 }
@@ -83,6 +90,7 @@ class _Harness {
           return await ban?.call(version, identity) ??
               _room(version: version + 1);
         },
+        events,
       ),
       state: () => SessionRoomState(
         connection: const ConnectionState(
@@ -152,6 +160,28 @@ class _Harness {
 }
 
 void main() {
+  test(
+    'mute and camera restriction proceed while removal is pending',
+    () async {
+      final h = _Harness();
+      addTearDown(h.dispose);
+      final started = Completer<void>();
+      final finish = Completer<void>();
+      h.remove = (_) {
+        started.complete();
+        return finish.future;
+      };
+      final removal = h.service.removeParticipant('participant');
+      await started.future;
+      await h.service.muteParticipant('other');
+      await h.service.disableParticipantCamera('other');
+      check(h.events).contains('mute:other');
+      check(h.events).contains('camera:other');
+      finish.complete();
+      await removal;
+      check(h.events).contains('revoke:participant');
+    },
+  );
   for (final serverOriginated in [false, true]) {
     test(
       'authorized removal marks the local participant and leaves exactly once (server: $serverOriginated)',
@@ -419,7 +449,9 @@ void main() {
           return response.future;
         };
         final banning = h.service.banParticipant('participant');
-        final rejected = check(banning).throws<SessionCommandException>();
+        final rejected = replacedAttempt
+            ? check(banning).throws<SessionCommandException>()
+            : null;
         await started.future;
         final newer = _room(version: 20);
         if (replacedAttempt) {
@@ -428,15 +460,21 @@ void main() {
           h.room = newer;
         }
         response.complete(_room(version: replacedAttempt ? 30 : 11));
-        await rejected;
+        if (rejected != null) {
+          await rejected;
+        } else {
+          await banning;
+        }
 
         check(h.applied).isEmpty();
         if (!replacedAttempt) check(h.room).identicalTo(newer);
-        check(h.service.lastFailure?.kind).equals(
-          replacedAttempt
-              ? SessionCommandFailureKind.superseded
-              : SessionCommandFailureKind.conflict,
-        );
+        if (replacedAttempt) {
+          check(
+            h.service.lastFailure?.kind,
+          ).equals(SessionCommandFailureKind.superseded);
+        } else {
+          check(h.service.lastFailure).isNull();
+        }
       },
     );
   }

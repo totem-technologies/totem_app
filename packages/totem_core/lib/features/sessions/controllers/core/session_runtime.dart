@@ -175,8 +175,9 @@ class SessionRuntime {
     return connection;
   }
 
-  /// Used only by existing adapter tests and the C2 compatibility bridge.
-  void installForAdapterTest(SessionTransport connection) {
+  /// Installs a transport for the legacy room compatibility bridge and tests.
+  /// Remove with the C2 compatibility path.
+  void installCompatibilityTransport(SessionTransport connection) {
     if (_disposed || isLeaving) {
       throw StateError('Session runtime cannot accept a connection');
     }
@@ -188,7 +189,8 @@ class SessionRuntime {
     _transport = connection;
   }
 
-  void observeInstalled() {
+  /// Starts observing a transport installed through the compatibility path.
+  void observeCompatibilityTransport() {
     _attempt ??= SessionAttempt._(this, generation);
     if (_transport case final connection?) _listen(connection);
   }

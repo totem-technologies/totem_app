@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/models/session_chat_message.dart';
 import 'package:totem_core/features/sessions/services/session_packet_router.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
@@ -71,8 +72,13 @@ class SessionChatService extends ChangeNotifier {
         if (local == null || (!fromKeeper && !toKeeper)) return;
       }
       add(message);
-    } catch (error) {
-      lastError = error;
+    } catch (error, stackTrace) {
+      ErrorHandler.report(
+        error,
+        stackTrace: stackTrace,
+        message: 'Invalid incoming chat packet',
+        disposition: ErrorDisposition.expected,
+      );
     }
   }
 

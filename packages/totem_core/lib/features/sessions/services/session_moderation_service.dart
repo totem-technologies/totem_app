@@ -67,7 +67,9 @@ class SessionModerationService {
         'This connection ended before the command completed',
       );
     }
-    if (response.version < state().roomState.version) {
+    final accepted = state().roomState;
+    if (response.version < accepted.version) return;
+    if (response.version == accepted.version && response != accepted) {
       throw SessionCommandException(
         SessionCommandFailureKind.conflict,
         'A newer room update has already been received',
@@ -157,17 +159,17 @@ class SessionModerationService {
   Future<void> muteParticipant(String identity) => _commands.run((_) async {
     _requireKeeper();
     await backend.mute(identity).timeout(const Duration(seconds: 20));
-  });
+  }, key: ('mute', identity));
   Future<void> disableParticipantCamera(String identity) => _commands.run((
     _,
   ) async {
     _requireKeeper();
     await backend.disableCamera(identity).timeout(const Duration(seconds: 20));
-  });
+  }, key: ('camera', identity));
   Future<void> muteEveryone() => _commands.run((_) async {
     _requireKeeper();
     await backend.muteEveryone().timeout(const Duration(seconds: 20));
-  });
+  }, key: 'muteEveryone');
 
   void receive(SessionTransportPacket packet) {
     if (_disposed ||

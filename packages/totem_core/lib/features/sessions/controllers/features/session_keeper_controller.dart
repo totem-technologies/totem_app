@@ -31,7 +31,7 @@ class SessionKeeperController extends _$SessionKeeperController {
     final backend = SessionCommandBackend(ref, session.options.sessionSlug);
     bool Function() captureValidity() {
       final attempt = session.activeAttempt;
-      return () => ref.mounted && (attempt?.isCurrent ?? true);
+      return () => ref.mounted && (attempt?.isCurrent ?? false);
     }
 
     _turns = SessionTurnService(

@@ -345,7 +345,22 @@ void main() {
     },
   );
 
-  for (final acceptedVersion in [11, 20]) {
+  test('ending is dispatched while a reorder is pending', () async {
+    final h = _Harness()..keeper = true;
+    addTearDown(h.service.dispose);
+    final pending = Completer<RoomState>();
+    h.perform = (command, version) => command == 'reorder'
+        ? pending.future
+        : Future.value(_room(version: 12, speaker: 'other'));
+    final reorder = h.service.reorder(['participant']);
+    await h.service.end();
+    check(h.requests).deepEquals([('reorder', 10), ('end', 10)]);
+    pending.complete(_room(version: 11));
+    await reorder;
+    check(h.room.version).equals(12);
+  });
+
+  for (final acceptedVersion in [11]) {
     test(
       'a conflicting response cannot replace an accepted room version $acceptedVersion or change media',
       () async {
@@ -374,6 +389,30 @@ void main() {
       },
     );
   }
+
+  test(
+    'a pass response older than accepted state still mutes the former speaker',
+    () async {
+      final h = _Harness();
+      addTearDown(h.service.dispose);
+      final started = Completer<void>();
+      final response = Completer<RoomState>();
+      h.perform = (_, _) {
+        started.complete();
+        return response.future;
+      };
+      final passing = h.service.passTotem();
+      await started.future;
+      final newer = _room(version: 12, speaker: 'other');
+      h.room = newer;
+      response.complete(_room(version: 11, speaker: 'other'));
+      await passing;
+      check(h.room).identicalTo(newer);
+      check(h.commits).isEmpty();
+      check(h.microphoneOn).isFalse();
+      check(h.requests).deepEquals([('pass', 10)]);
+    },
+  );
 
   test(
     'an identical room update observed before the pass response still completes the pass',

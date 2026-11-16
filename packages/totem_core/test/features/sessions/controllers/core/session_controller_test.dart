@@ -362,6 +362,10 @@ void main() {
             check(factory.created).isEmpty();
             check(await controller.join()).equals(SessionJoinResult.success);
             final transport = factory.created.single;
+            final runtime = controller.runtime;
+            container.invalidate(sessionTransportFactoryProvider(options));
+            await container.pump();
+            check(identical(controller.runtime, runtime)).isTrue();
             check(identical(controller.transport, transport)).isTrue();
             check(controller.room).isNull(); // No separate SDK room exists.
             check(transport.connectCalls).equals(1);
@@ -376,10 +380,14 @@ void main() {
               identity: 'remote',
               name: 'Participant',
             );
+            final admissionSync = controller.admission.synchronized;
             transport.emit(
               const TransportParticipantChanged(remote, present: true),
             );
             check(controller.state.participantsList).deepEquals([remote]);
+            check(
+              identical(controller.admission.synchronized, admissionSync),
+            ).isTrue();
             final metadata = {
               ...controller.state.roomState.toJson(),
               'version': 23,

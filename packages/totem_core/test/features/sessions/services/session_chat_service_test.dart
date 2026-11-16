@@ -176,6 +176,14 @@ void main() {
       check(await h.service.send('Retry me')).equals(ChatSendOutcome.failed);
       check(h.service.messages).isEmpty();
       check(h.service.lastError).identicalTo(failure);
+      h.service.receive(
+        SessionTransportPacket(
+          topic: SessionCommunicationTopics.chat.topic,
+          sender: _keeper,
+          bytes: [0xff],
+        ),
+      );
+      check(h.service.lastError).identicalTo(failure);
 
       h.connection!.publishFailure = null;
       check(await h.service.send('Retry me')).equals(ChatSendOutcome.sent);
@@ -311,7 +319,7 @@ void main() {
         ),
       );
       check(h.service.messages).isEmpty();
-      check(h.service.lastError).isNotNull();
+      check(h.service.lastError).isNull();
     },
   );
 
