@@ -489,6 +489,10 @@ SessionErrorCategory classifySessionError(
     if (isOffline && canOfflineStateOverrideDisconnectReason(cause.reason)) {
       return SessionErrorCategory.offline;
     }
+    // A join that failed never had a connection to lose.
+    if (cause.reason == DisconnectReason.joinFailure) {
+      return SessionErrorCategory.serverUnreachable;
+    }
     return isTechnicalDisconnectReason(cause.reason)
         ? SessionErrorCategory.connectionLost
         : SessionErrorCategory.unknown;

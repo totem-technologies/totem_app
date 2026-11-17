@@ -114,6 +114,9 @@ class NotificationRequest {
 
   bool get isCancelled => _isCancelled;
 
+  /// Whether this request was dismissed and its controller let it go.
+  bool get isClosed => _isClosed;
+
   void show() {
     if (_isShown || _isCancelled) return;
 

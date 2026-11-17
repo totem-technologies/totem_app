@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' show ClientException;
 import 'package:livekit_client/livekit_client.dart'
     as livekit
     show ConnectionState;
@@ -310,6 +311,34 @@ class _DelayedInitializeSessionController extends SessionController {
     room = initializedRoom;
     return transport!;
   }
+}
+
+/// A controller that connects through [factory], kept alive for the test.
+SessionController _transportController(
+  SessionOptions options,
+  FakeSessionTransportFactory factory,
+) {
+  late SessionController controller;
+  final container = ProviderContainer(
+    overrides: [
+      sessionProvider(
+        options.sessionSlug,
+      ).overrideWithValue(AsyncData(_createSessionEvent(options.sessionSlug))),
+      sessionTransportFactoryProvider(options).overrideWithValue(factory),
+      roomStateProvider(
+        options.sessionSlug,
+      ).overrideWith((_) => controller.state.roomState),
+      authControllerProvider.overrideWith(
+        () => FakeAuthController(AuthState.unauthenticated()),
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  final sub = container.listen(sessionControllerProvider(options), (_, _) {});
+  addTearDown(sub.close);
+  return controller = container.read(
+    sessionControllerProvider(options).notifier,
+  );
 }
 
 void main() {
@@ -1227,32 +1256,7 @@ void main() {
         Future<(SessionController, FakeSessionTransport)>
         connectedSession() async {
           final factory = FakeSessionTransportFactory();
-          late SessionController controller;
-          final container = ProviderContainer(
-            overrides: [
-              sessionProvider(options.sessionSlug).overrideWithValue(
-                AsyncData(_createSessionEvent(options.sessionSlug)),
-              ),
-              sessionTransportFactoryProvider(
-                options,
-              ).overrideWithValue(factory),
-              roomStateProvider(
-                options.sessionSlug,
-              ).overrideWith((_) => controller.state.roomState),
-              authControllerProvider.overrideWith(
-                () => FakeAuthController(AuthState.unauthenticated()),
-              ),
-            ],
-          );
-          addTearDown(container.dispose);
-          final sub = container.listen(
-            sessionControllerProvider(options),
-            (_, _) {},
-          );
-          addTearDown(sub.close);
-          controller = container.read(
-            sessionControllerProvider(options).notifier,
-          );
+          final controller = _transportController(options, factory);
           check(await controller.join()).equals(SessionJoinResult.success);
           check(
             controller.state.connectionState,
@@ -1312,6 +1316,99 @@ void main() {
             ).isTrue();
           },
         );
+      });
+
+      group('rejoin', () {
+        const options = SessionOptions(
+          sessionSlug: 'test-session',
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+
+        test('retrying after a fatal join failure connects again', () async {
+          var attempts = 0;
+          final factory = FakeSessionTransportFactory(
+            configure: (transport) {
+              if (attempts++ != 0) return;
+              transport.connectFailure = SessionTransportFailure(
+                SessionTransportFailureKind.connection,
+                'internal error',
+                cause: StateError('internal error'),
+                stackTrace: StackTrace.empty,
+              );
+            },
+          );
+          final controller = _transportController(options, factory);
+          check(await controller.join()).equals(SessionJoinResult.fatalFailure);
+          check(
+            controller.state.connectionState,
+          ).equals(RoomConnectionState.error);
+
+          await controller.rejoin();
+
+          check(factory.created).length.equals(2);
+          check(factory.created.last.connectCalls).equals(1);
+          check(
+            controller.state.connectionState,
+          ).equals(RoomConnectionState.connected);
+          check(controller.state.connection.error).isNull();
+        });
+
+        test(
+          'a failed rejoin without a LiveKit cause shows the error screen',
+          () async {
+            // On web, LiveKit's validate request fails like this when the
+            // video server can't be reached.
+            final failure = SessionTransportFailure(
+              SessionTransportFailureKind.unexpected,
+              'Failed to fetch',
+              cause: ClientException('Failed to fetch'),
+              stackTrace: StackTrace.empty,
+            );
+            final factory = FakeSessionTransportFactory(
+              configure: (transport) => transport.connectFailure = failure,
+            );
+            final controller = _transportController(options, factory);
+
+            await controller.rejoin();
+
+            check(
+              controller.state.connectionState,
+            ).equals(RoomConnectionState.error);
+            check(
+              classifySessionError(controller.state.connection.error),
+            ).equals(SessionErrorCategory.serverUnreachable);
+          },
+        );
+
+        test('leaving during a rejoin does not report a failure', () async {
+          final started = Completer<void>();
+          final gate = Completer<void>();
+          final factory = FakeSessionTransportFactory(
+            configure: (transport) {
+              transport
+                ..connectStarted = started
+                ..connectCompletion = gate;
+            },
+          );
+          final controller = _transportController(options, factory);
+
+          final rejoining = controller.rejoin();
+          await started.future;
+          final leaving = controller.leave();
+          gate.complete();
+          await leaving;
+          await rejoining;
+
+          check(factory.created.single.disconnectCalls).equals(1);
+          check(
+            controller.state.connectionState,
+          ).equals(RoomConnectionState.disconnected);
+          check(controller.state.connection.error).isNull();
+        });
       });
 
       test('a failed rejoin from the error screen reports its cause', () async {
@@ -1391,6 +1488,53 @@ void main() {
           SessionJoinFailure(failure).kind,
         ).equals(SessionErrorCategory.serverUnreachable);
       });
+
+      test(
+        'a failed activation keeps a cause the runtime caught for the note',
+        () async {
+          const options = SessionOptions(
+            sessionSlug: 'test-session',
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          final container = _createContainerWithEventOverride('test-session');
+          addTearDown(container.dispose);
+          final sub = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(sub.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final localParticipant = MockLocalParticipant();
+          when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+          // Connected when offered, gone by the time the runtime claims it.
+          final room = _CountingRoom(
+            localParticipant,
+            disconnectAfterFirstConnectionStateRead: true,
+          );
+
+          check(
+            await controller.activateConnectedRoom(room: room),
+          ).equals(SessionJoinResult.retryableFailure);
+          check(controller.lastJoinFailure).isA<StateError>();
+
+          // The next attempt doesn't inherit the old cause.
+          check(await controller.resetAfterFailedJoin()).isTrue();
+          check(
+            await controller.activateConnectedRoom(
+              room: _CountingRoom(localParticipant),
+            ),
+          ).equals(SessionJoinResult.success);
+          check(controller.lastJoinFailure).isNull();
+          await controller.leave();
+        },
+      );
 
       test('a participant renaming themselves updates the list', () async {
         const eventSlug = 'test-session';
@@ -1812,6 +1956,49 @@ void main() {
         check(room.disposeCount).equals(0);
         await controller.leave();
         check(room.disposeCount).equals(1);
+      });
+
+      test('activating the live room while it reconnects keeps it', () async {
+        const options = SessionOptions(
+          sessionSlug: 'test-session',
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+          speakerEnabled: true,
+        );
+        final container = _createContainerWithEventOverride('test-session');
+        addTearDown(container.dispose);
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(subscription.close);
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final localParticipant = MockLocalParticipant();
+        when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
+        final room = _CountingRoom(localParticipant);
+        check(
+          await controller.activateConnectedRoom(room: room),
+        ).equals(SessionJoinResult.success);
+        await room.listener.trigger(const RoomReconnectingEvent());
+        check(
+          controller.runtime.phase,
+        ).equals(SessionRuntimePhase.reconnecting);
+
+        check(
+          await controller.activateConnectedRoom(room: room),
+        ).equals(SessionJoinResult.success);
+
+        check(room.disconnectCount).equals(0);
+        check(room.disposeCount).equals(0);
+        check(
+          controller.runtime.phase,
+        ).equals(SessionRuntimePhase.reconnecting);
+        await controller.leave();
       });
 
       test('claims an offered room before a prior leave finishes', () async {

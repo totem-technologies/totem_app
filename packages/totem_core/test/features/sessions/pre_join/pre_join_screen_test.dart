@@ -210,7 +210,7 @@ class _FailingSessionController extends SessionController {
       SessionJoinResult.retryableFailure;
 
   @override
-  Future<void> resetAfterFailedJoin() async {}
+  Future<bool> resetAfterFailedJoin() async => true;
 }
 
 class _PendingSessionController extends SessionController {

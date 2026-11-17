@@ -135,7 +135,8 @@ class SessionController extends _$SessionController {
   /// What made the latest join or activation fail, if it failed with an
   /// error. Cleared when a new attempt starts, so the pre-join screen can
   /// explain a failure that [join] only reports as a [SessionJoinResult].
-  Object? get lastJoinFailure => _lastJoinFailure;
+  /// Falls back to what the runtime caught outside the join operation.
+  Object? get lastJoinFailure => _lastJoinFailure ?? _runtime?.lastFailure;
   Object? _lastJoinFailure;
 
   /// The sync timer periodically checks for changes in the room state
@@ -804,15 +805,20 @@ class SessionController extends _$SessionController {
 
   /// Tears down a failed connection attempt while keeping the controller
   /// available for another join from the pre-join screen.
-  Future<void> resetAfterFailedJoin() async {
+  ///
+  /// Returns whether the reset applied: false when the controller was
+  /// disposed or another attempt started meanwhile.
+  Future<bool> resetAfterFailedJoin() async {
     final owner = runtime;
     final resetting = owner.reset();
     final cancelledGeneration = owner.generation;
     await resetting;
-    if (ref.mounted &&
+    final applied =
+        ref.mounted &&
         identical(_runtime, owner) &&
         owner.generation == cancelledGeneration &&
-        !owner.isJoining) {
+        !owner.isJoining;
+    if (applied) {
       _dispatch(
         const ConnectionChanged(
           RoomConnectionState.disconnected,
@@ -821,6 +827,7 @@ class SessionController extends _$SessionController {
         ),
       );
     }
+    return applied;
   }
 
   /// Joins again from the room's error screen.
@@ -829,14 +836,30 @@ class SessionController extends _$SessionController {
   /// renders as an endless loading screen. A failed rejoin is torn down and
   /// reported instead, so the error screen comes back with its cause.
   Future<void> rejoin() async {
+    if (runtime.isLeaving) return;
+    // A fatal failure parks the runtime until it is reset.
+    if (runtime.phase == SessionRuntimePhase.terminalFailure ||
+        state.connectionState == RoomConnectionState.error) {
+      await resetAfterFailedJoin();
+      if (!ref.mounted || runtime.isLeaving) return;
+    }
     final result = await join();
-    if (result == SessionJoinResult.success || !ref.mounted) return;
+    if (result == SessionJoinResult.success ||
+        !ref.mounted ||
+        runtime.isLeaving) {
+      return;
+    }
     // Fatal failures already moved the session into its error state.
     if (state.connectionState == RoomConnectionState.error) return;
+    // Only a failure of this attempt is reported; a leave or a newer join
+    // superseded it otherwise.
+    if (runtime.phase != SessionRuntimePhase.recoverableFailure &&
+        runtime.phase != SessionRuntimePhase.terminalFailure) {
+      return;
+    }
 
-    final cause = _lastJoinFailure;
-    await resetAfterFailedJoin();
-    if (!ref.mounted) return;
+    final cause = lastJoinFailure;
+    if (!await resetAfterFailedJoin()) return;
     _dispatch(
       const ConnectionChanged(
         RoomConnectionState.disconnected,
@@ -931,8 +954,11 @@ class SessionController extends _$SessionController {
     if (identical(this.room, room) && runtime.isJoining) {
       return join(joinMedia: joinMedia);
     }
+    // A reconnecting room is still this session's live room; offering it
+    // again would disconnect it.
     if (identical(this.room, room) &&
-        runtime.phase == SessionRuntimePhase.connected) {
+        (runtime.phase == SessionRuntimePhase.connected ||
+            runtime.phase == SessionRuntimePhase.reconnecting)) {
       return join(joinMedia: joinMedia);
     }
     // The offer checks connectivity before ownership can be accepted.

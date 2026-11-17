@@ -185,6 +185,11 @@ void main() {
           ),
           SessionErrorCategory.connectionLost,
         ),
+        // A join that failed never connected, so nothing was lost.
+        (
+          const RoomDisconnectionError(DisconnectReason.joinFailure),
+          SessionErrorCategory.serverUnreachable,
+        ),
         // On web, LiveKit's validate request fails like this when its server
         // can't be reached.
         (
@@ -288,6 +293,7 @@ void main() {
       for (final reason in [
         DisconnectReason.reconnectAttemptsExceeded,
         DisconnectReason.signalingConnectionFailure,
+        DisconnectReason.joinFailure,
       ]) {
         check(
           because: '$reason',

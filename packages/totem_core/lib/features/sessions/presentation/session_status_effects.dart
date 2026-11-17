@@ -130,7 +130,10 @@ class _SessionStatusEffectsState extends ConsumerState<SessionStatusEffects> {
       _dismissReconnectingNotification(immediately: true);
       return;
     }
-    if (_reconnectingNotification != null) return;
+    // The controller drops requests while blocked and closes them when it
+    // becomes blocked, so only a live request suppresses a new banner.
+    final current = _reconnectingNotification;
+    if (current != null && !current.isCancelled && !current.isClosed) return;
 
     _reconnectingNotification = _reconnectingEscalated
         ? _notificationController.showPermanent(
@@ -297,7 +300,12 @@ class _SessionStatusEffectsState extends ConsumerState<SessionStatusEffects> {
         roomStatus == RoomStatus.ended ||
         currentRoomScreen == RoomScreen.disconnected ||
         currentRoomScreen == RoomScreen.error;
+    final wasBlocked = _notificationController.blocked;
     _notificationController.blocked = showingDisconnectedScreen;
+    // A reconnect may still be under way once banners are allowed again.
+    if (wasBlocked && !showingDisconnectedScreen) {
+      _scheduleReconnectingNotificationSync();
+    }
 
     if (connectionState == RoomConnectionState.connected &&
         roomStatus == RoomStatus.active &&

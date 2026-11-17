@@ -64,6 +64,9 @@ class SessionRuntime {
   Object _entryIdentity = Object();
   Object get entryIdentity => _entryIdentity;
   bool _entryEnded = false;
+
+  /// What the latest join threw, if it failed with an error. Cleared when a
+  /// new join is requested.
   Object? lastFailure;
   final media = JoinMediaOwner();
   final polling = SessionPollScheduler();
@@ -201,6 +204,7 @@ class SessionRuntime {
     SessionJoinMedia? media,
     ConnectedSessionLease? offer,
   }) {
+    lastFailure = null;
     if (_disposed) {
       return this.media.retain(media).dispose().then((_) async {
         await offer?.dispose();

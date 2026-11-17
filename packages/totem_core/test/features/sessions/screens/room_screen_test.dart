@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' show ClientException;
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
@@ -31,6 +32,7 @@ import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/listening_turn_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
 import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
@@ -847,6 +849,46 @@ void main() {
       // The device is online; only the video server was unreachable.
       check(tester.widgetList(find.text("You're Offline"))).isEmpty();
       check(tester.widgetList(find.text('Connection Lost'))).length.equals(1);
+      check(tester.widgetList(find.text('Try Joining Again'))).length.equals(1);
+    });
+
+    testWidgets('explains a rejoin the video server never answered', (
+      tester,
+    ) async {
+      // On web, LiveKit's validate request fails like this when the video
+      // server can't be reached.
+      final error = RoomTransportError(
+        SessionTransportFailure(
+          SessionTransportFailureKind.unexpected,
+          'Failed to fetch',
+          cause: ClientException('Failed to fetch'),
+          stackTrace: StackTrace.empty,
+        ),
+      );
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        ),
+        screen: RoomScreen.error,
+        connectionState: RoomConnectionState.error,
+        extraOverrides: [
+          sessionErrorProvider.overrideWith((ref) => error),
+          isOfflineProvider.overrideWith((ref) => Stream.value(false)),
+        ],
+      );
+
+      check(
+        tester.widgetList(find.byType(SessionDisconnectedScreen)),
+      ).isEmpty();
+      check(
+        tester.widgetList(
+          find.text(SessionErrorCategory.serverUnreachable.title),
+        ),
+      ).length.equals(1);
       check(tester.widgetList(find.text('Try Joining Again'))).length.equals(1);
     });
 
@@ -2759,6 +2801,35 @@ void main() {
       ).isEmpty();
       harness.container.read(reconnecting.notifier).set(false);
       await tester.pump();
+    });
+
+    testWidgets('comes back after blocked banners closed it mid-reconnect', (
+      tester,
+    ) async {
+      final (harness, reconnecting) = await pumpReconnectingRoom(
+        tester,
+        Stream.value(false),
+      );
+      final roomStatus = harness.container.read(
+        harness.roomStatusProvider.notifier,
+      );
+
+      harness.container.read(reconnecting.notifier).set(true);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('Reconnecting…'))).length.equals(1);
+
+      // Banners are blocked, which closes the reconnecting one.
+      roomStatus.set(RoomStatus.ended);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('Reconnecting…'))).isEmpty();
+
+      roomStatus.set(RoomStatus.active);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.text('Reconnecting…'))).length.equals(1);
+
+      harness.container.read(reconnecting.notifier).set(false);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(NotificationBanner))).isEmpty();
     });
 
     testWidgets(

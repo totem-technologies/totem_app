@@ -83,13 +83,20 @@ class SessionStateReducer {
           turnStartedAt: current.turnStartedAt,
         );
       case SessionErrorChanged():
+        // Connection failures show the error screen, whether or not LiveKit
+        // raised them, and end any reconnect attempt.
+        final isConnectionFailure =
+            event.error is RoomLiveKitError ||
+            event.error is RoomTransportError;
         return SessionRoomState(
           connection: current.connection.copyWith(
             error: event.error,
-            state: event.error is RoomLiveKitError
+            state: isConnectionFailure
                 ? RoomConnectionState.error
                 : current.connection.state,
-            phase: event.error is RoomLiveKitError ? SessionPhase.error : null,
+            phase: isConnectionFailure ? SessionPhase.error : null,
+            isReconnecting:
+                current.connection.isReconnecting && !isConnectionFailure,
           ),
           participants: current.participants,
           turn: current.turn,
