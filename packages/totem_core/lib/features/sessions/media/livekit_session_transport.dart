@@ -48,27 +48,38 @@ class LiveKitSessionTransport implements SessionTransport {
       ..on<sdk.RoomReconnectingEvent>(
         (_) => _connection(SessionTransportConnectionState.reconnecting),
       )
-      ..on<sdk.RoomReconnectedEvent>(
-        (_) => _connection(
+      ..on<sdk.RoomResumingEvent>(
+        (_) => _connection(SessionTransportConnectionState.reconnecting),
+      )
+      ..on<sdk.RoomReconnectedEvent>((_) {
+        _connection(
           SessionTransportConnectionState.connected,
           reconnected: true,
-        ),
-      )
-      ..on<sdk.RoomDisconnectedEvent>(
-        (event) => _connection(
+        );
+        if (_subscribeExisting) {
+          _subscribeInBackground(subscribeToExistingMedia());
+        }
+      })
+      ..on<sdk.RoomDisconnectedEvent>((event) {
+        _subscriptions.clear();
+        _subscribeExisting = false;
+        _connection(
           SessionTransportConnectionState.disconnected,
           reason: event.reason?.name,
-        ),
-      )
+        );
+      })
       ..on<sdk.RoomMetadataChangedEvent>(
         (event) => _emit(TransportMetadataChanged(event.metadata)),
       )
       ..on<sdk.ParticipantConnectedEvent>(
         (event) => _participant(event.participant, true),
       )
-      ..on<sdk.ParticipantDisconnectedEvent>(
-        (event) => _participant(event.participant, false),
-      )
+      ..on<sdk.ParticipantDisconnectedEvent>((event) {
+        _subscriptions.removeWhere(
+          (_, entry) => identical(entry.$1, event.participant),
+        );
+        _participant(event.participant, false);
+      })
       ..on<sdk.ParticipantNameUpdatedEvent>(
         (event) => _emit(
           TransportParticipantUpdated(
@@ -100,19 +111,40 @@ class LiveKitSessionTransport implements SessionTransport {
       ..on<sdk.TrackPublishedEvent>((event) {
         _emit(const TransportMediaChanged());
         if (_subscribeExisting) {
-          unawaited(
-            _subscribe(event.publication).catchError((
-              Object error,
-              StackTrace stackTrace,
-            ) {
-              if (!_disposed) _events.addError(error, stackTrace);
-            }),
+          _subscribeInBackground(
+            _subscribe(event.participant, event.publication),
           );
         }
       })
       ..on<sdk.TrackUnpublishedEvent>((event) {
         _subscriptions.remove(event.publication);
         _emit(const TransportMediaChanged());
+      })
+      ..on<sdk.TrackSubscriptionPermissionChangedEvent>((event) {
+        final participant = event.participant;
+        final publication = event.publication;
+        if (participant is! sdk.RemoteParticipant ||
+            !identical(
+              _room.remoteParticipants[participant.identity],
+              participant,
+            ) ||
+            !participant.getTrackPublications().any(
+              (p) => identical(p, publication),
+            )) {
+          return;
+        }
+        if (event.state == sdk.TrackSubscriptionState.notAllowed) {
+          if (identical(_subscriptions[publication]?.$1, participant)) {
+            _subscriptions.remove(publication);
+          }
+        } else if (_subscribeExisting && publication.subscriptionAllowed) {
+          _subscribeInBackground(_subscribe(participant, publication));
+        }
+      })
+      ..on<sdk.TrackSubscribedEvent>((event) {
+        if (!_incomingMediaParticipants.contains(event.participant.identity)) {
+          _subscribeInBackground(event.publication.unsubscribe());
+        }
       });
   }
   final sdk.Room _room;
@@ -121,7 +153,9 @@ class LiveKitSessionTransport implements SessionTransport {
   sdk.Room get legacyRoomForB2AndC2 => _room;
   late final sdk.EventsListener<sdk.RoomEvent> _listener;
   final _events = StreamController<SessionTransportEvent>.broadcast(sync: true);
-  final Map<sdk.RemoteTrackPublication, Object> _subscriptions = Map.identity();
+  final Map<sdk.RemoteTrackPublication, (sdk.RemoteParticipant, Object)>
+  _subscriptions = Map.identity();
+  Set<String> _incomingMediaParticipants = const {};
   bool _subscribeExisting = false;
   bool _disposed = false;
   Future<void>? _disposal;
@@ -296,14 +330,34 @@ class LiveKitSessionTransport implements SessionTransport {
     );
   }
 
-  Future<void> _subscribe(sdk.RemoteTrackPublication publication) async {
-    if (_disposed || _subscriptions.containsKey(publication)) return;
+  void _subscribeInBackground(Future<void> subscription) {
+    unawaited(
+      subscription.catchError((Object error, StackTrace stackTrace) {
+        if (!_disposed) _events.addError(error, stackTrace);
+      }),
+    );
+  }
+
+  Future<void> _subscribe(
+    sdk.RemoteParticipant participant,
+    sdk.RemoteTrackPublication publication,
+  ) async {
+    if (_disposed ||
+        !_incomingMediaParticipants.contains(participant.identity) ||
+        !publication.subscriptionAllowed ||
+        _subscriptions.containsKey(publication)) {
+      return;
+    }
     final token = Object();
-    _subscriptions[publication] = token;
+    _subscriptions[publication] = (participant, token);
     try {
       await publication.subscribe();
+      if (!publication.subscriptionAllowed &&
+          identical(_subscriptions[publication]?.$2, token)) {
+        _subscriptions.remove(publication);
+      }
     } catch (error, stackTrace) {
-      if (identical(_subscriptions[publication], token)) {
+      if (identical(_subscriptions[publication]?.$2, token)) {
         _subscriptions.remove(publication);
       }
       throw failure(
@@ -315,13 +369,40 @@ class LiveKitSessionTransport implements SessionTransport {
   }
 
   @override
+  void setIncomingMediaParticipants(Set<String> identities) {
+    _requireActive();
+    if (setEquals(_incomingMediaParticipants, identities)) return;
+    _incomingMediaParticipants = Set.unmodifiable(identities);
+    final revoked = _subscriptions.entries
+        .where((entry) => !identities.contains(entry.value.$1.identity))
+        .map((entry) => entry.key)
+        .toList();
+    for (final publication in revoked) {
+      _subscriptions.remove(publication);
+      _subscribeInBackground(publication.unsubscribe());
+    }
+    if (_subscribeExisting) _subscribeInBackground(subscribeToExistingMedia());
+  }
+
+  @override
   Future<void> subscribeToExistingMedia() async {
     _requireActive();
     _subscribeExisting = true;
+    final current =
+        Map<sdk.RemoteTrackPublication, sdk.RemoteParticipant>.identity();
+    for (final participant in _room.remoteParticipants.values) {
+      for (final publication in participant.getTrackPublications()) {
+        current[publication] = participant;
+      }
+    }
+    _subscriptions.removeWhere(
+      (publication, entry) =>
+          !identical(current[publication], entry.$1) ||
+          !publication.subscriptionAllowed,
+    );
     await Future.wait(
-      _room.remoteParticipants.values
-          .expand((p) => p.getTrackPublications())
-          .map(_subscribe),
+      current.entries.map((entry) => _subscribe(entry.value, entry.key)),
+      eagerError: true,
     );
   }
 

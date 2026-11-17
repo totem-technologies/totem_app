@@ -129,6 +129,8 @@ class SessionController extends _$SessionController {
   Set<String>? _admittedMediaRecipients;
   Set<String>? _appliedMediaRecipients;
   bool? _appliedAllParticipantsAllowed;
+  // Null timers are paused departures awaiting a successful local reconnect.
+  final Map<String, Timer?> _departureReconcileTimers = {};
 
   JoinMediaOwner get _joinMediaOwner => runtime.media;
 
@@ -289,7 +291,9 @@ class SessionController extends _$SessionController {
       previousEntryCleanup: previousEntryCleanup,
       onEvent: _onTransportEvent,
       onCancel: () {
-        if (!ref.mounted || !identical(_runtime, ownedRuntime)) return;
+        if (!identical(_runtime, ownedRuntime)) return;
+        _cancelDepartureReconciliations();
+        if (!ref.mounted) return;
         keeper.disposePresenceTracking();
         devices.cancelPendingOperations();
         chat.cancelPending();
@@ -573,19 +577,60 @@ class SessionController extends _$SessionController {
 
   /// Attempts to reconcile the local state with the server state.
   void _attemptReconcile() {
+    if (runtime.phase == SessionRuntimePhase.reconnecting ||
+        _transport?.connectionState ==
+            SessionTransportConnectionState.reconnecting) {
+      return;
+    }
     if (!isCurrentUserKeeper()) return;
     if (state.roomState.status == RoomStatus.ended) return;
     unawaited(_scheduleServerStatePoll(attemptReconcile: true));
   }
 
+  void _cancelDepartureReconciliations() {
+    for (final timer in _departureReconcileTimers.values) {
+      timer?.cancel();
+    }
+    _departureReconcileTimers.clear();
+  }
+
   void _onParticipantDisconnected(ParticipantInfo participant) {
-    _attemptReconcile();
     _updateParticipantsList();
+    final identity = participant.identity;
+    if (_departureReconcileTimers.containsKey(identity)) return;
+    if (runtime.phase == SessionRuntimePhase.reconnecting ||
+        _transport?.connectionState ==
+            SessionTransportConnectionState.reconnecting) {
+      _departureReconcileTimers[identity] = null;
+      return;
+    }
+    _scheduleDepartureReconciliation(identity);
+  }
+
+  void _scheduleDepartureReconciliation(String identity) {
+    final owner = runtime;
+    final generation = owner.generation;
+    _departureReconcileTimers[identity] = Timer(const Duration(seconds: 5), () {
+      _departureReconcileTimers.remove(identity);
+      if (!ref.mounted ||
+          !identical(_runtime, owner) ||
+          owner.generation != generation ||
+          !owner.acceptsEvents ||
+          _transport?.participants.any((p) => p.identity == identity) !=
+              false) {
+        return;
+      }
+      _attemptReconcile();
+    });
   }
 
   void _onParticipantConnected(ParticipantInfo participant) {
     final identity = participant.identity;
-    if (_isMediaRecipientOrKeeper(identity)) _attemptReconcile();
+    final hadPendingDeparture = _departureReconcileTimers.containsKey(identity);
+    _departureReconcileTimers.remove(identity)?.cancel();
+    if (!hadPendingDeparture && _isMediaRecipientOrKeeper(identity)) {
+      _attemptReconcile();
+    }
     _updateParticipantsList();
   }
 
@@ -625,7 +670,12 @@ class SessionController extends _$SessionController {
       return false;
     }
 
-    runtime.polling.start(
+    _startPolling(owner, generation);
+    return true;
+  }
+
+  void _startPolling(SessionRuntime owner, int generation) {
+    owner.polling.start(
       syncInterval: syncTimerDuration,
       pollInterval: _statePollInterval,
       synchronize: () {
@@ -639,7 +689,6 @@ class SessionController extends _$SessionController {
         attemptReconcile: reconcile,
       ),
     );
-    return true;
   }
 
   Future<SessionJoinResult> _publishInitialMedia(
@@ -741,7 +790,11 @@ class SessionController extends _$SessionController {
       }
 
       attempt.requireCurrent();
-      await _transport!.connect(AppConfig.instance.liveKitUrl, options.token);
+      await _transport!.connect(
+        AppConfig.instance.liveKitUrl,
+        options.token,
+        autoSubscribe: false,
+      );
       if (!ref.mounted || !attempt.isCurrent) {
         return SessionJoinResult.retryableFailure;
       }
@@ -750,7 +803,12 @@ class SessionController extends _$SessionController {
         throw StateError('Room connected without a local participant');
       }
 
-      return await _publishInitialMedia(joinMedia, attempt);
+      final result = await _publishInitialMedia(joinMedia, attempt);
+      if (result == SessionJoinResult.success) {
+        _applyMediaSubscriptionPermissions();
+        unawaited(_subscribeRemoteMedia());
+      }
+      return result;
     } on SessionTransportFailure catch (error, stackTrace) {
       ErrorHandler.logError(
         error,
@@ -966,8 +1024,29 @@ class SessionController extends _$SessionController {
             if (!reconnected) {
               _onConnected();
             } else {
+              _updateRoomState();
+              _updateParticipantsList();
               _applyMediaSubscriptionPermissions(force: true);
+              _startPolling(runtime, runtime.generation);
+              unawaited(_scheduleServerStatePoll());
+              for (final identity in _departureReconcileTimers.keys.toList()) {
+                if (_departureReconcileTimers[identity] != null) continue;
+                if (_transport?.participants.any(
+                      (p) => p.identity == identity,
+                    ) !=
+                    false) {
+                  _departureReconcileTimers.remove(identity);
+                } else {
+                  _scheduleDepartureReconciliation(identity);
+                }
+              }
             }
+          case SessionTransportConnectionState.reconnecting:
+            for (final identity in _departureReconcileTimers.keys.toList()) {
+              _departureReconcileTimers[identity]?.cancel();
+              _departureReconcileTimers[identity] = null;
+            }
+            runtime.polling.stop();
           case SessionTransportConnectionState.disconnected:
             if (reason != null) {
               _dispatch(
@@ -1033,6 +1112,12 @@ class SessionController extends _$SessionController {
   void _applyMediaSubscriptionPermissions({bool force = false}) {
     final localIdentity = _transport?.localIdentity;
     if (!ref.mounted || localIdentity == null) return;
+
+    final incoming = <String>{...?_admittedMediaRecipients};
+    final incomingKeeper = state.roomState.keeper;
+    if (incomingKeeper.isNotEmpty) incoming.add(incomingKeeper);
+    incoming.remove(localIdentity);
+    _transport!.setIncomingMediaParticipants(incoming);
 
     final isKeeper = _isLocalUserKeeper;
     final allParticipantsAllowed = isKeeper && _admittedMediaRecipients == null;

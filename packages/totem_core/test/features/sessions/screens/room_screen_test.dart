@@ -20,6 +20,7 @@ import 'package:totem_core/features/permissions/media_permission_controller.dart
 import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_prompts_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -44,6 +45,25 @@ import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
 import '../media/test_participants.dart';
+
+class _MockSessionRuntime extends Mock implements SessionRuntime {}
+
+class _RoomScreenFakeSessionController extends FakeSessionController {
+  _RoomScreenFakeSessionController() {
+    when(
+      () => runtime.phase,
+    ).thenReturn(SessionRuntimePhase.recoverableFailure);
+  }
+
+  @override
+  final runtime = _MockSessionRuntime();
+}
+
+class _RecordingRouter extends FakeTotemRouter {
+  int exits = 0;
+  @override
+  void popOrHome([BuildContext? context]) => exits++;
+}
 
 class _PresentationPrompts extends SessionPromptsController {
   @override
@@ -168,6 +188,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   required MockSessionController session,
   required SessionDetailSchema event,
   required RoomScreen screen,
+  SessionRuntimePhase runtimePhase = SessionRuntimePhase.recoverableFailure,
   NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>? roomScreenProvider,
   RoomConnectionState connectionState = RoomConnectionState.connected,
   RoomStatus roomStatus = RoomStatus.active,
@@ -183,6 +204,9 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   bool isCurrentUserKeeper = false,
   List<Object?> extraOverrides = const [],
 }) async {
+  final runtime = _MockSessionRuntime();
+  when(() => runtime.phase).thenReturn(runtimePhase);
+  when(() => session.runtime).thenReturn(runtime);
   final p1 = testParticipant('user-1');
   final p2 = testParticipant('user-2');
   final keeper = testParticipant('keeper-1');
@@ -433,7 +457,7 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
   List<Object?> extraOverrides = const [],
   AsyncValueSetter<ProviderContainer>? beforeMount,
 }) async {
-  final session = FakeSessionController();
+  final session = _RoomScreenFakeSessionController();
   final eventStateProvider =
       NotifierProvider<_SessionEventOverrideNotifier, SessionDetailSchema?>(
         () => _SessionEventOverrideNotifier(event),
@@ -683,6 +707,7 @@ void main() {
             );
         late ProviderContainer container;
         var joinCalls = 0;
+
         when(() => session.join()).thenAnswer((_) async {
           joinCalls++;
           final result = await response.future;
@@ -718,6 +743,28 @@ void main() {
         await _unmountRoomScreen(tester);
       },
     );
+
+    testWidgets('terminal failure offers an exit instead of retry', (
+      tester,
+    ) async {
+      final router = _RecordingRouter();
+      TotemRouter.instance = router;
+      addTearDown(() => TotemRouter.instance = FakeTotemRouter());
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(_testNow(tester)),
+        screen: RoomScreen.error,
+        runtimePhase: SessionRuntimePhase.terminalFailure,
+      );
+      check(find.text('Try Joining Again').evaluate()).isEmpty();
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pump();
+      check(router.exits).equals(1);
+      verifyNever(() => session.resetAfterFailedJoin());
+      verifyNever(() => session.join());
+      await _unmountRoomScreen(tester);
+    });
 
     testWidgets('closes session sheets stacked above chat on disconnect', (
       tester,

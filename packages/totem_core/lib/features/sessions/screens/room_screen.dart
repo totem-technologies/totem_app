@@ -3,11 +3,12 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart'
-    hide Session, SessionOptions;
+    hide Session, SessionOptions, logger;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
 import 'package:totem_core/features/sessions/presentation/session_presentation_effects.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
@@ -19,6 +20,7 @@ import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
 import 'package:totem_core/features/sessions/widgets/session_panels.dart';
+import 'package:totem_core/shared/logger.dart';
 
 class VideoSessionScreen extends ConsumerStatefulWidget {
   const VideoSessionScreen({
@@ -309,6 +311,15 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     );
   }
 
+  Future<void> _retrySession(SessionController session) async {
+    final runtime = session.runtime;
+    if (runtime.phase == SessionRuntimePhase.terminalFailure) {
+      logger.i('Session manual recovery: terminal retry blocked');
+      return;
+    }
+    await session.join();
+  }
+
   Widget _buildBody(
     SessionController session,
     RoomScreen screen,
@@ -327,7 +338,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     switch (screen) {
       case RoomScreen.error:
         return SessionErrorScreen(
-          onRetry: session.join,
+          onRetry: session.runtime.phase == SessionRuntimePhase.terminalFailure
+              ? null
+              : () => _retrySession(session),
           error: disconnectionError,
         );
       case RoomScreen.loading:
@@ -335,7 +348,10 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       case RoomScreen.disconnected:
         if (isInternetDisconnect) {
           return SessionErrorScreen(
-            onRetry: session.join,
+            onRetry:
+                session.runtime.phase == SessionRuntimePhase.terminalFailure
+                ? null
+                : () => _retrySession(session),
             error: disconnectionError,
           );
         }

@@ -250,6 +250,54 @@ confirm audio/video continuity, roster recovery, turn controls, and clean re-ent
 | iPhone / iPad physical device | Background/foreground audio, camera switch/mute, interrupted connection/adoption, final release of tracks and audio route listeners |
 | Browser page close / refresh | Best-effort immediate disconnect; next entry recovers roster and identity without retaining previous local media |
 
+#### Focused follow-up validation (not executed)
+
+All rows below are **not executed**; they are a plan, not evidence of a fix.
+Record the build/commit, Flutter and LiveKit versions, server version, device/OS,
+network conditions, steps, timestamps, observed result and relevant logs or
+profiles for each run. Use a Keeper and at least two participants where applicable.
+
+| Environment | Follow-up and observable result to check |
+|---|---|
+| Android and iOS, real devices | Mute the microphone, interrupt connectivity long enough to force a full reconnect, then restore it. Check reconnect completion, remote media/settings, microphone state and errors; repeat with the microphone enabled. Exercise an iOS audio interruption as well. |
+| Android and iOS, impaired network | During reconnect, reproduce a slow handshake exceeding the connection timeout if feasible. Check for unexpected `duplicateIdentity`, orphan/stale participants and whether a later re-entry recovers. Separately verify that a genuine second client with the same identity is still handled as replacement. |
+| Safari 26.2 on Mac M1; Safari 27 on Mac M4; Chrome on Mac M1 | Enter and transition to an active session with multiple videos; toggle self-view, resize, background and restore. Check video continuity and Flutter UI composition above/around platform views. Compare CPU and frame behavior under matched workload and capture profiles; do not infer a fix from a build. |
+| iPhone/iPad Safari and native app; Android native app | Exercise preview-to-admission handoff, leave during publication, background/foreground, device routes and re-entry. Check capture/connection ownership, media continuity and final cleanup; on Android check foreground-service lifetime. |
+| Keeper and participants against the backend | Exercise turn commands, moderation, network loss and re-entry. Check canonical state/roster convergence and failure or retry presentation; do not assume backend mutations can be rolled back by the client. |
+
+#### External dependencies and limits
+
+- LiveKit Flutter SDK [#1274](https://github.com/livekit/client-sdk-flutter/issues/1274)
+  reports that a failed track republish during a full reconnect can prevent
+  `RoomReconnectedEvent`. [#1219](https://github.com/livekit/client-sdk-flutter/issues/1219)
+  reports a timed-out signal connection leaving an orphan socket whose events
+  can disconnect the current session with `duplicateIdentity`. Both were open
+  when checked; these are upstream reports, not proof that every reconnect or
+  duplicate-identity failure has the same cause. Confirm the deployed SDK and
+  upstream status when testing.
+- Canonical room state and versioned mutations depend on the backend; LiveKit
+  signaling and participant sessions depend on the LiveKit server. Issue #1219
+  describes the server acting correctly when two sessions share an identity,
+  not a confirmed backend defect. Client-side fencing cannot cancel an accepted
+  backend mutation or guarantee atomicity with local media or storage.
+- Incoming media now depends on the cooperative admission roster. Mixed-version
+  sessions or lost roster announcements can leave participant media unavailable;
+  falling back to unverified presence would bypass admission. A coordinated
+  rollout or a backend capability gate and reliable roster recovery are needed
+  before release. This is not server-enforced authorization.
+- Safari source audit: `FramePacedTicker` uses a shared 15 Hz clock and its
+  source comment reports lower CPU than 30 Hz in a prior Safari comparison;
+  waveform samples update notifiers rather than requesting a rebuild per sample.
+  Participant and preview video use platform views, and the call layout wraps
+  tiles in repaint boundaries. These are source observations, not a measurement
+  of this change or proof of a performance improvement. The
+  [rendering benchmark](../../scripts/benchmark/README.md) isolates synthetic
+  video and waveform workloads without LiveKit, capture, authentication or API;
+  its automated captures cover Chrome and Firefox, not Safari. Use a real Safari
+  profile and real session as well. The Flutter 3.50.0 context-loss mitigation
+  and remaining WebGL/iOS composition risks are described in the
+  [Safari checklist](../../README.md#safari-regression-checklist).
+
 Automated tests use controlled Futures, fake transports, and fake clocks. They do
 not replace real-device Safari publication and mobile foreground-service checks.
 The existing raw-room compatibility boundary and SDK-shaped domain errors are

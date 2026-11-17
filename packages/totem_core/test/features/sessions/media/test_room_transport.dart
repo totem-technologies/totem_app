@@ -122,6 +122,8 @@ class TestRoomTransport implements SessionTransport {
     required Set<String> recipients,
   }) {}
   @override
+  void setIncomingMediaParticipants(Set<String> identities) {}
+  @override
   Future<void> subscribeToExistingMedia() async {}
   @override
   Future<void> dispose() => _disposing ??= _dispose();

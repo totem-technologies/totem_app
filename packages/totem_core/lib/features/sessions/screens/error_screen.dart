@@ -91,11 +91,19 @@ class SessionErrorScreen extends ConsumerWidget {
         isInternetDisconnectReason(resolvedError.reason);
     final isOffline = isOfflineFromProvider || isOfflineFromError;
     final title = isOffline ? "You're Offline" : 'Something went wrong';
-    final subtitle = isOffline
-        ? 'Video sessions require an active internet connection.\n'
-              'Check your Wi-Fi or mobile data, then tap below to rejoin.'
-        : "We couldn't connect you to this session. "
-              'Please check your internet connection or try again.';
+    final String subtitle;
+    if (onRetry == null) {
+      subtitle =
+          "We couldn't connect you to this session. Go back to session details.";
+    } else if (isOffline) {
+      subtitle =
+          'Video sessions require an active internet connection.\n'
+          'Check your Wi-Fi or mobile data, then tap below to rejoin.';
+    } else {
+      subtitle =
+          "We couldn't connect you to this session. "
+          'Please check your internet connection or try again.';
+    }
 
     final theme = Theme.of(context);
 

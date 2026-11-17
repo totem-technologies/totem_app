@@ -149,6 +149,14 @@ class FakeSessionTransport implements SessionTransport {
     this.recipients = Set.unmodifiable(recipients);
   }
 
+  Set<String> incomingMediaParticipants = const {};
+
+  @override
+  void setIncomingMediaParticipants(Set<String> identities) {
+    _active();
+    incomingMediaParticipants = Set.unmodifiable(identities);
+  }
+
   @override
   Future<void> subscribeToExistingMedia() async {
     _active();

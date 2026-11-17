@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_poll_scheduler.dart';
@@ -76,6 +77,7 @@ class SessionRuntime {
   final _states = StreamController<SessionRuntimePhase>.broadcast(sync: true);
   Stream<SessionRuntimePhase> get states => _states.stream;
   SessionRuntimePhase _currentPhase = SessionRuntimePhase.idle;
+  final Stopwatch _phaseDuration = Stopwatch()..start();
   SessionRuntimePhase get phase => _currentPhase;
   int _generation = 0;
   int get generation => _generation;
@@ -101,6 +103,22 @@ class SessionRuntime {
       !_disposed && !isLeaving && _attempt != null && _attempt!.isCurrent;
   void _phase(SessionRuntimePhase next) {
     if (phase == next || _states.isClosed) return;
+    unawaited(
+      Sentry.addBreadcrumb(
+        Breadcrumb(
+          category: 'session.lifecycle',
+          message: 'Session phase changed',
+          level: SentryLevel.info,
+          data: {
+            'from': phase.name,
+            'to': next.name,
+            'generation': generation,
+            'duration_ms': _phaseDuration.elapsedMilliseconds,
+          },
+        ),
+      ),
+    );
+    _phaseDuration.reset();
     _currentPhase = next;
     _states.add(next);
   }
@@ -131,6 +149,24 @@ class SessionRuntime {
     _events ??= connection.events.listen(
       (event) {
         if (!identical(_transport, connection)) return;
+        if ((acceptsEvents || isLeaving) &&
+            event is TransportConnectionChanged) {
+          unawaited(
+            Sentry.addBreadcrumb(
+              Breadcrumb(
+                category: 'session.connection',
+                message: 'Transport connection changed',
+                level: SentryLevel.info,
+                data: {
+                  'state': event.state.name,
+                  'reason': event.reason?.name,
+                  'reconnected': event.reconnected,
+                  'generation': generation,
+                },
+              ),
+            ),
+          );
+        }
         if (!acceptsEvents) {
           // Preserve the current connection's final diagnostics during leave.
           if (isLeaving &&

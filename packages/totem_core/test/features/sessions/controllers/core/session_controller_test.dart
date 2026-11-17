@@ -395,6 +395,12 @@ void main() {
             transport.emit(TransportMetadataChanged(jsonEncode(metadata)));
             check(controller.state.roomState.version).equals(23);
             final permissionUpdates = transport.permissionUpdates;
+            final cameraCommands = factory.localMedia.cameraCommands.length;
+            final microphoneCommands =
+                factory.localMedia.microphoneCommands.length;
+            transport
+              ..participants = []
+              ..metadata = jsonEncode({...metadata, 'version': 24});
             const <SessionTransportEvent>[
               TransportConnectionChanged(
                 SessionTransportConnectionState.reconnecting,
@@ -405,6 +411,14 @@ void main() {
               ),
             ].forEach(transport.emit);
             check(transport.permissionUpdates > permissionUpdates).isTrue();
+            check(controller.state.participantsList).isEmpty();
+            check(controller.state.roomState.version).equals(24);
+            check(
+              factory.localMedia.cameraCommands.length,
+            ).equals(cameraCommands);
+            check(
+              factory.localMedia.microphoneCommands.length,
+            ).equals(microphoneCommands);
             check(transport.connectCalls).equals(1);
             transport.emit(
               const TransportParticipantChanged(remote, present: false),
@@ -1696,6 +1710,9 @@ void main() {
         await previousLeave;
         check(await activation).equals(SessionJoinResult.success);
         await pumpEventQueue();
+        verifyNever(publication.subscribe);
+        controller.updateAdmittedMediaRecipients({'remote'});
+        await pumpEventQueue();
         verify(publication.subscribe).called(1);
       });
 
@@ -1825,7 +1842,7 @@ void main() {
         addTearDown(subscription.close);
         final controller = container.read(
           sessionControllerProvider(options).notifier,
-        );
+        )..updateAdmittedMediaRecipients({'remote'});
 
         check(
           await controller.activateConnectedRoom(room: room),
@@ -1909,7 +1926,7 @@ void main() {
           addTearDown(subscription.close);
           final controller = container.read(
             sessionControllerProvider(options).notifier,
-          );
+          )..updateAdmittedMediaRecipients({'remote'});
 
           check(
             await controller.activateConnectedRoom(room: room),
@@ -2194,109 +2211,250 @@ void main() {
         },
       );
 
-      test('keeper reconciles admitted participant connections only', () async {
-        const eventSlug = 'test-session';
-        const options = SessionOptions(
-          sessionSlug: eventSlug,
-          token: 'test-token',
-          cameraEnabled: false,
-          microphoneEnabled: false,
-          cameraOptions: SessionController.defaultCameraCaptureOptions,
-          speakerEnabled: true,
-        );
-        const roomState = RoomState(
-          keeper: 'keeper',
-          nextSpeaker: Omittable(''),
-          currentSpeaker: Omittable(''),
-          status: RoomStatus.waitingRoom,
-          turnState: TurnState.idle,
-          sessionSlug: eventSlug,
-          statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
-          talkingOrder: [],
-          version: 1,
-          roundNumber: 0,
-        );
-        var reconcilePolls = 0;
-        final container = ProviderContainer(
-          overrides: [
-            authControllerProvider.overrideWith(
-              () => FakeAuthController(
-                AuthState.authenticated(
-                  user: UserSchema(
-                    email: 'keeper@example.com',
-                    slug: const Omittable('keeper'),
-                    name: const Omittable('Keeper'),
-                    profileAvatarType: ProfileAvatarTypeEnum.td,
-                    circleCount: 0,
-                    dateCreated: DateTime(2024),
+      testWidgets(
+        'keeper delays departures independently and polls safely on reconnect',
+        (tester) async {
+          const eventSlug = 'test-session';
+          const options = SessionOptions(
+            sessionSlug: eventSlug,
+            token: 'test-token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+            speakerEnabled: true,
+          );
+          const roomState = RoomState(
+            keeper: 'keeper',
+            nextSpeaker: Omittable(''),
+            currentSpeaker: Omittable(''),
+            status: RoomStatus.waitingRoom,
+            turnState: TurnState.idle,
+            sessionSlug: eventSlug,
+            statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+            talkingOrder: [],
+            version: 1,
+            roundNumber: 0,
+          );
+          var reconcilePolls = 0;
+          var normalPolls = 0;
+          Completer<RoomState>? normalPollGate;
+          final factory = FakeSessionTransportFactory();
+          final container = ProviderContainer(
+            overrides: [
+              authControllerProvider.overrideWith(
+                () => FakeAuthController(
+                  AuthState.authenticated(
+                    user: UserSchema(
+                      email: 'keeper@example.com',
+                      slug: const Omittable('keeper'),
+                      name: const Omittable('Keeper'),
+                      profileAvatarType: ProfileAvatarTypeEnum.td,
+                      circleCount: 0,
+                      dateCreated: DateTime(2024),
+                    ),
                   ),
                 ),
               ),
+              sessionProvider(
+                eventSlug,
+              ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
+              sessionTransportFactoryProvider(
+                options,
+              ).overrideWithValue(factory),
+              roomStateProvider(eventSlug).overrideWith((_) {
+                normalPolls++;
+                return normalPollGate?.future ?? Future.value(roomState);
+              }),
+              roomStateProvider(eventSlug, attemptReconcile: true).overrideWith(
+                (_) async {
+                  reconcilePolls++;
+                  return roomState;
+                },
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, _) {},
+            fireImmediately: true,
+          );
+          addTearDown(subscription.close);
+          final controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          const admitted = ParticipantInfo(
+            sid: 'a',
+            identity: 'admitted',
+            name: 'Admitted',
+          );
+          const other = ParticipantInfo(
+            sid: 'b',
+            identity: 'other',
+            name: 'Other',
+          );
+          controller.applyRoomState(roomState);
+
+          check(await controller.join()).equals(SessionJoinResult.success);
+          final transport = factory.created.single
+            ..emit(const TransportParticipantChanged(admitted, present: true));
+          check(transport.autoSubscribe).equals(false);
+          check(transport.incomingMediaParticipants).deepEquals({'keeper'});
+          await tester.pump();
+          reconcilePolls = 0;
+          controller.updateAdmittedMediaRecipients({'admitted'});
+          await tester.pump();
+          check(
+            transport.incomingMediaParticipants,
+          ).deepEquals({'keeper', 'admitted'});
+          check(reconcilePolls).equals(1);
+          container.invalidate(
+            roomStateProvider(eventSlug, attemptReconcile: true),
+          );
+
+          controller.updateAdmittedMediaRecipients({'admitted'});
+          await tester.pump();
+          check(reconcilePolls).equals(1);
+
+          transport.emit(
+            const TransportParticipantChanged(other, present: true),
+          );
+          await tester.pump();
+          check(reconcilePolls).equals(1);
+
+          transport.emit(
+            const TransportParticipantChanged(admitted, present: true),
+          );
+          await tester.pump();
+          check(reconcilePolls).equals(2);
+          container.invalidate(
+            roomStateProvider(eventSlug, attemptReconcile: true),
+          );
+
+          transport.emit(
+            const TransportParticipantChanged(admitted, present: false),
+          );
+          await tester.pump(const Duration(seconds: 2));
+          transport
+            ..emit(const TransportParticipantChanged(other, present: false))
+            ..emit(const TransportParticipantChanged(admitted, present: true));
+          await tester.pump(const Duration(seconds: 3));
+          check(reconcilePolls).equals(2);
+          await tester.pump(const Duration(seconds: 2));
+          await tester.pump();
+          check(reconcilePolls).equals(3);
+          container.invalidate(
+            roomStateProvider(eventSlug, attemptReconcile: true),
+          );
+
+          // A missed return event must not reconcile a participant who is present.
+          transport
+            ..emit(const TransportParticipantChanged(admitted, present: false))
+            ..participants = [admitted];
+          await tester.pump(const Duration(seconds: 5));
+          await tester.pump();
+          check(reconcilePolls).equals(3);
+
+          transport
+            ..emit(const TransportParticipantChanged(admitted, present: false))
+            ..emit(
+              const TransportConnectionChanged(
+                SessionTransportConnectionState.reconnecting,
+              ),
+            )
+            ..emit(const TransportParticipantChanged(admitted, present: true))
+            ..emit(const TransportParticipantChanged(other, present: false));
+          await tester.pump(const Duration(seconds: 5));
+          check(reconcilePolls).equals(3);
+          container.invalidate(roomStateProvider(eventSlug));
+          final normalBeforeReconnect = normalPolls;
+          final cameraCommands = factory.localMedia.cameraCommands.length;
+          final microphoneCommands =
+              factory.localMedia.microphoneCommands.length;
+          transport.emit(
+            const TransportConnectionChanged(
+              SessionTransportConnectionState.connected,
+              reconnected: true,
             ),
-            sessionProvider(
-              eventSlug,
-            ).overrideWithValue(AsyncData(_createSessionEvent(eventSlug))),
-            roomStateProvider(eventSlug).overrideWith((_) async => roomState),
-            roomStateProvider(eventSlug, attemptReconcile: true).overrideWith((
-              _,
-            ) async {
-              reconcilePolls++;
-              return roomState;
-            }),
-          ],
-        );
-        addTearDown(container.dispose);
-        final subscription = container.listen(
-          sessionControllerProvider(options),
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(subscription.close);
-        final controller = container.read(
-          sessionControllerProvider(options).notifier,
-        );
-        final localParticipant = MockLocalParticipant('keeper');
-        final admittedParticipant = _RemoteParticipantWithPublications(
-          'admitted',
-          'Admitted',
-          const [],
-        );
-        when(localParticipant.unpublishAllTracks).thenAnswer((_) async {});
-        final room = _CountingRoom(
-          localParticipant,
-          remoteParticipantMap: {'admitted': admittedParticipant},
-        );
-        controller.applyRoomState(roomState);
+          );
+          await tester.pump();
+          check(normalPolls).equals(normalBeforeReconnect + 1);
+          check(reconcilePolls).equals(3);
+          check(
+            factory.localMedia.cameraCommands.length,
+          ).equals(cameraCommands);
+          check(
+            factory.localMedia.microphoneCommands.length,
+          ).equals(microphoneCommands);
+          check(transport.connectCalls).equals(1);
+          await tester.pump(const Duration(seconds: 4));
+          check(reconcilePolls).equals(3);
+          await tester.pump(const Duration(seconds: 1));
+          await tester.pump();
+          check(reconcilePolls).equals(4);
+          container.invalidate(
+            roomStateProvider(eventSlug, attemptReconcile: true),
+          );
 
-        check(
-          await controller.activateConnectedRoom(room: room),
-        ).equals(SessionJoinResult.success);
-        await pumpEventQueue();
-        reconcilePolls = 0;
-        controller.updateAdmittedMediaRecipients({'admitted'});
-        await pumpEventQueue();
-        check(reconcilePolls).equals(1);
+          // A departure pending before reconnect is verified after it too.
+          transport
+            ..emit(const TransportParticipantChanged(admitted, present: false))
+            ..emit(
+              const TransportConnectionChanged(
+                SessionTransportConnectionState.reconnecting,
+              ),
+            )
+            ..emit(
+              const TransportConnectionChanged(
+                SessionTransportConnectionState.connected,
+                reconnected: true,
+              ),
+            );
+          await tester.pump(const Duration(seconds: 4));
+          check(reconcilePolls).equals(4);
+          await tester.pump(const Duration(seconds: 1));
+          await tester.pump();
+          check(reconcilePolls).equals(5);
+          container.invalidate(
+            roomStateProvider(eventSlug, attemptReconcile: true),
+          );
 
-        controller.updateAdmittedMediaRecipients({'admitted'});
-        await pumpEventQueue();
-        check(reconcilePolls).equals(1);
+          // A reconcile queued behind a fetch must not survive reconnect.
+          normalPollGate = Completer<RoomState>();
+          container.invalidate(roomStateProvider(eventSlug));
+          unawaited(controller.runtime.polling.request());
+          await tester.pump();
+          transport
+            ..emit(const TransportParticipantChanged(admitted, present: true))
+            ..emit(
+              const TransportConnectionChanged(
+                SessionTransportConnectionState.reconnecting,
+              ),
+            )
+            ..emit(
+              const TransportConnectionChanged(
+                SessionTransportConnectionState.connected,
+                reconnected: true,
+              ),
+            );
+          normalPollGate.complete(roomState);
+          await tester.pump();
+          await tester.pump();
+          check(reconcilePolls).equals(5);
 
-        await room.listener.trigger(
-          ParticipantConnectedEvent(
-            participant: MockRemoteParticipant('pending', 'Pending'),
-          ),
-        );
-        await pumpEventQueue();
-        check(reconcilePolls).equals(1);
-
-        await room.listener.trigger(
-          ParticipantConnectedEvent(
-            participant: MockRemoteParticipant('admitted', 'Admitted'),
-          ),
-        );
-        await pumpEventQueue();
-        check(reconcilePolls).equals(2);
-      });
+          transport
+            ..emit(
+              const TransportConnectionChanged(
+                SessionTransportConnectionState.reconnecting,
+              ),
+            )
+            ..emit(const TransportParticipantChanged(admitted, present: false));
+          unawaited(controller.leave());
+          await tester.pump(const Duration(seconds: 5));
+          await tester.pump();
+          check(reconcilePolls).equals(5);
+        },
+      );
 
       test('join only calls room.connect once while connecting', () async {
         const eventSlug = 'test-session';

@@ -192,7 +192,11 @@ class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {
 }
 
 class MockRemoteTrackPublication<T extends RemoteTrack> extends Mock
-    implements RemoteTrackPublication<T> {}
+    implements RemoteTrackPublication<T> {
+  MockRemoteTrackPublication() {
+    when(() => subscriptionAllowed).thenReturn(true);
+  }
+}
 
 class MockLocalAudioTrackPublication extends Mock
     implements LocalTrackPublication<LocalAudioTrack> {}

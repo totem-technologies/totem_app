@@ -136,6 +136,9 @@ abstract interface class SessionTransport {
     required bool allowEveryone,
     required Set<String> recipients,
   });
+
+  /// Replaces the trusted identities whose remote media may be received.
+  void setIncomingMediaParticipants(Set<String> identities);
   Future<void> subscribeToExistingMedia();
   Future<void> disconnect();
 
