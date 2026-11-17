@@ -200,6 +200,8 @@ class SessionDeviceController extends _$SessionDeviceController {
 
   int _request(MediaKind kind) => _requests[kind] = _requests[kind]! + 1;
 
+  int get microphoneIntentRevision => _requests[MediaKind.microphone]!;
+
   bool _isLatest(MediaKind kind, int request) => request == _requests[kind];
 
   /// Runs [command] after the device's earlier commands, or straight away
@@ -274,7 +276,7 @@ class SessionDeviceController extends _$SessionDeviceController {
     try {
       await _setEnabled(kind, true);
     } on MediaPublishException catch (error) {
-      if (_disposed) return const TurnOnSkipped();
+      if (_disposed || !_isLatest(kind, request)) return const TurnOnSkipped();
       logger.w('The room could not take the ${kind.name}', error: error);
       // The device was captured, which proves its permission (WS1).
       _permissions.recordCaptureSuccess(kind);
@@ -284,7 +286,7 @@ class SessionDeviceController extends _$SessionDeviceController {
       _emitState();
       return const TurnOnSkipped();
     } catch (error, stackTrace) {
-      if (_disposed) return const TurnOnSkipped();
+      if (_disposed || !_isLatest(kind, request)) return const TurnOnSkipped();
       final failure = await _permissions.recordCaptureFailure(
         kind,
         error,
@@ -295,7 +297,7 @@ class SessionDeviceController extends _$SessionDeviceController {
       _setProblem(kind, failure.problem);
       return TurnOnFailed(failure);
     }
-    if (_disposed) return const TurnOnSkipped();
+    if (_disposed || !_isLatest(kind, request)) return const TurnOnSkipped();
     // The room went away meanwhile, so nothing was captured.
     if (!_isOn(kind)) {
       _turnOnBlocked.add((kind, TurnOnBlocker.connection));
@@ -666,6 +668,12 @@ class SessionDeviceController extends _$SessionDeviceController {
         if (!_disposed) _emitState();
       }
     });
+  }
+
+  /// Invalidates queued device intents before a connection is released.
+  void cancelPendingOperations() {
+    MediaKind.values.forEach(_request);
+    _speakerphoneRequest++;
   }
 
   Future<void> stopDeviceChangeListener() async {

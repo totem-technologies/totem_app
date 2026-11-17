@@ -48,7 +48,6 @@ SessionRoomState _state({
   RoomStatus roomStatus = RoomStatus.waitingRoom,
   TurnState turnState = TurnState.idle,
   List<ParticipantInfo> participants = const <ParticipantInfo>[],
-  List<SessionChatMessage> messages = const [],
   String keeper = 'keeper',
   String? currentSpeaker,
   String? nextSpeaker,
@@ -64,7 +63,6 @@ SessionRoomState _state({
       wasJoining: wasJoining,
     ),
     participants: ParticipantsState(participants: participants),
-    chat: ChatState(messages: messages),
     turn: SessionTurnState(
       roomState: _roomState(
         status: roomStatus,
@@ -163,20 +161,26 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(sessionAdmissionOpenProvider.notifier).open = true;
-      check(container.read(sessionAdmissionOpenProvider)).isTrue();
-      check(container.read(sessionChatOpenProvider)).isFalse();
-      check(container.read(sessionPromptsOpenProvider)).isFalse();
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.admission);
+      check(container.read(sessionAdmissionSelectedProvider)).isTrue();
+      check(container.read(sessionChatSelectedProvider)).isFalse();
+      check(container.read(sessionPromptsSelectedProvider)).isFalse();
 
-      container.read(sessionChatOpenProvider.notifier).open = true;
-      check(container.read(sessionAdmissionOpenProvider)).isFalse();
-      check(container.read(sessionChatOpenProvider)).isTrue();
-      check(container.read(sessionPromptsOpenProvider)).isFalse();
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.chat);
+      check(container.read(sessionAdmissionSelectedProvider)).isFalse();
+      check(container.read(sessionChatSelectedProvider)).isTrue();
+      check(container.read(sessionPromptsSelectedProvider)).isFalse();
 
-      container.read(sessionPromptsOpenProvider.notifier).open = true;
-      check(container.read(sessionAdmissionOpenProvider)).isFalse();
-      check(container.read(sessionChatOpenProvider)).isFalse();
-      check(container.read(sessionPromptsOpenProvider)).isTrue();
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.prompts);
+      check(container.read(sessionAdmissionSelectedProvider)).isFalse();
+      check(container.read(sessionChatSelectedProvider)).isFalse();
+      check(container.read(sessionPromptsSelectedProvider)).isTrue();
     });
   });
 
@@ -274,31 +278,35 @@ void main() {
       ).deepEquals(['keeper']);
     });
 
-    test('participant projections ignore chat-only changes', () {
+    test('chat updates do not mutate participant state', () {
       final participant = testParticipant('alice', name: 'Alice');
-      final before = _state(participants: [participant]);
-      final after = SessionRoomState(
-        connection: before.connection,
-        participants: before.participants,
-        turn: before.turn,
-        chat: const ChatState(
-          messages: [
-            SessionChatMessage(
-              message: 'Hello',
-              timestamp: 1,
-              id: 'message-1',
-              sender: false,
-            ),
-          ],
+      final state = _state(participants: [participant]);
+      final chat = FakeSessionController()..mockState = state;
+      final before = sessionParticipantLayout(state);
+      chat.chat.add(
+        const SessionChatMessage(
+          message: 'Hello',
+          timestamp: 1,
+          id: 'message-1',
+          sender: false,
         ),
       );
-
+      final previousMessages = chat.chat.messages;
+      chat.chat.add(
+        const SessionChatMessage(
+          message: 'Another message',
+          timestamp: 2,
+          id: 'message-2',
+          sender: false,
+        ),
+      );
+      check(sessionParticipantLayout(chat.state)).equals(before);
+      check(chat.state).identicalTo(state);
       check(
-        sessionParticipantPresentation(before, participant.identity),
-      ).equals(sessionParticipantPresentation(after, participant.identity));
-      check(
-        sessionParticipantLayout(before),
-      ).equals(sessionParticipantLayout(after));
+        previousMessages.map((message) => message.id),
+      ).deepEquals(['message-1']);
+      check(chat.chat.messages).length.equals(2);
+      chat.chat.dispose();
     });
 
     test('defaults when scope is not overridden', () {
@@ -381,6 +389,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          sessionMessagesProvider.overrideWithValue(const [chatMessage]),
           currentSessionStateProvider.overrideWithValue(
             _state(
               connectionState: RoomConnectionState.connected,
@@ -388,7 +397,6 @@ void main() {
               roomStatus: RoomStatus.active,
               turnState: TurnState.passing,
               participants: participants,
-              messages: const [chatMessage],
               keeper: 'keeper',
               currentSpeaker: 'alice',
               nextSpeaker: 'keeper',

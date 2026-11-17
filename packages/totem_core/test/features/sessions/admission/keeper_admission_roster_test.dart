@@ -185,13 +185,15 @@ void main() {
       store.replace(['second'], 2, awaitingReadiness: ['second']);
       final second = notifier.persist();
       final clear = notifier.clear();
-      check(store.members).isEmpty();
-      check(store.revision).equals(0);
+      // In-memory recovery is retained until the durable clear succeeds.
+      check(store.members.toSet()).deepEquals({'second'});
+      check(store.revision).equals(2);
       check(preferences.writes).length.equals(1);
 
       firstWrite.complete(true);
       await Future.wait([first, second, clear]);
-
+      check(store.members).isEmpty();
+      check(store.revision).equals(0);
       check(preferences.values).isEmpty();
       check(preferences.removals).deepEquals([_key('session-a', 'keeper-a')]);
       check(
@@ -199,6 +201,35 @@ void main() {
             .map((write) => (jsonDecode(write.$2) as Map)['revision'])
             .toList(),
       ).deepEquals([1, 2]);
+    },
+  );
+
+  test(
+    'durable revocations survive reload and superseded writers cannot restore an old roster',
+    () async {
+      final preferences = _FakePreferences();
+      final container = _container(preferences);
+      addTearDown(container.dispose);
+      final provider = keeperAdmissionRosterProvider('session', 'keeper');
+      final subscription = container.listen(provider, (_, _) {});
+      addTearDown(subscription.close);
+      final old = await container.read(provider.future);
+      old.revoked.add('removed');
+      old.replace(['allowed'], 1);
+      final writer = container.read(provider.notifier);
+      await writer.persistStore(old);
+      container.invalidate(provider);
+      final current = await container.read(provider.future);
+      check(current.revoked).deepEquals({'removed'});
+      check(current.members.toSet()).deepEquals({'allowed'});
+      current.replace(['newer'], 2);
+      await container.read(provider.notifier).persistStore(current);
+      old.replace(['removed'], 100);
+      check(() => writer.persistStore(old)).throws<StateError>();
+      final saved =
+          jsonDecode(preferences.values[_key('session', 'keeper')]!) as Map;
+      check(saved['members'] as List).deepEquals(['newer']);
+      check(saved['revoked'] as List).deepEquals(['removed']);
     },
   );
 

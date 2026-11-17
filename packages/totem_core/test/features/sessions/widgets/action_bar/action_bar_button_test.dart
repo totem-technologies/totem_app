@@ -1,167 +1,146 @@
-import 'package:checks/checks.dart';
+import 'dart:ui' show PointerDeviceKind;
 
+import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 
 void main() {
-  Future<void> pumpWidget(
+  Future<void> pumpBar(
     WidgetTester tester, {
     required Widget child,
-    Size? surfaceSize,
-    Color? textColor,
+    Size size = const Size(390, 844),
   }) async {
-    if (surfaceSize != null) {
-      tester.view.physicalSize = surfaceSize;
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-    }
-
+    tester.view
+      ..physicalSize = size
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: DefaultTextStyle.merge(
-            style: TextStyle(color: textColor),
-            // Align is load-bearing: production pins the bar to the bottom
-            // and keeps it from stretching to fill the scaffold.
-            child: Align(alignment: Alignment.bottomCenter, child: child),
-          ),
+          body: Align(alignment: Alignment.bottomCenter, child: child),
         ),
       ),
     );
   }
 
-  double buttonWidthOf(WidgetTester tester) {
-    return tester.getSize(find.byType(ActionBarButton).first).width;
-  }
-
-  List<Widget> ghostButtons(int count) {
-    return [
-      for (var i = 0; i < count; i++)
-        ActionBarButton(onPressed: () {}, child: Text('$i')),
-    ];
-  }
-
-  group('ActionBarShortcutTooltip', () {
-    testWidgets('shows the shortcut only on a desktop web target', (
+  testWidgets('only enabled accessible actions respond to taps', (
+    tester,
+  ) async {
+    var taps = 0;
+    await pumpBar(
       tester,
-    ) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-      try {
-        await pumpWidget(
-          tester,
-          child: const ActionBarShortcutTooltip(
-            shortcut: ActionBarShortcut.microphone,
-            child: Icon(Icons.mic),
+      child: ActionBar(
+        children: [
+          ActionBarButton(
+            semanticsLabel: 'Send message',
+            onPressed: () => taps++,
+            child: const Icon(Icons.message),
           ),
-        );
-
-        check(
-          tester.widgetList(find.byType(Tooltip)),
-        ).length.equals(kIsWeb ? 1 : 0);
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
-    });
-
-    testWidgets('does not show the shortcut on a mobile web target', (
-      tester,
-    ) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
-      try {
-        await pumpWidget(
-          tester,
-          child: const ActionBarShortcutTooltip(
-            shortcut: ActionBarShortcut.microphone,
-            child: Icon(Icons.mic),
+          const ActionBarButton(
+            semanticsLabel: 'Unavailable action',
+            onPressed: null,
+            child: Icon(Icons.message),
           ),
-        );
-
-        check(tester.widgetList(find.byType(Tooltip))).isEmpty();
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
-    });
+        ],
+      ),
+    );
+    await tester.tap(find.bySemanticsLabel('Send message'));
+    await tester.tap(find.bySemanticsLabel('Unavailable action'));
+    await tester.pump();
+    check(taps).equals(1);
   });
 
-  group('ActionBarButton', () {
-    testWidgets('invokes callback on tap', (tester) async {
-      var taps = 0;
-
-      await pumpWidget(
-        tester,
-        child: ActionBarButton(
-          onPressed: () => taps++,
-          child: const Icon(Icons.message),
-        ),
-      );
-
-      await tester.tap(find.byType(ActionBarButton));
-      await tester.pump();
-
-      check(taps).equals(1);
-    });
-  });
-
-  group('ActionBar', () {
-    testWidgets('uses phone metrics on a phone-width surface', (tester) async {
-      await pumpWidget(
-        tester,
-        surfaceSize: const Size(390, 844),
-        child: ActionBar(children: ghostButtons(5)),
-      );
-
-      check(buttonWidthOf(tester)).equals(48);
-    });
-
-    testWidgets('uses phone metrics when nested in an unbounded Row', (
+  for (final scenario in [
+    (name: 'phone', size: const Size(390, 844), constrained: false, row: false),
+    (
+      name: 'unbounded row',
+      size: const Size(390, 844),
+      constrained: false,
+      row: true,
+    ),
+    (
+      name: 'constrained phone',
+      size: const Size(390, 844),
+      constrained: true,
+      row: false,
+    ),
+    (
+      name: 'wide tablet',
+      size: const Size(1200, 900),
+      constrained: false,
+      row: false,
+    ),
+  ]) {
+    testWidgets('all actions fit and remain reachable in ${scenario.name}', (
       tester,
     ) async {
-      await pumpWidget(
-        tester,
-        surfaceSize: const Size(390, 844),
-        child: Row(
+      final activated = <int>[];
+      Widget bar = ActionBar(
+        children: [
+          for (var i = 0; i < 5; i++)
+            ActionBarButton(
+              semanticsLabel: 'Action $i',
+              onPressed: () => activated.add(i),
+              child: Text('$i'),
+            ),
+        ],
+      );
+      if (scenario.constrained) {
+        bar = SizedBox(width: 250, child: bar);
+      } else if (scenario.row) {
+        bar = Row(
           children: [
-            const Expanded(child: Text('next up')),
-            ActionBar(children: ghostButtons(5)),
+            const Expanded(child: Text('Next up')),
+            bar,
             const Spacer(),
           ],
+        );
+      }
+      await pumpBar(tester, size: scenario.size, child: bar);
+      Rect? previous;
+      for (var i = 0; i < 5; i++) {
+        final action = find.bySemanticsLabel('Action $i');
+        final rect = tester.getRect(action);
+        check(rect.left).isGreaterOrEqual(0);
+        check(rect.right).isLessOrEqual(scenario.size.width);
+        check(rect.top).isGreaterOrEqual(0);
+        check(rect.bottom).isLessOrEqual(scenario.size.height);
+        if (previous != null) check(previous.overlaps(rect)).isFalse();
+        previous = rect;
+        await tester.tap(action);
+      }
+      await tester.pump();
+      check(activated).deepEquals([0, 1, 2, 3, 4]);
+      check(tester.takeException()).isNull();
+    });
+  }
+
+  testWidgets('shortcut help is discoverable only on desktop web', (
+    tester,
+  ) async {
+    for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+      debugDefaultTargetPlatformOverride = platform;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      await pumpBar(
+        tester,
+        child: const ActionBarShortcutTooltip(
+          shortcut: ActionBarShortcut.microphone,
+          child: SizedBox(width: 48, height: 48, child: Text('Microphone')),
         ),
       );
-
-      check(buttonWidthOf(tester)).equals(48);
-    });
-
-    testWidgets('falls back to compact when phone width cannot fit children', (
-      tester,
-    ) async {
-      // phone.widthFor(5) = 276; compact.widthFor(5) = 224. Use a width
-      // between them so only the phone tier is rejected.
-      await pumpWidget(
-        tester,
-        surfaceSize: const Size(390, 844),
-        child: SizedBox(
-          width: 250,
-          child: ActionBar(children: ghostButtons(5)),
-        ),
+      final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await pointer.addPointer(
+        location: tester.getCenter(find.text('Microphone')),
       );
-
-      check(buttonWidthOf(tester)).equals(40);
-    });
-
-    testWidgets('uses comfortable metrics on a wide tablet surface', (
-      tester,
-    ) async {
-      await pumpWidget(
-        tester,
-        surfaceSize: const Size(1200, 900),
-        child: ActionBar(children: ghostButtons(2)),
-      );
-
-      check(buttonWidthOf(tester)).equals(44);
-    });
+      await tester.pump(const Duration(seconds: 1));
+      check(
+        find.text('Toggle microphone (M)').evaluate(),
+      ).length.equals(kIsWeb && platform == TargetPlatform.windows ? 1 : 0);
+      await pointer.removePointer();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
   });
 }

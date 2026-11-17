@@ -1,9 +1,10 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 
 Future<void> showKeeperProfileSheet(BuildContext context, String slug) {
   return showModalBottomSheet<void>(
-    context: context,
+    context: sessionNavigatorContext(context),
     isScrollControlled: true,
     showDragHandle: true,
     useSafeArea: true,

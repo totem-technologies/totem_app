@@ -327,9 +327,7 @@ void main() {
     });
   });
 
-  autoSizeTest('Join uses one label size on desktop and touch', (
-    tester,
-  ) async {
+  autoSizeTest('Join uses one label size on desktop and touch', (tester) async {
     await pumpTestWidget(
       tester,
       child: Column(
@@ -348,12 +346,14 @@ void main() {
     for (final text in ['Desktop', 'Touch']) {
       check(labelOf(text))
         ..has((style) => style?.fontSize, 'fontSize').equals(21)
-        ..has((style) => style?.fontWeight, 'fontWeight').equals(
-          FontWeight.w600,
-        )
-        ..has((style) => style?.fontFamily, 'fontFamily').equals(
-          AppTheme.fontFamilySans,
-        );
+        ..has(
+          (style) => style?.fontWeight,
+          'fontWeight',
+        ).equals(FontWeight.w600)
+        ..has(
+          (style) => style?.fontFamily,
+          'fontFamily',
+        ).equals(AppTheme.fontFamilySans);
     }
   });
 

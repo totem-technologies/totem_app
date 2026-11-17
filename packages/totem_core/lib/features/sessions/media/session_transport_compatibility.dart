@@ -1,0 +1,152 @@
+/// Temporary SDK integrations for B1. Remove messaging conversion in B2 and
+/// raw room adoption/access in C2. This file never creates a second connection.
+library;
+
+import 'package:flutter/foundation.dart';
+import 'package:livekit_client/livekit_client.dart' as sdk;
+import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
+import 'package:totem_core/features/sessions/media/livekit_local_media.dart';
+import 'package:totem_core/features/sessions/media/livekit_room_media.dart';
+import 'package:totem_core/features/sessions/media/livekit_session_transport.dart';
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/media/room_media.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
+
+typedef LegacySessionRoom = sdk.Room;
+typedef LegacyRoomOptions = sdk.RoomOptions;
+typedef LegacyCameraOptions = sdk.CameraCaptureOptions;
+typedef LegacyVideoPublishOptions = sdk.VideoPublishOptions;
+const defaultCameraCaptureOptions = sdk.CameraCaptureOptions(
+  params: sdk.VideoParameters(
+    dimensions: sdk.VideoDimensionsPresets.h720_43,
+    encoding: sdk.VideoEncoding(maxBitrate: 1300 * 1000, maxFramerate: 24),
+  ),
+);
+sdk.VideoPublishOptions videoPublishOptionsForPlatform({
+  required bool isWeb,
+  required bool isWasm,
+}) => sdk.VideoPublishOptions(
+  videoCodec: (isWeb || isWasm) ? 'h264' : 'h265',
+  backupVideoCodec: const sdk.BackupVideoCodec(codec: 'h264'),
+);
+sdk.RoomOptions sessionRoomOptions({
+  required sdk.CameraCaptureOptions cameraOptions,
+  required bool speakerEnabled,
+}) => LiveKitLocalMedia.applyCapturePolicy(
+  sdk.RoomOptions(
+    defaultCameraCaptureOptions: cameraOptions,
+    defaultAudioOutputOptions: sdk.AudioOutputOptions(
+      speakerOn: speakerEnabled,
+    ),
+    dynacast: true,
+    adaptiveStream: true,
+    defaultVideoPublishOptions: videoPublishOptionsForPlatform(
+      isWeb: kIsWeb,
+      isWasm: kIsWasm,
+    ),
+  ),
+);
+LegacySessionRoom? legacyRoom(SessionTransport? transport) =>
+    transport is LiveKitSessionTransport
+    ? transport.legacyRoomForB2AndC2
+    : null;
+SessionTransport wrapLegacyRoom(
+  LegacySessionRoom room,
+  sdk.CameraCaptureOptions cameraOptions, {
+  LocalMedia? localMedia,
+  RoomMedia? roomMedia,
+}) => LiveKitSessionTransport(
+  room: room,
+  cameraOptions: cameraOptions,
+  localMedia: localMedia as LiveKitLocalMedia?,
+  roomMedia: roomMedia as LiveKitRoomMedia?,
+);
+bool legacyRoomConnected(LegacySessionRoom room) =>
+    room.connectionState == sdk.ConnectionState.connected;
+Future<void> releaseRejectedLegacyRoom(LegacySessionRoom room) async {
+  try {
+    await room.disconnect();
+  } catch (error, stackTrace) {
+    ErrorHandler.logError(
+      error,
+      stackTrace: stackTrace,
+      message: 'Failed to disconnect rejected session room',
+    );
+  }
+  try {
+    await room.dispose();
+  } catch (error, stackTrace) {
+    ErrorHandler.logError(
+      error,
+      stackTrace: stackTrace,
+      message: 'Failed to dispose rejected session room',
+    );
+  }
+}
+
+sdk.LocalVideoTrack? cameraTrack(JoinMediaOwner owner) =>
+    owner.track<sdk.LocalVideoTrack>();
+sdk.LocalAudioTrack? microphoneTrack(JoinMediaOwner owner) =>
+    owner.track<sdk.LocalAudioTrack>();
+Future<bool> publishCamera(
+  SessionTransport transport,
+  sdk.LocalVideoTrack? track,
+  sdk.VideoPublishOptions options,
+) async {
+  final media = transport.localMedia;
+  if (media is LiveKitLocalMedia) {
+    return await media.publishJoinCamera(track, publishOptions: options);
+  }
+  if (track != null) {
+    throw StateError(
+      'This media implementation cannot accept a legacy captured track',
+    );
+  }
+  await media.setCameraEnabled(true);
+  return true;
+}
+
+Future<bool> publishMicrophone(
+  SessionTransport transport,
+  sdk.LocalAudioTrack? track, {
+  required bool muted,
+}) async {
+  final media = transport.localMedia;
+  if (media is LiveKitLocalMedia) {
+    return await media.publishJoinMicrophone(track, muted: muted);
+  }
+  if (track != null) {
+    throw StateError(
+      'This media implementation cannot accept a legacy captured track',
+    );
+  }
+  await media.setMicrophoneEnabled(!muted);
+  return true;
+}
+
+RoomError legacyCompatibleError(SessionTransportFailure failure) =>
+    failure.cause is sdk.LiveKitException
+    ? RoomLiveKitError(failure.cause as sdk.LiveKitException)
+    : RoomTransportError(failure);
+RoomDisconnectionError legacyDisconnectError(
+  SessionTransportDisconnectReason reason,
+) => RoomDisconnectionError(sdk.DisconnectReason.values.byName(reason.name));
+
+ConnectedSessionLease offerConnectedRoom(
+  LegacySessionRoom room, {
+  required LocalMedia localMedia,
+  required RoomMedia roomMedia,
+  required sdk.CameraCaptureOptions cameraOptions,
+}) => ConnectedSessionLease.deferred(
+  identity: room,
+  connected: () => legacyRoomConnected(room),
+  claim: () => wrapLegacyRoom(
+    room,
+    cameraOptions,
+    localMedia: localMedia,
+    roomMedia: roomMedia,
+  ),
+  release: () => releaseRejectedLegacyRoom(room),
+);

@@ -1,6 +1,5 @@
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 
 sealed class SessionEvent {
@@ -20,7 +19,9 @@ class ConnectionChanged extends SessionEvent {
 }
 
 class RoomStateChanged extends SessionEvent {
-  const RoomStateChanged(this.roomState);
+  const RoomStateChanged(this.roomState, {required this.observedAt});
+
+  final DateTime observedAt;
 
   final RoomState roomState;
 }
@@ -41,10 +42,4 @@ class SessionErrorChanged extends SessionEvent {
   const SessionErrorChanged(this.error);
 
   final RoomError? error;
-}
-
-class SessionChatMessageAdded extends SessionEvent {
-  const SessionChatMessageAdded(this.message);
-
-  final SessionChatMessage message;
 }

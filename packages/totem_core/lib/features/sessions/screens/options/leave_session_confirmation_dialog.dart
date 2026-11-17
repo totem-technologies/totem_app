@@ -32,7 +32,11 @@ class LeaveSessionConfirmationDialog extends ConsumerWidget {
             onConfirm: () async {
               final currentSession = ref.read(currentSessionProvider);
               if (currentSession == null) return;
-              await endSessionWithErrorHandling(context, currentSession);
+              final ended = await endSessionWithErrorHandling(
+                context,
+                currentSession,
+              );
+              if (!ended) return;
               TotemRouter.instance.setTabCloseConfirmationEnabled(false);
               if (context.mounted) Navigator.of(context).pop(true);
             },

@@ -21,13 +21,18 @@ final class SessionAdmissionSettingsProvider
         retry: null,
         name: r'sessionAdmissionSettingsProvider',
         isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[sessionScopeProvider],
+        dependencies: <ProviderOrFamily>[
+          sessionScopeProvider,
+          currentSessionProvider,
+        ],
         $allTransitiveDependencies: <ProviderOrFamily>[
           SessionAdmissionSettingsProvider.$allTransitiveDependencies0,
+          SessionAdmissionSettingsProvider.$allTransitiveDependencies1,
         ],
       );
 
   static final $allTransitiveDependencies0 = sessionScopeProvider;
+  static final $allTransitiveDependencies1 = currentSessionProvider;
 
   @override
   String debugGetCreateSourceHash() => _$sessionAdmissionSettingsHash();
@@ -46,7 +51,7 @@ final class SessionAdmissionSettingsProvider
 }
 
 String _$sessionAdmissionSettingsHash() =>
-    r'c4ae4d439d167ba440cc675fed7073a50cb0b4bb';
+    r'2fa83e9502db90b425eb3d42346fe1aa49b3d184';
 
 abstract class _$SessionAdmissionSettings extends $Notifier<bool> {
   bool build();

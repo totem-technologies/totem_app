@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
@@ -16,7 +17,7 @@ Future<void> showBannedParticipantsModal(
   SessionRoomState state,
 ) {
   return showResponsiveModal<void>(
-    context: context,
+    context: sessionNavigatorContext(context),
     useRootNavigator: false,
     showDragHandle: false,
     bottomSheetBackgroundColor: AppTheme.cream,

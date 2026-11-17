@@ -8,6 +8,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/admission_transport.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 final _fixedNow = DateTime.utc(2030);
 
@@ -790,7 +791,7 @@ void main() {
     check(received).length.equals(2);
     check(
       (received.last as AdmissionRoomDisconnected).reason,
-    ).equals(DisconnectReason.reconnectAttemptsExceeded);
+    ).equals(SessionTransportDisconnectReason.reconnectAttemptsExceeded);
   });
 
   test('pending fails on terminal disconnect and ends on metadata', () async {
@@ -810,7 +811,9 @@ void main() {
     check(guest.status).equals(AdmissionStatus.pending);
     final sentBeforeFailure = channel.sent.length;
     channel.controller.add(
-      const AdmissionRoomDisconnected(DisconnectReason.roomDeleted),
+      const AdmissionRoomDisconnected(
+        SessionTransportDisconnectReason.roomDeleted,
+      ),
     );
     check(guest.status).equals(AdmissionStatus.failed);
     channel.controller.add(const AdmissionPresenceChanged('keeper', true));
@@ -840,7 +843,9 @@ void main() {
       check(await changed).equals(AdmissionStatus.ended);
       check(guest.status).equals(AdmissionStatus.ended);
       channel.controller.add(
-        const AdmissionRoomDisconnected(DisconnectReason.roomDeleted),
+        const AdmissionRoomDisconnected(
+          SessionTransportDisconnectReason.roomDeleted,
+        ),
       );
       check(guest.status).equals(AdmissionStatus.ended);
       await check(
@@ -1090,7 +1095,9 @@ void main() {
               (_, channel) =>
                   channel.controller.add(const AdmissionRoomEnded()),
               (_, channel) => channel.controller.add(
-                const AdmissionRoomDisconnected(DisconnectReason.roomDeleted),
+                const AdmissionRoomDisconnected(
+                  SessionTransportDisconnectReason.roomDeleted,
+                ),
               ),
               (guest, _) => unawaited(guest.dispose()),
             ]) {
@@ -1741,7 +1748,9 @@ void main() {
       await guest.cancel();
       check(guest.status).equals(AdmissionStatus.cancelled);
       guestChannel.controller.add(
-        const AdmissionRoomDisconnected(DisconnectReason.clientInitiated),
+        const AdmissionRoomDisconnected(
+          SessionTransportDisconnectReason.clientInitiated,
+        ),
       );
       check(guest.status).equals(AdmissionStatus.cancelled);
       check(keeper.requests).isEmpty();
@@ -3299,4 +3308,36 @@ void main() {
       ).isEmpty();
     },
   );
+
+  test('permanent decline denies a participant who is also revoked', () async {
+    final channel = _Channel('keeper');
+    final store = KeeperAdmissionRosterStore()..revoked.add('guest');
+    final keeper = _keeperAdmissionController(
+      channel: channel,
+      keeperIdentity: () => 'keeper',
+      sessionIdentity: 'session',
+      rosterStore: store,
+    );
+    addTearDown(() async {
+      await keeper.dispose();
+      await channel.dispose();
+    });
+
+    keeper.setDeclinedIdentities({'guest'});
+    final request = AdmissionRequest(
+      id: 'revoked-and-declined',
+      senderIdentity: 'guest',
+      recipientIdentity: 'keeper',
+      expiresAt: _fixedNow.add(const Duration(minutes: 1)),
+      displayName: 'Guest',
+    );
+    channel.controller.add(AdmissionPacketReceived(request));
+    await pumpEventQueue();
+
+    final decision = channel.sent.whereType<AdmissionDecision>().single;
+    check(decision.id).equals(request.id);
+    check(decision.approved).isFalse();
+    check(keeper.requests).isEmpty();
+    check(keeper.attempts.single.status).equals(KeeperAdmissionStatus.denied);
+  });
 }

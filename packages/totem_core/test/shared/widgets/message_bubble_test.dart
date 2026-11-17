@@ -73,9 +73,7 @@ void main() {
 
   testWidgets(
     'trailing punctuation remains outside links and taps launch their targets',
-    (
-      tester,
-    ) async {
+    (tester) async {
       final originalLauncher = UrlLauncherPlatform.instance;
       final launcher = _FakeUrlLauncher();
       UrlLauncherPlatform.instance = launcher;
@@ -112,9 +110,7 @@ void main() {
       ]);
 
       final editable = tester
-          .state<EditableTextState>(
-            find.byType(EditableText),
-          )
+          .state<EditableTextState>(find.byType(EditableText))
           .renderEditable;
       for (final link in [
         'https://example.com/path?q=one',

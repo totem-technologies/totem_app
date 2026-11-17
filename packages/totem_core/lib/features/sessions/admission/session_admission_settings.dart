@@ -4,7 +4,7 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 
 part 'session_admission_settings.g.dart';
 
-@Riverpod(dependencies: [sessionScope])
+@Riverpod(dependencies: [sessionScope, currentSession])
 class SessionAdmissionSettings extends _$SessionAdmissionSettings {
   String? _sessionSlug;
   bool? _enabledOverride;
@@ -17,11 +17,18 @@ class SessionAdmissionSettings extends _$SessionAdmissionSettings {
       _enabledOverride = null;
     }
 
-    return _enabledOverride ?? true;
+    final candidate = ref.watch(currentSessionProvider)?.admission;
+    final service = candidate?.mounted == true ? candidate : null;
+    final enabled = _enabledOverride ?? service?.approvalRequired ?? true;
+    return enabled;
   }
 
   void setEnabled(bool enabled) {
     _enabledOverride = enabled;
     state = enabled;
+    final candidate = ref.read(currentSessionProvider)?.admission;
+    if (candidate?.mounted == true) {
+      candidate!.setApprovalRequired(enabled);
+    }
   }
 }
