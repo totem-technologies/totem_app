@@ -7,7 +7,7 @@ import 'package:audio_session/audio_session.dart' as audio;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_core/core/api/api_client/api_client.dart';
+
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/permissions/media_control.dart';
 import 'package:totem_core/features/permissions/media_permission_controller.dart';
@@ -109,9 +109,6 @@ class SessionDeviceState {
 /// Why the session didn't turn a device on. Nothing changes until the user
 /// tries again.
 enum TurnOnBlocker {
-  /// Nobody may speak while the keeper is away.
-  keeperAway,
-
   /// There's no room to take the device's track, or the room couldn't take
   /// it, such as while the connection is down.
   connection,
@@ -267,12 +264,7 @@ class SessionDeviceController extends _$SessionDeviceController {
       _setProblem(kind, null);
       return const TurnedOn();
     }
-    if (kind == MediaKind.microphone &&
-        session.state.roomState.status == RoomStatus.active &&
-        !session.state.hasKeeper) {
-      _turnOnBlocked.add((kind, TurnOnBlocker.keeperAway));
-      return const TurnOnSkipped();
-    }
+
     try {
       await _setEnabled(kind, true);
     } on MediaPublishException catch (error) {

@@ -685,6 +685,65 @@ void main() {
         check(session.mockLocalMedia.cameraCommands).deepEquals([true]);
       });
 
+      testWidgets('unmute confirmation returns when the keeper returns', (
+        tester,
+      ) async {
+        final away = _buildState(
+          participants: [
+            _mockRemote('user-1', 'User One'),
+            _mockRemote('speaker-1', 'Speaker One'),
+          ],
+        );
+        final returned = _buildState();
+        final mutable =
+            NotifierProvider<_MutableSessionState, SessionRoomState>(
+              () => _MutableSessionState(away),
+            );
+        await pumpListeningTurn(
+          tester,
+          sessionState: away,
+          mutableState: mutable,
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ListeningTurnScreen)),
+        );
+
+        try {
+          await tester.tap(find.bySemanticsLabel('Microphone off'));
+          await tester.pump();
+          check(tester.widgetList(find.text('Unmute Anyway'))).isEmpty();
+          check(session.mockLocalMedia.microphoneCommands).deepEquals([true]);
+
+          await tester.tap(find.bySemanticsLabel('Microphone on'));
+          await tester.pump();
+          check(
+            session.mockLocalMedia.microphoneCommands,
+          ).deepEquals([true, false]);
+
+          when(() => session.state).thenReturn(returned);
+          container.read(mutable.notifier).value = returned;
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel('Microphone off'));
+          await tester.pumpAndSettle();
+          check(tester.widgetList(find.text('Unmute Anyway'))).length.equals(1);
+          check(
+            session.mockLocalMedia.microphoneCommands,
+          ).deepEquals([true, false]);
+          await tester.tap(find.text('Unmute Anyway'));
+          await tester.pumpAndSettle();
+          check(
+            session.mockLocalMedia.microphoneCommands,
+          ).deepEquals([true, false, true]);
+        } finally {
+          if (find.text('Stay Muted').evaluate().isNotEmpty) {
+            await tester.tap(find.text('Stay Muted'));
+            await tester.pumpAndSettle();
+          }
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      });
+
       testWidgets('X13: a refused unmute explains the fix', (tester) async {
         final state = _buildState(status: RoomStatus.active);
         session.mockLocalMedia.onMicrophoneCommand = (enabled) async {
