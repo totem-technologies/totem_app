@@ -40,7 +40,7 @@ void main() {
     await tester.pump();
     debugDefaultTargetPlatformOverride = null;
 
-    check(container.read(sessionChatOpenProvider)).isFalse();
+    check(container.read(sessionChatSelectedProvider)).isFalse();
     check(microphoneToggles).equals(1);
     check(cameraToggles).equals(1);
   });

@@ -26,7 +26,6 @@ class SessionStateReducer {
           participants: event.connectionState == RoomConnectionState.connected
               ? current.participants.copyWith(removed: false)
               : current.participants,
-          chat: current.chat,
           turn: current.turn,
           turnStartedAt: current.turnStartedAt,
         );
@@ -36,25 +35,31 @@ class SessionStateReducer {
             isReconnecting: event.isReconnecting,
           ),
           participants: current.participants,
-          chat: current.chat,
           turn: current.turn,
           turnStartedAt: current.turnStartedAt,
         );
       case RoomStateChanged():
+        final isEnding =
+            current.roomState.status != RoomStatus.ended &&
+            event.roomState.status == RoomStatus.ended;
+        if (event.roomState.version < current.roomState.version ||
+            (event.roomState.version == current.roomState.version &&
+                !isEnding)) {
+          return current;
+        }
         final isEnded = event.roomState.status == RoomStatus.ended;
         final newSpeaker = SessionRoomState.speakerOf(event.roomState);
         final turnStartedAt =
             event.roomState.status != RoomStatus.active || newSpeaker.isEmpty
             ? null
             : current.speakingNow != newSpeaker || current.turnStartedAt == null
-            ? DateTime.now()
+            ? event.observedAt
             : current.turnStartedAt;
         return SessionRoomState(
           connection: current.connection.copyWith(
             phase: isEnded ? SessionPhase.ended : null,
           ),
           participants: current.participants,
-          chat: current.chat,
           turn: current.turn.copyWith(roomState: event.roomState),
           turnStartedAt: turnStartedAt,
         );
@@ -64,7 +69,6 @@ class SessionStateReducer {
           participants: current.participants.copyWith(
             participants: event.participants,
           ),
-          chat: current.chat,
           turn: current.turn,
           turnStartedAt: current.turnStartedAt,
         );
@@ -75,7 +79,6 @@ class SessionStateReducer {
             removed: true,
             removeReason: event.reason,
           ),
-          chat: current.chat,
           turn: current.turn,
           turnStartedAt: current.turnStartedAt,
         );
@@ -89,22 +92,6 @@ class SessionStateReducer {
             phase: event.error is RoomLiveKitError ? SessionPhase.error : null,
           ),
           participants: current.participants,
-          chat: current.chat,
-          turn: current.turn,
-          turnStartedAt: current.turnStartedAt,
-        );
-      case SessionChatMessageAdded():
-        if (current.chat.messages.any(
-          (message) => message.id == event.message.id,
-        )) {
-          return current;
-        }
-        return SessionRoomState(
-          connection: current.connection,
-          participants: current.participants,
-          chat: current.chat.copyWith(
-            messages: [...current.chat.messages, event.message],
-          ),
           turn: current.turn,
           turnStartedAt: current.turnStartedAt,
         );

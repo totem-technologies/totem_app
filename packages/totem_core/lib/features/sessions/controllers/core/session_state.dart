@@ -5,9 +5,9 @@ import 'package:livekit_client/livekit_client.dart'
     hide ConnectionState, SessionOptions, logger;
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/permissions/classify.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 enum RoomConnectionState { connecting, connected, disconnected, error }
 
@@ -15,6 +15,13 @@ enum SessionPhase { idle, connecting, connected, disconnected, error, ended }
 
 sealed class RoomError {
   const RoomError();
+}
+
+class RoomTransportError extends RoomError {
+  const RoomTransportError(this.failure);
+  final SessionTransportFailure failure;
+  @override
+  String toString() => 'RoomTransportError: $failure';
 }
 
 class RoomLiveKitError extends RoomError {
@@ -134,31 +141,6 @@ class ParticipantsState {
 }
 
 @immutable
-class ChatState {
-  const ChatState({this.messages = const []});
-
-  final List<SessionChatMessage> messages;
-
-  ChatState copyWith({List<SessionChatMessage>? messages}) {
-    return ChatState(messages: messages ?? this.messages);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is ChatState &&
-        const DeepCollectionEquality().equals(
-          other.messages.map((m) => m.id),
-          messages.map((m) => m.id),
-        );
-  }
-
-  @override
-  int get hashCode =>
-      const DeepCollectionEquality().hash(messages.map((m) => m.id));
-}
-
-@immutable
 class SessionTurnState {
   const SessionTurnState({required this.roomState});
 
@@ -202,11 +184,22 @@ class SessionOptions {
     if (identical(this, other)) return true;
     return other is SessionOptions &&
         other.sessionSlug == sessionSlug &&
-        other.token == token;
+        other.token == token &&
+        other.cameraEnabled == cameraEnabled &&
+        other.microphoneEnabled == microphoneEnabled &&
+        other.speakerEnabled == speakerEnabled &&
+        other.cameraOptions == cameraOptions;
   }
 
   @override
-  int get hashCode => sessionSlug.hashCode ^ token.hashCode;
+  int get hashCode => Object.hash(
+    sessionSlug,
+    token,
+    cameraEnabled,
+    microphoneEnabled,
+    speakerEnabled,
+    cameraOptions,
+  );
 }
 
 /// Pre-join media whose ownership is transferred to the session controller.
@@ -239,14 +232,12 @@ class SessionRoomState {
   const SessionRoomState({
     required this.connection,
     required this.participants,
-    required this.chat,
     required this.turn,
     this.turnStartedAt,
   });
 
   final ConnectionState connection;
   final ParticipantsState participants;
-  final ChatState chat;
   final SessionTurnState turn;
 
   /// Wall-clock time when the current turn began.
@@ -259,7 +250,6 @@ class SessionRoomState {
   RoomState get roomState => turn.roomState;
   List<ParticipantInfo> get participantsList => participants.participants;
   bool get removed => participants.removed;
-  List<SessionChatMessage> get messages => chat.messages;
 
   DisconnectReason? get disconnectReason {
     final error = connection.error;
@@ -331,7 +321,6 @@ class SessionRoomState {
         'error: ${connection.error}, '
         'participants: ${participants.participants.length}, '
         'removed: ${participants.removed}, '
-        'messages: ${chat.messages.length}'
         ')';
   }
 
@@ -341,7 +330,6 @@ class SessionRoomState {
     return other is SessionRoomState &&
         other.connection == connection &&
         other.participants == participants &&
-        other.chat == chat &&
         other.turn == turn &&
         other.turnStartedAt == turnStartedAt;
   }
@@ -350,7 +338,6 @@ class SessionRoomState {
   int get hashCode =>
       connection.hashCode ^
       participants.hashCode ^
-      chat.hashCode ^
       turn.hashCode ^
       turnStartedAt.hashCode;
 }
@@ -471,18 +458,30 @@ enum SessionErrorCategory {
 
 /// Classifies a session [error] into a [SessionErrorCategory] for user-facing copy.
 ///
-/// Accepts [RoomError]s, raw LiveKit exceptions, [MediaPublishException], and
-/// [SessionJoinFailure]. A confirmed offline device ([isOffline]) wins over
-/// ambiguous failures, but never over a session outcome.
+/// Accepts [RoomError]s, [SessionTransportFailure]s, raw LiveKit exceptions,
+/// [MediaPublishException], and [SessionJoinFailure]. A confirmed offline
+/// device ([isOffline]) wins over ambiguous failures, but never over a session
+/// outcome.
 SessionErrorCategory classifySessionError(
   Object? error, {
   bool isOffline = false,
 }) {
-  final cause = switch (error) {
-    SessionJoinFailure(:final cause) => cause,
-    RoomLiveKitError(:final exception) => exception,
-    _ => error,
-  };
+  // Unwrap to the underlying cause, remembering the transport's own reading
+  // in case the cause itself isn't recognised.
+  SessionTransportFailure? transportFailure;
+  var cause = error;
+  while (true) {
+    final next = switch (cause) {
+      SessionJoinFailure(cause: final inner) => inner,
+      RoomLiveKitError(:final exception) => exception,
+      RoomTransportError(:final failure) => failure,
+      SessionTransportFailure(cause: final inner) => inner,
+      _ => null,
+    };
+    if (next == null) break;
+    if (cause is SessionTransportFailure) transportFailure = cause;
+    cause = next;
+  }
 
   if (cause is RoomDisconnectionError) {
     // LiveKit gives up with the same reasons whether the device or only the
@@ -511,7 +510,23 @@ SessionErrorCategory classifySessionError(
     MediaPublishException() => SessionErrorCategory.connectionLost,
     final Object other when captureErrorName(other) != null =>
       SessionErrorCategory.mediaDevice,
-    _ => SessionErrorCategory.unknown,
+    _ => switch (transportFailure) {
+      SessionTransportFailure(
+        connectionFailure: SessionTransportConnectionFailure.notAllowed,
+      ) =>
+        SessionErrorCategory.accessDenied,
+      SessionTransportFailure(
+        kind: SessionTransportFailureKind.connection ||
+            SessionTransportFailureKind.mediaConnection,
+      ) =>
+        SessionErrorCategory.serverUnreachable,
+      SessionTransportFailure(
+        kind: SessionTransportFailureKind.publication ||
+            SessionTransportFailureKind.subscription,
+      ) =>
+        SessionErrorCategory.connectionLost,
+      _ => SessionErrorCategory.unknown,
+    },
   };
 
   if (isOffline &&

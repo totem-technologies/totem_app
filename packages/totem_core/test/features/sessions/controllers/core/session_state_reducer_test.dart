@@ -5,7 +5,6 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_reducer.dart';
-import 'package:totem_core/features/sessions/controllers/features/session_messaging_controller.dart';
 
 import '../../media/test_participants.dart';
 
@@ -19,7 +18,7 @@ RoomState _roomState({RoomStatus status = RoomStatus.waitingRoom}) {
     sessionSlug: 'session-1',
     statusDetail: const RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
     talkingOrder: const [],
-    version: 1,
+    version: 0,
     roundNumber: 1,
   );
 }
@@ -32,7 +31,7 @@ SessionRoomState _initialState() {
       error: RoomDisconnectionError(DisconnectReason.disconnected),
     ),
     participants: const ParticipantsState(removed: true),
-    chat: const ChatState(),
+
     turn: SessionTurnState(roomState: _roomState()),
   );
 }
@@ -49,7 +48,6 @@ void main() {
             state: RoomConnectionState.connected,
           ),
           participants: const ParticipantsState(),
-          chat: const ChatState(),
           turn: SessionTurnState(roomState: _roomState()),
         );
 
@@ -114,7 +112,7 @@ void main() {
               error: RoomDisconnectionError(DisconnectReason.disconnected),
             ),
             participants: const ParticipantsState(removed: false),
-            chat: const ChatState(),
+
             turn: SessionTurnState(roomState: _roomState()),
           );
 
@@ -194,7 +192,7 @@ void main() {
 
           final next = reducer.reduceState(
             current,
-            RoomStateChanged(nextRoomState),
+            RoomStateChanged(nextRoomState, observedAt: DateTime.utc(2026)),
           );
 
           check(next.roomState).equals(nextRoomState);
@@ -207,7 +205,7 @@ void main() {
 
           final next = reducer.reduceState(
             current,
-            RoomStateChanged(nextRoomState),
+            RoomStateChanged(nextRoomState, observedAt: DateTime.utc(2026)),
           );
 
           check(next.roomState.status).equals(RoomStatus.ended);
@@ -222,9 +220,12 @@ void main() {
             // Room goes active — speakerOf falls back to keeper.
             final active = _roomState(
               status: RoomStatus.active,
-            ).copyWith(currentSpeaker: const Omittable(''));
+            ).copyWith(version: 1, currentSpeaker: const Omittable(''));
 
-            final next = reducer.reduceState(current, RoomStateChanged(active));
+            final next = reducer.reduceState(
+              current,
+              RoomStateChanged(active, observedAt: DateTime.utc(2026)),
+            );
 
             check(next.speakingNow).equals('keeper');
             check(next.turnStartedAt).isNotNull();
@@ -235,11 +236,11 @@ void main() {
 
             final withSpeaker = _roomState(
               status: RoomStatus.active,
-            ).copyWith(currentSpeaker: const Omittable('user-1'));
+            ).copyWith(version: 1, currentSpeaker: const Omittable('user-1'));
 
             final next = reducer.reduceState(
               current,
-              RoomStateChanged(withSpeaker),
+              RoomStateChanged(withSpeaker, observedAt: DateTime.utc(2026)),
             );
 
             check(next.turnStartedAt).isNotNull();
@@ -248,17 +249,20 @@ void main() {
           test('clears the stamp when the room becomes inactive', () {
             final active = _roomState(
               status: RoomStatus.active,
-            ).copyWith(currentSpeaker: const Omittable('user-1'));
+            ).copyWith(version: 1, currentSpeaker: const Omittable('user-1'));
             final speaking = reducer.reduceState(
               _initialState(),
-              RoomStateChanged(active),
+              RoomStateChanged(active, observedAt: DateTime.utc(2026)),
             );
             check(speaking.turnStartedAt).isNotNull();
 
             for (final status in [RoomStatus.waitingRoom, RoomStatus.ended]) {
               final inactive = reducer.reduceState(
                 speaking,
-                RoomStateChanged(active.copyWith(status: status)),
+                RoomStateChanged(
+                  active.copyWith(version: 2, status: status),
+                  observedAt: DateTime.utc(2026),
+                ),
               );
               check(inactive.turnStartedAt).isNull();
             }
@@ -269,17 +273,20 @@ void main() {
 
             final active = _roomState(
               status: RoomStatus.active,
-            ).copyWith(currentSpeaker: const Omittable('user-1'));
+            ).copyWith(version: 1, currentSpeaker: const Omittable('user-1'));
 
             final first = reducer.reduceState(
               current,
-              RoomStateChanged(active),
+              RoomStateChanged(active, observedAt: DateTime.utc(2026)),
             );
             final stamp = first.turnStartedAt!;
 
             // Metadata bump — same speaker.
             final bumped = active.copyWith(version: 2);
-            final second = reducer.reduceState(first, RoomStateChanged(bumped));
+            final second = reducer.reduceState(
+              first,
+              RoomStateChanged(bumped, observedAt: DateTime.utc(2026)),
+            );
 
             check(second.turnStartedAt).identicalTo(stamp);
           });
@@ -289,11 +296,11 @@ void main() {
 
             final active = _roomState(
               status: RoomStatus.active,
-            ).copyWith(currentSpeaker: const Omittable('user-1'));
+            ).copyWith(version: 1, currentSpeaker: const Omittable('user-1'));
 
             final afterRoom = reducer.reduceState(
               current,
-              RoomStateChanged(active),
+              RoomStateChanged(active, observedAt: DateTime.utc(2026)),
             );
             final stamp = afterRoom.turnStartedAt!;
 
@@ -324,7 +331,7 @@ void main() {
               state: RoomConnectionState.connecting,
             ),
             participants: const ParticipantsState(removed: false),
-            chat: const ChatState(),
+
             turn: SessionTurnState(roomState: _roomState()),
           );
 
@@ -367,92 +374,46 @@ void main() {
       });
     });
 
-    group('ChatState', () {
-      group('SessionChatMessageAdded event', () {
-        test('appends message', () {
-          final current = _initialState();
-          const message = SessionChatMessage(
-            message: 'hello',
-            timestamp: 123,
-            id: 'm1',
-            sender: true,
-          );
-
-          final next = reducer.reduceState(
-            current,
-            const SessionChatMessageAdded(message),
-          );
-
-          check(next.messages).length.equals(1);
-          check(next.messages.first.id).equals('m1');
-          check(next.messages.first.message).equals('hello');
-        });
-
-        test('ignores a message with an existing ID', () {
-          const message = SessionChatMessage(
-            message: 'hello',
-            timestamp: 123,
-            id: 'm1',
-            sender: true,
-          );
-          final current = reducer.reduceState(
-            _initialState(),
-            const SessionChatMessageAdded(message),
-          );
-
-          final next = reducer.reduceState(
-            current,
-            const SessionChatMessageAdded(message),
-          );
-
-          check(next.messages).length.equals(1);
-          check(next.messages.single.id).equals('m1');
-        });
-
-        test('maintains message order', () {
-          var state = _initialState();
-
-          for (int i = 0; i < 5; i++) {
-            state = reducer.reduceState(
-              state,
-              SessionChatMessageAdded(
-                SessionChatMessage(
-                  message: 'Message $i',
-                  timestamp: i,
-                  id: 'msg-$i',
-                  sender: i.isEven,
-                ),
-              ),
-            );
-          }
-
-          check(state.messages).length.equals(5);
-          for (int i = 0; i < 5; i++) {
-            check(state.messages[i].id).equals('msg-$i');
-          }
-        });
-      });
-    });
-
-    group('State immutability', () {
-      test('original state not modified when adding message', () {
-        final originalState = _initialState();
-        final originalMessageCount = originalState.messages.length;
-
-        final _ = reducer.reduceState(
-          originalState,
-          const SessionChatMessageAdded(
-            SessionChatMessage(
-              message: 'New message',
-              timestamp: 5000,
-              id: 'msg-new',
-              sender: true,
-            ),
+    test('stale and duplicate versions cannot replace accepted room state', () {
+      final accepted = reducer.reduceState(
+        _initialState(),
+        RoomStateChanged(
+          _roomState(status: RoomStatus.active).copyWith(version: 5),
+          observedAt: DateTime.utc(2026),
+        ),
+      );
+      for (final version in [4, 5]) {
+        final rejected = reducer.reduceState(
+          accepted,
+          RoomStateChanged(
+            _roomState().copyWith(version: version),
+            observedAt: DateTime.utc(2027),
           ),
         );
+        check(rejected).identicalTo(accepted);
+      }
+      final ended = reducer.reduceState(
+        accepted,
+        RoomStateChanged(
+          accepted.roomState.copyWith(status: RoomStatus.ended),
+          observedAt: DateTime.utc(2027),
+        ),
+      );
+      check(ended.roomState.status).equals(RoomStatus.ended);
+      check(ended.roomState.version).equals(5);
+    });
 
-        check(originalState.messages).length.equals(originalMessageCount);
-      });
+    test('same state and timestamp produce deterministic turn timing', () {
+      final current = _initialState();
+      final event = RoomStateChanged(
+        _roomState(status: RoomStatus.active).copyWith(version: 1),
+        observedAt: DateTime.utc(2026),
+      );
+      final first = reducer.reduceState(current, event);
+      final second = reducer.reduceState(current, event);
+      check(first).equals(second);
+      check(first.turnStartedAt).equals(event.observedAt);
+      check(current.turnStartedAt).isNull();
     });
   });
 }

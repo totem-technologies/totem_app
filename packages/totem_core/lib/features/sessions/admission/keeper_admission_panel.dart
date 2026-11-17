@@ -6,7 +6,7 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_list.dart';
-
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
@@ -106,7 +106,7 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
                 );
                 if (request == null) return;
                 final action = await showDialog<_DeclineAction>(
-                  context: context,
+                  context: sessionNavigatorContext(context),
                   useRootNavigator: false,
                   builder: (dialogContext) => ConfirmationDialog(
                     content:

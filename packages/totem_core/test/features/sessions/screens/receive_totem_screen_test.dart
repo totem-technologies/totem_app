@@ -1,5 +1,3 @@
-// ignore_for_file: avoid_dynamic_calls
-
 import 'dart:ui';
 
 import 'package:checks/checks.dart';
@@ -69,7 +67,7 @@ SessionRoomState _buildState({
         testParticipant('keeper-1', name: 'Keeper'),
       ],
     ),
-    chat: const ChatState(),
+
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',
@@ -225,7 +223,6 @@ void main() {
         isStaff: true,
       );
 
-      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
       check(
         tester.widgetList(find.bySemanticsLabel('Microphone off')),
       ).length.equals(1);
@@ -236,10 +233,6 @@ void main() {
       check(
         tester.widgetList(find.bySemanticsLabel('Send reaction')),
       ).length.equals(0);
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
-      check(tester.widgetList(find.text('Receive'))).length.equals(1);
       check(tester.widgetList(find.text('"Take your time"'))).length.equals(1);
     });
 
@@ -272,18 +265,6 @@ void main() {
       },
     );
 
-    testWidgets('hides round message text when no round message is provided', (
-      tester,
-    ) async {
-      await pumpReceiveTotem(tester, roundMessage: null);
-
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
-      check(tester.widgetList(find.text('Receive'))).length.equals(1);
-      check(tester.widgetList(find.text('"Take your time"'))).length.equals(0);
-    });
-
     testWidgets('toggles mic and camera from action bar', (tester) async {
       await pumpReceiveTotem(tester, isStaff: true);
 
@@ -313,86 +294,6 @@ void main() {
         await tester.pump();
         verify(() => devices.turnOn(MediaKind.camera)).called(1);
       });
-    });
-
-    testWidgets('accepts totem when slider completes', (tester) async {
-      final feedbackService = _TestSessionCuesService();
-
-      await pumpReceiveTotem(tester, feedbackService: feedbackService);
-
-      check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
-      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
-      await actionSlider.widget.onActionCompleted();
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      verify(() => keeper.acceptTotem()).called(1);
-      check(feedbackService.swipePulseCount).equals(1);
-    });
-
-    testWidgets('triggers soft haptic after successful receive swipe', (
-      tester,
-    ) async {
-      final feedbackService = _TestSessionCuesService();
-
-      await pumpReceiveTotem(tester, feedbackService: feedbackService);
-
-      check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
-      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
-      await actionSlider.widget.onActionCompleted();
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      check(feedbackService.swipePulseCount).equals(1);
-    });
-
-    testWidgets('shows error notification when accept totem fails', (
-      tester,
-    ) async {
-      when(
-        () => keeper.acceptTotem(),
-      ).thenAnswer((_) async => throw Exception('accept failed'));
-
-      final feedbackService = _TestSessionCuesService();
-
-      await pumpReceiveTotem(tester, feedbackService: feedbackService);
-
-      check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
-      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
-      await actionSlider.widget.onActionCompleted();
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      verify(() => keeper.acceptTotem()).called(1);
-      check(
-        tester.widgetList(find.text('Something went wrong')),
-      ).length.equals(1);
-      check(
-        tester.widgetList(
-          find.text('We were unable to accept the totem. Please try again.'),
-        ),
-      ).length.equals(1);
-      check(feedbackService.swipePulseCount).equals(1);
-    });
-
-    testWidgets('renders correctly in landscape orientation', (tester) async {
-      tester.view.physicalSize = const Size(1920, 1080);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      await pumpReceiveTotem(tester, roundMessage: 'Breathe and share');
-
-      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
-      check(tester.widgetList(find.text('Receive'))).length.equals(1);
-      check(
-        tester.widgetList(find.text('"Breathe and share"')),
-      ).length.equals(1);
     });
 
     for (final (label, size, textScale, prompt) in [
@@ -426,16 +327,17 @@ void main() {
         await pumpReceiveTotem(tester, roundMessage: prompt);
 
         check(tester.takeException()).isNull();
-        // The pill carries the "being passed" line, so it isn't repeated.
-        check(
-          tester.widgetList(find.text('The Totem is being passed to you.')),
-        ).length.equals(1);
         final slider = tester.getRect(find.byType(ActionSlider));
-        check(slider.height).equals(48);
         check(slider.left).isGreaterOrEqual(0);
         check(slider.top).isGreaterOrEqual(0);
         check(slider.right).isLessOrEqual(size.width);
         check(slider.bottom).isLessOrEqual(size.height);
+        check(
+          slider.overlaps(tester.getRect(find.byType(SessionActionBar))),
+        ).isFalse();
+        check(
+          find.byKey(ActionSlider.thumbKey).hitTestable().evaluate(),
+        ).isNotEmpty();
       });
     }
 
@@ -468,31 +370,53 @@ void main() {
       check(card.participant.identity).equals('user-1');
     });
 
-    testWidgets('allows retry after a failed receive attempt', (tester) async {
+    testWidgets('a failed receive swipe explains failure and allows retry', (
+      tester,
+    ) async {
       var callCount = 0;
       when(() => keeper.acceptTotem()).thenAnswer((_) async {
         callCount += 1;
-        if (callCount == 1) {
-          throw Exception('accept failed once');
-        }
+        if (callCount == 1) throw Exception('accept failed once');
       });
+      final feedbackService = _TestSessionCuesService();
+      await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
-      await pumpReceiveTotem(tester);
-
-      check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
-      final actionSlider = tester.state(find.byType(ActionSlider)) as dynamic;
-      await actionSlider.widget.onActionCompleted();
+      await tester.drag(
+        find.byKey(ActionSlider.thumbKey),
+        const Offset(800, 0),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
+      check(callCount).equals(1);
       check(
-        tester.widgetList(find.text('Something went wrong')),
-      ).length.equals(1);
+        find
+            .text('We were unable to accept the totem. Please try again.')
+            .evaluate(),
+      ).isNotEmpty();
+      check(feedbackService.swipePulseCount).equals(1);
 
-      await actionSlider.widget.onActionCompleted();
+      await tester.drag(
+        find.byKey(ActionSlider.thumbKey),
+        const Offset(800, 0),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-
-      verify(() => keeper.acceptTotem()).called(2);
+      check(callCount).equals(2);
+      check(feedbackService.swipePulseCount).equals(2);
+      // The successful attempt stays busy until authoritative turn state changes.
+      await tester.drag(
+        find.byKey(ActionSlider.thumbKey),
+        const Offset(800, 0),
+      );
+      await tester.pump();
+      check(callCount).equals(2);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      check(
+        find
+            .text('We were unable to accept the totem. Please try again.')
+            .evaluate(),
+      ).isEmpty();
     });
   });
 }

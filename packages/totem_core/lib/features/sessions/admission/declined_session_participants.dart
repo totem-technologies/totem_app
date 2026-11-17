@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:totem_core/features/sessions/admission/admission_storage_queue.dart';
 
 part 'declined_session_participants.g.dart';
 
@@ -75,12 +76,11 @@ class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
     final preferences = await ref.watch(
       sessionAdmissionPreferencesProvider.future,
     );
-    final declined = Set.unmodifiable(
-      _readDeclined(
-        preferences,
-        _storageKeyFor(sessionSlug, keeperIdentity),
-        keeperIdentity,
-      ),
+    final key = _storageKeyFor(sessionSlug, keeperIdentity);
+    final declined = await AdmissionStorageQueue.run(
+      key,
+      () async =>
+          Set.unmodifiable(_readDeclined(preferences, key, keeperIdentity)),
     );
     if (generation == _initializationGeneration) {
       _sessionSlug = sessionSlug;
@@ -99,18 +99,29 @@ class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
     await _update(identity, add: false);
   }
 
+  Future<void> Function() captureClear() {
+    final preferences = _preferences;
+    final key = _storageKey;
+    return () {
+      final operation = _operations.then(
+        (_) => AdmissionStorageQueue.run(key, () async {
+          if (!await preferences.remove(key)) {
+            throw StateError('Could not clear declined session participants');
+          }
+          _declined = const <String>{};
+          if (ref.mounted) state = AsyncData(_declined);
+        }),
+      );
+      _operations = operation.catchError((Object _) {});
+      return operation;
+    };
+  }
+
   Future<void> clear() {
     final link = ref.keepAlive();
-    final operation = _operations.then((_) async {
-      await _awaitInitialization();
-      if (!await _preferences.remove(_storageKey)) {
-        throw StateError('Could not clear declined session participants');
-      }
-      _declined = const <String>{};
-      if (ref.mounted) state = AsyncData(_declined);
-    });
-    _operations = operation.catchError((Object _) {});
-    return operation.whenComplete(link.close);
+    return _awaitInitialization()
+        .then((_) => captureClear()())
+        .whenComplete(link.close);
   }
 
   Future<void> resetCorruptData() {
@@ -119,15 +130,15 @@ class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
     }
     final key = _storageKey;
     final link = ref.keepAlive();
-    final operation = _operations.then((_) async {
-      final preferences = await ref.read(
-        sessionAdmissionPreferencesProvider.future,
-      );
-      if (!await preferences.remove(key)) {
-        throw StateError('Could not clear declined session participants');
-      }
-      if (ref.mounted) ref.invalidateSelf();
-    });
+    final preferences = ref.read(sessionAdmissionPreferencesProvider.future);
+    final operation = _operations.then(
+      (_) => AdmissionStorageQueue.run(key, () async {
+        if (!await (await preferences).remove(key)) {
+          throw StateError('Could not clear declined session participants');
+        }
+        if (ref.mounted) ref.invalidateSelf();
+      }),
+    );
     _operations = operation.catchError((Object _) {});
     return operation.whenComplete(link.close);
   }
@@ -141,12 +152,15 @@ class DeclinedSessionParticipants extends _$DeclinedSessionParticipants {
       final changed = add ? updated.add(identity) : updated.remove(identity);
       if (!changed) return;
 
-      final persisted = updated.isEmpty
-          ? await _preferences.remove(_storageKey)
-          : await _preferences.setString(
-              _storageKey,
-              jsonEncode(updated.toList()..sort()),
-            );
+      final persisted = await AdmissionStorageQueue.run(
+        _storageKey,
+        () => updated.isEmpty
+            ? _preferences.remove(_storageKey)
+            : _preferences.setString(
+                _storageKey,
+                jsonEncode(updated.toList()..sort()),
+              ),
+      );
       if (!persisted) {
         throw StateError('Could not persist declined session participants');
       }

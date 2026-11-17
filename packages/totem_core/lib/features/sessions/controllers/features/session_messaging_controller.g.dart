@@ -8,12 +8,15 @@ part of 'session_messaging_controller.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Thin compatibility facade. Feature owners hold state and implement protocols.
 
 @ProviderFor(SessionMessagingController)
 final sessionMessagingControllerProvider = SessionMessagingControllerFamily._();
 
+/// Thin compatibility facade. Feature owners hold state and implement protocols.
 final class SessionMessagingControllerProvider
     extends $NotifierProvider<SessionMessagingController, void> {
+  /// Thin compatibility facade. Feature owners hold state and implement protocols.
   SessionMessagingControllerProvider._({
     required SessionMessagingControllerFamily super.from,
     required SessionController super.argument,
@@ -60,7 +63,9 @@ final class SessionMessagingControllerProvider
 }
 
 String _$sessionMessagingControllerHash() =>
-    r'381288308e1179afded38daadec38ba5b593c3cf';
+    r'2eb3c885e2d25c88bc1ac50a899ae3d7f83bf499';
+
+/// Thin compatibility facade. Feature owners hold state and implement protocols.
 
 final class SessionMessagingControllerFamily extends $Family
     with
@@ -80,12 +85,16 @@ final class SessionMessagingControllerFamily extends $Family
         isAutoDispose: true,
       );
 
+  /// Thin compatibility facade. Feature owners hold state and implement protocols.
+
   SessionMessagingControllerProvider call(SessionController session) =>
       SessionMessagingControllerProvider._(argument: session, from: this);
 
   @override
   String toString() => r'sessionMessagingControllerProvider';
 }
+
+/// Thin compatibility facade. Feature owners hold state and implement protocols.
 
 abstract class _$SessionMessagingController extends $Notifier<void> {
   late final _$args = ref.$arg as SessionController;

@@ -22,7 +22,7 @@ SessionRoomState _sessionState() => const SessionRoomState(
     state: RoomConnectionState.connected,
   ),
   participants: ParticipantsState(participants: []),
-  chat: ChatState(),
+
   turn: SessionTurnState(
     roomState: RoomState(
       keeper: 'keeper-1',

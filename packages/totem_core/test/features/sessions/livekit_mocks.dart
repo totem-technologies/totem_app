@@ -58,7 +58,9 @@ class MockLocalParticipant extends Mock implements LocalParticipant {
   MockLocalParticipant([
     this.id = 'local-participant',
     this.participantName = 'Local Participant',
-  ]);
+  ]) {
+    when(unpublishAllTracks).thenAnswer((_) async {});
+  }
   final String id;
   String participantName;
 

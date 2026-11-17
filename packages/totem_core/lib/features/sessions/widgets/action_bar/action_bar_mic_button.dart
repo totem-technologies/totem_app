@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
-
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
@@ -47,7 +47,8 @@ class _ActionBarMicButtonState extends State<ActionBarMicButton> {
       final shouldEnable = !widget.isMicOn;
       if (shouldEnable && widget.requiresUnmuteConfirmation) {
         final confirmed = await showDialog<bool>(
-          context: context,
+          context: sessionNavigatorContext(context),
+          useRootNavigator: false,
           builder: (dialogContext) => ConfirmationDialog(
             content:
                 'Someone else has the Totem.\n'

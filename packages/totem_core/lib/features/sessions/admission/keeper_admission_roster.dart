@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
+import 'package:totem_core/features/sessions/admission/admission_storage_queue.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 
 part 'keeper_admission_roster.g.dart';
@@ -45,10 +46,36 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
     return _enqueue(snapshot);
   }
 
-  Future<void> clear() {
-    final store = _loadedStore()..clear();
+  /// Refuse a late writer captured by a superseded admission owner.
+  Future<void> persistStore(KeeperAdmissionRosterStore owner) {
+    if (!identical(_loadedStore(), owner)) {
+      throw StateError('Keeper admission roster owner was replaced');
+    }
+    return _enqueue(_snapshot(owner));
+  }
+
+  KeeperAdmissionPersistence capturePersistence(
+    KeeperAdmissionRosterStore owner,
+  ) {
+    if (!identical(_loadedStore(), owner)) {
+      throw StateError('Roster owner replaced');
+    }
+    final preferences = _preferences!;
+    final key = _storageKey!;
+    return KeeperAdmissionPersistence._(
+      () => _enqueueCaptured(preferences, key, _snapshot(owner)),
+      () async {
+        await _enqueueCaptured(preferences, key, null);
+        owner.clear();
+      },
+    );
+  }
+
+  Future<void> clear() async {
+    final store = _loadedStore();
+    await _enqueue(null);
+    store.clear();
     if (ref.mounted) state = AsyncData(store);
-    return _enqueue(null);
   }
 
   Future<void> resetCorruptData() {
@@ -57,15 +84,15 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
     }
     final key = _storageKeyFor(_sessionSlug, _keeperIdentity);
     final link = ref.keepAlive();
-    final operation = _writes.then((_) async {
-      final preferences = await ref.read(
-        sessionAdmissionPreferencesProvider.future,
-      );
-      if (!await preferences.remove(key)) {
-        throw StateError('Could not clear keeper admission roster');
-      }
-      if (ref.mounted) ref.invalidateSelf();
-    });
+    final preferences = ref.read(sessionAdmissionPreferencesProvider.future);
+    final operation = _writes.then(
+      (_) => AdmissionStorageQueue.run(key, () async {
+        if (!await (await preferences).remove(key)) {
+          throw StateError('Could not clear keeper admission roster');
+        }
+        if (ref.mounted) ref.invalidateSelf();
+      }),
+    );
     _writes = operation.catchError((Object _) {});
     return operation.whenComplete(link.close);
   }
@@ -74,18 +101,22 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
     String sessionSlug,
     String keeperIdentity,
     int generation,
-  ) =>
-      ref.watch(sessionAdmissionPreferencesProvider.future).then((preferences) {
-        final storageKey = _storageKeyFor(sessionSlug, keeperIdentity);
-        final store = _readStore(preferences, storageKey, keeperIdentity);
-        if (generation == _initializationGeneration) {
-          _preferences = preferences;
-          _store = store;
-          _storageKey = storageKey;
-          _loadedGeneration = generation;
-        }
-        return store;
-      });
+  ) => ref.watch(sessionAdmissionPreferencesProvider.future).then((
+    preferences,
+  ) async {
+    final storageKey = _storageKeyFor(sessionSlug, keeperIdentity);
+    final store = await AdmissionStorageQueue.run(
+      storageKey,
+      () async => _readStore(preferences, storageKey, keeperIdentity),
+    );
+    if (generation == _initializationGeneration) {
+      _preferences = preferences;
+      _store = store;
+      _storageKey = storageKey;
+      _loadedGeneration = generation;
+    }
+    return store;
+  });
 
   Future<void> _enqueue(_RosterSnapshot? snapshot) {
     final preferences = _preferences;
@@ -94,7 +125,19 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
       throw StateError('Keeper admission roster is not initialized');
     }
     final link = ref.keepAlive();
-    final operation = _writes.then((_) async {
+    return _enqueueCaptured(
+      preferences,
+      storageKey,
+      snapshot,
+    ).whenComplete(link.close);
+  }
+
+  Future<void> _enqueueCaptured(
+    SessionAdmissionPreferences preferences,
+    String storageKey,
+    _RosterSnapshot? snapshot,
+  ) {
+    final operation = AdmissionStorageQueue.run(storageKey, () async {
       final persisted = snapshot == null
           ? await preferences.remove(storageKey)
           : await preferences.setString(storageKey, snapshot.encode());
@@ -103,7 +146,7 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
       }
     });
     _writes = operation.catchError((Object _) {});
-    return operation.whenComplete(link.close);
+    return operation;
   }
 
   KeeperAdmissionRosterStore _loadedStore() {
@@ -133,7 +176,8 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
         decoded['generation'] is! String ||
         decoded['revision'] is! int ||
         decoded['members'] is! List ||
-        decoded['awaitingReadiness'] is! List) {
+        decoded['awaitingReadiness'] is! List ||
+        (decoded.containsKey('revoked') && decoded['revoked'] is! List)) {
       throw CorruptSessionAdmissionData();
     }
 
@@ -155,6 +199,12 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
     }
 
     return KeeperAdmissionRosterStore(keeperGeneration: generation)
+      ..revoked.addAll(
+        _readIdentities(
+          (decoded['revoked'] as List<Object?>?) ?? const [],
+          keeperIdentity,
+        ),
+      )
       ..replace(members, revision, awaitingReadiness: awaitingReadiness);
   }
 
@@ -183,6 +233,7 @@ class KeeperAdmissionRoster extends _$KeeperAdmissionRoster {
       revision: store.revision,
       members: members,
       awaitingReadiness: awaitingReadiness,
+      revoked: store.revoked.toList()..sort(),
     );
   }
 
@@ -203,12 +254,14 @@ final class _RosterSnapshot {
     required this.revision,
     required this.members,
     required this.awaitingReadiness,
+    required this.revoked,
   });
 
   final String generation;
   final int revision;
   final List<String> members;
   final List<String> awaitingReadiness;
+  final List<String> revoked;
 
   String encode() => jsonEncode({
     'version': KeeperAdmissionRoster._schemaVersion,
@@ -216,5 +269,26 @@ final class _RosterSnapshot {
     'revision': revision,
     'members': members,
     'awaitingReadiness': awaitingReadiness,
+    'revoked': revoked,
   });
+}
+
+/// A session's captured writer is independent of Ref disposal. Releasing it
+/// fences late callbacks; already-started writes remain in the storage queue.
+class KeeperAdmissionPersistence {
+  KeeperAdmissionPersistence._(this._save, this._clear);
+  final Future<void> Function() _save;
+  final Future<void> Function() _clear;
+  bool _released = false;
+  Future<void> persist() {
+    if (_released) throw StateError('Admission persistence owner released');
+    return _save();
+  }
+
+  Future<void> clear() {
+    if (_released) throw StateError('Admission persistence owner released');
+    return _clear();
+  }
+
+  void release() => _released = true;
 }

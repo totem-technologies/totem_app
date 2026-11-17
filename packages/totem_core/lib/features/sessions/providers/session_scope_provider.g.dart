@@ -662,29 +662,26 @@ final class ResolveCurrentScreenProvider
 String _$resolveCurrentScreenHash() =>
     r'19618a6f7fc74e6783f0e95d937321d23edc37c0';
 
-/// Authoritative identities admitted to the current room.
+/// Read-only presentation projection of the session admission roster.
 ///
 /// Before a client receives a roster, only the room state's keeper is visible.
-/// Room owners should call [update] with the current roster's members, or an
-/// empty iterable when no authoritative roster is available.
+/// The Keeper remains visible while authoritative recovery is unavailable.
 
 @ProviderFor(AdmittedSessionParticipantIdentities)
 final admittedSessionParticipantIdentitiesProvider =
     AdmittedSessionParticipantIdentitiesProvider._();
 
-/// Authoritative identities admitted to the current room.
+/// Read-only presentation projection of the session admission roster.
 ///
 /// Before a client receives a roster, only the room state's keeper is visible.
-/// Room owners should call [update] with the current roster's members, or an
-/// empty iterable when no authoritative roster is available.
+/// The Keeper remains visible while authoritative recovery is unavailable.
 final class AdmittedSessionParticipantIdentitiesProvider
     extends
         $NotifierProvider<AdmittedSessionParticipantIdentities, Set<String>> {
-  /// Authoritative identities admitted to the current room.
+  /// Read-only presentation projection of the session admission roster.
   ///
   /// Before a client receives a roster, only the room state's keeper is visible.
-  /// Room owners should call [update] with the current roster's members, or an
-  /// empty iterable when no authoritative roster is available.
+  /// The Keeper remains visible while authoritative recovery is unavailable.
   AdmittedSessionParticipantIdentitiesProvider._()
     : super(
         from: null,
@@ -695,21 +692,25 @@ final class AdmittedSessionParticipantIdentitiesProvider
         dependencies: <ProviderOrFamily>[
           sessionScopeProvider,
           keeperIdentityProvider,
+          currentSessionProvider,
         ],
-        $allTransitiveDependencies: <ProviderOrFamily>[
+        $allTransitiveDependencies: <ProviderOrFamily>{
           AdmittedSessionParticipantIdentitiesProvider
               .$allTransitiveDependencies0,
           AdmittedSessionParticipantIdentitiesProvider
               .$allTransitiveDependencies1,
           AdmittedSessionParticipantIdentitiesProvider
               .$allTransitiveDependencies2,
-        ],
+          AdmittedSessionParticipantIdentitiesProvider
+              .$allTransitiveDependencies3,
+        },
       );
 
   static final $allTransitiveDependencies0 = sessionScopeProvider;
   static final $allTransitiveDependencies1 = keeperIdentityProvider;
   static final $allTransitiveDependencies2 =
       KeeperIdentityProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies3 = currentSessionProvider;
 
   @override
   String debugGetCreateSourceHash() =>
@@ -730,13 +731,12 @@ final class AdmittedSessionParticipantIdentitiesProvider
 }
 
 String _$admittedSessionParticipantIdentitiesHash() =>
-    r'3809c1f9fc7bbd8f1d3682c2f57e8428a520a4be';
+    r'091e44df86594dfca8dca715fb6f816f2729d282';
 
-/// Authoritative identities admitted to the current room.
+/// Read-only presentation projection of the session admission roster.
 ///
 /// Before a client receives a roster, only the room state's keeper is visible.
-/// Room owners should call [update] with the current roster's members, or an
-/// empty iterable when no authoritative roster is available.
+/// The Keeper remains visible while authoritative recovery is unavailable.
 
 abstract class _$AdmittedSessionParticipantIdentities
     extends $Notifier<Set<String>> {
@@ -793,6 +793,7 @@ final class VisibleSessionParticipantLayoutProvider
           VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies1,
           VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2,
           VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3,
+          VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies4,
         },
       );
 
@@ -803,6 +804,8 @@ final class VisibleSessionParticipantLayoutProvider
       admittedSessionParticipantIdentitiesProvider;
   static final $allTransitiveDependencies3 =
       AdmittedSessionParticipantIdentitiesProvider.$allTransitiveDependencies1;
+  static final $allTransitiveDependencies4 =
+      AdmittedSessionParticipantIdentitiesProvider.$allTransitiveDependencies3;
 
   @override
   String debugGetCreateSourceHash() => _$visibleSessionParticipantLayoutHash();
@@ -862,6 +865,7 @@ final class SessionParticipantsProvider
           SessionParticipantsProvider.$allTransitiveDependencies2,
           SessionParticipantsProvider.$allTransitiveDependencies3,
           SessionParticipantsProvider.$allTransitiveDependencies4,
+          SessionParticipantsProvider.$allTransitiveDependencies5,
         },
       );
 
@@ -875,6 +879,8 @@ final class SessionParticipantsProvider
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2;
   static final $allTransitiveDependencies4 =
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3;
+  static final $allTransitiveDependencies5 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies4;
 
   @override
   String debugGetCreateSourceHash() => _$sessionParticipantsHash();
@@ -1141,12 +1147,12 @@ final class HasKeeperDisconnectedProvider
 String _$hasKeeperDisconnectedHash() =>
     r'd4368b63194733d75c4d556997e6f84e2b4f399c';
 
-/// All chat messages for the current session.
+/// All chat messages, projected from their session-owned service.
 
 @ProviderFor(sessionMessages)
 final sessionMessagesProvider = SessionMessagesProvider._();
 
-/// All chat messages for the current session.
+/// All chat messages, projected from their session-owned service.
 
 final class SessionMessagesProvider
     extends
@@ -1156,7 +1162,7 @@ final class SessionMessagesProvider
           List<SessionChatMessage>
         >
     with $Provider<List<SessionChatMessage>> {
-  /// All chat messages for the current session.
+  /// All chat messages, projected from their session-owned service.
   SessionMessagesProvider._()
     : super(
         from: null,
@@ -1164,16 +1170,16 @@ final class SessionMessagesProvider
         retry: null,
         name: r'sessionMessagesProvider',
         isAutoDispose: true,
-        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        dependencies: <ProviderOrFamily>[currentSessionProvider],
         $allTransitiveDependencies: <ProviderOrFamily>[
           SessionMessagesProvider.$allTransitiveDependencies0,
           SessionMessagesProvider.$allTransitiveDependencies1,
         ],
       );
 
-  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies0 = currentSessionProvider;
   static final $allTransitiveDependencies1 =
-      CurrentSessionStateProvider.$allTransitiveDependencies0;
+      CurrentSessionProvider.$allTransitiveDependencies0;
 
   @override
   String debugGetCreateSourceHash() => _$sessionMessagesHash();
@@ -1198,7 +1204,7 @@ final class SessionMessagesProvider
   }
 }
 
-String _$sessionMessagesHash() => r'fc346f31bc9ace6128030e70f72ae61264bb02db';
+String _$sessionMessagesHash() => r'1b1ec5587d9c490ce50392cf90d837b2bc2340a2';
 
 /// Messages visible in a single chat thread.
 
@@ -1309,47 +1315,101 @@ final class SessionThreadMessagesFamily extends $Family
   String toString() => r'sessionThreadMessagesProvider';
 }
 
-/// Whether in-call chat is open.
-///
-/// Single source of truth for both the docked desktop rail and the phone /
-/// tablet overlay. The room screen watches this flag plus the layout
-/// breakpoint and presents exactly one host. Reset on room entry so a panel
-/// open in one circle does not carry into the next.
+@ProviderFor(SessionPresentation)
+final sessionPresentationProvider = SessionPresentationProvider._();
 
-@ProviderFor(SessionChatOpen)
-final sessionChatOpenProvider = SessionChatOpenProvider._();
-
-/// Whether in-call chat is open.
-///
-/// Single source of truth for both the docked desktop rail and the phone /
-/// tablet overlay. The room screen watches this flag plus the layout
-/// breakpoint and presents exactly one host. Reset on room entry so a panel
-/// open in one circle does not carry into the next.
-final class SessionChatOpenProvider
-    extends $NotifierProvider<SessionChatOpen, bool> {
-  /// Whether in-call chat is open.
-  ///
-  /// Single source of truth for both the docked desktop rail and the phone /
-  /// tablet overlay. The room screen watches this flag plus the layout
-  /// breakpoint and presents exactly one host. Reset on room entry so a panel
-  /// open in one circle does not carry into the next.
-  SessionChatOpenProvider._()
+final class SessionPresentationProvider
+    extends $NotifierProvider<SessionPresentation, SessionPresentationState> {
+  SessionPresentationProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'sessionChatOpenProvider',
+        name: r'sessionPresentationProvider',
         isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[sessionScopeProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          SessionPresentationProvider.$allTransitiveDependencies0,
+        ],
       );
 
+  static final $allTransitiveDependencies0 = sessionScopeProvider;
+
   @override
-  String debugGetCreateSourceHash() => _$sessionChatOpenHash();
+  String debugGetCreateSourceHash() => _$sessionPresentationHash();
 
   @$internal
   @override
-  SessionChatOpen create() => SessionChatOpen();
+  SessionPresentation create() => SessionPresentation();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SessionPresentationState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SessionPresentationState>(value),
+    );
+  }
+}
+
+String _$sessionPresentationHash() =>
+    r'357f3e669de539cb6a6b8a0532919d95968cbefe';
+
+abstract class _$SessionPresentation
+    extends $Notifier<SessionPresentationState> {
+  SessionPresentationState build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<SessionPresentationState, SessionPresentationState>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<SessionPresentationState, SessionPresentationState>,
+              SessionPresentationState,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(sessionChatSelected)
+final sessionChatSelectedProvider = SessionChatSelectedProvider._();
+
+final class SessionChatSelectedProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  SessionChatSelectedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'sessionChatSelectedProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[sessionPresentationProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          SessionChatSelectedProvider.$allTransitiveDependencies0,
+          SessionChatSelectedProvider.$allTransitiveDependencies1,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = sessionPresentationProvider;
+  static final $allTransitiveDependencies1 =
+      SessionPresentationProvider.$allTransitiveDependencies0;
+
+  @override
+  String debugGetCreateSourceHash() => _$sessionChatSelectedHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return sessionChatSelected(ref);
+  }
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(bool value) {
@@ -1360,59 +1420,45 @@ final class SessionChatOpenProvider
   }
 }
 
-String _$sessionChatOpenHash() => r'3724669903597dbf53e14b93b24f58ec9fb33965';
+String _$sessionChatSelectedHash() =>
+    r'9211fc31f94bf94a3face0866e8ca7386fe9094d';
 
-/// Whether in-call chat is open.
-///
-/// Single source of truth for both the docked desktop rail and the phone /
-/// tablet overlay. The room screen watches this flag plus the layout
-/// breakpoint and presents exactly one host. Reset on room entry so a panel
-/// open in one circle does not carry into the next.
+@ProviderFor(sessionPromptsSelected)
+final sessionPromptsSelectedProvider = SessionPromptsSelectedProvider._();
 
-abstract class _$SessionChatOpen extends $Notifier<bool> {
-  bool build();
-  @$mustCallSuper
-  @override
-  WhenComplete runBuild() {
-    final ref = this.ref as $Ref<bool, bool>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<bool, bool>,
-              bool,
-              Object?,
-              Object?
-            >;
-    return element.handleCreate(ref, build);
-  }
-}
-
-/// Docked discussion-prompt panel visibility for the active session.
-
-@ProviderFor(SessionPromptsOpen)
-final sessionPromptsOpenProvider = SessionPromptsOpenProvider._();
-
-/// Docked discussion-prompt panel visibility for the active session.
-final class SessionPromptsOpenProvider
-    extends $NotifierProvider<SessionPromptsOpen, bool> {
-  /// Docked discussion-prompt panel visibility for the active session.
-  SessionPromptsOpenProvider._()
+final class SessionPromptsSelectedProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  SessionPromptsSelectedProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'sessionPromptsOpenProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        name: r'sessionPromptsSelectedProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[sessionPresentationProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          SessionPromptsSelectedProvider.$allTransitiveDependencies0,
+          SessionPromptsSelectedProvider.$allTransitiveDependencies1,
+        ],
       );
 
+  static final $allTransitiveDependencies0 = sessionPresentationProvider;
+  static final $allTransitiveDependencies1 =
+      SessionPresentationProvider.$allTransitiveDependencies0;
+
   @override
-  String debugGetCreateSourceHash() => _$sessionPromptsOpenHash();
+  String debugGetCreateSourceHash() => _$sessionPromptsSelectedHash();
 
   @$internal
   @override
-  SessionPromptsOpen create() => SessionPromptsOpen();
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return sessionPromptsSelected(ref);
+  }
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(bool value) {
@@ -1423,51 +1469,45 @@ final class SessionPromptsOpenProvider
   }
 }
 
-String _$sessionPromptsOpenHash() =>
-    r'ac755a914b0338f1aec11071f0d94a65449067ba';
+String _$sessionPromptsSelectedHash() =>
+    r'36efa3e2e055f2af024798b2af0c6062fcfce223';
 
-/// Docked discussion-prompt panel visibility for the active session.
+@ProviderFor(sessionAdmissionSelected)
+final sessionAdmissionSelectedProvider = SessionAdmissionSelectedProvider._();
 
-abstract class _$SessionPromptsOpen extends $Notifier<bool> {
-  bool build();
-  @$mustCallSuper
-  @override
-  WhenComplete runBuild() {
-    final ref = this.ref as $Ref<bool, bool>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<bool, bool>,
-              bool,
-              Object?,
-              Object?
-            >;
-    return element.handleCreate(ref, build);
-  }
-}
-
-@ProviderFor(SessionAdmissionOpen)
-final sessionAdmissionOpenProvider = SessionAdmissionOpenProvider._();
-
-final class SessionAdmissionOpenProvider
-    extends $NotifierProvider<SessionAdmissionOpen, bool> {
-  SessionAdmissionOpenProvider._()
+final class SessionAdmissionSelectedProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  SessionAdmissionSelectedProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'sessionAdmissionOpenProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        name: r'sessionAdmissionSelectedProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[sessionPresentationProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          SessionAdmissionSelectedProvider.$allTransitiveDependencies0,
+          SessionAdmissionSelectedProvider.$allTransitiveDependencies1,
+        ],
       );
 
+  static final $allTransitiveDependencies0 = sessionPresentationProvider;
+  static final $allTransitiveDependencies1 =
+      SessionPresentationProvider.$allTransitiveDependencies0;
+
   @override
-  String debugGetCreateSourceHash() => _$sessionAdmissionOpenHash();
+  String debugGetCreateSourceHash() => _$sessionAdmissionSelectedHash();
 
   @$internal
   @override
-  SessionAdmissionOpen create() => SessionAdmissionOpen();
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return sessionAdmissionSelected(ref);
+  }
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(bool value) {
@@ -1478,30 +1518,12 @@ final class SessionAdmissionOpenProvider
   }
 }
 
-String _$sessionAdmissionOpenHash() =>
-    r'fc1df612bde68d534659c73c88b64b00935ce45e';
-
-abstract class _$SessionAdmissionOpen extends $Notifier<bool> {
-  bool build();
-  @$mustCallSuper
-  @override
-  WhenComplete runBuild() {
-    final ref = this.ref as $Ref<bool, bool>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<bool, bool>,
-              bool,
-              Object?,
-              Object?
-            >;
-    return element.handleCreate(ref, build);
-  }
-}
+String _$sessionAdmissionSelectedHash() =>
+    r'99d062096cb645fba0e5a278055ae6e761c9dfb9';
 
 /// Current in-call thread. Null is the Everyone group thread.
 ///
-/// Reset alongside [SessionChatOpen]; a thread target from a previous circle
+/// Scoped alongside [SessionPresentation]; a thread target from a previous circle
 /// names a keeper who isn't in this one, and every send would be rejected.
 
 @ProviderFor(SessionChatThreadTarget)
@@ -1509,13 +1531,13 @@ final sessionChatThreadTargetProvider = SessionChatThreadTargetProvider._();
 
 /// Current in-call thread. Null is the Everyone group thread.
 ///
-/// Reset alongside [SessionChatOpen]; a thread target from a previous circle
+/// Scoped alongside [SessionPresentation]; a thread target from a previous circle
 /// names a keeper who isn't in this one, and every send would be rejected.
 final class SessionChatThreadTargetProvider
     extends $NotifierProvider<SessionChatThreadTarget, String?> {
   /// Current in-call thread. Null is the Everyone group thread.
   ///
-  /// Reset alongside [SessionChatOpen]; a thread target from a previous circle
+  /// Scoped alongside [SessionPresentation]; a thread target from a previous circle
   /// names a keeper who isn't in this one, and every send would be rejected.
   SessionChatThreadTargetProvider._()
     : super(
@@ -1525,6 +1547,7 @@ final class SessionChatThreadTargetProvider
         name: r'sessionChatThreadTargetProvider',
         isAutoDispose: false,
         dependencies: <ProviderOrFamily>[
+          sessionScopeProvider,
           sessionParticipantsProvider,
           localParticipantIdentityProvider,
           keeperIdentityProvider,
@@ -1546,20 +1569,19 @@ final class SessionChatThreadTargetProvider
         },
       );
 
-  static final $allTransitiveDependencies0 = sessionParticipantsProvider;
-  static final $allTransitiveDependencies1 =
-      SessionParticipantsProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies0 = sessionScopeProvider;
+  static final $allTransitiveDependencies1 = sessionParticipantsProvider;
   static final $allTransitiveDependencies2 =
-      SessionParticipantsProvider.$allTransitiveDependencies1;
+      SessionParticipantsProvider.$allTransitiveDependencies0;
   static final $allTransitiveDependencies3 =
-      SessionParticipantsProvider.$allTransitiveDependencies2;
+      SessionParticipantsProvider.$allTransitiveDependencies1;
   static final $allTransitiveDependencies4 =
       SessionParticipantsProvider.$allTransitiveDependencies3;
   static final $allTransitiveDependencies5 =
       SessionParticipantsProvider.$allTransitiveDependencies4;
-  static final $allTransitiveDependencies6 = localParticipantIdentityProvider;
-  static final $allTransitiveDependencies7 =
-      LocalParticipantIdentityProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies6 =
+      SessionParticipantsProvider.$allTransitiveDependencies5;
+  static final $allTransitiveDependencies7 = localParticipantIdentityProvider;
   static final $allTransitiveDependencies8 =
       LocalParticipantIdentityProvider.$allTransitiveDependencies2;
   static final $allTransitiveDependencies9 = currentSessionEventProvider;
@@ -1582,11 +1604,11 @@ final class SessionChatThreadTargetProvider
 }
 
 String _$sessionChatThreadTargetHash() =>
-    r'e46c2b883513b9ae54ac048044c2fa9b4e1d8e73';
+    r'57e84c21443d4907eb16e922c1e9049daed30693';
 
 /// Current in-call thread. Null is the Everyone group thread.
 ///
-/// Reset alongside [SessionChatOpen]; a thread target from a previous circle
+/// Scoped alongside [SessionPresentation]; a thread target from a previous circle
 /// names a keeper who isn't in this one, and every send would be rejected.
 
 abstract class _$SessionChatThreadTarget extends $Notifier<String?> {
@@ -1623,9 +1645,13 @@ final class SessionChatUnreadThreadsProvider
         retry: null,
         name: r'sessionChatUnreadThreadsProvider',
         isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[sessionScopeProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          SessionChatUnreadThreadsProvider.$allTransitiveDependencies0,
+        ],
       );
+
+  static final $allTransitiveDependencies0 = sessionScopeProvider;
 
   @override
   String debugGetCreateSourceHash() => _$sessionChatUnreadThreadsHash();
@@ -1644,7 +1670,7 @@ final class SessionChatUnreadThreadsProvider
 }
 
 String _$sessionChatUnreadThreadsHash() =>
-    r'26894ef8f4624f90ecca15b9d25faa3749a3558f';
+    r'8ed42d43bf584e177216368881b80bd834ac3f7b';
 
 /// Threads with messages the user has not viewed in a mounted chat panel.
 
@@ -1853,6 +1879,7 @@ final class SpeakingNowIdentityProvider
           SpeakingNowIdentityProvider.$allTransitiveDependencies2,
           SpeakingNowIdentityProvider.$allTransitiveDependencies3,
           SpeakingNowIdentityProvider.$allTransitiveDependencies4,
+          SpeakingNowIdentityProvider.$allTransitiveDependencies5,
         },
       );
 
@@ -1866,6 +1893,8 @@ final class SpeakingNowIdentityProvider
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2;
   static final $allTransitiveDependencies4 =
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3;
+  static final $allTransitiveDependencies5 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies4;
 
   @override
   String debugGetCreateSourceHash() => _$speakingNowIdentityHash();
@@ -1914,6 +1943,7 @@ final class NextSpeakerIdentityProvider
           NextSpeakerIdentityProvider.$allTransitiveDependencies2,
           NextSpeakerIdentityProvider.$allTransitiveDependencies3,
           NextSpeakerIdentityProvider.$allTransitiveDependencies4,
+          NextSpeakerIdentityProvider.$allTransitiveDependencies5,
         },
       );
 
@@ -1927,6 +1957,8 @@ final class NextSpeakerIdentityProvider
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2;
   static final $allTransitiveDependencies4 =
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3;
+  static final $allTransitiveDependencies5 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies4;
 
   @override
   String debugGetCreateSourceHash() => _$nextSpeakerIdentityHash();
@@ -2039,6 +2071,7 @@ final class FeaturedParticipantProvider
           FeaturedParticipantProvider.$allTransitiveDependencies2,
           FeaturedParticipantProvider.$allTransitiveDependencies3,
           FeaturedParticipantProvider.$allTransitiveDependencies4,
+          FeaturedParticipantProvider.$allTransitiveDependencies5,
         },
       );
 
@@ -2051,6 +2084,8 @@ final class FeaturedParticipantProvider
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2;
   static final $allTransitiveDependencies4 =
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3;
+  static final $allTransitiveDependencies5 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies4;
 
   @override
   String debugGetCreateSourceHash() => _$featuredParticipantHash();
@@ -2166,6 +2201,7 @@ final class SpeakingNextParticipantProvider
           SpeakingNextParticipantProvider.$allTransitiveDependencies2,
           SpeakingNextParticipantProvider.$allTransitiveDependencies3,
           SpeakingNextParticipantProvider.$allTransitiveDependencies4,
+          SpeakingNextParticipantProvider.$allTransitiveDependencies5,
         },
       );
 
@@ -2179,6 +2215,8 @@ final class SpeakingNextParticipantProvider
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies2;
   static final $allTransitiveDependencies4 =
       VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies3;
+  static final $allTransitiveDependencies5 =
+      VisibleSessionParticipantLayoutProvider.$allTransitiveDependencies4;
 
   @override
   String debugGetCreateSourceHash() => _$speakingNextParticipantHash();

@@ -21,6 +21,11 @@ android {
     compileSdk = 37 // flutter.compileSdkVersion
     ndkVersion = "28.2.13676358" // flutter.ndkVersion
 
+    // Android's default asset filter excludes dotfiles, including Flutter's .env.
+    androidResources {
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
+
     compileOptions {
         // Flag to enable support for the new language APIs
         isCoreLibraryDesugaringEnabled = true

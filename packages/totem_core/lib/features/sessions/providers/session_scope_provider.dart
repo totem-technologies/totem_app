@@ -13,6 +13,7 @@ import 'package:totem_core/core/config/consts.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/providers/session_chat_provider.dart';
 
 part 'session_scope_provider.g.dart';
 
@@ -211,21 +212,34 @@ RoomScreen? resolveCurrentScreen(Ref ref) {
   }
 }
 
-/// Authoritative identities admitted to the current room.
+/// Read-only presentation projection of the session admission roster.
 ///
 /// Before a client receives a roster, only the room state's keeper is visible.
-/// Room owners should call [update] with the current roster's members, or an
-/// empty iterable when no authoritative roster is available.
-@Riverpod(keepAlive: true, dependencies: [sessionScope, keeperIdentity])
+/// The Keeper remains visible while authoritative recovery is unavailable.
+@Riverpod(
+  keepAlive: true,
+  dependencies: [sessionScope, keeperIdentity, currentSession],
+)
 class AdmittedSessionParticipantIdentities
     extends _$AdmittedSessionParticipantIdentities {
   @override
   Set<String> build() {
     ref.watch(sessionScopeProvider);
     final keeperIdentity = ref.watch(keeperIdentityProvider);
-    return Set.unmodifiable({?keeperIdentity});
+    final candidate = ref.watch(currentSessionProvider)?.admission;
+    final service = candidate?.mounted == true ? candidate : null;
+    void changed() {
+      if (ref.mounted) {
+        state = _withKeeper(service?.admittedIdentities ?? const []);
+      }
+    }
+
+    service?.addListener(changed);
+    ref.onDispose(() => service?.removeListener(changed));
+    return Set.unmodifiable({?keeperIdentity, ...?service?.admittedIdentities});
   }
 
+  @visibleForTesting
   void update(Iterable<String> identities) {
     state = _withKeeper(identities);
   }
@@ -305,13 +319,13 @@ bool hasKeeperDisconnected(Ref ref) {
       false;
 }
 
-/// All chat messages for the current session.
-@Riverpod(dependencies: [currentSessionState])
+/// All chat messages, projected from their session-owned service.
+@Riverpod(dependencies: [currentSession])
 List<SessionChatMessage> sessionMessages(Ref ref) {
-  return ref.watch(
-        currentSessionStateProvider.select((s) => s?.chat.messages),
-      ) ??
-      const [];
+  final session = ref.watch(currentSessionProvider);
+  return session == null
+      ? const []
+      : ref.watch(sessionChatMessagesProvider(session));
 }
 
 /// Messages visible in a single chat thread.
@@ -331,62 +345,56 @@ List<SessionChatMessage> sessionThreadMessages(
       .toList(growable: false);
 }
 
-/// Whether in-call chat is open.
-///
-/// Single source of truth for both the docked desktop rail and the phone /
-/// tablet overlay. The room screen watches this flag plus the layout
-/// breakpoint and presents exactly one host. Reset on room entry so a panel
-/// open in one circle does not carry into the next.
-@Riverpod(keepAlive: true)
-class SessionChatOpen extends _$SessionChatOpen {
-  @override
-  bool build() => false;
+enum SessionPanel { none, chat, prompts, admission }
 
-  bool get open => state;
-
-  set open(bool value) {
-    state = value;
-    if (value) {
-      ref.read(sessionPromptsOpenProvider.notifier).open = false;
-      ref.read(sessionAdmissionOpenProvider.notifier).open = false;
-    }
-  }
-
-  void toggle() => open = !state;
+/// Immutable intent for one panel. Routes remain owned by SessionPanels.
+class SessionPresentationState {
+  const SessionPresentationState({
+    this.panel = SessionPanel.none,
+    this.revision = 0,
+  });
+  final SessionPanel panel;
+  final int revision;
 }
 
-/// Docked discussion-prompt panel visibility for the active session.
-@Riverpod(keepAlive: true)
-class SessionPromptsOpen extends _$SessionPromptsOpen {
+@Riverpod(keepAlive: true, dependencies: [sessionScope])
+class SessionPresentation extends _$SessionPresentation {
   @override
-  bool build() => false;
-
-  bool get open => state;
-
-  set open(bool value) {
-    state = value;
-    if (value) {
-      ref.read(sessionChatOpenProvider.notifier).open = false;
-      ref.read(sessionAdmissionOpenProvider.notifier).open = false;
-    }
+  SessionPresentationState build() {
+    ref.watch(sessionScopeProvider);
+    return const SessionPresentationState();
   }
+
+  void openPanel(SessionPanel panel) {
+    if (state.panel == panel) return;
+    state = SessionPresentationState(
+      panel: panel,
+      revision: state.revision + 1,
+    );
+  }
+
+  void closePanel({SessionPanel? expectedPanel, int? expectedRevision}) {
+    if (expectedPanel != null && state.panel != expectedPanel) return;
+    if (expectedRevision != null && state.revision != expectedRevision) return;
+    openPanel(SessionPanel.none);
+  }
+
+  void togglePanel(SessionPanel panel) =>
+      state.panel == panel ? closePanel() : openPanel(panel);
 }
 
-@Riverpod(keepAlive: true)
-class SessionAdmissionOpen extends _$SessionAdmissionOpen {
-  @override
-  bool build() => false;
-
-  bool get open => state;
-
-  set open(bool value) {
-    state = value;
-    if (value) {
-      ref.read(sessionChatOpenProvider.notifier).open = false;
-      ref.read(sessionPromptsOpenProvider.notifier).open = false;
-    }
-  }
-}
+@Riverpod(dependencies: [SessionPresentation])
+bool sessionChatSelected(Ref ref) => ref.watch(
+  sessionPresentationProvider.select((s) => s.panel == SessionPanel.chat),
+);
+@Riverpod(dependencies: [SessionPresentation])
+bool sessionPromptsSelected(Ref ref) => ref.watch(
+  sessionPresentationProvider.select((s) => s.panel == SessionPanel.prompts),
+);
+@Riverpod(dependencies: [SessionPresentation])
+bool sessionAdmissionSelected(Ref ref) => ref.watch(
+  sessionPresentationProvider.select((s) => s.panel == SessionPanel.admission),
+);
 
 String? sessionChatLocalIdentity({
   required String? roomIdentity,
@@ -430,11 +438,12 @@ String? sessionChatTwoPersonPeer(
 
 /// Current in-call thread. Null is the Everyone group thread.
 ///
-/// Reset alongside [SessionChatOpen]; a thread target from a previous circle
+/// Scoped alongside [SessionPresentation]; a thread target from a previous circle
 /// names a keeper who isn't in this one, and every send would be rejected.
 @Riverpod(
   keepAlive: true,
   dependencies: [
+    sessionScope,
     sessionParticipants,
     localParticipantIdentity,
     keeperIdentity,
@@ -445,6 +454,7 @@ String? sessionChatTwoPersonPeer(
 class SessionChatThreadTarget extends _$SessionChatThreadTarget {
   @override
   String? build() {
+    ref.watch(sessionScopeProvider);
     ref.listen(sessionParticipantsProvider, (_, _) => _scheduleReconcile());
     ref.listen(
       localParticipantIdentityProvider,
@@ -543,10 +553,13 @@ class SessionChatThreadTarget extends _$SessionChatThreadTarget {
 }
 
 /// Threads with messages the user has not viewed in a mounted chat panel.
-@Riverpod(keepAlive: true)
+@Riverpod(keepAlive: true, dependencies: [sessionScope])
 class SessionChatUnreadThreads extends _$SessionChatUnreadThreads {
   @override
-  Set<String?> build() => <String?>{};
+  Set<String?> build() {
+    ref.watch(sessionScopeProvider);
+    return <String?>{};
+  }
 
   /// Null means there are no unread threads; a non-null value can contain a
   /// null thread for the Everyone thread.

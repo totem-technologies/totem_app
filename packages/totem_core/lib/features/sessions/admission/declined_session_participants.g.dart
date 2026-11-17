@@ -96,7 +96,7 @@ final class DeclinedSessionParticipantsProvider
 }
 
 String _$declinedSessionParticipantsHash() =>
-    r'2ca498f473189266d68d1b09616eb9c394ee3679';
+    r'410ffba76bb4252db5cc582364f3a412498f751b';
 
 final class DeclinedSessionParticipantsFamily extends $Family
     with

@@ -33,7 +33,7 @@ class _ActionBarEmojiButtonState extends ConsumerState<ActionBarEmojiButton> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(sessionChatOpenProvider, (previous, next) {
+    ref.listen(sessionChatSelectedProvider, (previous, next) {
       if (next && _isOpen) _dismiss();
     });
 

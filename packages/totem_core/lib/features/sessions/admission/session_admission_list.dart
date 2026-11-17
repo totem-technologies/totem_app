@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 
 /// Display-only admission data. IDs come from the owner.
 class SessionAdmissionGuest {
@@ -75,6 +76,7 @@ class SessionAdmissionList extends StatelessWidget {
               if (guests.length > 1)
                 OutlinedButton(
                   onPressed: busy ? null : onAdmitAll,
+                  style: SessionButtonStyle.outlined(compact: true),
                   child: const Text('Admit all'),
                 ),
               IconButton(
@@ -144,10 +146,12 @@ class SessionAdmissionList extends StatelessWidget {
           onPressed: busy || onDecline == null
               ? null
               : () => onDecline!(guest.id),
+          style: SessionButtonStyle.outlined(compact: true),
           child: const Text('Decline'),
         ),
         ElevatedButton(
           onPressed: busy || onAdmit == null ? null : () => onAdmit!(guest.id),
+          style: SessionButtonStyle.filled(compact: true),
           child: const Text('Admit'),
         ),
       ],

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/shared/assets.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:url_launcher/link.dart';
@@ -11,7 +12,8 @@ Future<void> showDownloadMobileAppDialog(BuildContext context) {
           defaultTargetPlatform == TargetPlatform.android);
   if (shouldShow) {
     return showDialog(
-      context: context,
+      context: sessionNavigatorContext(context),
+      useRootNavigator: false,
       builder: (context) => const DownloadMobileAppDialog(),
     );
   }

@@ -97,7 +97,7 @@ const _sessionState = SessionRoomState(
     state: RoomConnectionState.connected,
   ),
   participants: ParticipantsState(),
-  chat: ChatState(),
+
   turn: SessionTurnState(
     roomState: RoomState(
       keeper: 'keeper',

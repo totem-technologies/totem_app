@@ -3,9 +3,50 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' show ClientException;
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_state.dart'
+    as state;
 import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 void main() {
+  test(
+    'provider configuration identity includes changed media preferences',
+    () {
+      state.SessionOptions options({
+        bool camera = true,
+        bool microphone = true,
+        bool speaker = true,
+        String? cameraId,
+      }) => state.SessionOptions(
+        sessionSlug: 'same-slug',
+        token: 'same-token',
+        cameraEnabled: camera,
+        microphoneEnabled: microphone,
+        speakerEnabled: speaker,
+        cameraOptions: cameraId == null
+            ? const CameraCaptureOptions()
+            : CameraCaptureOptions(deviceId: cameraId),
+      );
+      final original = options();
+      check(original).equals(options());
+      check(
+        sessionControllerProvider(original),
+      ).equals(sessionControllerProvider(options()));
+      for (final changed in [
+        options(camera: false),
+        options(microphone: false),
+        options(speaker: false),
+        options(cameraId: 'different-camera'),
+      ]) {
+        check(changed == original).isFalse();
+        check(
+          sessionControllerProvider(changed) ==
+              sessionControllerProvider(original),
+        ).isFalse();
+      }
+    },
+  );
+
   group('isInternetDisconnectReason', () {
     test('recognizes explicit client-side network failures', () {
       check(
@@ -159,6 +200,72 @@ void main() {
           SessionErrorCategory.mediaDevice,
         ),
         (const SessionJoinFailure(), SessionErrorCategory.unknown),
+      ];
+      for (final (error, kind) in cases) {
+        check(because: '$error', classifySessionError(error)).equals(kind);
+      }
+    });
+
+    test('reads failures through the session transport boundary', () {
+      SessionTransportFailure failure(
+        SessionTransportFailureKind kind,
+        Object cause, {
+        SessionTransportConnectionFailure? connectionFailure,
+      }) => SessionTransportFailure(
+        kind,
+        '$cause',
+        cause: cause,
+        stackTrace: StackTrace.empty,
+        connectionFailure: connectionFailure,
+      );
+
+      final cases = <(Object, SessionErrorCategory)>[
+        // Joins wrap the SDK error; the cause still decides.
+        (
+          SessionJoinFailure(
+            failure(
+              SessionTransportFailureKind.connection,
+              ConnectException(
+                'timed out',
+                reason: ConnectionErrorReason.Timeout,
+              ),
+              connectionFailure: SessionTransportConnectionFailure.timeout,
+            ),
+          ),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        (
+          RoomTransportError(
+            failure(
+              SessionTransportFailureKind.unexpected,
+              ClientException('Failed to fetch'),
+            ),
+          ),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        // An unrecognised cause falls back to the transport's own reading.
+        (
+          RoomTransportError(
+            failure(
+              SessionTransportFailureKind.connection,
+              StateError('refused'),
+              connectionFailure: SessionTransportConnectionFailure.notAllowed,
+            ),
+          ),
+          SessionErrorCategory.accessDenied,
+        ),
+        (
+          failure(SessionTransportFailureKind.mediaConnection, StateError('x')),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        (
+          failure(SessionTransportFailureKind.publication, StateError('x')),
+          SessionErrorCategory.connectionLost,
+        ),
+        (
+          failure(SessionTransportFailureKind.unexpected, StateError('x')),
+          SessionErrorCategory.unknown,
+        ),
       ];
       for (final (error, kind) in cases) {
         check(because: '$error', classifySessionError(error)).equals(kind);

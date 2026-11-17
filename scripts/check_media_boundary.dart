@@ -11,10 +11,54 @@
 
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+
 const _allowedPaths = [
   'packages/totem_core/lib/features/sessions/media/',
   'packages/totem_core/lib/features/sessions/pre_join/pre_join_media_controller.dart',
 ];
+
+// Migration baseline: these existing SDK consumers still need transport or
+// capture-handle migration. Remove entries as their direct imports disappear.
+// An exception applies to one existing file, never an orchestration directory.
+const _existingSdkConsumers = {
+  'controllers/core/session_state.dart',
+  'controllers/core/join_media_owner.dart',
+  'pre_join/pre_join_flow_controller.dart',
+  'pre_join/pre_join_media_controller.dart',
+  'pre_join/pre_join_state.dart',
+  'pre_join/pre_join_preview_card.dart',
+  'admission/admission_transport.dart',
+  'providers/session_scope_provider.dart',
+  'screens/room_screen.dart',
+  'screens/session_disconnected.dart',
+};
+
+List<String> _sdkViolations(String path, String source) {
+  const root = 'packages/totem_core/lib/features/sessions/';
+  if (!path.startsWith(root)) return const [];
+  final relative = path.substring(root.length);
+  if (relative.startsWith('media/') ||
+      _existingSdkConsumers.contains(relative)) {
+    return const [];
+  }
+  final parsed = parseString(content: source, throwIfDiagnostics: false);
+  final violations = <String>[];
+  for (final directive
+      in parsed.unit.directives.whereType<NamespaceDirective>()) {
+    final uris = [directive.uri, ...directive.configurations.map((c) => c.uri)];
+    for (final uri in uris) {
+      if (!(uri.stringValue?.startsWith('package:livekit_client/') ?? false))
+        continue;
+      final line = parsed.lineInfo.getLocation(uri.offset).lineNumber;
+      violations.add(
+        '$path:$line: keep LiveKit imports and exports behind the Sessions media adapters',
+      );
+    }
+  }
+  return violations;
+}
 
 final _forbidden = <RegExp, String>{
   // Formatting can break the chain after localParticipant.
@@ -34,6 +78,7 @@ List<String> findViolations(Map<String, String> files) {
   final violations = <String>[];
   for (final MapEntry(key: path, value: source) in files.entries) {
     final normalizedPath = path.replaceAll(r'\', '/');
+    violations.addAll(_sdkViolations(normalizedPath, source));
     if (_allowedPaths.any(normalizedPath.startsWith)) continue;
     final lines = source.split('\n');
     for (final MapEntry(key: pattern, value: advice) in _forbidden.entries) {
@@ -83,10 +128,12 @@ Future<Map<String, String>> filesForCheck(List<String> args) async {
 Future<void> main(List<String> args) async {
   final violations = findViolations(await filesForCheck(args));
   if (violations.isEmpty) {
-    print('✅ Local capture stays behind the media adapters');
+    print(
+      '✅ Media capture and new Sessions SDK dependencies stay behind adapters',
+    );
     return;
   }
-  print('❌ Local capture calls outside lib/features/sessions/media/:');
+  print('❌ Sessions media boundary violations:');
   violations.forEach(print);
   exit(1);
 }

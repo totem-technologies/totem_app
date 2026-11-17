@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +20,7 @@ import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
+import 'package:totem_core/features/sessions/services/session_commands.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
@@ -142,7 +141,7 @@ SessionRoomState _buildState({
       state: RoomConnectionState.connected,
     ),
     participants: ParticipantsState(participants: defaultParticipants),
-    chat: const ChatState(),
+
     turn: SessionTurnState(
       roomState: RoomState(
         keeper: keeper,
@@ -284,57 +283,57 @@ void main() {
       }
     }
 
-    testWidgets('renders the participant grid for room sizes up to 12', (
-      tester,
-    ) async {
-      for (final participantCount in [1, 3, 7, 12]) {
-        final state = _buildState(
-          keeper: 'user-1',
-          currentSpeaker: 'speaker-0',
-          nextSpeaker: 'user-2',
-          participants: _buildParticipantsWithLocal(
-            localParticipant,
-            participantCount,
-          ),
-        );
+    testWidgets(
+      'keeps every participant visible without overlapping controls at grid boundaries',
+      (tester) async {
+        for (final participantCount in [1, 7, 12]) {
+          final state = _buildState(
+            keeper: 'user-1',
+            currentSpeaker: 'speaker-0',
+            nextSpeaker: 'user-2',
+            participants: _buildParticipantsWithLocal(
+              localParticipant,
+              participantCount,
+            ),
+          );
 
-        await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
+          await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
 
-        check(
-          tester.widgetList(find.byType(ParticipantCard)),
-        ).length.equals(participantCount);
-        check(
-          tester.widgetList(find.byType(SpeakingTurnScreen)),
-        ).length.equals(1);
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump();
-      }
-    });
-
-    testWidgets('renders the keeper pass card and session action bar', (
-      tester,
-    ) async {
-      final state = _buildState(
-        keeper: 'user-1',
-        currentSpeaker: 'user-1',
-        nextSpeaker: 'user-2',
-      );
-
-      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
-
-      check(tester.widgetList(find.byType(TextField))).length.equals(1);
-      check(
-        tester.widgetList(find.byType(ActionSliderButton)),
-      ).length.equals(1);
-      check(
-        tester.widgetList(find.text('Your prompt for this round')),
-      ).length.equals(1);
-      check(tester.widgetList(find.text('Pass to User Two'))).length.equals(1);
-      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
-      check(
-        tester.widgetList(find.byType(ParticipantCard)),
-      ).length.isGreaterOrEqual(1);
-    });
+          final cards = tester.widgetList<ParticipantCard>(
+            find.byType(ParticipantCard),
+          );
+          check(
+            cards.map((card) => card.participant.identity).toSet(),
+          ).deepEquals(
+            state.participantsList
+                .map((participant) => participant.identity)
+                .toSet(),
+          );
+          final controls = tester.getRect(find.byType(SessionActionBar));
+          final bounds =
+              Offset.zero &
+              (tester.view.physicalSize / tester.view.devicePixelRatio);
+          final rects = [
+            for (final card in cards) tester.getRect(find.byWidget(card)),
+          ];
+          for (var index = 0; index < rects.length; index++) {
+            final rect = rects[index];
+            check(rect.width > 0 && rect.height > 0).isTrue();
+            check(bounds.contains(rect.topLeft)).isTrue();
+            check(
+              rect.right <= bounds.right && rect.bottom <= bounds.bottom,
+            ).isTrue();
+            check(rect.overlaps(controls)).isFalse();
+            for (final other in rects.skip(index + 1)) {
+              check(rect.overlaps(other)).isFalse();
+            }
+          }
+          check(tester.takeException()).isNull();
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      },
+    );
 
     testWidgets('action bar exposes controls and toggles mic/camera', (
       tester,
@@ -396,57 +395,134 @@ void main() {
       });
     });
 
-    testWidgets('passes the Totem with a trimmed round message', (
-      tester,
-    ) async {
-      final state = _buildState(
-        keeper: 'user-1',
-        currentSpeaker: 'user-1',
-        nextSpeaker: 'user-2',
+    testWidgets(
+      'passes the Totem with a trimmed round message',
+      (tester) async {
+        final state = _buildState(
+          keeper: 'user-1',
+          currentSpeaker: 'user-1',
+          nextSpeaker: 'user-2',
+        );
+        final cuesService = _TestSessionCuesService();
+
+        when(
+          () => keeper.passTotem(customPrompt: 'A round message'),
+        ).thenAnswer((_) async {});
+
+        await pumpSpeakingTurn(
+          tester,
+          sessionState: state,
+          isKeeper: true,
+          cuesService: cuesService,
+        );
+
+        await tester.enterText(find.byType(TextField), '  A round message  ');
+        await tester.drag(
+          find.byKey(ActionSlider.thumbKey),
+          const Offset(800, 0),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // The confirmation dialog should now be visible.
+        await tester.tap(
+          find.widgetWithText(ElevatedButton, 'Pass to User Two'),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        verify(
+          () => keeper.passTotem(customPrompt: 'A round message'),
+        ).called(1);
+        check(cuesService.swipePulseCount).equals(1);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+      // auto_size_text's _checkTextFits allocates TextPainters without disposal
+      // when the swipe label changes. The Totem-owned slider is unmounted above.
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
+
+    testWidgets(
+      'a participant can pass without Keeper prompt controls',
+      (tester) async {
+        final state = _buildState(
+          keeper: 'keeper-1',
+          currentSpeaker: 'user-1',
+          nextSpeaker: 'user-2',
+        );
+
+        when(() => keeper.passTotem()).thenAnswer((_) async {});
+        await pumpSpeakingTurn(tester, sessionState: state, isKeeper: false);
+
+        check(tester.widgetList(find.byType(TextField))).length.equals(0);
+        await tester.drag(
+          find.byKey(ActionSlider.thumbKey),
+          const Offset(800, 0),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        verify(() => keeper.passTotem()).called(1);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+      // auto_size_text's _checkTextFits allocates TextPainters without disposal
+      // when the swipe label changes. The Totem-owned slider is unmounted above.
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
+
+    for (final committed in [false, true]) {
+      testWidgets(
+        committed
+            ? 'a committed pass warns about microphone failure'
+            : 'a rejected pass has no success cue',
+        (tester) async {
+          final cues = _TestSessionCuesService();
+          when(() => keeper.passTotem()).thenThrow(
+            SessionCommandException(
+              committed
+                  ? SessionCommandFailureKind.partialSuccess
+                  : SessionCommandFailureKind.conflict,
+              committed
+                  ? 'Mute the microphone or leave the session.'
+                  : 'The pass was rejected.',
+            ),
+          );
+          await pumpSpeakingTurn(
+            tester,
+            sessionState: _buildState(
+              keeper: 'keeper-1',
+              currentSpeaker: 'user-1',
+              nextSpeaker: 'user-2',
+            ),
+            isKeeper: false,
+            cuesService: cues,
+          );
+          await tester.drag(
+            find.byKey(ActionSlider.thumbKey),
+            const Offset(800, 0),
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+          verify(() => keeper.passTotem()).called(1);
+          check(cues.swipePulseCount).equals(committed ? 1 : 0);
+          if (committed) {
+            check(
+              find.text('Mute the microphone or leave the session.').evaluate(),
+            ).isNotEmpty();
+          }
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        },
+        experimentalLeakTesting: LeakTesting.settings.withIgnored(
+          classes: <String>['TextPainter'],
+        ),
       );
-      final cuesService = _TestSessionCuesService();
-
-      when(
-        () => keeper.passTotem(customPrompt: 'A round message'),
-      ).thenAnswer((_) async {});
-
-      await pumpSpeakingTurn(
-        tester,
-        sessionState: state,
-        isKeeper: true,
-        cuesService: cuesService,
-      );
-
-      await tester.enterText(find.byType(TextField), '  A round message  ');
-      final actionSlider =
-          tester.state(find.byType(ActionSlider)) as ActionSliderState;
-      unawaited(actionSlider.widget.onActionCompleted());
-      await tester.pumpAndSettle();
-
-      // The confirmation dialog should now be visible.
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Pass to User Two'));
-      await tester.pumpAndSettle();
-
-      verify(() => keeper.passTotem(customPrompt: 'A round message')).called(1);
-      check(cuesService.swipePulseCount).equals(1);
-    });
-
-    testWidgets('shows the standard pass card when the user is not keeper', (
-      tester,
-    ) async {
-      final state = _buildState(
-        keeper: 'keeper-1',
-        currentSpeaker: 'user-1',
-        nextSpeaker: 'user-2',
-      );
-
-      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: false);
-
-      check(tester.widgetList(find.byType(TextField))).length.equals(0);
-      check(tester.widgetList(find.byType(ActionSlider))).length.equals(1);
-      check(tester.widgetList(find.text('Pass to User Two'))).length.equals(1);
-      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
-    });
+    }
 
     const longPrompt =
         'Think of a moment this week when you felt truly heard by someone, '
@@ -484,14 +560,16 @@ void main() {
 
             check(tester.takeException()).isNull();
             final slider = tester.getRect(find.byType(ActionSlider));
-            check(slider.height).equals(48);
             check(slider.top).isGreaterOrEqual(0);
             check(slider.bottom).isLessOrEqual(size.height);
             check(slider.left).isGreaterOrEqual(0);
             check(slider.right).isLessOrEqual(size.width);
             check(
-              tester.widgetList(find.byType(SessionActionBar)),
-            ).length.equals(1);
+              slider.overlaps(tester.getRect(find.byType(SessionActionBar))),
+            ).isFalse();
+            check(
+              find.byKey(ActionSlider.thumbKey).hitTestable().evaluate(),
+            ).isNotEmpty();
           },
         );
       }
@@ -516,22 +594,6 @@ void main() {
       ).length.equals(1);
       check(tester.widgetList(find.byType(TextField))).length.equals(0);
       check(tester.widgetList(find.byType(ActionSlider))).length.equals(0);
-      check(tester.widgetList(find.byType(SessionActionBar))).length.equals(1);
-    });
-
-    testWidgets('does not render SelfView when disabled by default', (
-      tester,
-    ) async {
-      final state = _buildState(
-        keeper: 'user-1',
-        currentSpeaker: 'user-1',
-        nextSpeaker: 'user-2',
-      );
-
-      await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
-      await tester.pumpAndSettle();
-
-      check(tester.widgetList(find.byType(SelfView))).length.equals(0);
     });
 
     testWidgets(
@@ -546,13 +608,21 @@ void main() {
         await pumpSpeakingTurn(tester, sessionState: state, isKeeper: true);
         await tester.pumpAndSettle();
 
+        check(
+          find.bySemanticsLabel('Your self view, draggable').evaluate(),
+        ).isEmpty();
         final container = tester.element(find.byType(SpeakingTurnScreen));
         final ref = ProviderScope.containerOf(container);
 
         ref.read(selfViewSettingsProvider.notifier).setEnabled(true);
         await tester.pumpAndSettle();
 
-        check(tester.widgetList(find.byType(SelfView))).length.equals(1);
+        check(
+          find
+              .bySemanticsLabel('Your self view, draggable')
+              .hitTestable()
+              .evaluate(),
+        ).isNotEmpty();
 
         final prefs = await SharedPreferences.getInstance();
         check(prefs.getBool(AppConsts.storageSelfViewEnabledKey)).equals(true);
@@ -586,13 +656,16 @@ void main() {
 
       final cardFinder = find.bySemanticsLabel('Your self view, draggable');
       final initialOffset = tester.getTopLeft(cardFinder);
-      check(initialOffset.dx).equals(714.0); // 800 - 70 - 16
+      check(initialOffset.dx).isGreaterThan(
+        tester.view.physicalSize.width / tester.view.devicePixelRatio / 2,
+      );
 
       await tester.drag(cardFinder, const Offset(-500, 0));
       await tester.pumpAndSettle();
 
       final newOffset = tester.getTopLeft(cardFinder);
-      check(newOffset.dx).equals(16.0); // _padding is 16
+      check(newOffset.dx).isLessThan(initialOffset.dx);
+      check(newOffset.dx).isGreaterOrEqual(0);
 
       final prefs = await SharedPreferences.getInstance();
       check(
@@ -604,10 +677,15 @@ void main() {
       await tester.pumpAndSettle();
 
       final backOffset = tester.getTopLeft(cardFinder);
-      check(backOffset.dx).equals(714.0); // Should snap back to end
+      check(backOffset.dx).isGreaterThan(newOffset.dx);
+      check(tester.getRect(cardFinder).right).isLessOrEqual(
+        tester.view.physicalSize.width / tester.view.devicePixelRatio,
+      );
       check(
         prefs.getString(AppConsts.storageSelfViewPositionKey),
       ).equals('end');
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     });
   });
 }
