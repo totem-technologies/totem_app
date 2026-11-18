@@ -169,6 +169,23 @@ class LiveKitSessionTransport implements SessionTransport {
         _subscribeInBackground(
           _subscribe(event.participant, event.publication),
         );
+      })
+      ..on<sdk.TrackUnsubscribedEvent>((event) {
+        final participant = event.participant;
+        final publication = event.publication;
+        if (!_currentPublication(participant, publication) ||
+            publication.subscribed) {
+          return;
+        }
+        final state = _subscriptionOperations[publication];
+        if (state != null) {
+          state
+            ..requested = false
+            ..mayBeSubscribed = false;
+        }
+        if (_subscribeExisting || state != null) {
+          _subscribeInBackground(_subscribe(participant, publication));
+        }
       });
   }
   final sdk.Room _room;
@@ -183,8 +200,12 @@ class LiveKitSessionTransport implements SessionTransport {
   final _subscriptionOperations = Expando<_RemoteSubscription>();
   final Map<sdk.RemoteTrackPublication, _RemoteSubscription> _pendingCleanup =
       Map.identity();
+  final Map<sdk.RemoteTrackPublication, _RemoteSubscription>
+  _failedSubscriptions = Map.identity();
   Timer? _cleanupRetry;
+  Timer? _subscriptionRetry;
   var _cleanupRetryAttempt = 0;
+  var _subscriptionRetryAttempt = 0;
   final _departedParticipants = Expando<bool>();
   final _removedPublications = Expando<bool>();
   // Replacement SDK objects can address the same server-side track SID. Keep
@@ -241,6 +262,8 @@ class LiveKitSessionTransport implements SessionTransport {
     if (state != SessionTransportConnectionState.connected) {
       _cleanupRetry?.cancel();
       _cleanupRetry = null;
+      _subscriptionRetry?.cancel();
+      _subscriptionRetry = null;
     }
     if (state == SessionTransportConnectionState.disconnected) {
       _pruneSubscriptions();
@@ -482,6 +505,7 @@ class LiveKitSessionTransport implements SessionTransport {
         if (identical(_subscriptions[publication], state)) {
           _subscriptions.remove(publication);
         }
+        _scheduleSubscriptionRetry(publication, state);
         completion.completeError(
           failure(
             error,
@@ -557,6 +581,7 @@ class LiveKitSessionTransport implements SessionTransport {
       if (state.requested || publication.subscribed) {
         state.requested = true;
         _subscriptions[publication] = state;
+        _forgetSubscriptionRetry(publication);
         return;
       }
       final generation = _mediaGeneration;
@@ -581,6 +606,7 @@ class LiveKitSessionTransport implements SessionTransport {
       state.requested =
           permission == state.permissionRevision &&
           publication.subscriptionAllowed;
+      if (state.requested) _forgetSubscriptionRetry(publication);
       if (!_authorizedPublication(participant, publication) ||
           _mediaConnection == SessionTransportConnectionState.disconnected) {
         state.requested = true;
@@ -599,6 +625,47 @@ class LiveKitSessionTransport implements SessionTransport {
       _cleanupRetry = null;
       _cleanupRetryAttempt = 0;
     }
+  }
+
+  void _forgetSubscriptionRetry(sdk.RemoteTrackPublication publication) {
+    _failedSubscriptions.remove(publication);
+    if (_failedSubscriptions.isEmpty) {
+      _subscriptionRetry?.cancel();
+      _subscriptionRetry = null;
+      _subscriptionRetryAttempt = 0;
+    }
+  }
+
+  void _scheduleSubscriptionRetry(
+    sdk.RemoteTrackPublication publication,
+    _RemoteSubscription state,
+  ) {
+    if (_disposed ||
+        _mediaConnection != SessionTransportConnectionState.connected ||
+        !_authorizedPublication(state.participant, publication)) {
+      return;
+    }
+    _failedSubscriptions[publication] = state;
+    if (_subscriptionRetry != null) return;
+    final seconds = _subscriptionRetryAttempt < 5
+        ? 1 << _subscriptionRetryAttempt
+        : 30;
+    if (_subscriptionRetryAttempt < 5) _subscriptionRetryAttempt++;
+    _subscriptionRetry = Timer(Duration(seconds: seconds), () {
+      _subscriptionRetry = null;
+      final failed =
+          Map<sdk.RemoteTrackPublication, _RemoteSubscription>.identity()
+            ..addAll(_failedSubscriptions);
+      for (final entry in failed.entries) {
+        if (!_disposed &&
+            _mediaConnection == SessionTransportConnectionState.connected &&
+            _authorizedPublication(entry.value.participant, entry.key)) {
+          _subscribeInBackground(
+            _subscribe(entry.value.participant, entry.key),
+          );
+        }
+      }
+    });
   }
 
   void _scheduleCleanupRetry() {
@@ -644,6 +711,15 @@ class LiveKitSessionTransport implements SessionTransport {
   }
 
   void _pruneSubscriptions() {
+    _failedSubscriptions.removeWhere(
+      (publication, state) =>
+          !_authorizedPublication(state.participant, publication),
+    );
+    if (_failedSubscriptions.isEmpty) {
+      _subscriptionRetry?.cancel();
+      _subscriptionRetry = null;
+      _subscriptionRetryAttempt = 0;
+    }
     final tracked =
         Map<sdk.RemoteTrackPublication, _RemoteSubscription>.identity()
           ..addAll(_subscriptions)
@@ -701,6 +777,9 @@ class LiveKitSessionTransport implements SessionTransport {
     _mediaGeneration++;
     _cleanupRetry?.cancel();
     _cleanupRetry = null;
+    _subscriptionRetry?.cancel();
+    _subscriptionRetry = null;
+    _failedSubscriptions.clear();
     _mediaConnection = SessionTransportConnectionState.disconnected;
     _subscribeExisting = false;
     _pruneSubscriptions();
@@ -713,6 +792,8 @@ class LiveKitSessionTransport implements SessionTransport {
     _disposed = true;
     _cleanupRetry?.cancel();
     _cleanupRetry = null;
+    _subscriptionRetry?.cancel();
+    _subscriptionRetry = null;
     _mediaGeneration++;
     _subscribeExisting = false;
     _authorization.clear();
@@ -727,6 +808,7 @@ class LiveKitSessionTransport implements SessionTransport {
         roomMedia.attach(null);
         _subscriptions.clear();
         _pendingCleanup.clear();
+        _failedSubscriptions.clear();
         _subscriptionLanes.clear();
         try {
           await _room.dispose();

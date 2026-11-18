@@ -734,6 +734,85 @@ void main() {
   );
 
   test(
+    'an authorized unsubscribe event resubscribes the current publication',
+    () async {
+      final publication = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      var subscribed = false;
+      var subscribeCalls = 0;
+      when(() => publication.subscribed).thenAnswer((_) => subscribed);
+      when(publication.subscribe).thenAnswer((_) async {
+        subscribeCalls++;
+        subscribed = true;
+      });
+      final remote = _Remote([publication]);
+      final room = _Room(MockLocalParticipant())..remotes['remote'] = remote;
+      final transport = LiveKitSessionTransport(
+        room: room,
+        cameraOptions: const sdk.CameraCaptureOptions(),
+      );
+      try {
+        transport.setIncomingMediaParticipants({'remote'});
+        await transport.subscribeToExistingMedia();
+        subscribed = false;
+        room.transportEvents.emit(
+          sdk.TrackUnsubscribedEvent(
+            participant: remote,
+            publication: publication,
+            track: MockRemoteVideoTrack(),
+          ),
+        );
+        await pumpEventQueue();
+
+        check(subscribeCalls).equals(2);
+        check(subscribed).isTrue();
+      } finally {
+        await transport.dispose();
+        await room.transportEvents.dispose();
+      }
+    },
+  );
+
+  test('transient subscription failures retry authorized current media', () {
+    fakeAsync((clock) {
+      final publication = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      var subscribed = false;
+      var attempts = 0;
+      when(() => publication.subscribed).thenAnswer((_) => subscribed);
+      when(publication.subscribe).thenAnswer((_) async {
+        if (++attempts == 1) throw StateError('temporary failure');
+        subscribed = true;
+      });
+      final room = _Room(MockLocalParticipant())
+        ..remotes['remote'] = _Remote([publication]);
+      final transport = LiveKitSessionTransport(
+        room: room,
+        cameraOptions: const sdk.CameraCaptureOptions(),
+      );
+      final errors = <Object>[];
+      final listener = transport.events.listen((_) {}, onError: errors.add);
+      try {
+        transport.setIncomingMediaParticipants({'remote'});
+        unawaited(transport.subscribeToExistingMedia().catchError((_) {}));
+        clock.flushMicrotasks();
+        check(attempts).equals(1);
+        check(errors).isEmpty();
+
+        clock
+          ..elapse(const Duration(seconds: 1))
+          ..flushMicrotasks();
+        check(attempts).equals(2);
+        check(subscribed).isTrue();
+        check(errors).isEmpty();
+      } finally {
+        unawaited(listener.cancel());
+        unawaited(transport.dispose());
+        unawaited(room.transportEvents.dispose());
+        clock.flushMicrotasks();
+      }
+    });
+  });
+
+  test(
     'incoming roster gates existing and future publications and admits later',
     () async {
       final keeperPublication = MockRemoteTrackPublication<sdk.RemoteTrack>();
