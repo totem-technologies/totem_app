@@ -17,11 +17,7 @@ dev_dependencies:
     sdk: flutter
 
 dependency_overrides:
-  livekit_client:
-    git:
-      url: https://github.com/totem-technologies/client-sdk-flutter
-      ref: fix/combined-stats-and-renderer
   flutter_webrtc:
     git:
       url: https://github.com/flutter-webrtc/flutter-webrtc
-      ref: 381926ca5b1bfea4e8b46743eee97c2ee9a9a72b
+      ref: 4afd400300ea7d64184f424369c4e4e8db397622
