@@ -2326,6 +2326,10 @@ void main() {
           );
           await tester.pump();
           check(reconcilePolls).equals(2);
+          controller.updateAdmittedMediaRecipients({'admitted', 'other'});
+          check(
+            transport.incomingMediaParticipants,
+          ).deepEquals({'keeper', 'admitted', 'other'});
           container.invalidate(
             roomStateProvider(eventSlug, attemptReconcile: true),
           );
@@ -2386,6 +2390,11 @@ void main() {
             factory.localMedia.microphoneCommands.length,
           ).equals(microphoneCommands);
           check(transport.connectCalls).equals(1);
+          // The dropped roster update during the interruption must not revoke
+          // media already authorized by the last verified roster.
+          check(
+            transport.incomingMediaParticipants,
+          ).deepEquals({'keeper', 'admitted', 'other'});
           await tester.pump(const Duration(seconds: 4));
           check(reconcilePolls).equals(3);
           await tester.pump(const Duration(seconds: 1));

@@ -45,9 +45,11 @@ class SessionRuntime {
     required this.activateInfrastructure,
     required this.deactivateInfrastructure,
     this.previousEntryCleanup,
+    this.sessionSlug,
   });
   final SessionTransportFactory factory;
   final Future<void>? previousEntryCleanup;
+  final String? sessionSlug;
   final void Function() onCancel;
   SessionAttempt? get activeAttempt => _attempt;
   final void Function(Object error, StackTrace stack) onError;
@@ -64,6 +66,9 @@ class SessionRuntime {
   final void Function() Function() retainEntry;
   Object _entryIdentity = Object();
   Object get entryIdentity => _entryIdentity;
+  late final String _sessionCorrelationId = identityHashCode(
+    _entryIdentity,
+  ).toRadixString(16);
   bool _entryEnded = false;
   Object? lastFailure;
   final media = JoinMediaOwner();
@@ -162,6 +167,12 @@ class SessionRuntime {
                   'reason': event.reason?.name,
                   'reconnected': event.reconnected,
                   'generation': generation,
+                  'session_slug': sessionSlug,
+                  'session_correlation': _sessionCorrelationId,
+                  'local_identity': connection.localIdentity,
+                  'remote_participant_count': connection.participants
+                      .where((participant) => !participant.isLocal)
+                      .length,
                 },
               ),
             ),
@@ -174,7 +185,12 @@ class SessionRuntime {
                 category: 'session.connection',
                 message: 'session.reconnected',
                 level: SentryLevel.info,
-                data: {'generation': generation},
+                data: {
+                  'generation': generation,
+                  'session_slug': sessionSlug,
+                  'session_correlation': _sessionCorrelationId,
+                  'local_identity': connection.localIdentity,
+                },
               ),
             ),
           );

@@ -145,6 +145,18 @@ class SessionAdmissionService extends ChangeNotifier {
   AdmissionRosterTrust _rosterTrust = AdmissionRosterTrust.unverified;
   AdmissionRosterTrust get rosterTrust => _rosterTrust;
 
+  Map<String, Object?> get _rosterDiagnostics {
+    final roster = _clientController?.roster;
+    final keeper = _keeperController;
+    return {
+      'session_slug': session.options.sessionSlug,
+      'keeper_identity': _keeperIdentity,
+      'keeper_generation': roster?.keeperGeneration ?? keeper?.keeperGeneration,
+      'roster_revision': roster?.revision ?? keeper?.rosterRevision,
+      'admitted_count': _admittedIdentities.length,
+    };
+  }
+
   void _setRosterTrust(AdmissionRosterTrust next) {
     if (_rosterTrust == next) return;
     final previous = _rosterTrust;
@@ -159,7 +171,11 @@ class SessionAdmissionService extends ChangeNotifier {
             category: 'admission.roster',
             message: next.name,
             level: SentryLevel.info,
-            data: {'from': previous.name, 'to': next.name},
+            data: {
+              'from': previous.name,
+              'to': next.name,
+              ..._rosterDiagnostics,
+            },
           ),
         ),
       );

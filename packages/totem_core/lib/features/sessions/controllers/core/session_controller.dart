@@ -289,6 +289,7 @@ class SessionController extends _$SessionController {
     _runtime = ownedRuntime = SessionRuntime(
       factory: _transportFactory,
       previousEntryCleanup: previousEntryCleanup,
+      sessionSlug: options.sessionSlug,
       onEvent: _onTransportEvent,
       onCancel: () {
         if (!identical(_runtime, ownedRuntime)) return;

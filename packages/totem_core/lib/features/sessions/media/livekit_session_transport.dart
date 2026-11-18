@@ -225,6 +225,48 @@ class LiveKitSessionTransport implements SessionTransport {
   @visibleForTesting
   int get cachedRemotePublicationCount => _subscriptions.length;
 
+  int get _remotePublicationCount => _room.remoteParticipants.values.fold(
+    0,
+    (count, participant) => count + participant.getTrackPublications().length,
+  );
+
+  int get _activeSubscriptionCount => _subscriptions.values
+      .where(
+        (subscription) =>
+            subscription.requested || subscription.mayBeSubscribed,
+      )
+      .length;
+
+  void _reportMediaRecovery(
+    String outcome, {
+    SentryLevel level = SentryLevel.info,
+    Map<String, Object?> data = const {},
+  }) {
+    // Diagnostics must never affect media recovery, including with partial SDK
+    // objects during teardown or tests.
+    try {
+      unawaited(
+        Sentry.addBreadcrumb(
+          Breadcrumb(
+            category: 'session.media_recovery',
+            message: outcome,
+            level: level,
+            data: {
+              'room_name': _room.name,
+              'local_identity': localIdentity,
+              'connection_generation': _mediaGeneration,
+              'remote_participant_count': _room.remoteParticipants.length,
+              'remote_publication_count': _remotePublicationCount,
+              'active_subscription_count': _activeSubscriptionCount,
+              'authorized_participant_count': _incomingMediaParticipants.length,
+              ...data,
+            },
+          ),
+        ),
+      );
+    } catch (_) {}
+  }
+
   @override
   Stream<SessionTransportEvent> get events => _events.stream;
   @override
@@ -257,8 +299,15 @@ class LiveKitSessionTransport implements SessionTransport {
     String? reason,
     bool reconnected = false,
   }) {
-    if (_mediaConnection != state) _mediaGeneration++;
+    final transitioned = _mediaConnection != state;
+    if (transitioned) _mediaGeneration++;
     _mediaConnection = state;
+    if (transitioned || reconnected) {
+      _reportMediaRecovery(
+        reconnected ? 'reconnected' : 'connection_${state.name}',
+        data: {'disconnect_reason': reason},
+      );
+    }
     if (state != SessionTransportConnectionState.connected) {
       _cleanupRetry?.cancel();
       _cleanupRetry = null;
@@ -282,7 +331,25 @@ class LiveKitSessionTransport implements SessionTransport {
     );
     if (state == SessionTransportConnectionState.connected &&
         _subscribeExisting) {
-      _subscribeInBackground(subscribeToExistingMedia());
+      _subscribeInBackground(
+        reconnected
+            ? _recoverRemoteSubscriptions()
+            : subscribeToExistingMedia(),
+      );
+    }
+  }
+
+  Future<void> _recoverRemoteSubscriptions() async {
+    _reportMediaRecovery('subscription_reconciliation_started');
+    try {
+      await subscribeToExistingMedia();
+      _reportMediaRecovery('subscription_reconciliation_succeeded');
+    } catch (_) {
+      _reportMediaRecovery(
+        'subscription_reconciliation_failed',
+        level: SentryLevel.warning,
+      );
+      rethrow;
     }
   }
 
@@ -651,6 +718,11 @@ class LiveKitSessionTransport implements SessionTransport {
         ? 1 << _subscriptionRetryAttempt
         : 30;
     if (_subscriptionRetryAttempt < 5) _subscriptionRetryAttempt++;
+    _reportMediaRecovery(
+      'subscription_retry_scheduled',
+      level: SentryLevel.warning,
+      data: {'retry_attempt': _subscriptionRetryAttempt},
+    );
     _subscriptionRetry = Timer(Duration(seconds: seconds), () {
       _subscriptionRetry = null;
       final failed =
