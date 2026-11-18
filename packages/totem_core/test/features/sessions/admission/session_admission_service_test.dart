@@ -670,7 +670,7 @@ void main() {
   );
 
   testWidgets(
-    'closing a service releases its unban reservation without releasing a new owner',
+    'started unban reservation remains guarded through service handoff',
     (tester) async {
       setupAppConfig();
       registerFallbackValue(SessionTransportPacket(bytes: [], topic: ''));
@@ -711,11 +711,11 @@ void main() {
       for (var i = 0; i < 15; i++) {
         await tester.pump();
       }
-      final replacement = await second.service.reserveUnban('guest');
+      await check(second.service.reserveUnban('guest')).throws<StateError>();
 
       backend.complete();
       await unbanning;
-      check(second.service.reserveUnban('guest')).throws<StateError>();
+      final replacement = await second.service.reserveUnban('guest');
 
       replacement.cancel();
       await close(second);
@@ -790,7 +790,7 @@ void main() {
         ref,
         session,
         now: tester.binding.clock.now,
-        recoveryLease: const Duration(seconds: 10),
+        recoveryLease: const Duration(seconds: 90),
       ),
     );
     final container = ProviderContainer(
@@ -849,12 +849,16 @@ void main() {
     check(service.isSynchronizing).isTrue();
     check(service.admittedIdentities).deepEquals({'guest', 'alice'});
     final interruptedDeadline = service.recoveryDeadline;
+    await tester.pump(const Duration(seconds: 1));
+    check(service.admittedIdentities).deepEquals({'guest', 'alice'});
+    await tester.pump(const Duration(seconds: 30));
+    check(service.admittedIdentities).deepEquals({'guest', 'alice'});
     await tester.pump(const Duration(seconds: 6));
     snapshot('uncorrelated', 2, ['guest', 'alice', 'bob'], 'unknown-request');
     await tester.pump();
     check(service.recoveryDeadline).equals(interruptedDeadline);
     check(service.admittedIdentities).deepEquals({'guest', 'alice'});
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 53));
     check(service.rosterTrust).equals(AdmissionRosterTrust.expired);
     check(service.isSynchronizing).isTrue();
     check(service.admittedIdentities).isEmpty();
@@ -962,7 +966,7 @@ void main() {
     final requestsBeforeExpiry = sent
         .whereType<AdmissionRosterRequest>()
         .length;
-    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(seconds: 85));
     check(service.rosterTrust).equals(AdmissionRosterTrust.expired);
     check(service.isSynchronizing).isTrue();
     check(service.admittedIdentities).isEmpty();
@@ -986,7 +990,7 @@ void main() {
     connectionState = state.RoomConnectionState.disconnected;
     service.sync();
     await tester.pump();
-    await tester.pump(const Duration(seconds: 10));
+    await tester.pump(const Duration(seconds: 90));
     check(service.rosterTrust).equals(AdmissionRosterTrust.expired);
     check(service.admittedIdentities).isEmpty();
     connectionState = state.RoomConnectionState.connected;

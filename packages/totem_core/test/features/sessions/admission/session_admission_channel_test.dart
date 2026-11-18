@@ -221,54 +221,47 @@ void main() {
     },
   );
 
-  test(
-    'Keeper hello, presence, reconnect, and one timed retry resend the same correlated outcome',
-    () {
-      fakeAsync((clock) {
-        final connection = _connection();
-        final channel = SessionAdmissionChannel(
-          connection,
-          now: () => _now.add(clock.elapsed),
+  test('Keeper signals coalesce into one in-flight receipt retry', () {
+    fakeAsync((clock) {
+      final connection = _connection();
+      final channel = SessionAdmissionChannel(
+        connection,
+        now: () => _now.add(clock.elapsed),
+      );
+      var sent = false;
+      unawaited(channel.sendJoinOutcome(_request()).then((_) => sent = true));
+      clock.flushMicrotasks();
+      check(sent).isTrue();
+      check(connection.publications).length.equals(1);
+      channel.handle(_received(_hello(), sender: _other));
+      check(connection.publications).length.equals(1);
+      channel
+        ..handle(_received(_hello()))
+        ..handle(const TransportParticipantChanged(_keeper, present: true))
+        ..handle(
+          const TransportConnectionChanged(
+            SessionTransportConnectionState.connected,
+            reconnected: true,
+          ),
         );
-        var sent = false;
-        unawaited(channel.sendJoinOutcome(_request()).then((_) => sent = true));
-        clock.flushMicrotasks();
-        check(sent).isTrue();
-        check(connection.publications).length.equals(1);
-        channel.handle(_received(_hello(), sender: _other));
-        check(connection.publications).length.equals(1);
-        channel
-          ..handle(_received(_hello()))
-          ..handle(const TransportParticipantChanged(_keeper, present: true))
-          ..handle(
-            const TransportConnectionChanged(
-              SessionTransportConnectionState.connected,
-              reconnected: true,
-            ),
-          );
-        clock.flushMicrotasks();
-        check(connection.publications).length.equals(4);
-        clock
-          ..elapse(const Duration(seconds: 2))
-          ..flushMicrotasks();
-        check(connection.publications).length.equals(5);
-        for (final publication in connection.publications) {
-          final packet = AdmissionProtocol.decode(
-            publication.bytes,
-            senderIdentity: 'guest',
-            now: _now.add(clock.elapsed),
-          );
-          check(packet).isA<AdmissionJoined>();
-          check(packet?.id).equals('request');
-          check(packet?.recipientIdentity).equals('keeper');
-          check(publication.recipients).deepEquals(['keeper']);
-        }
-        unawaited(channel.dispose());
-        unawaited(connection.dispose());
-        clock.flushMicrotasks();
-      });
-    },
-  );
+      clock.flushMicrotasks();
+      check(connection.publications).length.equals(2);
+      for (final publication in connection.publications) {
+        final packet = AdmissionProtocol.decode(
+          publication.bytes,
+          senderIdentity: 'guest',
+          now: _now.add(clock.elapsed),
+        );
+        check(packet).isA<AdmissionJoined>();
+        check(packet?.id).equals('request');
+        check(packet?.recipientIdentity).equals('keeper');
+        check(publication.recipients).deepEquals(['keeper']);
+      }
+      unawaited(channel.dispose());
+      unawaited(connection.dispose());
+      clock.flushMicrotasks();
+    });
+  });
 
   test(
     'Keeper roster confirmation cancels timed and reconnect-driven resends',

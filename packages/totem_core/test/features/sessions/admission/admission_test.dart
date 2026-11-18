@@ -6,6 +6,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
+import 'package:totem_core/features/sessions/admission/admission_join_receipt.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/admission_transport.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
@@ -760,32 +761,180 @@ void main() {
     check(nextKeeper.attempts).isEmpty();
   });
 
-  test('a missed joined receipt retries once without a presence change', () {
+  test(
+    'a missed joined receipt retries with bounded backoff until confirmed',
+    () {
+      fakeAsync((async) {
+        final clock = async.getClock(_fixedNow);
+        final room = _AdmissionRoom(null)..participant = _Participant('guest');
+        final transport = _admissionTransport(room, now: clock.now);
+        final request = AdmissionRequest(
+          id: 'r1',
+          senderIdentity: 'guest',
+          recipientIdentity: 'keeper',
+          expiresAt: clock.now().add(const Duration(minutes: 1)),
+          displayName: 'Guest',
+        );
+        unawaited(transport.sendJoinOutcome(request));
+        async.flushMicrotasks();
+        check(room.participant!.published).length.equals(1);
+
+        async
+          ..elapse(const Duration(seconds: 3))
+          ..flushMicrotasks();
+        check(room.participant!.published).length.equals(2);
+        async
+          ..elapse(const Duration(seconds: 5))
+          ..flushMicrotasks();
+        check(room.participant!.published).length.equals(3);
+        for (final published in room.participant!.published) {
+          final packet = AdmissionProtocol.decode(
+            published.positionalArguments.single as List<int>,
+            senderIdentity: 'guest',
+            now: clock.now(),
+          );
+          check(packet)
+              .isA<AdmissionJoined>()
+              .has((receipt) => receipt.id, 'id')
+              .equals('r1');
+        }
+
+        unawaited(
+          room.listener.trigger(
+            DataReceivedEvent(
+              data: AdmissionProtocol.encode(
+                AdmissionRosterUpdated(
+                  id: 'roster',
+                  senderIdentity: 'keeper',
+                  recipientIdentity: 'guest',
+                  expiresAt: request.expiresAt,
+                  sessionIdentity: 'session',
+                  keeperGeneration: 'generation',
+                  revision: 1,
+                  members: const ['guest'],
+                ),
+              ),
+              participant: _RemoteParticipant('keeper'),
+              topic: AdmissionProtocol.topic,
+            ),
+          ),
+        );
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(minutes: 1));
+        check(room.participant!.published).length.equals(3);
+        unawaited(transport.dispose());
+        async.flushMicrotasks();
+      });
+    },
+  );
+
+  test(
+    'joined receipt retries pause for reconnect and resume after recovery',
+    () {
+      fakeAsync((async) {
+        final clock = async.getClock(_fixedNow);
+        final room = _AdmissionRoom(null)..participant = _Participant('guest');
+        final transport = _admissionTransport(room, now: clock.now);
+        final request = AdmissionRequest(
+          id: 'r1',
+          senderIdentity: 'guest',
+          recipientIdentity: 'keeper',
+          expiresAt: clock.now().add(const Duration(minutes: 1)),
+          displayName: 'Guest',
+        );
+        unawaited(transport.sendJoinOutcome(request));
+        async.flushMicrotasks();
+        unawaited(room.listener.trigger(const RoomReconnectingEvent()));
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 10));
+        check(room.participant!.published).length.equals(1);
+
+        unawaited(room.listener.trigger(const RoomReconnectedEvent()));
+        async.flushMicrotasks();
+        check(room.participant!.published).length.equals(2);
+        unawaited(transport.dispose());
+        async.flushMicrotasks();
+      });
+    },
+  );
+
+  test('disposing during a joined receipt send prevents later retries', () {
     fakeAsync((async) {
       final clock = async.getClock(_fixedNow);
-      final room = _AdmissionRoom(null)..participant = _Participant('guest');
-      final transport = _admissionTransport(room, now: clock.now);
+      final send = Completer<void>();
+      var sends = 0;
+      final receipt = AdmissionJoinReceipt(
+        localIdentity: () => 'guest',
+        send: (_) {
+          sends++;
+          return send.future;
+        },
+        now: clock.now,
+      );
       final request = AdmissionRequest(
         id: 'r1',
         senderIdentity: 'guest',
         recipientIdentity: 'keeper',
-        expiresAt: clock.now().add(const Duration(minutes: 1)),
+        expiresAt: clock.now().add(const Duration(minutes: 2)),
         displayName: 'Guest',
       );
-      unawaited(transport.sendJoinOutcome(request));
-      async.flushMicrotasks();
-      check(room.participant!.published).length.equals(1);
-
+      unawaited(receipt.sendOutcome(request));
       async
-        ..elapse(const Duration(seconds: 2))
-        ..flushMicrotasks();
-      check(room.participant!.published).length.equals(2);
-      async.elapse(const Duration(seconds: 4));
-      check(room.participant!.published).length.equals(2);
-      unawaited(transport.dispose());
-      async.flushMicrotasks();
+        ..flushMicrotasks()
+        ..elapse(const Duration(minutes: 1));
+      check(sends).equals(1);
+      receipt.dispose();
+      send.complete();
+      async
+        ..flushMicrotasks()
+        ..elapse(const Duration(minutes: 1));
+      check(sends).equals(1);
+      check(async.pendingTimers).isEmpty();
     });
   });
+
+  test(
+    'duplicate joined receipt resends a committed roster without mutation',
+    () async {
+      final channel = _Channel('keeper')..present.add('guest');
+      final keeper = _keeperAdmissionController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+        sessionIdentity: 'session',
+      );
+      addTearDown(() async {
+        await keeper.dispose();
+        await channel.dispose();
+      });
+      final request = AdmissionRequest(
+        id: 'r1',
+        senderIdentity: 'guest',
+        recipientIdentity: 'keeper',
+        expiresAt: _fixedNow.add(const Duration(minutes: 1)),
+        displayName: 'Guest',
+      );
+      channel.controller.add(AdmissionPacketReceived(request));
+      await keeper.approve(request.id, 'guest');
+      final receipt = AdmissionProtocol.joined(request);
+      channel.controller.add(AdmissionPacketReceived(receipt));
+      await pumpEventQueue();
+      final revision = keeper.rosterRevision;
+      final snapshots = channel.sent
+          .whereType<AdmissionRosterSnapshot>()
+          .length;
+
+      channel.controller.add(AdmissionPacketReceived(receipt));
+      await pumpEventQueue();
+
+      check(keeper.roster).deepEquals(['guest']);
+      check(keeper.rosterRevision).equals(revision);
+      check(
+        channel.sent.whereType<AdmissionRosterSnapshot>(),
+      ).length.equals(snapshots + 1);
+    },
+  );
 
   test('admitted roster arriving during publish prevents a receipt retry', () {
     fakeAsync((async) {

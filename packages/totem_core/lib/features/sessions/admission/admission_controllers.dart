@@ -1096,6 +1096,14 @@ class KeeperAdmissionController {
     }
     final attempt = _attempts[sender]!;
     if (_pendingJoined.containsKey(sender)) return;
+    if (attempt.status == KeeperAdmissionStatus.joined &&
+        packet is AdmissionJoined) {
+      // The client retries until it observes an authenticated roster containing
+      // itself. A duplicate receipt is therefore a request to resend the
+      // already-committed snapshot, not another roster mutation.
+      _sendRosterSnapshot(sender);
+      return;
+    }
     if (attempt.status == KeeperAdmissionStatus.joining &&
         _now().isBefore(attempt.joinDeadline!)) {
       _decisionRetries.remove(sender)?.cancel();

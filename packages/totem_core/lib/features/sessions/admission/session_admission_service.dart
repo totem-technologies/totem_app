@@ -87,9 +87,13 @@ final class AdmissionUnbanReservation {
     _finish();
   }
 
-  /// Release this service's reservation when its admission attachment ends.
+  /// Release an unused reservation when its admission attachment ends.
+  ///
+  /// Once started, the original backend operation owns release. Keeping its
+  /// guard across an owner handoff prevents a replacement Keeper controller
+  /// from approving the participant before that operation settles.
   void invalidate(Object owner) {
-    if (identical(_owner, owner)) _finish();
+    if (identical(_owner, owner) && !_started) _finish();
   }
 }
 
