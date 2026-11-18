@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:checks/checks.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart' as sdk;
 import 'package:mocktail/mocktail.dart';
@@ -21,7 +22,7 @@ class _Room extends FakeRoom {
   UnmodifiableMapView<String, sdk.RemoteParticipant> get remoteParticipants =>
       UnmodifiableMapView(remotes);
   @override
-  sdk.ConnectionState connectionState = sdk.ConnectionState.disconnected;
+  sdk.ConnectionState connectionState = sdk.ConnectionState.connected;
   @override
   sdk.EventsListener<sdk.RoomEvent> createListener({
     bool synchronized = false,
@@ -68,6 +69,504 @@ class _Remote extends MockRemoteParticipant {
 }
 
 void main() {
+  test(
+    'revocation during a pending subscribe eventually removes media',
+    () async {
+      final publication = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      final pending = Completer<void>();
+      var subscribed = false;
+      when(() => publication.subscribed).thenAnswer((_) => subscribed);
+      when(publication.subscribe).thenAnswer((_) async {
+        await pending.future;
+        subscribed = true;
+      });
+      when(publication.unsubscribe).thenAnswer((_) async {
+        subscribed = false;
+      });
+      final room = _Room(MockLocalParticipant())
+        ..remotes['remote'] = _Remote([publication]);
+      final transport = LiveKitSessionTransport(
+        room: room,
+        cameraOptions: const sdk.CameraCaptureOptions(),
+      );
+      try {
+        transport.setIncomingMediaParticipants({'remote'});
+        final initial = transport.subscribeToExistingMedia();
+        transport.setIncomingMediaParticipants({});
+        await pumpEventQueue();
+        pending.complete();
+        await initial;
+        await pumpEventQueue();
+        check(subscribed).isFalse();
+      } finally {
+        if (!pending.isCompleted) pending.complete();
+        await transport.dispose();
+        await room.transportEvents.dispose();
+      }
+    },
+  );
+
+  test(
+    'reconnects deduplicate pending work and disconnect invalidates it',
+    () async {
+      final publication = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      final pending = Completer<void>();
+      var attempts = 0;
+      when(publication.subscribe).thenAnswer((_) {
+        attempts++;
+        return attempts == 1 ? pending.future : Future.value();
+      });
+      final room = _Room(MockLocalParticipant())
+        ..remotes['remote'] = _Remote([publication]);
+      final transport = LiveKitSessionTransport(
+        room: room,
+        cameraOptions: const sdk.CameraCaptureOptions(),
+      );
+      try {
+        transport.setIncomingMediaParticipants({'remote'});
+        final initial = transport.subscribeToExistingMedia();
+        room.transportEvents.emit(const sdk.RoomReconnectedEvent());
+        room.transportEvents.emit(const sdk.RoomReconnectedEvent());
+        await pumpEventQueue();
+        check(attempts).equals(1);
+        await transport.disconnect();
+        await pumpEventQueue();
+        pending.complete();
+        await initial;
+        await transport.connect('url', 'token');
+        await transport.subscribeToExistingMedia();
+        check(attempts).equals(2);
+      } finally {
+        if (!pending.isCompleted) pending.complete();
+        await transport.dispose();
+        await room.transportEvents.dispose();
+      }
+    },
+  );
+
+  test('participant departure during subscribe removes late media', () async {
+    final publication = MockRemoteTrackPublication<sdk.RemoteTrack>();
+    final pending = Completer<void>();
+    var subscribed = false;
+    when(() => publication.subscribed).thenAnswer((_) => subscribed);
+    when(publication.subscribe).thenAnswer((_) async {
+      await pending.future;
+      subscribed = true;
+    });
+    when(publication.unsubscribe).thenAnswer((_) async {
+      subscribed = false;
+    });
+    final remote = _Remote([publication]);
+    final room = _Room(MockLocalParticipant())..remotes['remote'] = remote;
+    final transport = LiveKitSessionTransport(
+      room: room,
+      cameraOptions: const sdk.CameraCaptureOptions(),
+    );
+    try {
+      transport.setIncomingMediaParticipants({'remote'});
+      final initial = transport.subscribeToExistingMedia();
+      room.remotes.remove('remote');
+      room.transportEvents.emit(
+        sdk.ParticipantDisconnectedEvent(participant: remote),
+      );
+      await pumpEventQueue();
+      pending.complete();
+      await initial;
+      await pumpEventQueue();
+      check(subscribed).isFalse();
+    } finally {
+      if (!pending.isCompleted) pending.complete();
+      await transport.dispose();
+      await room.transportEvents.dispose();
+    }
+  });
+
+  test(
+    'late unauthorized subscribed event waits for pending subscribe cleanup',
+    () async {
+      final publication = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      final pending = Completer<void>();
+      var subscribed = false;
+      var unsubscribeCalls = 0;
+      when(() => publication.subscribed).thenAnswer((_) => subscribed);
+      when(publication.subscribe).thenAnswer((_) async {
+        await pending.future;
+        subscribed = true;
+      });
+      when(publication.unsubscribe).thenAnswer((_) async {
+        unsubscribeCalls++;
+        subscribed = false;
+      });
+      final remote = _Remote([publication]);
+      final room = _Room(MockLocalParticipant())..remotes['remote'] = remote;
+      final transport = LiveKitSessionTransport(
+        room: room,
+        cameraOptions: const sdk.CameraCaptureOptions(),
+      );
+      try {
+        transport.setIncomingMediaParticipants({'remote'});
+        final initial = transport.subscribeToExistingMedia();
+        transport.setIncomingMediaParticipants({});
+        room.transportEvents.emit(
+          sdk.TrackSubscribedEvent(
+            participant: remote,
+            publication: publication,
+            track: MockRemoteVideoTrack(),
+          ),
+        );
+        await pumpEventQueue();
+        check(unsubscribeCalls).equals(0);
+        pending.complete();
+        await initial;
+        await pumpEventQueue();
+        check(subscribed).isFalse();
+        check(unsubscribeCalls).equals(1);
+      } finally {
+        if (!pending.isCompleted) pending.complete();
+        await transport.dispose();
+        await room.transportEvents.dispose();
+      }
+    },
+  );
+
+  test('a delayed unsubscribe cannot undo a newer admission', () async {
+    final publication = MockRemoteTrackPublication<sdk.RemoteTrack>();
+    final pending = Completer<void>();
+    var subscribed = false;
+    var subscribeCalls = 0;
+    when(() => publication.subscribed).thenAnswer((_) => subscribed);
+    when(publication.subscribe).thenAnswer((_) async {
+      subscribeCalls++;
+      subscribed = true;
+    });
+    when(publication.unsubscribe).thenAnswer((_) async {
+      await pending.future;
+      subscribed = false;
+    });
+    final room = _Room(MockLocalParticipant())
+      ..remotes['remote'] = _Remote([publication]);
+    final transport = LiveKitSessionTransport(
+      room: room,
+      cameraOptions: const sdk.CameraCaptureOptions(),
+    );
+    try {
+      transport.setIncomingMediaParticipants({'remote'});
+      await transport.subscribeToExistingMedia();
+      transport.setIncomingMediaParticipants({});
+      await pumpEventQueue();
+      transport.setIncomingMediaParticipants({'remote'});
+      await pumpEventQueue();
+      check(subscribeCalls).equals(1);
+      pending.complete();
+      await pumpEventQueue();
+      check(subscribed).isTrue();
+    } finally {
+      if (!pending.isCompleted) pending.complete();
+      await transport.dispose();
+      await room.transportEvents.dispose();
+    }
+  });
+
+  test(
+    'a replaced publication is reconciled while its predecessor is pending',
+    () async {
+      final original = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      final replacement = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      final pending = Completer<void>();
+      var originalSubscribed = false;
+      var replacementSubscribed = false;
+      when(() => original.subscribed).thenAnswer((_) => originalSubscribed);
+      when(
+        () => replacement.subscribed,
+      ).thenAnswer((_) => replacementSubscribed);
+      when(original.subscribe).thenAnswer((_) async {
+        await pending.future;
+        originalSubscribed = true;
+      });
+      when(original.unsubscribe).thenAnswer((_) async {
+        originalSubscribed = false;
+      });
+      when(replacement.subscribe).thenAnswer((_) async {
+        replacementSubscribed = true;
+      });
+      final remote = _Remote([original]);
+      final room = _Room(MockLocalParticipant())..remotes['remote'] = remote;
+      final transport = LiveKitSessionTransport(
+        room: room,
+        cameraOptions: const sdk.CameraCaptureOptions(),
+      );
+      try {
+        transport.setIncomingMediaParticipants({'remote'});
+        final initial = transport.subscribeToExistingMedia();
+        remote.publications
+          ..clear()
+          ..add(replacement);
+        room.transportEvents.emit(const sdk.RoomReconnectedEvent());
+        await pumpEventQueue();
+        pending.complete();
+        await initial;
+        await pumpEventQueue();
+        check(originalSubscribed).isFalse();
+        check(replacementSubscribed).isTrue();
+      } finally {
+        if (!pending.isCompleted) pending.complete();
+        await transport.dispose();
+        await room.transportEvents.dispose();
+      }
+    },
+  );
+
+  test(
+    'full reconnect serializes replacement publications with the same SID',
+    () async {
+      final original = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      final replacement = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      final subscribePending = Completer<void>();
+      final unsubscribePending = Completer<void>();
+      final operations = <String>[];
+      var originalSubscribed = false;
+      var replacementSubscribed = false;
+      when(() => original.sid).thenReturn('same-track');
+      when(() => replacement.sid).thenReturn('same-track');
+      when(() => original.subscribed).thenAnswer((_) => originalSubscribed);
+      when(
+        () => replacement.subscribed,
+      ).thenAnswer((_) => replacementSubscribed);
+      when(original.subscribe).thenAnswer((_) async {
+        operations.add('original subscribe');
+        await subscribePending.future;
+        originalSubscribed = true;
+      });
+      when(original.unsubscribe).thenAnswer((_) async {
+        operations.add('original unsubscribe');
+        await unsubscribePending.future;
+        originalSubscribed = false;
+        replacementSubscribed = false;
+      });
+      when(replacement.subscribe).thenAnswer((_) async {
+        operations.add('replacement subscribe');
+        replacementSubscribed = true;
+      });
+      when(replacement.unsubscribe).thenAnswer((_) async {
+        replacementSubscribed = false;
+      });
+      final originalRemote = _Remote([original]);
+      final room = _Room(MockLocalParticipant())
+        ..remotes['remote'] = originalRemote;
+      final transport = LiveKitSessionTransport(
+        room: room,
+        cameraOptions: const sdk.CameraCaptureOptions(),
+      );
+      try {
+        transport.setIncomingMediaParticipants({'remote'});
+        final initial = transport.subscribeToExistingMedia();
+        room.transportEvents.emit(const sdk.RoomReconnectingEvent());
+        room.remotes['remote'] = _Remote([replacement]);
+        room.transportEvents.emit(const sdk.RoomReconnectedEvent());
+        await pumpEventQueue();
+        check(operations).deepEquals(['original subscribe']);
+        subscribePending.complete();
+        await pumpEventQueue();
+        check(
+          operations,
+        ).deepEquals(['original subscribe', 'original unsubscribe']);
+        check(originalSubscribed).isTrue();
+        check(replacementSubscribed).isFalse();
+        unsubscribePending.complete();
+        await initial;
+        await pumpEventQueue();
+        check(operations).deepEquals([
+          'original subscribe',
+          'original unsubscribe',
+          'replacement subscribe',
+        ]);
+        check(originalSubscribed).isFalse();
+        check(replacementSubscribed).isTrue();
+        room.transportEvents.emit(
+          sdk.TrackSubscribedEvent(
+            participant: originalRemote,
+            publication: original,
+            track: MockRemoteVideoTrack(),
+          ),
+        );
+        await pumpEventQueue();
+        check(operations).deepEquals([
+          'original subscribe',
+          'original unsubscribe',
+          'replacement subscribe',
+        ]);
+        check(replacementSubscribed).isTrue();
+      } finally {
+        if (!subscribePending.isCompleted) subscribePending.complete();
+        if (!unsubscribePending.isCompleted) unsubscribePending.complete();
+        await pumpEventQueue();
+        await transport.dispose();
+        await room.transportEvents.dispose();
+      }
+    },
+  );
+
+  test(
+    'full reconnect replacements keep only the current publication cached',
+    () async {
+      final subscribed = <bool>[];
+      final subscribeCalls = <int>[];
+      MockRemoteTrackPublication<sdk.RemoteTrack> publication() {
+        final index = subscribed.length;
+        subscribed.add(false);
+        subscribeCalls.add(0);
+        final track = MockRemoteTrackPublication<sdk.RemoteTrack>();
+        when(() => track.sid).thenReturn('same-track');
+        when(() => track.subscribed).thenAnswer((_) => subscribed[index]);
+        when(track.subscribe).thenAnswer((_) async {
+          subscribeCalls[index]++;
+          subscribed[index] = true;
+        });
+        when(track.unsubscribe).thenAnswer((_) async {
+          subscribed[index] = false;
+        });
+        return track;
+      }
+
+      final room = _Room(MockLocalParticipant())
+        ..remotes['remote'] = _Remote([publication()]);
+      final transport = LiveKitSessionTransport(
+        room: room,
+        cameraOptions: const sdk.CameraCaptureOptions(),
+      );
+      try {
+        transport.setIncomingMediaParticipants({'remote'});
+        await transport.subscribeToExistingMedia();
+        check(transport.cachedRemotePublicationCount).equals(1);
+        for (var i = 0; i < 10; i++) {
+          room.transportEvents.emit(const sdk.RoomReconnectingEvent());
+          await pumpEventQueue();
+          room.remotes['remote'] = _Remote([publication()]);
+          room.transportEvents.emit(const sdk.RoomReconnectedEvent());
+          await pumpEventQueue();
+          check(transport.cachedRemotePublicationCount).equals(1);
+          check(subscribed.last).isTrue();
+          check(subscribeCalls).deepEquals(List.filled(i + 2, 1));
+          room.transportEvents.emit(const sdk.RoomReconnectedEvent());
+          await pumpEventQueue();
+          check(subscribeCalls).deepEquals(List.filled(i + 2, 1));
+          check(transport.cachedRemotePublicationCount).equals(1);
+        }
+        await transport.dispose();
+        check(transport.cachedRemotePublicationCount).equals(0);
+      } finally {
+        await transport.dispose();
+        await room.transportEvents.dispose();
+      }
+    },
+  );
+
+  test('failed revocation retries without blocking admitted media', () {
+    fakeAsync((clock) {
+      final revoked = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      final keeper = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      var revokedSubscribed = false;
+      var keeperSubscribed = false;
+      var unsubscribeAttempts = 0;
+      var failThrough = 3;
+      when(() => revoked.subscribed).thenAnswer((_) => revokedSubscribed);
+      when(() => keeper.subscribed).thenAnswer((_) => keeperSubscribed);
+      when(revoked.subscribe).thenAnswer((_) async {
+        revokedSubscribed = true;
+      });
+      when(keeper.subscribe).thenAnswer((_) async {
+        keeperSubscribed = true;
+      });
+      when(revoked.unsubscribe).thenAnswer((_) async {
+        if (++unsubscribeAttempts <= failThrough) {
+          throw StateError('temporary failure');
+        }
+        revokedSubscribed = false;
+      });
+      when(keeper.unsubscribe).thenAnswer((_) async {
+        keeperSubscribed = false;
+      });
+      final room = _Room(MockLocalParticipant())
+        ..remotes.addAll({
+          'revoked': _Remote([revoked], 'revoked'),
+          'keeper': _Remote([keeper], 'keeper'),
+        });
+      final transport = LiveKitSessionTransport(
+        room: room,
+        cameraOptions: const sdk.CameraCaptureOptions(),
+      );
+      final errors = <Object>[];
+      final listener = transport.events.listen((_) {}, onError: errors.add);
+      try {
+        transport.setIncomingMediaParticipants({'revoked', 'keeper'});
+        unawaited(transport.subscribeToExistingMedia());
+        clock.flushMicrotasks();
+        transport.setIncomingMediaParticipants({'keeper'});
+        clock.flushMicrotasks();
+        check(keeperSubscribed).isTrue();
+        check(unsubscribeAttempts).equals(2);
+        check(revokedSubscribed).isTrue();
+        clock
+          ..elapse(const Duration(seconds: 1))
+          ..flushMicrotasks();
+        check(unsubscribeAttempts).equals(4);
+        check(revokedSubscribed).isFalse();
+        check(keeperSubscribed).isTrue();
+
+        transport.setIncomingMediaParticipants({'revoked', 'keeper'});
+        clock.flushMicrotasks();
+        check(revokedSubscribed).isTrue();
+        failThrough = unsubscribeAttempts + 10;
+        transport.setIncomingMediaParticipants({'keeper'});
+        clock.flushMicrotasks();
+        unawaited(transport.dispose());
+        clock.flushMicrotasks();
+        final attemptsAfterDispose = unsubscribeAttempts;
+        clock
+          ..elapse(const Duration(minutes: 2))
+          ..flushMicrotasks();
+        check(unsubscribeAttempts).equals(attemptsAfterDispose);
+      } finally {
+        unawaited(listener.cancel());
+        unawaited(transport.dispose());
+        unawaited(room.transportEvents.dispose());
+        clock.flushMicrotasks();
+      }
+    });
+  });
+
+  test(
+    'unchanged roster preserves existing subscriptions without SDK cycles',
+    () async {
+      final alreadySubscribed = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      final newlySubscribed = MockRemoteTrackPublication<sdk.RemoteTrack>();
+      when(() => alreadySubscribed.subscribed).thenReturn(true);
+      when(newlySubscribed.subscribe).thenAnswer((_) async {});
+      final room = _Room(MockLocalParticipant())
+        ..remotes['remote'] = _Remote([alreadySubscribed, newlySubscribed]);
+      final transport = LiveKitSessionTransport(
+        room: room,
+        cameraOptions: const sdk.CameraCaptureOptions(),
+      );
+      try {
+        transport.setIncomingMediaParticipants({'remote'});
+        await transport.subscribeToExistingMedia();
+        verifyNever(alreadySubscribed.subscribe);
+        verify(newlySubscribed.subscribe).called(1);
+        transport.setIncomingMediaParticipants({'remote'});
+        await transport.subscribeToExistingMedia();
+        await pumpEventQueue();
+        verifyNever(alreadySubscribed.subscribe);
+        verifyNever(newlySubscribed.subscribe);
+        verifyNever(alreadySubscribed.unsubscribe);
+        verifyNever(newlySubscribed.unsubscribe);
+      } finally {
+        await transport.dispose();
+        await room.transportEvents.dispose();
+      }
+    },
+  );
+
   test(
     'resume reconciles missed permission denial without retrying unchanged media',
     () async {
@@ -220,12 +719,14 @@ void main() {
           ),
         );
         await pumpEventQueue();
-        check(attempts).equals(2);
+        check(attempts).equals(1);
         first.complete();
         await initial;
+        await pumpEventQueue();
         await transport.subscribeToExistingMedia();
         check(attempts).equals(2);
       } finally {
+        if (!first.isCompleted) first.complete();
         await transport.dispose();
         await room.transportEvents.dispose();
       }
@@ -309,11 +810,17 @@ void main() {
         await pumpEventQueue();
         verifyNever(publication.subscribe);
         remote.publications.clear();
+        room.remotes.remove('remote');
         room.transportEvents.emit(
           sdk.ParticipantDisconnectedEvent(participant: remote),
         );
         await pumpEventQueue();
         remote.publications.add(publication);
+        room.remotes['remote'] = remote;
+        room.transportEvents.emit(
+          sdk.ParticipantConnectedEvent(participant: remote),
+        );
+        await pumpEventQueue();
         await transport.subscribeToExistingMedia();
         verify(publication.subscribe).called(1);
         await transport.disconnect();
@@ -321,9 +828,10 @@ void main() {
         room.transportEvents.emit(const sdk.RoomReconnectedEvent());
         await pumpEventQueue();
         verifyNever(publication.subscribe);
+        await transport.connect('url', 'token');
         await transport.subscribeToExistingMedia();
         verify(publication.subscribe).called(1);
-        check(room.connections).equals(0);
+        check(room.connections).equals(1);
       } finally {
         await transport.dispose();
         await room.transportEvents.dispose();

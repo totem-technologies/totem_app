@@ -194,7 +194,10 @@ class MockMediaStreamTrack extends Mock implements webrtc.MediaStreamTrack {
 class MockRemoteTrackPublication<T extends RemoteTrack> extends Mock
     implements RemoteTrackPublication<T> {
   MockRemoteTrackPublication() {
+    when(() => sid).thenReturn(identityHashCode(this).toString());
     when(() => subscriptionAllowed).thenReturn(true);
+    when(() => subscribed).thenReturn(false);
+    when(unsubscribe).thenAnswer((_) async {});
   }
 }
 

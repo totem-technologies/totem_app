@@ -195,8 +195,9 @@ class _AdmissionHarness {
   _AdmissionHarness({
     _AdmissionPreferences? preferences,
     Future<SessionAdmissionPreferences> Function(Ref ref)? preferencesOverride,
+    String localIdentity = 'keeper',
   }) : preferences = preferences ?? _AdmissionPreferences() {
-    final participant = MockLocalParticipant('keeper');
+    final participant = MockLocalParticipant(localIdentity);
     when(
       () => participant.publishData(
         any(),
@@ -207,7 +208,7 @@ class _AdmissionHarness {
     ).thenAnswer((invocation) async {
       final packet = AdmissionProtocol.decode(
         invocation.positionalArguments.single as List<int>,
-        senderIdentity: 'keeper',
+        senderIdentity: localIdentity,
         now: _now(),
       );
       if (packet != null) {
@@ -416,6 +417,7 @@ void main() {
       transport: () => harness.session.transport,
       applyState: (_) {},
       prepareRemoval: admission.prepareRemoval,
+      withRevokedAdmission: admission.withRevokedAdmission,
       markRemoved: (_) {},
       leave: () async {},
       onError: (_, _) {},
@@ -450,10 +452,11 @@ void main() {
 
   group('admission persistence teardown', () {
     test(
-      'concurrent close waits for final roster persistence before releasing controllers',
+      'concurrent close quiesces the controller and waits for final roster persistence',
       () async {
         final preferences = _AdmissionPreferences();
         final (harness, container, service) = await removalSession(preferences);
+        final controller = service.keeperController!;
         final controllerClosed = observeControllerClosure(service);
         final saving = Completer<void>();
         final saved = Completer<bool>();
@@ -469,7 +472,13 @@ void main() {
         await saving.future;
         await container.pump();
         check(completed).isFalse();
-        check(controllerClosed.isCompleted).isFalse();
+        check(controllerClosed.isCompleted).isTrue();
+        final writesWhileClosing = preferences.writeCount;
+        final sentWhileClosing = harness.sent.length;
+        controller.revoke('guest');
+        await container.pump();
+        check(preferences.writeCount).equals(writesWhileClosing);
+        check(harness.sent.length).equals(sentWhileClosing);
         check(await service.admitAll()).isFalse();
         await service.decide(harness.request('while-closing'), true);
         final published = harness.sent.length;
@@ -972,6 +981,14 @@ void main() {
         check(service.admittedIdentities.contains('guest')).isFalse();
         check(harness.mediaRecipients.last.contains('guest')).isFalse();
         check(preferences.values.containsKey(removalJournalKey)).isTrue();
+        final journal =
+            jsonDecode(preferences.values[removalJournalKey]!) as Map;
+        final records = journal['version'] == 1
+            ? journal['records'] as Map
+            : journal;
+        check(
+          records['guest'],
+        ).equals(failure == 'journal update' ? 'intent' : 'committed');
         check(service.requireRemovalReady).throws<StateError>();
         preferences
           ..beforeSet = null
@@ -1096,6 +1113,7 @@ void main() {
       final (harness, _, service) = await removalSession(preferences);
       await (await service.prepareRemoval('guest')).commit();
       await (await service.prepareRemoval('another')).commit();
+      await service.revokeRemovedParticipant('guest');
       service.setApprovalRequired(false);
       await service.synchronized;
       await harness.sendRequest(harness.request('removed-again'));
@@ -1103,12 +1121,72 @@ void main() {
 
       check(service.admittedIdentities.contains('guest')).isFalse();
       check(service.admittedIdentities.contains('another')).isFalse();
+      check(
+        service.keeperController!.requests.single.senderIdentity,
+      ).equals('guest');
       check(harness.mediaRecipients.last.contains('guest')).isFalse();
       check(preferences.values.containsKey(removalJournalKey)).isFalse();
       final persisted =
           jsonDecode(preferences.values[removalRosterKey]!) as Map;
       check((persisted['members'] as List).contains('guest')).isFalse();
       check((persisted['members'] as List).contains('another')).isFalse();
+      check(
+        (persisted['revoked'] as List).toSet(),
+      ).deepEquals({'guest', 'another'});
+    },
+  );
+
+  test(
+    'unban reservation blocks approval through persistence and owner replacement',
+    () async {
+      final preferences = _AdmissionPreferences();
+      final (harness, _, service) = await removalSession(preferences);
+      await service.revokeRemovedParticipant('guest');
+      final request = harness.request('reserved');
+      await harness.sendRequest(request);
+      final saving = Completer<void>();
+      final saved = Completer<bool>();
+      final backendStarted = Completer<void>();
+      final backend = Completer<void>();
+      addTearDown(() {
+        if (!saved.isCompleted) saved.complete(true);
+        if (!backend.isCompleted) backend.complete();
+      });
+      preferences.beforeSet = (key, _) {
+        if (key != removalRosterKey) return Future.value(true);
+        if (!saving.isCompleted) saving.complete();
+        return saved.future;
+      };
+      final reserving = service.reserveUnban('guest');
+      await saving.future;
+      await check(
+        service.keeperController!.approve(request.id, 'guest'),
+      ).throws<StateError>();
+      saved.complete(true);
+      final reservation = await reserving;
+      final operation = reservation.run(() {
+        backendStarted.complete();
+        return backend.future;
+      });
+      await backendStarted.future;
+      reservation.cancel();
+      preferences.beforeSet = null;
+      final timedOut = Completer<void>();
+      final caller = Future.any([operation, timedOut.future]);
+      timedOut.completeError(TimeoutException('unban timed out'));
+      await check(caller).throws<TimeoutException>();
+
+      final (replacement, _, nextService) = await removalSession(preferences);
+      nextService.sync();
+      await nextService.synchronized;
+      final nextRequest = replacement.request('after-handoff');
+      await replacement.sendRequest(nextRequest);
+      await check(
+        nextService.keeperController!.approve(nextRequest.id, 'guest'),
+      ).throws<StateError>();
+      backend.complete();
+      await operation;
+      await nextService.keeperController!.approve(nextRequest.id, 'guest');
     },
   );
 
@@ -1193,7 +1271,8 @@ void main() {
       check(service.hasCorruptRemovalJournal).isFalse();
       check(service.recoveryError).isNull();
       check(preferences.values.containsKey(removalJournalKey)).isFalse();
-      check(preferences.values.containsKey(removalRosterKey)).isFalse();
+      final roster = jsonDecode(preferences.values[removalRosterKey]!) as Map;
+      check(roster['members'] as List).isEmpty();
       check(service.admittedIdentities).isEmpty();
       service.requireRemovalReady();
     },
@@ -1214,6 +1293,117 @@ void main() {
       check(preferences.values.containsKey(removalJournalKey)).isTrue();
     },
   );
+
+  testWidgets(
+    'synchronization status leaves the session interactive and clears',
+    (tester) async {
+      setupAppConfig();
+      final harness = _AdmissionHarness(localIdentity: 'guest');
+      harness.room.remotes['keeper'] = _RemoteParticipant('keeper');
+      var taps = 0;
+      var childBuilds = 0;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: harness.overrides,
+          child: MaterialApp(
+            home: SessionAdmissionOverlay(
+              sessionSlug: 'session',
+              child: Builder(
+                builder: (context) {
+                  childBuilds++;
+                  return SizedBox.expand(
+                    child: TextButton(
+                      onPressed: () => taps++,
+                      child: const Text('Session action'),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SessionAdmissionOverlay)),
+        listen: false,
+      );
+      final service = container.read(currentSessionProvider)!.admission;
+      await tester.pump();
+      check(find.text('Synchronizing participants').evaluate()).isNotEmpty();
+      final buildsDuringSync = childBuilds;
+      await tester.tapAt(
+        tester.getCenter(find.text('Synchronizing participants')),
+      );
+      check(taps).equals(1);
+
+      final request = harness.sent.whereType<AdmissionRosterRequest>().last;
+      await harness.sendPacket(
+        AdmissionRosterSnapshot(
+          id: 'snapshot',
+          requestId: request.id,
+          senderIdentity: 'keeper',
+          recipientIdentity: 'guest',
+          expiresAt: harness.expiration(),
+          sessionIdentity: 'session',
+          keeperGeneration: 'generation',
+          revision: 1,
+          members: const ['guest'],
+        ),
+      );
+      await tester.pump();
+      check(find.text('Synchronizing participants').evaluate()).isEmpty();
+      check(childBuilds).equals(buildsDuringSync);
+      await tester.tap(find.text('Session action'));
+      check(taps).equals(2);
+      await tester.runAsync(service.close);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  test('client synchronization status follows the active admission', () async {
+    setupAppConfig();
+    final harness = _AdmissionHarness(localIdentity: 'guest');
+    harness.room.remotes['keeper'] = _RemoteParticipant('keeper');
+    final container = ProviderContainer(overrides: harness.overrides);
+    final retained = container.listen(currentSessionProvider, (_, _) {});
+    final service = container.read(currentSessionProvider)!.admission;
+    final observed = <bool>[];
+    void listener() => observed.add(service.isSynchronizing);
+    service.addListener(listener);
+    try {
+      await service.synchronized;
+      await pumpEventQueue();
+      check(service.isSynchronizing).isTrue();
+      check(observed).contains(true);
+      final request = harness.sent.whereType<AdmissionRosterRequest>().last;
+      await harness.sendPacket(
+        AdmissionRosterSnapshot(
+          id: 'snapshot',
+          requestId: request.id,
+          senderIdentity: 'keeper',
+          recipientIdentity: 'guest',
+          expiresAt: harness.expiration(),
+          sessionIdentity: 'session',
+          keeperGeneration: 'generation',
+          revision: 1,
+          members: const ['guest'],
+        ),
+      );
+      await pumpEventQueue();
+      check(service.isSynchronizing).isFalse();
+      check(observed.last).isFalse();
+      check(service.admittedIdentities).contains('guest');
+      await service.disconnect();
+      check(service.isSynchronizing).isFalse();
+      check(service.admittedIdentities).isEmpty();
+    } finally {
+      service.removeListener(listener);
+      await service.close();
+      retained.close();
+      container.dispose();
+    }
+  });
 
   test(
     'session owns admission and roster permissions without a widget',
@@ -1244,7 +1434,8 @@ void main() {
         final request = controller.requests.single;
         await service.decide(request, true);
         await harness.sendPacket(AdmissionProtocol.joined(request));
-        await Future<void>.value();
+        await controller.pendingRosterWrites;
+        await container.pump();
         check(
           container.read(admittedSessionParticipantIdentitiesProvider),
         ).contains('guest');
@@ -1307,6 +1498,10 @@ void main() {
       observeReady();
       for (var frame = 0; !ready.isCompleted && frame < 20; frame++) {
         await tester.pump();
+        if (find.byType(SessionWaitingQueueButton).evaluate().isNotEmpty &&
+            !ready.isCompleted) {
+          ready.complete();
+        }
       }
       check(
         ready.isCompleted,
@@ -1343,6 +1538,7 @@ void main() {
       listen: false,
     );
     final service = container.read(currentSessionProvider)!.admission;
+    addTearDown(service.close);
     // Most scenarios start after durable admission data has loaded. Tests of
     // loading explicitly control the preferences future instead.
     if (harness._preferencesOverride == null) {
@@ -1358,9 +1554,12 @@ void main() {
         tester.element(overlay),
         listen: false,
       );
-      await tester.runAsync(
-        () => container.read(currentSessionProvider)!.admission.close(),
-      );
+      late Future<void> closing;
+      await tester.runAsync(() async {
+        closing = container.read(currentSessionProvider)!.admission.close();
+      });
+      await tester.pump();
+      await tester.runAsync(() => closing);
     }
     await tester.pumpWidget(const SizedBox.shrink());
   }
@@ -1438,11 +1637,13 @@ void main() {
       addTearDown(videoBuilds.dispose);
       setViewport(tester, const Size(390, 844));
       addTearDown(tester.view.reset);
+
       final container = await pumpHost(
         tester,
         harness,
         videoBuilds: videoBuilds,
       );
+
       final service = container.read(currentSessionProvider)!.admission;
       await container.read(
         keeperAdmissionRosterProvider('session', 'keeper').future,
@@ -1450,28 +1651,37 @@ void main() {
       await container.read(
         declinedSessionParticipantsProvider('session', 'keeper').future,
       );
-      service.sync();
-      await service.synchronized;
+
+      await tester.runAsync(() async {
+        service.sync();
+        await service.synchronized;
+      });
+
       final backend = _RemovalBackend()
         ..action = () async => throw TimeoutException('outcome unavailable');
       final moderation = moderationFor(harness, service, backend);
+
       await check(
         moderation.removeParticipant('guest'),
       ).throws<SessionCommandException>();
       await check(moderation.removeParticipant('guest')).throws<StateError>();
+
       check(backend.calls).equals(1);
       container
           .read(sessionPresentationProvider.notifier)
           .openPanel(SessionPanel.admission);
       await tester.pumpAndSettle();
+
       check(service.admittedIdentities.contains('guest')).isFalse();
       await tester.tap(find.text('Verified guest was not removed'));
       await tester.pumpAndSettle();
       check(service.admittedIdentities.contains('guest')).isFalse();
       await tester.tap(find.text('Confirm verified outcome'));
       await tester.pumpAndSettle();
+
       check(service.admittedIdentities).contains('guest');
       check(harness.mediaRecipients.last).contains('guest');
+      check(preferences.values.containsKey(removalJournalKey)).isFalse();
       check(backend.calls).equals(1);
       check(find.text('Verified guest was not removed').evaluate()).isEmpty();
       container.read(sessionPresentationProvider.notifier).closePanel();
@@ -2023,6 +2233,7 @@ void main() {
     testWidgets('reset restores admission with corrupt $corruptStores', (
       tester,
     ) async {
+      setupAppConfig();
       final preferences = _AdmissionPreferences();
       await seedDeclined(preferences, 'blocked');
       final declinedKey = preferences.values.keys.single;
@@ -2083,9 +2294,12 @@ void main() {
       check(preferences.values[declinedKey]).equals(
         corruptStores.contains('declined') ? null : original[declinedKey],
       );
-      check(
-        preferences.values[rosterKey],
-      ).equals(corruptStores.contains('roster') ? null : original[rosterKey]);
+      if (corruptStores.contains('roster')) {
+        final saved = jsonDecode(preferences.values[rosterKey]!) as Map;
+        check(saved['members'] as List).isEmpty();
+      } else {
+        check(preferences.values[rosterKey]).equals(original[rosterKey]);
+      }
       check(preferences.values['unrelated']).equals('keep');
       final declined = await container.read(
         declinedSessionParticipantsProvider('session', 'keeper').future,
@@ -2227,22 +2441,26 @@ void main() {
           .read(sessionAdmissionSettingsProvider.notifier)
           .setEnabled(false);
       await tester.pump();
+      await tester.runAsync(
+        () => container.read(currentSessionProvider)!.admission.synchronized,
+      );
+      final initialWrites = preferences.writeCount;
 
       final request = harness.request('admit');
       await harness.sendRequest(request);
       await tester.pump();
       await tester.pump();
-      check(preferences.writeCount).equals(0);
+      check(preferences.writeCount).equals(initialWrites);
 
       await harness.sendPacket(AdmissionProtocol.joined(request));
       await tester.pump();
       await tester.pump();
-      check(preferences.writeCount).equals(1);
+      check(preferences.writeCount).equals(initialWrites + 1);
 
       await harness.sendRequest(harness.request('ready-again'));
       await tester.pump();
       await tester.pump();
-      check(preferences.writeCount).equals(2);
+      check(preferences.writeCount).equals(initialWrites + 2);
 
       await closeHost(tester);
       await tester.pump();
@@ -2377,6 +2595,7 @@ void main() {
     );
     await tester.pump();
     await tester.pump();
+    addTearDown(harness.session.admission.close);
     check(harness.mediaRecipients.last).deepEquals({'guest', 'silent'});
 
     await harness.session.admission.revokeRemovedParticipant('guest');

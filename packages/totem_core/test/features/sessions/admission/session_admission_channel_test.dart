@@ -178,6 +178,9 @@ void main() {
           (event) => (event.identity, event.present),
         ),
       ).deepEquals([('keeper', false), ('keeper', true)]);
+      check(
+        events.whereType<AdmissionConnectionInterrupted>(),
+      ).length.equals(1);
       check(events.whereType<AdmissionConnectionRestored>()).length.equals(1);
       check(
         events.whereType<AdmissionRoomDisconnected>().single.reason,

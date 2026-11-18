@@ -48,18 +48,25 @@ SessionTransportPacket _removal({
 );
 
 class _Backend implements SessionModerationBackend {
-  _Backend(this.removeAction, this.banAction, this.events);
+  _Backend(this.removeAction, this.banAction, this.events, {this.unbanAction});
   final List<String> events;
   final Future<void> Function(String) removeAction;
   final Future<RoomState> Function(int, String) banAction;
+  final Future<RoomState> Function(int, String)? unbanAction;
   @override
   Future<void> remove(String identity) => removeAction(identity);
   @override
   Future<RoomState> ban(int version, String identity) =>
       banAction(version, identity);
   @override
-  Future<RoomState> unban(int version, String identity) =>
-      banAction(version, identity);
+  Future<RoomState> unban(int version, String identity) async {
+    events.add('unban:$identity:$version');
+    final action = unbanAction;
+    return action != null
+        ? await action(version, identity)
+        : _room(version: version + 1);
+  }
+
   @override
   Future<void> mute(String identity) async {
     events.add('mute:$identity');
@@ -91,6 +98,12 @@ class _Harness {
               _room(version: version + 1);
         },
         events,
+        unbanAction: (version, identity) {
+          final action = unban;
+          return action != null
+              ? action(version, identity)
+              : Future.value(_room(version: version + 1));
+        },
       ),
       state: () => SessionRoomState(
         connection: const ConnectionState(
@@ -118,6 +131,12 @@ class _Harness {
             events.add('unknown');
           },
         );
+      },
+      withRevokedAdmission: (identity, operation) async {
+        events.add('prepare');
+        final revoke = await prepare?.call() ?? _revoke;
+        await revoke(identity);
+        return await operation();
       },
       markRemoved: removed.add,
       leave: () async {
@@ -147,6 +166,7 @@ class _Harness {
   Future<AdmissionRevocation> Function()? prepare;
   Future<void> Function(String)? remove;
   Future<RoomState> Function(int, String)? ban;
+  Future<RoomState> Function(int, String)? unban;
   Future<void> Function()? leaving;
   Completer<void>? failureReported;
   Future<void> _revoke(String identity) async {
@@ -478,6 +498,98 @@ void main() {
       },
     );
   }
+
+  test(
+    'unban waits for saved admission revocation before contacting the backend',
+    () async {
+      final h = _Harness();
+      addTearDown(h.dispose);
+      final revocation = Completer<void>();
+      h.prepare = () async => (String identity) async {
+        h.events.add('revoke:$identity');
+        await revocation.future;
+      };
+
+      final unbanning = h.service.unbanParticipant('participant');
+      await pumpEventQueue();
+      final eventsWhileRevoking = List<String>.of(h.events);
+      revocation.complete();
+      await unbanning;
+
+      check(eventsWhileRevoking).deepEquals(['prepare', 'revoke:participant']);
+      check(
+        h.events,
+      ).deepEquals(['prepare', 'revoke:participant', 'unban:participant:10']);
+      check(h.applied.single.version).equals(11);
+    },
+  );
+
+  test('a timed-out unban cannot apply after moderation disposal', () {
+    fakeAsync((clock) {
+      final h = _Harness();
+      addTearDown(h.dispose);
+      final backend = Completer<RoomState>();
+      h.unban = (_, _) => backend.future;
+      Object? failure;
+      h.service
+          .unbanParticipant('participant')
+          .then(
+            (_) {},
+            onError: (Object error) {
+              failure = error;
+            },
+          );
+      clock
+        ..flushMicrotasks()
+        ..elapse(const Duration(seconds: 20))
+        ..flushMicrotasks();
+      check(failure).isA<TimeoutException>();
+
+      h.service.dispose();
+      backend.complete(_room(version: 11));
+      clock.flushMicrotasks();
+      check(h.applied).isEmpty();
+    });
+  });
+
+  test('unban is blocked when saved admission revocation fails', () async {
+    final h = _Harness();
+    addTearDown(h.dispose);
+    h.prepare = () async => (String identity) async {
+      h.events.add('revoke:$identity');
+      throw StateError('admission revocation failed');
+    };
+
+    await check(h.service.unbanParticipant('participant')).throws<StateError>();
+    check(h.events).deepEquals(['prepare', 'revoke:participant']);
+    check(h.applied).isEmpty();
+  });
+
+  test(
+    'a superseded unban does not contact the backend after revocation',
+    () async {
+      final h = _Harness();
+      addTearDown(h.dispose);
+      final revocation = Completer<void>();
+      h.prepare = () async => (String identity) async {
+        h.events.add('revoke:$identity');
+        await revocation.future;
+      };
+
+      final unbanning = h.service.unbanParticipant('participant');
+      final rejected = check(unbanning).throws<SessionCommandException>();
+      await pumpEventQueue();
+      h.generation++;
+      revocation.complete();
+      await rejected;
+
+      check(h.events).deepEquals(['prepare', 'revoke:participant']);
+      check(h.applied).isEmpty();
+      check(
+        h.service.lastFailure?.kind,
+      ).equals(SessionCommandFailureKind.superseded);
+    },
+  );
 
   test('participants cannot execute moderation commands', () async {
     final h = _Harness()..keeper = false;

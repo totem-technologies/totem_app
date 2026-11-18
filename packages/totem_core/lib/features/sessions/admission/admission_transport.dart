@@ -26,6 +26,11 @@ final class AdmissionConnectionRestored extends AdmissionEvent {
   const AdmissionConnectionRestored();
 }
 
+/// A nonterminal signaling interruption; the same room remains owned by Session.
+final class AdmissionConnectionInterrupted extends AdmissionEvent {
+  const AdmissionConnectionInterrupted();
+}
+
 final class AdmissionRoomEnded extends AdmissionEvent {
   const AdmissionRoomEnded();
 }
@@ -83,6 +88,12 @@ class LiveKitAdmissionTransport implements AdmissionChannel {
         if (!_ended) {
           _emit(const AdmissionConnectionRestored());
         }
+      })
+      ..on<RoomReconnectingEvent>((_) {
+        if (!_ended) _emit(const AdmissionConnectionInterrupted());
+      })
+      ..on<RoomResumingEvent>((_) {
+        if (!_ended) _emit(const AdmissionConnectionInterrupted());
       })
       ..on<RoomReconnectedEvent>((_) {
         _checkRoomEnded(room.metadata);

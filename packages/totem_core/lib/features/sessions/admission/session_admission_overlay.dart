@@ -180,7 +180,37 @@ class _SessionAdmissionOverlayState
       onDeclinePermanently: (request) =>
           service?.decide(request, false, permanently: true) ?? Future.value(),
       onAdmitAll: () async => await service?.admitAll() ?? false,
-      child: widget.child,
+      child: Stack(
+        children: [
+          widget.child,
+          if (service?.isSynchronizing == true)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: IgnorePointer(
+                  child: Center(
+                    child: Material(
+                      elevation: 2,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Semantics(
+                          liveRegion: true,
+                          child: const Text('Synchronizing participants'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -201,8 +231,7 @@ class SessionAdmissionQueueControl extends ConsumerWidget {
       (attempt) => attempt.status == KeeperAdmissionStatus.joining,
     );
     final retry = admission.onRetry;
-    if (retry == null &&
-        (!admission.enabled || (admission.requests.isEmpty && !joining))) {
+    if (retry == null && admission.requests.isEmpty && !joining) {
       return child ?? const SizedBox.shrink();
     }
     String? label;

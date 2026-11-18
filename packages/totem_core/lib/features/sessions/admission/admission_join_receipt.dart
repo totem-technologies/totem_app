@@ -18,6 +18,7 @@ class AdmissionJoinReceipt {
   bool _confirmed = false;
   bool _disposed = false;
   bool _ended = false;
+  bool _interrupted = false;
 
   void handle(AdmissionEvent event) {
     switch (event) {
@@ -37,7 +38,12 @@ class AdmissionJoinReceipt {
         }
       case AdmissionPresenceChanged(:final identity, :final present):
         if (present && identity == _receipt?.recipientIdentity) retry();
+      case AdmissionConnectionInterrupted():
+        _interrupted = true;
+        _retry?.cancel();
+        _retry = null;
       case AdmissionConnectionRestored():
+        _interrupted = false;
         retry();
       case AdmissionRoomEnded():
         _ended = true;
@@ -73,7 +79,7 @@ class AdmissionJoinReceipt {
     try {
       await send(receipt);
     } finally {
-      if (!_disposed && !_ended && !_confirmed) {
+      if (!_disposed && !_ended && !_interrupted && !_confirmed) {
         _retry = Timer(const Duration(seconds: 2), retry);
       }
     }
@@ -81,7 +87,9 @@ class AdmissionJoinReceipt {
 
   void retry() {
     final receipt = _receipt;
-    if (_disposed || _ended || _confirmed || receipt == null) return;
+    if (_disposed || _ended || _interrupted || _confirmed || receipt == null) {
+      return;
+    }
     if (!now().isBefore(receipt.expiresAt)) {
       _receipt = null;
       return;

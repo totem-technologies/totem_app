@@ -477,8 +477,25 @@ class SessionController extends _$SessionController {
           currentState.status != RoomStatus.ended &&
           nextState.status == RoomStatus.ended;
       final previous = state;
-      _dispatch(RoomStateChanged(nextState, observedAt: DateTime.now()));
-      if (identical(state, previous)) return false;
+      final next = _stateReducer.reduceState(
+        previous,
+        RoomStateChanged(nextState, observedAt: DateTime.now()),
+      );
+      if (identical(next, previous)) return false;
+      if (currentState.keeper != nextState.keeper) {
+        if (_admittedMediaRecipients != null) {
+          _admittedMediaRecipients = const {};
+        }
+        final localIdentity = _transport?.localIdentity;
+        if (localIdentity != null) {
+          _transport!.setIncomingMediaParticipants({
+            if (nextState.keeper.isNotEmpty &&
+                nextState.keeper != localIdentity)
+              nextState.keeper,
+          });
+        }
+      }
+      state = next;
       _applyMediaSubscriptionPermissions();
       return isEnding;
     }

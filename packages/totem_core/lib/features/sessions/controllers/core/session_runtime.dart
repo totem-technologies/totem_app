@@ -167,6 +167,18 @@ class SessionRuntime {
             ),
           );
         }
+        if (event is TransportConnectionChanged && event.reconnected) {
+          unawaited(
+            Sentry.addBreadcrumb(
+              Breadcrumb(
+                category: 'session.connection',
+                message: 'session.reconnected',
+                level: SentryLevel.info,
+                data: {'generation': generation},
+              ),
+            ),
+          );
+        }
         if (!acceptsEvents) {
           // Preserve the current connection's final diagnostics during leave.
           if (isLeaving &&

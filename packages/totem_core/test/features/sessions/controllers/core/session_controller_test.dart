@@ -1714,6 +1714,9 @@ void main() {
         controller.updateAdmittedMediaRecipients({'remote'});
         await pumpEventQueue();
         verify(publication.subscribe).called(1);
+        controller.updateAdmittedMediaRecipients({'remote'});
+        await pumpEventQueue();
+        verifyNever(publication.subscribe);
       });
 
       test(
@@ -1848,6 +1851,7 @@ void main() {
           await controller.activateConnectedRoom(room: room),
         ).equals(SessionJoinResult.success);
         await pumpEventQueue();
+        participant.publications.add(publishedPublication);
         await room.listener.trigger(
           TrackPublishedEvent(
             participant: participant,
@@ -1865,12 +1869,14 @@ void main() {
         verify(existingPublication.subscribe).called(1);
         verify(publishedPublication.subscribe).called(1);
 
+        participant.publications.remove(publishedPublication);
         await room.listener.trigger(
           TrackUnpublishedEvent(
             participant: participant,
             publication: publishedPublication,
           ),
         );
+        participant.publications.add(publishedPublication);
         await room.listener.trigger(
           TrackPublishedEvent(
             participant: participant,
@@ -1882,7 +1888,7 @@ void main() {
       });
 
       test(
-        'retries failed remote subscriptions without clearing a newer attempt',
+        'retries failed remote subscriptions without duplicating an in-flight attempt',
         () async {
           const eventSlug = 'test-session';
           const options = SessionOptions(
@@ -1934,12 +1940,8 @@ void main() {
           await pumpEventQueue();
           check(subscribeAttempts).equals(1);
 
-          await room.listener.trigger(
-            TrackUnpublishedEvent(
-              participant: participant,
-              publication: publication,
-            ),
-          );
+          firstAttempt.completeError(StateError('first subscription failed'));
+          await pumpEventQueue();
           await room.listener.trigger(
             TrackPublishedEvent(
               participant: participant,
@@ -1948,9 +1950,6 @@ void main() {
           );
           await pumpEventQueue();
           check(subscribeAttempts).equals(2);
-
-          firstAttempt.completeError(StateError('first subscription failed'));
-          await pumpEventQueue();
           await room.listener.trigger(
             TrackPublishedEvent(
               participant: participant,
@@ -2441,6 +2440,40 @@ void main() {
           await tester.pump();
           await tester.pump();
           check(reconcilePolls).equals(5);
+
+          const nextKeeperState = RoomState(
+            keeper: 'next-keeper',
+            nextSpeaker: Omittable(''),
+            currentSpeaker: Omittable(''),
+            status: RoomStatus.waitingRoom,
+            turnState: TurnState.idle,
+            sessionSlug: eventSlug,
+            statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
+            talkingOrder: [],
+            version: 2,
+            roundNumber: 0,
+          );
+          final keeperListener = container.listen(
+            sessionControllerProvider(options),
+            (previous, next) {
+              if (previous?.roomState.keeper != next.roomState.keeper &&
+                  next.roomState.keeper == 'next-keeper') {
+                check(
+                  transport.incomingMediaParticipants,
+                ).deepEquals({'next-keeper'});
+                controller.updateAdmittedMediaRecipients({'new-admitted'});
+              }
+            },
+          );
+          controller.applyRoomState(nextKeeperState);
+          keeperListener.close();
+          check(
+            transport.incomingMediaParticipants,
+          ).deepEquals({'next-keeper', 'new-admitted'});
+          controller.applyRoomState(roomState);
+          check(
+            transport.incomingMediaParticipants,
+          ).deepEquals({'next-keeper', 'new-admitted'});
 
           transport
             ..emit(

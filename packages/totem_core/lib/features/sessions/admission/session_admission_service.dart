@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
@@ -14,6 +16,22 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 import 'package:totem_core/features/sessions/services/session_moderation_service.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
+final class _RevocationJournal extends MapBase<String, String> {
+  _RevocationJournal([Map<String, String>? records]) : _records = records ?? {};
+  final Map<String, String> _records;
+  Map<String, Object?>? roster;
+  @override
+  String? operator [](Object? key) => _records[key];
+  @override
+  void operator []=(String key, String value) => _records[key] = value;
+  @override
+  Iterable<String> get keys => _records.keys;
+  @override
+  String? remove(Object? key) => _records.remove(key);
+  @override
+  void clear() => _records.clear();
+}
+
 class CorruptAdmissionRemovalJournal implements Exception {
   const CorruptAdmissionRemovalJournal(this.cause);
 
@@ -23,9 +41,75 @@ class CorruptAdmissionRemovalJournal implements Exception {
   String toString() => 'Corrupt admission removal journal: $cause';
 }
 
+/// A reservation held until the backend settles or its admission attachment ends.
+///
+/// Attachment shutdown leaves the backend outcome unknown, but retains the
+/// durable revocation so a replacement owner can safely reconcile or remove.
+final class AdmissionUnbanReservation {
+  AdmissionUnbanReservation._(
+    this._owner,
+    this._release,
+    this._validate,
+    this._onRelease,
+  );
+
+  final Object _owner;
+  final void Function() _release;
+  final void Function() _validate;
+  final void Function() _onRelease;
+  bool _started = false;
+  bool _released = false;
+
+  void _finish() {
+    if (_released) return;
+    _released = true;
+    _onRelease();
+    _release();
+  }
+
+  /// Start the original backend future; apply timeouts to the returned future.
+  Future<T> run<T>(Future<T> Function() operation) async {
+    if (_started || _released) {
+      throw StateError('Unban reservation is no longer available');
+    }
+    _started = true;
+    try {
+      _validate();
+      return await operation();
+    } finally {
+      _finish();
+    }
+  }
+
+  /// Release an unused reservation.
+  void cancel() {
+    if (_started) return;
+    _finish();
+  }
+
+  /// Release this service's reservation when its admission attachment ends.
+  void invalidate(Object owner) {
+    if (identical(_owner, owner)) _finish();
+  }
+}
+
+/// Trust in the current session's admission roster.
+enum AdmissionRosterTrust {
+  unverified,
+  verified,
+  recovering,
+  expired,
+  invalidated,
+}
+
 /// Admission coordinator retained by the active session, independently of UI.
 class SessionAdmissionService extends ChangeNotifier {
-  SessionAdmissionService(this.ref, this.session, {this.now});
+  SessionAdmissionService(
+    this.ref,
+    this.session, {
+    this.now,
+    this.recoveryLease = const Duration(seconds: 90),
+  }) : assert(!recoveryLease.isNegative, 'Recovery lease cannot be negative');
 
   SessionAdmissionChannel? _transport;
   KeeperAdmissionController? _keeperController;
@@ -36,9 +120,13 @@ class SessionAdmissionService extends ChangeNotifier {
   // Cancelled by _detachAdmission.
   // ignore: cancel_subscriptions
   StreamSubscription<AdmissionRoster?>? _clientChanges;
+  // Cancelled by _detachAdmission.
+  // ignore: cancel_subscriptions
+  StreamSubscription<bool>? _clientSynchronizationChanges;
 
   SessionTransport? _room;
   String? _keeperIdentity;
+  String? _attachmentSessionIdentity;
   KeeperAdmissionRosterStore? _attachedKeeperRoster;
   KeeperAdmissionPersistence? _persistence;
   Future<void> Function()? _saveKeeperRoster;
@@ -49,6 +137,37 @@ class SessionAdmissionService extends ChangeNotifier {
   final Ref ref;
   final SessionController session;
   final DateTime Function()? now;
+  final Duration recoveryLease;
+  AdmissionRosterTrust _rosterTrust = AdmissionRosterTrust.unverified;
+  AdmissionRosterTrust get rosterTrust => _rosterTrust;
+
+  void _setRosterTrust(AdmissionRosterTrust next) {
+    if (_rosterTrust == next) return;
+    final previous = _rosterTrust;
+    _rosterTrust = next;
+    if (next
+        case AdmissionRosterTrust.verified ||
+            AdmissionRosterTrust.recovering ||
+            AdmissionRosterTrust.invalidated) {
+      unawaited(
+        Sentry.addBreadcrumb(
+          Breadcrumb(
+            category: 'admission.roster',
+            message: next.name,
+            level: SentryLevel.info,
+            data: {'from': previous.name, 'to': next.name},
+          ),
+        ),
+      );
+    }
+  }
+
+  bool get isRecoveringRoster =>
+      _rosterTrust == AdmissionRosterTrust.recovering;
+  String? _rosterSessionIdentity;
+  DateTime? _recoveryDeadline;
+  DateTime? get recoveryDeadline => _recoveryDeadline;
+  Timer? _recoveryTimer;
   Set<String> _admittedIdentities = const {};
   Set<String> get admittedIdentities => _admittedIdentities;
   bool approvalRequired = true;
@@ -80,6 +199,14 @@ class SessionAdmissionService extends ChangeNotifier {
   final _operations = <Future<dynamic>>{};
   final _journalOperations = <Future<dynamic>>{};
   final _rosterWrites = <Future<bool>>{};
+  final _reservationOwner = Object();
+  final _unbanReservations = <AdmissionUnbanReservation>{};
+
+  void _invalidateUnbanReservations() {
+    for (final reservation in List.of(_unbanReservations)) {
+      reservation.invalidate(_reservationOwner);
+    }
+  }
 
   Future<T> _track<T>(Future<T> work) {
     late final Future<T> tracked;
@@ -170,6 +297,13 @@ class SessionAdmissionService extends ChangeNotifier {
   }
 
   KeeperAdmissionController? get keeperController => _keeperController;
+
+  /// Whether the attached client is waiting for a trusted admission roster.
+  bool get isSynchronizing =>
+      _clientController != null &&
+      (_clientController!.isSynchronizing ||
+          _rosterTrust == AdmissionRosterTrust.recovering ||
+          _rosterTrust == AdmissionRosterTrust.expired);
   bool get busy => _busy;
   void setState(void Function() action) {
     if (!mounted) return;
@@ -183,6 +317,8 @@ class SessionAdmissionService extends ChangeNotifier {
   Future<void> close() => _closing ??= _close();
   Future<void> _close() async {
     _disposed = true;
+    _invalidateUnbanReservations();
+    _recoveryTimer?.cancel();
     _generation++;
     Object? failure;
     StackTrace? failureStack;
@@ -301,6 +437,15 @@ class SessionAdmissionService extends ChangeNotifier {
   Future<void> _synchronization = Future.value();
   void sync() {
     if (!mounted || _disconnecting) return;
+    if (_keeperIdentity != null &&
+        ((_rosterSessionIdentity != null &&
+                _rosterSessionIdentity != session.options.sessionSlug) ||
+            _keeperIdentity != session.admissionState.roomState.keeper ||
+            !identical(_room, session.transport) ||
+            session.admissionState.roomState.status == RoomStatus.ended ||
+            session.session?.ended == true)) {
+      _invalidateRoster();
+    }
     _sessionEnded =
         _sessionEnded ||
         session.admissionState.roomState.status == RoomStatus.ended ||
@@ -312,8 +457,18 @@ class SessionAdmissionService extends ChangeNotifier {
           await _sync();
         }
       }).catchError((Object failure, StackTrace stackTrace) {
-        if (mounted) {
-          _syncAdmittedIdentities(const []);
+        if (mounted && generation == _generation) {
+          if (_clientController != null &&
+              _attachmentSessionIdentity == session.options.sessionSlug &&
+              _keeperIdentity == session.admissionState.roomState.keeper &&
+              identical(_room, session.transport) &&
+              session.admissionState.roomState.status != RoomStatus.ended &&
+              session.session?.ended != true) {
+            _beginRosterRecovery();
+            _clientController?.requestSynchronization();
+          } else {
+            _invalidateRoster();
+          }
           recoveryError = 'Admission unavailable. Retry recovery.';
           error = recoveryError;
           notifyListeners();
@@ -353,7 +508,17 @@ class SessionAdmissionService extends ChangeNotifier {
         room != null &&
         keeperIdentity.isNotEmpty;
     if (!active) {
-      if (_hasAdmission) {
+      final recoverableClient =
+          !connected &&
+          !_sessionEnded &&
+          _clientController != null &&
+          identical(_room, room) &&
+          _keeperIdentity == keeperIdentity &&
+          _attachmentSessionIdentity == session.options.sessionSlug;
+      if (recoverableClient) {
+        _beginRosterRecovery();
+        notifyListeners();
+      } else if (_hasAdmission) {
         await _detachAdmission(endSession: _sessionEnded);
       }
       return;
@@ -396,6 +561,7 @@ class SessionAdmissionService extends ChangeNotifier {
         : _clientController != null;
     if (identical(_room, room) &&
         _keeperIdentity == keeperIdentity &&
+        _attachmentSessionIdentity == session.options.sessionSlug &&
         controllerActive &&
         (!isKeeper || identical(_attachedKeeperRoster, restoredRoster))) {
       if (declinedIdentities != null) {
@@ -424,6 +590,14 @@ class SessionAdmissionService extends ChangeNotifier {
           restoredRoster!,
           persistence!.persist,
         );
+        if (!mounted ||
+            generation != _generation ||
+            !identical(session.transport, room) ||
+            session.admissionState.roomState.keeper != keeperIdentity) {
+          persistence.release();
+          return;
+        }
+        await persistence.persist();
       } catch (_) {
         persistence!.release();
         rethrow;
@@ -440,6 +614,7 @@ class SessionAdmissionService extends ChangeNotifier {
     _transport = transport;
     _room = room;
     _keeperIdentity = keeperIdentity;
+    _attachmentSessionIdentity = session.options.sessionSlug;
 
     if (isKeeper) {
       _attachedKeeperRoster = restoredRoster;
@@ -461,35 +636,30 @@ class SessionAdmissionService extends ChangeNotifier {
             session.admissionState.roomState.status == RoomStatus.active,
         sessionIdentity: session.options.sessionSlug,
         rosterStore: restoredRoster,
+        persistRoster: () {
+          final snapshot = Future<void>.sync(persistence.persist);
+          return _persistRoster(() => snapshot).then((saved) async {
+            if (!saved) await snapshot;
+          });
+        },
         approvalRequired:
             approvalRequired ||
             _recoveryUnavailable ||
             _pendingRevocations.isNotEmpty,
         declinedIdentities: declinedIdentities!,
+        quarantinedIdentities: _unresolvedRevocations,
         now: now,
       );
       _keeperController = controller;
       _committedRevocations.forEach(controller.revoke);
       if (!mounted || !identical(_keeperController, controller)) return;
-      var persistedRosterRevision = controller.rosterRevision;
-      final savingRosterRevisions = <int>{};
+
+      _rosterSessionIdentity = session.options.sessionSlug;
+      _setRosterTrust(AdmissionRosterTrust.verified);
       _syncAdmittedIdentities(controller.roster);
       _keeperChanges = controller.changes.listen((_) {
         if (!mounted || !identical(_keeperController, controller)) return;
-        final revision = controller.rosterRevision;
-        final persist = _saveKeeperRoster;
-        if (persist != null &&
-            revision != persistedRosterRevision &&
-            savingRosterRevisions.add(revision)) {
-          unawaited(
-            _persistRoster(persist).then((saved) {
-              savingRosterRevisions.remove(revision);
-              if (saved && revision > persistedRosterRevision) {
-                persistedRosterRevision = revision;
-              }
-            }),
-          );
-        }
+
         _syncAdmittedIdentities(controller.roster);
         setState(() {});
       });
@@ -501,10 +671,45 @@ class SessionAdmissionService extends ChangeNotifier {
         now: now,
       );
       _clientController = controller;
-      _syncAdmittedIdentities(controller.roster?.members ?? const []);
+      _clientSynchronizationChanges = controller.synchronizationChanges.listen((
+        synchronizing,
+      ) {
+        if (!mounted ||
+            _detaching ||
+            !identical(_clientController, controller)) {
+          return;
+        }
+        if (synchronizing) _beginRosterRecovery();
+        notifyListeners();
+      });
       _clientChanges = controller.changes.listen((roster) {
-        if (!mounted || !identical(_clientController, controller)) return;
-        _syncAdmittedIdentities(roster?.members ?? const []);
+        if (!mounted ||
+            _detaching ||
+            !identical(_clientController, controller)) {
+          return;
+        }
+        if (_keeperIdentity != session.admissionState.roomState.keeper ||
+            _attachmentSessionIdentity != session.options.sessionSlug ||
+            !identical(_room, session.transport) ||
+            session.admissionState.roomState.status == RoomStatus.ended ||
+            session.session?.ended == true) {
+          _invalidateRoster();
+          return;
+        }
+        if (roster == null) {
+          _invalidateRoster();
+        } else {
+          _recoveryTimer?.cancel();
+          _rosterSessionIdentity = session.options.sessionSlug;
+          _recoveryDeadline = (now?.call() ?? DateTime.now()).add(
+            recoveryLease,
+          );
+          _setRosterTrust(AdmissionRosterTrust.verified);
+          if (controller.isSynchronizing) _beginRosterRecovery();
+          if (_rosterTrust != AdmissionRosterTrust.expired) {
+            _syncAdmittedIdentities(roster.members);
+          }
+        }
       });
     }
     setState(() {});
@@ -579,8 +784,44 @@ class SessionAdmissionService extends ChangeNotifier {
     }
   }
 
+  void _beginRosterRecovery() {
+    final deadline = _recoveryDeadline;
+    if (deadline == null || _rosterTrust == AdmissionRosterTrust.expired) {
+      return;
+    }
+    _recoveryTimer?.cancel();
+    final remaining = deadline.difference(now?.call() ?? DateTime.now());
+    if (remaining <= Duration.zero) {
+      _expireRoster();
+      return;
+    }
+    _setRosterTrust(AdmissionRosterTrust.recovering);
+    _recoveryTimer = Timer(remaining, _expireRoster);
+  }
+
+  void _expireRoster() {
+    _recoveryTimer?.cancel();
+    _recoveryTimer = null;
+    _rosterTrust = AdmissionRosterTrust.expired;
+    _recoveryDeadline = null;
+    _syncAdmittedIdentities(const []);
+    _clientController?.requestSynchronization();
+  }
+
+  void _invalidateRoster() {
+    _recoveryTimer?.cancel();
+    _recoveryTimer = null;
+    _recoveryDeadline = null;
+    _rosterSessionIdentity = null;
+    if (_rosterTrust != AdmissionRosterTrust.unverified) {
+      _setRosterTrust(AdmissionRosterTrust.invalidated);
+    }
+    _syncAdmittedIdentities(const []);
+  }
+
   void _syncAdmittedIdentities(Iterable<String> identities) {
     if (!mounted) return;
+    _keeperController?.setQuarantinedIdentities(_unresolvedRevocations);
     final roster = Set<String>.unmodifiable(
       identities.where(
         (id) =>
@@ -599,6 +840,7 @@ class SessionAdmissionService extends ChangeNotifier {
     bool endSession = false,
   }) async {
     _detaching = true;
+    _invalidateUnbanReservations();
     final persistence = _persistence;
     final persist = _saveKeeperRoster;
     final clearRoster = _clearKeeperRoster;
@@ -608,6 +850,7 @@ class SessionAdmissionService extends ChangeNotifier {
     final transport = _transport;
     final keeperChanges = _keeperChanges;
     final clientChanges = _clientChanges;
+    final clientSynchronizationChanges = _clientSynchronizationChanges;
     final hasFinalRosterWrite = endSession
         ? clearRoster != null
         : persist != null;
@@ -639,7 +882,12 @@ class SessionAdmissionService extends ChangeNotifier {
     try {
       // Quiesce service observers and event routing before capturing final state.
       if (keeperChanges != null) await attempt(keeperChanges.cancel);
+
       if (clientChanges != null) await attempt(clientChanges.cancel);
+      if (clientSynchronizationChanges != null) {
+        await attempt(clientSynchronizationChanges.cancel);
+      }
+
       while (_operations.isNotEmpty) {
         await attempt(() async {
           await Future.wait(_operations.toList());
@@ -650,6 +898,7 @@ class SessionAdmissionService extends ChangeNotifier {
           await Future.wait(_journalOperations.toList());
         });
       }
+      if (keeperController != null) await attempt(keeperController.dispose);
       while (_rosterWrites.isNotEmpty) {
         final results = await Future.wait(_rosterWrites.toList());
         if (results.contains(false) && _storageFailure != null) {
@@ -697,11 +946,13 @@ class SessionAdmissionService extends ChangeNotifier {
       _clientController = null;
       _keeperChanges = null;
       _clientChanges = null;
+      _clientSynchronizationChanges = null;
       _keeperIdentity = null;
+      _attachmentSessionIdentity = null;
       _busy = false;
-      if (clearAdmitted) _syncAdmittedIdentities(const []);
-      if (keeperController != null) await attempt(keeperController.dispose);
+      if (clearAdmitted) _invalidateRoster();
       if (clientController != null) await attempt(clientController.dispose);
+
       if (disposeChannel) {
         _transport = null;
         _room = null;
@@ -869,7 +1120,8 @@ class SessionAdmissionService extends ChangeNotifier {
     }
     final keeper = _keeperIdentity!;
     final store = _attachedKeeperRoster!;
-    final persist = _saveKeeperRoster!;
+    final controller = _keeperController!;
+    await controller.pendingRosterWrites;
     final preferences = await ref.read(
       sessionAdmissionPreferencesProvider.future,
     );
@@ -886,13 +1138,44 @@ class SessionAdmissionService extends ChangeNotifier {
       if (records.isNotEmpty &&
           !await preferences.setString(
             _revocationKey(keeper),
-            jsonEncode(records),
+            _encodeRevocations(records),
           )) {
         throw StateError(
           'Could not save removal reconciliation. Retry recovery.',
         );
       }
-      await _recoverRevocations(keeper, store, persist, serialized: true);
+      if (!identical(_keeperController, controller) ||
+          !identical(_attachedKeeperRoster, store)) {
+        throw StateError('Keeper changed during admission recovery');
+      }
+      // A live controller owns its revision. Recovery must not mutate its store
+      // behind it or a subsequent controller save could roll back the revision.
+      for (final entry in records.entries) {
+        if (entry.value == 'committed' && !store.revoked.contains(entry.key)) {
+          controller.revoke(entry.key, persist: false);
+        }
+      }
+      await controller.retryRosterPersistence();
+      records
+        ..removeWhere((_, status) => status != 'intent')
+        ..roster = null;
+      final saved = records.isEmpty
+          ? await preferences.remove(_revocationKey(keeper))
+          : await preferences.setString(
+              _revocationKey(keeper),
+              _encodeRevocations(records),
+            );
+      if (!saved) {
+        throw StateError('Could not clear admission recovery journal');
+      }
+      _pendingRevocations
+        ..clear()
+        ..addAll(records.keys);
+      _unresolvedRevocations
+        ..clear()
+        ..addAll(records.keys);
+      _committedRevocations.clear();
+      _rejectedRevocations.clear();
       if (mounted && _keeperIdentity == keeper) {
         if (_pendingRevocations.isEmpty) {
           _recoveryUnavailable = false;
@@ -973,9 +1256,10 @@ class SessionAdmissionService extends ChangeNotifier {
         if (!records.containsKey(identity)) {
           throw StateError('No durable removal recovery record');
         }
+        _restoreJournalRoster(records, store, keeper);
         if (backendRemoved) {
           records[identity] = 'committed';
-          if (!await preferences.setString(key, jsonEncode(records))) {
+          if (!await preferences.setString(key, _encodeRevocations(records))) {
             throw StateError(message);
           }
           store.revoked.add(identity);
@@ -989,14 +1273,14 @@ class SessionAdmissionService extends ChangeNotifier {
           await roster.persistStore(store);
         } else {
           records[identity] = 'rejected';
-          if (!await preferences.setString(key, jsonEncode(records))) {
+          if (!await preferences.setString(key, _encodeRevocations(records))) {
             throw StateError(message);
           }
         }
         records.remove(identity);
         final saved = records.isEmpty
             ? await preferences.remove(key)
-            : await preferences.setString(key, jsonEncode(records));
+            : await preferences.setString(key, _encodeRevocations(records));
         if (!saved) throw StateError(message);
       }),
       () => mounted && _revocationKeeper == keeper,
@@ -1046,16 +1330,77 @@ class SessionAdmissionService extends ChangeNotifier {
   String _revocationKey(String keeper) =>
       'session_admission_revocations:${jsonEncode([session.options.sessionSlug, keeper])}';
 
-  Map<String, String> _readRevocations(String? saved) {
-    if (saved == null) return {};
+  String _encodeRevocations(Map<String, String> records) {
+    final roster = records is _RevocationJournal ? records.roster : null;
+    return jsonEncode(
+      roster == null
+          ? Map<String, String>.of(records)
+          : {
+              'version': 1,
+              'records': Map<String, String>.of(records),
+              'roster': roster,
+            },
+    );
+  }
+
+  Map<String, Object?> _captureRoster(KeeperAdmissionRosterStore store) => {
+    'generation': store.keeperGeneration,
+    'revision': store.revision,
+    'members': store.members.toList()..sort(),
+    'awaitingReadiness': store.awaitingReadiness.toList()..sort(),
+    'revoked': store.revoked.toList()..sort(),
+  };
+
+  Map<String, Object?> _readJournalRoster(Object? value) {
+    if (value is! Map<String, dynamic> ||
+        value['generation'] is! String ||
+        (value['generation'] as String).trim().isEmpty ||
+        value['revision'] is! int ||
+        (value['revision'] as int) < 0 ||
+        (value['revision'] as int) > 9007199254740991) {
+      throw const FormatException('Invalid journal roster');
+    }
+    final lists = <String, List<String>>{};
+    for (final name in ['members', 'awaitingReadiness', 'revoked']) {
+      final members = value[name];
+      if (members is! List ||
+          members.any(
+            (id) => id is! String || id.trim().isEmpty || id.length > 256,
+          ) ||
+          members.toSet().length != members.length) {
+        throw const FormatException('Invalid journal roster members');
+      }
+      lists[name] = members.cast<String>().toList();
+    }
+    if (!lists['members']!.toSet().containsAll(lists['awaitingReadiness']!)) {
+      throw const FormatException('Invalid journal readiness');
+    }
+    return {
+      'generation': value['generation'],
+      'revision': value['revision'],
+      ...lists,
+    };
+  }
+
+  _RevocationJournal _readRevocations(String? saved) {
+    if (saved == null) return _RevocationJournal();
     try {
-      final decoded = jsonDecode(saved);
+      var decoded = jsonDecode(saved);
       // Compatibility with the previous post-commit journal format.
       if (decoded is List && decoded.every((value) => value is String)) {
-        return {for (final id in decoded.cast<String>()) id: 'committed'};
+        return _RevocationJournal({
+          for (final id in decoded.cast<String>()) id: 'committed',
+        });
+      }
+      Map<String, Object?>? roster;
+      if (decoded is Map &&
+          decoded['version'] == 1 &&
+          decoded['records'] is Map) {
+        roster = _readJournalRoster(decoded['roster']);
+        decoded = decoded['records'];
       }
       if (decoded is! Map) throw const FormatException('Invalid journal shape');
-      final records = <String, String>{};
+      final records = _RevocationJournal()..roster = roster;
       for (final entry in decoded.entries) {
         if (entry.key is! String || entry.value is! String) {
           throw const FormatException('Invalid journal entry');
@@ -1156,7 +1501,7 @@ class SessionAdmissionService extends ChangeNotifier {
           );
         }
         records[identity] = 'intent';
-        if (!await preferences.setString(key, jsonEncode(records))) {
+        if (!await preferences.setString(key, _encodeRevocations(records))) {
           throw StateError(
             'Could not prepare removal recovery. Participant has not been removed.',
           );
@@ -1177,7 +1522,7 @@ class SessionAdmissionService extends ChangeNotifier {
         _serializeJournal(() async {
           final journal = _readRevocations(preferences.getString(key));
           journal[identity] = 'rejected';
-          if (!await preferences.setString(key, jsonEncode(journal))) {
+          if (!await preferences.setString(key, _encodeRevocations(journal))) {
             throw StateError(
               'Participant was not removed, but recovery cleanup failed. Verify status before reconciling.',
             );
@@ -1186,7 +1531,7 @@ class SessionAdmissionService extends ChangeNotifier {
             ..remove(identity);
           final saved = records.isEmpty
               ? await preferences.remove(key)
-              : await preferences.setString(key, jsonEncode(records));
+              : await preferences.setString(key, _encodeRevocations(records));
           if (!saved) {
             throw StateError(
               'Backend rejected removal, but clearing its recovery intent failed. Verify status before reconciling recovery.',
@@ -1229,27 +1574,39 @@ class SessionAdmissionService extends ChangeNotifier {
         _pendingRevocations.add(identity);
         _committedRevocations.add(identity);
         if (current()) {
-          _keeperController!.revoke(identity);
+          _keeperController!.revoke(identity, persist: false);
           _syncAdmittedIdentities(_keeperController!.roster);
         } else {
           _syncAdmittedIdentities(_admittedIdentities);
         }
       }
+      final snapshot = _captureRoster(store);
       return _removalPersistence(
         _serializeJournal(() async {
           final records = _readRevocations(preferences.getString(key));
           records[identity] = 'committed';
-          if (!await preferences.setString(key, jsonEncode(records))) {
+          records.roster = snapshot;
+          if (!await preferences.setString(key, _encodeRevocations(records))) {
             throw StateError(
               'Participant removed; recovery persistence incomplete. Retry admission recovery, not removal.',
             );
+          }
+          if (current()) {
+            _keeperController!.acknowledgeJournaledRoster(
+              keeperGeneration: snapshot['generation']! as String,
+              revision: snapshot['revision']! as int,
+              members: snapshot['members']! as List<String>,
+              awaitingReadiness: snapshot['awaitingReadiness']! as List<String>,
+              revoked: snapshot['revoked']! as List<String>,
+            );
+            _syncAdmittedIdentities(_keeperController!.roster);
           }
           // Always persist, even when an earlier failed write already changed the store.
           await persist();
           records.remove(identity);
           final saved = records.isEmpty
               ? await preferences.remove(key)
-              : await preferences.setString(key, jsonEncode(records));
+              : await preferences.setString(key, _encodeRevocations(records));
           if (!saved) {
             throw StateError(
               'Participant removed; recovery cleanup incomplete. Retry admission recovery, not removal.',
@@ -1312,6 +1669,51 @@ class SessionAdmissionService extends ChangeNotifier {
     }
   }
 
+  void _restoreJournalRoster(
+    _RevocationJournal records,
+    KeeperAdmissionRosterStore store,
+    String keeper,
+  ) {
+    final journalRoster = records.roster;
+    if (journalRoster != null) {
+      final generation = journalRoster['generation']! as String;
+      if (store.keeperGeneration != generation) {
+        if (_keeperController != null) {
+          throw StateError('Journal authority does not match active Keeper');
+        }
+        store.restoreJournalGeneration(generation);
+      }
+      final revision = journalRoster['revision']! as int;
+      if (revision >= store.revision) {
+        final members = journalRoster['members']! as List<String>;
+        final revoked = journalRoster['revoked']! as List<String>;
+        if (revision == store.revision &&
+            (!setEquals(members.toSet(), store.members.toSet()) ||
+                !setEquals(revoked.toSet(), store.revoked) ||
+                !setEquals(
+                  (journalRoster['awaitingReadiness']! as List<String>).toSet(),
+                  store.awaitingReadiness.toSet(),
+                ))) {
+          throw StateError('Conflicting committed roster snapshots');
+        }
+        if (members.contains(keeper) ||
+            revoked.contains(keeper) ||
+            members.any(revoked.contains)) {
+          throw const FormatException('Unsafe journal roster');
+        }
+        store.revoked
+          ..clear()
+          ..addAll(revoked);
+        store.replace(
+          members,
+          revision,
+          awaitingReadiness:
+              journalRoster['awaitingReadiness']! as List<String>,
+        );
+      }
+    }
+  }
+
   Future<void> _recoverRevocations(
     String keeper,
     KeeperAdmissionRosterStore store,
@@ -1329,6 +1731,7 @@ class SessionAdmissionService extends ChangeNotifier {
     );
     final key = _revocationKey(keeper);
     final records = _readRevocations(preferences.getString(key));
+    _restoreJournalRoster(records, store, keeper);
     if (!mounted || session.admissionState.roomState.keeper != keeper) {
       throw StateError('Keeper changed during removal recovery');
     }
@@ -1340,7 +1743,7 @@ class SessionAdmissionService extends ChangeNotifier {
         records[identity] = 'rejected';
       }
       if (records.isNotEmpty &&
-          !await preferences.setString(key, jsonEncode(records))) {
+          !await preferences.setString(key, _encodeRevocations(records))) {
         throw StateError(
           'Could not save known removal outcomes. Retry recovery.',
         );
@@ -1369,14 +1772,19 @@ class SessionAdmissionService extends ChangeNotifier {
       return;
     }
     final committed = _committedRevocations.toSet();
-    store.revoked.addAll(committed);
-    store.replace(
-      store.members.where((id) => !committed.contains(id)).toList(),
-      store.revision + 1,
-      awaitingReadiness: store.awaitingReadiness
-          .where((id) => !committed.contains(id))
-          .toList(),
-    );
+    final needsRestriction =
+        store.members.any(committed.contains) ||
+        !store.revoked.containsAll(committed);
+    if (needsRestriction) {
+      store.revoked.addAll(committed);
+      store.replace(
+        store.members.where((id) => !committed.contains(id)).toList(),
+        store.revision + 1,
+        awaitingReadiness: store.awaitingReadiness
+            .where((id) => !committed.contains(id))
+            .toList(),
+      );
+    }
     // Never infer successful persistence from equality with a mutated in-memory store.
     await persist();
     final remaining = Map<String, String>.of(records)
@@ -1385,7 +1793,7 @@ class SessionAdmissionService extends ChangeNotifier {
       );
     final saved = remaining.isEmpty
         ? await preferences.remove(key)
-        : await preferences.setString(key, jsonEncode(remaining));
+        : await preferences.setString(key, _encodeRevocations(remaining));
     if (!saved) {
       throw StateError(
         'Could not reconcile removed participants. Retry recovery.',
@@ -1419,8 +1827,72 @@ class SessionAdmissionService extends ChangeNotifier {
     }
   }
 
-  /// Standalone revocation uses the same durable protocol as moderation.
+  Future<RoomState> withRevokedAdmission(
+    String identity,
+    Future<RoomState> Function() operation,
+  ) async {
+    final reservation = await reserveUnban(identity);
+    try {
+      return await reservation.run(operation);
+    } finally {
+      reservation.cancel();
+    }
+  }
+
+  /// Durably revokes admission and reserves it against approval during unban.
+  /// The caller must run the unmodified backend future or cancel the reservation.
+  Future<AdmissionUnbanReservation> reserveUnban(String identity) async {
+    requireRemovalReady();
+    if (identity.trim().isEmpty || identity == _keeperIdentity) {
+      throw StateError('Cannot remove Keeper or empty identity');
+    }
+    final controller = _keeperController!;
+    final keeper = _keeperIdentity!;
+    final scope = session.options.sessionSlug;
+    final guardToken = AdmissionApprovalGuard.reserve(scope, identity);
+    void validate() {
+      requireRemovalReady();
+      if (!identical(_keeperController, controller) ||
+          _keeperIdentity != keeper ||
+          _currentKeeperIdentity() != keeper ||
+          !identical(_owners[_ownedScope], this)) {
+        throw StateError('Admission ownership changed before unban');
+      }
+    }
+
+    try {
+      await revokeRemovedParticipant(identity);
+      validate();
+      late final AdmissionUnbanReservation reservation;
+      reservation = AdmissionUnbanReservation._(
+        _reservationOwner,
+        () => AdmissionApprovalGuard.release(scope, identity, guardToken),
+        validate,
+        () => _unbanReservations.remove(reservation),
+      );
+      _unbanReservations.add(reservation);
+      return reservation;
+    } catch (_) {
+      AdmissionApprovalGuard.release(scope, identity, guardToken);
+      rethrow;
+    }
+  }
+
+  /// Ensures a removed participant's admission is durably revoked.
   Future<void> revokeRemovedParticipant(String identity) async {
+    requireRemovalReady();
+    if (identity.trim().isEmpty || identity == _keeperIdentity) {
+      throw StateError('Cannot remove Keeper or empty identity');
+    }
+    if (_attachedKeeperRoster!.revoked.contains(identity)) {
+      if (!await _persistRoster(_saveKeeperRoster!)) {
+        throw StateError(
+          'Could not persist admission revocation. Retry recovery.',
+        );
+      }
+      requireRemovalReady();
+      return;
+    }
     final removal = await prepareRemoval(identity);
     await removal.commit();
   }

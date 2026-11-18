@@ -30,6 +30,7 @@ abstract final class AdmissionProtocol {
         AdmissionRosterRequest() => 'roster.request',
         AdmissionRosterSnapshot() => 'roster.snapshot',
         AdmissionRosterUpdated() => 'roster.updated',
+        AdmissionRosterAck() => 'roster.ack',
       },
       'id': packet.id,
       'from': packet.senderIdentity,
@@ -57,6 +58,15 @@ abstract final class AdmissionProtocol {
         'revision': revision,
         'members': members,
         'requestId': ?requestId,
+      },
+      if (packet case AdmissionRosterAck(
+        :final sessionIdentity,
+        :final keeperGeneration,
+        :final revision,
+      )) ...{
+        'session': sessionIdentity,
+        'generation': keeperGeneration,
+        'revision': revision,
       },
       if (packet case AdmissionRosterUpdated(
         :final sessionIdentity,
@@ -227,6 +237,26 @@ abstract final class AdmissionProtocol {
       }
       final generation = value['generation'];
       final revision = value['revision'];
+      if (value['kind'] == 'roster.ack') {
+        if (generation is! String ||
+            generation.isEmpty ||
+            generation.length > 128 ||
+            revision is! int ||
+            revision < 0 ||
+            value.containsKey('members') ||
+            value.containsKey('requestId')) {
+          return null;
+        }
+        return AdmissionRosterAck(
+          id: id,
+          senderIdentity: from as String,
+          recipientIdentity: to,
+          expiresAt: expiration,
+          sessionIdentity: session,
+          keeperGeneration: generation,
+          revision: revision,
+        );
+      }
       final members = value['members'];
       if ((value['kind'] != 'roster.snapshot' &&
               value['kind'] != 'roster.updated') ||
@@ -379,6 +409,23 @@ final class AdmissionRosterRequest extends AdmissionPacket {
   final String sessionIdentity;
 }
 
+/// Acknowledges an applied roster revision to the Keeper.
+final class AdmissionRosterAck extends AdmissionPacket {
+  const AdmissionRosterAck({
+    required super.id,
+    required super.senderIdentity,
+    required super.recipientIdentity,
+    required super.expiresAt,
+    required this.sessionIdentity,
+    required this.keeperGeneration,
+    required this.revision,
+  });
+
+  final String sessionIdentity;
+  final String keeperGeneration;
+  final int revision;
+}
+
 sealed class AdmissionRosterPacket extends AdmissionPacket {
   const AdmissionRosterPacket({
     required super.id,
@@ -415,7 +462,7 @@ final class AdmissionRosterSnapshot extends AdmissionRosterPacket {
   final String? requestId;
 }
 
-/// An authoritative replacement roster at the next keeper revision.
+/// An authoritative full replacement roster at a keeper revision.
 final class AdmissionRosterUpdated extends AdmissionRosterPacket {
   const AdmissionRosterUpdated({
     required super.id,

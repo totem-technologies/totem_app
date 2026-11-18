@@ -28,6 +28,7 @@ class SessionModerationService {
     required this.transport,
     required this.applyState,
     required this.prepareRemoval,
+    required this.withRevokedAdmission,
     required this.markRemoved,
     required this.leave,
     required this.onError,
@@ -40,6 +41,11 @@ class SessionModerationService {
   final void Function(RoomState) applyState;
   final Future<PreparedAdmissionRemoval> Function(String identity)
   prepareRemoval;
+  final Future<RoomState> Function(
+    String identity,
+    Future<RoomState> Function() operation,
+  )
+  withRevokedAdmission;
   final void Function(RemoveReason) markRemoved;
   final Future<void> Function() leave;
   final void Function(Object, StackTrace) onError;
@@ -149,12 +155,17 @@ class SessionModerationService {
   Future<void> unbanParticipant(String identity) =>
       _commands.run((current) async {
         _requireKeeper();
-        _commit(
-          await backend
-              .unban(state().roomState.version, identity)
-              .timeout(const Duration(seconds: 20)),
-          current,
-        );
+        final response = await withRevokedAdmission(identity, () {
+          if (!current()) {
+            throw SessionCommandException(
+              SessionCommandFailureKind.superseded,
+              'This connection ended before unban',
+            );
+          }
+          _requireKeeper();
+          return backend.unban(state().roomState.version, identity);
+        }).timeout(const Duration(seconds: 20));
+        _commit(response, current);
       });
   Future<void> muteParticipant(String identity) => _commands.run((_) async {
     _requireKeeper();

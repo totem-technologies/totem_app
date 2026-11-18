@@ -75,6 +75,8 @@ class SessionAdmissionChannel implements AdmissionChannel {
         if (state == SessionTransportConnectionState.connected) {
           _metadata(connection.metadata);
           if (!_ended) _emit(const AdmissionConnectionRestored());
+        } else if (state == SessionTransportConnectionState.reconnecting) {
+          if (!_ended) _emit(const AdmissionConnectionInterrupted());
         } else if (state == SessionTransportConnectionState.disconnected) {
           _receipts.stop();
           if (!_ended) _emit(AdmissionRoomDisconnected(reason));

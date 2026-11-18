@@ -197,6 +197,68 @@ class _Channel implements AdmissionChannel {
   Future<void> dispose() => controller.close();
 }
 
+class _RosterRetryHarness {
+  _RosterRetryHarness(this.async) {
+    final clock = async.getClock(DateTime.utc(2026));
+    now = clock.now;
+    channel = _Channel('guest', now: now)..present.add('keeper');
+    client = _clientAdmissionRosterController(
+      channel: channel,
+      keeperIdentity: () => keeper,
+      sessionIdentity: 'session',
+      now: now,
+      newId: () => 'request-${++nextId}',
+    );
+    async.flushMicrotasks();
+  }
+
+  final FakeAsync async;
+  late final DateTime Function() now;
+  late final _Channel channel;
+  late final ClientAdmissionRosterController client;
+  String keeper = 'keeper';
+  int nextId = 0;
+
+  List<AdmissionRosterRequest> get requests =>
+      channel.sent.whereType<AdmissionRosterRequest>().toList();
+
+  Duration waitForRequest(int count) {
+    var elapsed = Duration.zero;
+    while (requests.length < count && elapsed < const Duration(minutes: 5)) {
+      const step = Duration(milliseconds: 100);
+      async.elapse(step);
+      elapsed += step;
+    }
+    check(requests.length).equals(count);
+    return elapsed;
+  }
+
+  void snapshot(AdmissionRosterRequest request, {String? sender}) {
+    channel.controller.add(
+      AdmissionPacketReceived(
+        AdmissionRosterSnapshot(
+          id: 'snapshot-${request.id}',
+          requestId: request.id,
+          senderIdentity: sender ?? request.recipientIdentity,
+          recipientIdentity: 'guest',
+          expiresAt: now().add(const Duration(minutes: 1)),
+          sessionIdentity: 'session',
+          keeperGeneration: 'generation',
+          revision: 1,
+          members: const ['guest'],
+        ),
+      ),
+    );
+    async.flushMicrotasks();
+  }
+
+  void close() {
+    unawaited(client.dispose());
+    unawaited(channel.dispose());
+    async.flushMicrotasks();
+  }
+}
+
 String _roomMetadata(String status) => jsonEncode({
   'session_slug': 'session',
   'version': 1,
@@ -782,13 +844,16 @@ void main() {
     });
     await room.listener.trigger(const RoomReconnectingEvent());
     await room.listener.trigger(const RoomResumingEvent());
-    check(received).isEmpty();
+    check(
+      received.whereType<AdmissionConnectionInterrupted>(),
+    ).length.equals(2);
+    check(received.whereType<AdmissionRoomDisconnected>()).isEmpty();
     await room.listener.trigger(const RoomReconnectedEvent());
-    check(received.single).isA<AdmissionConnectionRestored>();
+    check(received.last).isA<AdmissionConnectionRestored>();
     await room.listener.trigger(
       RoomDisconnectedEvent(reason: DisconnectReason.reconnectAttemptsExceeded),
     );
-    check(received).length.equals(2);
+    check(received).length.equals(4);
     check(
       (received.last as AdmissionRoomDisconnected).reason,
     ).equals(SessionTransportDisconnectReason.reconnectAttemptsExceeded);
@@ -1943,14 +2008,49 @@ void main() {
     channel.controller.add(AdmissionPacketReceived(fresh));
     check(keeper.requests.single.id).equals('fresh');
     await keeper.approve('fresh', 'guest');
+    check(store.revoked.contains('guest')).isFalse();
+    check(store.revision).equals(6);
     channel.controller.add(
       AdmissionPacketReceived(AdmissionProtocol.joined(fresh)),
     );
     check(keeper.roster).deepEquals(['friend', 'guest']);
   });
 
+  test('unban reservation rejects an approval already in flight', () async {
+    final channel = _Channel('keeper');
+    final keeper = _keeperAdmissionController(
+      channel: channel,
+      keeperIdentity: () => 'keeper',
+      sessionIdentity: 'reservation-in-flight',
+    );
+    final gate = Completer<void>();
+    addTearDown(() async {
+      if (!gate.isCompleted) gate.complete();
+      await keeper.dispose();
+      await channel.dispose();
+    });
+    channel.beforeSend = (packet) =>
+        packet is AdmissionDecision ? gate.future : Future.value();
+    final request = AdmissionRequest(
+      id: 'pending',
+      senderIdentity: 'guest',
+      recipientIdentity: 'keeper',
+      expiresAt: _fixedNow.add(const Duration(minutes: 1)),
+      displayName: 'Guest',
+    );
+    channel.controller.add(AdmissionPacketReceived(request));
+    final approval = keeper.approve(request.id, 'guest');
+    check(
+      () => AdmissionApprovalGuard.reserve('reservation-in-flight', 'guest'),
+    ).throws<StateError>();
+    gate.complete();
+    await approval;
+    AdmissionApprovalGuard.reserve('reservation-in-flight', 'guest');
+    AdmissionApprovalGuard.release('reservation-in-flight', 'guest');
+  });
+
   test(
-    'revocation isolates overlapping approvals and permits automatic readmission',
+    'revocation isolates overlapping approvals and requires explicit readmission',
     () async {
       final channel = _Channel('keeper');
       final keeper = _keeperAdmissionController(
@@ -1989,17 +2089,26 @@ void main() {
         ..revoke('guest')
         ..setApprovalRequired(false);
       channel.controller.add(AdmissionPacketReceived(fresh));
-      channel.controller.add(
-        AdmissionPacketReceived(AdmissionProtocol.joined(fresh)),
-      );
+      await pumpEventQueue();
+      check(keeper.approvalRequired).isFalse();
+      check(keeper.requests.single.id).equals('fresh');
+      check(
+        channel.sent.whereType<AdmissionDecision>().where(
+          (d) => d.id == 'fresh',
+        ),
+      ).isEmpty();
       oldGate.complete();
       await check(oldApproval).throws<StateError>();
       channel.controller.add(
         AdmissionPacketReceived(AdmissionProtocol.joined(old)),
       );
       check(keeper.roster).isEmpty();
+      final freshApproval = keeper.approve('fresh', 'guest');
       freshGate.complete();
-      await pumpEventQueue();
+      await freshApproval;
+      channel.controller.add(
+        AdmissionPacketReceived(AdmissionProtocol.joined(fresh)),
+      );
       check(keeper.roster).deepEquals(['guest']);
       check(keeper.attempts.single.status).equals(KeeperAdmissionStatus.joined);
     },
@@ -2825,7 +2934,7 @@ void main() {
             expiresAt: expiry,
             sessionIdentity: 'session',
             keeperGeneration: 'generation-1',
-            revision: 1,
+            revision: 8,
             members: const ['guest'],
           ),
         ),
@@ -2840,13 +2949,16 @@ void main() {
             expiresAt: expiry,
             sessionIdentity: 'session',
             keeperGeneration: 'generation-1',
-            revision: 1,
+            revision: 8,
             members: const ['guest'],
           ),
         ),
       );
-      check(channel.sent).length.equals(1);
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(1);
 
+      final changes = <AdmissionRoster?>[];
+      final subscription = client.changes.listen(changes.add);
+      addTearDown(subscription.cancel);
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionRosterUpdated(
@@ -2856,13 +2968,15 @@ void main() {
             expiresAt: expiry,
             sessionIdentity: 'session',
             keeperGeneration: 'generation-1',
-            revision: 3,
+            revision: 11,
             members: const ['guest', 'other'],
           ),
         ),
       );
-      check(client.hasAuthoritativeRoster).isFalse();
-      check(channel.sent).length.equals(2);
+      check(client.roster!.revision).equals(11);
+      check(client.contains('guest')).isTrue();
+      check(client.contains('other')).isTrue();
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(1);
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionRosterUpdated(
@@ -2872,8 +2986,8 @@ void main() {
             expiresAt: expiry,
             sessionIdentity: 'session',
             keeperGeneration: 'generation-1',
-            revision: 3,
-            members: const ['guest', 'other'],
+            revision: 11,
+            members: const ['guest'],
           ),
         ),
       );
@@ -2892,14 +3006,62 @@ void main() {
           ),
         ),
       );
-      check(channel.sent).length.equals(2);
-      check(client.hasAuthoritativeRoster).isFalse();
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRosterUpdated(
+            id: 'stale-revision-10',
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: expiry,
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation-1',
+            revision: 10,
+            members: const ['guest'],
+          ),
+        ),
+      );
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(1);
+      check(client.roster!.revision).equals(11);
+      check(client.roster!.members).deepEquals(['guest', 'other']);
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRosterUpdated(
+            id: 'removal-revision-12',
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: expiry,
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation-1',
+            revision: 12,
+            members: const ['guest'],
+          ),
+        ),
+      );
+      check(client.roster!.revision).equals(12);
+      check(client.roster!.members).deepEquals(['guest']);
+      await pumpEventQueue();
+      check(changes.where((roster) => roster == null)).isEmpty();
 
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRosterUpdated(
+            id: 'new-generation',
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: expiry,
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation-2',
+            revision: 4,
+            members: const ['guest', 'other'],
+          ),
+        ),
+      );
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionRosterSnapshot(
             id: 'snapshot-2',
-            requestId: 'request-2',
+            requestId: channel.sent.whereType<AdmissionRosterRequest>().last.id,
             senderIdentity: 'keeper',
             recipientIdentity: 'guest',
             expiresAt: expiry,
@@ -2912,6 +3074,7 @@ void main() {
       );
       check(client.roster?.keeperGeneration).equals('generation-2');
       check(client.contains('other')).isTrue();
+      await pumpEventQueue();
 
       channel.controller.add(
         AdmissionPacketReceived(
@@ -2928,12 +3091,12 @@ void main() {
         ),
       );
       check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(3);
-      check(client.contains('other')).isTrue();
+      check(client.roster).isNull();
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionRosterSnapshot(
             id: 'snapshot-3',
-            requestId: 'request-3',
+            requestId: channel.sent.whereType<AdmissionRosterRequest>().last.id,
             senderIdentity: 'keeper',
             recipientIdentity: 'guest',
             expiresAt: expiry,
@@ -2946,6 +3109,248 @@ void main() {
       );
       check(client.roster?.keeperGeneration).equals('generation-3');
       check(client.contains('other')).isFalse();
+    },
+  );
+
+  test(
+    'roster updates validate packets and beat an older pending snapshot',
+    () async {
+      final channel = _Channel('guest')..present.add('keeper');
+      var nextId = 0;
+      final client = _clientAdmissionRosterController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+        sessionIdentity: 'session',
+        newId: () => 'request-${++nextId}',
+      );
+      addTearDown(() async {
+        await client.dispose();
+        await channel.dispose();
+      });
+      final expiry = _fixedNow.add(const Duration(minutes: 1));
+      void snapshot(int revision, List<String> members, String requestId) {
+        channel.controller.add(
+          AdmissionPacketReceived(
+            AdmissionRosterSnapshot(
+              id: 'snapshot-$revision',
+              requestId: requestId,
+              senderIdentity: 'keeper',
+              recipientIdentity: 'guest',
+              expiresAt: expiry,
+              sessionIdentity: 'session',
+              keeperGeneration: 'generation',
+              revision: revision,
+              members: members,
+            ),
+          ),
+        );
+      }
+
+      void update({
+        int revision = 11,
+        String sender = 'keeper',
+        String recipient = 'guest',
+        String session = 'session',
+        String generation = 'generation',
+        List<String> members = const ['guest', 'new'],
+        DateTime? expiresAt,
+      }) {
+        channel.controller.add(
+          AdmissionPacketReceived(
+            AdmissionRosterUpdated(
+              id: 'update',
+              senderIdentity: sender,
+              recipientIdentity: recipient,
+              expiresAt: expiresAt ?? expiry,
+              sessionIdentity: session,
+              keeperGeneration: generation,
+              revision: revision,
+              members: members,
+            ),
+          ),
+        );
+      }
+
+      snapshot(8, ['guest', 'old'], 'request-1');
+      update(sender: 'mallory');
+      update(recipient: 'someone-else');
+      update(session: 'other-session');
+      update(generation: '');
+      update(revision: -1);
+      update(members: ['new', 'new']);
+      update(members: ['']);
+      update(expiresAt: _fixedNow);
+      check(client.roster!.revision).equals(8);
+      check(client.roster!.members).deepEquals(['guest', 'old']);
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(1);
+      await pumpEventQueue();
+
+      channel.controller.add(const AdmissionPresenceChanged('keeper', true));
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
+      await pumpEventQueue();
+      update();
+      check(client.roster!.revision).equals(11);
+      check(client.roster!.members).deepEquals(['guest', 'new']);
+      update(revision: 9, members: ['stale']);
+      update(revision: 11, members: ['duplicate']);
+      snapshot(9, [
+        'stale-snapshot',
+      ], channel.sent.whereType<AdmissionRosterRequest>().last.id);
+      check(client.roster!.revision).equals(11);
+      check(client.roster!.members).deepEquals(['guest', 'new']);
+      check(client.isSynchronizing).isTrue();
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(3);
+      snapshot(11, [
+        'guest',
+        'new',
+      ], channel.sent.whereType<AdmissionRosterRequest>().last.id);
+      check(client.isSynchronizing).isFalse();
+      update(revision: 12, members: ['new']);
+      check(client.roster).isNull();
+      check(client.contains('new')).isFalse();
+    },
+  );
+
+  test(
+    'non-admitted client cannot gain members from an unsolicited update',
+    () async {
+      final channel = _Channel('guest')..present.add('keeper');
+      var nextId = 0;
+      final client = _clientAdmissionRosterController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+        sessionIdentity: 'session',
+        newId: () => 'request-${++nextId}',
+      );
+      addTearDown(() async {
+        await client.dispose();
+        await channel.dispose();
+      });
+      final expiry = _fixedNow.add(const Duration(minutes: 1));
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRosterSnapshot(
+            id: 'empty',
+            requestId: 'request-1',
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: expiry,
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation',
+            revision: 8,
+            members: const [],
+          ),
+        ),
+      );
+      check(client.roster!.members).isEmpty();
+      await pumpEventQueue();
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRosterUpdated(
+            id: 'unsolicited',
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: expiry,
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation',
+            revision: 11,
+            members: const ['guest', 'other'],
+          ),
+        ),
+      );
+      check(client.roster!.revision).equals(8);
+      check(client.roster!.members).isEmpty();
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRosterSnapshot(
+            id: 'admitted',
+            requestId: 'request-2',
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: expiry,
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation',
+            revision: 11,
+            members: const ['guest', 'other'],
+          ),
+        ),
+      );
+      check(client.roster!.members).deepEquals(['guest', 'other']);
+    },
+  );
+
+  test(
+    'new keeper with the same generation requires a correlated snapshot',
+    () async {
+      final channel = _Channel('guest')
+        ..present.addAll(['keeper', 'new-keeper']);
+      var keeper = 'keeper';
+      var nextId = 0;
+      final client = _clientAdmissionRosterController(
+        channel: channel,
+        keeperIdentity: () => keeper,
+        sessionIdentity: 'session',
+        newId: () => 'request-${++nextId}',
+      );
+      addTearDown(() async {
+        await client.dispose();
+        await channel.dispose();
+      });
+      final expiry = _fixedNow.add(const Duration(minutes: 1));
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRosterSnapshot(
+            id: 'initial',
+            requestId: 'request-1',
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: expiry,
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation',
+            revision: 8,
+            members: const ['guest'],
+          ),
+        ),
+      );
+      check(client.contains('guest')).isTrue();
+      keeper = 'new-keeper';
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRosterUpdated(
+            id: 'new-keeper-update',
+            senderIdentity: 'new-keeper',
+            recipientIdentity: 'guest',
+            expiresAt: expiry,
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation',
+            revision: 11,
+            members: const ['guest', 'other'],
+          ),
+        ),
+      );
+      check(client.roster).isNull();
+      check(
+        channel.sent.whereType<AdmissionRosterRequest>().last.recipientIdentity,
+      ).equals('new-keeper');
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
+      channel.controller.add(
+        AdmissionPacketReceived(
+          AdmissionRosterSnapshot(
+            id: 'new-keeper-snapshot',
+            requestId: channel.sent.whereType<AdmissionRosterRequest>().last.id,
+            senderIdentity: 'new-keeper',
+            recipientIdentity: 'guest',
+            expiresAt: expiry,
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation',
+            revision: 11,
+            members: const ['guest', 'other'],
+          ),
+        ),
+      );
+      check(client.roster!.revision).equals(11);
+      check(client.roster!.members).deepEquals(['guest', 'other']);
     },
   );
 
@@ -2998,7 +3403,7 @@ void main() {
   );
 
   test(
-    'client resyncs immediately when an update arrives before a lost initial snapshot',
+    'overlapping updates coalesce behind an in-flight roster snapshot',
     () async {
       final channel = _Channel('guest')..present.add('keeper');
       var nextId = 0;
@@ -3023,10 +3428,25 @@ void main() {
         revision: 1,
         members: const ['guest'],
       );
+      final laterUpdate = AdmissionRosterUpdated(
+        id: 'update-later',
+        senderIdentity: 'keeper',
+        recipientIdentity: 'guest',
+        expiresAt: expiry,
+        sessionIdentity: 'session',
+        keeperGeneration: 'generation',
+        revision: 2,
+        members: const ['guest', 'other'],
+      );
+      final changes = <AdmissionRoster?>[];
+      final subscription = client.changes.listen(changes.add);
+      addTearDown(subscription.cancel);
       channel.controller
         ..add(AdmissionPacketReceived(update))
+        ..add(AdmissionPacketReceived(laterUpdate))
         ..add(AdmissionPacketReceived(update));
-      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(1);
+      check(client.roster).isNull();
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionRosterSnapshot(
@@ -3038,11 +3458,15 @@ void main() {
             sessionIdentity: 'session',
             keeperGeneration: 'generation',
             revision: 0,
-            members: const [],
+            members: const ['guest', 'removed'],
           ),
         ),
       );
       check(client.roster).isNull();
+      await pumpEventQueue();
+      check(changes).isEmpty();
+      check(client.isSynchronizing).isTrue();
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
       channel.controller.add(
         AdmissionPacketReceived(
           AdmissionRosterSnapshot(
@@ -3053,61 +3477,340 @@ void main() {
             expiresAt: expiry,
             sessionIdentity: 'session',
             keeperGeneration: 'generation',
-            revision: 1,
-            members: const ['guest'],
+            revision: 2,
+            members: const ['guest', 'other'],
           ),
         ),
       );
-      check(client.contains('guest')).isTrue();
+      check(client.roster!.members).deepEquals(['guest', 'other']);
+      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
     },
   );
 
-  test('unanswered roster request retries once with a new correlation ID', () {
-    fakeAsync((async) {
-      final clock = async.getClock(DateTime.utc(2026));
-      final channel = _Channel('guest', now: clock.now)..present.add('keeper');
-      var nextId = 0;
-      final client = _clientAdmissionRosterController(
-        channel: channel,
-        keeperIdentity: () => 'keeper',
-        sessionIdentity: 'session',
-        now: clock.now,
-        newId: () => 'request-${++nextId}',
-      );
-      async.flushMicrotasks();
-      check(client.roster).isNull();
-      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(1);
+  test(
+    'conflicting unverified generations require a newer correlated snapshot',
+    () {
+      fakeAsync((async) {
+        final h = _RosterRetryHarness(async);
+        final changes = <AdmissionRoster?>[];
+        final subscription = h.client.changes.listen(changes.add);
+        void update(String generation, int revision) {
+          h.channel.controller.add(
+            AdmissionPacketReceived(
+              AdmissionRosterUpdated(
+                id: 'update-$generation',
+                senderIdentity: 'keeper',
+                recipientIdentity: 'guest',
+                expiresAt: h.now().add(const Duration(minutes: 1)),
+                sessionIdentity: 'session',
+                keeperGeneration: generation,
+                revision: revision,
+                members: const ['guest'],
+              ),
+            ),
+          );
+        }
 
-      async
-        ..elapse(const Duration(seconds: 2))
-        ..flushMicrotasks();
-      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
-      async.elapse(const Duration(seconds: 10));
-      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
-      final expiry = clock.now().add(const Duration(minutes: 1));
-      for (final requestId in ['request-1', 'request-2']) {
-        channel.controller.add(
+        void snapshot(
+          AdmissionRosterRequest request,
+          String generation,
+          int revision,
+        ) {
+          h.channel.controller.add(
+            AdmissionPacketReceived(
+              AdmissionRosterSnapshot(
+                id: 'snapshot-$generation',
+                requestId: request.id,
+                senderIdentity: 'keeper',
+                recipientIdentity: 'guest',
+                expiresAt: h.now().add(const Duration(minutes: 1)),
+                sessionIdentity: 'session',
+                keeperGeneration: generation,
+                revision: revision,
+                members: const ['guest', 'other'],
+              ),
+            ),
+          );
+          async.flushMicrotasks();
+        }
+
+        final original = h.requests.single;
+        update('B', 2);
+        update('A', 5);
+        check(h.requests).length.equals(2);
+        snapshot(original, 'A', 5);
+        check(h.client.roster).isNull();
+        check(changes).isEmpty();
+        snapshot(h.requests.last, 'B', 1);
+        check(h.client.roster).isNull();
+        check(h.client.isSynchronizing).isTrue();
+        snapshot(h.requests.last, 'B', 2);
+        check(h.client.roster!.keeperGeneration).equals('B');
+        check(h.client.contains('other')).isTrue();
+        unawaited(subscription.cancel());
+        h.close();
+      });
+    },
+  );
+
+  test(
+    'lost requests and responses retry with backoff until a current snapshot arrives',
+    () {
+      fakeAsync((async) {
+        final h = _RosterRetryHarness(async);
+        // No peer receives the initial request; later requests receive no response.
+        final first = h.requests.single;
+        final firstDelay = h.waitForRequest(2);
+        final secondDelay = h.waitForRequest(3);
+        final thirdDelay = h.waitForRequest(4);
+        check(secondDelay > firstDelay).isTrue();
+        check(thirdDelay > secondDelay).isTrue();
+        check(h.requests.map((request) => request.id).toSet()).length.equals(4);
+        check(h.client.roster).isNull();
+
+        h.snapshot(first);
+        h.snapshot(h.requests[1]);
+        check(h.client.roster).isNull();
+        h.snapshot(h.requests.last);
+        check(h.client.contains('guest')).isTrue();
+        for (var count = 5; count <= 16; count++) {
+          async.elapse(const Duration(seconds: 20));
+          check(h.requests).length.equals(count - 1);
+          h.waitForRequest(count);
+          h.snapshot(h.requests.last);
+          check(h.client.contains('guest')).isTrue();
+        }
+        h.close();
+      });
+    },
+  );
+
+  test(
+    'roster evidence excludes retries and invalidates on generation change',
+    () {
+      fakeAsync((async) {
+        final h = _RosterRetryHarness(async);
+        final changes = <AdmissionRoster?>[];
+        final subscription = h.client.changes.listen(changes.add);
+        h.snapshot(h.requests.single);
+        check(changes).length.equals(1);
+
+        h.channel.controller.add(const AdmissionConnectionRestored());
+        h.waitForRequest(3);
+        check(h.client.contains('guest')).isTrue();
+        check(changes).length.equals(1);
+        final oldRequest = h.requests.last;
+        h.channel.controller.add(
           AdmissionPacketReceived(
-            AdmissionRosterSnapshot(
-              id: 'snapshot-$requestId',
-              requestId: requestId,
+            AdmissionRosterUpdated(
+              id: 'new-generation',
               senderIdentity: 'keeper',
               recipientIdentity: 'guest',
-              expiresAt: expiry,
+              expiresAt: h.now().add(const Duration(minutes: 1)),
               sessionIdentity: 'session',
-              keeperGeneration: 'generation',
-              revision: 1,
+              keeperGeneration: 'new-generation',
+              revision: 2,
               members: const ['guest'],
             ),
           ),
         );
-        check(client.contains('guest')).equals(requestId == 'request-2');
-      }
-      async.elapse(const Duration(seconds: 2));
-      check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
-      unawaited(client.dispose());
-      unawaited(channel.dispose());
+        async.flushMicrotasks();
+        check(h.client.roster).isNull();
+        check(changes.last).isNull();
+        h.channel.controller.add(
+          AdmissionPacketReceived(
+            AdmissionRosterUpdated(
+              id: 'delayed-old-generation',
+              senderIdentity: 'keeper',
+              recipientIdentity: 'guest',
+              expiresAt: h.now().add(const Duration(minutes: 1)),
+              sessionIdentity: 'session',
+              keeperGeneration: 'generation',
+              revision: 99,
+              members: const ['guest', 'removed'],
+            ),
+          ),
+        );
+        h.snapshot(oldRequest);
+        h.snapshot(h.requests.last);
+        check(h.client.roster).isNull();
+        h.channel.controller.add(
+          AdmissionPacketReceived(
+            AdmissionRosterSnapshot(
+              id: 'new-snapshot',
+              requestId: h.requests.last.id,
+              senderIdentity: 'keeper',
+              recipientIdentity: 'guest',
+              expiresAt: h.now().add(const Duration(minutes: 1)),
+              sessionIdentity: 'session',
+              keeperGeneration: 'new-generation',
+              revision: 2,
+              members: const ['guest'],
+            ),
+          ),
+        );
+        async.flushMicrotasks();
+        check(h.client.contains('guest')).isTrue();
+        check(changes).length.equals(3);
+        unawaited(subscription.cancel());
+        h.close();
+      });
+    },
+  );
+
+  test('explicit synchronization coalesces and waits for roster evidence', () {
+    fakeAsync((async) {
+      final h = _RosterRetryHarness(async);
+      final changes = <AdmissionRoster?>[];
+      final subscription = h.client.changes.listen(changes.add);
+      h.client.requestSynchronization();
+      check(h.requests).length.equals(1);
+      h.snapshot(h.requests.single);
+      check(changes).length.equals(1);
+
+      h.client.requestSynchronization();
+      h.client.requestSynchronization();
       async.flushMicrotasks();
+      check(h.requests).length.equals(2);
+      check(h.client.isSynchronizing).isTrue();
+      check(changes).length.equals(1);
+      h.snapshot(h.requests.last);
+      check(changes).length.equals(2);
+      check(h.client.isSynchronizing).isFalse();
+      unawaited(subscription.cancel());
+      h.close();
+    });
+  });
+
+  test('failed sends continue retrying without a recovery event', () {
+    fakeAsync((async) {
+      final h = _RosterRetryHarness(async);
+      h.channel.beforeSend = (_) async => throw StateError('offline');
+      h
+        ..waitForRequest(2)
+        ..waitForRequest(3);
+      h.channel.beforeSend = null;
+      h.waitForRequest(4);
+      h.snapshot(h.requests.last);
+      check(h.client.contains('guest')).isTrue();
+      async.elapse(const Duration(seconds: 20));
+      check(h.requests).length.equals(4);
+      h.close();
+    });
+  });
+
+  for (final signal in ['presence', 'connection', 'hello']) {
+    test('roster retries recover on $signal after a failed send', () {
+      fakeAsync((async) {
+        final h = _RosterRetryHarness(async);
+        h.channel.beforeSend = (_) async => throw StateError('offline');
+        h.waitForRequest(2);
+        async.flushMicrotasks();
+        h.channel.beforeSend = null;
+        switch (signal) {
+          case 'presence':
+            h.channel.controller.add(
+              const AdmissionPresenceChanged('keeper', true),
+            );
+          case 'connection':
+            h.channel.controller.add(const AdmissionConnectionRestored());
+          case 'hello':
+            h.channel.controller.add(
+              AdmissionPacketReceived(
+                AdmissionHello(
+                  id: 'hello',
+                  senderIdentity: 'keeper',
+                  recipientIdentity: 'guest',
+                  expiresAt: h.now().add(const Duration(minutes: 1)),
+                ),
+              ),
+            );
+        }
+        async.flushMicrotasks();
+        check(h.requests).length.equals(3);
+        h.snapshot(h.requests.last);
+        check(h.client.contains('guest')).isTrue();
+        async.elapse(const Duration(seconds: 20));
+        check(h.requests).length.equals(3);
+        h.close();
+      });
+    });
+  }
+
+  test('retry pauses while keeper is absent and resumes on presence', () {
+    fakeAsync((async) {
+      final h = _RosterRetryHarness(async);
+      h.channel.present.remove('keeper');
+      h.channel.controller.add(const AdmissionPresenceChanged('keeper', false));
+      async.elapse(const Duration(minutes: 5));
+      check(h.requests).length.equals(1);
+      h.channel.present.add('keeper');
+      h.channel.controller.add(const AdmissionPresenceChanged('keeper', true));
+      async.flushMicrotasks();
+      check(h.requests).length.equals(2);
+      h.snapshot(h.requests.last);
+      check(h.client.contains('guest')).isTrue();
+      h.close();
+    });
+  });
+
+  test('keeper switch invalidates old requests and retries the new keeper', () {
+    fakeAsync((async) {
+      final h = _RosterRetryHarness(async);
+      final oldRequest = h.requests.single;
+      h.channel.present.add('new-keeper');
+      h.keeper = 'new-keeper';
+      h.channel.controller.add(
+        const AdmissionPresenceChanged('new-keeper', true),
+      );
+      async.flushMicrotasks();
+      check(h.requests).length.equals(2);
+      check(h.requests.last.recipientIdentity).equals('new-keeper');
+      h.snapshot(oldRequest);
+      check(h.client.roster).isNull();
+      final staleNewRequest = h.requests.last;
+      h.waitForRequest(3);
+      check(h.requests.last.recipientIdentity).equals('new-keeper');
+      h.snapshot(staleNewRequest);
+      check(h.client.roster).isNull();
+      h.snapshot(h.requests.last);
+      check(h.client.contains('guest')).isTrue();
+      h.close();
+    });
+  });
+
+  for (final end in ['room end', 'dispose']) {
+    test('roster retries stop on $end', () {
+      fakeAsync((async) {
+        final h = _RosterRetryHarness(async)..waitForRequest(2);
+        if (end == 'room end') {
+          h.channel.controller.add(const AdmissionRoomEnded());
+        } else {
+          unawaited(h.client.dispose());
+          async.flushMicrotasks();
+        }
+        async.elapse(const Duration(minutes: 5));
+        check(h.requests).length.equals(2);
+        h.close();
+      });
+    });
+  }
+
+  test('delayed send failure after disposal does not schedule a retry', () {
+    fakeAsync((async) {
+      final h = _RosterRetryHarness(async);
+      final send = Completer<void>();
+      h.channel.beforeSend = (_) => send.future;
+      h.waitForRequest(2);
+      unawaited(h.client.dispose());
+      async.flushMicrotasks();
+      check(async.pendingTimers).isEmpty();
+      send.completeError(StateError('offline'));
+      async.flushMicrotasks();
+      check(async.pendingTimers).isEmpty();
+      async.elapse(const Duration(minutes: 5));
+      check(h.requests).length.equals(2);
+      h.close();
     });
   });
 

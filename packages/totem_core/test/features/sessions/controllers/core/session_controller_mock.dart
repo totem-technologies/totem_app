@@ -144,6 +144,7 @@ class FakeSessionController implements SessionController {
       transport: () => transport,
       applyState: applyRoomState,
       prepareRemoval: admission.prepareRemoval,
+      withRevokedAdmission: admission.withRevokedAdmission,
       markRemoved: markParticipantRemoved,
       leave: disconnectFromRoom,
       onError: (_, _) {},
@@ -242,6 +243,8 @@ class FakeAdmissionService extends Fake implements SessionAdmissionService {
   Future<void> Function(String)? onRevoke;
   @override
   bool get busy => false;
+  @override
+  bool get isSynchronizing => false;
   @override
   Set<String> get unresolvedRemovals => const {};
   @override
