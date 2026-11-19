@@ -154,9 +154,9 @@ class _AdmissionOverlayHost extends ConsumerWidget {
       now: _testNow,
       child: RoomBackground(
         status: RoomStatus.active,
-        child: Row(
+        child: Stack(
           children: [
-            Expanded(
+            Positioned.fill(
               child: Navigator(
                 key: const Key('room-navigator'),
                 onGenerateRoute: (_) => MaterialPageRoute<void>(

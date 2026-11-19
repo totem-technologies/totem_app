@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:material_ui/material_ui.dart';
@@ -43,8 +45,8 @@ class _SessionChatRouteObserver extends NavigatorObserver {
   }
 }
 
-class _DockedSessionPanelsRail extends ConsumerWidget {
-  const _DockedSessionPanelsRail({required this.sessionSlug});
+class _DockedSessionPanels extends ConsumerWidget {
+  const _DockedSessionPanels({required this.sessionSlug});
 
   final String sessionSlug;
 
@@ -64,8 +66,34 @@ class _DockedSessionPanelsRail extends ConsumerWidget {
       (false, false, false) => null,
     };
 
-    return DockedSessionSidePanel(open: panel != null, child: panel);
+    return DockedSessionSidePanel(
+      open: panel != null,
+      onDismiss: () => closeDockedSessionPanel(ref),
+      child: panel,
+    );
   }
+}
+
+/// Closes the panel the dock shows, in the dock's priority order. Returns
+/// whether one was open.
+bool closeDockedSessionPanel(WidgetRef ref) {
+  final chat = ref.read(sessionChatOpenProvider.notifier);
+  if (chat.open) {
+    chat.open = false;
+    return true;
+  }
+  final isKeeper = ref.read(isCurrentUserKeeperProvider);
+  final prompts = ref.read(sessionPromptsOpenProvider.notifier);
+  if (isKeeper && prompts.open) {
+    prompts.open = false;
+    return true;
+  }
+  final admission = ref.read(sessionAdmissionOpenProvider.notifier);
+  if (isKeeper && admission.open) {
+    admission.open = false;
+    return true;
+  }
+  return false;
 }
 
 /// Owns the room's nested routes and responsive panel presentation.
@@ -165,55 +193,78 @@ class _SessionPanelsState extends ConsumerState<SessionPanels> {
       sessionSlug: widget.sessionSlug,
       child: SessionKeyboardShortcuts(
         navigatorKey: _roomNavigatorKey,
+        onEscape: () =>
+            shouldDockSessionChat(context) && closeDockedSessionPanel(ref),
         enableEmojiReactions: widget.enableEmojiReactions,
         child: RoomBackground(
           status: roomStatus,
           child: Stack(
             children: [
               Positioned.fill(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Navigator(
-                        key: _roomNavigatorKey,
-                        observers: [_roomNavigatorObserver],
-                        clipBehavior: Clip.none,
-                        onDidRemovePage: (page) => {},
-                        pages: [
-                          MaterialPage(
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: RepaintBoundary(
-                                    child: PopScope(
-                                      canPop: false,
-                                      onPopInvokedWithResult:
-                                          (didPop, result) async {
-                                            await _handleBackNavigation(
-                                              session,
-                                              connectionState,
-                                            );
-                                          },
-                                      child: widget.child,
-                                    ),
+                child: Navigator(
+                  key: _roomNavigatorKey,
+                  observers: [_roomNavigatorObserver],
+                  clipBehavior: Clip.none,
+                  onDidRemovePage: (page) => {},
+                  pages: [
+                    MaterialPage(
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: RepaintBoundary(
+                              child: PopScope(
+                                canPop: false,
+                                onPopInvokedWithResult: (didPop, result) async {
+                                  await _handleBackNavigation(
+                                    session,
+                                    connectionState,
+                                  );
+                                },
+                                // Read before the docked panel.
+                                child: Semantics(
+                                  container: true,
+                                  explicitChildNodes: true,
+                                  sortKey: const OrdinalSortKey(0),
+                                  // Escape from a focused room control. A
+                                  // focused popup handles it first.
+                                  child: Focus(
+                                    canRequestFocus: false,
+                                    skipTraversal: true,
+                                    onKeyEvent: (node, event) {
+                                      if (event is KeyDownEvent &&
+                                          event.logicalKey ==
+                                              LogicalKeyboardKey.escape &&
+                                          shouldDockSessionChat(context) &&
+                                          closeDockedSessionPanel(ref)) {
+                                        return KeyEventResult.handled;
+                                      }
+                                      return KeyEventResult.ignored;
+                                    },
+                                    child: widget.child,
                                   ),
                                 ),
-                                Positioned.fill(
-                                  child: IgnorePointer(
-                                    child: Overlay(
-                                      key: EmojiReactions.emojiOverlayKey,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: Overlay(
+                                key: EmojiReactions.emojiOverlayKey,
+                              ),
+                            ),
+                          ),
+                          // The panel floats over the full-width room, inside
+                          // the page so the room's dialogs, menus and
+                          // notifications draw over it and their barriers
+                          // block it. Kept mounted while closed for its exit
+                          // animation.
+                          if (dockChatSlot)
+                            _DockedSessionPanels(
+                              sessionSlug: widget.sessionSlug,
+                            ),
                         ],
                       ),
                     ),
-                    // Keep the rail mounted while closed for its exit animation.
-                    if (dockChatSlot)
-                      _DockedSessionPanelsRail(sessionSlug: widget.sessionSlug),
                   ],
                 ),
               ),
@@ -282,9 +333,7 @@ class _SessionPanelsState extends ConsumerState<SessionPanels> {
     final navigator = _roomNavigatorKey.currentState;
     if (navigator == null) return;
 
-    final routes = List<Route<dynamic>>.of(
-      _roomNavigatorObserver.chatRoutes,
-    );
+    final routes = List<Route<dynamic>>.of(_roomNavigatorObserver.chatRoutes);
     if (routes.isEmpty) return;
 
     // Invalidate any in-flight showSessionChat before removing routes so a
@@ -344,6 +393,11 @@ class _SessionPanelsState extends ConsumerState<SessionPanels> {
     final navigator = _roomNavigatorKey.currentState;
     if (navigator?.canPop() ?? false) {
       navigator?.pop();
+      return;
+    }
+
+    // Back closes a docked panel before offering to leave.
+    if (shouldDockSessionChat(context) && closeDockedSessionPanel(ref)) {
       return;
     }
 

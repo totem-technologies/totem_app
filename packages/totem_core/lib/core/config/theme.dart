@@ -50,13 +50,20 @@ class AppTheme {
     ),
   ];
 
-  /// Separates the session side panel's leading edge from the room.
-  /// The side panel rail's clip extent derives from this list, so the
-  /// shadow can change without being cut off.
+  /// Separates the session side panel drawer's leading edge from the room.
   static const List<BoxShadow> sessionPanelShadow = [
     BoxShadow(
       color: Color(0x1F000000), // 12% black
       blurRadius: 24,
+    ),
+  ];
+
+  /// Lifts the docked session side panel card off the room it floats over.
+  static const List<BoxShadow> sessionFloatingPanelShadow = [
+    BoxShadow(
+      color: Color(0x1F000000), // 12% black
+      blurRadius: 24,
+      offset: Offset(0, 4),
     ),
   ];
 

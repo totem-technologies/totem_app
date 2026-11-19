@@ -1,4 +1,5 @@
 import 'package:checks/checks.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
@@ -19,6 +20,10 @@ void main() {
     required bool open,
     TextDirection textDirection = TextDirection.ltr,
     bool disableAnimations = false,
+    Widget content = const SizedBox.expand(key: _content),
+    VoidCallback? onDismiss,
+    VoidCallback? onVideoTap,
+    FocusNode? toggleFocus,
   }) {
     return MaterialApp(
       builder: (context, navigator) => MediaQuery(
@@ -29,13 +34,30 @@ void main() {
       ),
       home: Directionality(
         textDirection: textDirection,
-        child: Row(
+        child: Stack(
           children: [
-            const Expanded(child: SizedBox.expand(key: _video)),
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onVideoTap,
+                child: const SizedBox.expand(key: _video),
+              ),
+            ),
+            if (toggleFocus != null)
+              Positioned(
+                left: 0,
+                top: 0,
+                child: TextButton(
+                  focusNode: toggleFocus,
+                  onPressed: () {},
+                  child: const Text('toggle'),
+                ),
+              ),
             // Like the room, the child is dropped once the panel closes.
             DockedSessionSidePanel(
               open: open,
-              child: open ? const SizedBox.expand(key: _content) : null,
+              onDismiss: onDismiss,
+              child: open ? content : null,
             ),
           ],
         ),
@@ -83,20 +105,45 @@ void main() {
     _screen.height,
   );
 
-  testWidgets('docks the panel full height against the trailing edge', (
+  final cardRect = Rect.fromLTRB(
+    _screen.width - sessionSidePanelInset - sessionSidePanelWidth,
+    sessionSidePanelInset,
+    _screen.width - sessionSidePanelInset,
+    _screen.height - sessionSidePanelInset,
+  );
+
+  final rtlCardRect = Rect.fromLTRB(
+    sessionSidePanelInset,
+    sessionSidePanelInset,
+    sessionSidePanelInset + sessionSidePanelWidth,
+    _screen.height - sessionSidePanelInset,
+  );
+
+  double opacityOf(WidgetTester tester) => tester
+      .widget<FadeTransition>(
+        find
+            .ancestor(
+              of: find.byKey(_content),
+              matching: find.byType(FadeTransition),
+            )
+            .first,
+      )
+      .opacity
+      .value;
+
+  testWidgets('floats the card over the room, inset from its edges', (
     tester,
   ) async {
     useScreen(tester);
     await tester.pumpWidget(dockedHost(open: true));
 
-    check(tester.getRect(find.byKey(_content))).equals(trailingRect);
-    check(
-      tester.getSize(find.byKey(_video)).width,
-    ).equals(_screen.width - sessionSidePanelWidth);
+    check(tester.getRect(find.byKey(_content))).equals(cardRect);
+    // Nothing makes room for the panel: the video keeps the full width.
+    check(tester.getSize(find.byKey(_video))).equals(_screen);
   });
 
   for (final direction in TextDirection.values) {
-    testWidgets('slides the full-size panel along the video edge in '
+    testWidgets('slides and fades the card in from the trailing edge in '
         '${direction.name}', (tester) async {
       useScreen(tester);
       await tester.pumpWidget(
@@ -105,45 +152,136 @@ void main() {
       await tester.pumpWidget(dockedHost(open: true, textDirection: direction));
       await tester.pump(sessionSidePanelDuration ~/ 2);
 
-      final video = tester.getRect(find.byKey(_video));
+      final settled = direction == TextDirection.ltr ? cardRect : rtlCardRect;
       final panel = tester.getRect(find.byKey(_content));
-      check(video.width)
-        ..isGreaterThan(_screen.width - sessionSidePanelWidth)
-        ..isLessThan(_screen.width);
-      check(panel.width).equals(sessionSidePanelWidth);
+      check(panel.size).equals(settled.size);
       if (direction == TextDirection.ltr) {
-        check(panel.left).equals(video.right);
+        check(panel.left)
+          ..isGreaterThan(settled.left)
+          ..isLessThan(_screen.width);
       } else {
-        check(panel.right).equals(video.left);
+        check(panel.right)
+          ..isLessThan(settled.right)
+          ..isGreaterThan(0);
       }
+      check(opacityOf(tester))
+        ..isGreaterThan(0)
+        ..isLessThan(1);
+      check(tester.getSize(find.byKey(_video))).equals(_screen);
 
       await tester.pumpAndSettle();
-      final settled = tester.getRect(find.byKey(_content));
-      if (direction == TextDirection.ltr) {
-        check(settled).equals(trailingRect);
-      } else {
-        check(
-          settled,
-        ).equals(Rect.fromLTRB(0, 0, sessionSidePanelWidth, _screen.height));
-      }
+      check(tester.getRect(find.byKey(_content))).equals(settled);
+      check(opacityOf(tester)).equals(1);
     });
   }
 
-  testWidgets('removes the panel once closed', (tester) async {
+  testWidgets('ignores input while closing and removes the card once closed', (
+    tester,
+  ) async {
     useScreen(tester);
-    await tester.pumpWidget(dockedHost(open: true));
-    await tester.pumpWidget(dockedHost(open: false));
-    await tester.pump(sessionSidePanelReverseDuration ~/ 2);
+    var videoTaps = 0;
+    await tester.pumpWidget(
+      dockedHost(open: true, onVideoTap: () => videoTaps++),
+    );
+    await tester.pumpWidget(
+      dockedHost(open: false, onVideoTap: () => videoTaps++),
+    );
+    await tester.pump(sessionSidePanelReverseDuration ~/ 4);
 
-    // The last panel stays on screen while the rail slides out.
+    // The last panel stays on screen while it slides out, but taps on it
+    // already reach the room.
     check(find.byKey(_content).evaluate()).length.equals(1);
-    check(
-      tester.getSize(find.byKey(_video)).width,
-    ).isGreaterThan(_screen.width - sessionSidePanelWidth);
+    await tester.tapAt(cardRect.center);
+    check(videoTaps).equals(1);
 
     await tester.pumpAndSettle();
     check(find.byKey(_content).evaluate()).isEmpty();
-    check(tester.getSize(find.byKey(_video)).width).equals(_screen.width);
+    check(tester.getSize(find.byKey(_video))).equals(_screen);
+  });
+
+  testWidgets('passes taps outside the card through to the room', (
+    tester,
+  ) async {
+    useScreen(tester);
+    var videoTaps = 0;
+    var panelTaps = 0;
+    await tester.pumpWidget(
+      dockedHost(
+        open: true,
+        onVideoTap: () => videoTaps++,
+        content: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => panelTaps++,
+          child: const SizedBox.expand(key: _content),
+        ),
+      ),
+    );
+
+    // The trailing, top and bottom gaps, and the room beside the card.
+    for (final point in [
+      Offset(_screen.width - sessionSidePanelInset / 2, _screen.height / 2),
+      Offset(cardRect.center.dx, sessionSidePanelInset / 2),
+      Offset(cardRect.center.dx, _screen.height - sessionSidePanelInset / 2),
+      Offset(cardRect.left - 40, _screen.height / 2),
+    ]) {
+      await tester.tapAt(point);
+    }
+    check(videoTaps).equals(4);
+    check(panelTaps).equals(0);
+
+    await tester.tapAt(cardRect.center);
+    check(panelTaps).equals(1);
+    check(videoTaps).equals(4);
+  });
+
+  testWidgets('dismisses on Escape from inside the panel, even a text field', (
+    tester,
+  ) async {
+    useScreen(tester);
+    var dismissals = 0;
+    await tester.pumpWidget(
+      dockedHost(
+        open: true,
+        onDismiss: () => dismissals++,
+        content: const Material(child: TextField(autofocus: true)),
+      ),
+    );
+    await tester.pump();
+    check(tester.testTextInput.isVisible).isTrue();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    check(dismissals).equals(1);
+  });
+
+  testWidgets('returns focus to what held it before the panel opened', (
+    tester,
+  ) async {
+    useScreen(tester);
+    final toggle = FocusNode(debugLabel: 'toggle');
+    addTearDown(toggle.dispose);
+    final field = FocusNode(debugLabel: 'field');
+    addTearDown(field.dispose);
+    Widget host({required bool open}) => dockedHost(
+      open: open,
+      toggleFocus: toggle,
+      content: Material(child: TextField(focusNode: field)),
+    );
+
+    await tester.pumpWidget(host(open: false));
+    toggle.requestFocus();
+    await tester.pump();
+    await tester.pumpWidget(host(open: true));
+    await tester.pumpAndSettle();
+    field.requestFocus();
+    await tester.pump();
+    check(field.hasFocus).isTrue();
+
+    await tester.pumpWidget(host(open: false));
+    await tester.pump();
+    check(field.hasFocus).isFalse();
+    check(toggle.hasFocus).isTrue();
+    await tester.pumpAndSettle();
+    check(toggle.hasFocus).isTrue();
   });
 
   testWidgets('opens the drawer full height against the trailing edge', (
@@ -176,10 +314,12 @@ void main() {
     await tester.pumpWidget(dockedHost(open: false, disableAnimations: true));
     await tester.pumpWidget(dockedHost(open: true, disableAnimations: true));
 
-    check(tester.getRect(find.byKey(_content))).equals(trailingRect);
-    check(
-      tester.getSize(find.byKey(_video)).width,
-    ).equals(_screen.width - sessionSidePanelWidth);
+    check(tester.getRect(find.byKey(_content))).equals(cardRect);
+    check(opacityOf(tester)).equals(1);
+
+    await tester.pumpWidget(dockedHost(open: false, disableAnimations: true));
+    await tester.pump();
+    check(find.byKey(_content).evaluate()).isEmpty();
 
     await tester.pumpWidget(Container());
     await openDrawer(tester, disableAnimations: true);
