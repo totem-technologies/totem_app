@@ -8,11 +8,9 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
     as mobile_api
     show RoomStatus, SessionDetailSchema, TurnState;
 import 'package:totem_core/core/config/theme.dart';
-
 import 'package:totem_core/features/sessions/admission/declined_participants_modal.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
-
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -25,13 +23,12 @@ import 'package:totem_core/features/sessions/screens/options/leave_session_confi
 import 'package:totem_core/features/sessions/screens/options/session_start_confirmation_dialog.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/banned_participants_modal.dart';
-
 import 'package:totem_core/features/sessions/widgets/participant_reorder_modal.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
 import 'package:totem_core/shared/extensions.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 
@@ -49,7 +46,7 @@ Future<void> showOptionsSheet(
       : 120.0;
 
   return showResponsiveModal<void>(
-    context: context,
+    context: sessionNavigatorContext(context),
     showDragHandle: false,
     useRootNavigator: false,
     bottomSheetBackgroundColor: AppTheme.cream,
@@ -165,9 +162,11 @@ class MoreOptions extends ConsumerWidget {
               onTap: () async {
                 final navigator = Navigator.of(context)..pop();
                 final shouldLeave = await showLeaveDialog(context) ?? false;
-                if (shouldLeave && navigator.mounted) {
-                  TotemRouter.instance.popOrHome(navigator.context);
-                  currentSession.leave();
+                if (shouldLeave) {
+                  await currentSession.leave();
+                  if (navigator.mounted) {
+                    TotemRouter.instance.popOrHome(navigator.context);
+                  }
                 }
               },
             ),
@@ -385,7 +384,7 @@ class MoreOptions extends ConsumerWidget {
 
   static Future<bool?> showLeaveDialog(BuildContext context) {
     return showDialog<bool>(
-      context: context,
+      context: sessionNavigatorContext(context),
       useRootNavigator: false,
       builder: (context) => const LeaveSessionConfirmationDialog(),
     );
@@ -404,7 +403,7 @@ class MoreOptions extends ConsumerWidget {
     if (state.roomState.nextSpeaker.value == null) return;
 
     await showDialog<void>(
-      context: context,
+      context: sessionNavigatorContext(context),
       useRootNavigator: false,
       builder: (context) => ForcePassConfirmationDialog(
         session: session,
@@ -418,7 +417,7 @@ class MoreOptions extends ConsumerWidget {
     SessionController session,
   ) async {
     await showDialog<void>(
-      context: context,
+      context: sessionNavigatorContext(context),
       useRootNavigator: false,
       builder: (context) =>
           SessionStartConfirmationDialog(onStart: session.keeper.startSession),
@@ -430,7 +429,7 @@ class MoreOptions extends ConsumerWidget {
     SessionController session,
   ) {
     return showDialog<void>(
-      context: context,
+      context: sessionNavigatorContext(context),
       useRootNavigator: false,
       builder: (context) => EndSessionConfirmationDialog(session: session),
     );

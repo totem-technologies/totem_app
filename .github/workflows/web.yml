@@ -12,7 +12,8 @@ name: Web
 #   push tag v*        -> build + deploy the STAGING environment
 #   release published  -> build + deploy the PRODUCTION environment, only for a
 #                         non-prerelease with a v* tag; any other release (e.g.
-#                         one made to host PR screenshots) skips the job
+#                         one made to host PR screenshots) skips the job, and
+#                         fails unless the tagged commit is on main
 #
 # One job handles all of these: the flavor (and whether to deploy) is derived
 # from the triggering event, so the build+deploy steps aren't duplicated.
@@ -61,6 +62,12 @@ jobs:
           # On a release, build the exact commit the tag points at; otherwise the
           # triggering commit (an empty ref means checkout's default).
           ref: ${{ github.event_name == 'release' && github.event.release.tag_name || '' }}
+
+      - name: Require production release from main
+        if: ${{ github.event_name == 'release' }}
+        uses: ./.github/actions/require-main
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Setup build environment
         uses: ./.github/actions/setup-environment

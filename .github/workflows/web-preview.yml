@@ -22,8 +22,11 @@ jobs:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # One shared environment; each PR still gets its own deployment and URL.
+    # GitHub auto-creates referenced environments and never deletes them, so a
+    # per-PR name would leave one behind for every PR.
     environment:
-      name: web-preview-pr-${{ github.event.pull_request.number }}
+      name: web-preview
       url: ${{ steps.preview.outputs.url }}
     steps:
       - uses: actions/checkout@v6

@@ -134,7 +134,9 @@ class ErrorHandler {
 
   /// Handle an exception and return a user-friendly error message
   static String getUserFriendlyErrorMessage(Object error) {
-    if (is404(error)) {
+    if (error is AppFeatureException) {
+      return error.message;
+    } else if (is404(error)) {
       return "This page doesn't exist";
     } else if (error is AppNetworkException ||
         error is DioException ||
@@ -190,9 +192,11 @@ class ErrorHandler {
     required String message,
     String title = 'Something Went Wrong',
     String buttonText = 'OK',
+    bool useRootNavigator = true,
   }) async {
     await showDialog<void>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) {
         return ConfirmationDialog(
           title: title,
@@ -215,6 +219,7 @@ class ErrorHandler {
     StackTrace? stackTrace,
     AsyncCallback? onRetry,
     bool showError = true,
+    bool useRootNavigator = true,
   }) async {
     logError(error, stackTrace: stackTrace);
     if (!context.mounted || !showError) return;
@@ -225,6 +230,7 @@ class ErrorHandler {
     if (error is AppAuthException) {
       await showErrorDialog(
         context,
+        useRootNavigator: useRootNavigator,
         title: 'Authentication Error',
         message: message,
         buttonText: 'Sign In Again',
@@ -234,6 +240,7 @@ class ErrorHandler {
     if (error is AppNetworkException && onRetry != null) {
       await showDialog<void>(
         context: context,
+        useRootNavigator: useRootNavigator,
         builder: (context) {
           return ConfirmationDialog(
             title: 'Something Went Wrong',

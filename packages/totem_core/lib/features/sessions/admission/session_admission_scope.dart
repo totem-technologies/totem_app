@@ -15,9 +15,20 @@ class SessionAdmissionScope extends InheritedWidget {
     required this.onRetry,
     required this.onResetCorruptData,
     required super.child,
+    this.recoveryMessage,
+    this.unresolvedRemovals = const {},
+    this.corruptRemovalJournal = false,
+    this.onReconcileRemoval,
+    this.onResetCorruptRemovalJournal,
     super.key,
   });
 
+  final String? recoveryMessage;
+  final Set<String> unresolvedRemovals;
+  final bool corruptRemovalJournal;
+  final Future<void> Function()? onResetCorruptRemovalJournal;
+  final Future<void> Function(String identity, bool removed)?
+  onReconcileRemoval;
   final List<AdmissionRequest> requests;
   final List<KeeperAdmissionAttempt> attempts;
   final bool enabled;

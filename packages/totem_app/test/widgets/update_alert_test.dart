@@ -2,6 +2,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/widgets/update_alert.dart';
+import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/shared/widgets/update_available_dialog.dart';
 import 'package:upgrader/upgrader.dart';
 
@@ -77,21 +78,43 @@ class _HostState extends State<_Host> {
 }
 
 void main() {
-  group('hasMajorOrMinorVersionUpdate', () {
-    test('prompts when the major or minor version changes', () {
-      check(hasMajorOrMinorVersionUpdate('0.0.1', '0.1.0')).isTrue();
-      check(hasMajorOrMinorVersionUpdate('0.1.10', '0.2.0')).isTrue();
-      check(hasMajorOrMinorVersionUpdate('1.4.2', '1.5.0')).isTrue();
+  group('hasVersionUpdate', () {
+    test('staging prompts for patch, minor, or major changes', () {
+      for (final version in ['1.4.3', '1.5.0', '2.0.0']) {
+        check(hasVersionUpdate('1.4.2', version, Environment.staging)).isTrue();
+      }
+      check(hasVersionUpdate('1.4.2', '1.4.2', Environment.staging)).isFalse();
     });
 
-    test('does not prompt for patch-only changes', () {
-      check(hasMajorOrMinorVersionUpdate('0.1.10', '0.1.11')).isFalse();
-      check(hasMajorOrMinorVersionUpdate('1.4.2', '2.4.0')).isTrue();
+    test('production prompts only for major changes', () {
+      for (final version in ['1.4.3', '1.5.0']) {
+        check(
+          hasVersionUpdate('1.4.2', version, Environment.production),
+        ).isFalse();
+      }
+      check(
+        hasVersionUpdate('1.4.2', '2.0.0', Environment.production),
+      ).isTrue();
     });
 
-    test('does not prompt when either version is unavailable or invalid', () {
-      check(hasMajorOrMinorVersionUpdate(null, '0.1.0')).isFalse();
-      check(hasMajorOrMinorVersionUpdate('0.1.0', 'invalid')).isFalse();
+    test('development retains major and minor comparisons', () {
+      check(
+        hasVersionUpdate('1.4.2', '1.4.3', Environment.development),
+      ).isFalse();
+      check(
+        hasVersionUpdate('1.4.2', '1.5.0', Environment.development),
+      ).isTrue();
+    });
+
+    test('does not prompt when a required version component is invalid', () {
+      check(hasVersionUpdate(null, '1.2.3', Environment.staging)).isFalse();
+      check(hasVersionUpdate('1.2.3', '1.2', Environment.staging)).isFalse();
+      check(
+        hasVersionUpdate('1.2.3', '1.2.invalid', Environment.staging),
+      ).isFalse();
+      check(
+        hasVersionUpdate('1.2.3', 'invalid', Environment.production),
+      ).isFalse();
     });
   });
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,16 +11,14 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
-
 import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_overlay.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_scope.dart';
-
+import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -28,14 +27,17 @@ import 'package:totem_core/features/sessions/controllers/core/session_state.dart
 import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/options/session_start_confirmation_dialog.dart';
-
+import 'package:totem_core/features/sessions/services/session_commands.dart';
+import 'package:totem_core/features/sessions/services/session_moderation_service.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
-import 'package:totem_core/features/sessions/widgets/background.dart';
+import 'package:totem_core/features/sessions/widgets/session_panels.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
+import 'package:totem_core/shared/widgets/notifications.dart';
 
 import '../../../setup.dart';
 import '../livekit_mocks.dart';
+import '../media/test_room_transport.dart';
 import '../session_test_mocks.dart';
 
 DateTime _testNow() => DateTime.utc(2026);
@@ -46,6 +48,9 @@ class _AdmissionPreferences implements SessionAdmissionPreferences {
   Error? readError;
   final values = <String, String>{};
   int writeCount = 0;
+  bool writesSucceed = true;
+  Future<bool> Function(String key, String value)? beforeSet;
+  Future<bool> Function(String key)? beforeRemove;
 
   @override
   String? getString(String key) {
@@ -57,20 +62,39 @@ class _AdmissionPreferences implements SessionAdmissionPreferences {
   @override
   Future<bool> setString(String key, String value) async {
     writeCount++;
+    if (!writesSucceed ||
+        !await (beforeSet?.call(key, value) ?? Future.value(true))) {
+      return false;
+    }
     values[key] = value;
     return true;
   }
 
   @override
   Future<bool> remove(String key) async {
+    if (!await (beforeRemove?.call(key) ?? Future.value(true))) return false;
     values.remove(key);
     return true;
+  }
+}
+
+class _RemovalBackend extends Fake implements SessionModerationBackend {
+  int calls = 0;
+  final started = Completer<void>();
+  Future<void> Function()? action;
+
+  @override
+  Future<void> remove(String identity) async {
+    calls++;
+    if (!started.isCompleted) started.complete();
+    await action?.call();
   }
 }
 
 class _AdmissionRoom extends FakeRoom {
   _AdmissionRoom(super.participant);
 
+  int transportCreations = 0;
   final listener = _AdmissionEvents();
   final remotes = <String, RemoteParticipant>{};
 
@@ -79,8 +103,10 @@ class _AdmissionRoom extends FakeRoom {
       UnmodifiableMapView(remotes);
 
   @override
-  EventsListener<RoomEvent> createListener({bool synchronized = true}) =>
-      listener;
+  EventsListener<RoomEvent> createListener({bool synchronized = true}) => (() {
+    transportCreations++;
+    return listener;
+  })();
 }
 
 class _AdmissionEvents implements EventsListener<RoomEvent> {
@@ -148,41 +174,18 @@ class _AdmissionOverlayHost extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final admissionOpen = ref.watch(sessionAdmissionOpenProvider);
-    return SessionAdmissionOverlay(
+    return SessionPanels(
       sessionSlug: 'session',
-      now: _testNow,
-      child: RoomBackground(
-        status: RoomStatus.active,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Navigator(
-                key: const Key('room-navigator'),
-                onGenerateRoute: (_) => MaterialPageRoute<void>(
-                  builder: (_) => Column(
-                    children: [
-                      Expanded(child: _VideoPlaceholder(videoBuilds)),
-                      SessionAdmissionQueueControl(
-                        child: SizedBox(
-                          key: SessionActionBar.actionBarKey,
-                          height: 64,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (includeDock && shouldDockSessionSidePanel(context))
-              DockedSessionSidePanel(
-                open: admissionOpen,
-                child: admissionOpen
-                    ? const SessionAdmissionPanel(docked: true)
-                    : null,
-              ),
-          ],
-        ),
+      session: ref.watch(currentSessionProvider),
+      connectionState: RoomConnectionState.connected,
+      roomStatus: RoomStatus.active,
+      child: Column(
+        children: [
+          Expanded(child: _VideoPlaceholder(videoBuilds)),
+          SessionAdmissionQueueControl(
+            child: SizedBox(key: SessionActionBar.actionBarKey, height: 64),
+          ),
+        ],
       ),
     );
   }
@@ -223,6 +226,9 @@ class _AdmissionHarness {
     });
     state = MockSessionRoomState();
     when(() => session.room).thenReturn(room);
+    when(
+      () => session.transport,
+    ).thenAnswer((_) => _transportFor(session.room!));
     when(() => state.connection).thenReturn(
       const session_state.ConnectionState(
         phase: session_state.SessionPhase.connected,
@@ -249,6 +255,25 @@ class _AdmissionHarness {
   final DateTime Function() _now = _testNow;
   var _requestCount = 0;
   final _AdmissionPreferences preferences;
+  late Ref serviceRef;
+  final _transports = Map<Room, TestRoomTransport>.identity();
+  SessionAdmissionService? _admissionService;
+  TestRoomTransport _transportFor(Room room) =>
+      _transports.putIfAbsent(room, () {
+        final transport = TestRoomTransport(room);
+        final subscription = transport.events.listen((event) {
+          if (identical(session.transport, transport)) {
+            _admissionService?.handleTransportEvent(event);
+          }
+        });
+        addTearDown(() async {
+          await subscription.cancel();
+          await transport.dispose();
+        });
+        return transport;
+      });
+  bool expectShutdownFailure = false;
+  final shutdownErrors = <Object>[];
   final sent = <AdmissionPacket>[];
   final mediaRecipients = <Set<String>>[];
   Future<void> Function(AdmissionPacket packet)? afterSend;
@@ -262,8 +287,40 @@ class _AdmissionHarness {
     sessionAdmissionPreferencesProvider.overrideWith(
       _preferencesOverride ?? (ref) async => preferences,
     ),
-    currentSessionProvider.overrideWith((ref) => session),
+    currentSessionProvider.overrideWith((ref) {
+      serviceRef = ref;
+      final service = SessionAdmissionService(ref, session, now: _testNow);
+      _admissionService = service;
+      when(() => session.admission).thenReturn(service);
+      when(() => session.admissionState).thenAnswer((_) => state);
+      when(() => session.options).thenReturn(
+        const session_state.SessionOptions(
+          sessionSlug: 'session',
+          token: '',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          speakerEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+        ),
+      );
+      when(() => session.session).thenReturn(null);
+      ref
+        ..onDispose(
+          () => unawaited(
+            service.close().catchError((Object error, StackTrace stack) {
+              if (!expectShutdownFailure) {
+                Error.throwWithStackTrace(error, stack);
+              }
+              shutdownErrors.add(error);
+            }),
+          ),
+        )
+        ..listen(currentSessionStateProvider, (_, _) => service.sync());
+      service.sync();
+      return session;
+    }),
     currentSessionStateProvider.overrideWithValue(state),
+    resolveCurrentScreenProvider.overrideWith((ref) => RoomScreen.listening),
     currentSessionEventProvider.overrideWith((ref) => null),
     isCurrentUserKeeperProvider.overrideWith((ref) => true),
     userProfileProvider('guest').overrideWith(
@@ -304,6 +361,964 @@ class _AdmissionHarness {
 }
 
 void main() {
+  const removalRosterKey = 'session_admission_keeper_roster:session:keeper';
+  const removalJournalKey =
+      'session_admission_revocations:["session","keeper"]';
+
+  Future<(_AdmissionHarness, ProviderContainer, SessionAdmissionService)>
+  removalSession(_AdmissionPreferences preferences) async {
+    setupAppConfig();
+    preferences.values.putIfAbsent(
+      removalRosterKey,
+      () => jsonEncode({
+        'version': 1,
+        'generation': 'removal-tests',
+        'revision': 1,
+        'members': ['guest', 'another'],
+        'awaitingReadiness': <String>[],
+      }),
+    );
+    final harness = _AdmissionHarness(preferences: preferences);
+    final container = ProviderContainer(overrides: harness.overrides);
+    final retained = container.listen(currentSessionProvider, (_, _) {});
+    final service = container.read(currentSessionProvider)!.admission;
+    await container.read(
+      keeperAdmissionRosterProvider('session', 'keeper').future,
+    );
+    await container.read(
+      declinedSessionParticipantsProvider('session', 'keeper').future,
+    );
+    service.sync();
+    await service.synchronized;
+    addTearDown(() async {
+      try {
+        await service.close();
+      } catch (error) {
+        if (!harness.expectShutdownFailure) rethrow;
+        harness.shutdownErrors.add(error);
+      } finally {
+        retained.close();
+        container.dispose();
+      }
+    });
+    return (harness, container, service);
+  }
+
+  SessionModerationService moderationFor(
+    _AdmissionHarness harness,
+    SessionAdmissionService admission,
+    _RemovalBackend backend,
+  ) {
+    final moderation = SessionModerationService(
+      backend: backend,
+      state: () => harness.session.admissionState,
+      isKeeper: () => true,
+      transport: () => harness.session.transport,
+      applyState: (_) {},
+      prepareRemoval: admission.prepareRemoval,
+      markRemoved: (_) {},
+      leave: () async {},
+      onError: (_, _) {},
+      captureValidity: () =>
+          () => true,
+    );
+    addTearDown(moderation.dispose);
+    return moderation;
+  }
+
+  Completer<void> observeControllerClosure(SessionAdmissionService service) {
+    final closed = Completer<void>();
+    final subscription = service.keeperController!.changes.listen(
+      (_) {},
+      onDone: closed.complete,
+    );
+    addTearDown(subscription.cancel);
+    return closed;
+  }
+
+  void endSession(_AdmissionHarness harness) {
+    final previous = harness.session.admissionState.roomState;
+    when(() => harness.state.roomState).thenReturn(
+      previous.copyWith(
+        status: RoomStatus.ended,
+        statusDetail: const RoomStateStatusDetailEnded(
+          EndedDetail(reason: EndReason.keeperEnded),
+        ),
+      ),
+    );
+  }
+
+  group('admission persistence teardown', () {
+    test(
+      'concurrent close waits for final roster persistence before releasing controllers',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (harness, container, service) = await removalSession(preferences);
+        final controllerClosed = observeControllerClosure(service);
+        final saving = Completer<void>();
+        final saved = Completer<bool>();
+        preferences.beforeSet = (key, _) {
+          if (key != removalRosterKey) return Future.value(true);
+          if (!saving.isCompleted) saving.complete();
+          return saved.future;
+        };
+        var completed = false;
+        final close = service.close();
+        check(service.close()).identicalTo(close);
+        unawaited(close.then((_) => completed = true));
+        await saving.future;
+        await container.pump();
+        check(completed).isFalse();
+        check(controllerClosed.isCompleted).isFalse();
+        check(await service.admitAll()).isFalse();
+        await service.decide(harness.request('while-closing'), true);
+        final published = harness.sent.length;
+        await harness.sendRequest(harness.request('while-closing'));
+        check(harness.sent.length).equals(published);
+        saved.complete(true);
+        await close;
+        await controllerClosed.future;
+        check(completed).isTrue();
+        check(service.keeperController).isNull();
+        final writes = preferences.writeCount;
+        await service.close();
+        await service.disconnect();
+        check(preferences.writeCount).equals(writes);
+      },
+    );
+
+    test(
+      'close drains an in-flight sync without recreating its replacement controller',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (harness, container, service) = await removalSession(preferences);
+        final controllerClosed = observeControllerClosure(service);
+        final saving = Completer<void>();
+        final saved = Completer<bool>();
+        preferences.beforeSet = (key, _) {
+          if (key != removalRosterKey) return Future.value(true);
+          if (!saving.isCompleted) saving.complete();
+          return saved.future;
+        };
+        final replacement = _AdmissionRoom(harness.room.participant);
+        when(() => harness.session.room).thenReturn(replacement);
+        service.sync();
+        await saving.future;
+        var completed = false;
+        final close = service.close();
+        unawaited(close.then((_) => completed = true));
+        await container.pump();
+        check(completed).isFalse();
+        saved.complete(true);
+        await close;
+        await controllerClosed.future;
+        check(service.keeperController).isNull();
+        final updates = harness.mediaRecipients.length;
+        final published = harness.sent.length;
+        await replacement.listener.trigger(
+          DataReceivedEvent(
+            data: AdmissionProtocol.encode(harness.request('late-sync')),
+            participant: _RemoteParticipant('guest'),
+            topic: AdmissionProtocol.topic,
+          ),
+        );
+        await container.pump();
+        check(harness.mediaRecipients.length).equals(updates);
+        check(harness.sent.length).equals(published);
+      },
+    );
+
+    test(
+      'ending waits for an earlier save and leaves storage cleared after close',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (harness, container, service) = await removalSession(preferences);
+        final storeProvider = keeperAdmissionRosterProvider(
+          'session',
+          'keeper',
+        );
+        final store = await container.read(storeProvider.future);
+        store.replace(['saved-before-end'], store.revision + 1);
+        final saving = Completer<void>();
+        final saved = Completer<bool>();
+        var firstWrite = true;
+        preferences.beforeSet = (key, _) {
+          if (key != removalRosterKey || !firstWrite) return Future.value(true);
+          firstWrite = false;
+          saving.complete();
+          return saved.future;
+        };
+        final previousSave = container.read(storeProvider.notifier).persist();
+        await saving.future;
+        endSession(harness);
+        service.sync();
+        await container.pump();
+        check(preferences.values.containsKey(removalRosterKey)).isTrue();
+        saved.complete(true);
+        await previousSave;
+        await service.synchronized;
+        check(preferences.values.containsKey(removalRosterKey)).isFalse();
+        await service.close();
+        check(preferences.values.containsKey(removalRosterKey)).isFalse();
+      },
+    );
+
+    test(
+      'a failed teardown save still closes controllers and reports the storage failure',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (harness, container, service) = await removalSession(preferences);
+        final controllerClosed = observeControllerClosure(service);
+        harness.expectShutdownFailure = true;
+        preferences.beforeSet = (key, _) async => key != removalRosterKey;
+        final persisted = preferences.values[removalRosterKey];
+        await check(service.close()).throws<StateError>();
+        await controllerClosed.future;
+        check(service.keeperController).isNull();
+        check(preferences.values[removalRosterKey]).equals(persisted);
+        final updates = harness.mediaRecipients.length;
+        final published = harness.sent.length;
+        await harness.sendRequest(harness.request('after-failed-close'));
+        await container.pump();
+        check(harness.mediaRecipients.length).equals(updates);
+        check(harness.sent.length).equals(published);
+        await check(service.close()).throws<StateError>();
+      },
+    );
+
+    test(
+      'successful final save recovers an earlier in-flight roster write failure',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (harness, _, service) = await removalSession(preferences);
+        final firstWriteFailed = Completer<void>();
+        var rosterWrites = 0;
+        preferences.beforeSet = (key, _) async {
+          if (key != removalRosterKey) return true;
+          rosterWrites++;
+          if (rosterWrites == 1) {
+            firstWriteFailed.complete();
+            return false;
+          }
+          return true;
+        };
+
+        service.keeperController!.revoke('guest');
+        await firstWriteFailed.future;
+        await service.close();
+
+        check(service.keeperController).isNull();
+        check(service.recoveryError).isNull();
+        check(service.error).isNull();
+        check(rosterWrites).equals(2);
+
+        final (_, _, replacement) = await removalSession(preferences);
+        check(replacement.keeperController).isNotNull();
+        check(replacement.admittedIdentities.contains('guest')).isFalse();
+        check(harness.shutdownErrors).isEmpty();
+      },
+    );
+
+    for (final failingKey in [
+      removalRosterKey,
+      'session_admission_declined_participants:session:keeper',
+    ]) {
+      test(
+        'end clearing attempts every store and reports failure for $failingKey',
+        () async {
+          final preferences = _AdmissionPreferences();
+          const declinedKey =
+              'session_admission_declined_participants:session:keeper';
+          preferences.values[declinedKey] = jsonEncode(['declined']);
+          final (harness, _, service) = await removalSession(preferences);
+          final controllerClosed = observeControllerClosure(service);
+          harness.expectShutdownFailure = true;
+          final attempted = <String>[];
+          preferences.beforeRemove = (key) async {
+            attempted.add(key);
+            return key != failingKey;
+          };
+          endSession(harness);
+          service.sync();
+          await service.synchronized;
+          await controllerClosed.future;
+          await check(service.close()).throws<StateError>();
+          check(attempted).contains(removalRosterKey);
+          check(attempted).contains(declinedKey);
+          check(preferences.values.containsKey(failingKey)).isTrue();
+          check(
+            preferences.values.containsKey(
+              failingKey == removalRosterKey ? declinedKey : removalRosterKey,
+            ),
+          ).isFalse();
+        },
+      );
+    }
+
+    test(
+      'disconnect followed by close releases one controller and rejects stale packets',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (harness, container, service) = await removalSession(preferences);
+        final controllerClosed = observeControllerClosure(service);
+        await Future.wait([service.disconnect(), service.disconnect()]);
+        await controllerClosed.future;
+        final writes = preferences.writeCount;
+        final published = harness.sent.length;
+        await service.close();
+        await harness.sendRequest(harness.request('after-disconnect-close'));
+        await container.pump();
+        check(preferences.writeCount).equals(writes);
+        check(harness.sent.length).equals(published);
+        check(service.keeperController).isNull();
+      },
+    );
+
+    test(
+      'a new entry waits for the previous teardown and reloads its final roster',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (oldHarness, oldContainer, oldService) = await removalSession(
+          preferences,
+        );
+        final provider = keeperAdmissionRosterProvider('session', 'keeper');
+        final store = await oldContainer.read(provider.future);
+        store.replace(['final-member'], store.revision + 1);
+        final saving = Completer<void>();
+        final saved = Completer<bool>();
+        var firstWrite = true;
+        preferences.beforeSet = (key, _) {
+          if (key != removalRosterKey || !firstWrite) return Future.value(true);
+          firstWrite = false;
+          saving.complete();
+          return saved.future;
+        };
+        final staleReplacement = _AdmissionRoom(oldHarness.room.participant);
+        when(() => oldHarness.session.room).thenReturn(staleReplacement);
+        oldService.sync();
+        await saving.future;
+        final closing = oldService.close();
+        final replacementHarness = _AdmissionHarness(preferences: preferences);
+        final replacementContainer = ProviderContainer(
+          overrides: replacementHarness.overrides,
+        );
+        final retained = replacementContainer.listen(
+          currentSessionProvider,
+          (_, _) {},
+        );
+        final replacement = replacementContainer
+            .read(currentSessionProvider)!
+            .admission;
+        final ready = Completer<void>();
+        void observeReady() {
+          if (replacement.keeperController != null && !ready.isCompleted) {
+            ready.complete();
+          }
+        }
+
+        replacement.addListener(observeReady);
+        addTearDown(() => replacement.removeListener(observeReady));
+        addTearDown(() async {
+          await replacement.close();
+          retained.close();
+          replacementContainer.dispose();
+        });
+        final loadingRoster = replacementContainer.read(provider.future);
+        final loadingDeclines = replacementContainer.read(
+          declinedSessionParticipantsProvider('session', 'keeper').future,
+        );
+        replacement.sync();
+        await replacementContainer.pump();
+        check(replacement.keeperController).isNull();
+        saved.complete(true);
+        await Future.wait([closing, loadingRoster, loadingDeclines]);
+        replacement.sync();
+        await ready.future;
+        check(replacement.admittedIdentities).deepEquals({'final-member'});
+        final updates = replacementHarness.mediaRecipients.length;
+        await oldHarness.sendRequest(oldHarness.request('old-entry'));
+        await staleReplacement.listener.trigger(
+          DataReceivedEvent(
+            data: AdmissionProtocol.encode(
+              oldHarness.request('old-sync-result'),
+            ),
+            participant: _RemoteParticipant('guest'),
+            topic: AdmissionProtocol.topic,
+          ),
+        );
+        await replacementContainer.pump();
+        check(replacementHarness.mediaRecipients.length).equals(updates);
+        check(oldService.keeperController).isNull();
+      },
+    );
+
+    test(
+      'a replacement retries recovery after the previous final save fails',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (oldHarness, _, oldService) = await removalSession(preferences);
+        oldHarness.expectShutdownFailure = true;
+        preferences.beforeSet = (key, _) async => key != removalRosterKey;
+        final harness = _AdmissionHarness(preferences: preferences);
+        final container = ProviderContainer(overrides: harness.overrides);
+        final retained = container.listen(currentSessionProvider, (_, _) {});
+        final service = container.read(currentSessionProvider)!.admission;
+        addTearDown(() async {
+          await service.close();
+          retained.close();
+          container.dispose();
+        });
+        final failed = Completer<void>();
+        final ready = Completer<void>();
+        void observeRecovery() {
+          if (service.error != null && !failed.isCompleted) {
+            failed.complete();
+          }
+          if (service.keeperController != null && !ready.isCompleted) {
+            ready.complete();
+          }
+        }
+
+        service.addListener(observeRecovery);
+        addTearDown(() => service.removeListener(observeRecovery));
+        observeRecovery();
+        await failed.future;
+        check(oldService.keeperController).isNull();
+        check(service.keeperController).isNull();
+        check(service.admittedIdentities).isEmpty();
+        check(
+          harness.mediaRecipients.expand((recipients) => recipients),
+        ).isEmpty();
+        preferences.beforeSet = null;
+        await service.retryRecovery();
+        service.sync();
+        await ready.future;
+        check(service.admittedIdentities).deepEquals({'guest', 'another'});
+        check(harness.mediaRecipients.last).deepEquals({'guest', 'another'});
+        check(service.error).isNull();
+      },
+    );
+
+    test(
+      'provider disposal while close is saving does not read an unmounted Ref',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (_, container, service) = await removalSession(preferences);
+        final controllerClosed = observeControllerClosure(service);
+        final saving = Completer<void>();
+        final saved = Completer<bool>();
+        preferences.beforeSet = (key, _) {
+          if (key != removalRosterKey) return Future.value(true);
+          if (!saving.isCompleted) saving.complete();
+          return saved.future;
+        };
+        final closing = service.close();
+        await saving.future;
+        container.dispose();
+        saved.complete(true);
+        await closing;
+        await controllerClosed.future;
+        check(preferences.values.containsKey(removalRosterKey)).isTrue();
+      },
+    );
+
+    test(
+      'close drains already-started revocation persistence before returning',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (harness, container, service) = await removalSession(preferences);
+        final removal = await service.prepareRemoval('guest');
+        final saving = Completer<void>();
+        final saved = Completer<bool>();
+        preferences.beforeSet = (key, _) {
+          if (key != removalRosterKey) return Future.value(true);
+          if (!saving.isCompleted) saving.complete();
+          return saved.future;
+        };
+        final committed = removal.commit();
+        await saving.future;
+        var completed = false;
+        final closing = service.close();
+        unawaited(closing.then((_) => completed = true));
+        await container.pump();
+        check(completed).isFalse();
+        check(harness.mediaRecipients.last.contains('guest')).isFalse();
+        saved.complete(true);
+        await Future.wait([committed, closing]);
+        check(preferences.values.containsKey(removalJournalKey)).isFalse();
+        final payload =
+            jsonDecode(preferences.values[removalRosterKey]!) as Map;
+        check((payload['members'] as List).contains('guest')).isFalse();
+        check((payload['revoked'] as List).contains('guest')).isTrue();
+      },
+    );
+  });
+
+  test('removal intent must be durable before preparation succeeds', () async {
+    final preferences = _AdmissionPreferences();
+    final (harness, _, service) = await removalSession(preferences);
+    preferences.beforeSet = (key, _) async => key != removalJournalKey;
+    final backend = _RemovalBackend();
+    final moderation = moderationFor(harness, service, backend);
+
+    await check(moderation.removeParticipant('guest')).throws<StateError>();
+
+    check(backend.calls).equals(0);
+
+    check(service.admittedIdentities).contains('guest');
+    check(harness.mediaRecipients.last).contains('guest');
+    check(preferences.values.containsKey(removalJournalKey)).isFalse();
+  });
+
+  for (final cleanupFails in [false, true]) {
+    test(
+      'backend rejection preserves admission even when journal cleanup fails ($cleanupFails)',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (harness, _, service) = await removalSession(preferences);
+        const rejection = ApiError<RoomState, RoomErrorResponse>(
+          statusCode: 403,
+          error: RoomErrorResponse(
+            code: ErrorCode.notKeeper,
+            message: 'Rejected',
+          ),
+        );
+        final backend = _RemovalBackend()..action = () async => throw rejection;
+        final moderation = moderationFor(harness, service, backend);
+        preferences.beforeRemove = (key) async =>
+            !cleanupFails || key != removalJournalKey;
+
+        if (cleanupFails) {
+          await check(
+            moderation.removeParticipant('guest'),
+          ).throws<SessionCommandException>();
+          check(
+            moderation.lastFailure?.kind,
+          ).equals(SessionCommandFailureKind.recoveryRequired);
+        } else {
+          await check(
+            moderation.removeParticipant('guest'),
+          ).throws<ApiError<RoomState, RoomErrorResponse>>();
+        }
+        check(backend.calls).equals(1);
+        check(service.admittedIdentities).contains('guest');
+        check(harness.mediaRecipients.last).contains('guest');
+        check(
+          preferences.values.containsKey(removalJournalKey),
+        ).equals(cleanupFails);
+        preferences.beforeRemove = null;
+        await service.retryRecovery();
+        check(preferences.values.containsKey(removalJournalKey)).isFalse();
+        check(service.admittedIdentities).contains('guest');
+        service.requireRemovalReady();
+      },
+    );
+  }
+
+  test(
+    'confirmed removal restricts live media before final persistence completes',
+    () async {
+      final preferences = _AdmissionPreferences();
+      final (harness, container, service) = await removalSession(preferences);
+      final backend = _RemovalBackend();
+      final backendResult = Completer<void>();
+      backend.action = () => backendResult.future;
+      final moderation = moderationFor(harness, service, backend);
+      final saving = Completer<void>();
+      final stored = Completer<bool>();
+      preferences.beforeSet = (key, _) {
+        if (key != removalRosterKey) return Future.value(true);
+        if (!saving.isCompleted) saving.complete();
+        return stored.future;
+      };
+
+      final completing = moderation.removeParticipant('guest');
+      await backend.started.future;
+      await container.pump();
+      check(preferences.values.containsKey(removalJournalKey)).isTrue();
+      check(service.admittedIdentities).contains('guest');
+      backendResult.complete();
+      await saving.future;
+      check(service.admittedIdentities.contains('guest')).isFalse();
+      check(harness.mediaRecipients.last.contains('guest')).isFalse();
+      check(service.admittedIdentities).contains('another');
+      check(preferences.values.containsKey(removalJournalKey)).isTrue();
+      stored.complete(true);
+      await completing;
+      check(backend.calls).equals(1);
+      check(preferences.values.containsKey(removalJournalKey)).isFalse();
+      service.requireRemovalReady();
+    },
+  );
+
+  for (final failure in ['roster', 'journal update', 'journal cleanup']) {
+    test(
+      'committed removal survives $failure failure and successful recovery retry',
+      () async {
+        final preferences = _AdmissionPreferences();
+        final (harness, container, service) = await removalSession(preferences);
+        final removal = await service.prepareRemoval('guest');
+        preferences
+          ..beforeSet = (key, _) async {
+            return !((failure == 'roster' && key == removalRosterKey) ||
+                (failure == 'journal update' && key == removalJournalKey));
+          }
+          ..beforeRemove = (key) async {
+            return failure != 'journal cleanup' || key != removalJournalKey;
+          };
+
+        await check(removal.commit()).throws<StateError>();
+
+        check(service.admittedIdentities.contains('guest')).isFalse();
+        check(harness.mediaRecipients.last.contains('guest')).isFalse();
+        check(preferences.values.containsKey(removalJournalKey)).isTrue();
+        check(service.requireRemovalReady).throws<StateError>();
+        preferences
+          ..beforeSet = null
+          ..beforeRemove = null;
+        if (failure == 'journal update') {
+          // The durable record still says "intent", but this active service
+          // knows the backend committed. Reconnecting must not downgrade it.
+          final replacement = _AdmissionRoom(harness.room.participant);
+          when(() => harness.session.room).thenReturn(replacement);
+          service.sync();
+          await service.synchronized;
+          check(service.unresolvedRemovals).isEmpty();
+          check(service.admittedIdentities.contains('guest')).isFalse();
+          check(harness.mediaRecipients.last.contains('guest')).isFalse();
+          final updates = harness.mediaRecipients.length;
+          await harness.sendRequest(harness.request('stale-old-room'));
+          await container.pump();
+          check(harness.mediaRecipients.length).equals(updates);
+
+          service.setApprovalRequired(false);
+          await service.synchronized;
+          final reconnecting = harness.request('revoked-reconnect');
+          for (final packet in [
+            reconnecting,
+            AdmissionProtocol.joined(reconnecting),
+          ]) {
+            await replacement.listener.trigger(
+              DataReceivedEvent(
+                data: AdmissionProtocol.encode(packet),
+                participant: _RemoteParticipant('guest'),
+                topic: AdmissionProtocol.topic,
+              ),
+            );
+          }
+          await container.pump();
+          check(
+            harness.sent.whereType<AdmissionDecision>().where(
+              (decision) => decision.id == reconnecting.id && decision.approved,
+            ),
+          ).isEmpty();
+          check(service.admittedIdentities.contains('guest')).isFalse();
+          check(harness.mediaRecipients.last.contains('guest')).isFalse();
+        } else {
+          await service.retryRecovery();
+        }
+        check(preferences.values.containsKey(removalJournalKey)).isFalse();
+        check(service.admittedIdentities.contains('guest')).isFalse();
+        service.requireRemovalReady();
+      },
+    );
+  }
+
+  test(
+    'unknown removal remains quarantined through recovery until explicitly reconciled',
+    () async {
+      final preferences = _AdmissionPreferences();
+      final (harness, _, service) = await removalSession(preferences);
+      final removal = await service.prepareRemoval('guest');
+      await removal.unknown();
+      check(service.admittedIdentities.contains('guest')).isFalse();
+      check(harness.mediaRecipients.last.contains('guest')).isFalse();
+      await service.retryRecovery();
+      check(preferences.values.containsKey(removalJournalKey)).isTrue();
+      check(service.requireRemovalReady).throws<StateError>();
+
+      await service.reconcileRemoval('guest', backendRemoved: true);
+      check(preferences.values.containsKey(removalJournalKey)).isFalse();
+      check(service.admittedIdentities.contains('guest')).isFalse();
+      service.requireRemovalReady();
+    },
+  );
+
+  test('verified removal reconciles after admission detaches', () async {
+    final preferences = _AdmissionPreferences();
+    final (_, container, service) = await removalSession(preferences);
+    final removal = await service.prepareRemoval('guest');
+    await removal.unknown();
+    await service.disconnect();
+
+    await service.reconcileRemoval('guest', backendRemoved: true);
+
+    final roster = await container.read(
+      keeperAdmissionRosterProvider('session', 'keeper').future,
+    );
+    check(roster.members).not((members) => members.contains('guest'));
+    check(roster.revoked).contains('guest');
+    check(preferences.values.containsKey(removalJournalKey)).isFalse();
+    check(service.unresolvedRemovals.contains('guest')).isFalse();
+    check(service.error).isNull();
+  });
+
+  test('detach waits for an in-flight removal reconciliation', () async {
+    final preferences = _AdmissionPreferences();
+    final (_, _, service) = await removalSession(preferences);
+    final removal = await service.prepareRemoval('guest');
+    await removal.unknown();
+    final savingRoster = Completer<void>();
+    final savedRoster = Completer<bool>();
+    preferences.beforeSet = (key, _) {
+      if (key != removalRosterKey) return Future.value(true);
+      if (!savingRoster.isCompleted) savingRoster.complete();
+      return savedRoster.future;
+    };
+
+    final reconciling = service.reconcileRemoval('guest', backendRemoved: true);
+    await savingRoster.future;
+    var detached = false;
+    final disconnecting = service.disconnect().then((_) => detached = true);
+    check(detached).isFalse();
+
+    savedRoster.complete(true);
+    await Future.wait([reconciling, disconnecting]);
+    check(detached).isTrue();
+    check(preferences.values.containsKey(removalJournalKey)).isFalse();
+    check(service.unresolvedRemovals.contains('guest')).isFalse();
+  });
+
+  test(
+    'consecutive removals persist both revocations and cannot be auto-admitted again',
+    () async {
+      final preferences = _AdmissionPreferences();
+      final (harness, _, service) = await removalSession(preferences);
+      await (await service.prepareRemoval('guest')).commit();
+      await (await service.prepareRemoval('another')).commit();
+      service.setApprovalRequired(false);
+      await service.synchronized;
+      await harness.sendRequest(harness.request('removed-again'));
+      await Future<void>.value();
+
+      check(service.admittedIdentities.contains('guest')).isFalse();
+      check(service.admittedIdentities.contains('another')).isFalse();
+      check(harness.mediaRecipients.last.contains('guest')).isFalse();
+      check(preferences.values.containsKey(removalJournalKey)).isFalse();
+      final persisted =
+          jsonDecode(preferences.values[removalRosterKey]!) as Map;
+      check((persisted['members'] as List).contains('guest')).isFalse();
+      check((persisted['members'] as List).contains('another')).isFalse();
+    },
+  );
+
+  test(
+    'committed removal after service disposal remains revoked on re-entry without stale notifications',
+    () async {
+      final preferences = _AdmissionPreferences();
+      final (oldHarness, _, oldService) = await removalSession(preferences);
+      final removal = await oldService.prepareRemoval('guest');
+      await oldService.close();
+      await check(removal.commit()).throws<StateError>();
+      check(preferences.values.containsKey(removalJournalKey)).isTrue();
+      final previousMediaUpdates = oldHarness.mediaRecipients.length;
+
+      final (replacement, _, service) = await removalSession(preferences);
+      check(service.admittedIdentities.contains('guest')).isFalse();
+      check(replacement.mediaRecipients.last.contains('guest')).isFalse();
+      check(oldHarness.mediaRecipients.length).equals(previousMediaUpdates);
+      await service.retryRecovery();
+      check(service.admittedIdentities.contains('guest')).isFalse();
+    },
+  );
+  test(
+    'unfinished durable intent stays quarantined after re-entry until outcome is verified',
+    () async {
+      final preferences = _AdmissionPreferences();
+      final (_, _, oldService) = await removalSession(preferences);
+      await oldService.prepareRemoval('guest');
+      await oldService.close();
+
+      final (replacement, _, service) = await removalSession(preferences);
+      check(service.admittedIdentities.contains('guest')).isFalse();
+      check(replacement.mediaRecipients.last.contains('guest')).isFalse();
+      check(preferences.values.containsKey(removalJournalKey)).isTrue();
+      check(service.requireRemovalReady).throws<StateError>();
+      await service.reconcileRemoval('guest', backendRemoved: false);
+      check(service.admittedIdentities).contains('guest');
+      check(replacement.mediaRecipients.last).contains('guest');
+      check(preferences.values.containsKey(removalJournalKey)).isFalse();
+      service.requireRemovalReady();
+    },
+  );
+
+  test(
+    'repeated failed recovery cannot clear journal from an already mutated roster',
+    () async {
+      final preferences = _AdmissionPreferences();
+      preferences.values[removalJournalKey] = jsonEncode({
+        'guest': 'committed',
+      });
+      preferences.beforeSet = (key, _) async => key != removalRosterKey;
+      final (_, _, service) = await removalSession(preferences);
+      check(preferences.values.containsKey(removalJournalKey)).isTrue();
+      check(service.admittedIdentities.contains('guest')).isFalse();
+
+      await service.retryRecovery();
+      await service.synchronized;
+      check(preferences.values.containsKey(removalJournalKey)).isTrue();
+      check(service.admittedIdentities.contains('guest')).isFalse();
+      preferences.beforeSet = null;
+      await service.retryRecovery();
+      await service.synchronized;
+      check(preferences.values.containsKey(removalJournalKey)).isFalse();
+      check(service.admittedIdentities.contains('guest')).isFalse();
+      service.requireRemovalReady();
+    },
+  );
+
+  test(
+    'corrupt removal journal can be explicitly reset and admission recovers',
+    () async {
+      final preferences = _AdmissionPreferences();
+      preferences.values[removalJournalKey] = '{not-json';
+      final (_, _, service) = await removalSession(preferences);
+
+      check(service.hasCorruptRemovalJournal).isTrue();
+      check(service.admittedIdentities).isEmpty();
+      check(preferences.values.containsKey(removalJournalKey)).isTrue();
+
+      await service.resetCorruptRemovalJournal();
+
+      check(service.hasCorruptRemovalJournal).isFalse();
+      check(service.recoveryError).isNull();
+      check(preferences.values.containsKey(removalJournalKey)).isFalse();
+      check(preferences.values.containsKey(removalRosterKey)).isFalse();
+      check(service.admittedIdentities).isEmpty();
+      service.requireRemovalReady();
+    },
+  );
+
+  test(
+    'failed corrupt journal reset preserves fail-closed admission',
+    () async {
+      final preferences = _AdmissionPreferences();
+      preferences.values[removalJournalKey] = '{not-json';
+      final (_, _, service) = await removalSession(preferences);
+      preferences.beforeRemove = (key) async => key != removalJournalKey;
+
+      await check(service.resetCorruptRemovalJournal()).throws<StateError>();
+
+      check(service.hasCorruptRemovalJournal).isTrue();
+      check(service.admittedIdentities).isEmpty();
+      check(preferences.values.containsKey(removalJournalKey)).isTrue();
+    },
+  );
+
+  test(
+    'session owns admission and roster permissions without a widget',
+    () async {
+      final harness = _AdmissionHarness();
+      final container = ProviderContainer(overrides: harness.overrides);
+      final retained = container.listen(currentSessionProvider, (_, _) {});
+      final service = container.read(currentSessionProvider)!.admission;
+      try {
+        await container.read(
+          keeperAdmissionRosterProvider('session', 'keeper').future,
+        );
+        await container.read(
+          declinedSessionParticipantsProvider('session', 'keeper').future,
+        );
+        service.sync();
+        await service.synchronized;
+        final controller = service.keeperController!;
+        service
+          ..sync()
+          ..sync();
+        await service.synchronized;
+        check(identical(controller, service.keeperController)).isTrue();
+        check(harness.room.transportCreations).equals(1);
+        await harness.sendRequest(harness.request('headless'));
+        await Future<void>.value();
+        check(controller.requests).length.equals(1);
+        final request = controller.requests.single;
+        await service.decide(request, true);
+        await harness.sendPacket(AdmissionProtocol.joined(request));
+        await Future<void>.value();
+        check(
+          container.read(admittedSessionParticipantIdentitiesProvider),
+        ).contains('guest');
+        check(harness.mediaRecipients.last).contains('guest');
+        await service.revokeRemovedParticipant('guest');
+        await Future<void>.value();
+        check(
+          container
+              .read(admittedSessionParticipantIdentitiesProvider)
+              .contains('guest'),
+        ).isFalse();
+        check(harness.mediaRecipients.last.contains('guest')).isFalse();
+        final replacement = _AdmissionRoom(harness.room.participant);
+        when(() => harness.session.room).thenReturn(replacement);
+        service.sync();
+        await service.synchronized;
+        check(identical(controller, service.keeperController)).isFalse();
+        check(replacement.transportCreations).equals(1);
+        final before = harness.mediaRecipients.length;
+        await harness.sendRequest(harness.request('stale'));
+        await Future<void>.value();
+        check(harness.mediaRecipients.length).equals(before);
+        final completeRemoval = await service.prepareRemoval('late-guest');
+        await service.close();
+        await check(completeRemoval.commit()).throws<StateError>();
+        check(
+          harness.preferences.values.containsKey(removalJournalKey),
+        ).isTrue();
+        await replacement.listener.trigger(
+          DataReceivedEvent(
+            data: AdmissionProtocol.encode(harness.request('disposed')),
+            participant: _RemoteParticipant('guest'),
+            topic: AdmissionProtocol.topic,
+          ),
+        );
+        await Future<void>.value();
+        check(harness.mediaRecipients.length).equals(before);
+      } finally {
+        await service.close();
+        retained.close();
+        container.dispose();
+      }
+    },
+  );
+
+  Future<void> waitForAdmissionReady(
+    WidgetTester tester,
+    SessionAdmissionService service,
+  ) async {
+    final ready = Completer<void>();
+    void observeReady() {
+      if ((service.keeperController != null || service.error != null) &&
+          !ready.isCompleted) {
+        ready.complete();
+      }
+    }
+
+    service.addListener(observeReady);
+    try {
+      observeReady();
+      for (var frame = 0; !ready.isCompleted && frame < 20; frame++) {
+        await tester.pump();
+      }
+      check(
+        ready.isCompleted,
+        because: 'Admission loading must finish',
+      ).isTrue();
+      await ready.future;
+      await tester.pump();
+    } finally {
+      service.removeListener(observeReady);
+    }
+  }
+
   Future<ProviderContainer> pumpHost(
     WidgetTester tester,
     _AdmissionHarness harness, {
@@ -323,10 +1338,31 @@ void main() {
       ),
     );
     await tester.pump();
-    return ProviderScope.containerOf(
+    final container = ProviderScope.containerOf(
       tester.element(find.byType(SessionAdmissionOverlay)),
       listen: false,
     );
+    final service = container.read(currentSessionProvider)!.admission;
+    // Most scenarios start after durable admission data has loaded. Tests of
+    // loading explicitly control the preferences future instead.
+    if (harness._preferencesOverride == null) {
+      await waitForAdmissionReady(tester, service);
+    }
+    return container;
+  }
+
+  Future<void> closeHost(WidgetTester tester) async {
+    final overlay = find.byType(SessionAdmissionOverlay);
+    if (overlay.evaluate().isNotEmpty) {
+      final container = ProviderScope.containerOf(
+        tester.element(overlay),
+        listen: false,
+      );
+      await tester.runAsync(
+        () => container.read(currentSessionProvider)!.admission.close(),
+      );
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
   }
 
   Future<void> seedDeclined(
@@ -382,9 +1418,7 @@ void main() {
     WidgetTester tester,
     Future<bool> Function() onStart,
   ) async {
-    final navigator = tester.state<NavigatorState>(
-      find.byKey(const Key('room-navigator')),
-    );
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator).last);
     showDialog<void>(
       context: navigator.context,
       useRootNavigator: false,
@@ -392,6 +1426,65 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'Keeper reconciles an unknown removal through verified recovery without resending it',
+    (tester) async {
+      setupAppConfig();
+      final preferences = _AdmissionPreferences();
+      await seedRoster(preferences, members: ['guest'], revision: 1);
+      final harness = _AdmissionHarness(preferences: preferences);
+      final videoBuilds = ValueNotifier(0);
+      addTearDown(videoBuilds.dispose);
+      setViewport(tester, const Size(390, 844));
+      addTearDown(tester.view.reset);
+      final container = await pumpHost(
+        tester,
+        harness,
+        videoBuilds: videoBuilds,
+      );
+      final service = container.read(currentSessionProvider)!.admission;
+      await container.read(
+        keeperAdmissionRosterProvider('session', 'keeper').future,
+      );
+      await container.read(
+        declinedSessionParticipantsProvider('session', 'keeper').future,
+      );
+      service.sync();
+      await service.synchronized;
+      final backend = _RemovalBackend()
+        ..action = () async => throw TimeoutException('outcome unavailable');
+      final moderation = moderationFor(harness, service, backend);
+      await check(
+        moderation.removeParticipant('guest'),
+      ).throws<SessionCommandException>();
+      await check(moderation.removeParticipant('guest')).throws<StateError>();
+      check(backend.calls).equals(1);
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.admission);
+      await tester.pumpAndSettle();
+      check(service.admittedIdentities.contains('guest')).isFalse();
+      await tester.tap(find.text('Verified guest was not removed'));
+      await tester.pumpAndSettle();
+      check(service.admittedIdentities.contains('guest')).isFalse();
+      await tester.tap(find.text('Confirm verified outcome'));
+      await tester.pumpAndSettle();
+      check(service.admittedIdentities).contains('guest');
+      check(harness.mediaRecipients.last).contains('guest');
+      check(backend.calls).equals(1);
+      check(find.text('Verified guest was not removed').evaluate()).isEmpty();
+      container.read(sessionPresentationProvider.notifier).closePanel();
+      await tester.pumpAndSettle();
+      await closeHost(tester);
+      await tester.pump();
+    },
+    // Same third-party auto_size_text notification banner as the existing
+    // error-notification tests below; Totem-owned hosts are unmounted above.
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
 
   testWidgets('session descendants observe live admission requests', (
     tester,
@@ -405,7 +1498,7 @@ void main() {
     await tester.pump();
 
     tester
-        .state<NavigatorState>(find.byKey(const Key('room-navigator')))
+        .state<NavigatorState>(find.byType(Navigator).last)
         .push<void>(
           MaterialPageRoute<void>(
             builder: (context) {
@@ -428,7 +1521,7 @@ void main() {
     await tester.pump();
     check(find.text('First, Second').evaluate()).length.equals(1);
 
-    await tester.pumpWidget(const SizedBox.shrink());
+    await closeHost(tester);
     await tester.pump();
   });
 
@@ -501,9 +1594,7 @@ void main() {
           .onPressed,
     ).isNull();
     check(starts).equals(1);
-    final navigator = tester.state<NavigatorState>(
-      find.byKey(const Key('room-navigator')),
-    );
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator).last);
     check(SessionAdmissionScope.maybeOf(navigator.context)!.requests).isEmpty();
     check(
       tester
@@ -513,6 +1604,8 @@ void main() {
     startGate.complete(true);
     await tester.pumpAndSettle();
     check(find.text('Admit all and start').evaluate()).isEmpty();
+    await closeHost(tester);
+    await tester.pump();
   });
 
   testWidgets(
@@ -532,7 +1625,7 @@ void main() {
         if (packet is AdmissionDecision) await gate.future;
       };
       final navigator = tester.state<NavigatorState>(
-        find.byKey(const Key('room-navigator')),
+        find.byType(Navigator).last,
       );
       final decision = SessionAdmissionScope.maybeOf(
         navigator.context,
@@ -560,7 +1653,7 @@ void main() {
       ).length.equals(1);
       gate.complete();
       await decision;
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
     },
@@ -628,7 +1721,7 @@ void main() {
             .toList(),
       ).deepEquals(['first', 'second']);
       check(starts).equals(1);
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
     },
@@ -682,7 +1775,7 @@ void main() {
     await tester.pumpAndSettle();
     check(starts).equals(1);
     check(find.text('Start without admitting').evaluate()).isEmpty();
-    await tester.pumpWidget(const SizedBox.shrink());
+    await closeHost(tester);
     await tester.pump();
   });
 
@@ -718,6 +1811,8 @@ void main() {
       ).length.equals(1);
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
+      await closeHost(tester);
+      await tester.pump();
     },
   );
 
@@ -744,6 +1839,8 @@ void main() {
     check(find.text('Start without admitting').evaluate()).length.equals(1);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
+    await closeHost(tester);
+    await tester.pump();
   });
 
   testWidgets(
@@ -794,6 +1891,8 @@ void main() {
       check(
         find.text('Are you sure you want to start the session?').evaluate(),
       ).isEmpty();
+      await closeHost(tester);
+      await tester.pump();
     },
   );
 
@@ -862,7 +1961,7 @@ void main() {
       ).length.equals(1);
       check(starts).equals(1);
       check(find.text('Admit all and start').evaluate()).isEmpty();
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
     },
@@ -896,8 +1995,10 @@ void main() {
     check(find.byType(SessionWaitingQueueButton).evaluate()).isEmpty();
 
     preferencesReady.complete(harness.preferences);
-    await tester.pump();
-    await tester.pump();
+    await waitForAdmissionReady(
+      tester,
+      container.read(currentSessionProvider)!.admission,
+    );
 
     await harness.sendRequest(harness.request('blocked-after-preferences'));
     await tester.pump();
@@ -909,7 +2010,7 @@ void main() {
     check(decisions.single.approved).isFalse();
 
     await tester.pump(const Duration(minutes: 5));
-    await tester.pumpWidget(const SizedBox.shrink());
+    await closeHost(tester);
     await tester.pump();
     await tester.idle();
   });
@@ -1001,11 +2102,54 @@ void main() {
       check(find.text('Retry').evaluate()).isEmpty();
       check(find.text('Reset admission data').evaluate()).isEmpty();
 
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
     });
   }
+
+  testWidgets('keeper can explicitly reset a corrupt removal journal', (
+    tester,
+  ) async {
+    setupAppConfig();
+    final preferences = _AdmissionPreferences();
+    await seedDeclined(preferences, 'blocked');
+    await seedRoster(preferences, members: ['member'], revision: 2);
+    preferences.values[removalJournalKey] = '{';
+    final harness = _AdmissionHarness(
+      preferences: preferences,
+      preferencesOverride: (_) async => preferences,
+    );
+    final videoBuilds = ValueNotifier(0);
+    addTearDown(videoBuilds.dispose);
+
+    final container = await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    await tester.tap(find.byType(SessionWaitingQueueButton));
+    await tester.pumpAndSettle();
+    check(find.text('Reset removal recovery').evaluate()).length.equals(1);
+
+    await tester.tap(find.text('Reset removal recovery'));
+    await tester.pumpAndSettle();
+    check(find.byType(ConfirmationDialog).evaluate()).length.equals(1);
+    check(find.textContaining('journal is unreadable').evaluate()).isNotEmpty();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ConfirmationDialog),
+        matching: find.text('Reset removal recovery'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final service = container.read(currentSessionProvider)!.admission;
+    check(preferences.values.containsKey(removalJournalKey)).isFalse();
+    check(service.hasCorruptRemovalJournal).isFalse();
+    check(service.keeperController).isNotNull();
+    check(find.text('Retry').evaluate()).isEmpty();
+
+    await closeHost(tester);
+    await tester.pump();
+    await tester.idle();
+  });
 
   testWidgets('ordinary read errors offer retry without resetting data', (
     tester,
@@ -1039,7 +2183,7 @@ void main() {
     check(roster.members).contains('member');
     check(find.text('Retry').evaluate()).isEmpty();
 
-    await tester.pumpWidget(const SizedBox.shrink());
+    await closeHost(tester);
     await tester.pump();
     await tester.idle();
   });
@@ -1059,9 +2203,9 @@ void main() {
     await tester.pump();
 
     check(harness.sent).isEmpty();
-    check(harness.mediaRecipients).isEmpty();
+    check(harness.mediaRecipients.expand((recipients) => recipients)).isEmpty();
 
-    await tester.pumpWidget(const SizedBox.shrink());
+    await closeHost(tester);
     await tester.pump();
     await tester.idle();
   });
@@ -1100,7 +2244,7 @@ void main() {
       await tester.pump();
       check(preferences.writeCount).equals(2);
 
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
 
@@ -1124,43 +2268,21 @@ void main() {
     },
   );
 
-  testWidgets('ending a Session removes its local admission data', (
-    tester,
-  ) async {
+  test('ending a Session removes its local admission data', () async {
     final preferences = _AdmissionPreferences();
     await seedDeclined(preferences, 'guest');
     await seedRoster(preferences, members: ['guest'], revision: 2);
-    final harness = _AdmissionHarness(preferences: preferences);
-    final videoBuilds = ValueNotifier(0);
-    addTearDown(videoBuilds.dispose);
-
-    final container = await pumpHost(tester, harness, videoBuilds: videoBuilds);
+    final (harness, _, service) = await removalSession(preferences);
     check(preferences.values).length.equals(2);
 
-    when(() => harness.state.roomState).thenReturn(
-      const RoomState(
-        keeper: 'keeper',
-        nextSpeaker: Omittable(''),
-        currentSpeaker: Omittable(''),
-        status: RoomStatus.ended,
-        turnState: TurnState.idle,
-        sessionSlug: 'session',
-        statusDetail: RoomStateStatusDetailEnded(
-          EndedDetail(reason: EndReason.keeperEnded),
-        ),
-        talkingOrder: [],
-        version: 2,
-        roundNumber: 1,
-      ),
-    );
-    container.read(sessionAdmissionSettingsProvider.notifier).setEnabled(false);
-    await tester.pump();
-    await tester.idle();
-    check(preferences.values).isEmpty();
+    endSession(harness);
+    service.sync();
+    await service.synchronized;
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-    await tester.idle();
+    check(preferences.values).isEmpty();
+    check(service.keeperController).isNull();
+    await service.close();
+    check(preferences.values).isEmpty();
   });
 
   testWidgets(
@@ -1178,7 +2300,7 @@ void main() {
 
       await pumpHost(tester, firstHarness, videoBuilds: videoBuilds);
       await tester.pump();
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
 
@@ -1220,7 +2342,7 @@ void main() {
       check(snapshot.revision).equals(7);
       check(snapshot.members).deepEquals(['guest', 'silent']);
 
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
     },
@@ -1257,9 +2379,7 @@ void main() {
     await tester.pump();
     check(harness.mediaRecipients.last).deepEquals({'guest', 'silent'});
 
-    await container
-        .read(sessionKeeperControllerProvider(harness.session).notifier)
-        .onParticipantRemoved!('guest');
+    await harness.session.admission.revokeRemovedParticipant('guest');
     await tester.pump();
     check(
       container.read(admittedSessionParticipantIdentitiesProvider),
@@ -1287,13 +2407,29 @@ void main() {
     check(find.byType(SessionWaitingQueueButton).evaluate()).length.equals(1);
     check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
 
+    // Temporarily unmount only the presentation; the retained session still
+    // owns admission and must accept requests when the host returns.
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+    final controller = harness.session.admission.keeperController;
+    check(controller).isNotNull();
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: ThemeData(useMaterial3: false),
+          home: _AdmissionOverlayHost(videoBuilds: videoBuilds),
+        ),
+      ),
+    );
+    await tester.pump();
     check(
-      container
-          .read(sessionKeeperControllerProvider(harness.session).notifier)
-          .onParticipantRemoved,
-    ).isNull();
+      identical(harness.session.admission.keeperController, controller),
+    ).isTrue();
+    check(harness.room.transportCreations).equals(1);
+    await closeHost(tester);
+    await tester.pump();
+
     await tester.idle();
   });
 
@@ -1317,7 +2453,7 @@ void main() {
     await tester.pump();
     check(find.byType(SessionWaitingQueueButton).evaluate()).length.equals(1);
 
-    await tester.pumpWidget(const SizedBox.shrink());
+    await closeHost(tester);
     await tester.pump();
     await tester.idle();
 
@@ -1353,7 +2489,7 @@ void main() {
     check(snapshot.revision).equals(3);
     check(snapshot.members).isEmpty();
 
-    await tester.pumpWidget(const SizedBox.shrink());
+    await closeHost(tester);
     await tester.pump();
     await tester.idle();
   });
@@ -1398,7 +2534,7 @@ void main() {
       check(find.byType(SessionWaitingQueueButton).evaluate()).length.equals(1);
 
       await tester.pump(const Duration(minutes: 5));
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
     },
@@ -1427,20 +2563,20 @@ void main() {
       ).equals(sessionSidePanelWidth);
 
       await tester
-          .state<NavigatorState>(find.byKey(const Key('room-navigator')))
+          .state<NavigatorState>(find.byType(Navigator).last)
           .maybePop();
       await tester.pumpAndSettle();
       check(find.byType(SessionAdmissionPanel).evaluate()).isEmpty();
 
       await tester.pump(const Duration(minutes: 5));
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
     },
   );
 
   testWidgets(
-    'clears a dormant dock selection before opening a tablet drawer',
+    'closes admission when the dock no longer fits and keeps it closed on widening',
     (tester) async {
       setViewport(tester, const Size(1200, 900));
       addTearDown(tester.view.resetPhysicalSize);
@@ -1461,25 +2597,23 @@ void main() {
 
       await tester.tap(find.byType(SessionWaitingQueueButton));
       await tester.pumpAndSettle();
-      check(container.read(sessionAdmissionOpenProvider)).isTrue();
+      check(container.read(sessionAdmissionSelectedProvider)).isTrue();
       check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
 
       setViewport(tester, const Size(800, 900));
       await tester.pump();
       check(find.byType(DockedSessionSidePanel).evaluate()).isEmpty();
-      check(container.read(sessionAdmissionOpenProvider)).isTrue();
-
-      await tester.tap(find.byType(SessionWaitingQueueButton));
       await tester.pumpAndSettle();
-      check(container.read(sessionAdmissionOpenProvider)).isFalse();
-      check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
+      check(container.read(sessionAdmissionSelectedProvider)).isFalse();
+      check(find.byType(SessionAdmissionPanel).evaluate()).isEmpty();
 
       setViewport(tester, const Size(1200, 900));
-      await tester.pump();
-      check(find.byType(SessionAdmissionPanel).evaluate()).length.equals(1);
+      await tester.pumpAndSettle();
+      check(find.byType(SessionAdmissionPanel).evaluate()).isEmpty();
+      check(container.read(sessionAdmissionSelectedProvider)).isFalse();
 
       await tester.pump(const Duration(minutes: 5));
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
     },
@@ -1535,7 +2669,7 @@ void main() {
     check(decisions).length.equals(1);
     check(decisions.single.id).equals(first.id);
 
-    await tester.pumpWidget(const SizedBox.shrink());
+    await closeHost(tester);
     await tester.pump();
     await tester.idle();
   });
@@ -1581,10 +2715,15 @@ void main() {
 
       check(harness.sent.whereType<AdmissionDecision>()).length.equals(2);
       check(
-        find.text('Could not update the queue').evaluate(),
+        find
+            .descendant(
+              of: find.byType(NotificationBanner),
+              matching: find.text('Could not update the queue'),
+            )
+            .evaluate(),
       ).length.equals(1);
 
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
     },
@@ -1638,7 +2777,7 @@ void main() {
       check(container.read(declinedProvider).requireValue).isEmpty();
       check(harness.sent.whereType<AdmissionDecision>()).isEmpty();
 
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
     },
@@ -1725,7 +2864,7 @@ void main() {
       ).isTrue();
 
       await tester.pump(const Duration(minutes: 5));
-      await tester.pumpWidget(const SizedBox.shrink());
+      await closeHost(tester);
       await tester.pump();
       await tester.idle();
     },

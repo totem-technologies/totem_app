@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +29,14 @@ import '../../media/fake_local_media.dart';
 import '../../media/test_participants.dart';
 import '../../session_test_fixtures.dart';
 import '../../session_test_mocks.dart';
+
+class _ObservedRouter extends FakeTotemRouter {
+  int exits = 0;
+  @override
+  void popOrHome([BuildContext? context]) {
+    exits++;
+  }
+}
 
 class _FakeSessionAdmissionPreferences implements SessionAdmissionPreferences {
   @override
@@ -66,7 +76,7 @@ SessionRoomState _sessionState({
       state: RoomConnectionState.connected,
     ),
     participants: ParticipantsState(participants: participants),
-    chat: const ChatState(),
+
     turn: SessionTurnState(roomState: roomState),
   );
 }
@@ -326,6 +336,37 @@ void main() {
         roundNumber: 1,
       ),
     );
+
+    testWidgets('leave action awaits session cleanup before navigating away', (
+      tester,
+    ) async {
+      final router = _ObservedRouter();
+      TotemRouter.instance = router;
+      final cleanup = Completer<void>();
+      final started = Completer<void>();
+      when(() => session.leave()).thenAnswer((_) {
+        started.complete();
+        return cleanup.future;
+      });
+      await _pumpMoreOptions(
+        tester,
+        session: session,
+        state: state,
+        deviceController: deviceController,
+      );
+      await tester.tap(find.text('Leave session'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Leave session').last);
+      await tester.pumpAndSettle();
+      check(started.isCompleted).isTrue();
+      check(router.exits).equals(0);
+      cleanup.complete();
+      await tester.pump();
+      check(router.exits).equals(1);
+      verify(() => session.leave()).called(1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
 
     for (final (label, expectedResult, endsSession) in [
       ('Cancel', null, false),

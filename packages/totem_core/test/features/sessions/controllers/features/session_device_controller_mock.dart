@@ -6,6 +6,9 @@ import 'package:totem_core/features/sessions/controllers/features/session_device
 
 class MockSessionDeviceController extends Mock
     implements SessionDeviceController {
+  @override
+  int get microphoneIntentRevision => 0;
+
   /// No device stops unless a test supplies a stream.
   Stream<MediaKind> deviceNeedsAttentionStream = const Stream.empty();
 
@@ -22,6 +25,8 @@ class MockSessionDeviceController extends Mock
 }
 
 class FakeSessionDeviceController implements SessionDeviceController {
+  @override
+  int get microphoneIntentRevision => 0;
   bool disableMicrophoneCalled = false;
   bool disableCameraCalled = false;
   bool _cameraEnabled = false;

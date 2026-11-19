@@ -122,6 +122,29 @@ void main() {
     },
   );
 
+  test(
+    'an older session cannot stop infrastructure owned by a newer session',
+    () async {
+      final platform = _FakeSessionInfraPlatform();
+      final controller = createContainer(
+        platform,
+      ).read(sessionInfraControllerProvider.notifier);
+      final oldEntry = Object();
+      final newEntry = Object();
+      await controller.activate(owner: oldEntry);
+      await controller.activate(owner: newEntry);
+      await controller.deactivate(owner: oldEntry);
+      check(platform.running).isTrue();
+      check(platform.startServiceCalls).equals(1);
+      check(platform.stopServiceCalls).equals(0);
+      await controller.deactivate(owner: oldEntry);
+      check(platform.running).isTrue();
+      await controller.deactivate(owner: newEntry);
+      check(platform.running).isFalse();
+      check(platform.stopServiceCalls).equals(1);
+    },
+  );
+
   test('pending activation stops before it can start after disposal', () async {
     final runningCheck = Completer<bool>();
     final delayedPlatform = _DelayedRunningCheckPlatform(runningCheck);

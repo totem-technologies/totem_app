@@ -92,7 +92,7 @@ const _sessionState = SessionRoomState(
     state: RoomConnectionState.connected,
   ),
   participants: ParticipantsState(),
-  chat: ChatState(),
+
   turn: SessionTurnState(
     roomState: RoomState(
       keeper: 'keeper',
@@ -306,12 +306,6 @@ class _PendingActivationSession extends _FailureReceiptSession {
     await super.resetAfterFailedJoin();
     _FailureReceiptSession.receiptMessaging.finished?.complete();
   }
-}
-
-class _UninitializedSessionController extends _SuccessfulSessionController {
-  @override
-  void preventAutoDispose() =>
-      throw StateError('Session unavailable before media handoff');
 }
 
 class _FatalSessionController extends _RetryableSessionController {
@@ -1940,7 +1934,8 @@ void main() {
       final container = _container(
         factory: factory,
         response: const JoinResponse(token: 'token', isAlreadyPresent: false),
-        sessionController: _UninitializedSessionController.new,
+        sessionController: () =>
+            throw StateError('Session unavailable before media handoff'),
       );
       addTearDown(container.dispose);
       await _waitForMedia(container);
@@ -1970,6 +1965,14 @@ void main() {
       factory: factory,
       response: const JoinResponse(token: 'token', isAlreadyPresent: false),
       sessionController: _SuccessfulSessionController.new,
+      sessionOptions: const SessionOptions(
+        sessionSlug: _slug,
+        token: 'token',
+        cameraEnabled: false,
+        microphoneEnabled: true,
+        speakerEnabled: true,
+        cameraOptions: SessionController.defaultCameraCaptureOptions,
+      ),
     );
     addTearDown(container.dispose);
     await _waitForMedia(container);

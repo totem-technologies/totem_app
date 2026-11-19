@@ -10,16 +10,18 @@ import 'package:totem_core/features/sessions/admission/keeper_admission_roster.d
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 Future<void> showParticipantReorderModals(BuildContext context) {
   return showResponsiveModal<void>(
-    context: context,
+    context: sessionNavigatorContext(context),
     useRootNavigator: false,
     bottomSheetBackgroundColor: AppTheme.cream,
     dialogBackgroundColor: AppTheme.cream,
@@ -176,7 +178,7 @@ class _ParticipantReorderWidgetState
 
                                   default:
                                     showResponsiveModal<void>(
-                                      context: context,
+                                      context: sessionNavigatorContext(context),
                                       useRootNavigator: false,
                                       showDragHandle: true,
                                       bottomSheetBuilder: (context) => Row(
@@ -250,7 +252,9 @@ class _ParticipantReorderWidgetState
 
                                     default:
                                       showResponsiveModal<void>(
-                                        context: context,
+                                        context: sessionNavigatorContext(
+                                          context,
+                                        ),
                                         useRootNavigator: false,
                                         showDragHandle: true,
                                         bottomSheetBuilder: (context) => Row(
@@ -285,6 +289,7 @@ class _ParticipantReorderWidgetState
                               children: [
                                 Expanded(
                                   child: OutlinedButton(
+                                    style: SessionButtonStyle.outlined(),
                                     onPressed: () =>
                                         Navigator.of(context).pop(),
                                     child: const Text('Cancel'),
@@ -292,6 +297,7 @@ class _ParticipantReorderWidgetState
                                 ),
                                 Expanded(
                                   child: ElevatedButton(
+                                    style: SessionButtonStyle.filled(),
                                     onPressed: _loading || !canSave
                                         ? null
                                         : () async {
@@ -443,7 +449,8 @@ class _ParticipantReorderWidgetState
     } catch (error) {
       if (mounted) {
         await ErrorHandler.showErrorDialog(
-          context,
+          sessionNavigatorContext(context),
+          useRootNavigator: false,
           title: 'Error Reordering Participants',
           message: 'An error occurred while reordering participants',
         );

@@ -21,9 +21,16 @@ final class EmojiReactionsProvider
         retry: null,
         name: r'emojiReactionsProvider',
         isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[currentSessionProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          EmojiReactionsProvider.$allTransitiveDependencies0,
+          EmojiReactionsProvider.$allTransitiveDependencies1,
+        ],
       );
+
+  static final $allTransitiveDependencies0 = currentSessionProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionProvider.$allTransitiveDependencies0;
 
   @override
   String debugGetCreateSourceHash() => _$emojiReactionsHash();
@@ -41,7 +48,7 @@ final class EmojiReactionsProvider
   }
 }
 
-String _$emojiReactionsHash() => r'5b49654a733fe1dda3116a9b20850c3f454640a4';
+String _$emojiReactionsHash() => r'e7ab827932f5c2da57b11787c0e9dcade8dac444';
 
 abstract class _$EmojiReactions extends $Notifier<List<SessionEmojiReaction>> {
   List<SessionEmojiReaction> build();
@@ -83,6 +90,12 @@ final class ParticipantEmojisProvider
          $allTransitiveDependencies: null,
        );
 
+  static final $allTransitiveDependencies0 = emojiReactionsProvider;
+  static final $allTransitiveDependencies1 =
+      EmojiReactionsProvider.$allTransitiveDependencies0;
+  static final $allTransitiveDependencies2 =
+      EmojiReactionsProvider.$allTransitiveDependencies1;
+
   @override
   String debugGetCreateSourceHash() => _$participantEmojisHash();
 
@@ -123,7 +136,7 @@ final class ParticipantEmojisProvider
   }
 }
 
-String _$participantEmojisHash() => r'0d53201459e39eb86879e4d0d0cdc1bd01a5e352';
+String _$participantEmojisHash() => r'd401629ab168d38465e40e9268445eff1087eff8';
 
 final class ParticipantEmojisFamily extends $Family
     with $FunctionalFamilyOverride<List<String>, String> {
@@ -131,8 +144,12 @@ final class ParticipantEmojisFamily extends $Family
     : super(
         retry: null,
         name: r'participantEmojisProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
+        dependencies: <ProviderOrFamily>[emojiReactionsProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          ParticipantEmojisProvider.$allTransitiveDependencies0,
+          ParticipantEmojisProvider.$allTransitiveDependencies1,
+          ParticipantEmojisProvider.$allTransitiveDependencies2,
+        ],
         isAutoDispose: true,
       );
 

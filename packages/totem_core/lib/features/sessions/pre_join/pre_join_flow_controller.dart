@@ -618,7 +618,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         sessionControllerProvider(options).notifier,
       );
       session = currentSession;
-      currentSession.preventAutoDispose();
 
       joinStarted = true;
       final SessionJoinResult result;
@@ -751,7 +750,6 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       return PreJoinJoinOutcome.retryableFailure;
     } finally {
       releaseSessionListener?.call();
-      session?.allowAutoDispose();
       if (admissionRoom != null && !roomTransferred) {
         await _closeAdmissionRoom(admissionRoom);
       }

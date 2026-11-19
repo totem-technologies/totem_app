@@ -455,6 +455,10 @@ class PreJoinMediaController extends _$PreJoinMediaController {
       throw StateError('Pre-join media has already been transferred');
     }
     await settled();
+    // Concurrent callers may have waited for the same capture operation.
+    if (_terminal || state.transferred) {
+      throw StateError('Pre-join media is no longer available for transfer');
+    }
 
     final cameraTrack = state.camera.isReady ? state.camera.track : null;
     final microphoneTrack = state.microphone.isReady

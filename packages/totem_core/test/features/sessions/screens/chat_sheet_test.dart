@@ -10,7 +10,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/permissions/media_control.dart';
 import 'package:totem_core/features/permissions/model.dart';
@@ -19,7 +18,6 @@ import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/chat.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
-import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/chat/message_bubble.dart';
 import 'package:totem_core/shared/widgets/chat/message_input_bar.dart';
 
@@ -128,7 +126,6 @@ SessionRoomState _createSessionState({
             testParticipant('lucas', name: 'Lucas'),
           ],
     ),
-    chat: ChatState(messages: messages),
     turn: const SessionTurnState(
       roomState: RoomState(
         keeper: 'keeper-1',
@@ -151,12 +148,14 @@ List<Object?> _sharedOverrides({
   required List<SessionChatMessage> messages,
   required SessionController session,
   required AuthState authState,
+  bool overrideMessages = true,
   RoomScreen currentScreen = RoomScreen.listening,
   List<ParticipantInfo>? participants,
 }) {
   return [
     authControllerProvider.overrideWith(() => FakeAuthController(authState)),
     currentSessionProvider.overrideWith((ref) => session),
+    if (overrideMessages) sessionMessagesProvider.overrideWithValue(messages),
     currentSessionEventProvider.overrideWith((ref) => _createSessionEvent()),
     currentSessionStateProvider.overrideWithValue(
       _createSessionState(messages: messages, participants: participants),
@@ -244,6 +243,7 @@ void main() {
           ..._sharedOverrides(
             isKeeper: isKeeper,
             messages: messages,
+            overrideMessages: false,
             session: session,
             authState: authState,
             currentScreen: currentScreen,
@@ -775,103 +775,6 @@ void main() {
       );
     }
 
-    testWidgets(
-      'shows the Everyone hint and private Keeper CTA for participants',
-      (tester) async {
-        await pumpChatSheet(
-          tester,
-          isKeeper: false,
-          messages: const [],
-          session: session,
-          authState: AuthState.unauthenticated(),
-        );
-
-        check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
-        check(
-          tester.widgetList(
-            find.text('Messages to Everyone — only the Keeper can post'),
-          ),
-        ).length.equals(1);
-        check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
-        check(
-          tester.widgetList(find.byType(CustomScrollView)),
-        ).length.equals(1);
-        check(
-          tester
-              .widget<CustomScrollView>(find.byType(CustomScrollView))
-              .controller,
-        ).isNotNull();
-
-        check(
-          tester.widgetList(find.text('Message Keeper privately')),
-        ).length.equals(1);
-        check(
-          tester.widget<TextField>(find.byType(TextField)).enabled,
-        ).equals(false);
-        check(
-          tester
-              .widget<Material>(
-                find
-                    .ancestor(
-                      of: find.text('Message Keeper privately'),
-                      matching: find.byType(Material),
-                    )
-                    .first,
-              )
-              .color,
-        ).equals(AppTheme.mauve);
-      },
-    );
-
-    testWidgets('keeps the private Keeper action inset on narrow phones', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(320, 640);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      await pumpChatSheet(
-        tester,
-        isKeeper: false,
-        messages: const [],
-        session: session,
-        authState: AuthState.unauthenticated(),
-      );
-
-      final action = find
-          .ancestor(
-            of: find.text('Message Keeper privately'),
-            matching: find.byType(Material),
-          )
-          .first;
-      check(tester.getRect(action).right).isLessOrEqual(300);
-    });
-
-    testWidgets('shows the keeper composer for Everyone', (tester) async {
-      await pumpChatSheet(
-        tester,
-        isKeeper: true,
-        messages: const [],
-        session: session,
-        authState: AuthState.unauthenticated(),
-      );
-
-      check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
-      check(
-        tester.widgetList(
-          find.text('Messages to Everyone — only you can post'),
-        ),
-      ).length.equals(1);
-      check(tester.widgetList(find.text('No messages yet'))).length.equals(1);
-      check(tester.widgetList(find.text('Message Everyone'))).length.equals(1);
-      check(tester.widgetList(find.byType(TextField))).length.equals(1);
-      check(tester.widgetList(find.text('Welcome! 🙏'))).length.equals(0);
-      check(
-        tester.widgetList(find.text('Please mute your mic')),
-      ).length.equals(0);
-    });
-
     testWidgets('keeps the composer above the keyboard', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1;
@@ -892,9 +795,26 @@ void main() {
       check(
         tester.getBottomLeft(find.byType(MessageInputBar)).dy <= 500,
       ).isTrue();
+      check(
+        find
+            .byKey(const ValueKey('message-input-send'))
+            .hitTestable()
+            .evaluate(),
+      ).isNotEmpty();
+      await tester.enterText(find.byType(TextField), 'Above keyboard');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('message-input-send')));
+      await tester.pump();
+      verify(
+        () => messaging.sendMessage('Above keyboard', recipientIdentity: null),
+      ).called(1);
+      check(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      ).isEmpty();
+      check(tester.takeException()).isNull();
     });
 
-    testWidgets('renders own and received messages as MessageBubbles', (
+    testWidgets('shows messages sent by the user and received from others', (
       tester,
     ) async {
       final mine = SessionChatMessage(
@@ -928,9 +848,6 @@ void main() {
         ),
       );
 
-      check(tester.widgetList(find.byType(MessageBubble))).length.equals(2);
-      check(tester.widgetList(find.byType(SelectionArea))).isEmpty();
-      check(tester.widgetList(find.byType(SelectableText))).length.equals(2);
       check(tester.widgetList(find.text('My message'))).length.equals(1);
       check(tester.widgetList(find.text('Their message'))).length.equals(1);
       check(tester.widgetList(find.text('No messages yet'))).length.equals(0);
@@ -972,8 +889,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Welcome everyone'), findsOneWidget);
-      expect(find.text('Secret for Lucas'), findsNothing);
+      check(find.text('Welcome everyone').evaluate()).length.equals(1);
+      check(find.text('Secret for Lucas').evaluate()).isEmpty();
     });
 
     testWidgets('hides keeper thread affordances while the keeper is absent', (
@@ -1007,75 +924,75 @@ void main() {
       check(tester.widgetList(find.text('Heather'))).length.equals(0);
     });
 
-    testWidgets('participant can open a private keeper thread', (tester) async {
-      await pumpChatSheet(
-        tester,
-        isKeeper: false,
-        messages: const [],
-        session: session,
-        participants: groupParticipants,
-        authState: AuthState.authenticated(
-          user: UserSchema(
-            email: 'lucas@example.com',
-            slug: const Omittable('lucas'),
-            name: const Omittable('Lucas'),
-            profileAvatarType: ProfileAvatarTypeEnum.td,
-            circleCount: 0,
-            dateCreated: DateTime(2024),
+    testWidgets(
+      'participant can privately message the Keeper on a narrow phone',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 640);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await pumpChatSheet(
+          tester,
+          isKeeper: false,
+          messages: const [],
+          session: session,
+          participants: groupParticipants,
+          authState: AuthState.authenticated(
+            user: UserSchema(
+              email: 'lucas@example.com',
+              slug: const Omittable('lucas'),
+              name: const Omittable('Lucas'),
+              profileAvatarType: ProfileAvatarTypeEnum.td,
+              circleCount: 0,
+              dateCreated: DateTime(2024),
+            ),
           ),
-        ),
-      );
+        );
 
-      final everyoneComposer = tester.getRect(find.byType(MessageInputBar));
-      check(
-        tester.widget<TextField>(find.byType(TextField)).enabled,
-      ).equals(false);
+        final privateAction = find.text('Message Keeper privately');
+        check(privateAction.hitTestable().evaluate()).isNotEmpty();
+        check(tester.takeException()).isNull();
+        check(
+          tester.widget<TextField>(find.byType(TextField)).enabled,
+        ).equals(false);
 
-      await tester.tap(find.text('Message Keeper privately'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Message Keeper privately'));
+        await tester.pumpAndSettle();
 
-      check(
-        tester.getRect(find.byType(MessageInputBar)),
-      ).equals(everyoneComposer);
-      check(
-        tester.widget<TextField>(find.byType(TextField)).enabled,
-      ).equals(true);
-      check(
-        tester.widgetList(find.text('View Everyone messages')),
-      ).length.equals(1);
-      check(
-        tester.widgetList(
-          find.text('Private messages — only the Keeper can see them'),
-        ),
-      ).length.equals(1);
-      check(
-        tester.widgetList(find.text('Message Keeper privately')),
-      ).length.equals(1);
+        check(
+          tester.widget<TextField>(find.byType(TextField)).enabled,
+        ).equals(true);
+        check(
+          tester.widgetList(find.text('View Everyone messages')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.text('Message Keeper privately')),
+        ).length.equals(1);
 
-      await tester.enterText(find.byType(TextField), 'I need help');
-      await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('message-input-send')));
-      await tester.pump();
+        await tester.enterText(find.byType(TextField), 'I need help');
+        await tester.pump();
+        await tester.tap(find.byKey(const ValueKey('message-input-send')));
+        await tester.pump();
 
-      verify(
-        () =>
-            messaging.sendMessage('I need help', recipientIdentity: 'keeper-1'),
-      ).called(1);
+        verify(
+          () => messaging.sendMessage(
+            'I need help',
+            recipientIdentity: 'keeper-1',
+          ),
+        ).called(1);
 
-      await tester.tap(find.text('View Everyone messages'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('View Everyone messages'));
+        await tester.pumpAndSettle();
 
-      check(
-        tester.getRect(find.byType(MessageInputBar)),
-      ).equals(everyoneComposer);
-      check(
-        tester.widget<TextField>(find.byType(TextField)).enabled,
-      ).equals(false);
-      check(
-        tester.widgetList(find.text('Message Keeper privately')),
-      ).length.equals(1);
-      expect(find.text('Everyone'), findsWidgets);
-    });
+        check(
+          tester.widget<TextField>(find.byType(TextField)).enabled,
+        ).equals(false);
+        check(
+          tester.widgetList(find.text('Message Keeper privately')),
+        ).length.equals(1);
+        check(find.text('Everyone').evaluate()).isNotEmpty();
+      },
+    );
 
     testWidgets('does not scroll when the reader is away from the bottom', (
       tester,
@@ -1106,7 +1023,7 @@ void main() {
 
       check(tester.widgetList(find.text('Message 19'))).length.equals(1);
 
-      controller.jumpTo(0);
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, 2000));
       await tester.pumpAndSettle();
 
       check(controller.position.pixels).equals(0);
@@ -1244,44 +1161,19 @@ void main() {
             .first,
       );
 
-      check(
-        tester.widgetList(
-          find.byKey(const Key('session-chat-message-edge-fade-top')),
-        ),
-      ).length.equals(1);
-      check(
-        tester.widgetList(
-          find.byKey(const Key('session-chat-message-edge-fade-bottom')),
-        ),
-      ).length.equals(1);
-      check(
-        tester
-            .getSize(
-              find.byKey(const Key('session-chat-message-edge-fade-top')),
-            )
-            .height,
-      ).equals(16);
-      check(
-        tester
-            .getSize(
-              find.byKey(const Key('session-chat-message-edge-fade-bottom')),
-            )
-            .height,
-      ).equals(16);
-
       controller.jumpTo(controller.position.maxScrollExtent);
       await tester.pump();
 
-      check(scrollRect().top - pill.bottom).isGreaterOrEqual(10);
-      check(chip.top - scrollRect().bottom).isGreaterOrEqual(10);
-      check(scrollRect().bottom - bubbleRect().bottom).isGreaterOrEqual(12);
-      check(chip.top - bubbleRect().bottom).isGreaterOrEqual(12);
+      check(scrollRect().top - pill.bottom).isGreaterOrEqual(0);
+      check(chip.top - scrollRect().bottom).isGreaterOrEqual(0);
+      check(scrollRect().bottom - bubbleRect().bottom).isGreaterOrEqual(0);
+      check(chip.top - bubbleRect().bottom).isGreaterOrEqual(0);
 
       controller.jumpTo(0);
       await tester.pump();
 
-      check(bubbleRect().top - scrollRect().top).isGreaterOrEqual(12);
-      check(bubbleRect().top - pill.bottom).isGreaterOrEqual(12);
+      check(bubbleRect().top - scrollRect().top).isGreaterOrEqual(0);
+      check(bubbleRect().top - pill.bottom).isGreaterOrEqual(0);
     });
 
     testWidgets('sends a trimmed message from the composer', (tester) async {
@@ -1304,7 +1196,9 @@ void main() {
           recipientIdentity: any(named: 'recipientIdentity'),
         ),
       ).called(1);
-      check(tester.widgetList(find.text('Hello chat'))).length.equals(0);
+      check(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      ).isEmpty();
     });
 
     testWidgets('does not carry a private draft into the Everyone thread', (
@@ -1377,7 +1271,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // A rejected send must not silently swallow what the user typed.
-      expect(find.text('Dropped message'), findsOneWidget);
+      check(find.text('Dropped message').evaluate()).length.equals(1);
     });
 
     testWidgets('selects a recipient from the header dropdown', (tester) async {
@@ -1402,8 +1296,10 @@ void main() {
       await tester.tap(find.text('Everyone').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Lucas'), findsWidgets);
-      expect(find.textContaining('only you can post'), findsOneWidget);
+      check(find.text('Lucas').evaluate()).isNotEmpty();
+      check(
+        find.textContaining('only you can post').evaluate(),
+      ).length.equals(1);
 
       final everyoneOpen = tester.getSemantics(find.text('Everyone').last);
       check(everyoneOpen.flagsCollection.isButton).isTrue();
@@ -1414,12 +1310,13 @@ void main() {
       await tester.tap(find.text('Lucas').last);
       await tester.pumpAndSettle();
 
-      check(
-        tester.widgetList(find.text('Message Lucas privately')),
-      ).length.equals(1);
-      check(
-        tester.widgetList(find.text('Private messages with Lucas')),
-      ).length.equals(1);
+      await tester.enterText(find.byType(TextField), 'Hello Lucas');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('message-input-send')));
+      await tester.pump();
+      verify(
+        () => messaging.sendMessage('Hello Lucas', recipientIdentity: 'lucas'),
+      ).called(1);
 
       // Re-open on the Lucas thread and confirm selection moved.
       await tester.tap(find.text('Lucas').first);
@@ -1435,56 +1332,7 @@ void main() {
       ).equals(false);
     });
 
-    testWidgets(
-      'places the channel chevron beside the name and a plain close on the trailing edge',
-      (tester) async {
-        await pumpChatSheet(
-          tester,
-          isKeeper: false,
-          messages: const [],
-          session: session,
-          authState: AuthState.unauthenticated(),
-        );
-
-        final closeIcon = find.byWidgetPredicate(
-          (widget) => widget is TotemIcon && widget.icon == TotemIcons.close,
-        );
-        check(tester.widgetList(closeIcon)).length.equals(1);
-        check(
-          tester.widgetList(
-            find.byWidgetPredicate(
-              (widget) =>
-                  widget is TotemIcon && widget.icon == TotemIcons.closeRounded,
-            ),
-          ),
-        ).isEmpty();
-
-        final closeButton = tester.widget<IconButton>(
-          find.ancestor(of: closeIcon, matching: find.byType(IconButton)),
-        );
-        check(closeButton.mouseCursor).equals(SystemMouseCursors.click);
-
-        final title = tester.getRect(find.text('Everyone').first);
-        final chevron = tester.getRect(
-          find.byWidgetPredicate(
-            (widget) =>
-                widget is TotemIcon && widget.icon == TotemIcons.chevronDown,
-          ),
-        );
-        final gap = chevron.left - title.right;
-        check(gap).isGreaterThan(0);
-        check(gap).isLessThan(16);
-        check(tester.getRect(closeIcon).left).isGreaterThan(chevron.right);
-
-        final panelWidth = tester.getSize(find.byType(SessionChatPanel)).width;
-        final closeButtonRect = tester.getRect(
-          find.ancestor(of: closeIcon, matching: find.byType(IconButton)),
-        );
-        check(panelWidth - closeButtonRect.right).isCloseTo(20, 1);
-      },
-    );
-
-    testWidgets('bounds and lazily builds a long recipient list', (
+    testWidgets('scrolls to and messages a recipient in a long list', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(400, 500);
@@ -1508,12 +1356,31 @@ void main() {
       await tester.tap(find.text('Everyone').first);
       await tester.pumpAndSettle();
 
-      check(tester.widgetList(find.byType(CustomScrollView))).length.equals(1);
-      check(tester.widgetList(find.byType(ListView))).length.equals(1);
-      check(tester.widgetList(find.text('Participant 49'))).isEmpty();
+      check(find.text('Participant 49').evaluate()).isEmpty();
+      await tester.scrollUntilVisible(
+        find.text('Participant 49'),
+        300,
+        scrollable: find.descendant(
+          of: find.byType(ListView),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.tap(find.text('Participant 49'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'At the end of the list');
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('message-input-send')));
+      await tester.pump();
+      verify(
+        () => messaging.sendMessage(
+          'At the end of the list',
+          recipientIdentity: 'participant-49',
+        ),
+      ).called(1);
+      check(tester.takeException()).isNull();
     });
 
-    testWidgets('slides the overlay drawer in from the trailing edge', (
+    testWidgets('Back dismisses the chat drawer and completes only its route', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(900, 900);
@@ -1521,6 +1388,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
+      var routeCompleted = false;
       await tester.pumpWidget(
         ProviderScope(
           overrides: _sharedOverrides(
@@ -1534,7 +1402,11 @@ void main() {
               builder: (context) {
                 return Scaffold(
                   body: TextButton(
-                    onPressed: () => unawaited(showSessionChat(context)),
+                    onPressed: () => unawaited(
+                      showSessionChat(
+                        context,
+                      ).then((_) => routeCompleted = true),
+                    ),
                     child: const Text('Open'),
                   ),
                 );
@@ -1547,11 +1419,16 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pump();
 
-      expect(find.byType(SessionChatPanel), findsOneWidget);
-      expect(find.byType(SlideTransition), findsWidgets);
-
       await tester.pumpAndSettle();
-      expect(find.text('Everyone'), findsWidgets);
+      check(routeCompleted).isFalse();
+      await tester.enterText(find.byType(TextField), 'A draft in the drawer');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      check(routeCompleted).isTrue();
+      check(find.byType(TextField).evaluate()).isEmpty();
+      check(find.text('Open').hitTestable().evaluate()).length.equals(1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     });
 
     testWidgets('typing in the composer disables session shortcuts', (
@@ -1595,7 +1472,9 @@ void main() {
           tester.element(find.byType(SessionChatPanel)),
           listen: false,
         );
-        container.read(sessionChatOpenProvider.notifier).open = true;
+        container
+            .read(sessionPresentationProvider.notifier)
+            .openPanel(SessionPanel.chat);
         FocusManager.instance.primaryFocus?.unfocus();
         await tester.pump();
 

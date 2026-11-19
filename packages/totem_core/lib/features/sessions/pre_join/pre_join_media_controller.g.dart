@@ -84,7 +84,7 @@ final class PreJoinMediaControllerProvider
 }
 
 String _$preJoinMediaControllerHash() =>
-    r'e81a6fd0cfc37b232bdbe96e53a72403fd349611';
+    r'5b318f4b0edb63fd1756395a3e6acf021b50c94d';
 
 /// The pre-join preview's camera and microphone.
 ///

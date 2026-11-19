@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -32,7 +31,7 @@ import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
-
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -43,7 +42,8 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 Future<bool> showAlreadyPresentDialog(BuildContext context) async {
   try {
     return await showDialog<bool>(
-          context: context,
+          context: sessionNavigatorContext(context),
+          useRootNavigator: false,
           builder: (context) => ConfirmationDialog(
             title: "You're already in this session",
             content:
@@ -554,6 +554,7 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
     }
 
     return ProviderScope(
+      key: ObjectKey(flow.sessionOptions),
       overrides: [
         sessionScopeProvider.overrideWith((_) => flow.sessionOptions!),
       ],

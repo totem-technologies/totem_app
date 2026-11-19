@@ -3,9 +3,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
 import 'package:totem_core/shared/widgets/user_avatar.dart';
 
@@ -15,7 +17,7 @@ Future<void> showBannedParticipantsModal(
   SessionRoomState state,
 ) {
   return showResponsiveModal<void>(
-    context: context,
+    context: sessionNavigatorContext(context),
     useRootNavigator: false,
     showDragHandle: false,
     bottomSheetBackgroundColor: AppTheme.cream,
@@ -263,20 +265,16 @@ class _BannedParticipantItemState
               : Padding(
                   padding: const EdgeInsetsDirectional.symmetric(vertical: 8),
                   child: OutlinedButton(
-                    style: const ButtonStyle(
-                      foregroundColor: WidgetStatePropertyAll(Colors.white),
-                      side: WidgetStatePropertyAll(
-                        BorderSide(color: Colors.white),
-                      ),
+                    style: SessionButtonStyle.outlined(
+                      compact: true,
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white),
                     ),
                     onPressed: () {
                       final name = user.value?.name.value;
                       _onUnban(name);
                     },
-                    child: const Text(
-                      'Unban',
-                      style: TextStyle(decoration: TextDecoration.none),
-                    ),
+                    child: const Text('Unban'),
                   ),
                 ),
         ),

@@ -5,6 +5,7 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/session_dock_surface.dart';
 import 'package:totem_core/shared/totem_icons.dart';
+import 'package:totem_core/shared/widgets/session_button_style.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 /// White card used by [JoinTransitionCard] on the pre-join screen.
@@ -60,11 +61,9 @@ bool _isSmallViewport(BuildContext context) {
   return ViewportResolver.getViewportKind(context).isSmall;
 }
 
-/// Label for the docked actions: the action bar's size on every device.
-/// Other [ActionSliderButton] uses (Join) keep their default label.
-TextStyle? _dockedActionLabelStyle(BuildContext context) {
-  return Theme.of(context).textTheme.labelLarge;
-}
+/// Label for the docked actions: the action bar's 14dp size on every device,
+/// at the session buttons' weight. Join keeps the default hero label.
+const TextStyle _dockedActionLabelStyle = SessionButtonStyle.compactLabel;
 
 const _dockedInset = 6.0;
 const _dockedTextInset = 20.0;
@@ -348,7 +347,7 @@ class _GenericTransitionCard extends StatelessWidget {
                   keepLoadingOnSuccess: keepActionLoadingOnSuccess,
                   isLoading: isSliderLoading,
                   height: actionHeight,
-                  labelStyle: _dockedActionLabelStyle(context),
+                  labelStyle: _dockedActionLabelStyle,
                 ),
         );
       },
@@ -421,10 +420,11 @@ class JoinTransitionCard extends StatelessWidget {
                 style: theme.textTheme.bodyMedium,
               ),
             SizedBox(
-              height: 52,
+              height: SessionButtonStyle.heroHeight,
               child: waiting
                   ? OutlinedButton(
                       onPressed: onLeaveWaiting,
+                      style: SessionButtonStyle.outlined(),
                       child: const Text('Leave waiting room'),
                     )
                   : ActionSliderButton(
@@ -433,7 +433,7 @@ class JoinTransitionCard extends StatelessWidget {
                       keepLoadingOnSuccess: keepActionLoadingOnSuccess,
                       isLoading: isSliderLoading,
                       enabled: enabled,
-                      height: 52,
+                      height: SessionButtonStyle.heroHeight,
                     ),
             ),
           ],
@@ -692,7 +692,7 @@ class _PromptTransitionCardState extends State<PromptTransitionCard> {
             onActionCompleted: onPromptAction,
             keepLoadingOnSuccess: widget.keepActionLoadingOnSuccess,
             focusNode: buttonFocusNode,
-            labelStyle: _dockedActionLabelStyle(context),
+            labelStyle: _dockedActionLabelStyle,
           ),
         );
       },
