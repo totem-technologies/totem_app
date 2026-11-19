@@ -83,10 +83,6 @@ class _SessionDeviceEffectsState extends ConsumerState<SessionDeviceEffects> {
       MediaKind.camera => 'camera',
     };
     final (title, message) = switch (blocker) {
-      TurnOnBlocker.keeperAway => (
-        "You can't unmute right now",
-        "The keeper is away. You can unmute once they're back.",
-      ),
       TurnOnBlocker.connection => (
         "Couldn't turn on your $device",
         'Check your connection and try again.',

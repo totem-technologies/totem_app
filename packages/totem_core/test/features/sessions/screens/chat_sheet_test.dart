@@ -486,6 +486,7 @@ void main() {
           check(container.read(sessionChatThreadTargetProvider)).isNull();
           check(tester.widgetList(find.text('Everyone'))).isNotEmpty();
           if (isKeeper) {
+            check(find.byType(MessageInputBar).evaluate()).length.equals(1);
             await tester.enterText(find.byType(TextField), 'Hello everyone');
             await tester.pump();
             await tester.tap(find.byKey(const ValueKey('message-input-send')));
@@ -952,16 +953,12 @@ void main() {
         final privateAction = find.text('Message Keeper privately');
         check(privateAction.hitTestable().evaluate()).isNotEmpty();
         check(tester.takeException()).isNull();
-        check(
-          tester.widget<TextField>(find.byType(TextField)).enabled,
-        ).equals(false);
+        check(find.byType(MessageInputBar).evaluate()).isEmpty();
 
         await tester.tap(find.text('Message Keeper privately'));
         await tester.pumpAndSettle();
 
-        check(
-          tester.widget<TextField>(find.byType(TextField)).enabled,
-        ).equals(true);
+        check(find.byType(MessageInputBar).evaluate()).length.equals(1);
         check(
           tester.widgetList(find.text('View Everyone messages')),
         ).length.equals(1);
@@ -984,9 +981,7 @@ void main() {
         await tester.tap(find.text('View Everyone messages'));
         await tester.pumpAndSettle();
 
-        check(
-          tester.widget<TextField>(find.byType(TextField)).enabled,
-        ).equals(false);
+        check(find.byType(MessageInputBar).evaluate()).isEmpty();
         check(
           tester.widgetList(find.text('Message Keeper privately')),
         ).length.equals(1);
@@ -1392,7 +1387,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: _sharedOverrides(
-            isKeeper: false,
+            isKeeper: true,
             messages: const [],
             session: session,
             authState: AuthState.unauthenticated(),

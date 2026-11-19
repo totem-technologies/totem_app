@@ -679,7 +679,7 @@ void main() {
       check(devices().cameraProblem).isNull();
     });
 
-    test('nobody can unmute while the keeper is away', () async {
+    test('a participant can unmute while the keeper is away', () async {
       final state = session.mockState;
       session.mockState = SessionRoomState(
         connection: state.connection,
@@ -698,13 +698,13 @@ void main() {
       final blocked = <(MediaKind, TurnOnBlocker)>[];
       controller().turnOnBlocked.listen(blocked.add);
 
-      await controller().turnOn(MediaKind.microphone);
+      final outcome = await controller().turnOn(MediaKind.microphone);
       await pumpEventQueue();
 
-      check(media.microphoneCommands).isEmpty();
-      check(
-        blocked,
-      ).deepEquals([(MediaKind.microphone, TurnOnBlocker.keeperAway)]);
+      check(outcome).isA<TurnedOn>();
+      check(media.microphoneCommands).deepEquals([true]);
+      check(devices().isMicrophoneEnabled).isTrue();
+      check(blocked).isEmpty();
     });
 
     test('X9: a camera switch that fails is recorded and shown', () async {

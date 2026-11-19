@@ -2537,7 +2537,6 @@ void main() {
     }
 
     for (final (blocker, title) in [
-      (TurnOnBlocker.keeperAway, "You can't unmute right now"),
       (TurnOnBlocker.connection, "Couldn't turn on your microphone"),
     ]) {
       testWidgets('explains a turn-on blocked by ${blocker.name}', (
