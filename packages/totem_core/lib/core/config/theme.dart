@@ -15,7 +15,7 @@ class AppTheme {
   static const Color waitingRoomMauve = Color(0xFFCFC1D6);
 
   /// Light [mauve] tint for the docked Session Prompts panel. Hue and the
-  /// [sessionPanelShadow] do most of the separation from the cream →
+  /// [sessionFloatingPanelShadow] do most of the separation from the cream →
   /// [waitingRoomMauve] waiting room; kept light so white prompt cards and
   /// the [mauve] buttons still stand out.
   static const Color sessionPanelSurface = Color(0xFFEEE5F1);
@@ -50,15 +50,7 @@ class AppTheme {
     ),
   ];
 
-  /// Separates the session side panel drawer's leading edge from the room.
-  static const List<BoxShadow> sessionPanelShadow = [
-    BoxShadow(
-      color: Color(0x1F000000), // 12% black
-      blurRadius: 24,
-    ),
-  ];
-
-  /// Lifts the docked session side panel card off the room it floats over.
+  /// Lifts the session side panel card off the room it floats over.
   static const List<BoxShadow> sessionFloatingPanelShadow = [
     BoxShadow(
       color: Color(0x1F000000), // 12% black

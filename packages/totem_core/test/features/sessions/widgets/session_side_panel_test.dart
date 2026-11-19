@@ -9,8 +9,8 @@ const _video = Key('video');
 const _screen = Size(1600, 1000);
 
 void main() {
-  void useScreen(WidgetTester tester) {
-    tester.view.physicalSize = _screen;
+  void useScreen(WidgetTester tester, [Size screen = _screen]) {
+    tester.view.physicalSize = screen;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -97,13 +97,6 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pump();
   }
-
-  final trailingRect = Rect.fromLTRB(
-    _screen.width - sessionSidePanelWidth,
-    0,
-    _screen.width,
-    _screen.height,
-  );
 
   final cardRect = Rect.fromLTRB(
     _screen.width - sessionSidePanelInset - sessionSidePanelWidth,
@@ -284,14 +277,51 @@ void main() {
     check(toggle.hasFocus).isTrue();
   });
 
-  testWidgets('opens the drawer full height against the trailing edge', (
-    tester,
-  ) async {
+  testWidgets('opens the drawer as the inset card', (tester) async {
     useScreen(tester);
     await openDrawer(tester);
     await tester.pumpAndSettle();
 
-    check(tester.getRect(find.byKey(_content))).equals(trailingRect);
+    check(tester.getRect(find.byKey(_content))).equals(cardRect);
+  });
+
+  testWidgets('floats the drawer with the inset in a small window', (
+    tester,
+  ) async {
+    const window = Size(700, 900);
+    useScreen(tester, window);
+    await openDrawer(tester);
+    await tester.pump(const Duration(milliseconds: 1));
+    check(opacityOf(tester)).isLessThan(1);
+
+    await tester.pumpAndSettle();
+    check(tester.getRect(find.byKey(_content))).equals(
+      Rect.fromLTRB(
+        window.width - sessionSidePanelInset - sessionSidePanelWidth,
+        sessionSidePanelInset,
+        window.width - sessionSidePanelInset,
+        window.height - sessionSidePanelInset,
+      ),
+    );
+    check(opacityOf(tester)).equals(1);
+  });
+
+  testWidgets('keeps the inset on both sides when narrower than the panel', (
+    tester,
+  ) async {
+    const window = Size(400, 900);
+    useScreen(tester, window);
+    await openDrawer(tester);
+    await tester.pumpAndSettle();
+
+    check(tester.getRect(find.byKey(_content))).equals(
+      Rect.fromLTRB(
+        sessionSidePanelInset,
+        sessionSidePanelInset,
+        window.width - sessionSidePanelInset,
+        window.height - sessionSidePanelInset,
+      ),
+    );
   });
 
   testWidgets('slides the RTL drawer in from the leading edge', (tester) async {
@@ -304,7 +334,9 @@ void main() {
     ).isLessThan(sessionSidePanelWidth);
 
     await tester.pumpAndSettle();
-    check(tester.getRect(find.byKey(_content)).left).equals(0);
+    check(
+      tester.getRect(find.byKey(_content)).left,
+    ).equals(sessionSidePanelInset);
   });
 
   testWidgets('opens at its final rect at once when animations are off', (
@@ -324,6 +356,6 @@ void main() {
     await tester.pumpWidget(Container());
     await openDrawer(tester, disableAnimations: true);
 
-    check(tester.getRect(find.byKey(_content))).equals(trailingRect);
+    check(tester.getRect(find.byKey(_content))).equals(cardRect);
   });
 }

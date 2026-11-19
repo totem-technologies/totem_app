@@ -9,12 +9,12 @@ import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 /// Width of the desktop panel column from the video-session design.
 const double sessionSidePanelWidth = 412;
 
-/// Docks the panel as a card over the room from this width up. Narrower,
-/// the card would hide most of the session, so it opens as a drawer instead.
+/// Docks the panel as a card over the room from this width up. Narrower, the
+/// same card opens as a modal drawer over a dimmed room instead, because it
+/// would hide most of the session.
 const double sessionSidePanelDockMinWidth = 1100;
 
-/// Gap between the docked panel card and the room's top, trailing and bottom
-/// edges.
+/// Gap between the panel card and the room's top, trailing and bottom edges.
 const double sessionSidePanelInset = 12;
 
 /// Matches the app's card radius.
@@ -67,7 +67,12 @@ class _SessionSidePanelDrawerRoute extends RawDialogRoute<void> {
            child: _slideFromTrailing(
              context: context,
              animation: animation,
-             child: _SessionSidePanelSurface(child: child),
+             child: FadeTransition(
+               opacity: animation.drive(
+                 CurveTween(curve: sessionSidePanelCurve),
+               ),
+               child: _SessionSidePanelFrame(child: child),
+             ),
            ),
          ),
        );
@@ -282,12 +287,63 @@ class _FloatingSessionSidePanelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _SessionSidePanelFrame(
+      // Read after the room, and Tab finishes the panel before moving on.
+      // Not modal: the session stays usable.
+      child: Semantics(
+        container: true,
+        explicitChildNodes: true,
+        sortKey: const OrdinalSortKey(1),
+        child: FocusTraversalGroup(
+          child: Focus(
+            focusNode: focusNode,
+            child: CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.escape): ?onDismiss,
+              },
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The panel's card: inset from the top, trailing and bottom edges, with
+/// rounded corners and a soft shadow. Shared by the docked card and the drawer.
+///
+/// On a screen too narrow for [sessionSidePanelWidth] it keeps the same inset
+/// on the leading edge too. Expects a bounded height from its parent.
+class _SessionSidePanelFrame extends StatelessWidget {
+  const _SessionSidePanelFrame({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final endPadding = switch (Directionality.of(context)) {
       TextDirection.ltr => media.padding.right,
       TextDirection.rtl => media.padding.left,
     };
+    final startPadding = switch (Directionality.of(context)) {
+      TextDirection.ltr => media.padding.left,
+      TextDirection.rtl => media.padding.right,
+    };
     final bottomGap = media.padding.bottom + sessionSidePanelInset;
+    final width = math
+        .max(
+          0,
+          math.min(
+            sessionSidePanelWidth,
+            media.size.width -
+                startPadding -
+                endPadding -
+                2 * sessionSidePanelInset,
+          ),
+        )
+        .toDouble();
     return Padding(
       padding: EdgeInsetsDirectional.only(
         top: media.padding.top + sessionSidePanelInset,
@@ -321,58 +377,11 @@ class _FloatingSessionSidePanelCard extends StatelessWidget {
               borderRadius: sessionSidePanelRadius,
               clipBehavior: Clip.antiAlias,
               child: SizedBox(
-                width: sessionSidePanelWidth,
+                width: width,
                 height: double.infinity,
-                // Read after the room, and Tab finishes the panel before
-                // moving on. Not modal: the session stays usable.
-                child: Semantics(
-                  container: true,
-                  explicitChildNodes: true,
-                  sortKey: const OrdinalSortKey(1),
-                  child: FocusTraversalGroup(
-                    child: Focus(
-                      focusNode: focusNode,
-                      child: CallbackShortcuts(
-                        bindings: {
-                          const SingleActivator(LogicalKeyboardKey.escape):
-                              ?onDismiss,
-                        },
-                        child: child,
-                      ),
-                    ),
-                  ),
-                ),
+                child: child,
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Full-height drawer surface below [sessionSidePanelDockMinWidth]. A soft
-/// shadow separates its leading edge from the session.
-///
-/// Expects a bounded height from its parent (the drawer Align).
-class _SessionSidePanelSurface extends StatelessWidget {
-  const _SessionSidePanelSurface({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: DecoratedBox(
-        decoration: const BoxDecoration(boxShadow: AppTheme.sessionPanelShadow),
-        // A Material ancestor for drawer children's ink and text fields.
-        child: Material(
-          color: AppTheme.cream,
-          clipBehavior: Clip.hardEdge,
-          child: SizedBox(
-            width: sessionSidePanelWidth,
-            height: double.infinity,
-            child: child,
           ),
         ),
       ),
