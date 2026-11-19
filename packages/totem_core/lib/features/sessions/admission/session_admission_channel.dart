@@ -9,12 +9,16 @@ import 'package:totem_core/features/sessions/transport/session_transport.dart';
 /// Active-session admission adapter fed by the runtime's existing event router.
 /// Does not subscribe to, disconnect, or dispose the underlying connection.
 class SessionAdmissionChannel implements AdmissionChannel {
-  SessionAdmissionChannel(this.connection, {DateTime Function()? now})
-    : _now = now ?? DateTime.now {
+  SessionAdmissionChannel(
+    this.connection, {
+    DateTime Function()? now,
+    void Function()? onConfirmationFailed,
+  }) : _now = now ?? DateTime.now {
     _receipts = AdmissionJoinReceipt(
       localIdentity: () => localIdentity,
       send: send,
       now: _now,
+      onConfirmationFailed: onConfirmationFailed,
     );
     _metadata(connection.metadata);
   }

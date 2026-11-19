@@ -205,21 +205,17 @@ void main() {
           newId: () => '${++id}',
         );
         async.elapse(const Duration(minutes: 2));
-        check(sends.length).equals(1);
+        check(sends.length > 1).isTrue();
+        final retries = sends.length;
         sends.first.complete();
         async.flushMicrotasks();
-        check(sends.length).equals(2);
-        channel.controller.add(const AdmissionConnectionInterrupted());
-        channel.controller.add(const AdmissionConnectionRestored());
-        check(sends.length).equals(3);
-        sends[1].completeError(StateError('stale'));
-        async
-          ..flushMicrotasks()
-          ..elapse(const Duration(minutes: 2));
-        check(sends.length).equals(3);
-        sends[2].complete();
+        check(sends.length).equals(retries);
+        channel.controller
+          ..add(const AdmissionConnectionInterrupted())
+          ..add(const AdmissionConnectionRestored());
+        sends.last.completeError(StateError('stale'));
         async.flushMicrotasks();
-        check(sends.length).equals(4);
+        check(sends.length >= retries).isTrue();
         client.dispose();
         channel.controller.close();
         async.flushMicrotasks();
@@ -460,7 +456,7 @@ void main() {
   );
 
   test(
-    'request send cap survives repeated reconnects and resumes when an old send settles',
+    'request retries proceed after a send timeout and ignore late settlement',
     () {
       fakeAsync((async) {
         final channel = _Channel('guest')..present.add('keeper');
@@ -481,11 +477,12 @@ void main() {
           channel.controller.add(const AdmissionConnectionRestored());
         }
         check(sends.length).equals(2);
+        async.elapse(const Duration(seconds: 31));
+        check(sends.length > 2).isTrue();
+        final retries = sends.length;
         sends.first.completeError(StateError('abandoned'));
         async.flushMicrotasks();
-        check(sends.length).equals(3);
-        async.elapse(const Duration(minutes: 2));
-        check(sends.length).equals(3);
+        check(sends.length).equals(retries);
         client.dispose();
         channel.controller.close();
         async.flushMicrotasks();
@@ -555,6 +552,51 @@ void main() {
       });
     },
   );
+
+  test('successful anti-entropy refresh does not enter recovery', () {
+    fakeAsync((async) {
+      final clock = async.getClock(DateTime.utc(2030));
+      final channel = _Channel('guest')..present.add('keeper');
+      final client = ClientAdmissionRosterController(
+        channel: channel,
+        keeperIdentity: () => 'keeper',
+        sessionIdentity: 'session',
+        now: clock.now,
+        antiEntropyInterval: const Duration(seconds: 1),
+      );
+      final signals = <bool>[];
+      final subscription = client.synchronizationChanges.listen(signals.add);
+      void respond() {
+        final request = channel.sent.whereType<AdmissionRosterRequest>().last;
+        channel.receive(
+          AdmissionRosterSnapshot(
+            id: 'snapshot-${request.id}',
+            requestId: request.id,
+            senderIdentity: 'keeper',
+            recipientIdentity: 'guest',
+            expiresAt: clock.now().add(const Duration(minutes: 1)),
+            sessionIdentity: 'session',
+            keeperGeneration: 'generation',
+            revision: 1,
+            members: const ['guest'],
+          ),
+        );
+      }
+
+      respond();
+      async.flushMicrotasks();
+      signals.clear();
+      async.elapse(const Duration(seconds: 2));
+      check(channel.sent.whereType<AdmissionRosterRequest>().length).equals(2);
+      respond();
+      check(client.contains('guest')).isTrue();
+      check(signals).isEmpty();
+      client.dispose();
+      channel.controller.close();
+      subscription.cancel();
+      async.flushMicrotasks();
+    });
+  });
 
   test('unadmitted snapshots do not produce ACKs or periodic requests', () {
     fakeAsync((async) {

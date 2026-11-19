@@ -70,6 +70,45 @@ class _Remote extends MockRemoteParticipant {
 
 void main() {
   test(
+    'unconfirmed subscription retries and reconnect refreshes stale request',
+    () {
+      fakeAsync((async) {
+        final publication = MockRemoteTrackPublication<sdk.RemoteTrack>();
+        var calls = 0;
+        var subscribed = false;
+        when(() => publication.subscribed).thenAnswer((_) => subscribed);
+        when(publication.subscribe).thenAnswer((_) async {
+          calls++;
+        });
+        final room = _Room(MockLocalParticipant())
+          ..remotes['remote'] = _Remote([publication]);
+        final transport = LiveKitSessionTransport(
+          room: room,
+          cameraOptions: const sdk.CameraCaptureOptions(),
+        );
+        unawaited(
+          (transport..setIncomingMediaParticipants({'remote'}))
+              .subscribeToExistingMedia(),
+        );
+        async.flushMicrotasks();
+        check(calls).equals(1);
+        async.elapse(const Duration(seconds: 1));
+        check(calls).equals(2);
+        room.transportEvents.emit(const sdk.RoomReconnectingEvent());
+        room.transportEvents.emit(const sdk.RoomReconnectedEvent());
+        async.flushMicrotasks();
+        check(calls).equals(3);
+        subscribed = true;
+        async.elapse(const Duration(seconds: 4));
+        check(calls).equals(3);
+        unawaited(transport.dispose());
+        unawaited(room.transportEvents.dispose());
+        async.flushMicrotasks();
+      });
+    },
+  );
+
+  test(
     'revocation during a pending subscribe eventually removes media',
     () async {
       final publication = MockRemoteTrackPublication<sdk.RemoteTrack>();
@@ -575,7 +614,11 @@ void main() {
       var allowed = true;
       when(() => denied.subscriptionAllowed).thenAnswer((_) => allowed);
       when(denied.subscribe).thenAnswer((_) async {});
-      when(unchanged.subscribe).thenAnswer((_) async {});
+      var unchangedSubscribed = false;
+      when(() => unchanged.subscribed).thenAnswer((_) => unchangedSubscribed);
+      when(unchanged.subscribe).thenAnswer((_) async {
+        unchangedSubscribed = true;
+      });
       final remote = _Remote([denied, unchanged]);
       final room = _Room(MockLocalParticipant())..remotes['remote'] = remote;
       final transport = LiveKitSessionTransport(
@@ -869,7 +912,14 @@ void main() {
     'reconnect preserves existing subscriptions and departures release them',
     () async {
       final publication = MockRemoteTrackPublication<sdk.RemoteTrack>();
-      when(publication.subscribe).thenAnswer((_) async {});
+      var subscribed = false;
+      when(() => publication.subscribed).thenAnswer((_) => subscribed);
+      when(publication.subscribe).thenAnswer((_) async {
+        subscribed = true;
+      });
+      when(publication.unsubscribe).thenAnswer((_) async {
+        subscribed = false;
+      });
       final remote = _Remote([publication]);
       final room = _Room(MockLocalParticipant());
       room.remotes['remote'] = remote;
@@ -925,7 +975,11 @@ void main() {
       final replacement = MockRemoteTrackPublication<sdk.RemoteTrack>();
       final failing = MockRemoteTrackPublication<sdk.RemoteTrack>();
       when(original.subscribe).thenAnswer((_) async {});
-      when(unchanged.subscribe).thenAnswer((_) async {});
+      var unchangedSubscribed = false;
+      when(() => unchanged.subscribed).thenAnswer((_) => unchangedSubscribed);
+      when(unchanged.subscribe).thenAnswer((_) async {
+        unchangedSubscribed = true;
+      });
       when(replacement.subscribe).thenAnswer((_) async {});
       var attempts = 0;
       when(failing.subscribe).thenAnswer((_) async {

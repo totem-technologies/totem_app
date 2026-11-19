@@ -161,11 +161,25 @@ class LiveKitSessionTransport implements SessionTransport {
           _subscribeInBackground(_subscribe(participant, publication));
         }
       })
+      ..on<sdk.TrackSubscriptionExceptionEvent>((event) {
+        final participant = event.participant;
+        if (participant == null || event.sid == null) return;
+        for (final publication in participant.getTrackPublications()) {
+          if (publication.sid != event.sid ||
+              !_currentPublication(participant, publication)) {
+            continue;
+          }
+          final state = _subscriptionState(participant, publication)
+            ..requested = false;
+          _scheduleSubscriptionRetry(publication, state);
+        }
+      })
       ..on<sdk.TrackSubscribedEvent>((event) {
         _subscriptionState(
           event.participant,
           event.publication,
         ).mayBeSubscribed = true;
+        _forgetSubscriptionRetry(event.publication);
         _subscribeInBackground(
           _subscribe(event.participant, event.publication),
         );
@@ -301,6 +315,11 @@ class LiveKitSessionTransport implements SessionTransport {
   }) {
     final transitioned = _mediaConnection != state;
     if (transitioned) _mediaGeneration++;
+    if (reconnected) {
+      for (final subscription in _subscriptions.values) {
+        subscription.requested = false;
+      }
+    }
     _mediaConnection = state;
     if (transitioned || reconnected) {
       _reportMediaRecovery(
@@ -645,10 +664,14 @@ class LiveKitSessionTransport implements SessionTransport {
       _forgetCleanup(publication);
       // Keep working media during SDK reconnect; only new work is paused.
       if (_mediaConnection != SessionTransportConnectionState.connected) return;
-      if (state.requested || publication.subscribed) {
+      if (publication.subscribed) {
         state.requested = true;
         _subscriptions[publication] = state;
         _forgetSubscriptionRetry(publication);
+        return;
+      }
+      if (state.requested) {
+        _scheduleSubscriptionRetry(publication, state);
         return;
       }
       final generation = _mediaGeneration;
@@ -671,9 +694,9 @@ class LiveKitSessionTransport implements SessionTransport {
       // A changed scope may adopt this result only if the same object is still
       // eligible; otherwise the loop performs serialized revocation cleanup.
       state.requested =
+          generation == _mediaGeneration &&
           permission == state.permissionRevision &&
           publication.subscriptionAllowed;
-      if (state.requested) _forgetSubscriptionRetry(publication);
       if (!_authorizedPublication(participant, publication) ||
           _mediaConnection == SessionTransportConnectionState.disconnected) {
         state.requested = true;
@@ -732,6 +755,7 @@ class LiveKitSessionTransport implements SessionTransport {
         if (!_disposed &&
             _mediaConnection == SessionTransportConnectionState.connected &&
             _authorizedPublication(entry.value.participant, entry.key)) {
+          entry.value.requested = false;
           _subscribeInBackground(
             _subscribe(entry.value.participant, entry.key),
           );

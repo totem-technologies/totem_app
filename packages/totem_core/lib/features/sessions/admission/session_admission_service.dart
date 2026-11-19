@@ -144,6 +144,12 @@ class SessionAdmissionService extends ChangeNotifier {
   final Duration recoveryLease;
   AdmissionRosterTrust _rosterTrust = AdmissionRosterTrust.unverified;
   AdmissionRosterTrust get rosterTrust => _rosterTrust;
+  String? get diagnosticKeeperIdentity => _keeperIdentity;
+  String? get diagnosticRosterGeneration =>
+      _clientController?.roster?.keeperGeneration ??
+      _keeperController?.keeperGeneration;
+  int? get diagnosticRosterRevision =>
+      _clientController?.roster?.revision ?? _keeperController?.rosterRevision;
 
   Map<String, Object?> get _rosterDiagnostics {
     final roster = _clientController?.roster;
@@ -311,9 +317,17 @@ class SessionAdmissionService extends ChangeNotifier {
     final channel = _transport ??= SessionAdmissionChannel(
       connection,
       now: now,
+      onConfirmationFailed: _admissionConfirmationFailed,
     );
     _room = connection;
     await channel.sendJoinOutcome(request, joined: joined);
+  }
+
+  void _admissionConfirmationFailed() {
+    if (!mounted || _disconnecting || _detaching) return;
+    error =
+        'Admission could not be confirmed. Ask the Keeper to approve a new request.';
+    notifyListeners();
   }
 
   KeeperAdmissionController? get keeperController => _keeperController;
@@ -630,7 +644,11 @@ class SessionAdmissionService extends ChangeNotifier {
         return;
       }
     }
-    final transport = _transport ?? SessionAdmissionChannel(room, now: now);
+    final transport = _transport ??= SessionAdmissionChannel(
+      room,
+      now: now,
+      onConfirmationFailed: _admissionConfirmationFailed,
+    );
     _transport = transport;
     _room = room;
     _keeperIdentity = keeperIdentity;

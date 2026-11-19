@@ -436,6 +436,165 @@ void main() {
         },
       );
 
+      test('ignores a poll started before reconnect', () async {
+        const options = SessionOptions(
+          sessionSlug: 'transport-session',
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          speakerEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+        );
+        final oldPoll = Completer<RoomState>();
+        final newPoll = Completer<RoomState>();
+        var polls = 0;
+        final factory = FakeSessionTransportFactory();
+        final container = ProviderContainer(
+          overrides: [
+            sessionProvider(options.sessionSlug).overrideWithValue(
+              AsyncData(_createSessionEvent(options.sessionSlug)),
+            ),
+            sessionTransportFactoryProvider(options).overrideWithValue(factory),
+            authControllerProvider.overrideWith(
+              () => FakeAuthController(AuthState.unauthenticated()),
+            ),
+            roomStateProvider(options.sessionSlug).overrideWith((_) {
+              polls++;
+              return polls == 1 ? oldPoll.future : newPoll.future;
+            }),
+          ],
+        );
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+        );
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        try {
+          check(await controller.join()).equals(SessionJoinResult.success);
+          await pumpEventQueue();
+          check(polls).equals(1);
+          final transport = factory.created.single;
+          final current = RoomState.fromJson({
+            ...controller.state.roomState.toJson(),
+            'version': 2,
+          });
+          final stale = RoomState.fromJson({...current.toJson(), 'version': 3});
+          transport
+            ..emit(
+              const TransportConnectionChanged(
+                SessionTransportConnectionState.reconnecting,
+              ),
+            )
+            ..metadata = jsonEncode(current.toJson());
+          container.invalidate(roomStateProvider(options.sessionSlug));
+          transport.emit(
+            const TransportConnectionChanged(
+              SessionTransportConnectionState.connected,
+              reconnected: true,
+            ),
+          );
+          check(controller.state.roomState.version).equals(2);
+          oldPoll.complete(stale);
+          await pumpEventQueue();
+          check(controller.state.roomState.version).equals(2);
+          check(polls).equals(2);
+          newPoll.complete(current);
+          await pumpEventQueue();
+        } finally {
+          if (!oldPoll.isCompleted) {
+            oldPoll.complete(controller.state.roomState);
+          }
+          if (!newPoll.isCompleted) {
+            newPoll.complete(controller.state.roomState);
+          }
+          await controller.leave();
+          subscription.close();
+          container.dispose();
+        }
+      });
+
+      test('ended metadata on reconnect does not restart polling', () async {
+        const options = SessionOptions(
+          sessionSlug: 'transport-session',
+          token: 'test-token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          speakerEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+        );
+        var polls = 0;
+        final factory = FakeSessionTransportFactory();
+        late SessionController controller;
+        final container = ProviderContainer(
+          overrides: [
+            sessionProvider(options.sessionSlug).overrideWithValue(
+              AsyncData(_createSessionEvent(options.sessionSlug)),
+            ),
+            sessionTransportFactoryProvider(options).overrideWithValue(factory),
+            authControllerProvider.overrideWith(
+              () => FakeAuthController(AuthState.unauthenticated()),
+            ),
+            roomStateProvider(options.sessionSlug).overrideWith((_) {
+              polls++;
+              return controller.state.roomState;
+            }),
+          ],
+        );
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+        );
+        controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        try {
+          check(await controller.join()).equals(SessionJoinResult.success);
+          await pumpEventQueue();
+          final transport = factory.created.single;
+          const ended = RoomState(
+            keeper: '',
+            nextSpeaker: Omittable(''),
+            currentSpeaker: Omittable(''),
+            status: RoomStatus.ended,
+            turnState: TurnState.idle,
+            sessionSlug: 'transport-session',
+            statusDetail: RoomStateStatusDetailEnded(
+              EndedDetail(reason: EndReason.keeperEnded),
+            ),
+            talkingOrder: [],
+            version: 1,
+            roundNumber: 0,
+          );
+          transport.emit(
+            const TransportConnectionChanged(
+              SessionTransportConnectionState.reconnecting,
+            ),
+          );
+          container.invalidate(roomStateProvider(options.sessionSlug));
+          final beforeReconnect = polls;
+          transport
+            ..metadata = jsonEncode(ended.toJson())
+            ..emit(
+              const TransportConnectionChanged(
+                SessionTransportConnectionState.connected,
+                reconnected: true,
+              ),
+            );
+          await pumpEventQueue();
+          check(controller.state.roomState.status).equals(RoomStatus.ended);
+          check(polls).equals(beforeReconnect);
+          container.invalidate(roomStateProvider(options.sessionSlug));
+          await controller.runtime.polling.request();
+          check(polls).equals(beforeReconnect);
+        } finally {
+          await controller.leave();
+          subscription.close();
+          container.dispose();
+        }
+      });
+
       test(
         'transport connect failure retries through a new factory connection',
         () async {

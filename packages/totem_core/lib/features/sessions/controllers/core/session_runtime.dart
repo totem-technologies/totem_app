@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_diagnostics.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_poll_scheduler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
@@ -106,6 +107,42 @@ class SessionRuntime {
       attempt.generation == generation;
   bool get acceptsEvents =>
       !_disposed && !isLeaving && _attempt != null && _attempt!.isCurrent;
+
+  SessionDiagnosticSnapshot? get diagnosticSnapshot {
+    final connection = _transport;
+    if (connection == null) return null;
+    final admission = this.admission;
+    final local = connection.localIdentity;
+    return SessionDiagnosticSnapshot(
+      sessionSlug: sessionSlug,
+      correlationId: _sessionCorrelationId,
+      connection: connection.connectionState,
+      remoteIdentities: List.unmodifiable(
+        connection.participants
+            .where((participant) => !participant.isLocal)
+            .map((participant) => participant.identity),
+      ),
+      keeperIdentity: admission?.diagnosticKeeperIdentity,
+      keeperPresent:
+          admission?.diagnosticKeeperIdentity != null &&
+          connection.participants.any(
+            (participant) =>
+                participant.identity == admission?.diagnosticKeeperIdentity,
+          ),
+      rosterTrust: admission?.rosterTrust ?? AdmissionRosterTrust.unverified,
+      rosterGeneration: admission?.diagnosticRosterGeneration,
+      rosterRevision: admission?.diagnosticRosterRevision,
+      admittedCount: admission?.admittedIdentities.length ?? 0,
+      localAdmitted: local == null
+          ? null
+          : admission?.admittedIdentities.contains(local),
+      publicationStates: const {},
+      blockedSubscriptionReasons: const [],
+      admissionRecoveryActive: admission?.isRecoveringRoster ?? false,
+      mediaRecoveryActive: false,
+    );
+  }
+
   void _phase(SessionRuntimePhase next) {
     if (phase == next || _states.isClosed) return;
     unawaited(
@@ -126,6 +163,28 @@ class SessionRuntime {
     _phaseDuration.reset();
     _currentPhase = next;
     _states.add(next);
+  }
+
+  void _emitDiagnostic(String name) {
+    final snapshot = diagnosticSnapshot;
+    if (snapshot == null) return;
+    unawaited(
+      Sentry.addBreadcrumb(
+        Breadcrumb(
+          category: 'session.diagnostics',
+          message: name,
+          level: SentryLevel.info,
+          data: {
+            'session_slug': snapshot.sessionSlug,
+            'session_correlation': snapshot.correlationId,
+            'sdk_application_state': snapshot.connection.name,
+            'remote_participant_count': snapshot.remoteIdentities.length,
+            'roster_trust': snapshot.rosterTrust.name,
+            'classification': snapshot.classification.name,
+          },
+        ),
+      ),
+    );
   }
 
   void _invalidate() {
@@ -179,6 +238,7 @@ class SessionRuntime {
           );
         }
         if (event is TransportConnectionChanged && event.reconnected) {
+          _emitDiagnostic('session.reconnected');
           unawaited(
             Sentry.addBreadcrumb(
               Breadcrumb(
@@ -194,6 +254,12 @@ class SessionRuntime {
               ),
             ),
           );
+        }
+        if (event is TransportParticipantChanged) {
+          _emitDiagnostic('session.participants_changed');
+        }
+        if (event is TransportMediaChanged) {
+          _emitDiagnostic('session.media_changed');
         }
         if (!acceptsEvents) {
           // Preserve the current connection's final diagnostics during leave.

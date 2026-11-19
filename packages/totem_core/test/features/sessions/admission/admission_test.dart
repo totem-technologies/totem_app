@@ -860,6 +860,58 @@ void main() {
     },
   );
 
+  test(
+    'expired confirmation requests a fresh decision before another receipt',
+    () {
+      fakeAsync((async) {
+        final clock = async.getClock(_fixedNow);
+        final sent = <AdmissionPacket>[];
+        var failed = false;
+        final receipt = AdmissionJoinReceipt(
+          localIdentity: () => 'guest',
+          send: (packet) async {
+            sent.add(packet);
+          },
+          now: clock.now,
+          newId: () => 'fresh',
+          onConfirmationFailed: () => failed = true,
+        );
+        final request = AdmissionRequest(
+          id: 'original',
+          senderIdentity: 'guest',
+          recipientIdentity: 'keeper',
+          expiresAt: clock.now().add(const Duration(seconds: 5)),
+          displayName: 'Guest',
+        );
+        unawaited(receipt.sendOutcome(request));
+        async.elapse(const Duration(seconds: 6));
+        final renewal = sent.whereType<AdmissionRequest>().single;
+        check(renewal.id).equals('fresh');
+        check(
+          sent.whereType<AdmissionJoined>().every(
+            (packet) => packet.id == 'original',
+          ),
+        ).isTrue();
+        receipt.handle(
+          AdmissionPacketReceived(
+            AdmissionDecision(
+              id: renewal.id,
+              senderIdentity: 'keeper',
+              recipientIdentity: 'guest',
+              expiresAt: renewal.expiresAt,
+              approved: true,
+            ),
+          ),
+        );
+        async.flushMicrotasks();
+        check(sent.whereType<AdmissionJoined>().last.id).equals('fresh');
+        check(failed).isFalse();
+        receipt.dispose();
+        async.flushMicrotasks();
+      });
+    },
+  );
+
   test('disposing during a joined receipt send prevents later retries', () {
     fakeAsync((async) {
       final clock = async.getClock(_fixedNow);
@@ -3977,10 +4029,14 @@ void main() {
       await client.dispose();
       await channel.dispose();
     });
-    await Future<void>.value();
+    for (var i = 0; i < 5; i++) {
+      await Future<void>.value();
+    }
     channel.beforeSend = null;
     channel.controller.add(const AdmissionPresenceChanged('keeper', true));
-    await Future<void>.value();
+    for (var i = 0; i < 5; i++) {
+      await Future<void>.value();
+    }
     check(channel.sent.whereType<AdmissionRosterRequest>()).length.equals(2);
   });
 

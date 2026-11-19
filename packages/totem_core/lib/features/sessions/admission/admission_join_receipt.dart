@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/admission_transport.dart';
+import 'package:uuid/uuid.dart';
 
 /// Shared receipt recovery for pending SDK and active application channels.
 /// Owns no connection or subscriptions.
@@ -9,14 +10,20 @@ class AdmissionJoinReceipt {
     required this.localIdentity,
     required this.send,
     required this.now,
-  });
+    String Function()? newId,
+    this.onConfirmationFailed,
+  }) : _newId = newId ?? const Uuid().v4;
   final String Function() localIdentity;
   final Future<void> Function(AdmissionPacket) send;
   final DateTime Function() now;
+  final String Function() _newId;
+  final void Function()? onConfirmationFailed;
   static const _initialRetryDelay = Duration(seconds: 2);
   static const _maximumRetryDelay = Duration(seconds: 30);
 
   AdmissionPacket? _receipt;
+  AdmissionRequest? _request;
+  bool _awaitingDecision = false;
   Timer? _retry;
   var _retryAttempt = 0;
   bool _sending = false;
@@ -28,8 +35,23 @@ class AdmissionJoinReceipt {
   void handle(AdmissionEvent event) {
     switch (event) {
       case AdmissionPacketReceived(:final packet):
-        if (packet is AdmissionHello &&
-            packet.senderIdentity == _receipt?.recipientIdentity &&
+        if (packet is AdmissionDecision &&
+            _awaitingDecision &&
+            packet.id == _request?.id &&
+            packet.senderIdentity == _request?.recipientIdentity &&
+            packet.recipientIdentity == localIdentity()) {
+          _awaitingDecision = false;
+          if (packet.approved) {
+            final request = _request!;
+            _receipt = AdmissionProtocol.joined(request);
+            _retryAttempt = 0;
+            retry();
+          } else {
+            _failConfirmation();
+          }
+        }
+        if ((packet is AdmissionHello || packet is AdmissionDecision) &&
+            packet.senderIdentity == _request?.recipientIdentity &&
             packet.recipientIdentity == localIdentity()) {
           retry();
         }
@@ -66,6 +88,7 @@ class AdmissionJoinReceipt {
       throw StateError('Admission transport unavailable');
     }
     if (_receipt != null) throw StateError('Join outcome already sent');
+    _request = request;
     final receipt = joined
         ? AdmissionProtocol.joined(request)
         : AdmissionProtocol.joinFailed(request);
@@ -87,16 +110,14 @@ class AdmissionJoinReceipt {
 
   void retry() {
     final receipt = _receipt;
-    if (_disposed ||
-        _ended ||
-        _interrupted ||
-        _confirmed ||
-        _sending ||
-        receipt == null) {
+    if (_disposed || _ended || _interrupted || _confirmed || _sending) return;
+    if (_awaitingDecision) {
+      unawaited(_sendReapprovalRequest());
       return;
     }
+    if (receipt == null) return;
     if (!now().isBefore(receipt.expiresAt)) {
-      stop();
+      _requestReapproval();
       return;
     }
     _retry?.cancel();
@@ -124,17 +145,22 @@ class AdmissionJoinReceipt {
   }
 
   void _scheduleRetry() {
-    final receipt = _receipt;
-    if (_disposed ||
-        _ended ||
-        _interrupted ||
-        _confirmed ||
-        receipt == null ||
-        !now().isBefore(receipt.expiresAt)) {
+    final packet = _awaitingDecision ? _request : _receipt;
+    if (_disposed || _ended || _interrupted || _confirmed || packet == null) {
+      return;
+    }
+    if (!now().isBefore(packet.expiresAt)) {
+      if (_awaitingDecision) {
+        _failConfirmation();
+      } else {
+        _requestReapproval();
+      }
       return;
     }
     _retry?.cancel();
-    _retry = Timer(_retryDelay(receipt), retry);
+    final remaining = packet.expiresAt.difference(now());
+    final delay = _retryDelay(packet);
+    _retry = Timer(delay < remaining ? delay : remaining, retry);
   }
 
   Duration _retryDelay(AdmissionPacket receipt) {
@@ -150,10 +176,52 @@ class AdmissionJoinReceipt {
     );
   }
 
+  void _requestReapproval() {
+    final previous = _request;
+    if (_disposed || _ended || previous == null || _awaitingDecision) return;
+    final renewed = AdmissionRequest(
+      id: _newId(),
+      senderIdentity: localIdentity(),
+      recipientIdentity: previous.recipientIdentity,
+      expiresAt: now().add(AdmissionProtocol.lifetime),
+      displayName: previous.displayName,
+    );
+    _request = renewed;
+    _receipt = null;
+    _awaitingDecision = true;
+    _retryAttempt = 0;
+    unawaited(_sendReapprovalRequest());
+  }
+
+  Future<void> _sendReapprovalRequest() async {
+    final request = _request;
+    if (_disposed || _ended || !_awaitingDecision || request == null) return;
+    if (!now().isBefore(request.expiresAt)) {
+      _failConfirmation();
+      return;
+    }
+    _sending = true;
+    try {
+      await send(request);
+    } catch (_) {
+      // Retry on bounded backoff while the same explicit decision is pending.
+    } finally {
+      _sending = false;
+      _scheduleRetry();
+    }
+  }
+
+  void _failConfirmation() {
+    stop();
+    onConfirmationFailed?.call();
+  }
+
   void stop() {
     _retry?.cancel();
     _retry = null;
     _receipt = null;
+    _request = null;
+    _awaitingDecision = false;
     _retryAttempt = 0;
     _confirmed = false;
   }

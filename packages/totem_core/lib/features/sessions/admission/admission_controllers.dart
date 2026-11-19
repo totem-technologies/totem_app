@@ -1088,6 +1088,12 @@ class KeeperAdmissionController {
     }
     final sender = packet.senderIdentity;
     final request = _attempts[sender]?.request;
+    if (packet is AdmissionJoined &&
+        request == null &&
+        roster.contains(sender)) {
+      _sendRosterSnapshot(sender);
+      return;
+    }
     if (request == null ||
         request.id != packet.id ||
         request.expiresAt != packet.expiresAt ||
@@ -1388,6 +1394,7 @@ class ClientAdmissionRosterController {
   int? _pendingAckRevision;
   final _synchronizationChanges = StreamController<bool>.broadcast();
   final _random = Random();
+  final Set<Timer> _operationTimeouts = {};
   String? _requestKeeper;
   int _retryCount = 0;
   bool _synchronizing = false;
@@ -1418,7 +1425,10 @@ class ClientAdmissionRosterController {
   bool contains(String identity) => roster?.contains(identity) ?? false;
 
   /// Requests fresh roster evidence, coalescing with any in-flight request.
-  void requestSynchronization() => _requestIfCurrentKeeperPresent();
+  void requestSynchronization() {
+    _setSynchronizing(true);
+    _requestIfCurrentKeeperPresent();
+  }
 
   void _onEvent(AdmissionEvent event) {
     if (_disposed || _ended) return;
@@ -1766,6 +1776,31 @@ class ClientAdmissionRosterController {
     _changes.add(null);
   }
 
+  Future<void> _withOperationTimeout(Future<void> operation) {
+    final result = Completer<void>();
+    late final Timer timeout;
+    timeout = Timer(const Duration(seconds: 30), () {
+      _operationTimeouts.remove(timeout);
+      if (!result.isCompleted) {
+        result.completeError(TimeoutException('Admission send timed out'));
+      }
+    });
+    _operationTimeouts.add(timeout);
+    operation.then(
+      (_) {
+        timeout.cancel();
+        _operationTimeouts.remove(timeout);
+        if (!result.isCompleted) result.complete();
+      },
+      onError: (Object error, StackTrace stack) {
+        timeout.cancel();
+        _operationTimeouts.remove(timeout);
+        if (!result.isCompleted) result.completeError(error, stack);
+      },
+    );
+    return result.future;
+  }
+
   void _requestIfCurrentKeeperPresent({bool force = false}) {
     final keeper = keeperIdentity();
     if (_disposed || _ended || _disconnected || channel.hasEnded) return;
@@ -1788,7 +1823,13 @@ class ClientAdmissionRosterController {
       _verifiedGeneration = null;
       _retiredGenerations.clear();
     }
-    _setSynchronizing(true);
+    final hasVerifiedLocalRoster =
+        roster?.contains(channel.localIdentity) ?? false;
+    if (!hasVerifiedLocalRoster ||
+        force ||
+        _unsynchronizedRevisions.isNotEmpty) {
+      _setSynchronizing(true);
+    }
     if (keeper.isEmpty ||
         keeper == channel.localIdentity ||
         !_keeperPresent(keeper)) {
@@ -1837,20 +1878,23 @@ class ClientAdmissionRosterController {
       }
       _outstandingRequestId = null;
       _outstandingRequestExpiry = null;
+      _setSynchronizing(true);
       if (_retryCount <= 5) {
         _admissionBreadcrumb('snapshot_retry', data: {'attempt': _retryCount});
       }
       _requestIfCurrentKeeperPresent();
     });
     unawaited(
-      Future<void>.sync(
-            () => channel.send(
-              AdmissionRosterRequest(
-                id: id,
-                senderIdentity: channel.localIdentity,
-                recipientIdentity: keeper,
-                expiresAt: expiry,
-                sessionIdentity: sessionIdentity,
+      _withOperationTimeout(
+            Future<void>.sync(
+              () => channel.send(
+                AdmissionRosterRequest(
+                  id: id,
+                  senderIdentity: channel.localIdentity,
+                  recipientIdentity: keeper,
+                  expiresAt: expiry,
+                  sessionIdentity: sessionIdentity,
+                ),
               ),
             ),
           )
@@ -1891,6 +1935,10 @@ class ClientAdmissionRosterController {
     _outstandingRequestId = null;
     _outstandingRequestExpiry = null;
     _snapshotRetry?.cancel();
+    for (final timeout in _operationTimeouts) {
+      timeout.cancel();
+    }
+    _operationTimeouts.clear();
     await Future.wait<void>([
       Future<void>.sync(() => _subscription.cancel()),
       Future<void>.sync(_synchronizationChanges.close),

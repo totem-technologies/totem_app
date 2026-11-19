@@ -137,6 +137,7 @@ class SessionController extends _$SessionController {
   /// The sync timer periodically checks for changes in the room state
   /// and participants list, to keep the UI up to date.
   int _consecutivePollFailures = 0;
+  int _pollEpoch = 0;
   static const _pollFailureReportThreshold = 3;
   static const syncTimerDuration = Duration(seconds: 20);
   static const _statePollInterval = Duration(seconds: 15);
@@ -531,6 +532,7 @@ class SessionController extends _$SessionController {
       return;
     }
     if (state.connectionState != RoomConnectionState.connected) return;
+    final pollEpoch = _pollEpoch;
 
     try {
       final roomState = await ref.read(
@@ -541,7 +543,8 @@ class SessionController extends _$SessionController {
       );
       if (!ref.mounted ||
           !identical(_runtime, owner) ||
-          connectionGeneration != owner.generation) {
+          connectionGeneration != owner.generation ||
+          pollEpoch != _pollEpoch) {
         return;
       }
 
@@ -551,14 +554,18 @@ class SessionController extends _$SessionController {
         );
         _consecutivePollFailures = 0;
       }
-      if (roomState.version > state.roomState.version) {
+      if (roomState.version > state.roomState.version ||
+          (roomState.version == state.roomState.version &&
+              roomState.status == RoomStatus.ended &&
+              state.roomState.status != RoomStatus.ended)) {
         applyRoomState(roomState);
         logger.d('Polled server state: version ${roomState.version}');
       }
     } catch (error, stackTrace) {
       if (!ref.mounted ||
           !identical(_runtime, owner) ||
-          connectionGeneration != owner.generation) {
+          connectionGeneration != owner.generation ||
+          pollEpoch != _pollEpoch) {
         return;
       }
       _consecutivePollFailures++;
@@ -1043,6 +1050,7 @@ class SessionController extends _$SessionController {
               _onConnected();
             } else {
               _updateRoomState();
+              if (!runtime.acceptsEvents) return;
               _updateParticipantsList();
               _applyMediaSubscriptionPermissions(force: true);
               _startPolling(runtime, runtime.generation);
@@ -1060,6 +1068,7 @@ class SessionController extends _$SessionController {
               }
             }
           case SessionTransportConnectionState.reconnecting:
+            _pollEpoch++;
             for (final identity in _departureReconcileTimers.keys.toList()) {
               _departureReconcileTimers[identity]?.cancel();
               _departureReconcileTimers[identity] = null;
