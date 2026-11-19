@@ -693,29 +693,55 @@ void main() {
     check(tester.widgetList(find.byType(ActionSliderButton))).isEmpty();
   });
 
-  for (final status in <({AdmissionKeeperAvailability availability, String message})>[
-    (
-      availability: AdmissionKeeperAvailability.absent,
-      message:
-          'Please check your camera and mic while you wait. Your Keeper will let you into the session soon. No one can see or hear you until you’re admitted.',
-    ),
-    (
-      availability: AdmissionKeeperAvailability.unresponsive,
-      message:
-          "The Keeper hasn't confirmed your request. Ask them to reconnect or update Totem, or leave and try again.",
-    ),
-  ]) {
-    testWidgets('pending admission shows ${status.message}', (tester) async {
-      await pumpScreen(
-        tester,
-        earlyParticipant: true,
-        waitingForAdmission: true,
-        keeperAvailability: status.availability,
-      );
+  const reassurance =
+      'Your Keeper will let you in when it’s time.\n'
+      'No one can see or hear you while you wait.';
+  for (final status
+      in <
+        ({
+          AdmissionKeeperAvailability availability,
+          String message,
+          bool showsTips,
+        })
+      >[
+        (
+          availability: AdmissionKeeperAvailability.checking,
+          message: reassurance,
+          showsTips: true,
+        ),
+        (
+          availability: AdmissionKeeperAvailability.absent,
+          message: reassurance,
+          showsTips: true,
+        ),
+        (
+          availability: AdmissionKeeperAvailability.unresponsive,
+          message:
+              "The Keeper hasn't confirmed your request. Ask them to reconnect or update Totem, or leave and try again.",
+          showsTips: false,
+        ),
+      ]) {
+    testWidgets(
+      'pending admission with a ${status.availability.name} Keeper '
+      '${status.showsTips ? 'reassures with grounding tips' : 'warns without tips'}',
+      (tester) async {
+        await pumpScreen(
+          tester,
+          earlyParticipant: true,
+          waitingForAdmission: true,
+          keeperAvailability: status.availability,
+        );
 
-      check(find.text(status.message).evaluate()).length.equals(1);
-      check(find.text('Leave waiting room').evaluate()).length.equals(1);
-    });
+        check(
+          find.text('You’re in the right place.').evaluate(),
+        ).length.equals(1);
+        check(find.text(status.message).evaluate()).length.equals(1);
+        check(
+          find.bySemanticsLabel(RegExp('^Tip: ')).evaluate(),
+        ).length.equals(status.showsTips ? 1 : 0);
+        check(find.text('Leave waiting room').evaluate()).length.equals(1);
+      },
+    );
   }
 
   testWidgets(

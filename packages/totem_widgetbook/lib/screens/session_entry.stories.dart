@@ -4,6 +4,7 @@ import 'package:totem_core/features/sessions/pre_join/pre_join_preview_card.dart
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_view.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
+import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
 import 'package:totem_widgetbook/viewports.dart';
 import 'package:widgetbook/widgetbook.dart';
@@ -78,6 +79,8 @@ final defaults = _Defaults(
         onCameraFacingChanged: (_) {},
         onCameraDeviceSelected: (_) {},
       ),
+      // A fixed first tip keeps the rendered catalog deterministic.
+      tips: args.waiting ? const GroundingMarquee(initialIndex: 0) : null,
       joinCard: JoinTransitionCard(
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
         keepActionLoadingOnSuccess: true,
