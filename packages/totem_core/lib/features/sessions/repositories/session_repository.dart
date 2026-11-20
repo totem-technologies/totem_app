@@ -131,9 +131,9 @@ Future<RoomState> _postEvent({
 Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) async {
   final apiService = ref.read(apiServiceProvider);
   JoinRoomRequest? resume;
-  final snapshot = await ParticipantAdmissionRepository(
-    apiService: apiService,
-  ).me(sessionSlug: sessionSlug);
+  final snapshot = await ref
+      .read(participantAdmissionRepositoryProvider)
+      .me(sessionSlug: sessionSlug);
   final participant = snapshot.me.value;
   if (participant != null &&
       ['pending', 'granting', 'approved'].contains(participant.status) &&

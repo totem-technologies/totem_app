@@ -1,5 +1,13 @@
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/services/repository_utils.dart';
+
+part 'participant_admission_repository.g.dart';
+
+@riverpod
+ParticipantAdmissionRepository participantAdmissionRepository(Ref ref) =>
+    ParticipantAdmissionRepository(apiService: ref.watch(apiServiceProvider));
 
 class ParticipantAdmissionRepository {
   const ParticipantAdmissionRepository({required this.apiService});

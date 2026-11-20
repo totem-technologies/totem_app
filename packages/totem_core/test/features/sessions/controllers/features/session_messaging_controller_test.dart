@@ -27,6 +27,7 @@ void main() {
         SessionCommunicationTopics.chat: 'lk-chat-topic',
         SessionCommunicationTopics.participantRemoved:
             'lk-participant-removed-topic',
+        SessionCommunicationTopics.admission: 'totem.admission.v2',
       };
 
       check(SessionCommunicationTopics.values).length.equals(topicNames.length);

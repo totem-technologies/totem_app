@@ -1,5 +1,13 @@
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/services/repository_utils.dart';
+
+part 'keeper_admission_repository.g.dart';
+
+@riverpod
+KeeperAdmissionRepository keeperAdmissionRepository(Ref ref) =>
+    KeeperAdmissionRepository(apiService: ref.watch(apiServiceProvider));
 
 /// Authenticated Keeper admission operations. Callers own command IDs and
 /// payloads so an uncertain outcome can be retried without changing either.

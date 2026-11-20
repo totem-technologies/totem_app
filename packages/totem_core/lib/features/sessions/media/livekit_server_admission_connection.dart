@@ -6,6 +6,7 @@ import 'package:livekit_client/livekit_client.dart';
 // ignore: implementation_imports
 import 'package:livekit_client/src/proto/livekit_models.pbenum.dart' as proto;
 import 'package:totem_core/features/sessions/admission/server_admission_connection.dart';
+import 'package:totem_core/features/sessions/services/session_packet_router.dart';
 
 /// Observes admission signals without taking ownership of the connected Room.
 class LiveKitServerAdmissionConnection implements ServerAdmissionConnection {
@@ -38,7 +39,7 @@ class LiveKitServerAdmissionConnection implements ServerAdmissionConnection {
         (_) => _emit(ServerAdmissionConnectionEvent.notification),
       )
       ..on<DataReceivedEvent>((event) {
-        if (event.topic == 'totem.admission.v2') {
+        if (event.topic == SessionCommunicationTopics.admission.topic) {
           _emit(ServerAdmissionConnectionEvent.notification);
         }
       });

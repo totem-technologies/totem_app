@@ -9,7 +9,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
-import 'package:totem_core/core/services/api_service.dart';
+
 import 'package:totem_core/features/permissions/media_permission_controller.dart';
 import 'package:totem_core/features/permissions/policy.dart';
 
@@ -206,9 +206,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     Room room,
     AdmissionJoinState initial,
   ) => ServerParticipantAdmission(
-    repository: ParticipantAdmissionRepository(
-      apiService: ref.read(apiServiceProvider),
-    ),
+    repository: ref.read(participantAdmissionRepositoryProvider),
     sessionSlug: sessionSlug,
     initial: initial,
     connection: LiveKitServerAdmissionConnection(room),

@@ -4,12 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
-import 'package:totem_core/core/services/api_service.dart';
+
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
 import 'package:totem_core/features/sessions/repositories/keeper_admission_repository.dart';
 import 'package:totem_core/features/sessions/repositories/participant_admission_repository.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
+import 'package:totem_core/features/sessions/services/session_packet_router.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
 import 'package:uuid/uuid.dart';
 
@@ -89,9 +90,9 @@ class SessionAdmissionService extends ChangeNotifier {
   String? _authorityLocal;
 
   KeeperAdmissionRepository get _keeperRepository =>
-      KeeperAdmissionRepository(apiService: ref.read(apiServiceProvider));
+      ref.read(keeperAdmissionRepositoryProvider);
   ParticipantAdmissionRepository get _participantRepository =>
-      ParticipantAdmissionRepository(apiService: ref.read(apiServiceProvider));
+      ref.read(participantAdmissionRepositoryProvider);
   String get _slug => session.options.sessionSlug;
 
   bool _current(int generation, SessionTransport room, String keeper) =>
@@ -298,7 +299,7 @@ class SessionAdmissionService extends ChangeNotifier {
         event is TransportParticipantChanged ||
         event is TransportParticipantUpdated ||
         (event is TransportPacketReceived &&
-            event.packet.topic == 'totem.admission.v2')) {
+            event.packet.topic == SessionCommunicationTopics.admission.topic)) {
       sync();
     }
   }

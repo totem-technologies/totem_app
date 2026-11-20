@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show AsyncCallback;
 import 'package:flutter/widgets.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart'
     show Participant;
@@ -26,7 +27,7 @@ class SessionAdmissionScope extends InheritedWidget {
   final bool busy;
   final VoidCallback? onRetry;
   final VoidCallback? onRefresh;
-  final Future<void> Function()? onRetryUnresolved;
+  final AsyncCallback? onRetryUnresolved;
   final String? error;
   final Future<void> Function(Participant, bool) onDecision;
   final Future<void> Function(Participant) onDeclinePermanently;

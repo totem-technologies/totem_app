@@ -68,7 +68,9 @@ class SessionRuntime {
   Object? lastFailure;
   final media = JoinMediaOwner();
   final polling = SessionPollScheduler();
-  SessionAdmissionService? admission;
+  // Server-backed session projection and keeper commands, retained across retries.
+  SessionAdmissionService? admissionService;
+  // The joining participant's admission and its connection, disposed on cleanup.
   ServerParticipantAdmission? serverAdmission;
   StreamSubscription<AdmissionStatus>? _serverAdmissionEvents;
 
@@ -301,7 +303,7 @@ class SessionRuntime {
       // A new entry after leaving cannot inherit callbacks from the old one.
       if (_entryEnded) {
         _entryIdentity = Object();
-        admission = null;
+        admissionService = null;
         _entryEnded = false;
       }
       _releaseEntry ??= retainEntry();
@@ -415,7 +417,7 @@ class SessionRuntime {
         onCleanup,
         () => deactivateInfrastructure(owner),
         () async {
-          await admission?.disconnect();
+          await admissionService?.disconnect();
         },
         () async {
           await _serverAdmissionEvents?.cancel();
@@ -466,7 +468,7 @@ class SessionRuntime {
           await pending?.dispose();
         },
         () async {
-          await admission?.close();
+          await admissionService?.close();
         },
         media.waitForPublications,
         disconnect,

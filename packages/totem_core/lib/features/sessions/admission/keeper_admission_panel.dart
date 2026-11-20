@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart' show AsyncCallback;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart'
     show Participant;
@@ -38,7 +39,7 @@ class KeeperAdmissionPanel extends StatefulWidget {
   final VoidCallback onClose;
   final String? error;
   final VoidCallback? onRefresh;
-  final Future<void> Function()? onRetryUnresolved;
+  final AsyncCallback? onRetryUnresolved;
   final bool busy;
   final bool desktop;
 

@@ -100,7 +100,7 @@ class SessionController extends _$SessionController {
   SessionRuntime get runtime =>
       _runtime ?? (throw StateError('Session runtime is not initialized'));
   SessionAdmissionService get admission =>
-      runtime.admission ??= SessionAdmissionService(ref, this);
+      runtime.admissionService ??= SessionAdmissionService(ref, this);
   SessionTransport? get _transport => _runtime?.transport;
   set _transport(SessionTransport? value) {
     if (value != null) runtime.installCompatibilityTransport(value);
@@ -352,7 +352,7 @@ class SessionController extends _$SessionController {
       if (runtime.acceptsEvents) {
         admission.sync();
       } else {
-        runtime.admission?.sync();
+        runtime.admissionService?.sync();
       }
     });
 
