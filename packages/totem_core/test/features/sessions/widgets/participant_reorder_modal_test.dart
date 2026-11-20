@@ -8,8 +8,7 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
-import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
+
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_reorder_modal.dart';
@@ -19,16 +18,21 @@ import '../controllers/core/session_controller_mock.dart';
 import '../media/test_participants.dart';
 import '../session_test_mocks.dart';
 
-class _TestRoster extends KeeperAdmissionRoster {
-  _TestRoster(this.result);
-
-  final FutureOr<KeeperAdmissionRosterStore> result;
+class _TestAdmission extends FakeAdmissionService {
+  Set<String>? recipients;
 
   @override
-  Future<KeeperAdmissionRosterStore> build(
-    String sessionSlug,
-    String keeperIdentity,
-  ) async => await result;
+  Set<String>? get serverDataRecipients => recipients;
+
+  @override
+  Set<String> get admittedIdentities => recipients ?? const {};
+}
+
+class _TestSession extends MockSessionController {
+  final _TestAdmission _admission = _TestAdmission();
+
+  @override
+  _TestAdmission get admission => _admission;
 }
 
 class _ReorderTestHarness {
@@ -39,7 +43,7 @@ class _ReorderTestHarness {
     required this.participantIds,
   });
 
-  final MockSessionController session;
+  final _TestSession session;
   final MockSessionKeeperController keeper;
   final MockSessionRoomState sessionState;
   final List<String> participantIds;
@@ -51,7 +55,7 @@ _ReorderTestHarness _createHarness({
   required String speakingNow,
   AsyncValueSetter<List<String>>? reorderHandler,
 }) {
-  final session = MockSessionController();
+  final session = _TestSession()..admission.recipients = participantIds.toSet();
   final keeper = MockSessionKeeperController();
   final sessionState = MockSessionRoomState();
   final participantList = [
@@ -93,17 +97,13 @@ Future<void> _pumpReorderWidget(
   required Widget child,
   Set<String>? admittedIdentities,
 }) async {
+  harness.session.admission.recipients =
+      admittedIdentities ?? harness.participantIds.toSet();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         currentSessionProvider.overrideWith((ref) => harness.session),
         currentSessionStateProvider.overrideWith((ref) => harness.sessionState),
-        keeperAdmissionRosterProvider('test-session', 'keeper-1').overrideWith(
-          () => _TestRoster(
-            KeeperAdmissionRosterStore()
-              ..replace(admittedIdentities ?? harness.participantIds, 0),
-          ),
-        ),
         admittedSessionParticipantIdentitiesProvider.overrideWithValue(
           admittedIdentities ?? harness.participantIds.toSet(),
         ),
@@ -208,14 +208,9 @@ void main() {
       roomState: roomState,
       speakingNow: 'keeper-1',
     );
-    final roster = KeeperAdmissionRosterStore();
-    final rosterOverride = keeperAdmissionRosterProvider(
-      'test-session',
-      'keeper-1',
-    ).overrideWith(() => _TestRoster(roster));
+    harness.session.admission.recipients = {};
     final container = ProviderContainer(
       overrides: [
-        rosterOverride,
         currentSessionProvider.overrideWith((ref) => harness.session),
         currentSessionStateProvider.overrideWith((ref) => harness.sessionState),
         admittedSessionParticipantIdentitiesProvider.overrideWithValue(
@@ -235,9 +230,8 @@ void main() {
     check(tester.widgetList(find.text('Save'))).isEmpty();
 
     void admit(Set<String> identities) {
-      roster.replace(identities, 0);
+      harness.session.admission.recipients = identities;
       container.updateOverrides([
-        rosterOverride,
         currentSessionProvider.overrideWith((ref) => harness.session),
         currentSessionStateProvider.overrideWith((ref) => harness.sessionState),
         admittedSessionParticipantIdentitiesProvider.overrideWithValue(
@@ -286,16 +280,11 @@ void main() {
       roomState: roomState,
       speakingNow: 'keeper-1',
     );
-    final completer = Completer<KeeperAdmissionRosterStore>();
-    final rosterOverride = keeperAdmissionRosterProvider(
-      'test-session',
-      'keeper-1',
-    ).overrideWith(() => _TestRoster(completer.future));
+    harness.session.admission.recipients = null;
     final container = ProviderContainer(
       overrides: [
         currentSessionProvider.overrideWith((ref) => harness.session),
         currentSessionStateProvider.overrideWith((ref) => harness.sessionState),
-        rosterOverride,
         admittedSessionParticipantIdentitiesProvider.overrideWithValue({
           'keeper-1',
         }),
@@ -318,16 +307,12 @@ void main() {
     check(saveEnabled()).isFalse();
     verifyNever(() => harness.keeper.reorder(any()));
 
-    completer.complete(
-      KeeperAdmissionRosterStore()
-        ..replace(['user-1', 'user-2'], 1, awaitingReadiness: ['user-2']),
-    );
+    harness.session.admission.recipients = {'user-1'};
     await tester.pump();
     check(saveEnabled()).isFalse();
     container.updateOverrides([
       currentSessionProvider.overrideWith((ref) => harness.session),
       currentSessionStateProvider.overrideWith((ref) => harness.sessionState),
-      rosterOverride,
       admittedSessionParticipantIdentitiesProvider.overrideWithValue({
         'keeper-1',
         'user-1',
@@ -343,7 +328,7 @@ void main() {
     check(captured).deepEquals(['keeper-1', 'user-1']);
   });
 
-  testWidgets('hides unadmitted participants from the reorder picker', (
+  testWidgets('includes retained members and hides unadmitted participants', (
     tester,
   ) async {
     const roomState = RoomState(
@@ -352,7 +337,7 @@ void main() {
       status: RoomStatus.waitingRoom,
       turnState: TurnState.idle,
       statusDetail: RoomStateStatusDetailWaitingRoom(WaitingRoomDetail()),
-      talkingOrder: ['keeper-1', 'user-1', 'user-2'],
+      talkingOrder: ['keeper-1', 'user-1', 'user-2', 'user-3'],
       keeper: 'keeper-1',
       roundNumber: 1,
     );
@@ -365,7 +350,7 @@ void main() {
     await _pumpReorderWidget(
       tester,
       harness,
-      admittedIdentities: {'keeper-1', 'user-1'},
+      admittedIdentities: {'keeper-1', 'user-1', 'user-3'},
       child: const MaterialApp(
         home: Scaffold(body: ParticipantReorderWidget()),
       ),
@@ -373,6 +358,13 @@ void main() {
 
     check(tester.widgetList(find.byKey(const ValueKey('user-1')))).isNotEmpty();
     check(tester.widgetList(find.byKey(const ValueKey('user-2')))).isEmpty();
+    check(tester.widgetList(find.byKey(const ValueKey('user-3')))).isNotEmpty();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    final captured =
+        verify(() => harness.keeper.reorder(captureAny())).captured.single
+            as List<String>;
+    check(captured).deepEquals(['keeper-1', 'user-1', 'user-3']);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });

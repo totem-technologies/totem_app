@@ -2,13 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart'
+    show Participant;
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
-import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
-import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
-import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_scope.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
@@ -16,10 +13,8 @@ import 'package:totem_core/features/sessions/providers/session_scope_provider.da
 import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
-import 'package:totem_core/shared/widgets/session_button_style.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 /// Presents session-owned admission state and commands in the room layout.
@@ -88,92 +83,21 @@ class _SessionAdmissionOverlayState
       _service = service;
       service?.addListener(_changed);
     }
-    VoidCallback? retry;
-    Future<void> Function()? resetCorruptData;
-    final keeper = ref.watch(keeperIdentityProvider);
-    if (keeper != null &&
-        ref.read(currentSessionProvider)?.room?.localParticipant?.identity ==
-            keeper) {
-      final provider = declinedSessionParticipantsProvider(
-        widget.sessionSlug,
-        keeper,
-      );
-      final rosterProvider = keeperAdmissionRosterProvider(
-        widget.sessionSlug,
-        keeper,
-      );
-      final declined = ref.watch(provider);
-      final roster = ref.watch(rosterProvider);
-      if ((declined.hasError && !declined.hasValue) ||
-          (roster.hasError && !roster.hasValue)) {
-        retry = () {
-          if (declined.hasError) ref.invalidate(provider);
-          if (roster.hasError) ref.invalidate(rosterProvider);
-        };
-        final corruptDeclined =
-            declined.error is CorruptSessionAdmissionData && !declined.hasValue;
-        final corruptRoster =
-            roster.error is CorruptSessionAdmissionData && !roster.hasValue;
-        if (corruptDeclined || corruptRoster) {
-          resetCorruptData = () async {
-            if (corruptDeclined) {
-              await ref.read(provider.notifier).resetCorruptData();
-            }
-            if (corruptRoster) {
-              await ref.read(rosterProvider.notifier).resetCorruptData();
-            }
-          };
-        }
-      }
-    }
-    if (service?.recoveryError != null) {
-      retry ??= () => unawaited(
-        service!.retryRecovery().catchError((Object error, StackTrace stack) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stack,
-            message: 'Admission recovery retry failed',
-          );
-          if (context.mounted) {
-            _notifications.showError(
-              context,
-              icon: TotemIcons.errorOutlined,
-              title: 'Admission recovery is still pending',
-              message:
-                  'Keep this session open and retry admission recovery. No removal request was sent.',
-            );
-          }
-        }),
-      );
-    }
-    final corruptRemovalJournal = service?.hasCorruptRemovalJournal ?? false;
-    final controller = service?.keeperController;
-    final attempts =
-        controller?.attempts
-            .where(
-              (attempt) => !controller.isPermanentlyDeclined(
-                attempt.request.senderIdentity,
-              ),
-            )
-            .toList() ??
-        const <KeeperAdmissionAttempt>[];
-    final requests = controller?.requests ?? const <AdmissionRequest>[];
     return SessionAdmissionScope(
-      recoveryMessage: service?.recoveryError,
-      unresolvedRemovals: service?.unresolvedRemovals ?? const {},
-      corruptRemovalJournal: corruptRemovalJournal,
-      onResetCorruptRemovalJournal: corruptRemovalJournal
-          ? service!.resetCorruptRemovalJournal
-          : null,
-      onReconcileRemoval: (identity, removed) async {
-        await service?.reconcileRemoval(identity, backendRemoved: removed);
-      },
-      requests: requests,
-      attempts: attempts,
-      enabled: controller?.approvalRequired ?? false,
+      requests: service?.requests ?? const <Participant>[],
+      attempts: service?.attempts ?? const <Participant>[],
+      enabled: service?.approvalRequired ?? false,
       busy: service?.busy ?? false,
-      onRetry: retry,
-      onResetCorruptData: resetCorruptData,
+      onRetry: service?.snapshot == null && service != null
+          ? service.sync
+          : null,
+      onRefresh: service?.error != null ? service?.sync : null,
+      onRetryUnresolved: service?.hasUnresolvedCommand == true
+          ? () async {
+              await service!.retryUnresolved();
+            }
+          : null,
+      error: service?.error,
       onDecision: (request, approve) async {
         await service?.decide(request, approve);
       },
@@ -197,20 +121,28 @@ class SessionAdmissionQueueControl extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final admission = SessionAdmissionScope.maybeOf(context);
     if (admission == null) return child ?? const SizedBox.shrink();
-    final joining = admission.attempts.any(
-      (attempt) => attempt.status == KeeperAdmissionStatus.joining,
-    );
-    final retry = admission.onRetry;
-    if (retry == null &&
-        (!admission.enabled || (admission.requests.isEmpty && !joining))) {
+    if (!ref.watch(isCurrentUserKeeperProvider)) {
       return child ?? const SizedBox.shrink();
     }
-    String? label;
-    if (retry != null) {
-      label = 'Admission unavailable';
-    } else if (admission.requests.isEmpty) {
-      label = 'Admission in progress';
+    final retry = admission.onRetry;
+    final joining = admission.attempts.any(
+      (attempt) => attempt.status == 'approved',
+    );
+    if (retry == null &&
+        admission.onRefresh == null &&
+        admission.onRetryUnresolved == null &&
+        admission.requests.isEmpty &&
+        !joining) {
+      return child ?? const SizedBox.shrink();
     }
+    final label =
+        retry != null ||
+            admission.onRefresh != null ||
+            admission.onRetryUnresolved != null
+        ? 'Admission needs attention'
+        : admission.requests.isEmpty
+        ? 'Admission in progress'
+        : null;
     final button = SessionWaitingQueueButton(
       count: admission.requests.length,
       label: label,
@@ -260,17 +192,33 @@ Future<void> presentSessionAdmission(BuildContext context) async {
 }
 
 /// Shared live content for the desktop rail, tablet drawer, and phone sheet.
-class SessionAdmissionPanel extends ConsumerWidget {
+class SessionAdmissionPanel extends ConsumerStatefulWidget {
   const SessionAdmissionPanel({this.docked = false, super.key});
 
   final bool docked;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SessionAdmissionPanel> createState() =>
+      _SessionAdmissionPanelState();
+}
+
+class _SessionAdmissionPanelState extends ConsumerState<SessionAdmissionPanel> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final service = ref.read(currentSessionProvider)?.admission;
+      if (service?.mounted == true) service!.sync();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final admission = SessionAdmissionScope.maybeOf(context);
     if (admission == null) return const SizedBox.shrink();
     void close() {
-      if (docked || ref.read(currentSessionProvider) != null) {
+      if (widget.docked || ref.read(currentSessionProvider) != null) {
         ref
             .read(sessionPresentationProvider.notifier)
             .closePanel(expectedPanel: SessionPanel.admission);
@@ -280,148 +228,28 @@ class SessionAdmissionPanel extends ConsumerWidget {
     }
 
     final retry = admission.onRetry;
-    final resetRemovalJournal = admission.onResetCorruptRemovalJournal;
     if (retry != null) {
       return Material(
         color: AppTheme.cream,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: ListView(
-              shrinkWrap: true,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  admission.recoveryMessage ??
-                      'Could not load admission recovery data. Please retry.',
-                  style: const TextStyle(color: AppTheme.slate),
+                  admission.error ??
+                      'Could not load admission data. Please retry.',
                 ),
-                OutlinedButton(
-                  onPressed: retry,
-                  style: SessionButtonStyle.outlined(),
-                  child: const Text('Retry'),
-                ),
-                for (final identity in admission.unresolvedRemovals)
-                  for (final removed in [true, false])
-                    OutlinedButton(
-                      onPressed: () => showDialog<void>(
-                        context: sessionNavigatorContext(context),
-                        useRootNavigator: false,
-                        builder: (dialogContext) => ConfirmationDialog(
-                          title: 'Reconcile removal of $identity?',
-                          content: removed
-                              ? 'Only confirm after verifying removal succeeded. This updates admission recovery without sending another removal request.'
-                              : 'Only confirm after verifying removal was rejected. This restores admission eligibility without sending another removal request.',
-                          confirmButtonText: 'Confirm verified outcome',
-                          type: ConfirmationDialogType.standard,
-                          onConfirm: () async {
-                            try {
-                              await admission.onReconcileRemoval?.call(
-                                identity,
-                                removed,
-                              );
-                              if (dialogContext.mounted) {
-                                Navigator.of(dialogContext).pop();
-                              }
-                            } catch (error) {
-                              if (dialogContext.mounted) {
-                                await ErrorHandler.handleApiError(
-                                  dialogContext,
-                                  error,
-                                  useRootNavigator: false,
-                                );
-                              }
-                            }
-                          },
-                        ),
-                      ),
-                      child: Text(
-                        removed
-                            ? 'Verified $identity was removed'
-                            : 'Verified $identity was not removed',
-                      ),
-                    ),
-                if (admission.onResetCorruptData case final reset?)
+                OutlinedButton(onPressed: retry, child: const Text('Retry')),
+                if (admission.onRetryUnresolved case final retryCommand?)
                   OutlinedButton(
-                    style: SessionButtonStyle.outlined(),
-                    onPressed: () => showDialog<void>(
-                      context: sessionNavigatorContext(context),
-                      useRootNavigator: false,
-                      builder: (dialogContext) => ConfirmationDialog(
-                        title: 'Reset admission data?',
-                        content:
-                            'Corrupt admission data will be removed. If the roster is reset, participants must be admitted again. If declined participants are reset, permanent declines will be lost.',
-                        confirmButtonText: 'Reset admission data',
-                        scrollable: true,
-                        onConfirm: () async {
-                          try {
-                            await reset();
-                            if (dialogContext.mounted) {
-                              Navigator.of(dialogContext).pop();
-                            }
-                          } catch (error, stackTrace) {
-                            ErrorHandler.logError(
-                              error,
-                              stackTrace: stackTrace,
-                              message: 'Could not reset admission data',
-                            );
-                            if (dialogContext.mounted) {
-                              ErrorHandler.showErrorDialog(
-                                sessionNavigatorContext(dialogContext),
-                                useRootNavigator: false,
-                                message:
-                                    'Could not reset admission data. Please try again.',
-                              );
-                            }
-                          }
-                        },
-                      ),
-                    ),
-                    child: const Text('Reset admission data'),
+                    onPressed: admission.busy
+                        ? null
+                        : () => unawaited(retryCommand()),
+                    child: const Text('Retry unresolved command'),
                   ),
-                if (admission.corruptRemovalJournal &&
-                    resetRemovalJournal != null)
-                  OutlinedButton(
-                    style: SessionButtonStyle.outlined(),
-                    onPressed: () => showDialog<void>(
-                      context: sessionNavigatorContext(context),
-                      useRootNavigator: false,
-                      builder: (dialogContext) => ConfirmationDialog(
-                        title: 'Reset removal recovery?',
-                        content:
-                            'The removal recovery journal is unreadable, so it is not possible to tell whether a participant removal completed. Resetting recovery clears the saved admitted roster to avoid restoring stale access. Participants will need to be admitted again.',
-                        confirmButtonText: 'Reset removal recovery',
-                        scrollable: true,
-                        onConfirm: () async {
-                          try {
-                            await resetRemovalJournal();
-                            if (dialogContext.mounted) {
-                              Navigator.of(dialogContext).pop();
-                            }
-                          } catch (error, stackTrace) {
-                            ErrorHandler.logError(
-                              error,
-                              stackTrace: stackTrace,
-                              message: 'Could not reset removal recovery',
-                            );
-                            if (dialogContext.mounted) {
-                              ErrorHandler.showErrorDialog(
-                                sessionNavigatorContext(dialogContext),
-                                useRootNavigator: false,
-                                message:
-                                    'Could not reset removal recovery. Please try again.',
-                              );
-                            }
-                          }
-                        },
-                      ),
-                    ),
-                    child: const Text('Reset removal recovery'),
-                  ),
-                OutlinedButton(
-                  onPressed: close,
-                  style: SessionButtonStyle.outlined(),
-                  child: const Text('Close'),
-                ),
+                OutlinedButton(onPressed: close, child: const Text('Close')),
               ],
             ),
           ),
@@ -436,7 +264,10 @@ class SessionAdmissionPanel extends ConsumerWidget {
           attempts: admission.attempts,
           busy: admission.busy,
           embedded: true,
-          desktop: docked,
+          desktop: widget.docked,
+          error: admission.error,
+          onRefresh: admission.onRefresh,
+          onRetryUnresolved: admission.onRetryUnresolved,
           onDecision: admission.onDecision,
           onDeclinePermanently: admission.onDeclinePermanently,
           onAdmitAll: () => unawaited(admission.onAdmitAll()),

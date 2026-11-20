@@ -3,6 +3,9 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/services/repository_utils.dart';
+import 'package:totem_core/features/sessions/admission/admission_status.dart';
+import 'package:totem_core/features/sessions/repositories/participant_admission_repository.dart';
+import 'package:uuid/uuid.dart';
 
 part 'session_repository.g.dart';
 
@@ -126,16 +129,64 @@ Future<RoomState> _postEvent({
 }
 
 @riverpod
-Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) {
+Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) async {
   final apiService = ref.read(apiServiceProvider);
-  return RepositoryUtils.handleApiCall<JoinResponse>(
-    apiCall: () =>
-        apiService.rooms.totemRoomsApiJoinRoom(sessionSlug: sessionSlug),
+  JoinRoomRequest? resume;
+  AdmissionMeSnapshot? snapshot;
+  try {
+    snapshot = await ref
+        .read(participantAdmissionRepositoryProvider)
+        .me(sessionSlug: sessionSlug);
+  } on ApiError<AdmissionMeSnapshot, dynamic> {
+    // Join remains authoritative, but a fresh attempt may supersede an old one.
+  } on AppNetworkException {
+    // The join request is still required to authorize and issue admission.
+  }
+  final participant = snapshot?.me.value;
+  if (participant != null &&
+      ServerAdmissionAttemptStatus.parse(participant.status)?.isResumable ==
+          true) {
+    if (participant.requestId.value == null ||
+        participant.requestId.value!.isEmpty ||
+        participant.attemptId.value == null ||
+        participant.attemptId.value!.isEmpty) {
+      throw StateError('Active admission attempt is missing its IDs');
+    }
+    resume = JoinRoomRequest(
+      requestId: participant.requestId.value!,
+      attemptId: participant.attemptId.value!,
+    );
+  }
+  final attempt =
+      resume ??
+      JoinRoomRequest(
+        requestId: const Uuid().v4(),
+        attemptId: const Uuid().v4(),
+      );
+  final response = await RepositoryUtils.handleApiCall<JoinResponse>(
+    apiCall: () => apiService.rooms.totemRoomsApiJoinRoom(
+      sessionSlug: sessionSlug,
+      body: attempt,
+    ),
     operationName: 'join session',
     timeout: _shortTimeoutDuration,
     diagnostics: {'session_slug': sessionSlug},
     shouldReport: (error) => !isTerminalSessionJoinError(error),
   );
+  final admission = response.admission.isPresent
+      ? response.admission.value
+      : null;
+  if (admission == null ||
+      admission.permissions.isUnknown ||
+      ServerAdmissionAttemptStatus.parse(
+            admission.status,
+          )?.isAllowedJoinResponse !=
+          true ||
+      admission.requestId != attempt.requestId ||
+      admission.attemptId != attempt.attemptId) {
+    throw StateError('Server admission is unavailable or unsupported');
+  }
+  return response;
 }
 
 @riverpod

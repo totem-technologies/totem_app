@@ -1,10 +1,11 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart' show AsyncCallback;
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart'
+    show Participant;
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
-import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_list.dart';
 import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
@@ -23,17 +24,22 @@ class KeeperAdmissionPanel extends StatefulWidget {
     required this.desktop,
     this.attempts = const [],
     this.onDeclinePermanently,
+    this.error,
+    this.onRefresh,
+    this.onRetryUnresolved,
     this.embedded = false,
     super.key,
   });
 
-  final List<AdmissionRequest> requests;
-  final List<KeeperAdmissionAttempt> attempts;
-  final Future<void> Function(AdmissionRequest request, bool approve)
-  onDecision;
-  final Future<void> Function(AdmissionRequest request)? onDeclinePermanently;
+  final List<Participant> requests;
+  final List<Participant> attempts;
+  final Future<void> Function(Participant request, bool approve) onDecision;
+  final Future<void> Function(Participant request)? onDeclinePermanently;
   final VoidCallback onAdmitAll;
   final VoidCallback onClose;
+  final String? error;
+  final VoidCallback? onRefresh;
+  final AsyncCallback? onRetryUnresolved;
   final bool busy;
   final bool desktop;
 
@@ -45,21 +51,22 @@ class KeeperAdmissionPanel extends StatefulWidget {
 }
 
 class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
-  String _status(KeeperAdmissionStatus status) => switch (status) {
-    KeeperAdmissionStatus.requested => 'Waiting for a decision',
-    KeeperAdmissionStatus.joining => 'Approval sent · joining',
-    KeeperAdmissionStatus.joined => 'Joined the Session',
-    KeeperAdmissionStatus.joinFailed => 'Could not join · may request again',
-    KeeperAdmissionStatus.timedOut => 'Join confirmation timed out',
-    KeeperAdmissionStatus.denied => 'Declined',
-    KeeperAdmissionStatus.cancelled => 'Canceled',
-    KeeperAdmissionStatus.expired => 'Request expired',
+  String _status(String status) => switch (status) {
+    'requested' || 'waiting' => 'Waiting for a decision',
+    'approved' => 'Approval sent · joining',
+    'activated' => 'Joined the Session',
+    'denied' || 'declined' => 'Declined',
+    'cancelled' || 'canceled' => 'Canceled',
+    'expired' => 'Request expired',
+    'failed' => 'Could not join · may request again',
+    _ => status,
   };
 
-  bool _isCurrent(AdmissionRequest request) => widget.requests.any(
+  bool _isCurrent(Participant request) => widget.requests.any(
     (current) =>
-        current.id == request.id &&
-        current.senderIdentity == request.senderIdentity,
+        current.identity == request.identity &&
+        current.requestId.value == request.requestId.value &&
+        current.attemptId.value == request.attemptId.value,
   );
 
   @override
@@ -67,7 +74,9 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
     final height = MediaQuery.sizeOf(context).height;
     final theme = Theme.of(context);
     final statuses = widget.attempts.where(
-      (attempt) => attempt.status != KeeperAdmissionStatus.requested,
+      (attempt) => !widget.requests.any(
+        (request) => request.identity == attempt.identity,
+      ),
     );
     final content = SizedBox(
       width: widget.desktop ? 380 : double.infinity,
@@ -78,14 +87,31 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 16,
           children: [
+            if (widget.error case final error?)
+              Text(
+                error,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            if (widget.onRefresh case final refresh?)
+              OutlinedButton(
+                onPressed: refresh,
+                child: const Text('Retry refresh'),
+              ),
+            if (widget.onRetryUnresolved case final retry?)
+              OutlinedButton(
+                onPressed: widget.busy ? null : () => unawaited(retry()),
+                child: const Text('Retry unresolved command'),
+              ),
             SessionAdmissionList(
               guests: [
                 for (final request in widget.requests)
                   SessionAdmissionGuest(
-                    id: request.id,
-                    name: request.displayName,
+                    id: request.identity,
+                    name: request.user.name.value ?? request.identity,
                     avatar: UserAvatar.slug(
-                      request.senderIdentity,
+                      request.identity,
                       radius: 18,
                       borderWidth: 0,
                     ),
@@ -95,14 +121,14 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
               onClose: widget.onClose,
               onAdmit: (id) {
                 final request = widget.requests.firstWhereOrNull(
-                  (request) => request.id == id,
+                  (request) => request.identity == id,
                 );
                 if (request == null) return;
                 unawaited(widget.onDecision(request, true));
               },
               onDecline: (id) async {
                 final request = widget.requests.firstWhereOrNull(
-                  (request) => request.id == id,
+                  (request) => request.identity == id,
                 );
                 if (request == null) return;
                 final action = await showDialog<_DeclineAction>(
@@ -110,7 +136,7 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
                   useRootNavigator: false,
                   builder: (dialogContext) => ConfirmationDialog(
                     content:
-                        'Are you sure you want to decline ${request.displayName}?'
+                        'Are you sure you want to decline ${request.user.name.value ?? request.identity}?'
                         '${widget.onDeclinePermanently == null ? '' : "\n\nDecline Permanently also declines future requests for this Session. You can undo this in Declined Participants."}',
                     scrollable: true,
                     confirmButtonText: 'Decline',
@@ -140,9 +166,9 @@ class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
             for (final attempt in statuses)
               Semantics(
                 label:
-                    '${attempt.request.displayName}: ${_status(attempt.status)}',
+                    '${attempt.user.name.value ?? attempt.identity}: ${_status(attempt.status)}',
                 child: Text(
-                  '${attempt.request.displayName} · ${_status(attempt.status)}',
+                  '${attempt.user.name.value ?? attempt.identity} · ${_status(attempt.status)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppTheme.slate,
                   ),

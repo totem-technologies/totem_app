@@ -18,7 +18,7 @@ import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/permissions/policy.dart';
 import 'package:totem_core/features/permissions/ui/priming_sheet.dart';
 import 'package:totem_core/features/permissions/ui/recovery.dart';
-import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
+import 'package:totem_core/features/sessions/admission/admission_status.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';

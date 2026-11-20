@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' hide SessionOptions;
 import 'package:totem_core/features/permissions/model.dart';
-import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
+import 'package:totem_core/features/sessions/admission/admission_status.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 
 enum PreJoinCapturePhase {
