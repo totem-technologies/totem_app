@@ -55,6 +55,7 @@ class SessionAdmissionService extends ChangeNotifier {
     final keeper = session.admissionState.roomState.keeper;
     return mounted &&
         !_disconnecting &&
+        !_busy &&
         session.transport?.localIdentity == keeper &&
         _pending.containsKey(keeper);
   }

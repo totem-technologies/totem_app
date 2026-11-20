@@ -409,17 +409,33 @@ void main() {
     expect(h.backend.commands, hasLength(1));
   });
 
+  test('in-flight approval is not an unresolved command', () async {
+    await h.refresh();
+    final guest = h.service.requests.single;
+    h.backend.gate = Completer<void>();
+    h.backend.started = Completer<void>();
+    final started = h.backend.started!.future;
+    final decision = h.service.decide(guest, true);
+    await started;
+    final unresolvedWhileInFlight = h.service.hasUnresolvedCommand;
+    h.backend.gate!.complete();
+    await decision;
+    expect(unresolvedWhileInFlight, isFalse);
+  });
+
   test('uncertain outcome retries the same command and payload', () async {
     await h.refresh();
     final guest = h.service.requests.single;
     h.backend.failureStatus = 503;
     await h.service.decide(guest, true);
     expect(h.service.error, contains('unknown'));
+    expect(h.service.hasUnresolvedCommand, isTrue);
     h.backend.failureStatus = null;
     await h.service.decide(guest, true);
     expect(h.backend.commands, hasLength(2));
     expect(h.body(h.backend.commands.last), h.body(h.backend.commands.first));
     expect(h.service.error, isNull);
+    expect(h.service.hasUnresolvedCommand, isFalse);
   });
 
   test(
