@@ -19,6 +19,7 @@ class SessionKeyboardShortcuts extends ConsumerStatefulWidget {
     this.enableChatShortcut = true,
     this.onToggleMicrophone,
     this.onToggleCamera,
+    this.onEscape,
     super.key,
   });
 
@@ -28,6 +29,11 @@ class SessionKeyboardShortcuts extends ConsumerStatefulWidget {
   final bool enableChatShortcut;
   final AsyncCallback? onToggleMicrophone;
   final AsyncCallback? onToggleCamera;
+
+  /// Handles Escape when nothing in the room has focus; returns whether it
+  /// did. A focused widget, popup or dialog gets Escape through the focus
+  /// tree instead, so it closes first.
+  final bool Function()? onEscape;
 
   @override
   ConsumerState<SessionKeyboardShortcuts> createState() =>
@@ -73,6 +79,11 @@ class _SessionKeyboardShortcutsState
       return false;
     }
     if (_hasModifierPressed() || _hasEditableFocus()) return false;
+
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      if (_hasBlockingNavigatorRoute() || !_hasIdleRoomFocus()) return false;
+      return widget.onEscape?.call() ?? false;
+    }
 
     if (widget.enableChatShortcut &&
         event.logicalKey == ActionBarShortcut.chatKey) {
@@ -157,6 +168,19 @@ class _SessionKeyboardShortcutsState
 
     return focusedContext.widget is EditableText ||
         focusedContext.findAncestorWidgetOfExactType<EditableText>() != null;
+  }
+
+  /// Whether focus rests on a scope in the room's own focus chain rather than
+  /// on a widget, or on a dialog opened outside the room navigator.
+  bool _hasIdleRoomFocus() {
+    final focus = FocusManager.instance.primaryFocus;
+    if (focus == null) return true;
+    if (focus is! FocusScopeNode) return false;
+    final roomFocus = widget.navigatorKey?.currentState?.focusNode;
+    if (roomFocus == null) return false;
+    return focus == roomFocus ||
+        focus.ancestors.contains(roomFocus) ||
+        roomFocus.ancestors.contains(focus);
   }
 
   bool _hasBlockingNavigatorRoute() {

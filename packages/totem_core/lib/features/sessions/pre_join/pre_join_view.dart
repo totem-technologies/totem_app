@@ -29,6 +29,7 @@ class PreJoinView extends StatelessWidget {
     required this.controlsKey,
     this.onLeave,
     this.notice,
+    this.tips,
     this.preview,
     this.controls,
     super.key,
@@ -43,6 +44,10 @@ class PreJoinView extends StatelessWidget {
 
   /// Shown above [joinCard], such as what's needed before joining.
   final Widget? notice;
+
+  /// Shown between [joinCard] and the media controls, such as grounding tips
+  /// while waiting to be admitted.
+  final Widget? tips;
 
   /// Replaces the provider-backed local participant preview.
   final Widget? preview;
@@ -144,7 +149,7 @@ class PreJoinView extends StatelessWidget {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               spacing: 18,
-                              children: [?notice, joinCard, actionBar],
+                              children: [?notice, joinCard, ?tips, actionBar],
                             ),
                           ),
                         ),
@@ -166,7 +171,7 @@ class PreJoinView extends StatelessWidget {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               spacing: 18,
-                              children: [?notice, joinCard, actionBar],
+                              children: [?notice, joinCard, ?tips, actionBar],
                             ),
                           ),
                         ),

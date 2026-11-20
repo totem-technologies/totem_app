@@ -34,6 +34,7 @@ import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
 import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
+import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
@@ -1250,6 +1251,126 @@ void main() {
 
       check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
       check(container.read(sessionChatSelectedProvider)).isFalse();
+    });
+
+    Future<ProviderContainer> pumpDockedChat(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await _pumpRoomScreenForResolvedScreen(
+        tester,
+        session: session,
+        event: _createSessionEventWithElapsed(
+          _testNow(tester),
+          elapsed: const Duration(minutes: 5),
+        ),
+        screen: RoomScreen.listening,
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(VideoSessionScreen)),
+        listen: false,
+      );
+      container
+          .read(sessionPresentationProvider.notifier)
+          .openPanel(SessionPanel.chat);
+      await tester.pumpAndSettle();
+      check(tester.widgetList(find.byType(SessionChatPanel))).length.equals(1);
+      return container;
+    }
+
+    testWidgets('floats the docked chat over the full-width room', (
+      tester,
+    ) async {
+      await pumpDockedChat(tester);
+
+      final chat = tester.getRect(find.byType(SessionChatPanel));
+      check(chat.width).equals(sessionSidePanelWidth);
+      check(chat.right).equals(1600 - sessionSidePanelInset);
+      check(chat.top).equals(sessionSidePanelInset);
+      check(chat.bottom).equals(1200 - sessionSidePanelInset);
+      // The room keeps the whole width under the card.
+      check(tester.getSize(find.byType(VideoSessionScreen)).width).equals(1600);
+    });
+
+    testWidgets('room dialogs draw over the docked chat and block it', (
+      tester,
+    ) async {
+      await pumpDockedChat(tester);
+      check(
+        find.byType(SessionChatPanel).hitTestable().evaluate(),
+      ).isNotEmpty();
+
+      showDialog<void>(
+        context: tester.element(find.byType(SessionChatPanel)),
+        useRootNavigator: false,
+        builder: (_) => const AlertDialog(content: Text('room dialog')),
+      );
+      await tester.pumpAndSettle();
+
+      check(find.text('room dialog').evaluate()).length.equals(1);
+      // The dialog's barrier sits over the card.
+      check(find.byType(SessionChatPanel).hitTestable().evaluate()).isEmpty();
+    });
+
+    testWidgets('back closes the docked chat before offering to leave', (
+      tester,
+    ) async {
+      final container = await pumpDockedChat(tester);
+
+      final roomNavigator = tester.state<NavigatorState>(
+        find
+            .ancestor(
+              of: find.byType(SessionChatPanel),
+              matching: find.byType(Navigator),
+            )
+            .first,
+      );
+      await roomNavigator.maybePop();
+      await tester.pumpAndSettle();
+
+      check(container.read(sessionChatSelectedProvider)).isFalse();
+      check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+      check(find.byType(AlertDialog).evaluate()).isEmpty();
+    });
+
+    testWidgets('Escape closes the docked chat', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        final container = await pumpDockedChat(tester);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+
+        check(container.read(sessionChatSelectedProvider)).isFalse();
+        check(tester.widgetList(find.byType(SessionChatPanel))).isEmpty();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('Escape closes a root dialog before the docked chat', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        final container = await pumpDockedChat(tester);
+        final dialog = showDialog<void>(
+          context: tester.element(find.byType(SessionChatPanel)),
+          builder: (_) => const AlertDialog(content: Text('root dialog')),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        await dialog;
+
+        check(find.text('root dialog').evaluate()).isEmpty();
+        check(container.read(sessionChatSelectedProvider)).isTrue();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
 
     testWidgets('keyboard C toggles the open flag on a wide viewport', (

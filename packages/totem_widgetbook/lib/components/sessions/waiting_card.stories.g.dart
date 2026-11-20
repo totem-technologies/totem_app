@@ -26,6 +26,7 @@ final JoinTransitionCardComponent =
       stories: [
         $Default..$generatedName = 'Default',
         $Waiting..$generatedName = 'Waiting',
+        $KeeperUnresponsive..$generatedName = 'KeeperUnresponsive',
       ],
     );
 typedef JoinTransitionCardScenario =
@@ -52,16 +53,32 @@ class JoinTransitionCardStory
 }
 
 class JoinCardInputArgs extends StoryArgs<JoinTransitionCard> {
-  JoinCardInputArgs({Arg<bool>? waiting})
-    : this.waitingArg = $initArg('waiting', waiting, BoolArg(false))!;
+  JoinCardInputArgs({Arg<bool>? waiting, Arg<bool>? keeperUnresponsive})
+    : this.waitingArg = $initArg('waiting', waiting, BoolArg(false))!,
+      this.keeperUnresponsiveArg = $initArg(
+        'keeperUnresponsive',
+        keeperUnresponsive,
+        BoolArg(false),
+      )!;
 
-  JoinCardInputArgs.fixed({bool waiting = false})
-    : this.waitingArg = $initArg('waiting', Arg.fixed(waiting), null)!;
+  JoinCardInputArgs.fixed({
+    bool waiting = false,
+    bool keeperUnresponsive = false,
+  }) : this.waitingArg = $initArg('waiting', Arg.fixed(waiting), null)!,
+       this.keeperUnresponsiveArg = $initArg(
+         'keeperUnresponsive',
+         Arg.fixed(keeperUnresponsive),
+         null,
+       )!;
 
   final Arg<bool> waitingArg;
 
+  final Arg<bool> keeperUnresponsiveArg;
+
   bool get waiting => waitingArg.value;
 
+  bool get keeperUnresponsive => keeperUnresponsiveArg.value;
+
   @override
-  List<Arg?> get list => [waitingArg];
+  List<Arg?> get list => [waitingArg, keeperUnresponsiveArg];
 }

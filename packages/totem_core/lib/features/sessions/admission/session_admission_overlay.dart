@@ -258,8 +258,6 @@ class _SessionAdmissionPanelState extends ConsumerState<SessionAdmissionPanel> {
     }
     return Material(
       color: AppTheme.cream,
-      elevation: widget.docked ? 6 : 0,
-      shadowColor: const Color.fromRGBO(0, 0, 0, 0.16),
       child: SafeArea(
         child: KeeperAdmissionPanel(
           requests: admission.requests,
