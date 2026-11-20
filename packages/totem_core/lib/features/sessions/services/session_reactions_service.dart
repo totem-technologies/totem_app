@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:totem_core/features/sessions/services/session_packet_router.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
+import 'package:totem_core/shared/logger.dart';
 
 /// Typed protocol adapter; the existing reactions owner retains its throttle
 /// and bounded presentation state.
@@ -60,7 +62,14 @@ class SessionReactionsService {
               SessionTransportConnectionState.connected) {
         return;
       }
-      final recipients = (broadcastRecipients() ?? const <String>[])
+      final roster = broadcastRecipients();
+      if (roster == null) {
+        logger.w(
+          'Reaction remains local because the trusted roster is unavailable.',
+        );
+        return;
+      }
+      final recipients = roster
           .where(
             (identity) =>
                 identity.isNotEmpty && identity != connection.localIdentity,

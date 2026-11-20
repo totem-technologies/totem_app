@@ -106,6 +106,10 @@ void main() {
       h.roster = null;
       await h.service.send('🔥');
       check(h.connection.publications).length.equals(1);
+      check(
+        h.reactions.map((reaction) => (reaction.userIdentity, reaction.emoji)),
+      ).deepEquals([('local', '👍'), ('local', '❤️'), ('local', '🔥')]);
+      check(h.errors).isEmpty();
     },
   );
 

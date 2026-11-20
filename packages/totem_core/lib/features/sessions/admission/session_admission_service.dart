@@ -24,10 +24,10 @@ class SessionAdmissionService extends ChangeNotifier {
 
   AdmissionSnapshot? _snapshot;
   AdmissionSnapshot? get snapshot {
-    _observeAuthority();
     final room = session.transport;
     return mounted &&
             !_disconnecting &&
+            _authorityCurrent &&
             room != null &&
             room.localIdentity == session.admissionState.roomState.keeper
         ? _snapshot
@@ -51,11 +51,11 @@ class SessionAdmissionService extends ChangeNotifier {
 
   /// Whether the current Keeper has a command whose outcome is unknown.
   bool get hasUnresolvedCommand {
-    _observeAuthority();
     final keeper = session.admissionState.roomState.keeper;
     return mounted &&
         !_disconnecting &&
-        !_busy &&
+        (!_busy || !_authorityCurrent) &&
+        keeper == _authorityKeeper &&
         session.transport?.localIdentity == keeper &&
         _pending.containsKey(keeper);
   }
@@ -65,15 +65,14 @@ class SessionAdmissionService extends ChangeNotifier {
   bool _disconnecting = false;
   bool get mounted => !_closed;
   Set<String> _admittedIdentities = const {};
-  Set<String> get admittedIdentities {
-    _observeAuthority();
-    return _admittedIdentities;
-  }
+  Set<String> get admittedIdentities =>
+      mounted && !_disconnecting && _authorityCurrent
+      ? _admittedIdentities
+      : const {};
 
   bool _recipientsCurrent = false;
   Set<String>? get serverDataRecipients {
-    _observeAuthority();
-    return mounted && !_disconnecting && _recipientsCurrent
+    return mounted && !_disconnecting && _authorityCurrent && _recipientsCurrent
         ? _admittedIdentities
         : null;
   }
@@ -82,6 +81,7 @@ class SessionAdmissionService extends ChangeNotifier {
   Future<void> get synchronized => _queue;
   int _generation = 0;
   bool _refreshQueued = false;
+  Timer? _presenceRefresh;
   Future<void>? _closing;
   final Map<String, _PendingCommand> _pending = {};
   final Set<String> _queuedActions = {};
@@ -89,6 +89,12 @@ class SessionAdmissionService extends ChangeNotifier {
   SessionTransport? _authorityRoom;
   String? _authorityKeeper;
   String? _authorityLocal;
+
+  bool get _authorityCurrent =>
+      _authorityObserved &&
+      identical(session.transport, _authorityRoom) &&
+      session.admissionState.roomState.keeper == _authorityKeeper &&
+      session.transport?.localIdentity == _authorityLocal;
 
   KeeperAdmissionRepository get _keeperRepository =>
       ref.read(keeperAdmissionRepositoryProvider);
@@ -295,10 +301,23 @@ class SessionAdmissionService extends ChangeNotifier {
   }
 
   void handleTransportEvent(SessionTransportEvent event) {
+    if (event is TransportParticipantChanged) {
+      if (!mounted || _disconnecting) return;
+      if (!_authorityCurrent ||
+          event.participant.identity ==
+              session.admissionState.roomState.keeper) {
+        sync();
+      } else {
+        _recipientsCurrent = false;
+        _presenceRefresh ??= Timer(const Duration(seconds: 1), () {
+          _presenceRefresh = null;
+          sync();
+        });
+      }
+      return;
+    }
     if (event is TransportConnectionChanged ||
         event is TransportMetadataChanged ||
-        event is TransportParticipantChanged ||
-        event is TransportParticipantUpdated ||
         (event is TransportPacketReceived &&
             event.packet.topic == SessionCommunicationTopics.admission.topic)) {
       sync();
@@ -551,6 +570,8 @@ class SessionAdmissionService extends ChangeNotifier {
   Future<void> disconnect() async {
     if (!mounted || _disconnecting) return;
     _disconnecting = true;
+    _presenceRefresh?.cancel();
+    _presenceRefresh = null;
     _generation++;
     _refreshQueued = false;
     _snapshot = null;
@@ -565,6 +586,8 @@ class SessionAdmissionService extends ChangeNotifier {
   Future<void> _close() async {
     if (!mounted) return;
     _closed = true;
+    _presenceRefresh?.cancel();
+    _presenceRefresh = null;
     _generation++;
     _recipientsCurrent = false;
     await _queue;

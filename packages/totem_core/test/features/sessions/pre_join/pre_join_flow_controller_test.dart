@@ -156,17 +156,9 @@ class _SuccessfulSessionController extends SessionController {
   static int activationCalls = 0;
   static ServerParticipantAdmission? receivedServerAdmission;
   static Completer<SessionJoinResult>? activationGate;
-  static int joinCalls = 0;
 
   @override
   SessionRoomState build(SessionOptions options) => _sessionState;
-
-  @override
-  Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async {
-    joinCalls++;
-    receivedMedia = joinMedia;
-    return SessionJoinResult.success;
-  }
 
   @override
   Future<SessionJoinResult> activateConnectedRoom({
@@ -183,8 +175,12 @@ class _SuccessfulSessionController extends SessionController {
 }
 
 class _ResettableSessionController extends _SuccessfulSessionController {
+  int resets = 0;
+
   @override
-  Future<void> resetAfterFailedJoin() async {}
+  Future<void> resetAfterFailedJoin() async {
+    resets++;
+  }
 }
 
 class _AdmissionRoom extends Room {
@@ -474,6 +470,20 @@ void main() {
     for (final admission in [
       const Omittable<AdmissionJoinState?>.absent(),
       const Omittable<AdmissionJoinState?>(null),
+      for (final status in ['future_status', 'declined', 'expired'])
+        Omittable<AdmissionJoinState?>(
+          AdmissionJoinState(
+            requestId: 'request-1',
+            attemptId: 'attempt-1',
+            status: status,
+            durableState: 'none',
+            approvalRequired: true,
+            expiresAt: DateTime(2025),
+            permissions: AdmissionJoinStatePermissions.fromJson('waiting'),
+            permissionSync: 'pending',
+            revision: 1,
+          ),
+        ),
       Omittable<AdmissionJoinState?>(
         AdmissionJoinState(
           requestId: 'request-1',
@@ -573,7 +583,7 @@ void main() {
         final flow = _ServerFlow(repository, connection);
         _AdmissionFlow.connections = 0;
         _SuccessfulSessionController.activationCalls = 0;
-        _SuccessfulSessionController.joinCalls = 0;
+
         _SuccessfulSessionController.activationGate =
             Completer<SessionJoinResult>();
         final container = _container(
@@ -629,7 +639,7 @@ void main() {
           _SuccessfulSessionController.receivedMedia?.microphoneTrack,
         ).equals(factory.audioTracks.single);
         check(_AdmissionFlow.connections).equals(1);
-        check(_SuccessfulSessionController.joinCalls).equals(0);
+
         check(factory.videoTracks.length).equals(1);
         check(factory.audioTracks.length).equals(1);
         check(repository.activations).equals(0);
@@ -688,6 +698,55 @@ void main() {
         check(
           container.read(preJoinFlowControllerProvider(_slug)).phase,
         ).equals(PreJoinFlowPhase.joined);
+      },
+    );
+
+    test(
+      'a transient activation receipt failure preserves the joined session and retries',
+      () async {
+        final repository = _ServerRepository()
+          ..activationWaiting = Completer<AdmissionMeSnapshot>();
+        final connection = _ServerConnection()..hasMediaPermissions = true;
+        final flow = _ServerFlow(repository, connection);
+        final session = _ResettableSessionController();
+        final container = _container(
+          factory: _TrackFactory(),
+          response: JoinResponse(
+            token: 'token',
+            isAlreadyPresent: false,
+            admission: Omittable(_serverInitial()),
+          ),
+          sessionController: () => session,
+          sessionOptions: serverOptions,
+          flowController: () => flow,
+        );
+        addTearDown(() async {
+          container.dispose();
+          await flow.admission?.dispose();
+        });
+        await _waitForMedia(container);
+        check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+        repository.current = _serverSnapshot('approved');
+        connection.events.add(ServerAdmissionConnectionEvent.notification);
+        await pumpEventQueue();
+        repository.activationWaiting!.completeError(
+          Exception('network failure'),
+        );
+        repository.activationWaiting = null;
+        await pumpEventQueue();
+        check(
+          container.read(preJoinFlowControllerProvider(_slug)).phase,
+        ).equals(PreJoinFlowPhase.joined);
+        check(session.resets).equals(0);
+        check(connection.disposed).isFalse();
+
+        await flow.admission!.refresh(confirm: true);
+        await pumpEventQueue();
+        check(repository.activations).equals(2);
+        check(
+          container.read(preJoinFlowControllerProvider(_slug)).phase,
+        ).equals(PreJoinFlowPhase.joined);
+        check(session.resets).equals(0);
       },
     );
 

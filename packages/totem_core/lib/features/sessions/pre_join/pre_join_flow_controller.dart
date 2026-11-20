@@ -9,10 +9,8 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
-
 import 'package:totem_core/features/permissions/media_permission_controller.dart';
 import 'package:totem_core/features/permissions/policy.dart';
-
 import 'package:totem_core/features/sessions/admission/server_participant_admission.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -128,12 +126,10 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           : null;
       if (serverState == null ||
           serverState.permissions.isUnknown ||
-          ![
-            'pending',
-            'granting',
-            'approved',
-            'activated',
-          ].contains(serverState.status) ||
+          ServerAdmissionAttemptStatus.parse(
+                serverState.status,
+              )?.isAllowedJoinResponse !=
+              true ||
           serverState.requestId.isEmpty ||
           serverState.attemptId.isEmpty) {
         throw StateError('Server admission is unavailable or unsupported');
@@ -550,7 +546,18 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         return PreJoinJoinOutcome.retryableFailure;
       }
 
-      await serverAdmission.activate();
+      try {
+        await serverAdmission.activate();
+        if (serverAdmission.status != AdmissionStatus.approved) {
+          throw StateError('Admission is no longer authorized');
+        }
+      } catch (error) {
+        if (serverAdmission.status != AdmissionStatus.pending ||
+            !identical(serverAdmission.error, error)) {
+          rethrow;
+        }
+        // Admission owns retrying the receipt after reconfirmation.
+      }
       if (!_isCurrent(attempt)) {
         await currentSession.resetAfterFailedJoin();
         return PreJoinJoinOutcome.ignored;

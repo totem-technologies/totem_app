@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:checks/checks.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -10,6 +12,8 @@ import 'package:totem_core/features/sessions/admission/session_admission_service
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart'
     as session_state;
+import 'package:totem_core/features/sessions/media/participant_info.dart';
+import 'package:totem_core/features/sessions/services/session_packet_router.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 import '../../../setup.dart';
@@ -79,6 +83,7 @@ class _Backend implements ApiClient {
   bool partial = false;
   Completer<void>? gate;
   Completer<void>? started;
+  Completer<void>? snapshotGate;
   final requests = <ApiRequest>[];
 
   Map<String, dynamic> get snapshot => {
@@ -126,7 +131,9 @@ class _Backend implements ApiClient {
           'message': 'unavailable',
         }, status);
       }
-      return response(snapshot);
+      final data = snapshot;
+      await snapshotGate?.future;
+      return response(data);
     }
     final body = jsonDecode(request.body! as String) as Map<String, dynamic>;
     started?.complete();
@@ -247,15 +254,144 @@ void main() {
   });
 
   test(
+    'participant updates do not refresh but presence and reconnect do',
+    () async {
+      await h.refresh();
+      final initialRequests = h.backend.requests.length;
+      const participant = ParticipantInfo(
+        sid: 'sid',
+        identity: 'guest',
+        name: 'Guest',
+      );
+      h.service.handleTransportEvent(
+        const TransportParticipantUpdated(participant),
+      );
+      await h.service.synchronized;
+      check(h.backend.requests.length).equals(initialRequests);
+      check(
+        h.service.serverDataRecipients,
+      ).isNotNull().unorderedEquals({'keeper', 'activated'});
+      h.backend.waiting = [];
+      h.backend.version++;
+      h.service.handleTransportEvent(
+        const TransportParticipantChanged(
+          ParticipantInfo(
+            sid: 'keeper-sid',
+            identity: 'keeper',
+            name: 'Keeper',
+          ),
+          present: false,
+        ),
+      );
+      await h.service.synchronized;
+      check(h.service.requests).isEmpty();
+      final afterPresence = h.backend.requests.length;
+      h.backend.waiting = [_participant('guest')];
+      h.backend.version++;
+      h.service.handleTransportEvent(
+        const TransportConnectionChanged(
+          SessionTransportConnectionState.connected,
+          reconnected: true,
+        ),
+      );
+      await h.service.synchronized;
+      check(h.backend.requests.length).isGreaterThan(afterPresence);
+      check(h.service.requests).isNotEmpty();
+    },
+  );
+
+  test(
+    'presence bursts are bounded and preserve immediate and in-flight refreshes',
+    () {
+      fakeAsync((async) {
+        final h = _Harness();
+        h.service.sync();
+        async.flushMicrotasks();
+        final initialRequests = h.backend.requests.length;
+        const guest = ParticipantInfo(
+          sid: 'sid',
+          identity: 'guest',
+          name: 'Guest',
+        );
+        const presence = TransportParticipantChanged(guest, present: true);
+        for (var i = 0; i < 20; i++) {
+          h.service.handleTransportEvent(presence);
+          async.elapse(const Duration(milliseconds: 40));
+        }
+        check(h.backend.requests.length).equals(initialRequests);
+        check(h.service.serverDataRecipients).isNull();
+        async.elapse(const Duration(milliseconds: 200));
+        check(h.backend.requests.length).equals(initialRequests + 3);
+
+        h.backend.snapshotGate = Completer<void>();
+        h.service.handleTransportEvent(
+          TransportPacketReceived(
+            SessionTransportPacket(
+              bytes: const [],
+              topic: SessionCommunicationTopics.admission.topic,
+            ),
+          ),
+        );
+        async.flushMicrotasks();
+        check(h.backend.requests.length).equals(initialRequests + 5);
+        h.service.handleTransportEvent(presence);
+        h.backend.waiting = [];
+        h.backend.version++;
+        async.elapse(const Duration(seconds: 1));
+        h.backend.snapshotGate!.complete();
+        h.backend.snapshotGate = null;
+        async.flushMicrotasks();
+        check(h.service.requests).isEmpty();
+        check(h.backend.requests.length).equals(initialRequests + 9);
+
+        h.service.handleTransportEvent(presence);
+        h.service.disconnect();
+        async.flushMicrotasks();
+        final afterDisconnect = h.backend.requests.length;
+        async.elapse(const Duration(seconds: 2));
+        check(h.backend.requests.length).equals(afterDisconnect);
+        h.service.handleTransportEvent(presence);
+        h.service.close();
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 2));
+        check(h.backend.requests.length).equals(afterDisconnect);
+        h.container.dispose();
+      });
+    },
+  );
+
+  test('presence observes changed keeper authority without waiting', () async {
+    await h.refresh();
+    h.localRoom = _room('new-keeper', 5);
+    h.backend.room = h.localRoom;
+    const participant = ParticipantInfo(
+      sid: 'sid',
+      identity: 'guest',
+      name: 'Guest',
+    );
+    h.service.handleTransportEvent(
+      const TransportParticipantChanged(participant, present: true),
+    );
+    await h.service.synchronized;
+    check(h.service.snapshot).isNull();
+    check(
+      h.service.serverDataRecipients,
+    ).isNotNull().unorderedEquals({'new-keeper', 'activated'});
+  });
+
+  test(
     'Keeper snapshot exposes waiting, history, permanent declines and room recipients',
     () async {
       await h.refresh();
-      expect(h.service.error, isNull);
-      expect(h.service.snapshot?.version, 12);
-      expect(h.service.requests.map((p) => p.identity), ['guest']);
-      expect(h.service.attempts.map((p) => p.identity), ['old']);
-      expect(h.service.declined.map((p) => p.identity), ['blocked']);
-      expect(h.service.serverDataRecipients, {'keeper', 'activated'});
+      check(h.service.error).isNull();
+      check(h.service.snapshot?.version).equals(12);
+      check(h.service.requests.map((p) => p.identity)).deepEquals(['guest']);
+      check(h.service.attempts.map((p) => p.identity)).deepEquals(['old']);
+      check(h.service.declined.map((p) => p.identity)).deepEquals(['blocked']);
+      check(
+        h.service.serverDataRecipients,
+      ).isNotNull().unorderedEquals({'keeper', 'activated'});
     },
   );
 
@@ -268,46 +404,49 @@ void main() {
         action == 'approve',
         permanently: action == 'permanent',
       );
-      expect(h.service.error, isNull);
+      check(h.service.error).isNull();
       final request = h.backend.commands.single;
-      expect(
+      check(
         request.path,
-        endsWith(action == 'approve' ? '/guest/approve' : '/guest/decline'),
-      );
+      ).endsWith(action == 'approve' ? '/guest/approve' : '/guest/decline');
       final body = h.body(request);
-      expect(body['command_id'], matches(RegExp(r'^[0-9a-f-]{36}$')));
-      expect(body['request_id'], 'request-guest');
-      expect(body['attempt_id'], 'attempt-guest');
-      expect(body['expected_version'], 7);
-      expect(body['expected_room_version'], 4);
-      if (action != 'approve') expect(body['permanent'], action == 'permanent');
-      expect(h.service.requests, isEmpty);
+      check(
+        body['command_id'],
+      ).isA<String>().matchesPattern(RegExp(r'^[0-9a-f-]{36}$'));
+      check(body['request_id']).equals('request-guest');
+      check(body['attempt_id']).equals('attempt-guest');
+      check(body['expected_version']).equals(7);
+      check(body['expected_room_version']).equals(4);
+      if (action != 'approve') {
+        check(body['permanent']).equals(action == 'permanent');
+      }
+      check(h.service.requests).isEmpty();
     });
   }
 
   test('admit all uses one versioned batch command', () async {
     h.backend.waiting.add(_participant('another'));
     await h.refresh();
-    expect(await h.service.admitAll(), isTrue);
+    check(await h.service.admitAll()).isTrue();
     final request = h.backend.commands.single;
-    expect(request.path, endsWith('/admission/admit-all'));
-    expect(h.body(request)['expected_room_version'], 4);
-    expect(h.service.requests, isEmpty);
+    check(request.path).endsWith('/admission/admit-all');
+    check(h.body(request)['expected_room_version']).equals(4);
+    check(h.service.requests).isEmpty();
   });
 
   test('settings only change after successful server response', () async {
     await h.refresh();
     h.backend.failureStatus = 409;
     await h.service.setApprovalRequired(false);
-    expect(h.service.approvalRequired, isTrue);
-    expect(h.service.error, isNotNull);
+    check(h.service.approvalRequired).isTrue();
+    check(h.service.error).isNotNull();
     h.backend.failureStatus = null;
     await h.service.setApprovalRequired(false);
-    expect(h.service.approvalRequired, isFalse);
-    expect(h.backend.approval, isFalse);
+    check(h.service.approvalRequired).isFalse();
+    check(h.backend.approval).isFalse();
     final body = h.body(h.backend.commands.last);
-    expect(body['expected_revision'], 9);
-    expect(body['expected_room_version'], 4);
+    check(body['expected_revision']).equals(9);
+    check(body['expected_room_version']).equals(4);
   });
 
   test('stale request is not submitted after refresh', () async {
@@ -315,8 +454,8 @@ void main() {
     final old = h.service.requests.single;
     h.backend.waiting = [_participant('guest')..['attempt_id'] = 'replacement'];
     await h.service.decide(old, true);
-    expect(h.backend.commands, isEmpty);
-    expect(h.service.error, isNotNull);
+    check(h.backend.commands).isEmpty();
+    check(h.service.error).isNotNull();
   });
 
   test('reassignment fences a delayed command response', () async {
@@ -329,20 +468,25 @@ void main() {
     await started;
     h.localRoom = _room('new-keeper', 5);
     h.backend.room = h.localRoom;
-    expect(h.service.snapshot, isNull);
-    expect(h.service.hasUnresolvedCommand, isFalse);
-    expect(h.service.requests, isEmpty);
-    expect(h.service.attempts, isEmpty);
-    expect(h.service.declined, isEmpty);
-    expect(h.service.admittedIdentities, isEmpty);
-    expect(h.service.serverDataRecipients, isNull);
+    clearInteractions(h.session);
+    check(h.service.snapshot).isNull();
+    check(h.service.hasUnresolvedCommand).isFalse();
+    check(h.service.requests).isEmpty();
+    check(h.service.attempts).isEmpty();
+    check(h.service.declined).isEmpty();
+    check(h.service.admittedIdentities).isEmpty();
+    check(h.service.serverDataRecipients).isNull();
+    verifyNever(() => h.session.updateAdmittedMediaRecipients(any()));
+    h.service.sync();
     verify(() => h.session.updateAdmittedMediaRecipients(<String>{})).called(1);
     h.backend.gate!.complete();
     await decision;
-    expect(h.service.snapshot, isNull);
+    check(h.service.snapshot).isNull();
     await h.refresh();
-    expect(h.service.snapshot, isNull);
-    expect(h.service.serverDataRecipients, {'new-keeper', 'activated'});
+    check(h.service.snapshot).isNull();
+    check(
+      h.service.serverDataRecipients,
+    ).isNotNull().unorderedEquals({'new-keeper', 'activated'});
   });
 
   test(
@@ -356,18 +500,18 @@ void main() {
       final replacement = _Transport();
       when(() => replacement.localIdentity).thenReturn('keeper');
       when(() => h.session.transport).thenReturn(replacement);
-      expect(h.service.snapshot, isNull);
-      expect(h.service.requests, isEmpty);
-      expect(h.service.serverDataRecipients, isNull);
-      expect(h.service.hasUnresolvedCommand, isTrue);
+      check(h.service.snapshot).isNull();
+      check(h.service.requests).isEmpty();
+      check(h.service.serverDataRecipients).isNull();
+      check(h.service.hasUnresolvedCommand).isTrue();
       h.backend.waiting = [];
       h.backend.failureStatus = null;
       await h.refresh();
-      expect(h.service.requests, isEmpty);
-      expect(await h.service.retryUnresolved(), isTrue);
-      expect(h.backend.commands, hasLength(2));
-      expect(h.body(h.backend.commands.last), oldBody);
-      expect(h.service.hasUnresolvedCommand, isFalse);
+      check(h.service.requests).isEmpty();
+      check(await h.service.retryUnresolved()).isTrue();
+      check(h.backend.commands).length.equals(2);
+      check(h.body(h.backend.commands.last)).deepEquals(oldBody);
+      check(h.service.hasUnresolvedCommand).isFalse();
     },
   );
 
@@ -385,13 +529,13 @@ void main() {
       final replacement = _Transport();
       when(() => replacement.localIdentity).thenReturn('keeper');
       when(() => h.session.transport).thenReturn(replacement);
-      expect(h.service.hasUnresolvedCommand, isTrue);
+      check(h.service.hasUnresolvedCommand).isTrue();
       final retry = h.service.retryUnresolved();
       h.backend.gate!.complete();
       await decision;
-      expect(await retry, isTrue);
-      expect(h.backend.commands, hasLength(2));
-      expect(h.body(h.backend.commands.last), original);
+      check(await retry).isTrue();
+      check(h.backend.commands).length.equals(2);
+      check(h.body(h.backend.commands.last)).deepEquals(original);
     },
   );
 
@@ -406,7 +550,7 @@ void main() {
     final second = h.service.decide(guest, true);
     h.backend.gate!.complete();
     await Future.wait([first, second]);
-    expect(h.backend.commands, hasLength(1));
+    check(h.backend.commands).length.equals(1);
   });
 
   test('in-flight approval is not an unresolved command', () async {
@@ -420,7 +564,7 @@ void main() {
     final unresolvedWhileInFlight = h.service.hasUnresolvedCommand;
     h.backend.gate!.complete();
     await decision;
-    expect(unresolvedWhileInFlight, isFalse);
+    check(unresolvedWhileInFlight).isFalse();
   });
 
   test('uncertain outcome retries the same command and payload', () async {
@@ -428,14 +572,16 @@ void main() {
     final guest = h.service.requests.single;
     h.backend.failureStatus = 503;
     await h.service.decide(guest, true);
-    expect(h.service.error, contains('unknown'));
-    expect(h.service.hasUnresolvedCommand, isTrue);
+    check(h.service.error).isNotNull().contains('unknown');
+    check(h.service.hasUnresolvedCommand).isTrue();
     h.backend.failureStatus = null;
     await h.service.decide(guest, true);
-    expect(h.backend.commands, hasLength(2));
-    expect(h.body(h.backend.commands.last), h.body(h.backend.commands.first));
-    expect(h.service.error, isNull);
-    expect(h.service.hasUnresolvedCommand, isFalse);
+    check(h.backend.commands).length.equals(2);
+    check(
+      h.body(h.backend.commands.last),
+    ).deepEquals(h.body(h.backend.commands.first));
+    check(h.service.error).isNull();
+    check(h.service.hasUnresolvedCommand).isFalse();
   });
 
   test(
@@ -450,11 +596,11 @@ void main() {
       h.backend.version++;
       h.backend.failureStatus = null;
       await h.refresh();
-      expect(h.service.approvalRequired, isFalse);
-      expect(h.service.hasUnresolvedCommand, isTrue);
-      expect(await h.service.retryUnresolved(), isTrue);
-      expect(h.body(h.backend.commands.last), oldBody);
-      expect(h.service.hasUnresolvedCommand, isFalse);
+      check(h.service.approvalRequired).isFalse();
+      check(h.service.hasUnresolvedCommand).isTrue();
+      check(await h.service.retryUnresolved()).isTrue();
+      check(h.body(h.backend.commands.last)).deepEquals(oldBody);
+      check(h.service.hasUnresolvedCommand).isFalse();
     },
   );
 
@@ -462,42 +608,42 @@ void main() {
     'snapshot refresh failure hides stale queue and supports manual retry',
     () async {
       await h.refresh();
-      expect(h.service.requests, isNotEmpty);
+      check(h.service.requests).isNotEmpty();
       h.backend.snapshotFailureStatus = 503;
       await h.refresh();
-      expect(h.service.snapshot, isNull);
-      expect(h.service.requests, isEmpty);
-      expect(h.service.serverDataRecipients, isNull);
-      expect(h.service.error, contains('refresh'));
+      check(h.service.snapshot).isNull();
+      check(h.service.requests).isEmpty();
+      check(h.service.serverDataRecipients).isNull();
+      check(h.service.error).isNotNull().contains('refresh');
       h.backend.snapshotFailureStatus = null;
       await h.refresh();
-      expect(h.service.requests, isNotEmpty);
-      expect(h.service.error, isNull);
+      check(h.service.requests).isNotEmpty();
+      check(h.service.error).isNull();
     },
   );
 
   test('participant reads only me and cannot submit Keeper commands', () async {
     when(() => h.transport.localIdentity).thenReturn('guest');
     await h.refresh();
-    expect(h.service.snapshot, isNull);
-    expect(h.service.serverDataRecipients, {'keeper', 'activated'});
-    expect(
+    check(h.service.snapshot).isNull();
+    check(
+      h.service.serverDataRecipients,
+    ).isNotNull().unorderedEquals({'keeper', 'activated'});
+    check(
       h.backend.requests.any((r) => r.path.endsWith('/admission/me')),
-      isTrue,
-    );
-    expect(
+    ).isTrue();
+    check(
       h.backend.requests.any((r) => r.path.endsWith('/admission')),
-      isFalse,
-    );
-    expect(await h.service.admitAll(), isFalse);
-    expect(h.backend.commands, isEmpty);
+    ).isFalse();
+    check(await h.service.admitAll()).isFalse();
+    check(h.backend.commands).isEmpty();
   });
 
   test('partial batch failure is surfaced without claiming success', () async {
     await h.refresh();
     h.backend.partial = true;
-    expect(await h.service.admitAll(), isFalse);
-    expect(h.service.error, contains('room_full'));
-    expect(h.service.requests.map((p) => p.identity), ['guest']);
+    check(await h.service.admitAll()).isFalse();
+    check(h.service.error).isNotNull().contains('room_full');
+    check(h.service.requests.map((p) => p.identity)).deepEquals(['guest']);
   });
 }

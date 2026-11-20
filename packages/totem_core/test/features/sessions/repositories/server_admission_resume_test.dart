@@ -75,16 +75,38 @@ void main() {
     return container;
   }
 
+  ApiResponse joinResponse(
+    String body, {
+    Map<String, Object?>? overrides,
+    Map<String, Object?>? admissionOverrides,
+  }) {
+    final ids = jsonDecode(body) as Map<String, dynamic>;
+    return ApiResponse(
+      statusCode: 200,
+      body: jsonEncode({
+        'token': 'joined-token',
+        'is_already_present': false,
+        'admission': {
+          'request_id': ids['request_id'],
+          'attempt_id': ids['attempt_id'],
+          'status': 'pending',
+          'durable_state': 'none',
+          'approval_required': true,
+          'expires_at': '2026-01-01T00:20:00.000Z',
+          'permissions': 'waiting',
+          'permission_sync': 'pending',
+          'revision': 1,
+          ...?admissionOverrides,
+        },
+        ...?overrides,
+      }),
+    );
+  }
+
   RecordingClient clientFor(ApiResponse admission) => RecordingClient(
     onRequest: (request) => request.method == 'GET'
         ? admission
-        : ApiResponse(
-            statusCode: 200,
-            body: jsonEncode({
-              'token': 'joined-token',
-              'is_already_present': false,
-            }),
-          ),
+        : joinResponse(request.body! as String),
   );
 
   void checkJoin(RecordingClient client, Map<String, Object?>? expectedBody) {
@@ -156,7 +178,7 @@ void main() {
     }
 
     for (final missing in ['request', 'attempt']) {
-      test('does not resume when the $missing ID is missing', () async {
+      test('fails closed when the active $missing ID is missing', () async {
         final client = clientFor(
           ApiResponse(
             statusCode: 200,
@@ -169,67 +191,188 @@ void main() {
             ),
           ),
         );
-        await containerFor(client).read(sessionTokenProvider('session').future);
-
-        checkJoin(client, null);
+        await expectLater(
+          containerFor(client).read(sessionTokenProvider('session').future),
+          throwsStateError,
+        );
+        check(client.requests).length.equals(1);
+        check(client.requests.single.method).equals('GET');
       });
     }
 
-    test('fails closed when admission endpoint returns 404', () async {
+    test('uses fresh IDs when admission endpoint returns 404', () async {
       final client = clientFor(
         ApiResponse(
           statusCode: 404,
           body: jsonEncode({'code': 'not_found', 'message': 'Not found'}),
         ),
       );
-      Object? caught;
-      try {
-        await containerFor(client).read(sessionTokenProvider('session').future);
-      } catch (error) {
-        caught = error;
-      }
-      check(caught is ApiError).isTrue();
-      check((caught! as ApiError).statusCode).equals(404);
-      check(client.requests).length.equals(1);
+      final result = await containerFor(
+        client,
+      ).read(sessionTokenProvider('session').future);
+      check(result.token).equals('joined-token');
+      checkJoin(client, null);
     });
 
-    test('fails closed on non-404 admission errors', () async {
+    test('uses fresh IDs on admission server errors', () async {
       final client = clientFor(
         ApiResponse(
           statusCode: 503,
           body: jsonEncode({'code': 'unavailable', 'message': 'Unavailable'}),
         ),
       );
-      Object? caught;
-      try {
-        await containerFor(client).read(sessionTokenProvider('session').future);
-      } catch (error) {
-        caught = error;
-      }
-
-      check(caught is ApiError).isTrue();
-      check((caught! as ApiError).statusCode).equals(503);
-      check(client.requests).length.equals(1);
-      check(client.requests.single.method).equals('GET');
+      final result = await containerFor(
+        client,
+      ).read(sessionTokenProvider('session').future);
+      check(result.token).equals('joined-token');
+      checkJoin(client, null);
     });
 
-    test('fails closed on admission network errors', () async {
+    test('does not replace a rejected resumed attempt', () async {
       final client = RecordingClient(
-        onRequest: (_) => throw dio.DioException(
-          requestOptions: dio.RequestOptions(path: '/admission/me'),
-          type: dio.DioExceptionType.connectionError,
-        ),
+        onRequest: (request) => request.method == 'GET'
+            ? ApiResponse(
+                statusCode: 200,
+                body: jsonEncode(_snapshot('pending')),
+              )
+            : ApiResponse(
+                statusCode: 403,
+                body: jsonEncode({
+                  'code': 'not_joinable',
+                  'message': 'This admission attempt is no longer valid',
+                  'detail': 'invalid_attempt',
+                }),
+              ),
       );
-      Object? caught;
-      try {
-        await containerFor(client).read(sessionTokenProvider('session').future);
-      } catch (error) {
-        caught = error;
-      }
-
-      check(caught is AppNetworkException).isTrue();
-      check(client.requests).length.equals(1);
-      check(client.requests.single.method).equals('GET');
+      await expectLater(
+        containerFor(client).read(sessionTokenProvider('session').future),
+        throwsA(isA<ApiError<JoinResponse, RoomErrorResponse>>()),
+      );
+      checkJoin(client, {'request_id': 'request-1', 'attempt_id': 'attempt-1'});
     });
+
+    test(
+      'does not replace an attempt after an uncertain join timeout',
+      () async {
+        final client = RecordingClient(
+          onRequest: (request) => request.method == 'GET'
+              ? ApiResponse(
+                  statusCode: 200,
+                  body: jsonEncode(_snapshot('pending')),
+                )
+              : throw dio.DioException(
+                  requestOptions: dio.RequestOptions(path: '/join'),
+                  type: dio.DioExceptionType.receiveTimeout,
+                ),
+        );
+        await expectLater(
+          containerFor(client).read(sessionTokenProvider('session').future),
+          throwsA(isA<AppNetworkException>()),
+        );
+        checkJoin(client, {
+          'request_id': 'request-1',
+          'attempt_id': 'attempt-1',
+        });
+      },
+    );
+
+    for (final type in [
+      dio.DioExceptionType.connectionError,
+      dio.DioExceptionType.receiveTimeout,
+    ]) {
+      test('uses fresh IDs on admission $type', () async {
+        final client = RecordingClient(
+          onRequest: (request) => request.method == 'GET'
+              ? throw dio.DioException(
+                  requestOptions: dio.RequestOptions(path: '/admission/me'),
+                  type: type,
+                )
+              : joinResponse(request.body! as String),
+        );
+        final result = await containerFor(
+          client,
+        ).read(sessionTokenProvider('session').future);
+        check(result.token).equals('joined-token');
+        checkJoin(client, null);
+      });
+    }
+
+    test('fallback does not bypass a server join rejection', () async {
+      final client = RecordingClient(
+        onRequest: (request) => request.method == 'GET'
+            ? ApiResponse(
+                statusCode: 404,
+                body: '{"code":"not_found","message":"Not found"}',
+              )
+            : ApiResponse(
+                statusCode: 403,
+                body: jsonEncode({
+                  'code': 'not_joinable',
+                  'message': 'Admission is permanently declined',
+                  'detail': 'permanently_declined',
+                }),
+              ),
+      );
+      await expectLater(
+        containerFor(client).read(sessionTokenProvider('session').future),
+        throwsA(isA<ApiError<JoinResponse, RoomErrorResponse>>()),
+      );
+      checkJoin(client, null);
+    });
+
+    test('fallback rejects a legacy join response without admission', () async {
+      final client = RecordingClient(
+        onRequest: (request) => request.method == 'GET'
+            ? ApiResponse(
+                statusCode: 404,
+                body: '{"code":"not_found","message":"Not found"}',
+              )
+            : ApiResponse(
+                statusCode: 200,
+                body: '{"token":"legacy","is_already_present":false}',
+              ),
+      );
+      await expectLater(
+        containerFor(client).read(sessionTokenProvider('session').future),
+        throwsStateError,
+      );
+      checkJoin(client, null);
+    });
+
+    for (final admission in [
+      null,
+      {'permissions': 'unknown'},
+      {'request_id': 'different'},
+      {'status': 'declined'},
+      {'status': 'permanently_declined'},
+      {'status': 'revoked'},
+      {'status': 'cancelled'},
+      {'status': 'superseded'},
+      {'status': 'expired'},
+      {'status': 'future_status'},
+    ]) {
+      test(
+        'fallback rejects unsupported admission response $admission',
+        () async {
+          final client = RecordingClient(
+            onRequest: (request) => request.method == 'GET'
+                ? ApiResponse(
+                    statusCode: 404,
+                    body: '{"code":"not_found","message":"Not found"}',
+                  )
+                : joinResponse(
+                    request.body! as String,
+                    overrides: admission == null ? {'admission': null} : null,
+                    admissionOverrides: admission,
+                  ),
+          );
+          await expectLater(
+            containerFor(client).read(sessionTokenProvider('session').future),
+            throwsStateError,
+          );
+          checkJoin(client, null);
+        },
+      );
+    }
   });
 }

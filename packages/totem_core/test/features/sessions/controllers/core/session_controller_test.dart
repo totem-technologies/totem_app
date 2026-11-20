@@ -20,14 +20,15 @@ import 'package:totem_core/core/services/api_service.dart';
 
 import 'package:totem_core/features/sessions/admission/server_participant_admission.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
-import 'package:totem_core/features/sessions/media/session_transport_factory_provider.dart';
+
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
 import '../../../../setup.dart';
+import '../../admission/server_participant_admission_test.dart'
+    as admission_test;
 import '../../livekit_mocks.dart';
-import '../../transport/fake_session_transport.dart';
 
 SessionDetailSchema _createSessionEvent(String eventSlug) {
   return SessionDetailSchema(
@@ -300,6 +301,44 @@ void main() {
 
   group('SessionController', () {
     group('Connection Lifecycle', () {
+      test('admission denied before handoff reports removal', () async {
+        const options = SessionOptions(
+          sessionSlug: 'denied-before-handoff',
+          token: 'token',
+          cameraEnabled: false,
+          microphoneEnabled: false,
+          speakerEnabled: true,
+          cameraOptions: SessionController.defaultCameraCaptureOptions,
+        );
+        final container = _createContainerWithEventOverride(
+          options.sessionSlug,
+        );
+        addTearDown(container.dispose);
+        final subscription = container.listen(
+          sessionControllerProvider(options),
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final controller = container.read(
+          sessionControllerProvider(options).notifier,
+        );
+        final admission =
+            _approvedAdmission() as _MockServerParticipantAdmission;
+        when(() => admission.status).thenReturn(AdmissionStatus.denied);
+        final room = _CountingRoom(MockLocalParticipant());
+
+        check(
+          await controller.activateConnectedRoom(
+            room: room,
+            serverAdmission: admission,
+          ),
+        ).equals(SessionJoinResult.retryableFailure);
+        await pumpEventQueue();
+        check(controller.state.removed).isTrue();
+        check(room.disposeCount).equals(1);
+        verify(admission.dispose).called(1);
+      });
+
       test('unapproved admission cannot activate or publish', () async {
         const options = SessionOptions(
           sessionSlug: 'unapproved',
@@ -353,47 +392,93 @@ void main() {
         verify(admission.dispose).called(1);
       });
 
-      test('join without an admitted room never creates a transport', () async {
-        const options = SessionOptions(
-          sessionSlug: 'no-admission',
-          token: 'test-token',
-          cameraEnabled: false,
-          microphoneEnabled: false,
-          speakerEnabled: true,
-          cameraOptions: SessionController.defaultCameraCaptureOptions,
-        );
-        final factory = FakeSessionTransportFactory();
-        final container = ProviderContainer(
-          overrides: [
-            sessionProvider(options.sessionSlug).overrideWithValue(
-              AsyncData(_createSessionEvent(options.sessionSlug)),
+      test(
+        'terminated admission connection leaves without reporting removal',
+        () async {
+          const options = SessionOptions(
+            sessionSlug: 'session',
+            token: 'token',
+            cameraEnabled: false,
+            microphoneEnabled: false,
+            speakerEnabled: true,
+            cameraOptions: SessionController.defaultCameraCaptureOptions,
+          );
+          late SessionController controller;
+          final client = RecordingClient(
+            onRequest: (_) => ApiResponse(
+              statusCode: 200,
+              body: jsonEncode(controller.state.roomState.toJson()),
             ),
-            sessionTransportFactoryProvider(options).overrideWithValue(factory),
-          ],
-        );
-        addTearDown(container.dispose);
-        final subscription = container.listen(
-          sessionControllerProvider(options),
-          (_, _) {},
-        );
-        addTearDown(subscription.close);
-        final controller = container.read(
-          sessionControllerProvider(options).notifier,
-        );
-        final camera = MockLocalVideoTrack();
-        var detached = false;
-        final result = await controller.join(
-          joinMedia: SessionJoinMedia(
-            cameraTrack: camera,
-            onBeforeDispose: () => detached = true,
-          ),
-        );
-        check(result).equals(SessionJoinResult.retryableFailure);
-        check(factory.created).isEmpty();
-        check(detached).isTrue();
-        verify(camera.stop).called(1);
-        verify(camera.dispose).called(1);
-      });
+          );
+          final container = ProviderContainer(
+            overrides: [
+              apiServiceProvider.overrideWithValue(
+                ClientApi(ApiConfig(client: client)),
+              ),
+              sessionProvider(options.sessionSlug).overrideWithValue(
+                AsyncData(_createSessionEvent(options.sessionSlug)),
+              ),
+              authControllerProvider.overrideWith(
+                () => FakeAuthController(AuthState.unauthenticated()),
+              ),
+              roomStateProvider(
+                options.sessionSlug,
+              ).overrideWith((_) async => controller.state.roomState),
+              roomStateProvider(
+                options.sessionSlug,
+                attemptReconcile: true,
+              ).overrideWith((_) async => controller.state.roomState),
+            ],
+          );
+          addTearDown(container.dispose);
+          final removedStates = <bool>[];
+          final subscription = container.listen(
+            sessionControllerProvider(options),
+            (_, state) => removedStates.add(state.removed),
+          );
+          addTearDown(subscription.close);
+          controller = container.read(
+            sessionControllerProvider(options).notifier,
+          );
+          final connection = admission_test.FakeConnection()
+            ..hasMediaPermissions = true;
+          final admission = ServerParticipantAdmission(
+            repository: admission_test.FakeRepository()
+              ..current = admission_test.snapshot('approved'),
+            sessionSlug: options.sessionSlug,
+            initial: admission_test.initial(),
+            connection: connection,
+            now: () => admission_test.time,
+          );
+          addTearDown(admission.dispose);
+          await admission.start();
+          check(admission.status).equals(AdmissionStatus.approved);
+          final participant = MockLocalParticipant();
+          when(participant.unpublishAllTracks).thenAnswer((_) async {});
+          when(
+            () => participant.setCameraEnabled(false),
+          ).thenAnswer((_) async => null);
+          when(
+            () => participant.setMicrophoneEnabled(false),
+          ).thenAnswer((_) async => null);
+          final room = _CountingRoom(participant);
+          check(
+            await _activate(controller, room: room, serverAdmission: admission),
+          ).equals(SessionJoinResult.success);
+
+          connection.events.add(ServerAdmissionConnectionEvent.terminated);
+          check(admission.status).equals(AdmissionStatus.failed);
+          await pumpEventQueue();
+
+          check(removedStates).not((it) => it.contains(true));
+          check(controller.state.removed).isFalse();
+          check(controller.state.participants.removeReason).isNull();
+          check(room.disconnectCount).equals(1);
+          check(room.disposeCount).equals(1);
+          check(controller.runtime.serverAdmission).isNull();
+          check(connection.events.isClosed).isTrue();
+        },
+      );
 
       test(
         'initializeConnection assigns room and returns same instance',
@@ -1425,6 +1510,16 @@ void main() {
           await _activate(controller, room: room),
         ).equals(SessionJoinResult.success);
         final initialListenerCount = room.listener.onCount;
+        final unusedCamera = MockLocalVideoTrack();
+        check(
+          await _activate(
+            controller,
+            room: room,
+            joinMedia: SessionJoinMedia(cameraTrack: unusedCamera),
+          ),
+        ).equals(SessionJoinResult.success);
+        verify(unusedCamera.stop).called(1);
+        verify(unusedCamera.dispose).called(1);
         check(
           await _activate(controller, room: room),
         ).equals(SessionJoinResult.success);
@@ -1789,7 +1884,7 @@ void main() {
       );
 
       test(
-        'projects keeper and admitted recipients into media permissions',
+        'keeps media permissions open and reapplies them on media changes and reconnect',
         () async {
           const eventSlug = 'test-session';
           const options = SessionOptions(
@@ -1834,35 +1929,23 @@ void main() {
           check(
             await _activate(controller, room: room),
           ).equals(SessionJoinResult.success);
-          final initialPermissions =
-              verify(
-                    () => localParticipant.setTrackSubscriptionPermissions(
-                      allParticipantsAllowed: true,
-                      trackPermissions: captureAny(named: 'trackPermissions'),
-                    ),
-                  ).captured.single
-                  as List<ParticipantTrackPermission>;
-          check(
-            initialPermissions.map(
-              (permission) => permission.participantIdentity,
+          verify(
+            () => localParticipant.setTrackSubscriptionPermissions(
+              allParticipantsAllowed: true,
+              trackPermissions: [],
             ),
-          ).unorderedEquals(['keeper']);
+          ).called(1);
           clearInteractions(localParticipant);
 
           controller
             ..updateAdmittedMediaRecipients({'admitted', 'participant'})
             ..updateAdmittedMediaRecipients({'admitted', 'participant'});
-          final captured =
-              verify(
-                    () => localParticipant.setTrackSubscriptionPermissions(
-                      allParticipantsAllowed: true,
-                      trackPermissions: captureAny(named: 'trackPermissions'),
-                    ),
-                  ).captured.single
-                  as List<ParticipantTrackPermission>;
-          check(
-            captured.map((permission) => permission.participantIdentity),
-          ).unorderedEquals(['admitted', 'keeper']);
+          verifyNever(
+            () => localParticipant.setTrackSubscriptionPermissions(
+              allParticipantsAllowed: any(named: 'allParticipantsAllowed'),
+              trackPermissions: any(named: 'trackPermissions'),
+            ),
+          );
 
           await room.listener.trigger(
             LocalTrackPublishedEvent(
@@ -1904,31 +1987,35 @@ void main() {
           roundNumber: 0,
         );
         var serverRoom = roomState;
+        var admissionRequests = 0;
         final client = RecordingClient(
-          onRequest: (request) => ApiResponse(
-            statusCode: 200,
-            body: jsonEncode(
-              request.path.endsWith('/state')
-                  ? serverRoom.toJson()
-                  : {
-                      'session_slug': eventSlug,
-                      'keeper': 'keeper',
-                      'room_version': serverRoom.version,
-                      'room_status': 'waiting_room',
-                      'approval_required': true,
-                      'settings_revision': 1,
-                      'version': 1,
-                      'observed_at': '2026-01-01T00:00:00Z',
-                      'admitted_count': 0,
-                      'activated_count': 0,
-                      'pending_count': 0,
-                      'participants': <Object>[],
-                      'waiting': <Object>[],
-                      'requests': <Object>[],
-                      'history_truncated': false,
-                    },
-            ),
-          ),
+          onRequest: (request) {
+            if (!request.path.endsWith('/state')) admissionRequests++;
+            return ApiResponse(
+              statusCode: 200,
+              body: jsonEncode(
+                request.path.endsWith('/state')
+                    ? serverRoom.toJson()
+                    : {
+                        'session_slug': eventSlug,
+                        'keeper': 'keeper',
+                        'room_version': serverRoom.version,
+                        'room_status': 'waiting_room',
+                        'approval_required': true,
+                        'settings_revision': 1,
+                        'version': 1,
+                        'observed_at': '2026-01-01T00:00:00Z',
+                        'admitted_count': 0,
+                        'activated_count': 0,
+                        'pending_count': 0,
+                        'participants': <Object>[],
+                        'waiting': <Object>[],
+                        'requests': <Object>[],
+                        'history_truncated': false,
+                      },
+              ),
+            );
+          },
         );
         var reconcilePolls = 0;
         final container = ProviderContainer(
@@ -1992,9 +2079,24 @@ void main() {
         check(controller.admission.error).isNull();
         await pumpEventQueue();
         reconcilePolls = 0;
-        serverRoom = roomState.copyWith(talkingOrder: ['admitted']);
-        controller.admission.sync();
+        final initialRequests = admissionRequests;
+        serverRoom = roomState.copyWith(
+          version: 2,
+          currentSpeaker: const Omittable('keeper'),
+        );
+        controller.applyRoomState(serverRoom);
+        await pumpEventQueue();
         await controller.admission.synchronized;
+        check(admissionRequests).equals(initialRequests);
+        check(controller.admission.serverDataRecipients).isNotNull();
+
+        serverRoom = serverRoom.copyWith(
+          version: 3,
+          talkingOrder: ['admitted'],
+        );
+        controller.applyRoomState(serverRoom);
+        await controller.admission.synchronized;
+        check(admissionRequests).equals(initialRequests + 1);
         check(controller.admission.error).isNull();
         check(controller.admission.admittedIdentities).contains('admitted');
         await pumpEventQueue();

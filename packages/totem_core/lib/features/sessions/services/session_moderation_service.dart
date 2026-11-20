@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/services/session_commands.dart';
@@ -13,7 +14,6 @@ class SessionModerationService {
     required this.isKeeper,
     required this.transport,
     required this.applyState,
-
     required this.markRemoved,
     required this.leave,
     required this.onError,
@@ -24,7 +24,6 @@ class SessionModerationService {
   final bool Function() isKeeper;
   final SessionTransport? Function() transport;
   final void Function(RoomState) applyState;
-
   final void Function(RemoveReason) markRemoved;
   final Future<void> Function() leave;
   final void Function(Object, StackTrace) onError;

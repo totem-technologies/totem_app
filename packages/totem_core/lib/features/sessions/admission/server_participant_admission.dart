@@ -21,7 +21,9 @@ class ServerParticipantAdmission {
     String Function()? newId,
   }) : _requestId = initial.requestId,
        _attemptId = initial.attemptId,
-       _deadline = initial.status == 'pending' || initial.status == 'granting'
+       _deadline =
+           ServerAdmissionAttemptStatus.parse(initial.status)?.hasDeadline ==
+               true
            ? initial.expiresAt
            : null,
        _now = now ?? DateTime.now,
@@ -47,6 +49,7 @@ class ServerParticipantAdmission {
   Future<void>? _activation;
   Future<void>? _disposing;
   bool _queuedConfirm = false;
+  bool _queuedRefresh = false;
   bool _started = false;
   bool _disposed = false;
   bool _confirmed = false;
@@ -64,7 +67,10 @@ class ServerParticipantAdmission {
   bool get isReturningParticipant => _participant?.returning ?? false;
   bool? get sessionStartedAtAdmission =>
       _participant == null ||
-          !['granting', 'approved', 'activated'].contains(_participant!.status)
+          ServerAdmissionAttemptStatus.parse(
+                _participant!.status,
+              )?.hasAdmissionDecision !=
+              true
       ? null
       : _participant!.sessionStarted;
   AdmissionMeSnapshot? get snapshot => _snapshot;
@@ -111,6 +117,7 @@ class ServerParticipantAdmission {
     do {
       final confirm = _queuedConfirm && connection.isConnected;
       _queuedConfirm = false;
+      _queuedRefresh = false;
       try {
         final sid = connection.localSid;
         if (confirm && _needsCreate) {
@@ -146,7 +153,9 @@ class ServerParticipantAdmission {
         if (!_valid(generation)) return;
         _handleError(e, confirm: confirm);
       }
-    } while (_valid(generation) && _queuedConfirm && !_terminal);
+    } while (_valid(generation) &&
+        (_queuedConfirm || _queuedRefresh) &&
+        !_terminal);
   }
 
   void _accept(AdmissionMeSnapshot value) {
@@ -181,16 +190,27 @@ class ServerParticipantAdmission {
       _setStatus(AdmissionStatus.ended);
       return;
     }
-    if (me != null && !me.eligible) {
+    if (me != null &&
+        me.identity != snap?.keeper &&
+        (me.admissionState == 'revoked' ||
+            me.admissionState == 'permanently_declined')) {
       _setStatus(AdmissionStatus.denied);
       return;
     }
-    final mapped = switch (me?.status) {
-      'declined' ||
-      'permanently_declined' ||
-      'revoked' => AdmissionStatus.denied,
-      'cancelled' || 'superseded' => AdmissionStatus.cancelled,
-      'expired' => AdmissionStatus.expired,
+    if (me != null && !me.eligible && !_mediaActivated) {
+      _setStatus(AdmissionStatus.denied);
+      return;
+    }
+    final mapped = switch (ServerAdmissionAttemptStatus.parse(me?.status)) {
+      ServerAdmissionAttemptStatus.permanentlyDeclined ||
+      ServerAdmissionAttemptStatus.revoked => AdmissionStatus.denied,
+      ServerAdmissionAttemptStatus.superseded => AdmissionStatus.cancelled,
+      ServerAdmissionAttemptStatus.declined when !_mediaActivated =>
+        AdmissionStatus.denied,
+      ServerAdmissionAttemptStatus.cancelled when !_mediaActivated =>
+        AdmissionStatus.cancelled,
+      ServerAdmissionAttemptStatus.expired when !_mediaActivated =>
+        AdmissionStatus.expired,
       _ => null,
     };
     if (mapped != null) {
@@ -199,8 +219,9 @@ class ServerParticipantAdmission {
     }
     final authorized =
         me != null &&
+        me.eligible &&
         (me.identity == snap?.keeper || me.admissionState == 'admitted') &&
-        (me.status == 'approved' || me.status == 'activated') &&
+        ServerAdmissionAttemptStatus.parse(me.status)?.isAuthorized == true &&
         me.permissionStatus == 'applied' &&
         me.appliedPermissionRevision.value == me.permissionRevision;
     if (authorized &&
@@ -211,7 +232,7 @@ class ServerParticipantAdmission {
       _expiration?.cancel();
       _retry?.cancel();
       _setStatus(AdmissionStatus.approved);
-      if (_recovering && _mediaActivated && !_receiptSent) {
+      if (_mediaActivated && !_receiptSent && _activation == null) {
         unawaited(_activateRecovery());
       }
     } else {
@@ -231,7 +252,9 @@ class ServerParticipantAdmission {
 
   void _scheduleExpiration() {
     _expiration?.cancel();
-    if (_terminal || _status == AdmissionStatus.approved) return;
+    if (_terminal || _mediaActivated || _status == AdmissionStatus.approved) {
+      return;
+    }
     final deadline = _deadline;
     if (deadline == null) return;
     final delay = deadline.difference(_now());
@@ -272,12 +295,25 @@ class ServerParticipantAdmission {
       _setStatus(AdmissionStatus.ended);
       return;
     }
-    if (code == 'permanently_declined' || code == 'not_eligible') {
+    if (code == 'permanently_declined' ||
+        code == 'revoked' ||
+        (!_mediaActivated && (code == 'not_eligible' || code == 'declined'))) {
       _setStatus(AdmissionStatus.denied);
       return;
     }
-    if (api != null &&
+    if (code == 'superseded' || (!_mediaActivated && code == 'cancelled')) {
+      _setStatus(AdmissionStatus.cancelled);
+      return;
+    }
+    if (!_mediaActivated && code == 'expired') {
+      _setStatus(AdmissionStatus.expired);
+      return;
+    }
+    if (!_mediaActivated &&
+        api != null &&
         api.statusCode < 500 &&
+        api.statusCode != 408 &&
+        api.statusCode != 429 &&
         ![
           'stale_version',
           'permission_pending',
@@ -318,7 +354,7 @@ class ServerParticipantAdmission {
       _activation = null;
       _confirmed = false;
       if (!_recovering &&
-          _receiptSent &&
+          _mediaActivated &&
           _confirmedSid != null &&
           connection.localSid != _confirmedSid) {
         _requestId = _newId();
@@ -340,9 +376,11 @@ class ServerParticipantAdmission {
       _keeper = connection.isPresent(_snapshot!.keeper)
           ? AdmissionKeeperAvailability.responsive
           : AdmissionKeeperAvailability.absent;
-      if (_keeper != previous) _changes.add(_status);
+      if (_keeper == previous) return;
+      _changes.add(_status);
     }
     _evaluate();
+    if (_refreshing != null) _queuedRefresh = true;
     unawaited(refresh());
   }
 
@@ -357,6 +395,7 @@ class ServerParticipantAdmission {
       throw StateError('Admission is not currently authorized');
     }
     _mediaActivated = true;
+    _expiration?.cancel();
     if (_receiptSent) return Future.value();
     return _activation ??= _sendActivation();
   }
@@ -380,7 +419,7 @@ class ServerParticipantAdmission {
       if (_valid(generation)) _handleError(e, confirm: false);
       rethrow;
     } finally {
-      if (_valid(generation)) _activation = null;
+      if (generation == _generation) _activation = null;
     }
   }
 
