@@ -55,7 +55,7 @@ final class KeeperAdmissionRosterProvider
 }
 
 String _$keeperAdmissionRosterHash() =>
-    r'f03b2881d2ca487ac92f5fce5b9e74c1b674a8ca';
+    r'd06f23572a5ffef88b9a8deaa8a65476ef57d80d';
 
 final class KeeperAdmissionRosterFamily extends $Family
     with

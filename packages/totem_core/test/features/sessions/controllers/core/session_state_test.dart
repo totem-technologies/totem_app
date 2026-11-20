@@ -1,9 +1,12 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' show ClientException;
 import 'package:livekit_client/livekit_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart'
     as state;
+import 'package:totem_core/features/sessions/media/local_media.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 void main() {
   test(
@@ -101,6 +104,214 @@ void main() {
           canOfflineStateOverrideDisconnectReason(reason),
         ).equals(false);
       }
+    });
+  });
+
+  group('session outcome vs technical disconnects', () {
+    const outcomes = {
+      DisconnectReason.clientInitiated,
+      DisconnectReason.duplicateIdentity,
+      DisconnectReason.participantRemoved,
+      DisconnectReason.roomDeleted,
+      DisconnectReason.roomClosed,
+    };
+
+    test('only real session outcomes keep the session-ended treatment', () {
+      for (final reason in DisconnectReason.values) {
+        check(
+          because: '$reason',
+          isSessionOutcomeDisconnectReason(reason),
+        ).equals(outcomes.contains(reason));
+        check(
+          because: '$reason',
+          isTechnicalDisconnectReason(reason),
+        ).equals(!outcomes.contains(reason));
+      }
+    });
+
+    test('an unknown reason is neither', () {
+      check(isSessionOutcomeDisconnectReason(null)).isFalse();
+      check(isTechnicalDisconnectReason(null)).isFalse();
+    });
+  });
+
+  group('classifySessionError', () {
+    test('maps LiveKit and session failures to what the user can do', () {
+      final cases = <(Object?, SessionErrorCategory)>[
+        (null, SessionErrorCategory.unknown),
+        (StateError('boom'), SessionErrorCategory.unknown),
+        (
+          ConnectException('denied', reason: ConnectionErrorReason.NotAllowed),
+          SessionErrorCategory.accessDenied,
+        ),
+        (
+          ConnectException('slow', reason: ConnectionErrorReason.Timeout),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        (
+          ConnectException('500', reason: ConnectionErrorReason.InternalError),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        (MediaConnectException(), SessionErrorCategory.serverUnreachable),
+        (TrackCreateException(), SessionErrorCategory.mediaDevice),
+        (
+          Exception('getUserMedia(): DOMException, NotReadableError'),
+          SessionErrorCategory.mediaDevice,
+        ),
+        (NegotiationError(), SessionErrorCategory.connectionLost),
+        (
+          MediaPublishException(TrackPublishException()),
+          SessionErrorCategory.connectionLost,
+        ),
+        (
+          RoomLiveKitError(MediaConnectException()),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        (
+          const RoomDisconnectionError(DisconnectReason.mediaFailure),
+          SessionErrorCategory.connectionLost,
+        ),
+        // LiveKit gives up the same way when only its server is unreachable,
+        // so these only read as offline when connectivity agrees.
+        (
+          const RoomDisconnectionError(
+            DisconnectReason.reconnectAttemptsExceeded,
+          ),
+          SessionErrorCategory.connectionLost,
+        ),
+        (
+          const RoomDisconnectionError(
+            DisconnectReason.signalingConnectionFailure,
+          ),
+          SessionErrorCategory.connectionLost,
+        ),
+        // A join that failed never connected, so nothing was lost.
+        (
+          const RoomDisconnectionError(DisconnectReason.joinFailure),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        // On web, LiveKit's validate request fails like this when its server
+        // can't be reached.
+        (
+          ClientException('Failed to fetch'),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        (
+          SessionJoinFailure(ClientException('Failed to fetch')),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        (
+          SessionJoinFailure(TrackCreateException()),
+          SessionErrorCategory.mediaDevice,
+        ),
+        (const SessionJoinFailure(), SessionErrorCategory.unknown),
+      ];
+      for (final (error, kind) in cases) {
+        check(because: '$error', classifySessionError(error)).equals(kind);
+      }
+    });
+
+    test('reads failures through the session transport boundary', () {
+      SessionTransportFailure failure(
+        SessionTransportFailureKind kind,
+        Object cause, {
+        SessionTransportConnectionFailure? connectionFailure,
+      }) => SessionTransportFailure(
+        kind,
+        '$cause',
+        cause: cause,
+        stackTrace: StackTrace.empty,
+        connectionFailure: connectionFailure,
+      );
+
+      final cases = <(Object, SessionErrorCategory)>[
+        // Joins wrap the SDK error; the cause still decides.
+        (
+          SessionJoinFailure(
+            failure(
+              SessionTransportFailureKind.connection,
+              ConnectException(
+                'timed out',
+                reason: ConnectionErrorReason.Timeout,
+              ),
+              connectionFailure: SessionTransportConnectionFailure.timeout,
+            ),
+          ),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        (
+          RoomTransportError(
+            failure(
+              SessionTransportFailureKind.unexpected,
+              ClientException('Failed to fetch'),
+            ),
+          ),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        // An unrecognised cause falls back to the transport's own reading.
+        (
+          RoomTransportError(
+            failure(
+              SessionTransportFailureKind.connection,
+              StateError('refused'),
+              connectionFailure: SessionTransportConnectionFailure.notAllowed,
+            ),
+          ),
+          SessionErrorCategory.accessDenied,
+        ),
+        (
+          failure(SessionTransportFailureKind.mediaConnection, StateError('x')),
+          SessionErrorCategory.serverUnreachable,
+        ),
+        (
+          failure(SessionTransportFailureKind.publication, StateError('x')),
+          SessionErrorCategory.connectionLost,
+        ),
+        (
+          failure(SessionTransportFailureKind.unexpected, StateError('x')),
+          SessionErrorCategory.unknown,
+        ),
+      ];
+      for (final (error, kind) in cases) {
+        check(because: '$error', classifySessionError(error)).equals(kind);
+      }
+    });
+
+    test('a confirmed offline device explains network failures', () {
+      check(
+        classifySessionError(MediaConnectException(), isOffline: true),
+      ).equals(SessionErrorCategory.offline);
+      check(
+        classifySessionError(
+          const RoomDisconnectionError(DisconnectReason.signalClose),
+          isOffline: true,
+        ),
+      ).equals(SessionErrorCategory.offline);
+      check(
+        classifySessionError(null, isOffline: true),
+      ).equals(SessionErrorCategory.offline);
+      for (final reason in [
+        DisconnectReason.reconnectAttemptsExceeded,
+        DisconnectReason.signalingConnectionFailure,
+        DisconnectReason.joinFailure,
+      ]) {
+        check(
+          because: '$reason',
+          classifySessionError(RoomDisconnectionError(reason), isOffline: true),
+        ).equals(SessionErrorCategory.offline);
+      }
+    });
+
+    test('being offline does not hide a device or access problem', () {
+      check(
+        classifySessionError(TrackCreateException(), isOffline: true),
+      ).equals(SessionErrorCategory.mediaDevice);
+      check(
+        classifySessionError(
+          ConnectException('denied', reason: ConnectionErrorReason.NotAllowed),
+          isOffline: true,
+        ),
+      ).equals(SessionErrorCategory.accessDenied);
     });
   });
 }

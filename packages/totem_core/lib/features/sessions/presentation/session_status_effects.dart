@@ -26,9 +26,21 @@ class SessionStatusEffects extends ConsumerStatefulWidget {
 }
 
 class _SessionStatusEffectsState extends ConsumerState<SessionStatusEffects> {
+  /// How long LiveKit may try to reconnect before the banner tells the user
+  /// it is taking longer than usual.
+  static const _reconnectingEscalationDelay = Duration(seconds: 10);
+
+  /// Reconnecting replaces any banner already showing (such as the keeper
+  /// pause), which comes back once the connection recovers.
+  static const _reconnectingNotificationCategory = 'session-reconnecting';
+
   NotificationController get _notificationController => widget.notifications;
   NotificationRequest? _closeKeeperLeftNotification;
   NotificationRequest? _offlineNotification;
+  NotificationRequest? _reconnectingNotification;
+  Timer? _reconnectingEscalationTimer;
+  bool _reconnectingEscalated = false;
+  bool _reconnectingSyncScheduled = false;
   Timer? _timeRemainingWarningTimer;
   String? _timeRemainingWarningSessionSlug;
   bool _hasShownTimeRemainingWarning = false;
@@ -65,6 +77,90 @@ class _SessionStatusEffectsState extends ConsumerState<SessionStatusEffects> {
       _offlineNotification?.dismissActive();
     }
     _offlineNotification = null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // The room may open while a reconnect is already under way.
+    _scheduleReconnectingNotificationSync();
+  }
+
+  /// These providers often change while the session scope is building, and a
+  /// banner can't be inserted into the overlay mid-build, so sync after the
+  /// frame instead.
+  void _scheduleReconnectingNotificationSync() {
+    if (_reconnectingSyncScheduled) return;
+    _reconnectingSyncScheduled = true;
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) {
+        _reconnectingSyncScheduled = false;
+        _syncReconnectingNotification();
+      })
+      ..ensureVisualUpdate();
+  }
+
+  /// Shows a banner while LiveKit recovers a dropped connection, escalating
+  /// it when recovery takes long. The offline banner already explains an
+  /// outage, so the two are never shown together.
+  void _syncReconnectingNotification() {
+    if (!mounted) return;
+
+    final isReconnecting =
+        ref.read(isSessionReconnectingProvider) &&
+        ref.read(connectionStateProvider) == RoomConnectionState.connected;
+    if (!isReconnecting) {
+      _reconnectingEscalationTimer?.cancel();
+      _reconnectingEscalationTimer = null;
+      _reconnectingEscalated = false;
+      _dismissReconnectingNotification();
+      return;
+    }
+
+    _reconnectingEscalationTimer ??= Timer(_reconnectingEscalationDelay, () {
+      if (!mounted) return;
+      _reconnectingEscalated = true;
+      _dismissReconnectingNotification(immediately: true);
+      _syncReconnectingNotification();
+    });
+
+    final isOffline =
+        ref.read(isOfflineProvider).value ?? _lastIsOffline ?? false;
+    if (isOffline) {
+      _dismissReconnectingNotification(immediately: true);
+      return;
+    }
+    // The controller drops requests while blocked and closes them when it
+    // becomes blocked, so only a live request suppresses a new banner.
+    final current = _reconnectingNotification;
+    if (current != null && !current.isCancelled && !current.isClosed) return;
+
+    _reconnectingNotification = _reconnectingEscalated
+        ? _notificationController.showPermanent(
+            context,
+            urgentLatestWinsCategory: _reconnectingNotificationCategory,
+            icon: TotemIcons.wifiOff,
+            title: 'Still trying to reconnect',
+            message:
+                'Check your Wi-Fi or mobile data. '
+                'You can leave and rejoin at any time.',
+          )
+        : _notificationController.showPermanent(
+            context,
+            urgentLatestWinsCategory: _reconnectingNotificationCategory,
+            icon: TotemIcons.wifi,
+            title: 'Reconnecting…',
+            message: 'Your connection dropped. Getting you back in.',
+          );
+  }
+
+  void _dismissReconnectingNotification({bool immediately = false}) {
+    if (immediately) {
+      _reconnectingNotification?.dismissImmediately();
+    } else {
+      _reconnectingNotification?.dismissActive();
+    }
+    _reconnectingNotification = null;
   }
 
   void _dismissKeeperLeftNotification() {
@@ -175,6 +271,8 @@ class _SessionStatusEffectsState extends ConsumerState<SessionStatusEffects> {
   @override
   void dispose() {
     _clearTimeRemainingWarningTimer();
+    _reconnectingEscalationTimer?.cancel();
+    _reconnectingNotification?.dismissImmediately();
     _offlineNotification?.dismissImmediately();
     _closeKeeperLeftNotification?.dismissImmediately();
     super.dispose();
@@ -202,7 +300,12 @@ class _SessionStatusEffectsState extends ConsumerState<SessionStatusEffects> {
         roomStatus == RoomStatus.ended ||
         currentRoomScreen == RoomScreen.disconnected ||
         currentRoomScreen == RoomScreen.error;
+    final wasBlocked = _notificationController.blocked;
     _notificationController.blocked = showingDisconnectedScreen;
+    // A reconnect may still be under way once banners are allowed again.
+    if (wasBlocked && !showingDisconnectedScreen) {
+      _scheduleReconnectingNotificationSync();
+    }
 
     if (connectionState == RoomConnectionState.connected &&
         roomStatus == RoomStatus.active &&
@@ -229,6 +332,7 @@ class _SessionStatusEffectsState extends ConsumerState<SessionStatusEffects> {
         if (next == RoomScreen.disconnected || next == RoomScreen.error) {
           _clearTimeRemainingWarningTimer();
           _dismissOfflineNotification(immediately: true);
+          _dismissReconnectingNotification(immediately: true);
         }
       })
       ..listen(roomStatusProvider, (previous, next) {
@@ -245,10 +349,16 @@ class _SessionStatusEffectsState extends ConsumerState<SessionStatusEffects> {
             next == RoomConnectionState.error) {
           _clearTimeRemainingWarningTimer();
         }
+        _scheduleReconnectingNotificationSync();
       })
+      ..listen(
+        isSessionReconnectingProvider,
+        (_, _) => _scheduleReconnectingNotificationSync(),
+      )
       ..listen(isOfflineProvider, (previous, next) {
         if (!next.hasValue) return;
         _onConnectivityChanged(next.value!, wasOffline: previous?.value);
+        _scheduleReconnectingNotificationSync();
       });
 
     return widget.child;

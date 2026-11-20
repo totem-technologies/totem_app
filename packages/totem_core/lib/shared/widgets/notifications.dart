@@ -114,6 +114,9 @@ class NotificationRequest {
 
   bool get isCancelled => _isCancelled;
 
+  /// Whether this request was dismissed and its controller let it go.
+  bool get isClosed => _isClosed;
+
   void show() {
     if (_isShown || _isCancelled) return;
 
@@ -483,17 +486,24 @@ class NotificationController {
   ///
   /// The notification is deduplicated so that the same
   /// (icon, title, message) combination is only shown once while visible.
+  ///
+  /// Providing [urgentLatestWinsCategory] shows the banner immediately, like
+  /// [showTimed] does, instead of waiting behind another permanent banner.
   NotificationRequest showPermanent(
     BuildContext context, {
     required TotemIconData icon,
     required String title,
     required String message,
+    Object? urgentLatestWinsCategory,
   }) {
     final view = View.of(context);
-    return show(
+    return _show(
       context,
       duration: Duration.zero,
-      dedupeKey: ('permanent_notification', icon, title, message),
+      dedupeKey:
+          urgentLatestWinsCategory ??
+          ('permanent_notification', icon, title, message),
+      urgentLatestWinsCategory: urgentLatestWinsCategory,
       onShown: () {
         SemanticsService.sendAnnouncement(
           view,

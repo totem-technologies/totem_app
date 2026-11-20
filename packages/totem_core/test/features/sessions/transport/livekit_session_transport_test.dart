@@ -53,6 +53,50 @@ class _Room extends FakeRoom {
 
 void main() {
   test(
+    'reports reconnecting once LiveKit retries a resume, not on its first try',
+    () async {
+      final participant = MockLocalParticipant('local');
+      when(participant.unpublishAllTracks).thenAnswer((_) async {});
+      final room = _Room(participant);
+      final transport = LiveKitSessionTransport(
+        room: room,
+        cameraOptions: const sdk.CameraCaptureOptions(),
+      );
+      final events = <SessionTransportEvent>[];
+      final subscription = transport.events.listen(events.add);
+      try {
+        await transport.connect('url', 'token');
+        events.clear();
+
+        room.transportEvents.emit(
+          const sdk.RoomAttemptReconnectEvent(
+            attempt: 1,
+            maxAttemptsRetry: 10,
+            nextRetryDelaysInMs: 0,
+          ),
+        );
+        await Future<void>.value();
+        check(events.whereType<TransportConnectionChanged>()).isEmpty();
+
+        room.transportEvents.emit(
+          const sdk.RoomAttemptReconnectEvent(
+            attempt: 2,
+            maxAttemptsRetry: 10,
+            nextRetryDelaysInMs: 300,
+          ),
+        );
+        await Future<void>.value();
+        check(
+          events.whereType<TransportConnectionChanged>().single.state,
+        ).equals(SessionTransportConnectionState.reconnecting);
+      } finally {
+        await subscription.cancel();
+        await transport.dispose();
+      }
+    },
+  );
+
+  test(
     'LiveKit adapter delivers translated packets and disconnects without leaking SDK events',
     () async {
       final participant = MockLocalParticipant('local');

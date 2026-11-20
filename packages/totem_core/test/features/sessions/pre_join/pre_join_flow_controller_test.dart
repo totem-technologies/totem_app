@@ -232,10 +232,11 @@ class _RetryableSessionController extends SessionController {
       SessionJoinResult.retryableFailure;
 
   @override
-  Future<void> resetAfterFailedJoin() async {
+  Future<bool> resetAfterFailedJoin() async {
     resets++;
     resetStarted?.complete();
     await resetGate?.future;
+    return true;
   }
 }
 
@@ -281,9 +282,10 @@ class _FailureReceiptSession extends _RetryableSessionController {
   }
 
   @override
-  Future<void> resetAfterFailedJoin() async {
+  Future<bool> resetAfterFailedJoin() async {
     events.add('reset');
     if (throwReset) throw StateError('reset failed');
+    return true;
   }
 }
 
@@ -302,9 +304,10 @@ class _PendingActivationSession extends _FailureReceiptSession {
   }
 
   @override
-  Future<void> resetAfterFailedJoin() async {
-    await super.resetAfterFailedJoin();
+  Future<bool> resetAfterFailedJoin() async {
+    final applied = await super.resetAfterFailedJoin();
     _FailureReceiptSession.receiptMessaging.finished?.complete();
+    return applied;
   }
 }
 
@@ -1798,7 +1801,7 @@ void main() {
       ).equals(PreJoinFlowPhase.idle);
       check(
         container.read(preJoinFlowControllerProvider(_slug)).error,
-      ).isA<StateError>();
+      ).isA<SessionJoinFailure>();
       check(
         container.read(preJoinFlowControllerProvider(_slug)).sessionOptions,
       ).isNull();
@@ -2150,6 +2153,10 @@ void main() {
       final outcome = await outcomeFuture;
 
       check(outcome).equals(PreJoinJoinOutcome.retryableFailure);
+      // The join note needs an error; a silent reset leaves no feedback.
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).error,
+      ).isA<SessionJoinFailure>();
       check(_RetryableSessionController.resets).equals(1);
       check(factory.videoTracks).length.equals(2);
       check(factory.audioTracks).length.equals(2);

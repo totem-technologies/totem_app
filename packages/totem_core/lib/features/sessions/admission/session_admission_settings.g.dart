@@ -51,7 +51,7 @@ final class SessionAdmissionSettingsProvider
 }
 
 String _$sessionAdmissionSettingsHash() =>
-    r'2fa83e9502db90b425eb3d42346fe1aa49b3d184';
+    r'e7460db9f2325c05634ee6dd31d313c9ba39e122';
 
 abstract class _$SessionAdmissionSettings extends $Notifier<bool> {
   bool build();

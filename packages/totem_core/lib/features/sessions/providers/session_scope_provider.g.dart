@@ -279,6 +279,60 @@ final class ConnectionStateProvider
 
 String _$connectionStateHash() => r'e7120f187e1bb2c3ff534cf045c17ee3b355e6a3';
 
+/// Whether LiveKit is recovering a dropped connection for the current session.
+
+@ProviderFor(isSessionReconnecting)
+final isSessionReconnectingProvider = IsSessionReconnectingProvider._();
+
+/// Whether LiveKit is recovering a dropped connection for the current session.
+
+final class IsSessionReconnectingProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Whether LiveKit is recovering a dropped connection for the current session.
+  IsSessionReconnectingProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'isSessionReconnectingProvider',
+        isAutoDispose: true,
+        dependencies: <ProviderOrFamily>[currentSessionStateProvider],
+        $allTransitiveDependencies: <ProviderOrFamily>[
+          IsSessionReconnectingProvider.$allTransitiveDependencies0,
+          IsSessionReconnectingProvider.$allTransitiveDependencies1,
+        ],
+      );
+
+  static final $allTransitiveDependencies0 = currentSessionStateProvider;
+  static final $allTransitiveDependencies1 =
+      CurrentSessionStateProvider.$allTransitiveDependencies0;
+
+  @override
+  String debugGetCreateSourceHash() => _$isSessionReconnectingHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return isSessionReconnecting(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$isSessionReconnectingHash() =>
+    r'dfaedbf9168e56d62321b317565ad8d47ca389a5';
+
 /// The high-level lifecycle phase for the current session.
 
 @ProviderFor(sessionPhase)
@@ -677,7 +731,7 @@ final class AdmittedSessionParticipantIdentitiesProvider
 }
 
 String _$admittedSessionParticipantIdentitiesHash() =>
-    r'c4b4c3314e486e9514625d3b6586a5c234e6e25a';
+    r'091e44df86594dfca8dca715fb6f816f2729d282';
 
 /// Read-only presentation projection of the session admission roster.
 ///
