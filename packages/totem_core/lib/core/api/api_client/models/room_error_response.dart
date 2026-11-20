@@ -23,6 +23,9 @@ final class ErrorCode {
       'keeper_not_in_room' => keeperNotInRoom,
       'stale_version' => staleVersion,
       'not_joinable' => notJoinable,
+      'admission_full' => admissionFull,
+      'waiting_full' => waitingFull,
+      'room_full' => roomFull,
       'livekit_error' => livekitError,
       'not_found' => notFound,
       _ => ErrorCode._(json),
@@ -57,6 +60,12 @@ final class ErrorCode {
 
   static const ErrorCode notJoinable = ErrorCode._('not_joinable');
 
+  static const ErrorCode admissionFull = ErrorCode._('admission_full');
+
+  static const ErrorCode waitingFull = ErrorCode._('waiting_full');
+
+  static const ErrorCode roomFull = ErrorCode._('room_full');
+
   static const ErrorCode livekitError = ErrorCode._('livekit_error');
 
   static const ErrorCode notFound = ErrorCode._('not_found');
@@ -75,6 +84,9 @@ final class ErrorCode {
     keeperNotInRoom,
     staleVersion,
     notJoinable,
+    admissionFull,
+    waitingFull,
+    roomFull,
     livekitError,
     notFound,
   ];

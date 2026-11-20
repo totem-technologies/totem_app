@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
-import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
-import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart'
+    show Participant;
 
 /// Live admission queue state and actions for descendants of the session.
 class SessionAdmissionScope extends InheritedWidget {
@@ -13,30 +13,23 @@ class SessionAdmissionScope extends InheritedWidget {
     required this.onDeclinePermanently,
     required this.onAdmitAll,
     required this.onRetry,
-    required this.onResetCorruptData,
+    required this.onRefresh,
+    required this.onRetryUnresolved,
+    required this.error,
     required super.child,
-    this.recoveryMessage,
-    this.unresolvedRemovals = const {},
-    this.corruptRemovalJournal = false,
-    this.onReconcileRemoval,
-    this.onResetCorruptRemovalJournal,
     super.key,
   });
 
-  final String? recoveryMessage;
-  final Set<String> unresolvedRemovals;
-  final bool corruptRemovalJournal;
-  final Future<void> Function()? onResetCorruptRemovalJournal;
-  final Future<void> Function(String identity, bool removed)?
-  onReconcileRemoval;
-  final List<AdmissionRequest> requests;
-  final List<KeeperAdmissionAttempt> attempts;
+  final List<Participant> requests;
+  final List<Participant> attempts;
   final bool enabled;
   final bool busy;
   final VoidCallback? onRetry;
-  final Future<void> Function()? onResetCorruptData;
-  final Future<void> Function(AdmissionRequest, bool) onDecision;
-  final Future<void> Function(AdmissionRequest) onDeclinePermanently;
+  final VoidCallback? onRefresh;
+  final Future<void> Function()? onRetryUnresolved;
+  final String? error;
+  final Future<void> Function(Participant, bool) onDecision;
+  final Future<void> Function(Participant) onDeclinePermanently;
   final Future<bool> Function() onAdmitAll;
 
   static SessionAdmissionScope? maybeOf(BuildContext context) =>

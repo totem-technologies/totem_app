@@ -185,6 +185,7 @@ class SessionOptions {
     cameraEnabled,
     microphoneEnabled,
     speakerEnabled,
+
     cameraOptions,
   );
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:totem_core/features/sessions/admission/server_participant_admission.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_poll_scheduler.dart';
@@ -68,6 +69,22 @@ class SessionRuntime {
   final media = JoinMediaOwner();
   final polling = SessionPollScheduler();
   SessionAdmissionService? admission;
+  ServerParticipantAdmission? serverAdmission;
+  StreamSubscription<AdmissionStatus>? _serverAdmissionEvents;
+
+  void attachServerAdmission(
+    ServerParticipantAdmission value,
+    void Function(AdmissionStatus) onStatus,
+  ) {
+    if (serverAdmission != null && !identical(serverAdmission, value)) {
+      throw StateError('Another admission already owns this session');
+    }
+    serverAdmission = value;
+    _serverAdmissionEvents ??= value.changes.listen((status) {
+      if (acceptsEvents && identical(serverAdmission, value)) onStatus(status);
+    });
+  }
+
   SessionTransport? _transport;
   SessionTransport? get transport => _transport;
   // Cancelled and cleared by _cleanup before the transport is disposed.
@@ -399,6 +416,13 @@ class SessionRuntime {
         () => deactivateInfrastructure(owner),
         () async {
           await admission?.disconnect();
+        },
+        () async {
+          await _serverAdmissionEvents?.cancel();
+          _serverAdmissionEvents = null;
+          final current = serverAdmission;
+          serverAdmission = null;
+          await current?.dispose();
         },
         () async {
           try {

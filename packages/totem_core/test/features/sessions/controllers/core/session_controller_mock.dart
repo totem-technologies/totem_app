@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livekit_client/livekit_client.dart'
-    hide ConnectionState, SessionOptions;
+    hide ConnectionState, Participant, SessionOptions;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
+
 import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
@@ -94,6 +94,7 @@ class FakeSessionController implements SessionController {
       transport: () => transport,
       keeperIdentity: () => state.roomState.keeper,
       isKeeper: isCurrentUserKeeper,
+      broadcastRecipients: () => state.participantsList.map((p) => p.identity),
     );
     addTearDown(value.dispose);
     return value;
@@ -105,6 +106,7 @@ class FakeSessionController implements SessionController {
     final value = SessionReactionsService(
       transport: () => transport,
       hasKeeper: () => state.hasKeeper,
+      broadcastRecipients: () => state.participantsList.map((p) => p.identity),
       emit: (identity, emoji) async {
         receivedReactions.add((identity, emoji));
         return true;
@@ -143,7 +145,7 @@ class FakeSessionController implements SessionController {
       isKeeper: isCurrentUserKeeper,
       transport: () => transport,
       applyState: applyRoomState,
-      prepareRemoval: admission.prepareRemoval,
+
       markRemoved: markParticipantRemoved,
       leave: disconnectFromRoom,
       onError: (_, _) {},
@@ -238,45 +240,33 @@ class FakeAdmissionService extends Fake implements SessionAdmissionService {
   bool get mounted => true;
 
   @override
-  void setApprovalRequired(bool value) {}
-  Future<void> Function(String)? onRevoke;
+  AdmissionSnapshot? get snapshot => null;
+  @override
+  List<Participant> get requests => const [];
+  @override
+  List<Participant> get attempts => const [];
+  @override
+  List<Participant> get declined => const [];
+  @override
+  bool get hasUnresolvedCommand => false;
   @override
   bool get busy => false;
-  @override
-  Set<String> get unresolvedRemovals => const {};
+
   @override
   Set<String> get admittedIdentities => const {};
   @override
+  Set<String>? get serverDataRecipients => null;
+  @override
   String? get error => null;
   @override
-  String? get recoveryError => null;
+  Future<void> get synchronized => Future.value();
   @override
-  bool get hasCorruptRemovalJournal => false;
-  @override
-  KeeperAdmissionController? get keeperController => null;
+  void sync() {}
+
   @override
   void addListener(void Function() listener) {}
   @override
   void removeListener(void Function() listener) {}
-  @override
-  void requireRemovalReady() {
-    if (onRevoke == null) throw StateError('Admission is not ready');
-  }
-
-  @override
-  Future<PreparedAdmissionRemoval> prepareRemoval(String identity) async {
-    requireRemovalReady();
-    return PreparedAdmissionRemoval(
-      commit: () => revokeRemovedParticipant(identity),
-      reject: () async {},
-      unknown: () async {},
-    );
-  }
-
-  @override
-  Future<void> revokeRemovedParticipant(String identity) async {
-    await onRevoke!(identity);
-  }
 }
 
 class _FakeKeeper extends Fake implements SessionKeeperController {

@@ -106,19 +106,6 @@ class _Harness {
         applied.add(next);
         room = next;
       },
-      prepareRemoval: (identity) async {
-        events.add('prepare');
-        final revoke = await prepare?.call() ?? _revoke;
-        return PreparedAdmissionRemoval(
-          commit: () => revoke(identity),
-          reject: () async {
-            events.add('rejected');
-          },
-          unknown: () async {
-            events.add('unknown');
-          },
-        );
-      },
       markRemoved: removed.add,
       leave: () async {
         leaves++;
@@ -144,15 +131,10 @@ class _Harness {
   final removed = <RemoveReason>[];
   final applied = <RoomState>[];
   final errors = <Object>[];
-  Future<AdmissionRevocation> Function()? prepare;
   Future<void> Function(String)? remove;
   Future<RoomState> Function(int, String)? ban;
   Future<void> Function()? leaving;
   Completer<void>? failureReported;
-  Future<void> _revoke(String identity) async {
-    events.add('revoke:$identity');
-  }
-
   Future<void> dispose() async {
     service.dispose();
     await connection.dispose();
@@ -179,7 +161,7 @@ void main() {
       check(h.events).contains('camera:other');
       finish.complete();
       await removal;
-      check(h.events).contains('revoke:participant');
+      check(h.events).contains('backend:participant');
     },
   );
   for (final serverOriginated in [false, true]) {
@@ -253,89 +235,38 @@ void main() {
     },
   );
 
-  test(
-    'prepared recovery is acquired before the backend can remove a participant',
-    () async {
-      final h = _Harness();
-      addTearDown(h.dispose);
-      final preparing = Completer<void>();
-      final prepared = Completer<AdmissionRevocation>();
-      h.prepare = () {
-        preparing.complete();
-        return prepared.future;
-      };
-      final removing = h.service.removeParticipant('participant');
-      await preparing.future;
-      check(h.events).deepEquals(['prepare']);
-      prepared.complete((String identity) async {
-        h.events.add('revoke:$identity');
-      });
-      await removing;
+  test('ambiguous backend removal failure preserves its cause', () async {
+    final h = _Harness();
+    addTearDown(h.dispose);
+    final failure = AppNetworkException.noConnection();
+    h.remove = (_) async => throw failure;
 
-      check(
-        h.events,
-      ).deepEquals(['prepare', 'backend:participant', 'revoke:participant']);
-    },
-  );
+    await check(
+      h.service.removeParticipant('participant'),
+    ).throws<SessionCommandException>();
 
-  test(
-    'unavailable admission recovery refuses removal before the backend mutation',
-    () async {
-      final h = _Harness();
-      addTearDown(h.dispose);
-      h.prepare = () async => throw StateError('recovery unavailable');
+    check(h.events).deepEquals(['backend:participant']);
+    check(
+      h.service.lastFailure?.kind,
+    ).equals(SessionCommandFailureKind.unknownOutcome);
+    check(
+      (h.service.lastFailure!.error as SessionCommandException).cause,
+    ).identicalTo(failure);
+  });
 
-      await check(
-        h.service.removeParticipant('participant'),
-      ).throws<StateError>();
-
-      check(h.events).deepEquals(['prepare']);
-    },
-  );
-
-  test(
-    'backend removal failure leaves admission permissions unchanged',
-    () async {
-      final h = _Harness();
-      addTearDown(h.dispose);
-      final failure = AppNetworkException.noConnection();
-      h.remove = (_) async => throw failure;
-
-      await check(
-        h.service.removeParticipant('participant'),
-      ).throws<SessionCommandException>();
-
-      check(h.events).deepEquals(['prepare', 'backend:participant', 'unknown']);
-      check(
-        h.service.lastFailure?.kind,
-      ).equals(SessionCommandFailureKind.unknownOutcome);
-      check(
-        (h.service.lastFailure!.error as SessionCommandException).cause,
-      ).identicalTo(failure);
-    },
-  );
-
-  test(
-    'definitive backend rejection clears the prepared intent without revoking',
-    () async {
-      final h = _Harness();
-      addTearDown(h.dispose);
-      const failure = ApiError<RoomState, RoomErrorResponse>(
-        statusCode: 403,
-        error: RoomErrorResponse(
-          code: ErrorCode.notKeeper,
-          message: 'Rejected',
-        ),
-      );
-      h.remove = (_) async => throw failure;
-      await check(
-        h.service.removeParticipant('participant'),
-      ).throws<ApiError<RoomState, RoomErrorResponse>>();
-      check(
-        h.events,
-      ).deepEquals(['prepare', 'backend:participant', 'rejected']);
-    },
-  );
+  test('definitive backend rejection propagates unchanged', () async {
+    final h = _Harness();
+    addTearDown(h.dispose);
+    const failure = ApiError<RoomState, RoomErrorResponse>(
+      statusCode: 403,
+      error: RoomErrorResponse(code: ErrorCode.notKeeper, message: 'Rejected'),
+    );
+    h.remove = (_) async => throw failure;
+    await check(
+      h.service.removeParticipant('participant'),
+    ).throws<ApiError<RoomState, RoomErrorResponse>>();
+    check(h.events).deepEquals(['backend:participant']);
+  });
 
   test(
     'timeout retains unknown outcome and overlapping removal never resends',
@@ -373,68 +304,33 @@ void main() {
         check(
           (failure! as SessionCommandException).kind,
         ).equals(SessionCommandFailureKind.unknownOutcome);
-        check(
-          h.events,
-        ).deepEquals(['prepare', 'backend:participant', 'unknown']);
+        check(h.events).deepEquals(['backend:participant']);
         backend.complete();
         clock.flushMicrotasks();
-        check(
-          h.events,
-        ).deepEquals(['prepare', 'backend:participant', 'unknown']);
+        check(h.events).deepEquals(['backend:participant']);
       });
     },
   );
 
-  test(
-    'backend success still finishes its captured revocation journal after service disposal',
-    () async {
-      final h = _Harness();
-      addTearDown(h.dispose);
-      final backendStarted = Completer<void>();
-      final backend = Completer<void>();
-      h.remove = (_) {
-        backendStarted.complete();
-        return backend.future;
-      };
-      final removing = h.service.removeParticipant('participant');
-      await backendStarted.future;
-      h.service.dispose();
-      backend.complete();
-      await removing;
-
-      check(
-        h.events,
-      ).deepEquals(['prepare', 'backend:participant', 'revoke:participant']);
-      h.service.receive(_removal());
-      check(h.removed).isEmpty();
-      check(h.leaves).equals(0);
-    },
-  );
-
-  test(
-    'persistence failure after backend success remains an explicit partial success',
-    () async {
-      final h = _Harness();
-      addTearDown(h.dispose);
-      final failure = Exception('roster persistence failed');
-      h.prepare = () async => (String identity) async {
-        h.events.add('revoke:$identity');
-        throw failure;
-      };
-
-      await check(
-        h.service.removeParticipant('participant'),
-      ).throws<Exception>();
-
-      check(
-        h.events,
-      ).deepEquals(['prepare', 'backend:participant', 'revoke:participant']);
-      check(
-        h.service.lastFailure?.kind,
-      ).equals(SessionCommandFailureKind.partialSuccess);
-      check(h.service.lastFailure?.error).identicalTo(failure);
-    },
-  );
+  test('disposal during removal prevents later removal packets', () async {
+    final h = _Harness();
+    addTearDown(h.dispose);
+    final started = Completer<void>();
+    final backend = Completer<void>();
+    h.remove = (_) {
+      started.complete();
+      return backend.future;
+    };
+    final removing = h.service.removeParticipant('participant');
+    await started.future;
+    h.service.dispose();
+    backend.complete();
+    await removing;
+    h.service.receive(_removal());
+    check(h.events).deepEquals(['backend:participant']);
+    check(h.removed).isEmpty();
+    check(h.leaves).equals(0);
+  });
 
   for (final replacedAttempt in [false, true]) {
     test(

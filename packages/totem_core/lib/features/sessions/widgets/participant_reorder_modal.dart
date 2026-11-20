@@ -5,8 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
-import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
-import 'package:totem_core/features/sessions/admission/keeper_admission_roster.dart';
+
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
@@ -55,7 +54,7 @@ class _ParticipantReorderWidgetState
             ? null
             : (
                 talkingOrder: state.roomState.talkingOrder,
-                sessionSlug: state.roomState.sessionSlug,
+
                 connected: state.participants.participants,
                 keeper: state.roomState.keeper,
                 speakingNow: state.speakingNow,
@@ -65,15 +64,15 @@ class _ParticipantReorderWidgetState
     final visibleParticipants = ref.watch(sessionParticipantsProvider);
     if (sessionState == null) return const SizedBox.shrink();
 
-    final roster = ref.watch(
-      keeperAdmissionRosterProvider(
-        sessionState.sessionSlug,
-        sessionState.keeper,
-      ),
-    );
-    final visibleIdentities = visibleParticipants
-        .map((participant) => participant.identity)
-        .toSet();
+    final admitted = ref.watch(admittedSessionParticipantIdentitiesProvider);
+    final recipients = ref
+        .watch(currentSessionProvider)
+        ?.admission
+        .serverDataRecipients;
+    final visibleIdentities = {
+      ...visibleParticipants.map((participant) => participant.identity),
+      ...sessionState.talkingOrder.where(admitted.contains),
+    };
     _syncOrder(
       visibleIdentities,
       sessionState.talkingOrder,
@@ -91,8 +90,9 @@ class _ParticipantReorderWidgetState
     }
 
     final canSave = _rosterReady(
-      roster,
+      recipients,
       sessionState.connected.map((participant) => participant.identity),
+      sessionState.talkingOrder,
       visibleIdentities,
       keeperSlug,
     );
@@ -312,38 +312,44 @@ class _ParticipantReorderWidgetState
                                             final latestState = ref.read(
                                               currentSessionStateProvider,
                                             );
-                                            final latestIdentities = ref
-                                                .read(
-                                                  sessionParticipantsProvider,
-                                                )
-                                                .map(
-                                                  (participant) =>
-                                                      participant.identity,
-                                                )
-                                                .toSet();
-                                            if (latestState == null ||
-                                                !_rosterReady(
-                                                  ref.read(
-                                                    keeperAdmissionRosterProvider(
-                                                      latestState
-                                                          .roomState
-                                                          .sessionSlug,
-                                                      latestState
-                                                          .roomState
-                                                          .keeper,
-                                                    ),
+                                            if (latestState == null) {
+                                              setState(() => _loading = false);
+                                              return;
+                                            }
+                                            final admitted = ref.read(
+                                              admittedSessionParticipantIdentitiesProvider,
+                                            );
+                                            final latestIdentities = {
+                                              ...ref
+                                                  .read(
+                                                    sessionParticipantsProvider,
+                                                  )
+                                                  .map(
+                                                    (participant) =>
+                                                        participant.identity,
                                                   ),
-                                                  latestState
-                                                      .participants
-                                                      .participants
-                                                      .map(
-                                                        (participant) =>
-                                                            participant
-                                                                .identity,
-                                                      ),
-                                                  latestIdentities,
-                                                  latestState.roomState.keeper,
-                                                )) {
+                                              ...latestState
+                                                  .roomState
+                                                  .talkingOrder
+                                                  .where(admitted.contains),
+                                            };
+                                            if (!_rosterReady(
+                                              session
+                                                  .admission
+                                                  .serverDataRecipients,
+                                              latestState
+                                                  .participants
+                                                  .participants
+                                                  .map(
+                                                    (participant) =>
+                                                        participant.identity,
+                                                  ),
+                                              latestState
+                                                  .roomState
+                                                  .talkingOrder,
+                                              latestIdentities,
+                                              latestState.roomState.keeper,
+                                            )) {
                                               setState(() => _loading = false);
                                               return;
                                             }
@@ -405,18 +411,17 @@ class _ParticipantReorderWidgetState
   }
 
   bool _rosterReady(
-    AsyncValue<KeeperAdmissionRosterStore> roster,
+    Set<String>? recipients,
     Iterable<String> connected,
+    Iterable<String> talkingOrder,
     Set<String> visible,
     String keeper,
   ) {
-    final store = roster.value;
-    if (roster.isLoading || roster.hasError || store == null) return false;
-    final ready = store.members.toSet().difference(
-      store.awaitingReadiness.toSet(),
-    );
-    final expected = connected
-        .where((identity) => identity == keeper || ready.contains(identity))
+    if (recipients == null) return false;
+    final expected = {...connected, ...talkingOrder}
+        .where(
+          (identity) => identity == keeper || recipients.contains(identity),
+        )
         .toSet();
     return expected.contains(keeper) &&
         const SetEquality<String>().equals(expected, visible);

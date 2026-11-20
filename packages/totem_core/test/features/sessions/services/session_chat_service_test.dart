@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
+
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/services/session_chat_service.dart';
 import 'package:totem_core/features/sessions/services/session_packet_router.dart';
@@ -69,12 +69,14 @@ class _Harness {
       transport: () => connection,
       keeperIdentity: () => 'keeper',
       isKeeper: () => keeper,
+      broadcastRecipients: () => roster,
       now: () => DateTime.fromMillisecondsSinceEpoch(1234),
       createId: () => 'outgoing-${_ids++}',
     );
   }
 
   final bool keeper;
+  Set<String>? roster = {'keeper', 'participant', 'other'};
   int _ids = 0;
   FakeSessionTransport? connection;
   late final SessionChatService service;
@@ -86,6 +88,49 @@ class _Harness {
 }
 
 void main() {
+  test('server broadcasts target only the current activated roster', () async {
+    final h = _Harness(keeper: true);
+    addTearDown(h.dispose);
+    h.connection!.participants = [
+      _keeper,
+      _participant,
+      _other,
+      const ParticipantInfo(sid: 'c', identity: 'c', name: 'C'),
+      const ParticipantInfo(sid: 'd', identity: 'd', name: 'D'),
+    ];
+    h.roster = {'keeper', 'participant', 'other'};
+    check(await h.service.send('Everyone')).equals(ChatSendOutcome.sent);
+    check(
+      h.connection!.publications.single.recipients,
+    ).deepEquals(['participant', 'other']);
+    check(
+      await h.service.send('Waiting', recipientIdentity: 'c'),
+    ).equals(ChatSendOutcome.invalidRecipient);
+    check(
+      await h.service.send('Unknown', recipientIdentity: 'unknown'),
+    ).equals(ChatSendOutcome.invalidRecipient);
+    check(
+      await h.service.send('Direct', recipientIdentity: 'participant'),
+    ).equals(ChatSendOutcome.sent);
+    check(
+      h.connection!.publications.last.recipients,
+    ).deepEquals(['participant']);
+    h.roster = {'', 'keeper'};
+    check(await h.service.send('Only me')).equals(ChatSendOutcome.sent);
+    check(
+      await h.service.send('Not admitted', recipientIdentity: 'participant'),
+    ).equals(ChatSendOutcome.invalidRecipient);
+    h.roster = null;
+    check(await h.service.send('No snapshot')).equals(ChatSendOutcome.failed);
+    check(
+      await h.service.send('No snapshot', recipientIdentity: 'participant'),
+    ).equals(ChatSendOutcome.failed);
+    check(h.connection!.publications).length.equals(2);
+    check(
+      h.service.messages.map((message) => message.message),
+    ).deepEquals(['Everyone', 'Direct', 'Only me']);
+  });
+
   test(
     'Keeper broadcasts reliably and sends private packets only to their recipient',
     () async {
@@ -108,7 +153,7 @@ void main() {
           (packet) => packet.topic == SessionCommunicationTopics.chat.topic,
         ),
       ).isTrue();
-      check(publications.first.recipients).isEmpty();
+      check(publications.first.recipients).deepEquals(['participant', 'other']);
       check(publications.last.recipients).deepEquals(['participant']);
       final payload =
           jsonDecode(utf8.decode(publications.last.bytes))
@@ -303,12 +348,12 @@ void main() {
   );
 
   test(
-    'admission packets and malformed chat never enter chat history',
+    'non-chat packets and malformed chat never enter chat history',
     () async {
       final h = _Harness();
       addTearDown(h.dispose);
 
-      h.service.receive(_packet(topic: AdmissionProtocol.topic));
+      h.service.receive(_packet(topic: SessionCommunicationTopics.emoji.topic));
       check(h.service.messages).isEmpty();
       check(h.service.lastError).isNull();
       h.service.receive(

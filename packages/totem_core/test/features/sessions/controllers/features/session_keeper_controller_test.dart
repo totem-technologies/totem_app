@@ -230,6 +230,55 @@ void main() {
       );
     });
     group('removeParticipant', () {
+      test('removes through the backend', () async {
+        final session = FakeSessionController()
+          ..isCurrentUserKeeperValue = true;
+        await attachAttempt(session);
+        var backendCalls = 0;
+        final container = ProviderContainer(
+          overrides: [
+            removeParticipantProvider(
+              session.options.sessionSlug,
+              'user-2',
+            ).overrideWith((_) async {
+              backendCalls++;
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionKeeperControllerProvider(session).notifier,
+        );
+
+        await controller.removeParticipant('user-2');
+        check(backendCalls).equals(1);
+      });
+
+      test('server admission preserves unknown removal outcomes', () async {
+        final session = FakeSessionController()
+          ..isCurrentUserKeeperValue = true;
+        await attachAttempt(session);
+        final container = ProviderContainer(
+          overrides: [
+            removeParticipantProvider(
+              session.options.sessionSlug,
+              'user-2',
+            ).overrideWith((_) async => throw StateError('connection lost')),
+          ],
+        );
+        addTearDown(container.dispose);
+        final controller = container.read(
+          sessionKeeperControllerProvider(session).notifier,
+        );
+
+        await check(
+          controller.removeParticipant('user-2'),
+        ).throws<SessionCommandException>();
+        check(
+          controller.moderation.lastFailure?.kind,
+        ).equals(SessionCommandFailureKind.unknownOutcome);
+      });
+
       test(
         'rejects commands without an active attempt before contacting the backend',
         () async {
@@ -259,102 +308,10 @@ void main() {
           check(backendCalls).equals(0);
         },
       );
-      test('does not remove while admission recovery is unavailable', () async {
-        final session = FakeSessionController()
-          ..isCurrentUserKeeperValue = true;
-        await attachAttempt(session);
-        var backendCalls = 0;
-        final container = ProviderContainer(
-          overrides: [
-            removeParticipantProvider(
-              session.options.sessionSlug,
-              'user-2',
-            ).overrideWith((_) async {
-              backendCalls++;
-            }),
-          ],
-        );
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(session).notifier,
-        );
-        await check(
-          controller.removeParticipant('user-2'),
-        ).throws<StateError>();
-        check(backendCalls).equals(0);
-      });
-
-      test('notifies once after backend removal succeeds', () async {
-        final session = FakeSessionController()
-          ..isCurrentUserKeeperValue = true;
-        await attachAttempt(session);
-        final started = Completer<void>();
-        final backend = Completer<void>();
-        final removed = <String>[];
-        final container = ProviderContainer(
-          overrides: [
-            removeParticipantProvider(
-              session.options.sessionSlug,
-              'user-2',
-            ).overrideWith((_) async {
-              started.complete();
-              await backend.future;
-            }),
-          ],
-        );
-        addTearDown(container.dispose);
-        final controller = container.read(
-          sessionKeeperControllerProvider(session).notifier,
-        );
-        (session.admission as FakeAdmissionService).onRevoke = (slug) async =>
-            removed.add(slug);
-
-        final removal = controller.removeParticipant('user-2');
-        await started.future;
-        check(removed).isEmpty();
-        backend.complete();
-        await removal;
-
-        check(removed).deepEquals(['user-2']);
-      });
-
-      test(
-        'reports an unknown backend outcome without claiming completed revocation',
-        () async {
-          final session = FakeSessionController()
-            ..isCurrentUserKeeperValue = true;
-          await attachAttempt(session);
-          final removed = <String>[];
-          final container = ProviderContainer(
-            overrides: [
-              removeParticipantProvider(
-                session.options.sessionSlug,
-                'user-2',
-              ).overrideWith((_) async => throw StateError('removal failed')),
-            ],
-          );
-          addTearDown(container.dispose);
-          final controller = container.read(
-            sessionKeeperControllerProvider(session).notifier,
-          );
-          (session.admission as FakeAdmissionService).onRevoke = (slug) async =>
-              removed.add(slug);
-
-          await check(
-            controller.removeParticipant('user-2'),
-          ).throws<SessionCommandException>();
-          check(removed).isEmpty();
-          check(
-            controller.moderation.lastFailure?.kind,
-          ).equals(SessionCommandFailureKind.unknownOutcome);
-        },
-      );
-
-      test('non-keeper neither removes nor notifies', () async {
+      test('non-keeper cannot remove participants', () async {
         final session = FakeSessionController();
         await attachAttempt(session);
         var backendCalls = 0;
-        final removed = <String>[];
         final container = ProviderContainer(
           overrides: [
             removeParticipantProvider(
@@ -369,15 +326,12 @@ void main() {
         final controller = container.read(
           sessionKeeperControllerProvider(session).notifier,
         );
-        (session.admission as FakeAdmissionService).onRevoke = (slug) async =>
-            removed.add(slug);
 
         await check(
           controller.removeParticipant('user-2'),
         ).throws<SessionCommandException>();
 
         check(backendCalls).equals(0);
-        check(removed).isEmpty();
       });
     });
 

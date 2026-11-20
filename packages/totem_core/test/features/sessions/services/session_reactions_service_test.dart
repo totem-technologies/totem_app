@@ -40,6 +40,7 @@ class _Harness {
     service = SessionReactionsService(
       transport: () => connection,
       hasKeeper: () => keeperPresent,
+      broadcastRecipients: () => roster,
       emit: (identity, emoji) {
         // Run the real throttle and update before optionally holding completion.
         final emitted = container
@@ -59,6 +60,7 @@ class _Harness {
   late FakeSessionTransport connection;
   DateTime now = DateTime.utc(2026);
   bool keeperPresent = true;
+  Set<String>? roster = {'local', 'sender', 'other'};
   final errors = <Object>[];
   Completer<void>? emitStarted;
   Completer<void>? emitCompletion;
@@ -73,6 +75,40 @@ class _Harness {
 }
 
 void main() {
+  test(
+    'server reactions sample the activated roster after local emission',
+    () async {
+      final h = _Harness();
+      addTearDown(h.dispose);
+      h.connection.participants = [
+        _sender,
+        _other,
+        const ParticipantInfo(sid: 'c', identity: 'c', name: 'C'),
+        const ParticipantInfo(sid: 'd', identity: 'd', name: 'D'),
+      ];
+      h
+        ..roster = {'local', 'sender', 'c'}
+        ..emitStarted = Completer<void>()
+        ..emitCompletion = Completer<void>();
+      final sending = h.service.send('👍');
+      await h.emitStarted!.future;
+      h.roster = {'local', 'sender', 'other'};
+      h.emitCompletion!.complete();
+      await sending;
+      check(
+        h.connection.publications.single.recipients,
+      ).deepEquals(['sender', 'other']);
+      h.emitCompletion = null;
+      h.now = h.now.add(const Duration(milliseconds: 310));
+      h.roster = {'', 'local'};
+      await h.service.send('❤️');
+      h.now = h.now.add(const Duration(milliseconds: 310));
+      h.roster = null;
+      await h.service.send('🔥');
+      check(h.connection.publications).length.equals(1);
+    },
+  );
+
   test(
     'incoming packets use the real per-participant reaction throttle',
     () async {
@@ -148,7 +184,7 @@ void main() {
       check(packet.topic).equals(SessionCommunicationTopics.emoji.topic);
       check(utf8.decode(packet.bytes)).equals('👍');
       check(packet.reliable).isFalse();
-      check(packet.recipients).isEmpty();
+      check(packet.recipients).deepEquals(['sender', 'other']);
 
       h.now = h.now.add(const Duration(milliseconds: 310));
       await h.service.send('❤️');

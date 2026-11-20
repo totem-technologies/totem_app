@@ -1,4 +1,3 @@
-import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 enum SessionCommunicationTopics {
@@ -32,7 +31,7 @@ class SessionPacketRouter {
       } else if (packet.topic ==
           SessionCommunicationTopics.participantRemoved.topic) {
         removal(packet);
-      } else if (packet.topic == AdmissionProtocol.topic) {
+      } else if (packet.topic == 'totem.admission.v2') {
         admission(event);
       }
     } else {

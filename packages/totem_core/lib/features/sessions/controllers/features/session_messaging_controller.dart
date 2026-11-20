@@ -1,5 +1,4 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/services/session_chat_service.dart';
 import 'package:totem_core/features/sessions/services/session_packet_router.dart';
@@ -28,8 +27,4 @@ class SessionMessagingController extends _$SessionMessagingController {
       await session.chat.send(text, recipientIdentity: recipientIdentity) ==
       ChatSendOutcome.sent;
   Future<void> sendReaction(String emoji) => session.reactions.send(emoji);
-  Future<void> sendAdmissionJoined(AdmissionRequest request) =>
-      session.admission.sendAdmissionJoined(request);
-  Future<void> sendAdmissionJoinFailed(AdmissionRequest request) =>
-      session.admission.sendAdmissionJoinFailed(request);
 }

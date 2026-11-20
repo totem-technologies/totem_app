@@ -1,6 +1,6 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
+
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/services/session_packet_router.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
@@ -22,7 +22,7 @@ void main() {
         SessionCommunicationTopics.chat.topic,
         SessionCommunicationTopics.emoji.topic,
         SessionCommunicationTopics.participantRemoved.topic,
-        AdmissionProtocol.topic,
+        'totem.admission.v2',
       ])
         SessionTransportPacket(bytes: [1, 2], topic: topic),
     ];
@@ -48,15 +48,21 @@ void main() {
     () {
       final handled = <Object>[];
       SessionPacketRouter(
-        chat: handled.add,
-        reaction: handled.add,
-        removal: handled.add,
-        admission: handled.add,
-      ).handle(
-        TransportPacketReceived(
-          SessionTransportPacket(bytes: [1], topic: 'unknown'),
-        ),
-      );
+          chat: handled.add,
+          reaction: handled.add,
+          removal: handled.add,
+          admission: handled.add,
+        )
+        ..handle(
+          TransportPacketReceived(
+            SessionTransportPacket(bytes: [1], topic: 'unknown'),
+          ),
+        )
+        ..handle(
+          TransportPacketReceived(
+            SessionTransportPacket(bytes: [1], topic: 'totem.admission.v1'),
+          ),
+        );
 
       check(handled).isEmpty();
     },
