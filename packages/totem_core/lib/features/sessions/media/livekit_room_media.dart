@@ -1,5 +1,5 @@
 import 'package:livekit_client/livekit_client.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:totem_core/features/sessions/media/livekit_microphone_level.dart';
 import 'package:totem_core/features/sessions/media/livekit_participant_video.dart';
 import 'package:totem_core/features/sessions/media/livekit_speaker_level.dart';
@@ -29,9 +29,53 @@ class LiveKitRoomMedia implements RoomMedia {
       ..on<TrackUnmutedEvent>((_) => notify()),
   );
 
+  // Speaker updates are separate from publication changes so they do not
+  // rebuild video renderers and media-state subscribers on every report.
+  late final _speakers = LiveKitRoomBinding(
+    (listener, notify) => listener
+      ..on<RoomConnectedEvent>((_) => notify())
+      ..on<RoomReconnectingEvent>((_) => notify())
+      ..on<RoomReconnectedEvent>((_) => notify())
+      ..on<ActiveSpeakersChangedEvent>((_) => notify())
+      ..on<RoomDisconnectedEvent>((_) => notify())
+      ..on<ParticipantDisconnectedEvent>((_) => notify()),
+  );
+
   void attach(Room? room) {
     _media.attach(room);
+    _speakers.attach(room);
   }
+
+  /// The server-reported amplitude for an active speaker, between 0 and 1.
+  /// Participants absent from the latest active-speaker list are silent.
+  double audioLevelOf(String identity) {
+    final room = _speakers.room;
+    if (room == null || room.connectionState != ConnectionState.connected) {
+      return 0;
+    }
+    for (final speaker in room.activeSpeakers) {
+      if (speaker.identity == identity &&
+          identical(room.getParticipantByIdentity(identity), speaker)) {
+        final level = speaker.audioLevel;
+        return level.isFinite ? level.clamp(0.0, 1.0) : 0;
+      }
+    }
+    return 0;
+  }
+
+  /// The current server-reported amplitude followed by changes, including
+  /// silence when a speaker leaves or the room is replaced.
+  Stream<double> watchAudioLevel(String identity) => Stream.multi((controller) {
+    var last = audioLevelOf(identity);
+    controller.add(last);
+    final subscription = _speakers.changes.listen((_) {
+      final next = audioLevelOf(identity);
+      if (next == last) return;
+      last = next;
+      controller.add(next);
+    });
+    controller.onCancel = subscription.cancel;
+  });
 
   Participant? _participant(String identity) =>
       _media.room?.getParticipantByIdentity(identity);
@@ -89,8 +133,11 @@ class LiveKitRoomMedia implements RoomMedia {
     required double iconSize,
   }) {
     return LiveKitSpeakerLevel(
+      identity: participant.identity,
       participant: () => _participant(participant.identity),
       changes: _media.changes,
+      audioLevel: () => audioLevelOf(participant.identity),
+      audioLevelChanges: _speakers.changes,
       color: color,
       iconSize: iconSize,
     );
