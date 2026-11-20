@@ -242,12 +242,17 @@ class _TransitionCardBase extends StatefulWidget {
     required this.childBuilder,
     this.keyboardShortcutText,
     this.keyboardShortcutVisible = true,
+    this.keyboardShortcutReservesSpace = true,
   });
 
   final Widget Function(BuildContext context, bool hasMouseConnected)
   childBuilder;
   final String? keyboardShortcutText;
   final bool keyboardShortcutVisible;
+
+  /// Whether a hidden shortcut hint keeps its space, so showing it again
+  /// doesn't move the card.
+  final bool keyboardShortcutReservesSpace;
 
   @override
   State<_TransitionCardBase> createState() => _TransitionCardBaseState();
@@ -282,18 +287,22 @@ class _TransitionCardBaseState extends State<_TransitionCardBase> {
 
     if (showShortcut) {
       return Column(
-        spacing: 6,
         children: [
           card,
           Visibility(
             visible: widget.keyboardShortcutVisible,
-            maintainSize: true,
+            maintainSize: widget.keyboardShortcutReservesSpace,
             maintainAnimation: true,
             maintainState: true,
-            child: Text(
-              widget.keyboardShortcutText!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: const Color(0xFF787D7E),
+            // The gap belongs to the hint, so a hint that doesn't reserve
+            // its space leaves no gap either.
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(top: 6),
+              child: Text(
+                widget.keyboardShortcutText!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF787D7E),
+                ),
               ),
             ),
           ),
@@ -393,13 +402,16 @@ class JoinTransitionCard extends StatelessWidget {
     return _TransitionCardBase(
       keyboardShortcutText: 'press space bar to join',
       keyboardShortcutVisible: enabled && !waiting,
+      // While waiting there's no join to hint at, so the tips below sit
+      // right under the card.
+      keyboardShortcutReservesSpace: !waiting,
       childBuilder: (context, _) {
         return _TransitionCardContainer(
           margin: margin,
           constraints: const BoxConstraints(maxWidth: 366),
           children: [
             Text(
-              waiting ? 'Waiting to join' : welcomeTitle,
+              waiting ? 'You’re in the right place.' : welcomeTitle,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 fontSize: 28,
@@ -409,7 +421,8 @@ class JoinTransitionCard extends StatelessWidget {
             Text(
               waiting
                   ? waitingMessage ??
-                        'Please check your camera and mic while you wait. Your Keeper will let you into the session soon. No one can see or hear you until you’re admitted.'
+                        'Your Keeper will let you in when it’s time.\n'
+                            'No one can see or hear you while you wait.'
                   : welcomeMessage,
               textAlign: TextAlign.center,
             ),

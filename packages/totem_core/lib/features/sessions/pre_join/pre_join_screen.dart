@@ -30,6 +30,7 @@ import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
+import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/session_declined_view.dart';
 import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
@@ -483,6 +484,13 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       controlsKey: _controlsKey,
       notice: readiness == JoinReadiness.microphoneNeeded
           ? MediaRecoveryBanner(control: _control(MediaKind.microphone))
+          : null,
+      // The unresponsive-Keeper warning stands alone, without tips.
+      tips:
+          pending &&
+              flow.keeperAvailability !=
+                  AdmissionKeeperAvailability.unresponsive
+          ? const GroundingMarquee()
           : null,
       joinCard: JoinTransitionCard(
         margin: const EdgeInsetsDirectional.symmetric(horizontal: 10),
