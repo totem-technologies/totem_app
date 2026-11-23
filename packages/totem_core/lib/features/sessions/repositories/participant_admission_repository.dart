@@ -14,6 +14,21 @@ class ParticipantAdmissionRepository {
 
   final ClientApi apiService;
 
+  Future<JoinResponse> rejoin({
+    required String sessionSlug,
+    required String operationId,
+  }) {
+    return RepositoryUtils.handleApiCall<JoinResponse>(
+      apiCall: () => apiService.rooms.totemRoomsApiJoinRoom(
+        sessionSlug: sessionSlug,
+        body: JoinRoomRequest(operationId: Omittable(operationId), fresh: true),
+      ),
+      operationName: 'join session',
+      timeout: const Duration(seconds: 10),
+      diagnostics: {'session_slug': sessionSlug},
+    );
+  }
+
   Future<AdmissionMeSnapshot> me({required String sessionSlug}) {
     return RepositoryUtils.handleApiCall<AdmissionMeSnapshot>(
       apiCall: () => apiService.rooms.totemRoomsAdmissionApiGetMyAdmission(

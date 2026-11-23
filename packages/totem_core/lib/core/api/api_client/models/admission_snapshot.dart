@@ -1,7 +1,10 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'package:degenerate_runtime/degenerate_runtime.dart';
+
 import 'participant.dart';
+import 'room_state.dart';
+import 'room_status.dart';
 
 @immutable
 final class AdmissionSnapshot {
@@ -9,6 +12,7 @@ final class AdmissionSnapshot {
     required this.sessionSlug,
     required this.keeper,
     required this.roomVersion,
+    required this.roomState,
     required this.roomStatus,
     required this.approvalRequired,
     required this.settingsRevision,
@@ -22,6 +26,7 @@ final class AdmissionSnapshot {
     required this.requests,
     required this.historyTruncated,
     this.presenceError = const Omittable.absent(),
+    this.admittedRecipients = const Omittable.absent(),
     this.connectedCount = const Omittable.absent(),
     this.admissionCapacity,
     this.admissionSlotsUsed,
@@ -36,13 +41,21 @@ final class AdmissionSnapshot {
       sessionSlug: json['session_slug'] as String,
       keeper: json['keeper'] as String,
       roomVersion: (json['room_version'] as num).toInt(),
-      roomStatus: json['room_status'] as String,
+      roomState: RoomState.fromJson(json['room_state'] as Map<String, dynamic>),
+      roomStatus: RoomStatus.fromJson(json['room_status'] as String),
       approvalRequired: json['approval_required'] as bool,
       settingsRevision: (json['settings_revision'] as num).toInt(),
       version: (json['version'] as num).toInt(),
       observedAt: DateTime.parse(json['observed_at'] as String),
       presenceError: json.containsKey('presence_error')
           ? Omittable(json['presence_error'] as String?)
+          : const Omittable.absent(),
+      admittedRecipients: json.containsKey('admitted_recipients')
+          ? Omittable(
+              (json['admitted_recipients'] as List<dynamic>?)
+                  ?.map((e) => e as String)
+                  .toList(),
+            )
           : const Omittable.absent(),
       connectedCount: json.containsKey('connected_count')
           ? Omittable(
@@ -99,7 +112,9 @@ final class AdmissionSnapshot {
 
   final int roomVersion;
 
-  final String roomStatus;
+  final RoomState roomState;
+
+  final RoomStatus roomStatus;
 
   final bool approvalRequired;
 
@@ -110,6 +125,8 @@ final class AdmissionSnapshot {
   final DateTime observedAt;
 
   final Omittable<String?> presenceError;
+
+  final Omittable<List<String>?> admittedRecipients;
 
   final Omittable<int?> connectedCount;
 
@@ -164,12 +181,15 @@ final class AdmissionSnapshot {
       'session_slug': sessionSlug,
       'keeper': keeper,
       'room_version': roomVersion,
-      'room_status': roomStatus,
+      'room_state': roomState.toJson(),
+      'room_status': roomStatus.toJson(),
       'approval_required': approvalRequired,
       'settings_revision': settingsRevision,
       'version': version,
       'observed_at': observedAt.toIso8601String(),
       if (presenceError.isPresent) 'presence_error': presenceError.value,
+      if (admittedRecipients.isPresent)
+        'admitted_recipients': admittedRecipients.value,
       if (connectedCount.isPresent) 'connected_count': connectedCount.value,
       'admitted_count': admittedCount,
       'activated_count': activatedCount,
@@ -196,8 +216,8 @@ final class AdmissionSnapshot {
         json['keeper'] is String &&
         json.containsKey('room_version') &&
         json['room_version'] is num &&
+        json.containsKey('room_state') &&
         json.containsKey('room_status') &&
-        json['room_status'] is String &&
         json.containsKey('approval_required') &&
         json['approval_required'] is bool &&
         json.containsKey('settings_revision') &&
@@ -223,12 +243,14 @@ final class AdmissionSnapshot {
     String? sessionSlug,
     String? keeper,
     int? roomVersion,
-    String? roomStatus,
+    RoomState? roomState,
+    RoomStatus? roomStatus,
     bool? approvalRequired,
     int? settingsRevision,
     int? version,
     DateTime? observedAt,
     Omittable<String?>? presenceError,
+    Omittable<List<String>?>? admittedRecipients,
     Omittable<int?>? connectedCount,
     int? admittedCount,
     int? activatedCount,
@@ -248,12 +270,14 @@ final class AdmissionSnapshot {
       sessionSlug: sessionSlug ?? this.sessionSlug,
       keeper: keeper ?? this.keeper,
       roomVersion: roomVersion ?? this.roomVersion,
+      roomState: roomState ?? this.roomState,
       roomStatus: roomStatus ?? this.roomStatus,
       approvalRequired: approvalRequired ?? this.approvalRequired,
       settingsRevision: settingsRevision ?? this.settingsRevision,
       version: version ?? this.version,
       observedAt: observedAt ?? this.observedAt,
       presenceError: presenceError ?? this.presenceError,
+      admittedRecipients: admittedRecipients ?? this.admittedRecipients,
       connectedCount: connectedCount ?? this.connectedCount,
       admittedCount: admittedCount ?? this.admittedCount,
       activatedCount: activatedCount ?? this.activatedCount,
@@ -286,12 +310,19 @@ final class AdmissionSnapshot {
             sessionSlug == other.sessionSlug &&
             keeper == other.keeper &&
             roomVersion == other.roomVersion &&
+            roomState == other.roomState &&
             roomStatus == other.roomStatus &&
             approvalRequired == other.approvalRequired &&
             settingsRevision == other.settingsRevision &&
             version == other.version &&
             observedAt == other.observedAt &&
             presenceError == other.presenceError &&
+            admittedRecipients.isPresent ==
+                other.admittedRecipients.isPresent &&
+            listEquals(
+              admittedRecipients.value,
+              other.admittedRecipients.value,
+            ) &&
             connectedCount == other.connectedCount &&
             admittedCount == other.admittedCount &&
             activatedCount == other.activatedCount &&
@@ -314,12 +345,14 @@ final class AdmissionSnapshot {
       sessionSlug,
       keeper,
       roomVersion,
+      roomState,
       roomStatus,
       approvalRequired,
       settingsRevision,
       version,
       observedAt,
       presenceError,
+      Object.hashAll(admittedRecipients.value ?? const []),
       connectedCount,
       admittedCount,
       activatedCount,
@@ -339,6 +372,6 @@ final class AdmissionSnapshot {
 
   @override
   String toString() {
-    return 'AdmissionSnapshot(sessionSlug: $sessionSlug, keeper: $keeper, roomVersion: $roomVersion, roomStatus: $roomStatus, approvalRequired: $approvalRequired, settingsRevision: $settingsRevision, version: $version, observedAt: $observedAt, presenceError: $presenceError, connectedCount: $connectedCount, admittedCount: $admittedCount, activatedCount: $activatedCount, pendingCount: $pendingCount, admissionCapacity: $admissionCapacity, admissionSlotsUsed: $admissionSlotsUsed, waitingConnectionLimit: $waitingConnectionLimit, livekitConnectionLimit: $livekitConnectionLimit, waitingSlotsUsed: $waitingSlotsUsed, connectionSlotsUsed: $connectionSlotsUsed, participants: $participants, waiting: $waiting, requests: $requests, historyTruncated: $historyTruncated)';
+    return 'AdmissionSnapshot(sessionSlug: $sessionSlug, keeper: $keeper, roomVersion: $roomVersion, roomState: $roomState, roomStatus: $roomStatus, approvalRequired: $approvalRequired, settingsRevision: $settingsRevision, version: $version, observedAt: $observedAt, presenceError: $presenceError, admittedRecipients: $admittedRecipients, connectedCount: $connectedCount, admittedCount: $admittedCount, activatedCount: $activatedCount, pendingCount: $pendingCount, admissionCapacity: $admissionCapacity, admissionSlotsUsed: $admissionSlotsUsed, waitingConnectionLimit: $waitingConnectionLimit, livekitConnectionLimit: $livekitConnectionLimit, waitingSlotsUsed: $waitingSlotsUsed, connectionSlotsUsed: $connectionSlotsUsed, participants: $participants, waiting: $waiting, requests: $requests, historyTruncated: $historyTruncated)';
   }
 }

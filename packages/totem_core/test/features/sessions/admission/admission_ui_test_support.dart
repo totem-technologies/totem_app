@@ -22,18 +22,18 @@ Participant admissionParticipant(
     profileAvatarType: ProfileAvatarTypeEnum.td,
     dateCreated: DateTime.utc(2024),
   ),
-  admissionState: state,
+  admissionState: ParticipantAdmissionState.fromJson(state),
   admissionVersion: 1,
   requestId: Omittable('request-$identity'),
   attemptId: Omittable('attempt-$identity'),
   attemptVersion: const Omittable(1),
-  status: status,
+  status: ParticipantStatus.fromJson(status),
   connectionState: ParticipantConnectionState.disconnected,
   eligible: true,
   returning: false,
   sessionStarted: false,
   lateArrival: false,
-  permissionStatus: 'pending',
+  permissionStatus: ParticipantPermissionStatus.pending,
   permissionRevision: 0,
 );
 
@@ -46,7 +46,17 @@ AdmissionSnapshot admissionSnapshot({
   sessionSlug: 'test-session',
   keeper: 'keeper-1',
   roomVersion: 1,
-  roomStatus: 'active',
+  roomState: const RoomState(
+    sessionSlug: 'test-session',
+    version: 1,
+    status: RoomStatus.active,
+    turnState: TurnState.idle,
+    statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+    talkingOrder: [],
+    keeper: 'keeper-1',
+    roundNumber: 1,
+  ),
+  roomStatus: RoomStatus.active,
   approvalRequired: approvalRequired,
   settingsRevision: 1,
   version: 1,
@@ -90,7 +100,11 @@ class AdmissionUiService extends ChangeNotifier
   @override
   List<Participant> get declined =>
       snapshot?.participants
-          .where((p) => p.admissionState == 'permanently_declined')
+          .where(
+            (p) =>
+                p.admissionState ==
+                ParticipantAdmissionState.permanentlyDeclined,
+          )
           .toList() ??
       [];
   @override

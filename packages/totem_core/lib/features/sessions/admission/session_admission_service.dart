@@ -9,7 +9,7 @@ import 'package:totem_core/features/sessions/controllers/core/session_controller
 
 import 'package:totem_core/features/sessions/repositories/keeper_admission_repository.dart';
 import 'package:totem_core/features/sessions/repositories/participant_admission_repository.dart';
-import 'package:totem_core/features/sessions/repositories/session_repository.dart';
+
 import 'package:totem_core/features/sessions/services/session_packet_router.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
 import 'package:uuid/uuid.dart';
@@ -23,6 +23,7 @@ class SessionAdmissionService extends ChangeNotifier {
   final DateTime Function()? now;
 
   AdmissionSnapshot? _snapshot;
+  AdmissionMeSnapshot? _meSnapshot;
   AdmissionSnapshot? get snapshot {
     final room = session.transport;
     return mounted &&
@@ -40,12 +41,34 @@ class SessionAdmissionService extends ChangeNotifier {
       List.unmodifiable(snapshot?.requests ?? const []);
   List<Participant> get declined => List.unmodifiable(
     snapshot?.participants.where(
-          (p) => p.admissionState == 'permanently_declined',
+          (p) =>
+              p.admissionState == ParticipantAdmissionState.permanentlyDeclined,
         ) ??
         const <Participant>[],
   );
-  bool _approvalRequired = true;
-  bool get approvalRequired => _approvalRequired;
+  bool get approvalRequired {
+    if (!mounted || _disconnecting || !_authorityCurrent) return true;
+    final state = session.admissionState.roomState;
+    final keeperSnapshot = snapshot;
+    if (keeperSnapshot != null &&
+        keeperSnapshot.roomVersion == state.version &&
+        keeperSnapshot.roomState.version == state.version &&
+        keeperSnapshot.roomState.sessionSlug == _slug &&
+        keeperSnapshot.roomState.keeper == state.keeper &&
+        keeperSnapshot.roomStatus == keeperSnapshot.roomState.status &&
+        keeperSnapshot.roomStatus != RoomStatus.ended) {
+      return keeperSnapshot.approvalRequired;
+    }
+    final me = _meSnapshot;
+    if (me != null &&
+        me.keeper == state.keeper &&
+        me.roomVersion == state.version &&
+        me.roomState.keeper == state.keeper) {
+      return me.approvalRequired;
+    }
+    return true;
+  }
+
   bool _busy = false;
   bool get busy => _busy;
 
@@ -147,6 +170,7 @@ class SessionAdmissionService extends ChangeNotifier {
       _generation++;
       _refreshQueued = false;
       _snapshot = null;
+      _meSnapshot = null;
       if (keeper != previousKeeper || (local != null && local != keeper)) {
         _pending.clear();
       }
@@ -172,6 +196,7 @@ class SessionAdmissionService extends ChangeNotifier {
         } catch (failure) {
           if (mounted && generation == _generation) {
             _snapshot = null;
+            _meSnapshot = null;
             _clearProjection();
             error = 'Could not refresh admission: $failure';
             _notify();
@@ -191,33 +216,13 @@ class SessionAdmissionService extends ChangeNotifier {
             RoomConnectionState.connected ||
         session.session?.ended == true) {
       _snapshot = null;
+      _meSnapshot = null;
       _clearProjection();
       _notify();
       return;
     }
-    final initialState = await roomState(ref, _slug);
-    if (!mounted ||
-        _disconnecting ||
-        generation != _generation ||
-        !identical(session.transport, room)) {
-      return;
-    }
-    if (initialState.sessionSlug != _slug ||
-        initialState.keeper.isEmpty ||
-        initialState.status == RoomStatus.ended) {
-      _snapshot = null;
-      _clearProjection();
-      throw StateError('Room state unavailable or ended');
-    }
-    if (initialState.version > session.admissionState.roomState.version) {
-      session.applyRoomState(initialState);
-      if (_observeAuthority()) {
-        sync();
-        return;
-      }
-    }
     final keeper = session.admissionState.roomState.keeper;
-    if (initialState.keeper != keeper || !_current(generation, room, keeper)) {
+    if (keeper.isEmpty || !_current(generation, room, keeper)) {
       _snapshot = null;
       _clearProjection();
       throw StateError('Room Keeper is not synchronized');
@@ -227,56 +232,127 @@ class SessionAdmissionService extends ChangeNotifier {
       throw StateError('Local identity unavailable');
     }
     if (local == keeper) {
-      final data = await _keeperRepository.snapshot(sessionSlug: _slug);
-      if (!_current(generation, room, keeper)) return;
-      if (data.sessionSlug != _slug || data.keeper != keeper) {
+      AdmissionSnapshot data;
+      try {
+        data = await _keeperRepository.snapshot(sessionSlug: _slug);
+      } on ApiError<AdmissionSnapshot, ErrorSchema> catch (failure) {
+        if (failure.statusCode != 403 || !_current(generation, room, keeper)) {
+          rethrow;
+        }
         _snapshot = null;
+        _meSnapshot = null;
         _clearProjection();
-        throw StateError('Keeper changed; refresh room state');
+        _notify();
+        final me = await _participantRepository.me(sessionSlug: _slug);
+        if (!_current(generation, room, keeper)) return;
+        if (me.keeper == keeper) {
+          throw StateError('Keeper admission access denied');
+        }
+        _applySnapshotProjection(
+          room,
+          keeper,
+          me.sessionSlug,
+          me.keeper,
+          me.roomVersion,
+          me.roomState,
+          me.roomStatus,
+          me.presenceError.value,
+          me.admittedRecipients.value,
+        );
+        if (!_current(generation, room, keeper)) return;
+        throw StateError('Keeper admission access denied');
       }
-      final state = await roomState(ref, _slug);
       if (!_current(generation, room, keeper)) return;
-      if (state.sessionSlug != _slug ||
-          state.keeper != keeper ||
-          state.version < data.roomVersion ||
-          state.status == RoomStatus.ended) {
-        _snapshot = null;
+      final old = _snapshot;
+      if (old != null &&
+          old.keeper == data.keeper &&
+          (data.version < old.version ||
+              (data.version == old.version &&
+                  data.observedAt.isBefore(old.observedAt)))) {
         _clearProjection();
-        throw StateError('Admission and room state do not agree');
+        throw StateError('Admission snapshot is stale');
       }
+      _applySnapshotProjection(
+        room,
+        keeper,
+        data.sessionSlug,
+        data.keeper,
+        data.roomVersion,
+        data.roomState,
+        data.roomStatus,
+        data.presenceError.value,
+        data.admittedRecipients.value,
+      );
+      if (!_current(generation, room, keeper)) return;
       _acceptSnapshot(data);
-      if (state.version > session.admissionState.roomState.version) {
-        session.applyRoomState(state);
-      }
-      if (!_current(generation, room, keeper)) return;
-      _setRecipients({...state.talkingOrder, state.keeper}..remove(''));
     } else {
       final data = await _participantRepository.me(sessionSlug: _slug);
       if (!_current(generation, room, keeper)) return;
-      final state = await roomState(ref, _slug);
+      _applySnapshotProjection(
+        room,
+        keeper,
+        data.sessionSlug,
+        data.keeper,
+        data.roomVersion,
+        data.roomState,
+        data.roomStatus,
+        data.presenceError.value,
+        data.admittedRecipients.value,
+      );
       if (!_current(generation, room, keeper)) return;
-      if (data.sessionSlug != _slug ||
-          state.sessionSlug != _slug ||
-          data.keeper != keeper ||
-          state.keeper != keeper ||
-          state.version < data.roomVersion ||
-          state.status == RoomStatus.ended) {
-        _snapshot = null;
-        _clearProjection();
-        throw StateError('Admission and room state do not agree');
-      }
       _snapshot = null;
-      _approvalRequired = data.approvalRequired;
-      if (state.version > session.admissionState.roomState.version) {
-        session.applyRoomState(state);
-      }
-      if (!_current(generation, room, keeper)) return;
-      _setRecipients({...state.talkingOrder, state.keeper}..remove(''));
+      _meSnapshot = data;
     }
     error = !_pending.containsKey(keeper)
         ? null
         : 'A previous admission command has an unknown outcome; retry it before making another change.';
     _notify();
+  }
+
+  void _applySnapshotProjection(
+    SessionTransport room,
+    String keeper,
+    String slug,
+    String snapshotKeeper,
+    int roomVersion,
+    RoomState state,
+    RoomStatus status,
+    String? presenceError,
+    List<String>? recipients,
+  ) {
+    if (slug != _slug ||
+        state.sessionSlug != _slug ||
+        snapshotKeeper.isEmpty ||
+        state.keeper != snapshotKeeper ||
+        (snapshotKeeper != keeper &&
+            roomVersion <= session.admissionState.roomState.version) ||
+        state.version != roomVersion ||
+        roomVersion < session.admissionState.roomState.version ||
+        status != state.status ||
+        status == RoomStatus.ended) {
+      _snapshot = null;
+      _clearProjection();
+      throw StateError('Admission and room state do not agree');
+    }
+    final generation = _generation;
+    if (state.version > session.admissionState.roomState.version) {
+      session.applyRoomState(state);
+    }
+    if (snapshotKeeper != keeper &&
+        session.admissionState.roomState.keeper == snapshotKeeper) {
+      sync();
+      return;
+    }
+    if (!_current(generation, room, keeper)) return;
+    if (presenceError != null || recipients == null) {
+      _clearProjection();
+      return;
+    }
+    final connected = {
+      if (room.localIdentity != null) room.localIdentity!,
+      ...room.participants.map((participant) => participant.identity),
+    };
+    _setRecipients(recipients.toSet().intersection(connected)..remove(''));
   }
 
   void _acceptSnapshot(AdmissionSnapshot data) {
@@ -289,9 +365,7 @@ class SessionAdmissionService extends ChangeNotifier {
       return;
     }
     _snapshot = data;
-    _approvalRequired = data.approvalRequired;
-    // Broadcast recipients come from the authoritative room-state projection,
-    // not durable admission, which can include disconnected or unactivated users.
+    _meSnapshot = null;
   }
 
   void _setRecipients(Set<String> identities) {
@@ -421,7 +495,7 @@ class SessionAdmissionService extends ChangeNotifier {
       final details = <String>[];
       for (final result in response.results) {
         final participant = result.participant.value;
-        final issue = result.error.value ?? participant?.lastError.value;
+        final issue = result.error.value?.value ?? participant?.lastError.value;
         if (issue != null && issue.isNotEmpty) {
           details.add('${result.identity.value ?? 'participant'}: $issue');
         }
@@ -550,7 +624,7 @@ class SessionAdmissionService extends ChangeNotifier {
       final matches = snapshot.participants.where(
         (p) =>
             p.identity == participant.identity &&
-            p.admissionState == 'permanently_declined',
+            p.admissionState == ParticipantAdmissionState.permanentlyDeclined,
       );
       if (matches.isEmpty) {
         throw StateError('Participant is no longer permanently declined');
@@ -575,6 +649,7 @@ class SessionAdmissionService extends ChangeNotifier {
     _generation++;
     _refreshQueued = false;
     _snapshot = null;
+    _meSnapshot = null;
     _busy = false;
     _clearProjection();
     _notify();

@@ -24,6 +24,7 @@ enum PreJoinFlowPhase { idle, joining, pending, joined }
 
 enum PreJoinJoinOutcome {
   confirmationRequired,
+  newAttemptConfirmationRequired,
   pending,
   joined,
   retryableFailure,

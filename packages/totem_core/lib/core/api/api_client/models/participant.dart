@@ -1,7 +1,168 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'package:degenerate_runtime/degenerate_runtime.dart';
+
+import 'admission_readiness.dart';
 import 'public_user_schema.dart';
+
+@immutable
+final class ParticipantAdmissionState {
+  const ParticipantAdmissionState._(this.value);
+
+  factory ParticipantAdmissionState.fromJson(String json) {
+    return switch (json) {
+      'none' => none,
+      'admitted' => admitted,
+      'permanently_declined' => permanentlyDeclined,
+      'revoked' => revoked,
+      _ => ParticipantAdmissionState._(json),
+    };
+  }
+
+  static const ParticipantAdmissionState none = ParticipantAdmissionState._(
+    'none',
+  );
+
+  static const ParticipantAdmissionState admitted = ParticipantAdmissionState._(
+    'admitted',
+  );
+
+  static const ParticipantAdmissionState permanentlyDeclined =
+      ParticipantAdmissionState._('permanently_declined');
+
+  static const ParticipantAdmissionState revoked = ParticipantAdmissionState._(
+    'revoked',
+  );
+
+  static const List<ParticipantAdmissionState> values = [
+    none,
+    admitted,
+    permanentlyDeclined,
+    revoked,
+  ];
+
+  final String value;
+
+  String toJson() {
+    return value;
+  }
+
+  /// Whether this value is unknown (not defined in the OpenAPI spec).
+  bool get isUnknown {
+    return !values.contains(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is ParticipantAdmissionState && other.value == value;
+  }
+
+  @override
+  int get hashCode {
+    return value.hashCode;
+  }
+
+  @override
+  String toString() {
+    return 'ParticipantAdmissionState($value)';
+  }
+}
+
+@immutable
+final class ParticipantStatus {
+  const ParticipantStatus._(this.value);
+
+  factory ParticipantStatus.fromJson(String json) {
+    return switch (json) {
+      'pending' => pending,
+      'granting' => granting,
+      'admitted' => admitted,
+      'declined' => declined,
+      'permanently_declined' => permanentlyDeclined,
+      'cancelled' => cancelled,
+      'expired' => expired,
+      'superseded' => superseded,
+      'revoked' => revoked,
+      'failed' => failed,
+      'no_request' => noRequest,
+      'approved' => approved,
+      'activated' => activated,
+      _ => ParticipantStatus._(json),
+    };
+  }
+
+  static const ParticipantStatus pending = ParticipantStatus._('pending');
+
+  static const ParticipantStatus granting = ParticipantStatus._('granting');
+
+  static const ParticipantStatus admitted = ParticipantStatus._('admitted');
+
+  static const ParticipantStatus declined = ParticipantStatus._('declined');
+
+  static const ParticipantStatus permanentlyDeclined = ParticipantStatus._(
+    'permanently_declined',
+  );
+
+  static const ParticipantStatus cancelled = ParticipantStatus._('cancelled');
+
+  static const ParticipantStatus expired = ParticipantStatus._('expired');
+
+  static const ParticipantStatus superseded = ParticipantStatus._('superseded');
+
+  static const ParticipantStatus revoked = ParticipantStatus._('revoked');
+
+  static const ParticipantStatus failed = ParticipantStatus._('failed');
+
+  static const ParticipantStatus noRequest = ParticipantStatus._('no_request');
+
+  static const ParticipantStatus approved = ParticipantStatus._('approved');
+
+  static const ParticipantStatus activated = ParticipantStatus._('activated');
+
+  static const List<ParticipantStatus> values = [
+    pending,
+    granting,
+    admitted,
+    declined,
+    permanentlyDeclined,
+    cancelled,
+    expired,
+    superseded,
+    revoked,
+    failed,
+    noRequest,
+    approved,
+    activated,
+  ];
+
+  final String value;
+
+  String toJson() {
+    return value;
+  }
+
+  /// Whether this value is unknown (not defined in the OpenAPI spec).
+  bool get isUnknown {
+    return !values.contains(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is ParticipantStatus && other.value == value;
+  }
+
+  @override
+  int get hashCode {
+    return value.hashCode;
+  }
+
+  @override
+  String toString() {
+    return 'ParticipantStatus($value)';
+  }
+}
 
 @immutable
 final class ParticipantConnectionState {
@@ -60,6 +221,123 @@ final class ParticipantConnectionState {
 }
 
 @immutable
+final class ParticipantPermissionStatus {
+  const ParticipantPermissionStatus._(this.value);
+
+  factory ParticipantPermissionStatus.fromJson(String json) {
+    return switch (json) {
+      'pending' => pending,
+      'in_progress' => inProgress,
+      'error' => error,
+      'applied' => applied,
+      _ => ParticipantPermissionStatus._(json),
+    };
+  }
+
+  static const ParticipantPermissionStatus pending =
+      ParticipantPermissionStatus._('pending');
+
+  static const ParticipantPermissionStatus inProgress =
+      ParticipantPermissionStatus._('in_progress');
+
+  static const ParticipantPermissionStatus error =
+      ParticipantPermissionStatus._('error');
+
+  static const ParticipantPermissionStatus applied =
+      ParticipantPermissionStatus._('applied');
+
+  static const List<ParticipantPermissionStatus> values = [
+    pending,
+    inProgress,
+    error,
+    applied,
+  ];
+
+  final String value;
+
+  String toJson() {
+    return value;
+  }
+
+  /// Whether this value is unknown (not defined in the OpenAPI spec).
+  bool get isUnknown {
+    return !values.contains(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is ParticipantPermissionStatus && other.value == value;
+  }
+
+  @override
+  int get hashCode {
+    return value.hashCode;
+  }
+
+  @override
+  String toString() {
+    return 'ParticipantPermissionStatus($value)';
+  }
+}
+
+@immutable
+final class ParticipantAdmissionBlockReason {
+  const ParticipantAdmissionBlockReason._(this.value);
+
+  factory ParticipantAdmissionBlockReason.fromJson(String json) {
+    return switch (json) {
+      'requires_reapproval' => requiresReapproval,
+      'permanently_declined' => permanentlyDeclined,
+      'admission_full' => admissionFull,
+      _ => ParticipantAdmissionBlockReason._(json),
+    };
+  }
+
+  static const ParticipantAdmissionBlockReason requiresReapproval =
+      ParticipantAdmissionBlockReason._('requires_reapproval');
+
+  static const ParticipantAdmissionBlockReason permanentlyDeclined =
+      ParticipantAdmissionBlockReason._('permanently_declined');
+
+  static const ParticipantAdmissionBlockReason admissionFull =
+      ParticipantAdmissionBlockReason._('admission_full');
+
+  static const List<ParticipantAdmissionBlockReason> values = [
+    requiresReapproval,
+    permanentlyDeclined,
+    admissionFull,
+  ];
+
+  final String value;
+
+  String toJson() {
+    return value;
+  }
+
+  /// Whether this value is unknown (not defined in the OpenAPI spec).
+  bool get isUnknown {
+    return !values.contains(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is ParticipantAdmissionBlockReason && other.value == value;
+  }
+
+  @override
+  int get hashCode {
+    return value.hashCode;
+  }
+
+  @override
+  String toString() {
+    return 'ParticipantAdmissionBlockReason($value)';
+  }
+}
+
+@immutable
 final class Participant {
   const Participant({
     required this.identity,
@@ -88,13 +366,16 @@ final class Participant {
     this.nextRetryAt = const Omittable.absent(),
     this.decisionActor = const Omittable.absent(),
     this.admissionBlockReason = const Omittable.absent(),
+    this.readiness = const Omittable.absent(),
   });
 
   factory Participant.fromJson(Map<String, dynamic> json) {
     return Participant(
       identity: json['identity'] as String,
       user: PublicUserSchema.fromJson(json['user'] as Map<String, dynamic>),
-      admissionState: json['admission_state'] as String,
+      admissionState: ParticipantAdmissionState.fromJson(
+        json['admission_state'] as String,
+      ),
       admissionVersion: (json['admission_version'] as num).toInt(),
       requestId: json.containsKey('request_id')
           ? Omittable(json['request_id'] as String?)
@@ -109,7 +390,7 @@ final class Participant {
                   : null,
             )
           : const Omittable.absent(),
-      status: json['status'] as String,
+      status: ParticipantStatus.fromJson(json['status'] as String),
       requestedAt: json.containsKey('requested_at')
           ? Omittable(
               json['requested_at'] != null
@@ -155,7 +436,9 @@ final class Participant {
       returning: json['returning'] as bool,
       sessionStarted: json['session_started'] as bool,
       lateArrival: json['late_arrival'] as bool,
-      permissionStatus: json['permission_status'] as String,
+      permissionStatus: ParticipantPermissionStatus.fromJson(
+        json['permission_status'] as String,
+      ),
       permissionRevision: (json['permission_revision'] as num).toInt(),
       appliedPermissionRevision: json.containsKey('applied_permission_revision')
           ? Omittable(
@@ -178,7 +461,22 @@ final class Participant {
           ? Omittable(json['decision_actor'] as String?)
           : const Omittable.absent(),
       admissionBlockReason: json.containsKey('admission_block_reason')
-          ? Omittable(json['admission_block_reason'] as String?)
+          ? Omittable(
+              json['admission_block_reason'] != null
+                  ? ParticipantAdmissionBlockReason.fromJson(
+                      json['admission_block_reason'] as String,
+                    )
+                  : null,
+            )
+          : const Omittable.absent(),
+      readiness: json.containsKey('readiness')
+          ? Omittable(
+              json['readiness'] != null
+                  ? AdmissionReadiness.fromJson(
+                      json['readiness'] as Map<String, dynamic>,
+                    )
+                  : null,
+            )
           : const Omittable.absent(),
     );
   }
@@ -187,7 +485,7 @@ final class Participant {
 
   final PublicUserSchema user;
 
-  final String admissionState;
+  final ParticipantAdmissionState admissionState;
 
   final int admissionVersion;
 
@@ -197,7 +495,7 @@ final class Participant {
 
   final Omittable<int?> attemptVersion;
 
-  final String status;
+  final ParticipantStatus status;
 
   final Omittable<DateTime?> requestedAt;
 
@@ -221,7 +519,7 @@ final class Participant {
 
   final bool lateArrival;
 
-  final String permissionStatus;
+  final ParticipantPermissionStatus permissionStatus;
 
   final int permissionRevision;
 
@@ -233,18 +531,20 @@ final class Participant {
 
   final Omittable<String?> decisionActor;
 
-  final Omittable<String?> admissionBlockReason;
+  final Omittable<ParticipantAdmissionBlockReason?> admissionBlockReason;
+
+  final Omittable<AdmissionReadiness?> readiness;
 
   Map<String, dynamic> toJson() {
     return {
       'identity': identity,
       'user': user.toJson(),
-      'admission_state': admissionState,
+      'admission_state': admissionState.toJson(),
       'admission_version': admissionVersion,
       if (requestId.isPresent) 'request_id': requestId.value,
       if (attemptId.isPresent) 'attempt_id': attemptId.value,
       if (attemptVersion.isPresent) 'attempt_version': attemptVersion.value,
-      'status': status,
+      'status': status.toJson(),
       if (requestedAt.isPresent)
         'requested_at': requestedAt.value?.toIso8601String(),
       if (expiresAt.isPresent) 'expires_at': expiresAt.value?.toIso8601String(),
@@ -260,7 +560,7 @@ final class Participant {
       'returning': returning,
       'session_started': sessionStarted,
       'late_arrival': lateArrival,
-      'permission_status': permissionStatus,
+      'permission_status': permissionStatus.toJson(),
       'permission_revision': permissionRevision,
       if (appliedPermissionRevision.isPresent)
         'applied_permission_revision': appliedPermissionRevision.value,
@@ -269,7 +569,8 @@ final class Participant {
         'next_retry_at': nextRetryAt.value?.toIso8601String(),
       if (decisionActor.isPresent) 'decision_actor': decisionActor.value,
       if (admissionBlockReason.isPresent)
-        'admission_block_reason': admissionBlockReason.value,
+        'admission_block_reason': admissionBlockReason.value?.toJson(),
+      if (readiness.isPresent) 'readiness': readiness.value?.toJson(),
     };
   }
 
@@ -278,11 +579,9 @@ final class Participant {
         json['identity'] is String &&
         json.containsKey('user') &&
         json.containsKey('admission_state') &&
-        json['admission_state'] is String &&
         json.containsKey('admission_version') &&
         json['admission_version'] is num &&
         json.containsKey('status') &&
-        json['status'] is String &&
         json.containsKey('connection_state') &&
         json.containsKey('eligible') &&
         json['eligible'] is bool &&
@@ -293,7 +592,6 @@ final class Participant {
         json.containsKey('late_arrival') &&
         json['late_arrival'] is bool &&
         json.containsKey('permission_status') &&
-        json['permission_status'] is String &&
         json.containsKey('permission_revision') &&
         json['permission_revision'] is num;
   }
@@ -301,12 +599,12 @@ final class Participant {
   Participant copyWith({
     String? identity,
     PublicUserSchema? user,
-    String? admissionState,
+    ParticipantAdmissionState? admissionState,
     int? admissionVersion,
     Omittable<String?>? requestId,
     Omittable<String?>? attemptId,
     Omittable<int?>? attemptVersion,
-    String? status,
+    ParticipantStatus? status,
     Omittable<DateTime?>? requestedAt,
     Omittable<DateTime?>? expiresAt,
     Omittable<DateTime?>? approvedAt,
@@ -318,13 +616,14 @@ final class Participant {
     bool? returning,
     bool? sessionStarted,
     bool? lateArrival,
-    String? permissionStatus,
+    ParticipantPermissionStatus? permissionStatus,
     int? permissionRevision,
     Omittable<int?>? appliedPermissionRevision,
     Omittable<String?>? lastError,
     Omittable<DateTime?>? nextRetryAt,
     Omittable<String?>? decisionActor,
-    Omittable<String?>? admissionBlockReason,
+    Omittable<ParticipantAdmissionBlockReason?>? admissionBlockReason,
+    Omittable<AdmissionReadiness?>? readiness,
   }) {
     return Participant(
       identity: identity ?? this.identity,
@@ -354,6 +653,7 @@ final class Participant {
       nextRetryAt: nextRetryAt ?? this.nextRetryAt,
       decisionActor: decisionActor ?? this.decisionActor,
       admissionBlockReason: admissionBlockReason ?? this.admissionBlockReason,
+      readiness: readiness ?? this.readiness,
     );
   }
 
@@ -386,7 +686,8 @@ final class Participant {
             lastError == other.lastError &&
             nextRetryAt == other.nextRetryAt &&
             decisionActor == other.decisionActor &&
-            admissionBlockReason == other.admissionBlockReason;
+            admissionBlockReason == other.admissionBlockReason &&
+            readiness == other.readiness;
   }
 
   @override
@@ -418,11 +719,12 @@ final class Participant {
       nextRetryAt,
       decisionActor,
       admissionBlockReason,
+      readiness,
     ]);
   }
 
   @override
   String toString() {
-    return 'Participant(identity: $identity, user: $user, admissionState: $admissionState, admissionVersion: $admissionVersion, requestId: $requestId, attemptId: $attemptId, attemptVersion: $attemptVersion, status: $status, requestedAt: $requestedAt, expiresAt: $expiresAt, approvedAt: $approvedAt, activatedAt: $activatedAt, connectedAt: $connectedAt, connected: $connected, connectionState: $connectionState, eligible: $eligible, returning: $returning, sessionStarted: $sessionStarted, lateArrival: $lateArrival, permissionStatus: $permissionStatus, permissionRevision: $permissionRevision, appliedPermissionRevision: $appliedPermissionRevision, lastError: $lastError, nextRetryAt: $nextRetryAt, decisionActor: $decisionActor, admissionBlockReason: $admissionBlockReason)';
+    return 'Participant(identity: $identity, user: $user, admissionState: $admissionState, admissionVersion: $admissionVersion, requestId: $requestId, attemptId: $attemptId, attemptVersion: $attemptVersion, status: $status, requestedAt: $requestedAt, expiresAt: $expiresAt, approvedAt: $approvedAt, activatedAt: $activatedAt, connectedAt: $connectedAt, connected: $connected, connectionState: $connectionState, eligible: $eligible, returning: $returning, sessionStarted: $sessionStarted, lateArrival: $lateArrival, permissionStatus: $permissionStatus, permissionRevision: $permissionRevision, appliedPermissionRevision: $appliedPermissionRevision, lastError: $lastError, nextRetryAt: $nextRetryAt, decisionActor: $decisionActor, admissionBlockReason: $admissionBlockReason, readiness: $readiness)';
   }
 }

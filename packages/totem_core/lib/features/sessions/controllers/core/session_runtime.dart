@@ -100,6 +100,7 @@ class SessionRuntime {
   int get generation => _generation;
   SessionAttempt? _attempt;
   Future<SessionJoinResult>? _joining;
+  SessionJoinMedia? _joiningMedia;
   Future<void>? _leaving;
   Future<void>? _cleaning;
   Future<void>? _disposing;
@@ -227,17 +228,31 @@ class SessionRuntime {
       });
     }
     final current = _joining;
+    // The initial tracks are reserved even while prior cleanup is pending.
+    final extraMedia = current != null && media != null
+        ? SessionJoinMedia(
+            cameraTrack:
+                identical(media.cameraTrack, _joiningMedia?.cameraTrack)
+                ? null
+                : media.cameraTrack,
+            microphoneTrack:
+                identical(media.microphoneTrack, _joiningMedia?.microphoneTrack)
+                ? null
+                : media.microphoneTrack,
+            onBeforeDispose: media.onBeforeDispose,
+          )
+        : media;
     if (current != null &&
         offer != null &&
         !identical(offer.identity, _offer?.identity) &&
         !identical(offer.identity, _transport)) {
-      return this.media.retain(media).dispose().then((_) async {
+      return this.media.retain(extraMedia).dispose().then((_) async {
         await offer.dispose();
         return SessionJoinResult.retryableFailure;
       });
     }
     if (current != null) {
-      return this.media.retain(media).dispose().then((_) => current);
+      return this.media.retain(extraMedia).dispose().then((_) => current);
     }
     if ((phase == SessionRuntimePhase.connected ||
             phase == SessionRuntimePhase.reconnecting) &&
@@ -265,6 +280,7 @@ class SessionRuntime {
     _offer = offer;
     final completion = Completer<SessionJoinResult>();
     _joining = completion.future;
+    _joiningMedia = media;
     unawaited(
       _run(
         operation,
@@ -348,6 +364,7 @@ class SessionRuntime {
       // Do not clear a newer operation after a cancelled attempt finishes.
       if (identical(_joining, flight)) {
         _joining = null;
+        _joiningMedia = null;
         _releaseEntry?.call();
         _releaseEntry = null;
       }
@@ -364,7 +381,10 @@ class SessionRuntime {
     final completion = Completer<void>();
     _cleaning = completion.future;
     // Leave already cancelled its attempt; preserve any join queued behind it.
-    if (!isLeaving) _joining = null;
+    if (!isLeaving) {
+      _joining = null;
+      _joiningMedia = null;
+    }
     _invalidate();
     if (!isLeaving &&
         !_disposed &&
@@ -446,6 +466,7 @@ class SessionRuntime {
     final pending = _offer;
     _offer = null;
     _joining = null;
+    _joiningMedia = null;
     final completion = Completer<void>();
     _leaving = completion.future;
     _phase(SessionRuntimePhase.leaving);

@@ -1987,6 +1987,7 @@ void main() {
           roundNumber: 0,
         );
         var serverRoom = roomState;
+        var admittedRecipients = ['keeper'];
         var admissionRequests = 0;
         final client = RecordingClient(
           onRequest: (request) {
@@ -2000,11 +2001,13 @@ void main() {
                         'session_slug': eventSlug,
                         'keeper': 'keeper',
                         'room_version': serverRoom.version,
+                        'room_state': serverRoom.toJson(),
                         'room_status': 'waiting_room',
                         'approval_required': true,
                         'settings_revision': 1,
                         'version': 1,
                         'observed_at': '2026-01-01T00:00:00Z',
+                        'admitted_recipients': admittedRecipients,
                         'admitted_count': 0,
                         'activated_count': 0,
                         'pending_count': 0,
@@ -2090,6 +2093,7 @@ void main() {
         check(admissionRequests).equals(initialRequests);
         check(controller.admission.serverDataRecipients).isNotNull();
 
+        admittedRecipients = ['keeper', 'admitted'];
         serverRoom = serverRoom.copyWith(
           version: 3,
           talkingOrder: ['admitted'],

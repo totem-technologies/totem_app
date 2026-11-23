@@ -1,6 +1,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'package:degenerate_runtime/degenerate_runtime.dart';
+
 import 'admission_join_state.dart';
 
 /// Token and server-owned admission snapshot (absent during legacy rollout).

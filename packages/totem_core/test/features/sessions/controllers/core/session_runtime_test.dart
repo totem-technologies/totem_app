@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:checks/checks.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_poll_scheduler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
+import '../../livekit_mocks.dart';
 import '../../transport/fake_session_transport.dart';
 
 class _Harness {
@@ -91,6 +94,149 @@ void main() {
       await h.runtime.dispose();
     });
   }
+
+  for (final previousEntry in [true, false]) {
+    test(
+      'duplicate media waits for ${previousEntry ? 'previous entry' : 'current'} cleanup',
+      () async {
+        final cleanupGate = Completer<void>();
+        final h = _Harness(
+          previousEntryCleanup: previousEntry ? cleanupGate.future : null,
+        );
+        Future<void>? cleanup;
+        if (!previousEntry) {
+          final started = Completer<void>();
+          h.cleaning = () {
+            started.complete();
+            return cleanupGate.future;
+          };
+          cleanup = h.runtime.cleanup();
+          await started.future;
+        }
+        final camera = MockLocalVideoTrack();
+        final extra = MockLocalAudioTrack();
+        var detached = 0;
+        final media = SessionJoinMedia(
+          cameraTrack: camera,
+          onBeforeDispose: () => detached++,
+        );
+        final operationGate = Completer<SessionJoinResult>();
+        final started = Completer<void>();
+        final first = h.runtime.join(
+          media: media,
+          operation: (_) {
+            check(h.runtime.media.track()).identicalTo(camera);
+            started.complete();
+            return operationGate.future;
+          },
+        );
+        final duplicate = h.runtime.join(
+          media: SessionJoinMedia(cameraTrack: camera, microphoneTrack: extra),
+          operation: (_) async => SessionJoinResult.fatalFailure,
+        );
+        await Future<void>.value();
+        verifyNever(camera.stop);
+        check(detached).equals(0);
+        h.cleaning = null;
+        cleanupGate.complete();
+        if (cleanup != null) await cleanup;
+        await started.future;
+        await Future<void>.value();
+        verifyNever(camera.stop);
+        operationGate.complete(SessionJoinResult.success);
+        check(await first).equals(SessionJoinResult.success);
+        check(await duplicate).equals(SessionJoinResult.success);
+        verify(camera.stop).called(1);
+        verify(camera.dispose).called(1);
+        verify(extra.stop).called(1);
+        verify(extra.dispose).called(1);
+        check(detached).equals(1);
+        await h.runtime.dispose();
+      },
+    );
+  }
+
+  test(
+    'rejects a competing offer before cleanup without disposing shared media',
+    () async {
+      final gate = Completer<void>();
+      final h = _Harness(previousEntryCleanup: gate.future);
+      final camera = MockLocalVideoTrack();
+      final extra = MockLocalAudioTrack();
+      final first = h.runtime.join(
+        media: SessionJoinMedia(cameraTrack: camera),
+        operation: (_) async {
+          check(h.runtime.media.track()).identicalTo(camera);
+          return SessionJoinResult.success;
+        },
+      );
+      final connection = FakeSessionTransport();
+      await connection.connect('url', 'token');
+      final rejected = await h.runtime.join(
+        offer: ConnectedSessionLease(connection),
+        media: SessionJoinMedia(cameraTrack: camera, microphoneTrack: extra),
+        operation: h.connect,
+      );
+      check(rejected).equals(SessionJoinResult.retryableFailure);
+      check(connection.underlyingDisposals).equals(1);
+      verifyNever(camera.stop);
+      verify(extra.stop).called(1);
+      verify(extra.dispose).called(1);
+      gate.complete();
+      check(await first).equals(SessionJoinResult.success);
+      verify(camera.stop).called(1);
+      verify(camera.dispose).called(1);
+      await h.runtime.dispose();
+    },
+  );
+
+  test(
+    'queued duplicate cannot dispose media transferred to the room',
+    () async {
+      final gate = Completer<void>();
+      final h = _Harness(previousEntryCleanup: gate.future);
+      final camera = MockLocalVideoTrack();
+      final media = SessionJoinMedia(cameraTrack: camera);
+      final first = h.runtime.join(
+        media: media,
+        operation: (_) async {
+          check(h.runtime.media.track()).identicalTo(camera);
+          h.runtime.media.releaseToRoom(camera);
+          return SessionJoinResult.success;
+        },
+      );
+      final duplicate = h.runtime.join(media: media, operation: h.connect);
+      gate.complete();
+      check(await first).equals(SessionJoinResult.success);
+      check(await duplicate).equals(SessionJoinResult.success);
+      await h.runtime.dispose();
+      verifyNever(camera.stop);
+      verifyNever(camera.dispose);
+    },
+  );
+
+  test('cancelled queued join releases shared media exactly once', () async {
+    final gate = Completer<void>();
+    final h = _Harness(previousEntryCleanup: gate.future);
+    final camera = MockLocalVideoTrack();
+    var detached = 0;
+    final media = SessionJoinMedia(
+      cameraTrack: camera,
+      onBeforeDispose: () => detached++,
+    );
+    final first = h.runtime.join(media: media, operation: h.connect);
+    final duplicate = h.runtime.join(media: media, operation: h.connect);
+    await h.leave();
+    verifyNever(camera.stop);
+    gate.complete();
+    check(await first).equals(SessionJoinResult.retryableFailure);
+    check(await duplicate).equals(SessionJoinResult.retryableFailure);
+    verify(camera.stop).called(1);
+    verify(camera.dispose).called(1);
+    check(detached).equals(1);
+    check(h.factory.created).isEmpty();
+    await h.runtime.dispose();
+  });
 
   test(
     'leave cancels pending connect; its late completion cannot affect a new entry',

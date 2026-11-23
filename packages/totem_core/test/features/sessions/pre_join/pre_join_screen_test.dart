@@ -27,6 +27,7 @@ import 'package:totem_core/features/sessions/admission/server_participant_admiss
         ServerAdmissionConnectionEvent,
         ServerParticipantAdmission;
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_preview_card.dart';
@@ -173,6 +174,23 @@ class _RecordingTotemRouter extends FakeTotemRouter {
   }
 }
 
+class _NewAttemptFlowController extends PreJoinFlowController {
+  final calls = <bool>[];
+
+  @override
+  PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState();
+
+  @override
+  Future<PreJoinJoinOutcome> requestJoin({
+    bool replaceExistingSession = false,
+  }) async {
+    calls.add(replaceExistingSession);
+    return replaceExistingSession
+        ? PreJoinJoinOutcome.retryableFailure
+        : PreJoinJoinOutcome.newAttemptConfirmationRequired;
+  }
+}
+
 class _MutableFlowController extends PreJoinFlowController {
   @override
   PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState();
@@ -196,19 +214,22 @@ class _TerminalAdmissionFlowController extends PreJoinFlowController {
 final _admissionInitial = AdmissionJoinState.fromJson(const {
   'request_id': 'request',
   'attempt_id': 'attempt',
-  'status': 'approved',
-  'durable_state': 'admitted',
+  'status': 'pending',
+  'durable_state': 'none',
   'approval_required': true,
   'expires_at': '2099-01-01T00:00:00Z',
   'permissions': 'admitted',
   'permission_sync': 'applied',
   'revision': 1,
+  'observed_at': '2026-01-01T00:00:00Z',
+  'readiness': {'state': 'waiting_for_approval'},
 });
 
-final _approvedSnapshot = AdmissionMeSnapshot.fromJson(const {
+final _approvedSnapshot = AdmissionMeSnapshot.fromJson({
   'session_slug': _slug,
   'keeper': 'keeper',
   'room_version': 1,
+  'room_state': _sessionState.turn.roomState.toJson(),
   'room_status': 'active',
   'approval_required': true,
   'settings_revision': 1,
@@ -217,7 +238,8 @@ final _approvedSnapshot = AdmissionMeSnapshot.fromJson(const {
   'admitted_count': 0,
   'activated_count': 0,
   'pending_count': 0,
-  'me': {
+  'readiness': const {'state': 'ready_to_activate'},
+  'me': const {
     'identity': 'keeper',
     'user': {
       'profile_avatar_type': 'boring',
@@ -255,6 +277,7 @@ class _AdmissionRepository implements ParticipantAdmissionRepository {
     final me = Map<String, dynamic>.from(json['me'] as Map);
     me['status'] = 'pending';
     me['admission_state'] = 'none';
+    json['readiness'] = {'state': 'waiting_for_approval'};
     json['me'] = me;
     return AdmissionMeSnapshot.fromJson(json);
   }
@@ -269,7 +292,9 @@ class _AdmissionRepository implements ParticipantAdmissionRepository {
     required AttemptReceiptInput receipt,
   }) async {
     activations++;
-    return _approvedSnapshot;
+    final json = _approvedSnapshot.toJson();
+    json['readiness'] = {'state': 'activated'};
+    return AdmissionMeSnapshot.fromJson(json);
   }
 
   @override
@@ -322,7 +347,19 @@ class _ServerFlow extends PreJoinFlowController {
   );
 }
 
+class _RuntimeOwnership extends Mock implements SessionRuntime {
+  ServerParticipantAdmission? admission;
+
+  @override
+  ServerParticipantAdmission? get serverAdmission => admission;
+}
+
 class _SuccessfulSessionController extends SessionController {
+  final _RuntimeOwnership ownership = _RuntimeOwnership();
+
+  @override
+  SessionRuntime get runtime => ownership;
+
   @override
   SessionRoomState build(SessionOptions options) => _sessionState;
 
@@ -331,10 +368,13 @@ class _SuccessfulSessionController extends SessionController {
     required Room room,
     SessionJoinMedia? joinMedia,
     ServerParticipantAdmission? serverAdmission,
-  }) async => SessionJoinResult.success;
+  }) async {
+    ownership.admission = serverAdmission;
+    return SessionJoinResult.success;
+  }
 }
 
-class _PendingSessionController extends SessionController {
+class _PendingSessionController extends _SuccessfulSessionController {
   static Completer<SessionJoinResult>? joinCompleter;
 
   @override
@@ -345,7 +385,10 @@ class _PendingSessionController extends SessionController {
     required Room room,
     SessionJoinMedia? joinMedia,
     ServerParticipantAdmission? serverAdmission,
-  }) => joinCompleter!.future;
+  }) {
+    ownership.admission = serverAdmission;
+    return joinCompleter!.future;
+  }
 }
 
 SessionDetailSchema _event({
@@ -1702,6 +1745,43 @@ void main() {
     ).length.equals(0);
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
   });
+
+  for (final confirm in [false, true]) {
+    testWidgets(
+      'new request confirmation ${confirm ? 'confirms' : 'cancels'} without claiming another device is connected',
+      (tester) async {
+        final flow = _NewAttemptFlowController();
+        await pumpScreen(tester, flowController: () => flow);
+        await tester.pump(const Duration(milliseconds: 300));
+        unawaited(
+          tester
+              .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+              .onActionCompleted(),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        check(flow.calls).deepEquals([false]);
+        check(
+          tester.widgetList(find.text('Start a new request?')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(
+            find.text(
+              'Your previous request can no longer be used. Start a new request? This may replace an existing connection to this session.',
+            ),
+          ),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.text("You're already in this session")),
+        ).length.equals(0);
+        await tester.tap(find.text(confirm ? 'Start New Request' : 'Cancel'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        check(flow.calls).deepEquals(confirm ? [false, true] : [false]);
+        check(tester.widgetList(find.byType(PreJoinScreen))).length.equals(1);
+      },
+    );
+  }
 
   testWidgets('already-present dialog returns true on confirm', (tester) async {
     late BuildContext context;

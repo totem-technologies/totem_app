@@ -4,7 +4,6 @@ import 'package:checks/checks.dart';
 import 'package:degenerate_runtime/testing.dart';
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
@@ -12,45 +11,6 @@ import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 
 import '../../../setup.dart';
-
-Map<String, Object?> _snapshot(
-  String status, {
-  String? requestId = 'request-1',
-  String? attemptId = 'attempt-1',
-}) => {
-  'session_slug': 'session',
-  'keeper': 'keeper',
-  'room_version': 1,
-  'room_status': 'active',
-  'approval_required': true,
-  'settings_revision': 1,
-  'version': 1,
-  'observed_at': '2026-01-01T00:00:00.000Z',
-  'admitted_count': 0,
-  'activated_count': 0,
-  'pending_count': 1,
-  'me': {
-    'identity': 'guest',
-    'user': {
-      'profile_avatar_type': 'boring',
-      'date_created': '2026-01-01T00:00:00.000Z',
-    },
-    'admission_state': 'none',
-    'admission_version': 1,
-    'request_id': requestId,
-    'attempt_id': attemptId,
-    'attempt_version': 1,
-    'status': status,
-    'connection_state': 'connected',
-    'eligible': true,
-    'returning': false,
-    'session_started': false,
-    'late_arrival': false,
-    'permission_status': 'applied',
-    'permission_revision': 1,
-    'applied_permission_revision': 1,
-  },
-};
 
 void main() {
   setupAppConfig();
@@ -65,7 +25,7 @@ void main() {
       ],
     );
     final subscription = container.listen(
-      sessionTokenProvider('session'),
+      joinOperationProvider('session'),
       (_, _) {},
     );
     addTearDown(() {
@@ -75,204 +35,86 @@ void main() {
     return container;
   }
 
-  ApiResponse joinResponse(
-    String body, {
+  ApiResponse joinResponse({
     Map<String, Object?>? overrides,
     Map<String, Object?>? admissionOverrides,
-  }) {
-    final ids = jsonDecode(body) as Map<String, dynamic>;
-    return ApiResponse(
-      statusCode: 200,
-      body: jsonEncode({
-        'token': 'joined-token',
-        'is_already_present': false,
-        'admission': {
-          'request_id': ids['request_id'],
-          'attempt_id': ids['attempt_id'],
-          'status': 'pending',
-          'durable_state': 'none',
-          'approval_required': true,
-          'expires_at': '2026-01-01T00:20:00.000Z',
-          'permissions': 'waiting',
-          'permission_sync': 'pending',
-          'revision': 1,
-          ...?admissionOverrides,
-        },
-        ...?overrides,
-      }),
-    );
-  }
-
-  RecordingClient clientFor(ApiResponse admission) => RecordingClient(
-    onRequest: (request) => request.method == 'GET'
-        ? admission
-        : joinResponse(request.body! as String),
+  }) => ApiResponse(
+    statusCode: 200,
+    body: jsonEncode({
+      'token': 'joined-token',
+      'is_already_present': false,
+      'admission': {
+        'request_id': 'server-request',
+        'attempt_id': 'server-attempt',
+        'status': 'pending',
+        'durable_state': 'none',
+        'approval_required': true,
+        'expires_at': '2026-01-01T00:20:00.000Z',
+        'permissions': 'waiting',
+        'permission_sync': 'pending',
+        'revision': 1,
+        'observed_at': '2026-01-01T00:00:00.000Z',
+        'readiness': {'state': 'waiting_for_approval'},
+        ...?admissionOverrides,
+      },
+      ...?overrides,
+    }),
   );
 
-  void checkJoin(RecordingClient client, Map<String, Object?>? expectedBody) {
-    check(client.requests).length.equals(2);
-    check(client.requests[0].method).equals('GET');
-    check(
-      client.requests[0].path,
-    ).equals('/api/mobile/protected/rooms/session/admission/me');
-    check(client.requests[1].method).equals('POST');
-    check(
-      client.requests[1].path,
-    ).equals('/api/mobile/protected/rooms/session/join');
-    final body =
-        jsonDecode(client.requests[1].body! as String) as Map<String, dynamic>?;
-    if (expectedBody == null) {
-      check(body).isNotNull();
-      final uuid = RegExp(
-        r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
-      );
-      check(uuid.hasMatch(body!['request_id'] as String)).isTrue();
-      check(uuid.hasMatch(body['attempt_id'] as String)).isTrue();
-      check(body['request_id'] != body['attempt_id']).isTrue();
-    } else {
-      check(body).isNotNull().deepEquals(expectedBody);
-    }
+  Map<String, dynamic> checkJoin(
+    RecordingClient client, {
+    int index = 0,
+    bool fresh = false,
+  }) {
+    final request = client.requests[index];
+    check(request.method).equals('POST');
+    check(request.path).equals('/api/mobile/protected/rooms/session/join');
+    final body = jsonDecode(request.body! as String) as Map<String, dynamic>;
+    expect(body.keys, unorderedEquals(['operation_id', 'fresh']));
+    expect(
+      body['operation_id'],
+      matches(
+        RegExp(
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        ),
+      ),
+    );
+    expect(body['fresh'], fresh);
+    return body;
   }
 
-  group('sessionToken admission resume', () {
-    test('sends fresh IDs for a first-time participant', () async {
-      final client = clientFor(
-        ApiResponse(
-          statusCode: 200,
-          body: jsonEncode(_snapshot('pending')..['me'] = null),
-        ),
+  group('sessionToken canonical admission', () {
+    for (final status in ['pending', 'granting', 'admitted']) {
+      test(
+        'accepts canonical IDs for $status without a preliminary snapshot',
+        () async {
+          final client = RecordingClient(
+            onRequest: (_) =>
+                joinResponse(admissionOverrides: {'status': status}),
+          );
+          final result = await containerFor(
+            client,
+          ).read(sessionTokenProvider('session').future);
+          check(result.token).equals('joined-token');
+          check(result.admission.value!.requestId).equals('server-request');
+          check(result.admission.value!.attemptId).equals('server-attempt');
+          check(client.requests).length.equals(1);
+          checkJoin(client);
+        },
       );
-      await containerFor(client).read(sessionTokenProvider('session').future);
-      checkJoin(client, null);
-    });
-
-    for (final status in ['pending', 'granting', 'approved']) {
-      test('resumes the $status attempt with the snapshot IDs', () async {
-        final client = clientFor(
-          ApiResponse(statusCode: 200, body: jsonEncode(_snapshot(status))),
-        );
-        final result = await containerFor(
-          client,
-        ).read(sessionTokenProvider('session').future);
-
-        check(result.token).equals('joined-token');
-        checkJoin(client, {
-          'request_id': 'request-1',
-          'attempt_id': 'attempt-1',
-        });
-      });
     }
-
-    for (final status in ['activated', 'declined', 'cancelled', 'expired']) {
-      test('starts a new request after $status', () async {
-        final client = clientFor(
-          ApiResponse(statusCode: 200, body: jsonEncode(_snapshot(status))),
-        );
-        final result = await containerFor(
-          client,
-        ).read(sessionTokenProvider('session').future);
-
-        check(result.token).equals('joined-token');
-        checkJoin(client, null);
-      });
-    }
-
-    for (final missing in ['request', 'attempt']) {
-      test('fails closed when the active $missing ID is missing', () async {
-        final client = clientFor(
-          ApiResponse(
-            statusCode: 200,
-            body: jsonEncode(
-              _snapshot(
-                'pending',
-                requestId: missing == 'request' ? null : 'request-1',
-                attemptId: missing == 'attempt' ? null : 'attempt-1',
-              ),
-            ),
-          ),
-        );
-        await expectLater(
-          containerFor(client).read(sessionTokenProvider('session').future),
-          throwsStateError,
-        );
-        check(client.requests).length.equals(1);
-        check(client.requests.single.method).equals('GET');
-      });
-    }
-
-    test('uses fresh IDs when admission endpoint returns 404', () async {
-      final client = clientFor(
-        ApiResponse(
-          statusCode: 404,
-          body: jsonEncode({'code': 'not_found', 'message': 'Not found'}),
-        ),
-      );
-      final result = await containerFor(
-        client,
-      ).read(sessionTokenProvider('session').future);
-      check(result.token).equals('joined-token');
-      checkJoin(client, null);
-    });
-
-    test('uses fresh IDs on admission server errors', () async {
-      final client = clientFor(
-        ApiResponse(
-          statusCode: 503,
-          body: jsonEncode({'code': 'unavailable', 'message': 'Unavailable'}),
-        ),
-      );
-      final result = await containerFor(
-        client,
-      ).read(sessionTokenProvider('session').future);
-      check(result.token).equals('joined-token');
-      checkJoin(client, null);
-    });
-
-    test('does not replace a rejected resumed attempt', () async {
-      final client = RecordingClient(
-        onRequest: (request) => request.method == 'GET'
-            ? ApiResponse(
-                statusCode: 200,
-                body: jsonEncode(_snapshot('pending')),
-              )
-            : ApiResponse(
-                statusCode: 403,
-                body: jsonEncode({
-                  'code': 'not_joinable',
-                  'message': 'This admission attempt is no longer valid',
-                  'detail': 'invalid_attempt',
-                }),
-              ),
-      );
-      await expectLater(
-        containerFor(client).read(sessionTokenProvider('session').future),
-        throwsA(isA<ApiError<JoinResponse, RoomErrorResponse>>()),
-      );
-      checkJoin(client, {'request_id': 'request-1', 'attempt_id': 'attempt-1'});
-    });
 
     test(
-      'does not replace an attempt after an uncertain join timeout',
+      'uses a new operation and fresh mode for an intentional replacement',
       () async {
-        final client = RecordingClient(
-          onRequest: (request) => request.method == 'GET'
-              ? ApiResponse(
-                  statusCode: 200,
-                  body: jsonEncode(_snapshot('pending')),
-                )
-              : throw dio.DioException(
-                  requestOptions: dio.RequestOptions(path: '/join'),
-                  type: dio.DioExceptionType.receiveTimeout,
-                ),
-        );
-        await expectLater(
-          containerFor(client).read(sessionTokenProvider('session').future),
-          throwsA(isA<AppNetworkException>()),
-        );
-        checkJoin(client, {
-          'request_id': 'request-1',
-          'attempt_id': 'attempt-1',
-        });
+        final client = RecordingClient(onRequest: (_) => joinResponse());
+        final container = containerFor(client);
+        await container.read(sessionTokenProvider('session').future);
+        container.read(joinOperationProvider('session')).reset(fresh: true);
+        await container.refresh(sessionTokenProvider('session').future);
+        final first = checkJoin(client);
+        final second = checkJoin(client, index: 1, fresh: true);
+        expect(first['operation_id'], isNot(second['operation_id']));
       },
     );
 
@@ -280,69 +122,80 @@ void main() {
       dio.DioExceptionType.connectionError,
       dio.DioExceptionType.receiveTimeout,
     ]) {
-      test('uses fresh IDs on admission $type', () async {
+      test('retries an uncertain $type with the same operation', () async {
+        var calls = 0;
         final client = RecordingClient(
-          onRequest: (request) => request.method == 'GET'
-              ? throw dio.DioException(
-                  requestOptions: dio.RequestOptions(path: '/admission/me'),
-                  type: type,
-                )
-              : joinResponse(request.body! as String),
+          onRequest: (_) {
+            if (++calls == 1) {
+              throw dio.DioException(
+                requestOptions: dio.RequestOptions(path: '/join'),
+                type: type,
+              );
+            }
+            return joinResponse();
+          },
         );
-        final result = await containerFor(
-          client,
-        ).read(sessionTokenProvider('session').future);
-        check(result.token).equals('joined-token');
-        checkJoin(client, null);
+        final container = containerFor(client);
+        await expectLater(
+          container.read(sessionTokenProvider('session').future),
+          throwsA(isA<AppNetworkException>()),
+        );
+        await container.refresh(sessionTokenProvider('session').future);
+        expect(checkJoin(client), checkJoin(client, index: 1));
+        check(client.requests).length.equals(2);
       });
     }
 
-    test('fallback does not bypass a server join rejection', () async {
-      final client = RecordingClient(
-        onRequest: (request) => request.method == 'GET'
-            ? ApiResponse(
-                statusCode: 404,
-                body: '{"code":"not_found","message":"Not found"}',
-              )
-            : ApiResponse(
-                statusCode: 403,
-                body: jsonEncode({
-                  'code': 'not_joinable',
-                  'message': 'Admission is permanently declined',
-                  'detail': 'permanently_declined',
-                }),
-              ),
+    for (final status in [404, 503]) {
+      test(
+        'does not fall back to a different operation on join HTTP $status',
+        () async {
+          final client = RecordingClient(
+            onRequest: (_) => ApiResponse(
+              statusCode: status,
+              body: jsonEncode({'code': 'not_found', 'message': 'Unavailable'}),
+            ),
+          );
+          await expectLater(
+            containerFor(client).read(sessionTokenProvider('session').future),
+            throwsA(isA<ApiError<JoinResponse, RoomErrorResponse>>()),
+          );
+          check(client.requests).length.equals(1);
+          checkJoin(client);
+        },
       );
-      await expectLater(
-        containerFor(client).read(sessionTokenProvider('session').future),
-        throwsA(isA<ApiError<JoinResponse, RoomErrorResponse>>()),
-      );
-      checkJoin(client, null);
-    });
+    }
 
-    test('fallback rejects a legacy join response without admission', () async {
-      final client = RecordingClient(
-        onRequest: (request) => request.method == 'GET'
-            ? ApiResponse(
-                statusCode: 404,
-                body: '{"code":"not_found","message":"Not found"}',
-              )
-            : ApiResponse(
-                statusCode: 200,
-                body: '{"token":"legacy","is_already_present":false}',
-              ),
-      );
-      await expectLater(
-        containerFor(client).read(sessionTokenProvider('session').future),
-        throwsStateError,
-      );
-      checkJoin(client, null);
-    });
+    for (final detail in [
+      'invalid_attempt',
+      'permanently_declined',
+      'not_eligible',
+    ]) {
+      test('does not replace a rejected attempt: $detail', () async {
+        final client = RecordingClient(
+          onRequest: (_) => ApiResponse(
+            statusCode: 403,
+            body: jsonEncode({
+              'code': 'not_joinable',
+              'message': 'Rejected',
+              'detail': detail,
+            }),
+          ),
+        );
+        await expectLater(
+          containerFor(client).read(sessionTokenProvider('session').future),
+          throwsA(isA<ApiError<JoinResponse, RoomErrorResponse>>()),
+        );
+        check(client.requests).length.equals(1);
+        checkJoin(client);
+      });
+    }
 
-    for (final admission in [
+    for (final admission in <Map<String, Object?>?>[
       null,
       {'permissions': 'unknown'},
-      {'request_id': 'different'},
+      {'request_id': ''},
+      {'attempt_id': ''},
       {'status': 'declined'},
       {'status': 'permanently_declined'},
       {'status': 'revoked'},
@@ -350,29 +203,42 @@ void main() {
       {'status': 'superseded'},
       {'status': 'expired'},
       {'status': 'future_status'},
+      {
+        'readiness': {'state': 'future_state'},
+      },
+      {
+        'readiness': {'state': 'blocked', 'reason': 'future_reason'},
+      },
     ]) {
-      test(
-        'fallback rejects unsupported admission response $admission',
-        () async {
-          final client = RecordingClient(
-            onRequest: (request) => request.method == 'GET'
-                ? ApiResponse(
-                    statusCode: 404,
-                    body: '{"code":"not_found","message":"Not found"}',
-                  )
-                : joinResponse(
-                    request.body! as String,
-                    overrides: admission == null ? {'admission': null} : null,
-                    admissionOverrides: admission,
-                  ),
-          );
-          await expectLater(
-            containerFor(client).read(sessionTokenProvider('session').future),
-            throwsStateError,
-          );
-          checkJoin(client, null);
-        },
-      );
+      test('rejects unsupported admission response $admission', () async {
+        final client = RecordingClient(
+          onRequest: (_) => joinResponse(
+            overrides: admission == null ? {'admission': null} : null,
+            admissionOverrides: admission,
+          ),
+        );
+        await expectLater(
+          containerFor(client).read(sessionTokenProvider('session').future),
+          throwsStateError,
+        );
+        check(client.requests).length.equals(1);
+        checkJoin(client);
+      });
     }
+
+    test('rejects a legacy response without admission', () async {
+      final client = RecordingClient(
+        onRequest: (_) => ApiResponse(
+          statusCode: 200,
+          body: '{"token":"legacy","is_already_present":false}',
+        ),
+      );
+      await expectLater(
+        containerFor(client).read(sessionTokenProvider('session').future),
+        throwsStateError,
+      );
+      check(client.requests).length.equals(1);
+      checkJoin(client);
+    });
   });
 }

@@ -10,36 +10,43 @@ toggle or fall back to a local roster, journal or cooperative protocol when the
 server response is missing, disabled, stale or unavailable. Fail closed: do not
 activate or publish without verified admission and effective permissions.
 
-Keep `SERVER_ENFORCED_ADMISSION` **off** until the server and compatible Keeper and
-participant clients are deployed together, an effective upgrade gate is in
-place, and rollout checks pass. The Django flag defaults off and admission
-endpoints return `404 feature_disabled` while off; it is not a client toggle.
+The server rollout checklist is **NOT READY**. The current Django flag
+`SERVER_ENFORCED_ADMISSION` defaults off, and admission endpoints return
+`404 feature_disabled` while it is off. Removing the gate and verifying mandatory
+enforcement are prerequisites for cutover; the flag is not a client toggle or a
+documented rollback mechanism. Compatible Keeper and participant clients, an
+effective upgrade gate and the other checklist blockers must be addressed first.
 Existing client-local approvals are not imported. Drain legacy rooms and account
 for old tokens before cutover; follow `totem/rooms/ADMISSION_ROLLOUT.md` in the
 server repository for deployment and rollback.
 
 ## Connection and reconnection
 
-1. Generate request and attempt UUIDs. Persist a request with
-   `POST /admission/request`, or supply the same IDs to `POST /join`.
+1. Fetch `/admission/me` and resume an active attempt's request and attempt IDs,
+   or generate new IDs for `/join`. Use the canonical IDs returned by the server.
 2. Obtain a token via `/join` with those IDs and connect once. Pre-join owns the
    waiting room and preview tracks; `ServerParticipantAdmission` observes the
    connection but does not own it. Confirm presence using `/admission/request`
    with `connected: true` and the same IDs. Presence does not mean approval.
 3. Fetch `/admission/me` after relevant notifications or permission changes.
-   Wait for the authoritative decision and effective LiveKit permissions.
+   Require server readiness `ready_to_activate` or `activated` with no reason,
+   confirmation of the current SID and effective local LiveKit permissions.
    Transfer the **same connected room**, observer and preview tracks to
    `SessionRuntime`; do not request another token or reconnect for approval.
 4. After successful local activation, send `/admission/activated` with the
-   current attempt version. Waiting, approval and activation are separate;
+   request ID, attempt ID and current attempt version. Pre-join reports joined
+   only after the response acknowledges `activated`; pending recovery waits for
+   reconfirmation and retries without transferring media again. Waiting, approval
+   and activation are separate;
    neither a token nor signaling presence records attendance or turn eligibility.
    The Keeper follows the same confirmation and activation sequence without
    waiting for manual approval. Runtime owns the adopted room and disposes the
    observer before the room.
 
 On reconnect, fetch the authoritative snapshot and reconfirm a pending/granting
-attempt with its existing IDs. A changed SID after activation requires fresh
-request and attempt IDs, confirmed on the existing reconnected room; durable
+attempt with its existing IDs. A changed SID after activation uses a fresh
+`/join` operation to obtain canonical request and attempt IDs, confirmed on the
+existing reconnected room without another connection; durable
 admission makes it a returning request. A temporary decline is terminal for its
 IDs; a new intentional request needs new IDs. A missing participant or failed
 confirmation is not approval. Notifications on `totem.admission.v2`, SDK events
@@ -88,6 +95,29 @@ errors, `partial_failure` and permission status, then refresh. See the server's
 `totem/rooms/ADMISSION_API.md` for complete payloads, authorization, counts,
 capacity, errors and retry semantics.
 
+Admission snapshots include room state and room version read with admission data
+under the server room lock. Admission `version` orders admission changes;
+`room_version` orders room state independently, and `observed_at` orders presence
+observations when versions are equal. Neither version tracks presence. `/me`
+contains the caller's state and readiness, not the Keeper's queue or roster.
+
+Snapshots also include the server's connected, activated recipient projection. The client intersects recipients
+with its current transport presence; a missing projection or presence error
+fails closed until the next successful refresh. Presence is a point-in-time
+observation and is not an atomic guarantee with the room state.
+
+## API generation
+
+Generate from the checked-out local Django mobile OpenAPI schema, not production:
+`make generate_api_models`; use `make check_api_models` to compare without
+modifying the client. The default server checkout is `../totem-server`; set
+`TOTEM_SERVER_DIR` for another checkout. The script uses a one-off Docker Compose
+Django container with the server mounted read-only, Python 3 and the project's
+locked `degenerate` tool. It includes uncommitted server changes and refuses to
+overwrite differing uncommitted generated API changes. Record the server revision
+and relevant working-tree changes, and do not edit generated API files by hand.
+See the client root README for prerequisites and details.
+
 ## Security limitations and verification
 
 Waiting connections can receive LiveKit broadcasts even with media subscription
@@ -98,7 +128,7 @@ Old/full-permission tokens and existing connections are not instantly revoked by
 a flag change. Token replay, LiveKit outages and identity-addressed permission
 races limit revocation; verify the actual deployment's invalidation behavior.
 
-Before enabling the backend flag, verify Keeper and participant flows, enforce
+Before cutover, verify Keeper and participant flows, enforce
 a compatible-client upgrade gate, and run real LiveKit staging tests with at
 least four users including Safari. Cover settings, decisions, reconnect and
 replacement SID, cancellation, partial permission failures, outages, capacity,

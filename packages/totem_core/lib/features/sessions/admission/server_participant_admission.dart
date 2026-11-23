@@ -21,11 +21,6 @@ class ServerParticipantAdmission {
     String Function()? newId,
   }) : _requestId = initial.requestId,
        _attemptId = initial.attemptId,
-       _deadline =
-           ServerAdmissionAttemptStatus.parse(initial.status)?.hasDeadline ==
-               true
-           ? initial.expiresAt
-           : null,
        _now = now ?? DateTime.now,
        _newId = newId ?? const Uuid().v4;
 
@@ -37,14 +32,12 @@ class ServerParticipantAdmission {
   final _changes = StreamController<AdmissionStatus>.broadcast();
   String _requestId;
   String _attemptId;
-  DateTime? _deadline;
   AdmissionMeSnapshot? _snapshot;
   Object? _error;
   AdmissionStatus _status = AdmissionStatus.idle;
   AdmissionKeeperAvailability _keeper = AdmissionKeeperAvailability.checking;
   StreamSubscription<ServerAdmissionConnectionEvent>? _subscription;
   Timer? _retry;
-  Timer? _expiration;
   Future<void>? _refreshing;
   Future<void>? _activation;
   Future<void>? _disposing;
@@ -55,8 +48,11 @@ class ServerParticipantAdmission {
   bool _confirmed = false;
   bool _mediaActivated = false;
   bool _receiptSent = false;
-  bool _recovering = false;
-  bool _needsCreate = false;
+
+  String? _recoveryOperationId;
+  Future<JoinResponse>? _recoveryJoin;
+  String? _recoverySid;
+  bool _readinessRecoveryAttempted = false;
   bool _cancelling = false;
   String? _confirmedSid;
   int _generation = 0;
@@ -66,11 +62,7 @@ class ServerParticipantAdmission {
   AdmissionKeeperAvailability get keeperAvailability => _keeper;
   bool get isReturningParticipant => _participant?.returning ?? false;
   bool? get sessionStartedAtAdmission =>
-      _participant == null ||
-          ServerAdmissionAttemptStatus.parse(
-                _participant!.status,
-              )?.hasAdmissionDecision !=
-              true
+      _participant == null || !_participant!.status.hasAdmissionDecision
       ? null
       : _participant!.sessionStarted;
   AdmissionMeSnapshot? get snapshot => _snapshot;
@@ -92,7 +84,6 @@ class ServerParticipantAdmission {
     _started = true;
     _subscription = connection.admissionEvents.listen(_onEvent);
     _setStatus(AdmissionStatus.pending);
-    _scheduleExpiration();
     if (connection.isConnected) await refresh(confirm: true);
   }
 
@@ -115,21 +106,41 @@ class ServerParticipantAdmission {
 
   Future<void> _refreshLoop(int generation) async {
     do {
-      final confirm = _queuedConfirm && connection.isConnected;
+      final confirm =
+          (_queuedConfirm || _recoveryOperationId != null) &&
+          connection.isConnected;
       _queuedConfirm = false;
       _queuedRefresh = false;
+      final sid = connection.localSid;
       try {
-        final sid = connection.localSid;
-        if (confirm && _needsCreate) {
-          final created = await repository.request(
+        if (_recoveryOperationId != null) {
+          if (!confirm || sid != _recoverySid) return;
+          final joining = _recoveryJoin ??= repository.rejoin(
             sessionSlug: sessionSlug,
-            requestId: _requestId,
-            attemptId: _attemptId,
+            operationId: _recoveryOperationId!,
           );
-          if (!_valid(generation)) return;
-          _accept(created);
-          _needsCreate = false;
-          if (!connection.isConnected || sid != connection.localSid) return;
+          JoinResponse joined;
+          try {
+            joined = await joining;
+          } finally {
+            if (identical(_recoveryJoin, joining)) _recoveryJoin = null;
+          }
+          if (!_valid(generation) ||
+              !connection.isConnected ||
+              sid != connection.localSid) {
+            return;
+          }
+          final admission = joined.admission.value;
+          if (admission == null ||
+              admission.requestId.isEmpty ||
+              admission.attemptId.isEmpty) {
+            throw StateError(
+              'Rejoin response is missing admission attempt IDs',
+            );
+          }
+          _requestId = admission.requestId;
+          _attemptId = admission.attemptId;
+          _recoveryOperationId = null;
         }
         final result = confirm
             ? await repository.request(
@@ -139,18 +150,28 @@ class ServerParticipantAdmission {
                 connected: true,
               )
             : await repository.me(sessionSlug: sessionSlug);
-        if (!_valid(generation)) return;
+        if (!_valid(generation) ||
+            (confirm &&
+                (!connection.isConnected || sid != connection.localSid))) {
+          return;
+        }
         _accept(result);
         if (confirm && connection.isConnected && sid == connection.localSid) {
           _confirmed = true;
           _confirmedSid = sid;
         }
         _error = null;
-        if (_participant?.status != 'granting') _failures = 0;
+        if (result.readiness.state != ReadinessState.applyingPermissions) {
+          _failures = 0;
+        }
         _retry?.cancel();
         _evaluate();
       } catch (e) {
-        if (!_valid(generation)) return;
+        if (!_valid(generation) ||
+            (confirm &&
+                (!connection.isConnected || sid != connection.localSid))) {
+          return;
+        }
         _handleError(e, confirm: confirm);
       }
     } while (_valid(generation) &&
@@ -174,9 +195,6 @@ class ServerParticipantAdmission {
       return;
     }
     _snapshot = value;
-    if (me?.expiresAt.isPresent == true && me!.expiresAt.value != null) {
-      _deadline = me.expiresAt.value;
-    }
     _keeper = connection.isPresent(value.keeper)
         ? AdmissionKeeperAvailability.responsive
         : AdmissionKeeperAvailability.absent;
@@ -184,89 +202,91 @@ class ServerParticipantAdmission {
 
   void _evaluate() {
     if (_disposed || !_started || _terminal) return;
-    final snap = _snapshot;
     final me = _participant;
-    if (snap?.roomStatus == 'ended') {
+    final readiness = _snapshot?.readiness;
+    final state = readiness?.state;
+    final reason = readiness?.reason.value;
+    if (state == ReadinessState.ended) {
       _setStatus(AdmissionStatus.ended);
       return;
     }
-    if (me != null &&
-        me.identity != snap?.keeper &&
-        (me.admissionState == 'revoked' ||
-            me.admissionState == 'permanently_declined')) {
+    if (state == ReadinessState.blocked &&
+        (reason == ReadinessReason.permanentlyDeclined ||
+            reason == ReadinessReason.requiresReapproval ||
+            (reason == ReadinessReason.notEligible && !_mediaActivated))) {
       _setStatus(AdmissionStatus.denied);
       return;
     }
-    if (me != null && !me.eligible && !_mediaActivated) {
-      _setStatus(AdmissionStatus.denied);
-      return;
+    if (state == ReadinessState.requiresNewAttempt) {
+      AdmissionStatus? outcome;
+      if (reason == ReadinessReason.requestPermanentlyDeclined ||
+          reason == ReadinessReason.requestRevoked ||
+          (reason == ReadinessReason.requestDeclined && !_mediaActivated)) {
+        outcome = AdmissionStatus.denied;
+      } else if (reason == ReadinessReason.requestSuperseded ||
+          (reason == ReadinessReason.requestCancelled && !_mediaActivated)) {
+        outcome = AdmissionStatus.cancelled;
+      } else if (reason == ReadinessReason.requestExpired && !_mediaActivated) {
+        outcome = AdmissionStatus.expired;
+      } else if (reason == ReadinessReason.requestFailed ||
+          reason == ReadinessReason.invalidRequest) {
+        _error = StateError(
+          'Admission requires a new attempt: ${reason?.value}',
+        );
+        outcome = AdmissionStatus.failed;
+      }
+      if (outcome != null) {
+        _setStatus(outcome);
+        return;
+      }
     }
-    final mapped = switch (ServerAdmissionAttemptStatus.parse(me?.status)) {
-      ServerAdmissionAttemptStatus.permanentlyDeclined ||
-      ServerAdmissionAttemptStatus.revoked => AdmissionStatus.denied,
-      ServerAdmissionAttemptStatus.superseded => AdmissionStatus.cancelled,
-      ServerAdmissionAttemptStatus.declined when !_mediaActivated =>
-        AdmissionStatus.denied,
-      ServerAdmissionAttemptStatus.cancelled when !_mediaActivated =>
-        AdmissionStatus.cancelled,
-      ServerAdmissionAttemptStatus.expired when !_mediaActivated =>
-        AdmissionStatus.expired,
-      _ => null,
-    };
-    if (mapped != null) {
-      _setStatus(mapped);
+    if (_mediaActivated &&
+        (state == ReadinessState.requiresNewAttempt ||
+            state == ReadinessState.applyingPermissions) &&
+        (reason == ReadinessReason.connectionRequired ||
+            reason == ReadinessReason.connectionChanged) &&
+        connection.isConnected) {
+      if (_readinessRecoveryAttempted) {
+        _error = StateError(
+          'Admission reconnect recovery requires a new attempt',
+        );
+        _setStatus(AdmissionStatus.failed);
+      } else {
+        _readinessRecoveryAttempted = true;
+        _confirmed = false;
+        _receiptSent = false;
+        _recoverySid = connection.localSid;
+        _recoveryOperationId ??= _newId();
+        _snapshot = null;
+        _setStatus(AdmissionStatus.pending);
+        unawaited(refresh(confirm: true));
+      }
       return;
     }
     final authorized =
         me != null &&
-        me.eligible &&
-        (me.identity == snap?.keeper || me.admissionState == 'admitted') &&
-        ServerAdmissionAttemptStatus.parse(me.status)?.isAuthorized == true &&
-        me.permissionStatus == 'applied' &&
-        me.appliedPermissionRevision.value == me.permissionRevision;
+        (state == ReadinessState.readyToActivate ||
+            state == ReadinessState.activated) &&
+        reason == null;
     if (authorized &&
         _confirmed &&
         connection.isConnected &&
         connection.localSid == _confirmedSid &&
         connection.hasMediaPermissions) {
-      _expiration?.cancel();
       _retry?.cancel();
+      _readinessRecoveryAttempted = false;
       _setStatus(AdmissionStatus.approved);
       if (_mediaActivated && !_receiptSent && _activation == null) {
         unawaited(_activateRecovery());
       }
     } else {
       _setStatus(AdmissionStatus.pending);
-      if (authorized) {
-        _expiration?.cancel();
-      } else {
-        _scheduleExpiration();
-      }
       _scheduleRetry(
         confirm: !_confirmed || connection.localSid != _confirmedSid,
         at: me?.nextRetryAt.isPresent == true ? me!.nextRetryAt.value : null,
-        lowFrequency: me?.status != 'granting',
+        lowFrequency: state != ReadinessState.applyingPermissions,
       );
     }
-  }
-
-  void _scheduleExpiration() {
-    _expiration?.cancel();
-    if (_terminal || _mediaActivated || _status == AdmissionStatus.approved) {
-      return;
-    }
-    final deadline = _deadline;
-    if (deadline == null) return;
-    final delay = deadline.difference(_now());
-    if (delay <= Duration.zero) {
-      _setStatus(AdmissionStatus.expired);
-      return;
-    }
-    _expiration = Timer(delay, () {
-      if (!_disposed && _status == AdmissionStatus.pending) {
-        _setStatus(AdmissionStatus.expired);
-      }
-    });
   }
 
   void _scheduleRetry({
@@ -290,39 +310,41 @@ class ServerParticipantAdmission {
     _error = e;
     _confirmed = false;
     final api = e is ApiError<AdmissionMeSnapshot, ErrorSchema> ? e : null;
-    final code = api?.error?.code;
-    if (code == 'ended') {
+    final roomApi = e is ApiError<JoinResponse, RoomErrorResponse> ? e : null;
+    final roomError = roomApi?.error;
+    final code =
+        api?.error?.code ??
+        (roomError?.detail.value == null
+            ? null
+            : ErrorSchemaCode.fromJson(roomError!.detail.value!));
+    if (code == ErrorSchemaCode.ended ||
+        roomError?.code == ErrorCode.roomAlreadyEnded) {
       _setStatus(AdmissionStatus.ended);
       return;
     }
-    if (code == 'permanently_declined' ||
-        code == 'revoked' ||
-        (!_mediaActivated && (code == 'not_eligible' || code == 'declined'))) {
+    // Preserve legacy attempt-status error handling; these values are not
+    // part of the generated error schema.
+    if (roomError?.code == ErrorCode.banned ||
+        code == ErrorSchemaCode.permanentlyDeclined ||
+        code == ErrorSchemaCode.fromJson('revoked') ||
+        (!_mediaActivated &&
+            (code == ErrorSchemaCode.notEligible ||
+                code == ErrorSchemaCode.fromJson('declined')))) {
       _setStatus(AdmissionStatus.denied);
       return;
     }
-    if (code == 'superseded' || (!_mediaActivated && code == 'cancelled')) {
+    if (code == ErrorSchemaCode.fromJson('superseded') ||
+        (!_mediaActivated && code == ErrorSchemaCode.fromJson('cancelled'))) {
       _setStatus(AdmissionStatus.cancelled);
       return;
     }
-    if (!_mediaActivated && code == 'expired') {
+    if (!_mediaActivated && code == ErrorSchemaCode.fromJson('expired')) {
       _setStatus(AdmissionStatus.expired);
       return;
     }
-    if (!_mediaActivated &&
-        api != null &&
-        api.statusCode < 500 &&
-        api.statusCode != 408 &&
-        api.statusCode != 429 &&
-        ![
-          'stale_version',
-          'permission_pending',
-          'connection_required',
-        ].contains(code)) {
-      _setStatus(AdmissionStatus.failed);
-      return;
-    }
+
     _setStatus(AdmissionStatus.pending);
+    _retry?.cancel();
     _scheduleRetry(
       confirm: true,
       at: _participant?.nextRetryAt.isPresent == true
@@ -353,18 +375,13 @@ class ServerParticipantAdmission {
       _refreshing = null;
       _activation = null;
       _confirmed = false;
-      if (!_recovering &&
-          _mediaActivated &&
-          _confirmedSid != null &&
-          connection.localSid != _confirmedSid) {
-        _requestId = _newId();
-        _attemptId = _newId();
+      if (_mediaActivated &&
+          (_recoverySid ?? _confirmedSid) != null &&
+          connection.localSid != (_recoverySid ?? _confirmedSid)) {
+        _recoverySid = connection.localSid;
+        _recoveryOperationId ??= _newId();
         _snapshot = null;
-        _deadline = null;
-        _confirmedSid = null;
         _receiptSent = false;
-        _recovering = true;
-        _needsCreate = true;
       }
       _evaluate();
       unawaited(refresh(confirm: true));
@@ -395,7 +412,6 @@ class ServerParticipantAdmission {
       throw StateError('Admission is not currently authorized');
     }
     _mediaActivated = true;
-    _expiration?.cancel();
     if (_receiptSent) return Future.value();
     return _activation ??= _sendActivation();
   }
@@ -411,8 +427,13 @@ class ServerParticipantAdmission {
         throw StateError('Admission activation was superseded');
       }
       _accept(result);
+      if (result.readiness.state != ReadinessState.activated ||
+          _snapshot?.readiness.state != ReadinessState.activated) {
+        throw StateError('Activation receipt was not acknowledged');
+      }
       _receiptSent = true;
-      _recovering = false;
+
+      _recoverySid = null;
       _error = null;
       _evaluate();
     } catch (e) {
@@ -466,7 +487,10 @@ class ServerParticipantAdmission {
           receipt: _receipt(),
         );
       } on ApiError<AdmissionMeSnapshot, ErrorSchema> catch (e) {
-        if (e.error?.code != 'stale_version' || !_valid(generation)) rethrow;
+        if (e.error?.code != ErrorSchemaCode.staleVersion ||
+            !_valid(generation)) {
+          rethrow;
+        }
         final current = await repository.me(sessionSlug: sessionSlug);
         if (!_valid(generation)) return;
         _accept(current);
@@ -491,7 +515,6 @@ class ServerParticipantAdmission {
     _status = value;
     if (_terminal) {
       _retry?.cancel();
-      _expiration?.cancel();
     }
     _changes.add(value);
   }
@@ -507,7 +530,6 @@ class ServerParticipantAdmission {
     _disposed = true;
     _generation++;
     _retry?.cancel();
-    _expiration?.cancel();
     await _subscription?.cancel();
     await connection.dispose();
     await _changes.close();

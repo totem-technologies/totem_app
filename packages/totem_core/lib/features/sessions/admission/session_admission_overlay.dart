@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart'
-    show Participant;
+    show Participant, ParticipantStatus;
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_scope.dart';
@@ -126,7 +126,7 @@ class SessionAdmissionQueueControl extends ConsumerWidget {
     }
     final retry = admission.onRetry;
     final joining = admission.attempts.any(
-      (attempt) => attempt.status == 'approved',
+      (attempt) => attempt.status == ParticipantStatus.approved,
     );
     if (retry == null &&
         admission.onRefresh == null &&

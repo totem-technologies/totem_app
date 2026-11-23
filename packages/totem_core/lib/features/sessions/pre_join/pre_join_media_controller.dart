@@ -96,6 +96,7 @@ class PreJoinMediaController extends _$PreJoinMediaController {
   bool _terminal = false;
   int _captureGeneration = 0;
   Future<void>? _terminalRelease;
+  Future<PreJoinMediaState>? _reset;
   StreamSubscription<bool>? _foregroundSubscription;
   late PreJoinForegroundMonitor _foregroundMonitor;
 
@@ -400,22 +401,36 @@ class PreJoinMediaController extends _$PreJoinMediaController {
     await _loop.run();
   }
 
-  Future<PreJoinMediaState> resetAfterFailedJoin() async {
-    if (_terminal) return state;
-    detachTransferredTracks();
-    await _initialization;
-    await _captureOperations.pending;
+  Future<PreJoinMediaState> resetAfterFailedJoin() {
+    if (_terminal) return Future.value(state);
+    return _reset ??= _resetAfterFailedJoin();
+  }
 
-    // Failed-room teardown owned the transferred tracks. Clear the handoff
-    // markers after teardown, then acquire one fresh capture pair.
-    _transferredVideoTrack = null;
-    _transferredAudioTrack = null;
-    _cameraTrack = null;
-    _microphoneTrack = null;
-    state = state.copyWith(transferred: false);
-    _emit();
-    await _loop.run();
-    return state;
+  Future<PreJoinMediaState> _resetAfterFailedJoin() async {
+    final previousState = state;
+    try {
+      detachTransferredTracks();
+      await _initialization;
+      if (!ref.mounted) return previousState;
+      if (_terminal) return state;
+      await _captureOperations.pending;
+      if (!ref.mounted) return previousState;
+      if (_terminal) return state;
+
+      // Failed-room teardown owned the transferred tracks. Clear the handoff
+      // markers after teardown, then acquire one fresh capture pair.
+      _transferredVideoTrack = null;
+      _transferredAudioTrack = null;
+      _cameraTrack = null;
+      _microphoneTrack = null;
+      state = state.copyWith(transferred: false);
+      _emit();
+      await _loop.run();
+      if (!ref.mounted) return previousState;
+      return state;
+    } finally {
+      _reset = null;
+    }
   }
 
   /// Releases preview media when this screen reaches a terminal outcome.

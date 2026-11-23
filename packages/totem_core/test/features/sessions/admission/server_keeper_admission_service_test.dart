@@ -84,17 +84,30 @@ class _Backend implements ApiClient {
   Completer<void>? gate;
   Completer<void>? started;
   Completer<void>? snapshotGate;
+  Completer<void>? meGate;
+  Completer<void>? meStarted;
+  List<String>? recipients;
+  bool omitRecipients = false;
+  bool nullRecipients = false;
+  String? presenceError;
+  int? snapshotRoomVersion;
   final requests = <ApiRequest>[];
 
   Map<String, dynamic> get snapshot => {
     'session_slug': 'session',
     'keeper': room.keeper,
-    'room_version': room.version,
-    'room_status': 'active',
+    'room_version': snapshotRoomVersion ?? room.version,
+    'room_state': room.toJson(),
+    'room_status': RoomStatus.active.value,
     'approval_required': approval,
     'settings_revision': revision,
     'version': version,
     'observed_at': '2026-01-01T00:00:00Z',
+    if (!omitRecipients)
+      'admitted_recipients': nullRecipients
+          ? null
+          : recipients ?? [room.keeper, 'activated'],
+    if (presenceError != null) 'presence_error': presenceError,
     'admitted_count': 0,
     'activated_count': 0,
     'pending_count': waiting.length,
@@ -117,11 +130,17 @@ class _Backend implements ApiClient {
         ..remove('waiting')
         ..remove('requests')
         ..remove('history_truncated');
+      data['readiness'] = const AdmissionReadiness(
+        state: ReadinessState.activated,
+      ).toJson();
       data['me'] = _participant(
         'keeper',
         state: 'admitted',
         status: 'activated',
       );
+      meStarted?.complete();
+      meStarted = null;
+      await meGate?.future;
       return response(data);
     }
     if (request.method == 'GET') {
@@ -161,7 +180,7 @@ class _Backend implements ApiClient {
               {
                 'identity': 'guest',
                 'outcome': 'pending',
-                'error': 'room_full',
+                'error': CommandResultError.roomFull.value,
                 'participant': null,
               },
             ]
@@ -187,6 +206,19 @@ class _Harness {
     registerFallbackValue(<String>{});
     when(() => session.transport).thenReturn(transport);
     when(() => transport.localIdentity).thenReturn('keeper');
+    when(() => transport.participants).thenReturn(const [
+      ParticipantInfo(sid: 'keeper-sid', identity: 'keeper', name: 'Keeper'),
+      ParticipantInfo(
+        sid: 'activated-sid',
+        identity: 'activated',
+        name: 'Activated',
+      ),
+      ParticipantInfo(
+        sid: 'new-keeper-sid',
+        identity: 'new-keeper',
+        name: 'New Keeper',
+      ),
+    ]);
     when(() => session.admissionState).thenReturn(state);
     when(
       () => state.connectionState,
@@ -321,7 +353,7 @@ void main() {
         check(h.backend.requests.length).equals(initialRequests);
         check(h.service.serverDataRecipients).isNull();
         async.elapse(const Duration(milliseconds: 200));
-        check(h.backend.requests.length).equals(initialRequests + 3);
+        check(h.backend.requests.length).equals(initialRequests + 1);
 
         h.backend.snapshotGate = Completer<void>();
         h.service.handleTransportEvent(
@@ -333,7 +365,7 @@ void main() {
           ),
         );
         async.flushMicrotasks();
-        check(h.backend.requests.length).equals(initialRequests + 5);
+        check(h.backend.requests.length).equals(initialRequests + 2);
         h.service.handleTransportEvent(presence);
         h.backend.waiting = [];
         h.backend.version++;
@@ -342,7 +374,7 @@ void main() {
         h.backend.snapshotGate = null;
         async.flushMicrotasks();
         check(h.service.requests).isEmpty();
-        check(h.backend.requests.length).equals(initialRequests + 9);
+        check(h.backend.requests.length).equals(initialRequests + 3);
 
         h.service.handleTransportEvent(presence);
         h.service.disconnect();
@@ -394,6 +426,45 @@ void main() {
       ).isNotNull().unorderedEquals({'keeper', 'activated'});
     },
   );
+
+  test(
+    'snapshot recipients require server presence and current transport',
+    () async {
+      h.backend.recipients = ['keeper', 'activated', 'disconnected'];
+      await h.refresh();
+      check(
+        h.service.serverDataRecipients,
+      ).isNotNull().unorderedEquals({'keeper', 'activated'});
+      check(h.backend.requests).length.equals(1);
+      for (final unavailable in ['omitted', 'null', 'error']) {
+        h.backend.omitRecipients = unavailable == 'omitted';
+        h.backend.nullRecipients = unavailable == 'null';
+        h.backend.presenceError = unavailable == 'error' ? 'unavailable' : null;
+        await h.refresh();
+        check(h.service.serverDataRecipients).isNull();
+        check(h.service.admittedIdentities).isEmpty();
+        check(h.service.requests).isNotEmpty();
+      }
+    },
+  );
+
+  test('stale or inconsistent room versions fail closed', () async {
+    await h.refresh();
+    h.localRoom = _room('keeper', 5);
+    await h.refresh();
+    check(h.service.serverDataRecipients).isNull();
+    check(h.service.snapshot).isNull();
+    h.localRoom = _room('keeper', 4);
+    h.backend.snapshotRoomVersion = 5;
+    await h.refresh();
+    check(h.service.serverDataRecipients).isNull();
+    check(h.service.snapshot).isNull();
+    h.backend.snapshotRoomVersion = null;
+    h.backend.room = _room('keeper', 6);
+    await h.refresh();
+    check(h.localRoom.version).equals(6);
+    check(h.service.serverDataRecipients).isNotNull();
+  });
 
   for (final action in ['approve', 'decline', 'permanent']) {
     test('$action sends current attempt and room versions', () async {
@@ -449,6 +520,76 @@ void main() {
     check(body['expected_room_version']).equals(4);
   });
 
+  test(
+    '403 from old Keeper discovers reassignment without a room request or stale decision',
+    () async {
+      h.backend.approval = false;
+      await h.refresh();
+      final guest = h.service.requests.single;
+      check(h.service.approvalRequired).isFalse();
+      h.backend.room = _room('new-keeper', 5);
+      h.backend.snapshotFailureStatus = 403;
+      h.backend.meGate = Completer<void>();
+      h.backend.meStarted = Completer<void>();
+      final started = h.backend.meStarted!.future;
+      final decision = h.service.decide(guest, true);
+      await started;
+      check(h.service.snapshot).isNull();
+      check(h.service.approvalRequired).isTrue();
+      h.backend.meGate!.complete();
+      await decision;
+      await h.service.synchronized;
+      check(h.localRoom.keeper).equals('new-keeper');
+      check(h.service.snapshot).isNull();
+      check(h.service.approvalRequired).isFalse();
+      check(h.backend.commands).isEmpty();
+      check(h.backend.requests.any((r) => r.path.endsWith('/state'))).isFalse();
+    },
+  );
+
+  test(
+    'participant discovers promotion and refreshes Keeper authority',
+    () async {
+      when(() => h.transport.localIdentity).thenReturn('new-keeper');
+      h.backend.room = _room('new-keeper', 5);
+      h.backend.approval = false;
+      await h.refresh();
+      await h.service.synchronized;
+      check(h.localRoom.keeper).equals('new-keeper');
+      check(h.service.snapshot).isNotNull();
+      check(h.service.approvalRequired).isFalse();
+      check(h.backend.requests.any((r) => r.path.endsWith('/state'))).isFalse();
+    },
+  );
+
+  test('reassignment at the same room version is rejected', () async {
+    when(() => h.transport.localIdentity).thenReturn('guest');
+    h.backend.room = _room('new-keeper', 4);
+    h.backend.approval = false;
+    await h.refresh();
+    check(h.localRoom.keeper).equals('keeper');
+    check(h.service.approvalRequired).isTrue();
+    check(h.service.serverDataRecipients).isNull();
+    check(h.service.error).isNotNull();
+  });
+
+  test('delayed reassignment cannot overwrite newer local authority', () async {
+    when(() => h.transport.localIdentity).thenReturn('guest');
+    h.backend.room = _room('new-keeper', 5);
+    h.backend.approval = false;
+    h.backend.meGate = Completer<void>();
+    h.backend.meStarted = Completer<void>();
+    final started = h.backend.meStarted!.future;
+    h.service.sync();
+    await started;
+    h.localRoom = _room('later-keeper', 6);
+    h.backend.meGate!.complete();
+    await h.service.synchronized;
+    check(h.localRoom.keeper).equals('later-keeper');
+    check(h.service.approvalRequired).isTrue();
+    check(h.service.serverDataRecipients).isNull();
+  });
+
   test('stale request is not submitted after refresh', () async {
     await h.refresh();
     final old = h.service.requests.single;
@@ -499,6 +640,7 @@ void main() {
       final oldBody = h.body(h.backend.commands.single);
       final replacement = _Transport();
       when(() => replacement.localIdentity).thenReturn('keeper');
+      when(() => replacement.participants).thenReturn(h.transport.participants);
       when(() => h.session.transport).thenReturn(replacement);
       check(h.service.snapshot).isNull();
       check(h.service.requests).isEmpty();
@@ -528,6 +670,7 @@ void main() {
       final original = h.body(h.backend.commands.single);
       final replacement = _Transport();
       when(() => replacement.localIdentity).thenReturn('keeper');
+      when(() => replacement.participants).thenReturn(h.transport.participants);
       when(() => h.session.transport).thenReturn(replacement);
       check(h.service.hasUnresolvedCommand).isTrue();
       final retry = h.service.retryUnresolved();

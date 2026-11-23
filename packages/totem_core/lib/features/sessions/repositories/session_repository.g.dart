@@ -9,6 +9,83 @@ part of 'session_repository.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
+@ProviderFor(joinOperation)
+final joinOperationProvider = JoinOperationFamily._();
+
+final class JoinOperationProvider
+    extends $FunctionalProvider<JoinOperation, JoinOperation, JoinOperation>
+    with $Provider<JoinOperation> {
+  JoinOperationProvider._({
+    required JoinOperationFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'joinOperationProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$joinOperationHash();
+
+  @override
+  String toString() {
+    return r'joinOperationProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $ProviderElement<JoinOperation> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  JoinOperation create(Ref ref) {
+    final argument = this.argument as String;
+    return joinOperation(ref, argument);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(JoinOperation value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<JoinOperation>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is JoinOperationProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$joinOperationHash() => r'6105eaa6f643c1ec168c17bd4271c712a84e4400';
+
+final class JoinOperationFamily extends $Family
+    with $FunctionalFamilyOverride<JoinOperation, String> {
+  JoinOperationFamily._()
+    : super(
+        retry: null,
+        name: r'joinOperationProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  JoinOperationProvider call(String sessionSlug) =>
+      JoinOperationProvider._(argument: sessionSlug, from: this);
+
+  @override
+  String toString() => r'joinOperationProvider';
+}
+
 @ProviderFor(sessionToken)
 final sessionTokenProvider = SessionTokenFamily._();
 
@@ -64,7 +141,7 @@ final class SessionTokenProvider
   }
 }
 
-String _$sessionTokenHash() => r'5db8d397fac32c6ca86c55d2e030ea8f70defbb1';
+String _$sessionTokenHash() => r'c630fb73d8598499b991fcbef81ec8ab531b9ab0';
 
 final class SessionTokenFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<JoinResponse>, String> {

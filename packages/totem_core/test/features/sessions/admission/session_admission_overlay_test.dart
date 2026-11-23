@@ -148,6 +148,34 @@ void main() {
     },
   );
 
+  testWidgets('keeper sees admission in progress for approved attempts', (
+    tester,
+  ) async {
+    final guest = admissionParticipant('guest', status: 'approved');
+    final service = AdmissionUiService(admissionSnapshot(attempts: [guest]));
+    addTearDown(service.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentSessionProvider.overrideWith(
+            (ref) => AdmissionUiSession(service),
+          ),
+          isCurrentUserKeeperProvider.overrideWith((ref) => true),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SessionAdmissionOverlay(
+              sessionSlug: 'test-session',
+              child: SessionAdmissionQueueControl(),
+            ),
+          ),
+        ),
+      ),
+    );
+    check(find.text('Admission in progress').evaluate()).length.equals(1);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('unresolved command can be retried without a snapshot', (
     tester,
   ) async {

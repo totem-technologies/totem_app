@@ -1,56 +1,9 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 import 'package:degenerate_runtime/degenerate_runtime.dart';
+
 import 'room_state_status_detail.dart';
-
-@immutable
-final class RoomStatus {
-  const RoomStatus._(this.value);
-
-  factory RoomStatus.fromJson(String json) {
-    return switch (json) {
-      'waiting_room' => waitingRoom,
-      'active' => active,
-      'ended' => ended,
-      _ => RoomStatus._(json),
-    };
-  }
-
-  static const RoomStatus waitingRoom = RoomStatus._('waiting_room');
-
-  static const RoomStatus active = RoomStatus._('active');
-
-  static const RoomStatus ended = RoomStatus._('ended');
-
-  static const List<RoomStatus> values = [waitingRoom, active, ended];
-
-  final String value;
-
-  String toJson() {
-    return value;
-  }
-
-  /// Whether this value is unknown (not defined in the OpenAPI spec).
-  bool get isUnknown {
-    return !values.contains(this);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        other is RoomStatus && other.value == value;
-  }
-
-  @override
-  int get hashCode {
-    return value.hashCode;
-  }
-
-  @override
-  String toString() {
-    return 'RoomStatus($value)';
-  }
-}
+import 'room_status.dart';
 
 @immutable
 final class TurnState {

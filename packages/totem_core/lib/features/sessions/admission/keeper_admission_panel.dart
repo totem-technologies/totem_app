@@ -4,7 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart' show AsyncCallback;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart'
-    show Participant;
+    show Participant, ParticipantStatus;
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_list.dart';
 import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
@@ -51,15 +51,15 @@ class KeeperAdmissionPanel extends StatefulWidget {
 }
 
 class _KeeperAdmissionPanelState extends State<KeeperAdmissionPanel> {
-  String _status(String status) => switch (status) {
-    'requested' || 'waiting' => 'Waiting for a decision',
-    'approved' => 'Approval sent · joining',
-    'activated' => 'Joined the Session',
-    'denied' || 'declined' => 'Declined',
-    'cancelled' || 'canceled' => 'Canceled',
-    'expired' => 'Request expired',
-    'failed' => 'Could not join · may request again',
-    _ => status,
+  String _status(ParticipantStatus status) => switch (status) {
+    ParticipantStatus.pending => 'Waiting for a decision',
+    ParticipantStatus.approved => 'Approval sent · joining',
+    ParticipantStatus.activated => 'Joined the Session',
+    ParticipantStatus.declined => 'Declined',
+    ParticipantStatus.cancelled => 'Canceled',
+    ParticipantStatus.expired => 'Request expired',
+    ParticipantStatus.failed => 'Could not join · may request again',
+    _ => status.value,
   };
 
   bool _isCurrent(Participant request) => widget.requests.any(

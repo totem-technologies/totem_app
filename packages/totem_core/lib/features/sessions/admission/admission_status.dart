@@ -1,3 +1,5 @@
+import 'package:totem_core/core/api/api_client/api_client.dart';
+
 enum AdmissionStatus {
   idle,
   pending,
@@ -11,37 +13,9 @@ enum AdmissionStatus {
 
 enum AdmissionKeeperAvailability { checking, absent, unresponsive, responsive }
 
-enum ServerAdmissionAttemptStatus {
-  pending,
-  granting,
-  approved,
-  activated,
-  declined,
-  permanentlyDeclined,
-  revoked,
-  cancelled,
-  superseded,
-  expired;
-
-  static ServerAdmissionAttemptStatus? parse(String? status) =>
-      switch (status) {
-        'pending' => pending,
-        'granting' => granting,
-        'approved' => approved,
-        'activated' => activated,
-        'declined' => declined,
-        'permanently_declined' => permanentlyDeclined,
-        'revoked' => revoked,
-        'cancelled' => cancelled,
-        'superseded' => superseded,
-        'expired' => expired,
-        _ => null,
-      };
-
-  bool get isResumable =>
-      this == pending || this == granting || this == approved;
-  bool get isAllowedJoinResponse => isResumable || this == activated;
-  bool get hasAdmissionDecision => this == granting || isAuthorized;
-  bool get isAuthorized => this == approved || this == activated;
-  bool get hasDeadline => this == pending || this == granting;
+extension AdmissionAttemptStatusProperties on ParticipantStatus {
+  bool get hasAdmissionDecision =>
+      this == ParticipantStatus.granting || isAuthorized;
+  bool get isAuthorized =>
+      this == ParticipantStatus.approved || this == ParticipantStatus.activated;
 }

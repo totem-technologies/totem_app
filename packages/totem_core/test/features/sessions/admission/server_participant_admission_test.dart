@@ -19,6 +19,8 @@ AdmissionJoinState initial() => AdmissionJoinState.fromJson({
   'permissions': 'waiting',
   'permission_sync': 'pending',
   'revision': 1,
+  'observed_at': time.toIso8601String(),
+  'readiness': const {'state': 'waiting_for_approval'},
 });
 
 AdmissionMeSnapshot snapshot(
@@ -33,11 +35,34 @@ AdmissionMeSnapshot snapshot(
   String identity = 'guest',
   String roomStatus = 'active',
   DateTime? nextRetryAt,
+  String? readinessState,
+  String? readinessReason,
 }) => AdmissionMeSnapshot.fromJson({
   'session_slug': 'session',
   'keeper': 'keeper',
   'room_version': 1,
+  'room_state': {
+    'session_slug': 'session',
+    'version': 1,
+    'status': roomStatus,
+    'turn_state': 'idle',
+    'status_detail': const {'type': 'unknown'},
+    'talking_order': const <String>[],
+    'keeper': 'keeper',
+    'round_number': 0,
+  },
   'room_status': roomStatus,
+  'readiness': readinessState == null
+      ? fixtureReadiness(
+          status,
+          eligible,
+          admissionState,
+          permissionStatus,
+          appliedPermissionRevision,
+          identity,
+          roomStatus,
+        )
+      : {'state': readinessState, 'reason': ?readinessReason},
   'approval_required': true,
   'settings_revision': 1,
   'version': version,
@@ -71,10 +96,81 @@ AdmissionMeSnapshot snapshot(
   },
 });
 
+Map<String, String> fixtureReadiness(
+  String status,
+  bool eligible,
+  String? durable,
+  String permission,
+  int? revision,
+  String identity,
+  String roomStatus,
+) {
+  if (roomStatus == 'ended') {
+    return {'state': 'ended', 'reason': 'session_ended'};
+  }
+  if (!eligible) return {'state': 'blocked', 'reason': 'not_eligible'};
+  if (identity != 'keeper' &&
+      (durable == 'revoked' || durable == 'permanently_declined')) {
+    return {
+      'state': 'blocked',
+      'reason': durable == 'revoked' ? 'requires_reapproval' : durable!,
+    };
+  }
+  if ([
+    'declined',
+    'permanently_declined',
+    'revoked',
+    'cancelled',
+    'superseded',
+    'expired',
+  ].contains(status)) {
+    return {'state': 'requires_new_attempt', 'reason': 'request_$status'};
+  }
+  if (status == 'pending') {
+    return {'state': 'waiting_for_approval', 'reason': 'approval_required'};
+  }
+  if (status != 'approved' && status != 'activated') {
+    return {'state': 'future_state'};
+  }
+  if (identity != 'keeper' && durable != null && durable != 'admitted') {
+    return {'state': 'blocked', 'reason': 'not_admitted'};
+  }
+  if (permission != 'applied' || revision != 1) {
+    return {'state': 'applying_permissions', 'reason': 'permission_pending'};
+  }
+  return {'state': status == 'activated' ? 'activated' : 'ready_to_activate'};
+}
+
 class FakeRepository implements ParticipantAdmissionRepository {
   AdmissionMeSnapshot current = snapshot('pending');
   Completer<AdmissionMeSnapshot>? waiting;
   Object? requestError;
+  Object? rejoinError;
+  Completer<JoinResponse>? rejoinWaiting;
+  final operations = <String>[];
+  @override
+  Future<JoinResponse> rejoin({
+    required String sessionSlug,
+    required String operationId,
+  }) {
+    operations.add(operationId);
+    if (rejoinError != null) return Future.error(rejoinError!);
+    final me = current.me.value!;
+    return rejoinWaiting?.future ??
+        Future.value(
+          JoinResponse.fromJson({
+            'token': 'unused',
+            'is_already_present': true,
+            'admission': initial()
+                .copyWith(
+                  requestId: me.requestId.value,
+                  attemptId: me.attemptId.value,
+                )
+                .toJson(),
+          }),
+        );
+  }
+
   int requests = 0;
   final connections = <bool>[];
   int reads = 0;
@@ -114,7 +210,15 @@ class FakeRepository implements ParticipantAdmissionRepository {
   }) {
     activations++;
     if (activationError != null) return Future.error(activationError!);
-    return activationWaiting?.future ?? Future.value(current);
+    return activationWaiting?.future ??
+        Future.value(
+          current.readiness.state == ReadinessState.readyToActivate
+              ? AdmissionMeSnapshot.fromJson({
+                  ...current.toJson(),
+                  'readiness': const {'state': 'activated'},
+                })
+              : current,
+        );
   }
 
   @override
@@ -128,7 +232,10 @@ class FakeRepository implements ParticipantAdmissionRepository {
       return Future.error(
         const ApiError<AdmissionMeSnapshot, ErrorSchema>(
           statusCode: 409,
-          error: ErrorSchema(code: 'stale_version', message: 'stale'),
+          error: ErrorSchema(
+            code: ErrorSchemaCode.staleVersion,
+            message: 'stale',
+          ),
         ),
       );
     }
@@ -161,6 +268,210 @@ class FakeConnection implements ServerAdmissionConnection {
 }
 
 void main() {
+  test('server readiness overrides legacy permission and admission fields', () {
+    fakeAsync((async) {
+      final repo = FakeRepository()
+        ..current = snapshot(
+          'approved',
+          readinessState: 'applying_permissions',
+          readinessReason: 'connection_changed',
+        );
+      final admission = ServerParticipantAdmission(
+        repository: repo,
+        sessionSlug: 'session',
+        initial: initial(),
+        connection: FakeConnection()..hasMediaPermissions = true,
+        now: () => time.add(async.elapsed),
+      )..start();
+      async.flushMicrotasks();
+      check(admission.status).equals(AdmissionStatus.pending);
+      repo.current = snapshot(
+        'pending',
+        version: 2,
+        permissionStatus: 'pending',
+        readinessState: 'ready_to_activate',
+      );
+      admission.refresh();
+      async.flushMicrotasks();
+      check(admission.status).equals(AdmissionStatus.approved);
+      admission.dispose();
+      async.flushMicrotasks();
+    });
+  });
+
+  for (final reason in ['request_failed', 'invalid_request']) {
+    test('$reason terminates an unusable admission attempt', () {
+      fakeAsync((async) {
+        final repo = FakeRepository()
+          ..current = snapshot(
+            'pending',
+            readinessState: 'requires_new_attempt',
+            readinessReason: reason,
+          );
+        final admission = ServerParticipantAdmission(
+          repository: repo,
+          sessionSlug: 'session',
+          initial: initial(),
+          connection: FakeConnection(),
+          now: () => time.add(async.elapsed),
+        )..start();
+        async.flushMicrotasks();
+        check(admission.status).equals(AdmissionStatus.failed);
+        check(admission.error).isNotNull();
+        async.elapse(const Duration(minutes: 2));
+        check(repo.requests).equals(1);
+        admission.dispose();
+        async.flushMicrotasks();
+      });
+    });
+  }
+
+  for (final reason in ['connection_required', 'connection_changed']) {
+    test(
+      '$reason after activation retries canonical rejoin with a stable key',
+      () {
+        fakeAsync((async) {
+          final repo = FakeRepository()..current = snapshot('approved');
+          final connection = FakeConnection()..hasMediaPermissions = true;
+          var id = 0;
+          final admission = ServerParticipantAdmission(
+            repository: repo,
+            sessionSlug: 'session',
+            initial: initial(),
+            connection: connection,
+            now: () => time.add(async.elapsed),
+            newId: () => 'operation${++id}',
+          )..start();
+          async.flushMicrotasks();
+          admission.activate();
+          async.flushMicrotasks();
+          repo
+            ..rejoinError = TimeoutException('uncertain')
+            ..current = snapshot(
+              'approved',
+              version: 2,
+              readinessState: 'applying_permissions',
+              readinessReason: reason,
+            );
+          admission.refresh();
+          async.flushMicrotasks();
+          check(admission.status).equals(AdmissionStatus.pending);
+          check(repo.operations).deepEquals(['operation1']);
+          repo
+            ..rejoinError = null
+            ..current = snapshot(
+              'approved',
+              request: 'new-request',
+              attempt: 'new-attempt',
+            );
+          async.elapse(const Duration(seconds: 4));
+          check(repo.operations).deepEquals(['operation1', 'operation1']);
+          check(repo.lastRequest).equals('new-request');
+          check(repo.lastAttempt).equals('new-attempt');
+          check(admission.status).equals(AdmissionStatus.approved);
+          check(repo.activations).equals(2);
+          admission.dispose();
+          async.flushMicrotasks();
+        });
+      },
+    );
+  }
+
+  test(
+    'persistent connection readiness after canonical rejoin fails safely',
+    () {
+      fakeAsync((async) {
+        final repo = FakeRepository()..current = snapshot('approved');
+        final admission = ServerParticipantAdmission(
+          repository: repo,
+          sessionSlug: 'session',
+          initial: initial(),
+          connection: FakeConnection()..hasMediaPermissions = true,
+          now: () => time.add(async.elapsed),
+        )..start();
+        async.flushMicrotasks();
+        admission.activate();
+        async.flushMicrotasks();
+        repo.current = snapshot(
+          'activated',
+          version: 2,
+          readinessState: 'requires_new_attempt',
+          readinessReason: 'connection_changed',
+        );
+        admission.refresh();
+        async.flushMicrotasks();
+        check(repo.operations.length).equals(1);
+        check(admission.status).equals(AdmissionStatus.failed);
+        check(admission.error).isNotNull();
+        async.elapse(const Duration(minutes: 2));
+        check(repo.operations.length).equals(1);
+        admission.dispose();
+        async.flushMicrotasks();
+      });
+    },
+  );
+
+  test('unknown readiness and unexpected ready reasons fail closed', () {
+    for (final current in [
+      snapshot('approved', readinessState: 'future_state'),
+      snapshot(
+        'approved',
+        readinessState: 'ready_to_activate',
+        readinessReason: 'future_reason',
+      ),
+      snapshot(
+        'approved',
+        readinessState: 'ready_to_activate',
+        readinessReason: 'permission_pending',
+      ),
+      snapshot(
+        'approved',
+        readinessState: 'blocked',
+        readinessReason: 'admission_full',
+      ),
+      snapshot(
+        'approved',
+        readinessState: 'requires_new_attempt',
+        readinessReason: 'connection_changed',
+      ),
+    ]) {
+      fakeAsync((async) {
+        final admission = ServerParticipantAdmission(
+          repository: FakeRepository()..current = current,
+          sessionSlug: 'session',
+          initial: initial(),
+          connection: FakeConnection()..hasMediaPermissions = true,
+          now: () => time.add(async.elapsed),
+        )..start();
+        async.flushMicrotasks();
+        check(admission.status).equals(AdmissionStatus.pending);
+        admission.dispose();
+        async.flushMicrotasks();
+      });
+    }
+  });
+
+  test('unknown admission or permission states do not authorize admission', () {
+    for (final current in [
+      snapshot('approved', admissionState: 'future_state'),
+      snapshot('approved', permissionStatus: 'future_permission'),
+    ]) {
+      fakeAsync((async) {
+        final admission = ServerParticipantAdmission(
+          repository: FakeRepository()..current = current,
+          sessionSlug: 'session',
+          initial: initial(),
+          connection: FakeConnection()..hasMediaPermissions = true,
+          now: () => time.add(async.elapsed),
+        )..start();
+        async.flushMicrotasks();
+        check(admission.status).equals(AdmissionStatus.pending);
+        admission.dispose();
+        async.flushMicrotasks();
+      });
+    }
+  });
+
   test('unknown participant status does not authorize admission', () {
     fakeAsync((async) {
       final repo = FakeRepository()
@@ -275,7 +586,7 @@ void main() {
                 : AdmissionStatus.denied;
             check(admission.status).equals(expected);
             repo.activationWaiting!.complete(
-              snapshot('approved', identity: identity),
+              snapshot('activated', identity: identity),
             );
             async
               ..flushMicrotasks()
@@ -418,7 +729,10 @@ void main() {
         repo.activationWaiting!.completeError(
           ApiError<AdmissionMeSnapshot, ErrorSchema>(
             statusCode: 409,
-            error: ErrorSchema(code: status, message: 'temporary'),
+            error: ErrorSchema(
+              code: ErrorSchemaCode.fromJson(status),
+              message: 'temporary',
+            ),
           ),
         );
         async.flushMicrotasks();
@@ -485,6 +799,87 @@ void main() {
     );
   }
 
+  for (final entry in <ErrorSchemaCode, AdmissionStatus>{
+    ErrorSchemaCode.ended: AdmissionStatus.ended,
+    ErrorSchemaCode.permanentlyDeclined: AdmissionStatus.denied,
+    ErrorSchemaCode.notEligible: AdmissionStatus.denied,
+    ErrorSchemaCode.staleVersion: AdmissionStatus.pending,
+    ErrorSchemaCode.permissionPending: AdmissionStatus.pending,
+    ErrorSchemaCode.connectionRequired: AdmissionStatus.pending,
+    ErrorSchemaCode.fromJson('revoked'): AdmissionStatus.denied,
+    ErrorSchemaCode.fromJson('declined'): AdmissionStatus.denied,
+    ErrorSchemaCode.fromJson('superseded'): AdmissionStatus.cancelled,
+    ErrorSchemaCode.fromJson('cancelled'): AdmissionStatus.cancelled,
+    ErrorSchemaCode.fromJson('expired'): AdmissionStatus.expired,
+    ErrorSchemaCode.fromJson('future_error'): AdmissionStatus.pending,
+  }.entries) {
+    test('HTTP 409 ${entry.key} before activation maps conservatively', () {
+      fakeAsync((async) {
+        final repo = FakeRepository()
+          ..requestError = ApiError<AdmissionMeSnapshot, ErrorSchema>(
+            statusCode: 409,
+            error: ErrorSchema(code: entry.key, message: 'error'),
+          );
+        final admission = ServerParticipantAdmission(
+          repository: repo,
+          sessionSlug: 'session',
+          initial: initial(),
+          connection: FakeConnection(),
+          now: () => time.add(async.elapsed),
+        )..start();
+        async.flushMicrotasks();
+        check(admission.status).equals(entry.value);
+        admission.dispose();
+        async.flushMicrotasks();
+      });
+    });
+  }
+
+  for (final statusCode in [404, 429, 409]) {
+    test('HTTP $statusCode while waiting retries with bounded backoff', () {
+      fakeAsync((async) {
+        final repo = FakeRepository()
+          ..requestError = ApiError<AdmissionMeSnapshot, ErrorSchema>(
+            statusCode: statusCode,
+            error: statusCode == 409
+                ? ErrorSchema(
+                    code: ErrorSchemaCode.fromJson('future_error'),
+                    message: 'unknown',
+                  )
+                : null,
+          );
+        final admission = ServerParticipantAdmission(
+          repository: repo,
+          sessionSlug: 'session',
+          initial: initial(),
+          connection: FakeConnection(),
+          now: () => time.add(async.elapsed),
+        )..start();
+        async.flushMicrotasks();
+        check(admission.status).equals(AdmissionStatus.pending);
+        check(admission.error).isNotNull();
+        check(repo.requests).equals(1);
+        async.elapse(const Duration(seconds: 1));
+        check(repo.requests).equals(1);
+        async.elapse(const Duration(seconds: 1));
+        check(repo.requests).equals(2);
+        async.elapse(const Duration(seconds: 3));
+        check(repo.requests).equals(2);
+        async.elapse(const Duration(seconds: 1));
+        check(repo.requests).equals(3);
+        async.elapse(const Duration(minutes: 3));
+        check(repo.requests < 10).isTrue();
+        check(admission.status).equals(AdmissionStatus.pending);
+        repo.requestError = null;
+        async.elapse(const Duration(minutes: 1));
+        check(admission.error).isNull();
+        check(admission.status).equals(AdmissionStatus.pending);
+        admission.dispose();
+        async.flushMicrotasks();
+      });
+    });
+  }
+
   for (final statusCode in [404, 408, 409, 429, 503]) {
     test('HTTP $statusCode after activation degrades and retries', () {
       fakeAsync((async) {
@@ -502,7 +897,10 @@ void main() {
         async.flushMicrotasks();
         repo.requestError = ApiError<AdmissionMeSnapshot, ErrorSchema>(
           statusCode: statusCode,
-          error: const ErrorSchema(code: 'unknown', message: 'temporary'),
+          error: ErrorSchema(
+            code: ErrorSchemaCode.fromJson('unknown'),
+            message: 'temporary',
+          ),
         );
         admission.refresh();
         async.flushMicrotasks();
@@ -592,7 +990,10 @@ void main() {
           async.flushMicrotasks();
           repo.requestError = ApiError<AdmissionMeSnapshot, ErrorSchema>(
             statusCode: 409,
-            error: ErrorSchema(code: entry.key, message: 'terminal'),
+            error: ErrorSchema(
+              code: ErrorSchemaCode.fromJson(entry.key),
+              message: 'terminal',
+            ),
           );
           admission.refresh();
           async.flushMicrotasks();
@@ -1008,7 +1409,7 @@ void main() {
     },
   );
 
-  test('expiration fences a late approval response', () {
+  test('local deadline does not fence a late server approval', () {
     fakeAsync((async) {
       final repo = FakeRepository()..waiting = Completer<AdmissionMeSnapshot>();
       final connection = FakeConnection()..hasMediaPermissions = true;
@@ -1022,11 +1423,11 @@ void main() {
       async
         ..flushMicrotasks()
         ..elapse(const Duration(minutes: 10));
-      check(admission.status).equals(AdmissionStatus.expired);
+      check(admission.status).equals(AdmissionStatus.pending);
       repo.waiting!.complete(snapshot('approved'));
       async.flushMicrotasks();
-      check(admission.status).equals(AdmissionStatus.expired);
-      check(admission.snapshot).isNull();
+      check(admission.status).equals(AdmissionStatus.approved);
+      check(admission.snapshot).isNotNull();
       admission.dispose();
       async.flushMicrotasks();
     });
@@ -1052,6 +1453,189 @@ void main() {
       async.flushMicrotasks();
     });
   });
+
+  test('replacement SID retries a timed out join with the same operation', () {
+    fakeAsync((async) {
+      final repo = FakeRepository()..current = snapshot('approved');
+      final connection = FakeConnection()..hasMediaPermissions = true;
+      var id = 0;
+      final admission = ServerParticipantAdmission(
+        repository: repo,
+        sessionSlug: 'session',
+        initial: initial(),
+        connection: connection,
+        now: () => time.add(async.elapsed),
+        newId: () => 'operation${++id}',
+      )..start();
+      async.flushMicrotasks();
+      admission.activate();
+      async.flushMicrotasks();
+      repo.rejoinError = TimeoutException('uncertain');
+      connection.localSid = 'new-sid';
+      connection.events.add(ServerAdmissionConnectionEvent.reconnected);
+      async.flushMicrotasks();
+      check(admission.status).equals(AdmissionStatus.pending);
+      check(repo.operations).deepEquals(['operation1']);
+      repo
+        ..rejoinError = null
+        ..current = snapshot(
+          'approved',
+          request: 'server-request',
+          attempt: 'server-attempt',
+        );
+      async.elapse(const Duration(seconds: 4));
+      check(repo.operations).deepEquals(['operation1', 'operation1']);
+      check(repo.lastRequest).equals('server-request');
+      check(repo.lastAttempt).equals('server-attempt');
+      check(admission.status).equals(AdmissionStatus.approved);
+      check(repo.activations).equals(2);
+      admission.dispose();
+      async.flushMicrotasks();
+    });
+  });
+
+  test('a SID change during an uncertain join retries the same operation', () {
+    fakeAsync((async) {
+      final repo = FakeRepository()..current = snapshot('approved');
+      final connection = FakeConnection()..hasMediaPermissions = true;
+      var id = 0;
+      final admission = ServerParticipantAdmission(
+        repository: repo,
+        sessionSlug: 'session',
+        initial: initial(),
+        connection: connection,
+        now: () => time.add(async.elapsed),
+        newId: () => 'operation${++id}',
+      )..start();
+      async.flushMicrotasks();
+      admission.activate();
+      async.flushMicrotasks();
+      final old = Completer<JoinResponse>();
+      repo.rejoinWaiting = old;
+      connection.localSid = 'sid-2';
+      connection.events.add(ServerAdmissionConnectionEvent.reconnected);
+      async.flushMicrotasks();
+      connection.localSid = 'sid-3';
+      connection.events.add(ServerAdmissionConnectionEvent.reconnected);
+      async.flushMicrotasks();
+      check(repo.operations).deepEquals(['operation1']);
+      repo
+        ..rejoinWaiting = null
+        ..current = snapshot(
+          'approved',
+          request: 'canonical-request',
+          attempt: 'canonical-attempt',
+        );
+      old.completeError(TimeoutException('uncertain'));
+      async.flushMicrotasks();
+      check(admission.status).equals(AdmissionStatus.pending);
+      async.elapse(const Duration(seconds: 8));
+      check(repo.operations).deepEquals(['operation1', 'operation1']);
+      check(repo.lastRequest).equals('canonical-request');
+      check(repo.lastAttempt).equals('canonical-attempt');
+      check(repo.activations).equals(2);
+      check(admission.status).equals(AdmissionStatus.approved);
+      admission.dispose();
+      async.flushMicrotasks();
+    });
+  });
+
+  for (final entry in {
+    'ended': AdmissionStatus.ended,
+    'permanently_declined': AdmissionStatus.denied,
+  }.entries) {
+    test('rejoin maps authoritative ${entry.key} room errors', () {
+      fakeAsync((async) {
+        final repo = FakeRepository()..current = snapshot('approved');
+        final connection = FakeConnection()..hasMediaPermissions = true;
+        final admission = ServerParticipantAdmission(
+          repository: repo,
+          sessionSlug: 'session',
+          initial: initial(),
+          connection: connection,
+          now: () => time.add(async.elapsed),
+        )..start();
+        async.flushMicrotasks();
+        admission.activate();
+        async.flushMicrotasks();
+        repo.rejoinError = ApiError<JoinResponse, RoomErrorResponse>(
+          statusCode: 409,
+          error: RoomErrorResponse.fromJson({
+            'code': entry.key == 'ended'
+                ? 'room_already_ended'
+                : 'not_joinable',
+            'message': 'rejected',
+            'detail': entry.key,
+          }),
+        );
+        connection.localSid = 'new-sid';
+        connection.events.add(ServerAdmissionConnectionEvent.reconnected);
+        async.flushMicrotasks();
+        check(admission.status).equals(entry.value);
+        admission.dispose();
+        async.flushMicrotasks();
+      });
+    });
+  }
+
+  test(
+    'a newer SID waits for the in-flight canonical join before confirming',
+    () {
+      fakeAsync((async) {
+        final repo = FakeRepository()..current = snapshot('approved');
+        final connection = FakeConnection()..hasMediaPermissions = true;
+        var id = 0;
+        final admission = ServerParticipantAdmission(
+          repository: repo,
+          sessionSlug: 'session',
+          initial: initial(),
+          connection: connection,
+          now: () => time.add(async.elapsed),
+          newId: () => 'operation${++id}',
+        )..start();
+        async.flushMicrotasks();
+        admission.activate();
+        async.flushMicrotasks();
+        final old = Completer<JoinResponse>();
+        repo.rejoinWaiting = old;
+        connection.localSid = 'sid-2';
+        connection.events.add(ServerAdmissionConnectionEvent.reconnected);
+        async.flushMicrotasks();
+        repo
+          ..rejoinWaiting = null
+          ..current = snapshot(
+            'approved',
+            request: 'current-request',
+            attempt: 'current-attempt',
+          );
+        connection.localSid = 'sid-3';
+        connection.events.add(ServerAdmissionConnectionEvent.reconnected);
+        async.flushMicrotasks();
+        check(repo.operations).deepEquals(['operation1']);
+        check(repo.activations).equals(1);
+        old.complete(
+          JoinResponse.fromJson({
+            'token': 'unused',
+            'is_already_present': true,
+            'admission': initial()
+                .copyWith(
+                  requestId: 'current-request',
+                  attemptId: 'current-attempt',
+                )
+                .toJson(),
+          }),
+        );
+        async.flushMicrotasks();
+        check(repo.operations).deepEquals(['operation1']);
+        check(repo.lastRequest).equals('current-request');
+        check(repo.lastAttempt).equals('current-attempt');
+        check(repo.activations).equals(2);
+        check(admission.status).equals(AdmissionStatus.approved);
+        admission.dispose();
+        async.flushMicrotasks();
+      });
+    },
+  );
 
   test(
     'activation is not duplicated on same SID; replacement SID uses new IDs',
@@ -1086,7 +1670,8 @@ void main() {
         connection.localSid = 'replacement';
         connection.events.add(ServerAdmissionConnectionEvent.reconnected);
         async.flushMicrotasks();
-        check(repo.connections).deepEquals([true, true, false, true]);
+        check(repo.connections).deepEquals([true, true, true]);
+        check(repo.operations).deepEquals(['new1']);
         check(repo.lastRequest).equals('new1');
         check(repo.lastAttempt).equals('new2');
         check(repo.activations).equals(2);

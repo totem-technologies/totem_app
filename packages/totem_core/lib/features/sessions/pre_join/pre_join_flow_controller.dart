@@ -5,7 +5,15 @@ import 'package:flutter/foundation.dart';
 import 'package:livekit_client/livekit_client.dart' hide SessionOptions;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart'
-    show AdmissionJoinState, AdmissionJoinStatePermissions;
+    show
+        AdmissionJoinState,
+        AdmissionJoinStatePermissions,
+        AdmissionJoinStateStatus,
+        ApiError,
+        ErrorCode,
+        ReadinessReason,
+        ReadinessState,
+        RoomErrorResponse;
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
@@ -26,9 +34,12 @@ part 'pre_join_flow_controller.g.dart';
 class PreJoinFlowController extends _$PreJoinFlowController {
   @override
   PreJoinFlowState build(String sessionSlug) {
+    ref.watch(joinOperationProvider(sessionSlug));
     ref.onDispose(() {
       _cancelRequested = true;
       ++_admissionAttempt;
+      _activationCancelled?.complete();
+      _activationCancelled = null;
       unawaited(() async {
         try {
           await _admissionSetup;
@@ -51,6 +62,10 @@ class PreJoinFlowController extends _$PreJoinFlowController {
   StreamSubscription<AdmissionStatus>? _serverAdmissionSubscription;
   Future<void>? _admissionSetup;
   Future<void>? _admissionCleanup;
+  Future<PreJoinJoinOutcome>? _activeJoin;
+  ServerParticipantAdmission? _sessionAdmission;
+  Completer<void>? _activationCancelled;
+  bool _returningToPreJoin = false;
   bool _cancelRequested = false;
   int _admissionAttempt = 0;
   int? _handledAdmissionAttempt;
@@ -101,15 +116,21 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     _cancelRequested = false;
     final attempt = ++_admissionAttempt;
     _admissionSetup = null;
+    var joinResponseReceived = false;
 
     try {
+      final operation = ref.read(joinOperationProvider(sessionSlug));
+      if (replaceExistingSession && !operation.fresh) {
+        operation.reset(fresh: true);
+      }
       final response = await ref.refresh(
         sessionTokenProvider(sessionSlug).future,
       );
       if (!_isCurrent(attempt)) return PreJoinJoinOutcome.ignored;
+      joinResponseReceived = true;
       if (response.isAlreadyPresent &&
           sessionSlug.isNotEmpty &&
-          !replaceExistingSession) {
+          !operation.fresh) {
         state = state.copyWith(phase: PreJoinFlowPhase.idle);
         return PreJoinJoinOutcome.confirmationRequired;
       }
@@ -126,10 +147,11 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           : null;
       if (serverState == null ||
           serverState.permissions.isUnknown ||
-          ServerAdmissionAttemptStatus.parse(
-                serverState.status,
-              )?.isAllowedJoinResponse !=
-              true ||
+          serverState.readiness.state.isUnknown ||
+          (serverState.readiness.reason.value?.isUnknown ?? false) ||
+          (serverState.status != AdmissionJoinStateStatus.pending &&
+              serverState.status != AdmissionJoinStateStatus.granting &&
+              serverState.status != AdmissionJoinStateStatus.admitted) ||
           serverState.requestId.isEmpty ||
           serverState.attemptId.isEmpty) {
         throw StateError('Server admission is unavailable or unsupported');
@@ -154,8 +176,38 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         );
       }
       return PreJoinJoinOutcome.pending;
-    } catch (error, stackTrace) {
+    } catch (caughtError, caughtStackTrace) {
       if (!_isCurrent(attempt)) return PreJoinJoinOutcome.ignored;
+      Object error = caughtError;
+      StackTrace stackTrace = caughtStackTrace;
+      final operation = ref.read(joinOperationProvider(sessionSlug));
+      if (!joinResponseReceived &&
+          !operation.fresh &&
+          error is ApiError &&
+          error.error is RoomErrorResponse &&
+          (error.error as RoomErrorResponse).code == ErrorCode.notJoinable &&
+          (error.error as RoomErrorResponse).detail.value ==
+              'invalid_attempt') {
+        try {
+          final snapshot = await ref
+              .read(participantAdmissionRepositoryProvider)
+              .me(sessionSlug: sessionSlug);
+          if (!_isCurrent(attempt)) return PreJoinJoinOutcome.ignored;
+          final readiness = snapshot.readiness;
+          final reason = readiness.reason.value;
+          if (readiness.state == ReadinessState.requiresNewAttempt &&
+              (reason == ReadinessReason.requestCancelled ||
+                  reason == ReadinessReason.requestExpired ||
+                  reason == ReadinessReason.requestFailed)) {
+            state = state.copyWith(phase: PreJoinFlowPhase.idle);
+            return PreJoinJoinOutcome.newAttemptConfirmationRequired;
+          }
+        } catch (refreshError, refreshStackTrace) {
+          if (!_isCurrent(attempt)) return PreJoinJoinOutcome.ignored;
+          error = refreshError;
+          stackTrace = refreshStackTrace;
+        }
+      }
       try {
         await _cleanupAdmission();
       } catch (cleanupError, cleanupStackTrace) {
@@ -298,12 +350,18 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           await _closeAdmissionRoom(room);
           return;
         }
-        await _joinWithToken(
+        final join = _joinWithToken(
           token,
           admissionRoom: room,
           serverAdmission: admission,
           attempt: attempt,
         );
+        _activeJoin = join;
+        try {
+          await join;
+        } finally {
+          if (identical(_activeJoin, join)) _activeJoin = null;
+        }
         return;
       }
       if (status == AdmissionStatus.denied ||
@@ -341,6 +399,29 @@ class PreJoinFlowController extends _$PreJoinFlowController {
     }
   }
 
+  Future<void> returnToPreJoin() async {
+    if (_returningToPreJoin) return;
+    final options = state.sessionOptions;
+    if (options == null) return;
+    final attempt = _admissionAttempt;
+    _returningToPreJoin = true;
+    try {
+      await _activeJoin;
+      if (!_isCurrent(attempt) ||
+          !identical(state.sessionOptions, options) ||
+          state.phase != PreJoinFlowPhase.joined) {
+        return;
+      }
+      final session = ref.read(sessionControllerProvider(options).notifier);
+      final admission = _sessionAdmission;
+      if (admission != null) {
+        await _resetAfterFailedJoin(session, attempt, admission);
+      }
+    } finally {
+      _returningToPreJoin = false;
+    }
+  }
+
   Future<void> cancelAdmission() async {
     if (state.phase == PreJoinFlowPhase.joined ||
         (state.phase == PreJoinFlowPhase.idle &&
@@ -349,9 +430,13 @@ class PreJoinFlowController extends _$PreJoinFlowController {
       return;
     }
     _cancelRequested = true;
+    ref.read(joinOperationProvider(sessionSlug)).reset();
     final attempt = ++_admissionAttempt;
+    _activationCancelled?.complete();
+    _activationCancelled = null;
     final setup = _admissionSetup;
     try {
+      await _activeJoin;
       try {
         await setup;
         if (attempt == _admissionAttempt) await _serverAdmission?.cancel();
@@ -516,6 +601,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         sessionControllerProvider(options).notifier,
       );
       session = currentSession;
+      _sessionAdmission = serverAdmission;
 
       joinStarted = true;
       roomTransferred = true;
@@ -532,12 +618,12 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         activationTrace.finish();
       }
       if (!_isCurrent(attempt)) {
-        await currentSession.resetAfterFailedJoin();
+        await _resetAfterFailedJoin(currentSession, attempt, serverAdmission);
         return PreJoinJoinOutcome.ignored;
       }
       if (result == SessionJoinResult.retryableFailure ||
           result == SessionJoinResult.fatalFailure) {
-        await _resetAfterFailedJoin(currentSession, attempt);
+        await _resetAfterFailedJoin(currentSession, attempt, serverAdmission);
         if (_isCurrent(attempt) && result == SessionJoinResult.fatalFailure) {
           state = state.copyWith(
             error: StateError('Failed to join the approved session'),
@@ -546,25 +632,68 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         return PreJoinJoinOutcome.retryableFailure;
       }
 
+      if (!identical(currentSession.runtime.serverAdmission, serverAdmission)) {
+        throw StateError('Session admission was superseded');
+      }
+      final cancelled = Completer<void>();
+      _activationCancelled = cancelled;
+      final changes = StreamIterator<AdmissionStatus>(serverAdmission.changes);
       try {
-        await serverAdmission.activate();
-        if (serverAdmission.status != AdmissionStatus.approved) {
-          throw StateError('Admission is no longer authorized');
+        while (_isCurrent(attempt)) {
+          try {
+            await Future.any<void>([
+              serverAdmission.activate(),
+              cancelled.future,
+            ]);
+            if (!_isCurrent(attempt)) break;
+            if (serverAdmission.status == AdmissionStatus.approved) break;
+            throw StateError('Admission is no longer authorized');
+          } catch (error) {
+            if (!_isCurrent(attempt)) break;
+            if (serverAdmission.status != AdmissionStatus.pending) rethrow;
+            state = state.copyWith(
+              phase: PreJoinFlowPhase.pending,
+              admissionStatus: AdmissionStatus.pending,
+              error: serverAdmission.error ?? error,
+            );
+            // Admission retries in the background; wait for reconfirmation and
+            // join its in-flight receipt rather than transferring media again.
+            while (_isCurrent(attempt)) {
+              final hasNext = await Future.any<bool>([
+                changes.moveNext(),
+                cancelled.future.then((_) => false),
+              ]);
+              if (!_isCurrent(attempt)) break;
+              if (!hasNext) throw StateError('Admission connection closed');
+              final status = changes.current;
+              if (status == AdmissionStatus.approved) break;
+              if (status != AdmissionStatus.pending) {
+                state = state.copyWith(admissionStatus: status);
+                throw StateError('Admission is no longer authorized');
+              }
+            }
+          }
         }
-      } catch (error) {
-        if (serverAdmission.status != AdmissionStatus.pending ||
-            !identical(serverAdmission.error, error)) {
-          rethrow;
+      } finally {
+        if (identical(_activationCancelled, cancelled)) {
+          _activationCancelled = null;
         }
-        // Admission owns retrying the receipt after reconfirmation.
+        await changes.cancel();
       }
       if (!_isCurrent(attempt)) {
-        await currentSession.resetAfterFailedJoin();
+        await _resetAfterFailedJoin(currentSession, attempt, serverAdmission);
         return PreJoinJoinOutcome.ignored;
       }
 
+      if (!identical(currentSession.runtime.serverAdmission, serverAdmission)) {
+        throw StateError('Session admission was superseded');
+      }
       if (_isCurrent(attempt)) {
-        state = state.copyWith(phase: PreJoinFlowPhase.joined);
+        state = state.copyWith(
+          phase: PreJoinFlowPhase.joined,
+          admissionStatus: AdmissionStatus.approved,
+          clearError: true,
+        );
         // Keep the session alive until this flow is disposed, including the
         // frame before the room screen subscribes to the session.
         releaseSessionListener = null;
@@ -603,7 +732,7 @@ class PreJoinFlowController extends _$PreJoinFlowController {
         }
       } else if (mediaTransferred && session != null) {
         try {
-          await _resetAfterFailedJoin(session, attempt);
+          await _resetAfterFailedJoin(session, attempt, serverAdmission);
         } catch (resetError, resetStackTrace) {
           ErrorHandler.logError(
             resetError,
@@ -623,7 +752,21 @@ class PreJoinFlowController extends _$PreJoinFlowController {
           clearSessionOptions: true,
         );
       }
-      if (_isCurrent(attempt)) state = state.copyWith(error: error);
+      if (_isCurrent(attempt)) {
+        final status = serverAdmission.status;
+        if (status == AdmissionStatus.denied ||
+            status == AdmissionStatus.expired ||
+            status == AdmissionStatus.ended ||
+            status == AdmissionStatus.cancelled) {
+          await ref
+              .read(preJoinMediaControllerProvider(sessionSlug).notifier)
+              .releaseForTerminalOutcome();
+          if (_isCurrent(attempt)) {
+            state = state.copyWith(admissionStatus: status);
+          }
+        }
+        if (_isCurrent(attempt)) state = state.copyWith(error: error);
+      }
       if (!isTerminalSessionJoinError(error)) {
         ErrorHandler.logError(
           error,
@@ -646,7 +789,17 @@ class PreJoinFlowController extends _$PreJoinFlowController {
   Future<void> _resetAfterFailedJoin(
     SessionController session,
     int attempt,
+    ServerParticipantAdmission admission,
   ) async {
+    if (!identical(session.runtime.serverAdmission, admission)) {
+      if (_isCurrent(attempt)) {
+        state = state.copyWith(
+          phase: PreJoinFlowPhase.idle,
+          clearSessionOptions: true,
+        );
+      }
+      return;
+    }
     if (!_isCurrent(attempt)) {
       await session.resetAfterFailedJoin();
       return;

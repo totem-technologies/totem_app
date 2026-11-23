@@ -28,6 +28,7 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
     this.admissionReady = false,
     this.isReturningParticipant = false,
     this.sessionStartedAtAdmission,
+    this.onReturnToPreJoin,
     this.now = DateTime.now,
     super.key,
   });
@@ -38,6 +39,7 @@ class VideoSessionScreen extends ConsumerStatefulWidget {
   final bool admissionReady;
   final bool isReturningParticipant;
   final bool? sessionStartedAtAdmission;
+  final AsyncCallback? onReturnToPreJoin;
   final ValueGetter<DateTime> now;
 
   @override
@@ -327,7 +329,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     switch (screen) {
       case RoomScreen.error:
         return SessionErrorScreen(
-          onRetry: session.join,
+          onRetry: widget.onReturnToPreJoin,
           error: disconnectionError,
         );
       case RoomScreen.loading:
@@ -335,7 +337,7 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
       case RoomScreen.disconnected:
         if (isInternetDisconnect) {
           return SessionErrorScreen(
-            onRetry: session.join,
+            onRetry: widget.onReturnToPreJoin,
             error: disconnectionError,
           );
         }

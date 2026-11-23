@@ -18,6 +18,7 @@ import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/sessions/admission/server_participant_admission.dart';
 
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
@@ -150,7 +151,18 @@ class _UnavailableTrackFactory extends PreJoinPreviewTrackFactory {
       throw Exception('Audio engine returned error code: -9001');
 }
 
+class _RuntimeOwnership extends Mock implements SessionRuntime {
+  ServerParticipantAdmission? admission;
+
+  @override
+  ServerParticipantAdmission? get serverAdmission => admission;
+}
+
 class _SuccessfulSessionController extends SessionController {
+  final _RuntimeOwnership ownership = _RuntimeOwnership();
+
+  @override
+  SessionRuntime get runtime => ownership;
   static SessionJoinMedia? receivedMedia;
   static Room? activatedRoom;
   static int activationCalls = 0;
@@ -169,6 +181,7 @@ class _SuccessfulSessionController extends SessionController {
     receivedMedia = joinMedia;
     activatedRoom = room;
     receivedServerAdmission = serverAdmission;
+    ownership.admission = serverAdmission;
     activationCalls++;
     return await activationGate?.future ?? SessionJoinResult.success;
   }
@@ -176,10 +189,12 @@ class _SuccessfulSessionController extends SessionController {
 
 class _ResettableSessionController extends _SuccessfulSessionController {
   int resets = 0;
+  Completer<void>? resetGate;
 
   @override
   Future<void> resetAfterFailedJoin() async {
     resets++;
+    await resetGate?.future;
   }
 }
 
@@ -238,6 +253,8 @@ AdmissionJoinState _serverInitial({bool admitted = false}) =>
       'permissions': admitted ? 'admitted' : 'waiting',
       'permission_sync': 'pending',
       'revision': 1,
+      'observed_at': _defaultTime.toIso8601String(),
+      'readiness': const {'state': 'waiting_for_approval'},
     });
 
 AdmissionMeSnapshot _serverSnapshot(String status, {bool returning = false}) =>
@@ -245,6 +262,7 @@ AdmissionMeSnapshot _serverSnapshot(String status, {bool returning = false}) =>
       'session_slug': _slug,
       'keeper': 'keeper',
       'room_version': 1,
+      'room_state': _sessionState.turn.roomState.toJson(),
       'room_status': 'active',
       'approval_required': true,
       'settings_revision': 1,
@@ -253,6 +271,19 @@ AdmissionMeSnapshot _serverSnapshot(String status, {bool returning = false}) =>
       'admitted_count': 0,
       'activated_count': 0,
       'pending_count': 1,
+      'readiness': switch (status) {
+        'approved' => {'state': 'ready_to_activate'},
+        'activated' => {'state': 'activated'},
+        'revoked' => {
+          'state': 'requires_new_attempt',
+          'reason': 'request_revoked',
+        },
+        'declined' || 'cancelled' => {
+          'state': 'requires_new_attempt',
+          'reason': 'request_$status',
+        },
+        _ => {'state': 'waiting_for_approval', 'reason': 'approval_required'},
+      },
       'me': {
         'identity': 'guest',
         'user': {
@@ -283,6 +314,7 @@ class _ServerRepository implements ParticipantAdmissionRepository {
   Completer<AdmissionMeSnapshot>? waiting;
   int activations = 0;
   Completer<AdmissionMeSnapshot>? activationWaiting;
+  AdmissionMeSnapshot? activationResponse;
   int cancellations = 0;
   int reads = 0;
 
@@ -306,7 +338,9 @@ class _ServerRepository implements ParticipantAdmissionRepository {
     required AttemptReceiptInput receipt,
   }) async {
     activations++;
-    return await activationWaiting?.future ?? current;
+    return await activationWaiting?.future ??
+        activationResponse ??
+        _serverSnapshot('activated');
   }
 
   @override
@@ -381,6 +415,7 @@ ProviderContainer _container({
   PreJoinFlowController Function()? flowController,
   Future<void>? precacheGate,
   bool stableSession = false,
+  ParticipantAdmissionRepository? admissionRepository,
 }) {
   return ProviderContainer(
       retry: (_, _) => null,
@@ -392,6 +427,10 @@ ProviderContainer _container({
           FakeMediaPermissionAdapter(),
         ),
         preJoinPreviewTrackFactoryProvider.overrideWithValue(factory),
+        if (admissionRepository != null)
+          participantAdmissionRepositoryProvider.overrideWith(
+            (_) => admissionRepository,
+          ),
 
         sessionTokenProvider(
           _slug,
@@ -467,34 +506,220 @@ void main() {
   setUpAll(setupAppConfig);
 
   group('server admission', () {
+    for (final reason in [
+      'request_cancelled',
+      'request_expired',
+      'request_failed',
+      'request_declined',
+      'request_revoked',
+      'request_permanently_declined',
+      'request_superseded',
+      'future_reason',
+    ]) {
+      test(
+        'terminal join recovery checks readiness $reason before asking for confirmation',
+        () async {
+          final repository = _ServerRepository()
+            ..current = _serverSnapshot('cancelled').copyWith(
+              readiness: AdmissionReadiness(
+                state: ReadinessState.requiresNewAttempt,
+                reason: Omittable(ReadinessReason.fromJson(reason)),
+              ),
+            );
+          final flow = _ServerFlow(repository, _ServerConnection());
+          var calls = 0;
+          final container = _container(
+            factory: _TrackFactory(),
+            response: JoinResponse(
+              token: 'token',
+              isAlreadyPresent: false,
+              admission: Omittable(_serverInitial()),
+            ),
+            sessionController: _SuccessfulSessionController.new,
+            flowController: () => flow,
+            admissionRepository: repository,
+            getToken: () async {
+              calls++;
+              if (calls > 1) throw StateError('uncertain fresh join');
+              throw const ApiError<JoinResponse, RoomErrorResponse>(
+                statusCode: 403,
+                error: RoomErrorResponse(
+                  code: ErrorCode.notJoinable,
+                  message: 'Invalid attempt',
+                  detail: Omittable('invalid_attempt'),
+                ),
+              );
+            },
+          );
+          addTearDown(container.dispose);
+          await _waitForMedia(container);
+          final operation = container.read(joinOperationProvider(_slug));
+          final originalId = operation.id;
+          final outcome = await flow.requestJoin();
+          final recoverable = [
+            'request_cancelled',
+            'request_expired',
+            'request_failed',
+          ].contains(reason);
+          expect(
+            outcome,
+            recoverable
+                ? PreJoinJoinOutcome.newAttemptConfirmationRequired
+                : PreJoinJoinOutcome.retryableFailure,
+          );
+          expect(operation.id, originalId);
+          expect(operation.fresh, false);
+          expect(repository.reads, 1);
+          expect(calls, 1);
+          if (recoverable) {
+            expect(
+              await flow.requestJoin(replaceExistingSession: true),
+              PreJoinJoinOutcome.retryableFailure,
+            );
+            expect(operation.id, isNot(originalId));
+            expect(operation.fresh, true);
+            final freshId = operation.id;
+            expect(
+              await flow.requestJoin(),
+              PreJoinJoinOutcome.retryableFailure,
+            );
+            expect(operation.id, freshId);
+          }
+        },
+      );
+    }
+
+    test(
+      'unavailable readiness does not start a fresh attempt and can be retried',
+      () async {
+        final repository = _ServerRepository()
+          ..current = _serverSnapshot('cancelled')
+          ..waiting = Completer<AdmissionMeSnapshot>();
+        final flow = _ServerFlow(repository, _ServerConnection());
+        final container = _container(
+          factory: _TrackFactory(),
+          response: JoinResponse(
+            token: 'token',
+            isAlreadyPresent: false,
+            admission: Omittable(_serverInitial()),
+          ),
+          sessionController: _SuccessfulSessionController.new,
+          flowController: () => flow,
+          admissionRepository: repository,
+          getToken: () async =>
+              throw const ApiError<JoinResponse, RoomErrorResponse>(
+                statusCode: 403,
+                error: RoomErrorResponse(
+                  code: ErrorCode.notJoinable,
+                  message: 'Invalid attempt',
+                  detail: Omittable('invalid_attempt'),
+                ),
+              ),
+        );
+        addTearDown(container.dispose);
+        await _waitForMedia(container);
+        final operation = container.read(joinOperationProvider(_slug));
+        final originalId = operation.id;
+        final joining = flow.requestJoin();
+        await pumpEventQueue();
+        repository.waiting!.completeError(StateError('snapshot unavailable'));
+        expect(await joining, PreJoinJoinOutcome.retryableFailure);
+        expect(operation.fresh, false);
+        expect(operation.id, originalId);
+        repository.waiting = null;
+        expect(
+          await flow.requestJoin(),
+          PreJoinJoinOutcome.newAttemptConfirmationRequired,
+        );
+        expect(operation.id, originalId);
+      },
+    );
+
+    test(
+      'replacement is fresh only after confirmation and remains stable on retry',
+      () async {
+        final flow = _ServerFlow(_ServerRepository(), _ServerConnection());
+        final response = JoinResponse(
+          token: 'token',
+          isAlreadyPresent: true,
+          admission: Omittable(_serverInitial()),
+        );
+        var calls = 0;
+        final container = _container(
+          factory: _TrackFactory(),
+          response: response,
+          sessionController: _SuccessfulSessionController.new,
+          flowController: () => flow,
+          getToken: () async {
+            if (++calls > 1) throw StateError('uncertain join');
+            return response;
+          },
+        );
+        addTearDown(container.dispose);
+        await _waitForMedia(container);
+        expect(
+          await flow.requestJoin(),
+          PreJoinJoinOutcome.confirmationRequired,
+        );
+        final operation = container.read(joinOperationProvider(_slug));
+        final initialId = operation.id;
+        expect(operation.fresh, false);
+        expect(
+          await flow.requestJoin(replaceExistingSession: true),
+          PreJoinJoinOutcome.retryableFailure,
+        );
+        final replacementId = operation.id;
+        expect(replacementId, isNot(initialId));
+        expect(operation.fresh, true);
+        expect(await flow.requestJoin(), PreJoinJoinOutcome.retryableFailure);
+        expect(operation.id, replacementId);
+        expect(operation.fresh, true);
+      },
+    );
+
     for (final admission in [
       const Omittable<AdmissionJoinState?>.absent(),
       const Omittable<AdmissionJoinState?>(null),
+      Omittable<AdmissionJoinState?>(
+        _serverInitial().copyWith(
+          readiness: AdmissionReadiness(
+            state: ReadinessState.fromJson('future_state'),
+          ),
+        ),
+      ),
       for (final status in ['future_status', 'declined', 'expired'])
         Omittable<AdmissionJoinState?>(
           AdmissionJoinState(
             requestId: 'request-1',
             attemptId: 'attempt-1',
-            status: status,
-            durableState: 'none',
+            status: AdmissionJoinStateStatus.fromJson(status),
+            durableState: AdmissionJoinStateDurableState.none,
             approvalRequired: true,
             expiresAt: DateTime(2025),
             permissions: AdmissionJoinStatePermissions.fromJson('waiting'),
-            permissionSync: 'pending',
+            permissionSync: AdmissionJoinStatePermissionSync.pending,
             revision: 1,
+            observedAt: DateTime(2025),
+            readiness: const AdmissionReadiness(
+              state: ReadinessState.waitingForApproval,
+            ),
           ),
         ),
       Omittable<AdmissionJoinState?>(
         AdmissionJoinState(
           requestId: 'request-1',
           attemptId: 'attempt-1',
-          status: 'pending',
-          durableState: 'none',
+          status: AdmissionJoinStateStatus.pending,
+          durableState: AdmissionJoinStateDurableState.none,
           approvalRequired: true,
           expiresAt: DateTime(2025),
           permissions: AdmissionJoinStatePermissions.fromJson('unsupported'),
-          permissionSync: 'pending',
+          permissionSync: AdmissionJoinStatePermissionSync.pending,
           revision: 1,
+          observedAt: DateTime(2025),
+          readiness: const AdmissionReadiness(
+            state: ReadinessState.waitingForApproval,
+          ),
         ),
       ),
     ]) {
@@ -656,6 +881,87 @@ void main() {
     );
 
     test(
+      'return to pre-join restores preview and permits a new server join',
+      () async {
+        final factory = _TrackFactory();
+        final repository = _ServerRepository();
+        final connection = _ServerConnection()..hasMediaPermissions = true;
+        final flow = _ServerFlow(repository, connection);
+        final session = _ResettableSessionController()
+          ..resetGate = Completer<void>();
+        _AdmissionFlow.connections = 0;
+        _SuccessfulSessionController.activationCalls = 0;
+        final container = _container(
+          factory: factory,
+          response: JoinResponse(
+            token: 'token',
+            isAlreadyPresent: false,
+            admission: Omittable(_serverInitial()),
+          ),
+          sessionController: () => session,
+          sessionOptions: serverOptions,
+          flowController: () => flow,
+        );
+        ServerParticipantAdmission? firstAdmission;
+        addTearDown(() async {
+          container.dispose();
+          await firstAdmission?.dispose();
+          await flow.admission?.dispose();
+        });
+
+        await _waitForMedia(container);
+        check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+        repository.current = _serverSnapshot('approved');
+        connection.events.add(ServerAdmissionConnectionEvent.notification);
+        await pumpEventQueue();
+        check(
+          container.read(preJoinFlowControllerProvider(_slug)).phase,
+        ).equals(PreJoinFlowPhase.joined);
+        check(
+          container.read(preJoinMediaControllerProvider(_slug)).transferred,
+        ).isTrue();
+        firstAdmission = flow.admission;
+
+        final returning = flow.returnToPreJoin();
+        await pumpEventQueue();
+        await flow.returnToPreJoin();
+        check(session.resets).equals(1);
+        check(factory.videoTracks.length).equals(1);
+        check(factory.audioTracks.length).equals(1);
+        session.resetGate!.complete();
+        await returning;
+
+        final state = container.read(preJoinFlowControllerProvider(_slug));
+        final media = container.read(preJoinMediaControllerProvider(_slug));
+        check(state.phase).equals(PreJoinFlowPhase.idle);
+        check(state.sessionOptions).isNull();
+        check(media.transferred).isFalse();
+        check(factory.videoTracks.length).equals(2);
+        check(factory.audioTracks.length).equals(2);
+        check(media.camera.track).equals(factory.videoTracks.last);
+        check(media.microphone.track).equals(factory.audioTracks.last);
+
+        repository.current = _serverSnapshot('pending');
+        check(await flow.requestJoin()).equals(PreJoinJoinOutcome.pending);
+        check(_AdmissionFlow.connections).equals(2);
+        repository.current = _serverSnapshot('approved');
+        connection.events.add(ServerAdmissionConnectionEvent.notification);
+        await pumpEventQueue();
+        check(
+          container.read(preJoinFlowControllerProvider(_slug)).phase,
+        ).equals(PreJoinFlowPhase.joined);
+        check(_SuccessfulSessionController.activationCalls).equals(2);
+        check(
+          _SuccessfulSessionController.receivedMedia?.cameraTrack,
+        ).equals(factory.videoTracks.last);
+        check(
+          _SuccessfulSessionController.receivedMedia?.microphoneTrack,
+        ).equals(factory.audioTracks.last);
+        check(session.resets).equals(1);
+      },
+    );
+
+    test(
       'permission and notification during an HTTP approval join only once',
       () async {
         final repository = _ServerRepository();
@@ -702,7 +1008,7 @@ void main() {
     );
 
     test(
-      'a transient activation receipt failure preserves the joined session and retries',
+      'a transient activation receipt failure preserves the session until retry succeeds',
       () async {
         final repository = _ServerRepository()
           ..activationWaiting = Completer<AdmissionMeSnapshot>();
@@ -736,9 +1042,17 @@ void main() {
         await pumpEventQueue();
         check(
           container.read(preJoinFlowControllerProvider(_slug)).phase,
-        ).equals(PreJoinFlowPhase.joined);
+        ).equals(PreJoinFlowPhase.pending);
+        check(
+          container.read(preJoinFlowControllerProvider(_slug)).error,
+        ).isNotNull();
         check(session.resets).equals(0);
         check(connection.disposed).isFalse();
+        check(
+          _SuccessfulSessionController.activatedRoom,
+        ).equals(flow.admissionRoom);
+        final media = _SuccessfulSessionController.receivedMedia;
+        final activationCalls = _SuccessfulSessionController.activationCalls;
 
         await flow.admission!.refresh(confirm: true);
         await pumpEventQueue();
@@ -747,8 +1061,176 @@ void main() {
           container.read(preJoinFlowControllerProvider(_slug)).phase,
         ).equals(PreJoinFlowPhase.joined);
         check(session.resets).equals(0);
+        check(
+          _SuccessfulSessionController.activationCalls,
+        ).equals(activationCalls);
+        check(_SuccessfulSessionController.receivedMedia).equals(media);
+        check(
+          container.read(preJoinFlowControllerProvider(_slug)).error,
+        ).isNull();
       },
     );
+
+    test('receipt must report activated readiness before joining', () async {
+      final repository = _ServerRepository()
+        ..activationResponse = _serverSnapshot('approved');
+      final connection = _ServerConnection()..hasMediaPermissions = true;
+      final flow = _ServerFlow(repository, connection);
+      final container = _container(
+        factory: _TrackFactory(),
+        response: JoinResponse(
+          token: 'token',
+          isAlreadyPresent: false,
+          admission: Omittable(_serverInitial()),
+        ),
+        sessionController: _ResettableSessionController.new,
+        sessionOptions: serverOptions,
+        flowController: () => flow,
+      );
+      addTearDown(() async {
+        container.dispose();
+        await flow.admission?.dispose();
+      });
+      await _waitForMedia(container);
+      await flow.requestJoin();
+      repository.current = _serverSnapshot('approved');
+      connection.events.add(ServerAdmissionConnectionEvent.notification);
+      await pumpEventQueue();
+      check(repository.activations).equals(1);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.pending);
+      repository.activationResponse = _serverSnapshot('activated');
+      await flow.admission!.refresh(confirm: true);
+      await pumpEventQueue();
+      check(repository.activations).equals(2);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.joined);
+    });
+
+    test('stale handoff completion does not reset a newer session', () async {
+      final repository = _ServerRepository();
+      final connection = _ServerConnection()..hasMediaPermissions = true;
+      final flow = _ServerFlow(repository, connection);
+      final session = _ResettableSessionController();
+      final gate = Completer<SessionJoinResult>();
+      _SuccessfulSessionController.activationGate = gate;
+      final container = _container(
+        factory: _TrackFactory(),
+        response: JoinResponse(
+          token: 'token',
+          isAlreadyPresent: false,
+          admission: Omittable(_serverInitial()),
+        ),
+        sessionController: () => session,
+        sessionOptions: serverOptions,
+        flowController: () => flow,
+      );
+      addTearDown(() async {
+        _SuccessfulSessionController.activationGate = null;
+        container.dispose();
+        await flow.admission?.dispose();
+      });
+      await _waitForMedia(container);
+      await flow.requestJoin();
+      repository.current = _serverSnapshot('approved');
+      connection.events.add(ServerAdmissionConnectionEvent.notification);
+      await pumpEventQueue();
+      final cancellation = flow.cancelAdmission();
+      session.ownership.admission = ServerParticipantAdmission(
+        repository: repository,
+        sessionSlug: _slug,
+        initial: _serverInitial(),
+        connection: _ServerConnection(),
+      );
+      gate.complete(SessionJoinResult.success);
+      await cancellation;
+      check(session.resets).equals(0);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
+    });
+
+    test('cancelling an outstanding receipt fences its late success', () async {
+      final repository = _ServerRepository()
+        ..activationWaiting = Completer<AdmissionMeSnapshot>();
+      final connection = _ServerConnection()..hasMediaPermissions = true;
+      final flow = _ServerFlow(repository, connection);
+      final session = _ResettableSessionController();
+      final container = _container(
+        factory: _TrackFactory(),
+        response: JoinResponse(
+          token: 'token',
+          isAlreadyPresent: false,
+          admission: Omittable(_serverInitial()),
+        ),
+        sessionController: () => session,
+        sessionOptions: serverOptions,
+        flowController: () => flow,
+      );
+      addTearDown(() async {
+        container.dispose();
+        await flow.admission?.dispose();
+      });
+      await _waitForMedia(container);
+      await flow.requestJoin();
+      repository.current = _serverSnapshot('approved');
+      connection.events.add(ServerAdmissionConnectionEvent.notification);
+      await pumpEventQueue();
+      check(repository.activations).equals(1);
+      await flow.cancelAdmission();
+      repository.activationWaiting!.complete(repository.current);
+      await pumpEventQueue();
+      check(session.resets).equals(1);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
+      ).equals(AdmissionStatus.cancelled);
+    });
+
+    test('revocation during receipt recovery resets the session', () async {
+      final repository = _ServerRepository()
+        ..activationWaiting = Completer<AdmissionMeSnapshot>();
+      final connection = _ServerConnection()..hasMediaPermissions = true;
+      final flow = _ServerFlow(repository, connection);
+      final session = _ResettableSessionController();
+      final container = _container(
+        factory: _TrackFactory(),
+        response: JoinResponse(
+          token: 'token',
+          isAlreadyPresent: false,
+          admission: Omittable(_serverInitial()),
+        ),
+        sessionController: () => session,
+        sessionOptions: serverOptions,
+        flowController: () => flow,
+      );
+      addTearDown(() async {
+        container.dispose();
+        await flow.admission?.dispose();
+      });
+      await _waitForMedia(container);
+      await flow.requestJoin();
+      repository.current = _serverSnapshot('approved');
+      connection.events.add(ServerAdmissionConnectionEvent.notification);
+      await pumpEventQueue();
+      repository.activationWaiting!.completeError(Exception('offline'));
+      repository.activationWaiting = null;
+      await pumpEventQueue();
+      repository.current = _serverSnapshot('revoked');
+      await flow.admission!.refresh(confirm: true);
+      await pumpEventQueue();
+      check(session.resets).equals(1);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).phase,
+      ).equals(PreJoinFlowPhase.idle);
+      check(
+        container.read(preJoinFlowControllerProvider(_slug)).admissionStatus,
+      ).equals(AdmissionStatus.denied);
+    });
 
     test('a stale activation receipt never marks the flow joined', () async {
       final repository = _ServerRepository()
@@ -781,11 +1263,7 @@ void main() {
       await pumpEventQueue();
       check(
         container.read(preJoinFlowControllerProvider(_slug)).phase,
-      ).equals(PreJoinFlowPhase.idle);
-      check(
-        container.read(preJoinFlowControllerProvider(_slug)).error
-            is StateError,
-      ).isTrue();
+      ).equals(PreJoinFlowPhase.pending);
     });
 
     test(
