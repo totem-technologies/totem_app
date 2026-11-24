@@ -70,7 +70,13 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
     NotificationsService.instance.attachInteractionHandler(
       _notificationHandler,
     );
-    unawaited(ref.read(notificationPermissionsProvider).request());
+    final notifications = ref.read(notificationsProvider);
+    unawaited(
+      ref
+          .read(notificationPermissionsProvider)
+          .request()
+          .whenComplete(notifications.refreshPermissionStatus),
+    );
   }
 
   @override

@@ -1,13 +1,43 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/features/permissions/notification_permissions.dart';
 
 part 'firebase_messaging_service.g.dart';
+
+bool _isExpectedMessagingError(Object error) {
+  final code = switch (error) {
+    FirebaseException(plugin: 'firebase_messaging') => error.code,
+    PlatformException() => error.code,
+    _ => null,
+  };
+
+  return switch (code) {
+    'apns-token-not-set' ||
+    'network-request-failed' ||
+    'network-error' ||
+    'permission-denied' ||
+    'not-implemented' ||
+    'unsupported' ||
+    'unavailable' => true,
+    _ => false,
+  };
+}
+
+typedef MessagingErrorReporter =
+    void Function(
+      Object error,
+      StackTrace stackTrace,
+      String message,
+      String incidentKey,
+    );
 
 @Riverpod(keepAlive: true)
 FirebaseMessagingService firebaseMessagingService(Ref ref) {
@@ -26,11 +56,13 @@ class FirebaseMessagingService implements NotificationPermissions {
     required this.authRepository,
     required this.messaging,
     required this.vapidKey,
+    this.errorReporter,
   });
 
   final AuthRepository authRepository;
   final FirebaseMessaging messaging;
   final String? vapidKey;
+  final MessagingErrorReporter? errorReporter;
   StreamSubscription<String>? _fidSubscription;
   String? _registeredFid;
   String? _pendingFid;
@@ -44,15 +76,41 @@ class FirebaseMessagingService implements NotificationPermissions {
   bool _sessionAuthenticated = false;
   bool Function()? _isAuthenticated;
 
+  void _handleMessagingError(
+    Object error, {
+    required StackTrace stackTrace,
+    required String message,
+    required String operation,
+  }) {
+    if (_isExpectedMessagingError(error)) {
+      logger.d(message);
+      return;
+    }
+
+    final incidentKey = 'firebase-messaging:$operation:${error.runtimeType}';
+    final reporter = errorReporter;
+    if (reporter != null) {
+      reporter(error, stackTrace, message, incidentKey);
+    } else {
+      ErrorHandler.report(
+        error,
+        stackTrace: stackTrace,
+        message: message,
+        incidentKey: incidentKey,
+      );
+    }
+  }
+
   @override
   Future<void> request() async {
     try {
       await messaging.requestPermission(provisional: true);
     } catch (error, stackTrace) {
-      ErrorHandler.logError(
+      _handleMessagingError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to request notification permissions',
+        operation: 'request-permission',
       );
     }
   }
@@ -64,18 +122,20 @@ class FirebaseMessagingService implements NotificationPermissions {
       _fidSubscription ??= messaging.onRegistered.listen(
         _onRegistered,
         onError: (dynamic error, StackTrace stackTrace) {
-          ErrorHandler.logError(
+          _handleMessagingError(
             error,
             stackTrace: stackTrace,
             message: 'FID stream update failed',
+            operation: 'fid-stream',
           );
         },
       );
     } catch (error, stackTrace) {
-      ErrorHandler.logError(
+      _handleMessagingError(
         error,
         stackTrace: stackTrace,
         message: 'Failed to initialize FCM token listener',
+        operation: 'initialize-fid-listener',
       );
     }
   }
@@ -107,10 +167,11 @@ class FirebaseMessagingService implements NotificationPermissions {
         }
         await messaging.register(vapidKey: vapidKey);
       } catch (error, stackTrace) {
-        ErrorHandler.logError(
+        _handleMessagingError(
           error,
           stackTrace: stackTrace,
           message: 'FCM registration failed',
+          operation: 'register',
         );
       }
     }();

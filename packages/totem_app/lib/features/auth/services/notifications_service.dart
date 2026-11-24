@@ -5,7 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -76,8 +76,43 @@ Future<void> notificationTapBackground(
   }
 }
 
-class NotificationsService {
-  NotificationsService._internal();
+typedef _NotificationErrorReporter =
+    void Function(Object error, StackTrace stackTrace, String message);
+
+Future<AuthorizationStatus> _readFirebaseNotificationPermission() async =>
+    (await FirebaseMessaging.instance.getNotificationSettings())
+        .authorizationStatus;
+
+void _reportUnexpectedNotificationError(
+  Object error,
+  StackTrace stackTrace,
+  String message,
+) {
+  ErrorHandler.report(
+    error,
+    stackTrace: stackTrace,
+    message: message,
+    incidentKey: 'notifications:$message:${error.runtimeType}',
+    diagnostics: {'feature': 'notifications'},
+  );
+}
+
+class NotificationsService with WidgetsBindingObserver {
+  NotificationsService._internal()
+    : _readNotificationPermission = _readFirebaseNotificationPermission,
+      _reportUnexpectedError = _reportUnexpectedNotificationError {
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @visibleForTesting
+  NotificationsService.forTesting({
+    required Future<AuthorizationStatus> Function() permissionReader,
+    required void Function(Object error, StackTrace stackTrace, String message)
+    errorReporter,
+  }) : _readNotificationPermission = permissionReader,
+       _reportUnexpectedError = errorReporter,
+       _firebaseInitialized = true;
+
   static final NotificationsService _instance =
       NotificationsService._internal();
   static NotificationsService get instance => _instance;
@@ -87,6 +122,13 @@ class NotificationsService {
   bool _initialized = false;
   bool _firebaseInitialized = false;
   bool _localNotificationsReady = false;
+  bool _localInitializationAttempted = false;
+  bool _notificationPermissionGranted = false;
+  final Future<AuthorizationStatus> Function() _readNotificationPermission;
+  final _NotificationErrorReporter _reportUnexpectedError;
+  Future<void>? _localInitialization;
+  Future<void>? _permissionRefresh;
+  bool _permissionRefreshRequested = false;
   bool _initialLocalNotificationChecked = false;
   int _lastNotificationId = 0;
   Future<void>? _initialization;
@@ -109,6 +151,8 @@ class NotificationsService {
   void detachInteractionHandler(NotificationInteractionHandler handler) {
     if (identical(_interactionHandler, handler)) _interactionHandler = null;
   }
+
+  Future<void> refreshPermissionStatus() => _refreshNotificationPermission();
 
   Future<void> initialize() {
     if (_initialized) return Future.value();
@@ -153,53 +197,29 @@ class NotificationsService {
         });
         _firebaseInitialized = true;
       } catch (error, stackTrace) {
-        ErrorHandler.logError(
+        _reportUnexpectedError(
           error,
-          stackTrace: stackTrace,
-          message: 'Failed to initialize Firebase messaging',
+          stackTrace,
+          'Failed to initialize Firebase messaging',
         );
       }
     }
 
-    if (!_localNotificationsReady) {
-      try {
-        const initializationSettings = InitializationSettings(
-          android: AndroidInitializationSettings('ic_notification'),
-          iOS: DarwinInitializationSettings(
-            requestAlertPermission: false,
-            requestBadgePermission: false,
-            requestSoundPermission: false,
-          ),
-        );
-        final didInitialize = await flutterLocalNotificationsPlugin.initialize(
-          settings: initializationSettings,
-          onDidReceiveNotificationResponse: _handleNotificationTap,
-          onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
-        );
-        if (didInitialize != true) {
-          throw StateError('Local notifications plugin did not initialize');
-        }
-        _localNotificationsReady = true;
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'Failed to initialize local notifications',
-        );
-        // Firebase remains available; leave this false for a later explicit
-        // retry rather than claiming local notifications are operational.
-      }
-    }
+    if (_firebaseInitialized) await _refreshNotificationPermission();
+    if (!_localInitializationAttempted) await _initializeLocalNotifications();
 
     if (_localNotificationsReady && !_initialLocalNotificationChecked) {
       await _handleInitialLocalNotification();
     }
 
     if (!await _restoreBackgroundPayload()) return;
-    if (!_firebaseInitialized || !_localNotificationsReady) return;
-
-    _initialized = true;
-    logger.i('⏰ NotificationsService initialized successfully');
+    _initialized = _firebaseInitialized && _localInitializationAttempted;
+    if (_initialized) {
+      logger.i(
+        '⏰ NotificationsService initialized '
+        '(local notifications ready: $_localNotificationsReady)',
+      );
+    }
   }
 
   Future<void> _handleInitialLocalNotification() async {
@@ -214,10 +234,10 @@ class NotificationsService {
         );
       }
     } catch (error, stackTrace) {
-      ErrorHandler.logError(
+      _reportUnexpectedError(
         error,
-        stackTrace: stackTrace,
-        message: 'Failed to handle initial local notification',
+        stackTrace,
+        'Failed to handle initial local notification',
       );
     }
   }
@@ -376,13 +396,102 @@ class NotificationsService {
     return _lastNotificationId;
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _firebaseInitialized) {
+      unawaited(_refreshNotificationPermission());
+    }
+  }
+
+  Future<void> _initializeLocalNotifications() {
+    return _localInitialization ??= _initializeLocalNotificationsOnce()
+        .whenComplete(() => _localInitialization = null);
+  }
+
+  Future<void> _initializeLocalNotificationsOnce() async {
+    _localInitializationAttempted = true;
+    try {
+      const initializationSettings = InitializationSettings(
+        android: AndroidInitializationSettings('ic_notification'),
+        iOS: DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        ),
+      );
+      final didInitialize = await flutterLocalNotificationsPlugin.initialize(
+        settings: initializationSettings,
+        onDidReceiveNotificationResponse: _handleNotificationTap,
+        onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+      );
+      _localNotificationsReady = didInitialize == true;
+    } catch (error, stackTrace) {
+      _reportUnexpectedError(
+        error,
+        stackTrace,
+        'Failed to initialize local notifications',
+      );
+    }
+  }
+
+  Future<void> _refreshNotificationPermission() {
+    final ongoingRefresh = _permissionRefresh;
+    if (ongoingRefresh != null) {
+      _permissionRefreshRequested = true;
+      return ongoingRefresh;
+    }
+    return _permissionRefresh = _refreshNotificationPermissionLoop();
+  }
+
+  Future<void> _refreshNotificationPermissionLoop() async {
+    try {
+      do {
+        _permissionRefreshRequested = false;
+        await _refreshNotificationPermissionOnce();
+      } while (_permissionRefreshRequested);
+    } finally {
+      _permissionRefresh = null;
+    }
+  }
+
+  Future<void> _refreshNotificationPermissionOnce() async {
+    final previouslyGranted = _notificationPermissionGranted;
+    try {
+      final authorizationStatus = await _readNotificationPermission();
+      _notificationPermissionGranted =
+          authorizationStatus == AuthorizationStatus.authorized ||
+          authorizationStatus == AuthorizationStatus.provisional;
+      if (!previouslyGranted &&
+          _notificationPermissionGranted &&
+          _localInitializationAttempted &&
+          !_localNotificationsReady) {
+        final ongoingInitialization = _localInitialization;
+        if (ongoingInitialization != null) await ongoingInitialization;
+        if (!_localNotificationsReady) {
+          _localInitializationAttempted = false;
+          await _initializeLocalNotifications();
+        }
+        if (_localNotificationsReady && !_initialLocalNotificationChecked) {
+          await _handleInitialLocalNotification();
+        }
+      }
+    } catch (error, stackTrace) {
+      _notificationPermissionGranted = false;
+      _reportUnexpectedError(
+        error,
+        stackTrace,
+        'Failed to check notification permission',
+      );
+    }
+  }
+
   Future<void> showNotification({
     required String title,
     required String body,
     required SessionNotificationPayload payload,
     String? messageId,
   }) async {
-    if (!_localNotificationsReady) return;
+    if (!_localNotificationsReady || !_notificationPermissionGranted) return;
     const notificationDetails = NotificationDetails(
       android: AndroidNotificationDetails(
         'spaces',
@@ -419,12 +528,10 @@ class NotificationsService {
         payload: serializedPayload,
       );
     } catch (error, stackTrace) {
-      ErrorHandler.report(
+      _reportUnexpectedError(
         error,
-        stackTrace: stackTrace,
-        message: 'Failed to display local notification',
-        incidentKey: 'local-notification-display:${error.runtimeType}',
-        diagnostics: {'feature': 'notifications'},
+        stackTrace,
+        'Failed to display local notification',
       );
     }
   }
