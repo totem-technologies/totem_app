@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/services/repository_utils.dart';
 
@@ -82,6 +83,7 @@ class AuthRepository {
         body: FcmfidRegisterSchema(fid: fid),
       ),
       operationName: 'register FCM installation',
+      shouldReport: (_) => false,
     );
   }
 
@@ -90,6 +92,7 @@ class AuthRepository {
       apiCall: () =>
           apiService.$default.totemApiMobileApiUnregisterFcmFid(fid: fid),
       operationName: 'unregister FCM installation',
+      shouldReport: (_) => false,
     );
   }
 }

@@ -18,6 +18,51 @@ void main() {
   });
 
   group('RepositoryUtils.handleApiCall', () {
+    test('redacts the FID in unregister request diagnostics', () async {
+      Map<String, Object?>? reportedDiagnostics;
+      Object? reportedError;
+      const fid = 'secret-fid';
+      final error = DioException(
+        requestOptions: RequestOptions(path: '/fcm/unregister/$fid'),
+        message: 'Failed /fcm/unregister/$fid; retry /fcm/unregister/$fid',
+        type: DioExceptionType.connectionError,
+      );
+
+      await RepositoryUtils.handleApiCall<void>(
+        apiCall: () async => throw error,
+        operationName: 'unregister FID',
+        errorReporter: (error, {diagnostics, stackTrace, message}) {
+          reportedError = error;
+          reportedDiagnostics = diagnostics;
+        },
+      ).catchError((_) {});
+
+      check(
+        reportedDiagnostics!['request_path'],
+      ).equals('/fcm/unregister/[redacted]');
+      check(reportedError.toString().contains(fid)).isFalse();
+      check(reportedDiagnostics.toString().contains(fid)).isFalse();
+      check(reportedError.toString().contains('[redacted]')).isTrue();
+    });
+
+    test('preserves Dio messages for unrelated request paths', () async {
+      const message = 'Connection failed for /spaces/private-room';
+      Object? reportedError;
+
+      await RepositoryUtils.handleApiCall<void>(
+        apiCall: () async => throw DioException(
+          requestOptions: RequestOptions(path: '/spaces/private-room'),
+          message: message,
+          type: DioExceptionType.connectionError,
+        ),
+        operationName: 'load space',
+        errorReporter: (error, {diagnostics, stackTrace, message}) {
+          reportedError = error;
+        },
+      ).catchError((_) {});
+
+      check(reportedError.toString().contains(message)).isTrue();
+    });
     test(
       'converts FormatException into AppDataException.invalidFormat',
       () async {

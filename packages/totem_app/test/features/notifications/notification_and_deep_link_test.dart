@@ -251,6 +251,49 @@ void main() {
     },
   );
 
+  test(
+    'foreground notification without a session payload is displayed',
+    () async {
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      const channel = MethodChannel(
+        'dexterous.com/flutter/local_notifications',
+      );
+      final previousPlatform = debugDefaultTargetPlatformOverride;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      AndroidFlutterLocalNotificationsPlugin.registerWith();
+      final showCalls = <Map<Object?, Object?>>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'getNotificationAppLaunchDetails') {
+          return {'notificationLaunchedApp': false};
+        }
+        if (call.method == 'show') {
+          showCalls.add(Map<Object?, Object?>.from(call.arguments as Map));
+          return null;
+        }
+        return true;
+      });
+      addTearDown(() {
+        messenger.setMockMethodCallHandler(channel, null);
+        debugDefaultTargetPlatformOverride = previousPlatform;
+      });
+
+      SharedPreferences.setMockInitialValues({});
+      final service = NotificationsService.forTesting(
+        permissionReader: () async => AuthorizationStatus.authorized,
+        errorReporter: (_, _, message) => fail(message),
+      );
+      await service.initialize();
+
+      await service.showNotification(title: 'title', body: 'body');
+
+      check(showCalls).length.equals(1);
+      check(showCalls.single['title']).equals('title');
+      check(showCalls.single['body']).equals('body');
+      check(showCalls.single['payload']).equals('');
+    },
+  );
+
   test('unexpected local presentation errors are reported', () async {
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;

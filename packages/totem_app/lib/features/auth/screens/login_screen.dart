@@ -78,11 +78,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (mounted) {
         context.go(
-          RouteNames.pinEntry,
-          extra: {
-            'email': _emailController.text.trim(),
-            'nextRoute': widget.nextRoute,
-          },
+          Uri(
+            path: RouteNames.pinEntry,
+            queryParameters: {'next': ?widget.nextRoute},
+          ).toString(),
+          extra: {'email': _emailController.text.trim()},
         );
       }
     } catch (error, stackTrace) {

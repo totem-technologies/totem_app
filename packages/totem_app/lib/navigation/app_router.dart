@@ -201,6 +201,7 @@ class AppTotemRouter extends TotemRouter {
   GoRouter? _router;
   String? _deferredNotificationLocation;
   Future<bool> Function()? _activeSessionNotificationHandler;
+  String? _activeSessionNotificationSlug;
   bool _sessionNotificationRequiresConfirmation = false;
   bool _sessionNotificationConfirmationPending = false;
   int _sessionNotificationGeneration = 0;
@@ -282,25 +283,32 @@ class AppTotemRouter extends TotemRouter {
   }
 
   @override
-  void setActiveSessionNotificationHandler(Future<bool> Function()? handler) {
+  void setActiveSessionNotificationHandlerForSession(
+    String sessionSlug,
+    Future<bool> Function() handler,
+  ) {
     if (_activeSessionNotificationHandler != handler &&
         _sessionNotificationConfirmationPending) {
       _sessionNotificationGeneration++;
       _sessionNotificationConfirmationPending = false;
     }
     _activeSessionNotificationHandler = handler;
-    if (handler != null &&
-        _deferredNotificationLocation != null &&
-        _ownsActiveSessionRoom(_router?.state.uri.path ?? '')) {
+    _activeSessionNotificationSlug = sessionSlug;
+    if (_deferredNotificationLocation != null && _hasActiveSessionPanels) {
       _sessionNotificationRequiresConfirmation = true;
       _confirmDeferredSessionNotification();
     }
   }
 
   @override
-  void clearActiveSessionNotificationHandler(Future<bool> Function() handler) {
-    if (_activeSessionNotificationHandler == handler) {
+  void clearActiveSessionNotificationHandlerForSession(
+    String sessionSlug,
+    Future<bool> Function() handler,
+  ) {
+    if (_activeSessionNotificationHandler == handler &&
+        _activeSessionNotificationSlug == sessionSlug) {
       _activeSessionNotificationHandler = null;
+      _activeSessionNotificationSlug = null;
       _deferredNotificationLocation = null;
       _sessionNotificationRequiresConfirmation = false;
       _sessionNotificationGeneration++;
@@ -320,7 +328,12 @@ class AppTotemRouter extends TotemRouter {
     }
     if (router.state.uri.path == location) return;
 
-    if (_ownsActiveSessionRoom(router.state.uri.path)) {
+    if (_hasActiveSessionPanels &&
+        _activeSessionNotificationSlug == payload.sessionSlug) {
+      return;
+    }
+
+    if (_hasActiveSessionPanels) {
       _deferredNotificationLocation = location;
       _sessionNotificationRequiresConfirmation = true;
       _confirmDeferredSessionNotification();
@@ -330,12 +343,14 @@ class AppTotemRouter extends TotemRouter {
     _goToNotificationLocation(router, location);
   }
 
-  bool _ownsActiveSessionRoom(String path) => path.startsWith('/session/');
+  bool get _hasActiveSessionPanels =>
+      _activeSessionNotificationHandler != null &&
+      _activeSessionNotificationSlug != null;
 
   void _confirmDeferredSessionNotification() {
     if (_deferredNotificationLocation == null ||
         _sessionNotificationConfirmationPending ||
-        !_ownsActiveSessionRoom(_router?.state.uri.path ?? '') ||
+        !_hasActiveSessionPanels ||
         _activeSessionNotificationHandler == null) {
       return;
     }
@@ -380,7 +395,7 @@ class AppTotemRouter extends TotemRouter {
     if (router == null || location == null) return;
     if (_sessionNotificationRequiresConfirmation ||
         _sessionNotificationConfirmationPending ||
-        _ownsActiveSessionRoom(router.state.uri.path)) {
+        _hasActiveSessionPanels) {
       return;
     }
     if (router.state.uri.path == location) {

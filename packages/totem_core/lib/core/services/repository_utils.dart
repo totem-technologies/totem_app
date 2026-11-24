@@ -133,13 +133,20 @@ class RepositoryUtils {
     return error;
   }
 
+  static String _redactRequestPath(String path) {
+    return path.replaceAllMapped(
+      RegExp('(/fcm/unregister/)[^/?]+'),
+      (match) => '${match[1]}[redacted]',
+    );
+  }
+
   static Map<String, Object?> _errorDiagnostics(Object error) {
     if (error is DioException) {
       return {
         'error_type': error.runtimeType.toString(),
         'dio_type': error.type.name,
         'request_method': error.requestOptions.method,
-        'request_path': error.requestOptions.path,
+        'request_path': _redactRequestPath(error.requestOptions.path),
         'status_code': ?error.response?.statusCode,
         'response_content_type': ?error.response?.headers.value('content-type'),
         if (error.response?.data case final responseData?)
@@ -242,8 +249,15 @@ class RepositoryUtils {
           details: details,
         );
       default:
+        final message = error.message;
+        final safeMessage =
+            message != null &&
+                _redactRequestPath(error.requestOptions.path) !=
+                    error.requestOptions.path
+            ? _redactRequestPath(message)
+            : message;
         return AppNetworkException(
-          'Network error during $operationName: ${error.message}',
+          'Network error during $operationName: $safeMessage',
           details: details,
         );
     }

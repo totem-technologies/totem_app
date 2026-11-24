@@ -184,7 +184,7 @@ class NotificationsService with WidgetsBindingObserver {
           message,
         ) {
           final payload = _decodePayload(message.data);
-          if (message.notification != null && payload != null) {
+          if (message.notification != null) {
             unawaited(
               showNotification(
                 title: message.notification?.title ?? '',
@@ -488,7 +488,7 @@ class NotificationsService with WidgetsBindingObserver {
   Future<void> showNotification({
     required String title,
     required String body,
-    required SessionNotificationPayload payload,
+    SessionNotificationPayload? payload,
     String? messageId,
   }) async {
     if (!_localNotificationsReady || !_notificationPermissionGranted) return;
@@ -512,10 +512,9 @@ class NotificationsService with WidgetsBindingObserver {
       ),
     );
 
-    final serializedPayload = jsonEncode({
-      'payload': payload.toJson(),
-      'message_id': ?messageId,
-    });
+    final serializedPayload = payload == null
+        ? null
+        : jsonEncode({'payload': payload.toJson(), 'message_id': ?messageId});
 
     try {
       await flutterLocalNotificationsPlugin.show(
