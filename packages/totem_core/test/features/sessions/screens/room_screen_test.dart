@@ -537,6 +537,8 @@ Future<_MutableRoomScreenHarness> _pumpRoomScreenWithMutableState(
 
 class _PageExitRecordingRouter extends FakeTotemRouter {
   VoidCallback? pageExitHandler;
+  Future<bool> Function()? activeSessionNotificationHandler;
+  int popOrHomeCalls = 0;
 
   @override
   void setPageExitHandler(VoidCallback? onExit) => pageExitHandler = onExit;
@@ -545,6 +547,20 @@ class _PageExitRecordingRouter extends FakeTotemRouter {
   void clearPageExitHandler(VoidCallback onExit) {
     if (pageExitHandler == onExit) pageExitHandler = null;
   }
+
+  @override
+  void setActiveSessionNotificationHandler(Future<bool> Function()? handler) =>
+      activeSessionNotificationHandler = handler;
+
+  @override
+  void clearActiveSessionNotificationHandler(Future<bool> Function() handler) {
+    if (activeSessionNotificationHandler == handler) {
+      activeSessionNotificationHandler = null;
+    }
+  }
+
+  @override
+  void popOrHome([BuildContext? context]) => popOrHomeCalls++;
 }
 
 void main() {
@@ -600,6 +616,60 @@ void main() {
         ),
       );
     });
+
+    testWidgets(
+      'notification leave confirmation cancels or awaits leave before navigation without stacking dialogs',
+      (tester) async {
+        final router = _PageExitRecordingRouter();
+        TotemRouter.instance = router;
+        addTearDown(() => TotemRouter.instance = FakeTotemRouter());
+        final leaveCompleter = Completer<void>();
+        var leaveCalls = 0;
+        when(session.leave).thenAnswer((_) {
+          leaveCalls++;
+          return leaveCompleter.future;
+        });
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.loading,
+        );
+        final requestLeave = router.activeSessionNotificationHandler!;
+
+        final cancelledRequest = requestLeave();
+        await tester.pumpAndSettle();
+        expect(find.text('Leave session'), findsOneWidget);
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        await cancelledRequest;
+        check(leaveCalls).equals(0);
+        check(router.popOrHomeCalls).equals(0);
+
+        final confirmedRequest = requestLeave();
+        await tester.pumpAndSettle();
+        final duplicateRequest = requestLeave();
+        await tester.pump();
+        check(
+          find
+              .text('Are you sure you want to leave the session?')
+              .evaluate()
+              .length,
+        ).equals(1);
+        await tester.tap(find.text('Leave session'));
+        await tester.pump();
+        check(leaveCalls).equals(1);
+        check(router.popOrHomeCalls).equals(0);
+
+        leaveCompleter.complete();
+        await tester.pumpAndSettle();
+        await confirmedRequest;
+        await duplicateRequest;
+        check(router.popOrHomeCalls).equals(0);
+        await _unmountRoomScreen(tester);
+      },
+    );
 
     testWidgets('leaves the session when the page unloads', (tester) async {
       final router = _PageExitRecordingRouter();

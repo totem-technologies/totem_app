@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:totem_app/features/auth/services/notifications_service.dart';
+import 'package:totem_app/features/auth/services/firebase_messaging_service.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
@@ -31,25 +31,23 @@ class MobileAuthController extends AuthController {
   UserRepository get _userRepository => ref.read(userRepositoryProvider);
   SecureStorage get _secureStorage => ref.read(secureStorageProvider);
   AnalyticsService get _analyticsService => ref.read(analyticsProvider);
-  NotificationsService get _notificationsService =>
-      ref.read(notificationsProvider);
+  FirebaseMessagingService get _messagingService =>
+      ref.read(firebaseMessagingServiceProvider);
 
   final _authStateController = StreamController<AuthState>.broadcast();
   @override
   Stream<AuthState> get authStateChanges => _authStateController.stream;
-  StreamSubscription<String>? _fcmTokenSubscription;
-  String? _registeredFid;
-  Future<void>? _pendingFidUpdate;
-  Future<void>? _pendingRegistration;
+  int _sessionGeneration = 0;
   bool _endingSession = false;
   bool _disposed = false;
 
   @override
   AuthState build() {
+    final messagingService = _messagingService;
     ref.onDispose(() async {
       _disposed = true;
-      await _fcmTokenSubscription?.cancel();
-      _fcmTokenSubscription = null;
+      _sessionGeneration++;
+      unawaited(messagingService.detach());
       await _authStateController.close();
     });
 
@@ -60,6 +58,9 @@ class MobileAuthController extends AuthController {
   @override
   bool get isAuthenticated => state.status == AuthStatus.authenticated;
 
+  bool get isAuthStateResolved =>
+      state.status != AuthStatus.initial && state.status != AuthStatus.loading;
+
   bool get isOnboardingCompleted =>
       isAuthenticated &&
       (state.user?.name.value != null &&
@@ -69,24 +70,7 @@ class MobileAuthController extends AuthController {
   UserSchema? get user => state.user;
 
   void _initialize() {
-    try {
-      _fcmTokenSubscription ??= _notificationsService.onRegistered.listen(
-        _onRegistered,
-        onError: (dynamic error, StackTrace stackTrace) {
-          ErrorHandler.logError(
-            error,
-            stackTrace: stackTrace,
-            message: 'FCM token refresh failed',
-          );
-        },
-      );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Failed to initialize FCM token listener',
-      );
-    }
+    _messagingService.start(isAuthenticated: () => isAuthenticated);
     checkExistingAuth();
   }
 
@@ -135,9 +119,11 @@ class MobileAuthController extends AuthController {
   Future<void> logout() async {
     if (!isAuthenticated || _endingSession) return;
     _endingSession = true;
+    _sessionGeneration++;
+    _messagingService.beginEndingSession();
 
     try {
-      await _unregisterNotifications();
+      await _messagingService.unregister();
       final refreshToken = await _secureStorage.read(
         key: AppConsts.refreshTokenKey,
       );
@@ -160,10 +146,12 @@ class MobileAuthController extends AuthController {
 
   @override
   Future<void> deleteAccount() async {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || _endingSession) return;
 
     _endingSession = true;
-    await _unregisterNotifications();
+    _sessionGeneration++;
+    _messagingService.beginEndingSession();
+    await _messagingService.unregister();
     _setState(AuthState.loading());
     try {
       await _userRepository.deleteAccount();
@@ -207,6 +195,7 @@ class MobileAuthController extends AuthController {
   Future<void> _checkExistingAuth() async {
     if (_isCheckingExistingAuth) return;
     _isCheckingExistingAuth = true;
+    final generation = _sessionGeneration;
     _setState(AuthState.loading());
 
     try {
@@ -215,6 +204,7 @@ class MobileAuthController extends AuthController {
       final accessToken = await _secureStorage.read(
         key: AppConsts.accessTokenKey,
       );
+      if (_disposed || generation != _sessionGeneration) return;
 
       if (accessToken == null) {
         logger.i('🔑 No token. Setting unauthenticated.');
@@ -223,6 +213,7 @@ class MobileAuthController extends AuthController {
       }
 
       final cachedUser = await ref.read(localStorageServiceProvider).getUser();
+      if (_disposed || generation != _sessionGeneration) return;
       if (cachedUser != null) {
         logger.i('🔑 Using cached user (Optimistic).');
         _setState(AuthState.authenticated(user: cachedUser));
@@ -236,16 +227,18 @@ class MobileAuthController extends AuthController {
           _registerForNotifications();
         }
       } else {
-        await _validateTokenOnline(cachedUser);
+        await _validateTokenOnline(cachedUser, generation);
       }
     } catch (error, stackTrace) {
+      if (_disposed || generation != _sessionGeneration) return;
       ErrorHandler.logError(
         error,
         stackTrace: stackTrace,
         message: 'Check existing auth failed',
       );
       _endingSession = true;
-      await _unregisterNotifications();
+      _messagingService.beginEndingSession();
+      await _messagingService.unregister();
       await _clearTokens();
       _setState(AuthState.unauthenticated());
     } finally {
@@ -253,7 +246,10 @@ class MobileAuthController extends AuthController {
     }
   }
 
-  Future<void> _validateTokenOnline(UserSchema? cachedUser) async {
+  Future<void> _validateTokenOnline(
+    UserSchema? cachedUser,
+    int generation,
+  ) async {
     bool timedOut = false;
 
     try {
@@ -263,9 +259,10 @@ class MobileAuthController extends AuthController {
         final user = await _userRepository.currentUser;
 
         // The timeout does not cancel the operation, so ignore late results.
-        if (timedOut) return;
+        if (timedOut || _disposed || generation != _sessionGeneration) return;
 
         await ref.read(localStorageServiceProvider).saveUser(user);
+        if (timedOut || _disposed || generation != _sessionGeneration) return;
         _setState(AuthState.authenticated(user: user));
 
         _analyticsService.setUserId(user);
@@ -275,6 +272,7 @@ class MobileAuthController extends AuthController {
         AppConsts.tokenValidationTimeout,
         onTimeout: () {
           timedOut = true;
+          if (_disposed || generation != _sessionGeneration) return;
           logger.w('🔑 Validation timed out. Staying in current state.');
           // If we have a cached user, we just stay authenticated (Soft Fail).
           // If we don't, we might want to force unauthenticated here.
@@ -360,101 +358,13 @@ class MobileAuthController extends AuthController {
   }
 
   void _registerForNotifications() {
-    if (_disposed ||
-        _endingSession ||
-        !isAuthenticated ||
-        _fcmTokenSubscription == null) {
-      return;
-    }
-    if (_pendingRegistration != null) return;
-    final registration = () async {
-      try {
-        await _notificationsService.register();
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'FCM registration failed',
-        );
-      }
-    }();
-    _pendingRegistration = registration;
-    unawaited(
-      registration.whenComplete(() {
-        if (identical(_pendingRegistration, registration)) {
-          _pendingRegistration = null;
-        }
-      }),
-    );
-  }
-
-  void _onRegistered(String fid) {
-    if (_disposed || _endingSession || !isAuthenticated) return;
-    _registeredFid = fid;
-    final previousUpdate = _pendingFidUpdate;
-    _pendingFidUpdate = () async {
-      try {
-        await previousUpdate;
-        if (_disposed || _endingSession || !isAuthenticated) return;
-        await _authRepository.updateFcmToken(fid);
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'FCM identifier update failed',
-        );
-      }
-    }();
-  }
-
-  Future<void> _unregisterNotifications() async {
-    final fid = _registeredFid;
-    _registeredFid = null;
-    if (fid != null && isAuthenticated) {
-      try {
-        await _pendingFidUpdate?.timeout(const Duration(seconds: 5));
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'FCM identifier update did not finish before logout',
-        );
-      }
-      try {
-        await _authRepository
-            .unregisterFcmToken(fid)
-            .timeout(const Duration(seconds: 5));
-      } catch (error, stackTrace) {
-        ErrorHandler.logError(
-          error,
-          stackTrace: stackTrace,
-          message: 'FCM identifier removal failed',
-        );
-      }
-    }
-    try {
-      await _pendingRegistration?.timeout(const Duration(seconds: 5));
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'FCM registration did not finish before logout',
-      );
-    }
-    try {
-      await _notificationsService.unregister().timeout(
-        const Duration(seconds: 5),
-      );
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'FCM unregistration failed',
-      );
-    }
+    if (_disposed || _endingSession) return;
+    _messagingService.beginSession();
+    _messagingService.register();
   }
 
   void _setState(AuthState newState) {
+    if (_disposed) return;
     state = newState;
     _authStateController.add(state);
   }

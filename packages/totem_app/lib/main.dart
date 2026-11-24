@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
-import 'package:totem_app/features/auth/services/firebase_notification_permissions.dart';
+import 'package:totem_app/features/auth/services/firebase_messaging_service.dart';
 import 'package:totem_app/features/auth/services/notifications_service.dart';
 import 'package:totem_app/firebase_options.dart';
 import 'package:totem_app/navigation/app_router.dart';
@@ -32,8 +32,8 @@ Future<void> main() async {
       },
       providerOverrides: [
         authControllerProvider.overrideWith(MobileAuthController.new),
-        notificationPermissionsProvider.overrideWithValue(
-          const FirebaseNotificationPermissions(),
+        notificationPermissionsProvider.overrideWith(
+          (ref) => ref.read(firebaseMessagingServiceProvider),
         ),
       ],
     );
@@ -56,13 +56,20 @@ class TotemApp extends ConsumerStatefulWidget {
 
 class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
   late final GoRouter _router;
+  late final AppTotemRouter _appRouter;
+  late final NotificationInteractionHandler _notificationHandler;
   bool _imagesPrecached = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _router = TotemRouter.instance.createRouter(ref);
+    _appRouter = TotemRouter.instance as AppTotemRouter;
+    _router = _appRouter.createRouter(ref);
+    _notificationHandler = _appRouter.handleSessionNotification;
+    NotificationsService.instance.attachInteractionHandler(
+      _notificationHandler,
+    );
     unawaited(ref.read(notificationPermissionsProvider).request());
   }
 
@@ -87,7 +94,10 @@ class _AppState extends ConsumerState<TotemApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    TotemRouter.instance.dispose();
+    NotificationsService.instance.detachInteractionHandler(
+      _notificationHandler,
+    );
+    _appRouter.dispose();
     _router.dispose();
     super.dispose();
   }

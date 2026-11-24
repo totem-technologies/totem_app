@@ -12,7 +12,7 @@ import 'api_client_security.dart';
 ///
 /// ```dart
 /// final sdk = ClientApi(ApiConfig(client: myClient));
-/// sdk.$default.totemApiMobileApiRegisterFcmToken();
+/// sdk.$default.totemApiMobileApiRegisterFcmFid();
 /// ```
 final class ClientApi {
   ClientApi(this._config);

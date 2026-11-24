@@ -1,13 +1,14 @@
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:checks/checks.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
-import 'package:totem_app/features/auth/services/notifications_service.dart';
+import 'package:totem_app/features/auth/services/firebase_messaging_service.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/auth/repositories/auth_repository.dart';
@@ -70,7 +71,7 @@ class MockAuthRepository extends Mock implements AuthRepository {}
 
 class MockSecureStorage extends Mock implements SecureStorage {}
 
-class MockNotificationsService extends Mock implements NotificationsService {}
+class MockFirebaseMessaging extends Mock implements FirebaseMessaging {}
 
 class MockCacheService extends Mock implements CacheService {}
 
@@ -79,7 +80,7 @@ void main() {
   late MockUserRepository mockUserRepository;
   late MockSecureStorage mockSecureStorage;
   late MockAnalyticsService mockAnalyticsService;
-  late MockNotificationsService mockNotificationsService;
+  late MockFirebaseMessaging mockFirebaseMessaging;
   late MockLocalStorageService mockLocalStorageService;
   late MockCacheService mockCacheService;
   late ProviderContainer container;
@@ -120,13 +121,15 @@ void main() {
     mockUserRepository = MockUserRepository();
     mockSecureStorage = MockSecureStorage();
     mockAnalyticsService = MockAnalyticsService();
-    mockNotificationsService = MockNotificationsService();
+    mockFirebaseMessaging = MockFirebaseMessaging();
     registrations = StreamController<String>.broadcast(sync: true);
     when(
-      () => mockNotificationsService.onRegistered,
+      () => mockFirebaseMessaging.onRegistered,
     ).thenAnswer((_) => registrations.stream);
-    when(() => mockNotificationsService.register()).thenAnswer((_) async {});
-    when(() => mockNotificationsService.unregister()).thenAnswer((_) async {});
+    when(
+      () => mockFirebaseMessaging.register(vapidKey: null),
+    ).thenAnswer((_) async {});
+    when(() => mockFirebaseMessaging.unregister()).thenAnswer((_) async {});
     mockLocalStorageService = MockLocalStorageService();
     mockCacheService = MockCacheService();
 
@@ -147,7 +150,15 @@ void main() {
         userRepositoryProvider.overrideWithValue(mockUserRepository),
         secureStorageProvider.overrideWithValue(mockSecureStorage),
         analyticsProvider.overrideWithValue(mockAnalyticsService),
-        notificationsProvider.overrideWithValue(mockNotificationsService),
+        firebaseMessagingServiceProvider.overrideWith((ref) {
+          final service = FirebaseMessagingService(
+            authRepository: mockAuthRepository,
+            messaging: mockFirebaseMessaging,
+            vapidKey: null,
+          );
+          ref.onDispose(() => unawaited(service.dispose()));
+          return service;
+        }),
         localStorageServiceProvider.overrideWithValue(mockLocalStorageService),
         cacheServiceProvider.overrideWithValue(mockCacheService),
       ],
@@ -404,23 +415,120 @@ void main() {
       user: testUserSchema(slug: '1', name: 'John'),
     );
 
+    test('logout invalidates an in-flight cached session validation', () async {
+      final user = testUserSchema(slug: '1', name: 'John');
+      final validationStarted = Completer<void>();
+      final validation = Completer<UserSchema>();
+      when(
+        () => mockSecureStorage.read(key: AppConsts.accessTokenKey),
+      ).thenAnswer((_) async => 'access');
+      when(
+        () => mockLocalStorageService.getUser(),
+      ).thenAnswer((_) async => user);
+      when(() => mockUserRepository.currentUser).thenAnswer((_) {
+        validationStarted.complete();
+        return validation.future;
+      });
+      when(
+        () => mockSecureStorage.read(key: AppConsts.refreshTokenKey),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockSecureStorage.delete(key: any(named: 'key')),
+      ).thenAnswer((_) async {});
+      when(() => mockLocalStorageService.clearUser()).thenAnswer((_) async {});
+      when(() => mockCacheService.clearCache()).thenAnswer((_) async {});
+      when(() => mockAnalyticsService.logLogout()).thenAnswer((_) async {});
+
+      final checkAuth = getController().checkExistingAuth();
+      await validationStarted.future;
+      await getController().logout();
+      validation.complete(user);
+      await checkAuth;
+
+      check(getState().status).equals(AuthStatus.unauthenticated);
+      verifyNever(() => mockLocalStorageService.saveUser(any()));
+      verifyNever(() => mockFirebaseMessaging.register(vapidKey: null));
+    });
+
+    test('logout waits for registration before unregistering', () async {
+      final registrationStarted = Completer<void>();
+      final registration = Completer<void>();
+      when(() => mockFirebaseMessaging.register(vapidKey: null)).thenAnswer((
+        _,
+      ) {
+        registrationStarted.complete();
+        return registration.future;
+      });
+      when(
+        () => mockSecureStorage.read(key: AppConsts.refreshTokenKey),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockSecureStorage.delete(key: any(named: 'key')),
+      ).thenAnswer((_) async {});
+      when(() => mockLocalStorageService.clearUser()).thenAnswer((_) async {});
+      when(() => mockCacheService.clearCache()).thenAnswer((_) async {});
+      when(() => mockAnalyticsService.logLogout()).thenAnswer((_) async {});
+
+      await authenticateUser();
+      await registrationStarted.future;
+      final logout = getController().logout();
+      verifyNever(() => mockFirebaseMessaging.unregister());
+      registration.complete();
+      await logout;
+      verify(() => mockFirebaseMessaging.unregister()).called(1);
+      check(getState().status).equals(AuthStatus.unauthenticated);
+    });
+
+    test('detaching ignores later FID events', () async {
+      final service = FirebaseMessagingService(
+        authRepository: mockAuthRepository,
+        messaging: mockFirebaseMessaging,
+        vapidKey: null,
+      );
+      service.start(isAuthenticated: () => true);
+      service.beginSession();
+      await service.detach();
+
+      registrations.add('detached-fid');
+
+      verifyNever(() => mockAuthRepository.registerFid(any()));
+      await service.dispose();
+    });
+
+    test('duplicate FID events register only once', () async {
+      final registrationStarted = Completer<void>();
+      final registration = Completer<void>();
+      when(() => mockAuthRepository.registerFid('fid')).thenAnswer((_) {
+        registrationStarted.complete();
+        return registration.future;
+      });
+
+      await authenticateUser();
+      registrations.add('fid');
+      await registrationStarted.future;
+      registrations.add('fid');
+      verify(() => mockAuthRepository.registerFid('fid')).called(1);
+
+      registration.complete();
+    });
+
     test(
       'registration events update the backend and logout removes the identifier before credentials',
       () async {
         final updateStarted = Completer<void>();
         final updateFinished = Completer<void>();
-        when(() => mockAuthRepository.updateFcmToken('fid')).thenAnswer((_) {
+        when(() => mockAuthRepository.registerFid('fid')).thenAnswer((_) {
           updateStarted.complete();
           return updateFinished.future;
         });
         when(
-          () => mockAuthRepository.unregisterFcmToken('fid'),
+          () => mockAuthRepository.unregisterFid('fid'),
         ).thenAnswer((_) async {});
         await authenticateUser();
-        verify(() => mockNotificationsService.register()).called(1);
+        verify(() => mockFirebaseMessaging.register(vapidKey: null)).called(1);
         registrations.add('fid');
         await updateStarted.future;
-        verifyNever(() => mockNotificationsService.register());
+        verifyNever(() => mockFirebaseMessaging.register(vapidKey: null));
         when(
           () => mockSecureStorage.read(key: AppConsts.refreshTokenKey),
         ).thenAnswer((_) async => null);
@@ -434,16 +542,47 @@ void main() {
         when(() => mockAnalyticsService.logLogout()).thenAnswer((_) async {});
         final logout = getController().logout();
         registrations.add('late-fid');
-        verifyNever(() => mockAuthRepository.unregisterFcmToken(any()));
+        verifyNever(() => mockAuthRepository.unregisterFid(any()));
         updateFinished.complete();
         await logout;
         verifyInOrder([
-          () => mockAuthRepository.unregisterFcmToken('fid'),
-          () => mockNotificationsService.unregister(),
+          () => mockAuthRepository.unregisterFid('fid'),
+          () => mockFirebaseMessaging.unregister(),
           () => mockSecureStorage.delete(key: AppConsts.accessTokenKey),
         ]);
-        verifyNever(() => mockAuthRepository.updateFcmToken('late-fid'));
-        verifyNever(() => mockNotificationsService.register());
+        verifyNever(() => mockAuthRepository.registerFid('late-fid'));
+        verifyNever(() => mockFirebaseMessaging.register(vapidKey: null));
+        check(getState().status).equals(AuthStatus.unauthenticated);
+      },
+    );
+
+    test(
+      'failed FID registration is not treated as a registered installation',
+      () async {
+        final registrationStarted = Completer<void>();
+        when(() => mockAuthRepository.registerFid('fid')).thenAnswer((_) {
+          registrationStarted.complete();
+          return Future<void>.error(StateError('registration failed'));
+        });
+        when(
+          () => mockSecureStorage.read(key: AppConsts.refreshTokenKey),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockSecureStorage.delete(key: any(named: 'key')),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockLocalStorageService.clearUser(),
+        ).thenAnswer((_) async {});
+        when(() => mockCacheService.clearCache()).thenAnswer((_) async {});
+        when(() => mockAnalyticsService.logLogout()).thenAnswer((_) async {});
+
+        await authenticateUser();
+        registrations.add('fid');
+        await registrationStarted.future;
+        await getController().logout();
+
+        verify(() => mockAuthRepository.registerFid('fid')).called(1);
+        verifyNever(() => mockAuthRepository.unregisterFid(any()));
         check(getState().status).equals(AuthStatus.unauthenticated);
       },
     );
@@ -452,10 +591,10 @@ void main() {
       'registration failure does not prevent authentication or logout',
       () async {
         when(
-          () => mockNotificationsService.register(),
+          () => mockFirebaseMessaging.register(vapidKey: null),
         ).thenThrow(UnsupportedError('unsupported'));
         when(
-          () => mockNotificationsService.unregister(),
+          () => mockFirebaseMessaging.unregister(),
         ).thenThrow(UnsupportedError('unsupported'));
         await authenticateUser();
         check(getState().status).equals(AuthStatus.authenticated);

@@ -55,6 +55,7 @@ void main() {
     'background notification payload is persisted for the next app launch',
     () async {
       SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
 
       await notificationTapBackground(
         const NotificationResponse(
@@ -62,29 +63,58 @@ void main() {
               NotificationResponseType.selectedNotification,
           id: 1,
           payload:
-              '{"type":"circle_starting","space_slug":"space","event_slug":"event"}',
+              '{"payload":{"type":"session_starting","space_slug":"space","session_slug":"event"},"message_id":"message-1"}',
+        ),
+      );
+
+      await preferences.reload();
+      check(preferences.getString('initial_payload')).equals(
+        '{"payload":{"type":"session_starting","space_slug":"space","session_slug":"event"},"message_id":"message-1"}',
+      );
+      check(
+        preferences.getString('initial_payload_identity'),
+      ).equals('message:message-1');
+      check(preferences.getInt('initial_payload_timestamp')).isNotNull();
+    },
+  );
+
+  test(
+    'background notification with no payload clears stale interaction',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'initial_payload': 'existing',
+        'initial_payload_identity': 'local:1',
+        'initial_payload_timestamp': 1,
+      });
+
+      await notificationTapBackground(
+        const NotificationResponse(
+          notificationResponseType:
+              NotificationResponseType.selectedNotification,
+          id: 1,
         ),
       );
 
       final preferences = await SharedPreferences.getInstance();
-      check(preferences.getString('initial_payload')).equals(
-        '{"type":"circle_starting","space_slug":"space","event_slug":"event"}',
-      );
+      check(preferences.getString('initial_payload')).isNull();
+      check(preferences.getString('initial_payload_identity')).isNull();
+      check(preferences.getInt('initial_payload_timestamp')).isNull();
     },
   );
 
-  test('background notification with no payload is ignored', () async {
-    SharedPreferences.setMockInitialValues({'initial_payload': 'existing'});
+  test('oversized background payload is not persisted', () async {
+    SharedPreferences.setMockInitialValues({});
 
     await notificationTapBackground(
-      const NotificationResponse(
+      NotificationResponse(
         notificationResponseType: NotificationResponseType.selectedNotification,
         id: 1,
+        payload: List.filled(8193, 'x').join(),
       ),
     );
 
     final preferences = await SharedPreferences.getInstance();
-    check(preferences.getString('initial_payload')).equals('existing');
+    check(preferences.getString('initial_payload')).isNull();
   });
 
   testWidgets(

@@ -15,7 +15,9 @@ import 'package:totem_core/shared/totem_icons.dart';
 import 'package:totem_core/shared/router.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
-  const OnboardingScreen({super.key});
+  const OnboardingScreen({this.nextRoute, super.key});
+
+  final String? nextRoute;
 
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -114,7 +116,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           .markWelcomeOnboardingCompleted();
 
       if (mounted) {
-        context.go(RouteNames.login);
+        context.go(
+          widget.nextRoute == null
+              ? RouteNames.login
+              : Uri(
+                  path: RouteNames.login,
+                  queryParameters: {'next': widget.nextRoute},
+                ).toString(),
+        );
       }
     } catch (error, stackTrace) {
       if (mounted) {

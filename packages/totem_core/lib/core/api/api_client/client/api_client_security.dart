@@ -19,12 +19,12 @@ final class ClientSecurity {
     ),
   };
 
-  static final totemApiMobileApiRegisterFcmTokenRequirements =
+  static final totemApiMobileApiRegisterFcmFidRequirements =
       <ApiSecurityRequirement>[
         const ApiSecurityRequirement({'JWTAuth': []}),
         const ApiSecurityRequirement({'SessionAuth': []}),
       ];
-  static final totemApiMobileApiUnregisterFcmTokenRequirements =
+  static final totemApiMobileApiUnregisterFcmFidRequirements =
       <ApiSecurityRequirement>[
         const ApiSecurityRequirement({'JWTAuth': []}),
         const ApiSecurityRequirement({'SessionAuth': []}),

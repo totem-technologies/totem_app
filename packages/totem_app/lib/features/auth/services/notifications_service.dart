@@ -8,37 +8,65 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/api/api_client/models/session_notification_payload.dart';
+
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/shared/logger.dart';
-import 'package:totem_core/shared/router.dart';
 
 final notificationsProvider = Provider<NotificationsService>((ref) {
   return NotificationsService.instance;
 }, name: 'Notifications Provider');
 
-final class NotificationType {
-  static const String circleStarting = 'circle_starting';
-  static const String circleAdvertisement = 'circle_advertisement';
-  static const String missedEvent = 'missed_event';
-}
-
 const _backgroundKey = 'initial_payload';
+const _backgroundIdentityKey = 'initial_payload_identity';
+const _backgroundTimestampKey = 'initial_payload_timestamp';
+const _maxBackgroundPayloadLength = 8192;
+const _backgroundPayloadMaxAge = Duration(hours: 24);
+const _maxHandledInteractionIds = 256;
+const _maxPendingInteractions = 64;
+
+typedef NotificationInteractionHandler =
+    void Function(SessionNotificationPayload payload);
+
+String? _transportMessageId(String serializedPayload) {
+  try {
+    final value = jsonDecode(serializedPayload);
+    if (value is! Map) return null;
+    final messageId = value['message_id'];
+    return messageId is String && messageId.isNotEmpty ? messageId : null;
+  } catch (_) {
+    return null;
+  }
+}
 
 @pragma('vm:entry-point')
 Future<void> notificationTapBackground(
   NotificationResponse notificationResponse,
 ) async {
   final payload = notificationResponse.payload;
-  if (payload == null) return;
 
   try {
-    await SharedPreferences.getInstance().then((prefs) async {
-      await prefs.setString(_backgroundKey, payload);
-    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    await prefs.remove(_backgroundKey);
+    await prefs.remove(_backgroundIdentityKey);
+    await prefs.remove(_backgroundTimestampKey);
+    if (payload == null || payload.length > _maxBackgroundPayloadLength) return;
+
+    final messageId = _transportMessageId(payload);
+    await prefs.setString(_backgroundKey, payload);
+    await prefs.setString(
+      _backgroundIdentityKey,
+      messageId == null
+          ? 'local:${notificationResponse.id}'
+          : 'message:$messageId',
+    );
+    await prefs.setInt(
+      _backgroundTimestampKey,
+      DateTime.now().millisecondsSinceEpoch,
+    );
   } catch (error, stackTrace) {
     ErrorHandler.logError(
       error,
@@ -60,9 +88,27 @@ class NotificationsService {
   bool _firebaseInitialized = false;
   bool _localNotificationsReady = false;
   bool _initialLocalNotificationChecked = false;
+  int _lastNotificationId = 0;
   Future<void>? _initialization;
   StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
+  final _pendingInteractions = <SessionNotificationPayload>[];
+  final _handledInteractionIds = <String>{};
+  NotificationInteractionHandler? _interactionHandler;
+
+  /// Attaches the router-facing callback and delivers interactions received so
+  /// far, including cold-start notification taps.
+  void attachInteractionHandler(NotificationInteractionHandler handler) {
+    _interactionHandler = handler;
+    while (_pendingInteractions.isNotEmpty &&
+        identical(_interactionHandler, handler)) {
+      _deliverInteraction(_pendingInteractions.removeAt(0), handler);
+    }
+  }
+
+  void detachInteractionHandler(NotificationInteractionHandler handler) {
+    if (identical(_interactionHandler, handler)) _interactionHandler = null;
+  }
 
   Future<void> initialize() {
     if (_initialized) return Future.value();
@@ -75,20 +121,32 @@ class NotificationsService {
     logger.i('⏰ Initializing NotificationsService...');
     if (!_firebaseInitialized) {
       try {
+        await FirebaseMessaging.instance
+            .setForegroundNotificationPresentationOptions(
+              alert: false,
+              badge: false,
+              sound: false,
+            );
         final initialMessage = await FirebaseMessaging.instance
             .getInitialMessage();
-        if (initialMessage != null) _handleFirebaseMessage(initialMessage);
+        if (initialMessage != null) {
+          _handleFirebaseMessage(initialMessage, isInteraction: true);
+        }
         _messageOpenedSubscription ??= FirebaseMessaging.onMessageOpenedApp
-            .listen(_handleFirebaseMessage);
+            .listen((message) {
+              _handleFirebaseMessage(message, isInteraction: true);
+            });
         _foregroundMessageSubscription ??= FirebaseMessaging.onMessage.listen((
           message,
         ) {
-          if (message.notification != null) {
+          final payload = _decodePayload(message.data);
+          if (message.notification != null && payload != null) {
             unawaited(
               showNotification(
                 title: message.notification?.title ?? '',
                 body: message.notification?.body ?? '',
-                data: message.data,
+                payload: payload,
+                messageId: message.messageId,
               ),
             );
           }
@@ -167,11 +225,24 @@ class NotificationsService {
   Future<bool> _restoreBackgroundPayload() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final payload = prefs.getString(_backgroundKey);
-      if (payload != null) {
-        _handlePayload(jsonDecode(payload) as Map);
-        await prefs.remove(_backgroundKey);
+      await prefs.reload();
+      final serializedPayload = prefs.getString(_backgroundKey);
+      final timestamp = prefs.getInt(_backgroundTimestampKey);
+      if (serializedPayload != null &&
+          serializedPayload.length <= _maxBackgroundPayloadLength &&
+          timestamp != null &&
+          _isRecentBackgroundPayload(timestamp)) {
+        final interaction = _decodeSerializedPayload(serializedPayload);
+        if (interaction != null) {
+          _handleNotificationInteraction(
+            interaction,
+            prefs.getString(_backgroundIdentityKey),
+          );
+        }
       }
+      await prefs.remove(_backgroundKey);
+      await prefs.remove(_backgroundIdentityKey);
+      await prefs.remove(_backgroundTimestampKey);
       return true;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
@@ -183,54 +254,133 @@ class NotificationsService {
     }
   }
 
-  void _handleFirebaseMessage(RemoteMessage message) {
-    logger.i('⏰ Handling message: ${message.data}');
-    _handlePayload(message.data);
+  void _handleFirebaseMessage(
+    RemoteMessage message, {
+    bool isInteraction = false,
+  }) {
+    final payload = _decodePayload(message.data);
+    if (payload == null || !isInteraction) return;
+    _handleNotificationInteraction(
+      payload,
+      message.messageId == null ? null : 'message:${message.messageId}',
+    );
   }
 
   void _handleNotificationTap(NotificationResponse notificationResponse) {
     final payload = notificationResponse.payload;
     if (payload != null) {
-      logger.d('⏰ Notification payload: $payload');
-      final deserializedPayload = jsonDecode(payload) as Map;
-      _handlePayload(deserializedPayload);
-    }
-  }
-
-  void _handlePayload(Map<dynamic, dynamic> payload) {
-    final type = payload['type'] as String?;
-    if (type != null) {
-      switch (type) {
-        case NotificationType.circleStarting:
-        case NotificationType.circleAdvertisement:
-        case NotificationType.missedEvent:
-          final spaceSlug = payload['space_slug'] as String?;
-          final sessionSlug = payload['event_slug'] as String?;
-          if (spaceSlug != null && sessionSlug != null) {
-            _handlePath(RouteNames.spaceSession(spaceSlug, sessionSlug));
-          }
-          return;
-        default:
-          logger.w('⏰ Unknown notification type: $type. No action taken.');
-          return;
+      final interaction = _decodeSerializedPayload(payload);
+      if (interaction != null) {
+        final messageId = _transportMessageId(payload);
+        _handleNotificationInteraction(
+          interaction,
+          messageId == null
+              ? 'local:${notificationResponse.id}'
+              : 'message:$messageId',
+        );
       }
     }
   }
 
-  void _handlePath(String? path) {
-    logger.i('⏰ Handling path: $path');
-    if (path != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        logger.i('⏰ Handled path: $path');
-        await TotemRouter.instance.navigatorKey.currentContext?.push(path);
-      });
+  SessionNotificationPayload? _decodeSerializedPayload(String value) {
+    try {
+      return _decodePayload(jsonDecode(value));
+    } catch (error) {
+      logger.w('⏰ Ignoring malformed notification JSON');
+      return null;
     }
+  }
+
+  SessionNotificationPayload? _decodePayload(Object? value) {
+    try {
+      if (value is! Map) return null;
+      final transport = Map<String, dynamic>.from(value);
+      final rawPayload = transport['payload'] ?? transport;
+      if (rawPayload is! Map) return null;
+      final json = Map<String, dynamic>.from(rawPayload);
+      if (!SessionNotificationPayload.canParse(json)) return null;
+      final payload = SessionNotificationPayload.fromJson(json);
+      if (payload.type.isUnknown ||
+          !_isSafeSlug(payload.spaceSlug) ||
+          !_isSafeSlug(payload.sessionSlug)) {
+        return null;
+      }
+      return payload;
+    } catch (error) {
+      logger.w('⏰ Ignoring invalid notification payload');
+      return null;
+    }
+  }
+
+  bool _isSafeSlug(String slug) =>
+      RegExp(r'^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$').hasMatch(slug);
+
+  bool _isRecentBackgroundPayload(int timestamp) {
+    final age = DateTime.now().millisecondsSinceEpoch - timestamp;
+    return age >= 0 && age <= _backgroundPayloadMaxAge.inMilliseconds;
+  }
+
+  void _handleNotificationInteraction(
+    SessionNotificationPayload payload,
+    String? identity,
+  ) {
+    if (identity != null && !_rememberInteraction(identity)) return;
+    final handler = _interactionHandler;
+    if (handler == null) {
+      if (_pendingInteractions.length == _maxPendingInteractions) {
+        _pendingInteractions.removeAt(0);
+      }
+      _pendingInteractions.add(payload);
+    } else {
+      _deliverInteraction(payload, handler);
+    }
+  }
+
+  void _deliverInteraction(
+    SessionNotificationPayload payload,
+    NotificationInteractionHandler handler,
+  ) {
+    try {
+      handler(payload);
+    } catch (error, stackTrace) {
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Notification interaction handler failed',
+      );
+    }
+  }
+
+  bool _rememberInteraction(String identity) {
+    if (_handledInteractionIds.contains(identity)) return false;
+    if (_handledInteractionIds.length == _maxHandledInteractionIds) {
+      _handledInteractionIds.remove(_handledInteractionIds.first);
+    }
+    _handledInteractionIds.add(identity);
+    return true;
+  }
+
+  int _notificationIdForMessage(String messageId) {
+    var hash = 0x811c9dc5;
+    for (final codeUnit in messageId.codeUnits) {
+      hash = ((hash ^ codeUnit) * 0x01000193) & 0x7fffffff;
+    }
+    return hash;
+  }
+
+  int _newNotificationId() {
+    final timestamp = DateTime.timestamp().millisecondsSinceEpoch % 2147483647;
+    _lastNotificationId = timestamp > _lastNotificationId
+        ? timestamp
+        : (_lastNotificationId + 1) % 2147483647;
+    return _lastNotificationId;
   }
 
   Future<void> showNotification({
     required String title,
     required String body,
-    required Map<String, dynamic> data,
+    required SessionNotificationPayload payload,
+    String? messageId,
   }) async {
     if (!_localNotificationsReady) return;
     const notificationDetails = NotificationDetails(
@@ -246,21 +396,27 @@ class NotificationsService {
         visibility: NotificationVisibility.public,
       ),
       iOS: DarwinNotificationDetails(
+        presentAlert: true,
         presentBadge: true,
         presentSound: true,
         interruptionLevel: InterruptionLevel.passive,
       ),
     );
 
-    final payload = jsonEncode(data);
+    final serializedPayload = jsonEncode({
+      'payload': payload.toJson(),
+      'message_id': ?messageId,
+    });
 
     try {
       await flutterLocalNotificationsPlugin.show(
-        id: DateTime.timestamp().millisecondsSinceEpoch % 2147483647,
+        id: messageId == null
+            ? _newNotificationId()
+            : _notificationIdForMessage(messageId),
         title: title,
         body: body,
         notificationDetails: notificationDetails,
-        payload: payload,
+        payload: serializedPayload,
       );
     } catch (error, stackTrace) {
       ErrorHandler.report(
@@ -272,12 +428,4 @@ class NotificationsService {
       );
     }
   }
-
-  Stream<String> get onRegistered => FirebaseMessaging.instance.onRegistered;
-
-  Future<void> register() => FirebaseMessaging.instance.register(
-    vapidKey: AppConfig.instance.vapidKey,
-  );
-
-  Future<void> unregister() => FirebaseMessaging.instance.unregister();
 }

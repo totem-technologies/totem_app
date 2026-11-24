@@ -46,6 +46,11 @@ class _FakeMobileAuthController extends MobileAuthController {
   bool get isAuthenticated => _currentState.status == AuthStatus.authenticated;
 
   @override
+  bool get isAuthStateResolved =>
+      _currentState.status != AuthStatus.initial &&
+      _currentState.status != AuthStatus.loading;
+
+  @override
   bool get isOnboardingCompleted =>
       isAuthenticated && (_currentState.user?.name.value?.isNotEmpty ?? false);
 
@@ -74,8 +79,10 @@ Future<GoRouter> _pumpRouter(
   WidgetTester tester, {
   required AuthState authState,
   required bool hasSeenWelcome,
+  void Function(_FakeMobileAuthController authController)? onAuthController,
 }) async {
   final authController = _FakeMobileAuthController(authState);
+  onAuthController?.call(authController);
   final routerOwner = AppTotemRouter();
   TotemRouter.instance = routerOwner;
   GoRouter? router;
@@ -132,6 +139,50 @@ void main() {
   });
 
   group('authentication redirects', () {
+    testWidgets('holds protected destinations while auth is unresolved', (
+      tester,
+    ) async {
+      _FakeMobileAuthController? authController;
+      final router = await _pumpRouter(
+        tester,
+        authState: AuthState.loading(),
+        hasSeenWelcome: true,
+        onAuthController: (controller) => authController = controller,
+      );
+      final destination = RouteNames.spaceSession('garden', 'gathering');
+
+      router.go(destination);
+      await tester.pump();
+      check(router.state.uri.path).equals(RouteNames.welcome);
+      check(router.state.uri.queryParameters['next']).equals(destination);
+
+      authController!.emit(AuthState.unauthenticated());
+      await tester.pump();
+      check(router.state.uri.path).equals(RouteNames.login);
+      check(router.state.uri.queryParameters['next']).equals(destination);
+    });
+
+    testWidgets('keeps PIN entry and its destination during auth loading', (
+      tester,
+    ) async {
+      final router = await _pumpRouter(
+        tester,
+        authState: AuthState.loading(),
+        hasSeenWelcome: true,
+      );
+      final destination = RouteNames.spaceSession('garden', 'gathering');
+      router.go(
+        Uri(
+          path: RouteNames.pinEntry,
+          queryParameters: {'next': destination},
+        ).toString(),
+      );
+      await tester.pump();
+
+      check(router.state.uri.path).equals(RouteNames.pinEntry);
+      check(router.state.uri.queryParameters['next']).equals(destination);
+    });
+
     testWidgets('first-time unauthenticated users remain on welcome', (
       tester,
     ) async {
@@ -154,6 +205,44 @@ void main() {
       );
 
       check(router.state.uri.path).equals(RouteNames.login);
+    });
+
+    testWidgets('preserves a protected destination through login', (
+      tester,
+    ) async {
+      final router = await _pumpRouter(
+        tester,
+        authState: AuthState.unauthenticated(),
+        hasSeenWelcome: true,
+      );
+
+      router.go(RouteNames.spaceSession('garden', 'gathering'));
+      await tester.pump();
+
+      check(router.state.uri.path).equals(RouteNames.login);
+      check(
+        router.state.uri.queryParameters['next'],
+      ).equals(RouteNames.spaceSession('garden', 'gathering'));
+    });
+
+    testWidgets('rejects external and authentication-loop destinations', (
+      tester,
+    ) async {
+      final router = await _pumpRouter(
+        tester,
+        authState: AuthState.authenticated(
+          user: _testUser(slug: 'user', name: 'Alex'),
+        ),
+        hasSeenWelcome: true,
+      );
+
+      router.go('${RouteNames.login}?next=https%3A%2F%2Fevil.example');
+      await tester.pump();
+      check(router.state.uri.path).equals(RouteNames.home);
+
+      router.go('${RouteNames.login}?next=%2F%2Fevil.example');
+      await tester.pump();
+      check(router.state.uri.path).equals(RouteNames.home);
     });
 
     testWidgets('unauthenticated users cannot open protected routes', (
@@ -187,6 +276,35 @@ void main() {
       },
     );
 
+    testWidgets('completed onboarding honors its safe next destination', (
+      tester,
+    ) async {
+      _FakeMobileAuthController? authController;
+      final router = await _pumpRouter(
+        tester,
+        authState: AuthState.authenticated(user: _testUser(slug: 'new-user')),
+        hasSeenWelcome: true,
+        onAuthController: (controller) => authController = controller,
+      );
+      final destination = RouteNames.spaceSession('garden', 'gathering');
+      router.go(
+        Uri(
+          path: RouteNames.onboarding,
+          queryParameters: {'next': destination},
+        ).toString(),
+      );
+      await tester.pump();
+
+      authController!.emit(
+        AuthState.authenticated(
+          user: _testUser(slug: 'new-user', name: 'Alex'),
+        ),
+      );
+      await tester.pump();
+
+      check(router.state.uri.path).equals(destination);
+    });
+
     testWidgets('onboarded users are kept out of authentication routes', (
       tester,
     ) async {
@@ -203,6 +321,31 @@ void main() {
 
       check(router.state.uri.path).equals(RouteNames.home);
     });
+  });
+
+  testWidgets('notification routing preserves authentication redirects', (
+    tester,
+  ) async {
+    final router = await _pumpRouter(
+      tester,
+      authState: AuthState.unauthenticated(),
+      hasSeenWelcome: true,
+    );
+    final owner = TotemRouter.instance as AppTotemRouter;
+
+    owner.handleSessionNotification(
+      const SessionNotificationPayload(
+        type: NotificationType.sessionStarting,
+        spaceSlug: 'garden',
+        sessionSlug: 'gathering',
+      ),
+    );
+    await tester.pump();
+
+    check(router.state.uri.path).equals(RouteNames.login);
+    check(
+      router.state.uri.queryParameters['next'],
+    ).equals(RouteNames.spaceSession('garden', 'gathering'));
   });
 
   testWidgets(
