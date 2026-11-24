@@ -87,6 +87,7 @@ class SessionKeeperController extends _$SessionKeeperController {
   void disposePresenceTracking() => presence.cancel();
   Future<void> passTotem({String? customPrompt, int? sessionPromptId}) => turns
       .passTotem(customPrompt: customPrompt, sessionPromptId: sessionPromptId);
+  Future<void> silenceIfNoLongerSpeaking() => turns.silenceIfNoLongerSpeaking();
   Future<void> acceptTotem() async {
     await turns.acceptTotem();
   }

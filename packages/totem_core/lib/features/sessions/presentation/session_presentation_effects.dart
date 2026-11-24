@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/presentation/session_action_feedback.dart';
 import 'package:totem_core/features/sessions/presentation/session_device_effects.dart';
 import 'package:totem_core/features/sessions/presentation/session_environment_effects.dart';
 import 'package:totem_core/features/sessions/presentation/session_status_effects.dart';
@@ -75,7 +76,10 @@ class _SessionPresentationEffectsState
         notifications: _notifications,
         child: SessionEnvironmentEffects(
           notifications: _notifications,
-          child: widget.child,
+          child: SessionActionFeedbackEffects(
+            notifications: _notifications,
+            child: widget.child,
+          ),
         ),
       ),
     );

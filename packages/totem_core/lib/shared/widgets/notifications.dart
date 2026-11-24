@@ -518,15 +518,31 @@ class NotificationController {
   }
 
   /// Shows an error notification banner that auto-dismisses after 5 seconds.
+  ///
+  /// Providing [urgentLatestWinsCategory] shows the banner immediately and
+  /// announces it, replacing any active or queued banner in that category.
   NotificationRequest showError(
     BuildContext context, {
     required TotemIconData icon,
     required String title,
     required String message,
+    Object? urgentLatestWinsCategory,
   }) {
-    return show(
+    final view = urgentLatestWinsCategory == null ? null : View.of(context);
+    return _show(
       context,
       duration: const Duration(seconds: 5),
+      dedupeKey: urgentLatestWinsCategory,
+      urgentLatestWinsCategory: urgentLatestWinsCategory,
+      onShown: view == null
+          ? null
+          : () {
+              SemanticsService.sendAnnouncement(
+                view,
+                '$title. $message',
+                TextDirection.ltr,
+              );
+            },
       builder: (context) {
         return NotificationBanner(
           icon: icon,

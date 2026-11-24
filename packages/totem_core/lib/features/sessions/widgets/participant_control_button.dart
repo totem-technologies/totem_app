@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
+import 'package:totem_core/features/sessions/controllers/features/session_keeper_controller.dart';
 import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/media/room_media.dart';
 import 'package:totem_core/features/sessions/media/room_media_providers.dart';
+import 'package:totem_core/features/sessions/presentation/session_action_feedback.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
 import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
@@ -200,6 +201,26 @@ class _ParticipantControlButtonState
     ];
   }
 
+  /// The banner is room-level, so the dialog can close either way.
+  Future<void> _moderate(
+    BuildContext dialogContext,
+    WidgetRef dialogRef,
+    SessionAction action,
+    Future<void> Function(SessionKeeperController keeper) command,
+  ) async {
+    final feedback = dialogRef.read(sessionActionFeedbackProvider.notifier);
+    final session = dialogRef.read(currentSessionProvider);
+    // The tile can unmount while the command runs, e.g. after a removal.
+    final name = widget.participant.name;
+    try {
+      if (session != null) await command(session.keeper);
+    } catch (error, stackTrace) {
+      feedback.report(action, error, subject: name, stackTrace: stackTrace);
+    } finally {
+      if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+    }
+  }
+
   Future<void> _onMuteParticipant(BuildContext context) async {
     await showDialog<void>(
       context: sessionNavigatorContext(context),
@@ -216,28 +237,17 @@ class _ParticipantControlButtonState
                     (user) => UserAvatar.fromUserSchema(user, radius: 40),
                   )
                   .value,
+              // Moderation owns the backend deadline.
+              actionTimeout: null,
               confirmButtonText: 'Mute',
               title: 'Mute ${widget.participant.name}',
               content: 'They can unmute themselves anytime.',
-              onConfirm: () async {
-                try {
-                  await ref
-                      .read(currentSessionProvider)
-                      ?.keeper
-                      .muteParticipant(widget.participant.identity);
-                } catch (error) {
-                  if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(
-                    sessionNavigatorContext(context),
-                    error,
-                    useRootNavigator: false,
-                  );
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
+              onConfirm: () => _moderate(
+                context,
+                ref,
+                SessionAction.muteParticipant,
+                (keeper) => keeper.muteParticipant(widget.participant.identity),
+              ),
               type: ConfirmationDialogType.standard,
             );
           },
@@ -262,28 +272,19 @@ class _ParticipantControlButtonState
                     (user) => UserAvatar.fromUserSchema(user, radius: 40),
                   )
                   .value,
+              // Moderation owns the backend deadline.
+              actionTimeout: null,
               confirmButtonText: 'Disable Camera',
               title: "Disable ${widget.participant.name}'s camera?",
               content: 'They can enable their camera anytime.',
-              onConfirm: () async {
-                try {
-                  await ref
-                      .read(currentSessionProvider)
-                      ?.keeper
-                      .disableParticipantCamera(widget.participant.identity);
-                } catch (error) {
-                  if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(
-                    sessionNavigatorContext(context),
-                    error,
-                    useRootNavigator: false,
-                  );
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
+              onConfirm: () => _moderate(
+                context,
+                ref,
+                SessionAction.disableParticipantCamera,
+                (keeper) => keeper.disableParticipantCamera(
+                  widget.participant.identity,
+                ),
+              ),
               type: ConfirmationDialogType.standard,
             );
           },
@@ -315,25 +316,13 @@ class _ParticipantControlButtonState
               content:
                   'Are you sure you want to remove '
                   '${widget.participant.name}?',
-              onConfirm: () async {
-                try {
-                  await ref
-                      .read(currentSessionProvider)
-                      ?.keeper
-                      .removeParticipant(widget.participant.identity);
-                } catch (error) {
-                  if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(
-                    sessionNavigatorContext(context),
-                    error,
-                    useRootNavigator: false,
-                  );
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
+              onConfirm: () => _moderate(
+                context,
+                ref,
+                SessionAction.removeParticipant,
+                (keeper) =>
+                    keeper.removeParticipant(widget.participant.identity),
+              ),
             );
           },
         );
@@ -357,29 +346,18 @@ class _ParticipantControlButtonState
                     (user) => UserAvatar.fromUserSchema(user, radius: 40),
                   )
                   .value,
+              // Moderation owns the backend deadline.
+              actionTimeout: null,
               confirmButtonText: 'Ban',
               content:
                   'Are you sure you want to ban '
                   '${widget.participant.name}? They will not be able to rejoin the session.',
-              onConfirm: () async {
-                try {
-                  await ref
-                      .read(currentSessionProvider)
-                      ?.keeper
-                      .banParticipant(widget.participant.identity);
-                } catch (error) {
-                  if (!context.mounted) return;
-                  await ErrorHandler.handleApiError(
-                    sessionNavigatorContext(context),
-                    error,
-                    useRootNavigator: false,
-                  );
-                } finally {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
+              onConfirm: () => _moderate(
+                context,
+                ref,
+                SessionAction.banParticipant,
+                (keeper) => keeper.banParticipant(widget.participant.identity),
+              ),
             );
           },
         );

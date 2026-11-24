@@ -15,6 +15,8 @@ class EndSessionConfirmationDialog extends StatelessWidget {
       title: 'End session',
       content: 'Are you sure you want to end the session?',
       confirmButtonText: 'End session',
+      // Ending owns its backend deadline; a dialog timeout would race it.
+      actionTimeout: null,
       onConfirm: () async {
         final ended = await endSessionWithErrorHandling(context, session);
         if (ended && context.mounted) Navigator.of(context).pop();

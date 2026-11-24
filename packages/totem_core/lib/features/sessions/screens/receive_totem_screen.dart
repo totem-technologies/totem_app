@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
+import 'package:totem_core/features/sessions/presentation/session_action_feedback.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
@@ -8,8 +8,6 @@ import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart'
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_text.dart';
 import 'package:totem_core/features/sessions/widgets/transition_card.dart';
-import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 class ReceiveTotemScreen extends ConsumerStatefulWidget {
@@ -20,14 +18,6 @@ class ReceiveTotemScreen extends ConsumerStatefulWidget {
 }
 
 class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
-  final _notificationController = NotificationController();
-
-  @override
-  void dispose() {
-    _notificationController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(currentSessionProvider);
@@ -38,25 +28,30 @@ class _ReceiveTotemScreenState extends ConsumerState<ReceiveTotemScreen> {
     );
 
     Future<bool> onAccept() async {
+      if (session == null) return false;
+      final cues = ref.read(sessionCuesServiceProvider);
+      final feedback = ref.read(sessionActionFeedbackProvider.notifier);
+      final turnBefore = feedback.turnSnapshot();
       try {
-        ref.read(sessionCuesServiceProvider).pulseSwipeCompletion();
-        await session?.keeper.acceptTotem();
+        await session.keeper.acceptTotem();
+        cues.pulseSwipeCompletion();
         return true;
       } catch (error, stackTrace) {
-        ErrorHandler.logError(
+        // Room state already shows an unconfirmed accept, so nothing failed.
+        if (feedback.turnAppliedDespite(
+          error,
+          turnBefore,
+          action: SessionAction.acceptTotem,
+          localIdentity: session.transport?.localIdentity,
+        )) {
+          cues.pulseSwipeCompletion();
+          return true;
+        }
+        feedback.report(
+          SessionAction.acceptTotem,
           error,
           stackTrace: stackTrace,
-          message: 'Accept Totem failed',
         );
-        if (context.mounted) {
-          _notificationController.showError(
-            context,
-            icon: TotemIcons.errorOutlined,
-            title: 'Something went wrong',
-            message: 'We were unable to accept the totem. Please try again.',
-          );
-        }
-
         return false;
       }
     }

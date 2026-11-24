@@ -11,6 +11,7 @@ import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
 import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
@@ -38,6 +39,7 @@ import 'package:totem_core/shared/widgets/notifications.dart';
 import '../../../setup.dart';
 import '../livekit_mocks.dart';
 import '../media/test_room_transport.dart';
+import '../presentation/action_feedback_host.dart';
 import '../session_test_mocks.dart';
 
 DateTime _testNow() => DateTime.utc(2026);
@@ -1896,34 +1898,63 @@ void main() {
     },
   );
 
-  testWidgets('start confirmation works without an admission scope', (
-    tester,
-  ) async {
-    final navigatorKey = GlobalKey<NavigatorState>();
-    await tester.pumpWidget(
-      MaterialApp(navigatorKey: navigatorKey, home: const SizedBox()),
-    );
-    var starts = 0;
-    showDialog<void>(
-      context: navigatorKey.currentContext!,
-      builder: (_) => SessionStartConfirmationDialog(
-        onStart: () async {
-          starts++;
-          return true;
-        },
-      ),
-    );
-    await tester.pumpAndSettle();
-    check(
-      find.text('Are you sure you want to start the session?').evaluate(),
-    ).length.equals(1);
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Start session'));
-    await tester.pumpAndSettle();
-    check(starts).equals(1);
-    check(
-      find.text('Are you sure you want to start the session?').evaluate(),
-    ).isEmpty();
-  });
+  testWidgets(
+    'start confirmation without an admission scope reports a failed start and closes after retry',
+    (tester) async {
+      silenceLogger();
+      final navigatorKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            navigatorKey: navigatorKey,
+            home: const ActionFeedbackHost(child: SizedBox()),
+          ),
+        ),
+      );
+      var starts = 0;
+      showDialog<void>(
+        context: navigatorKey.currentContext!,
+        builder: (_) => SessionStartConfirmationDialog(
+          onStart: () async {
+            starts++;
+            if (starts == 1) throw AppNetworkException.noConnection();
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      check(
+        find.text('Are you sure you want to start the session?').evaluate(),
+      ).length.equals(1);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Start session'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      check(starts).equals(1);
+      check(find.text("Couldn't start the session").evaluate()).isNotEmpty();
+      check(
+        find
+            .text('Everyone is still in the waiting room. Please try again.')
+            .evaluate(),
+      ).isNotEmpty();
+      // The dialog stays open, so confirming again is the retry.
+      check(
+        find.text('Are you sure you want to start the session?').evaluate(),
+      ).length.equals(1);
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Start session'));
+      await tester.pumpAndSettle();
+      check(starts).equals(2);
+      check(
+        find.text('Are you sure you want to start the session?').evaluate(),
+      ).isEmpty();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+    // auto_size_text's notification banner does not dispose its TextPainters.
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
 
   testWidgets(
     'failed admission keeps confirmation open and allows retry',

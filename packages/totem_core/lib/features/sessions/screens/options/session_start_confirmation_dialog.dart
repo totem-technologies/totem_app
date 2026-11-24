@@ -1,20 +1,22 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_scope.dart';
+import 'package:totem_core/features/sessions/presentation/session_action_feedback.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 /// Confirms starting with the live admission queue before changing room state.
-class SessionStartConfirmationDialog extends StatefulWidget {
+class SessionStartConfirmationDialog extends ConsumerStatefulWidget {
   const SessionStartConfirmationDialog({required this.onStart, super.key});
 
   final Future<bool> Function() onStart;
 
   @override
-  State<SessionStartConfirmationDialog> createState() =>
+  ConsumerState<SessionStartConfirmationDialog> createState() =>
       _SessionStartConfirmationDialogState();
 }
 
 class _SessionStartConfirmationDialogState
-    extends State<SessionStartConfirmationDialog> {
+    extends ConsumerState<SessionStartConfirmationDialog> {
   int? _actionCount;
 
   Future<void> _start(int count, {Future<bool> Function()? admitAll}) async {
@@ -22,7 +24,18 @@ class _SessionStartConfirmationDialogState
     var started = false;
     try {
       if (admitAll != null && (!await admitAll() || !mounted)) return;
-      started = await widget.onStart();
+      final feedback = ref.read(sessionActionFeedbackProvider.notifier);
+      try {
+        started = await widget.onStart();
+      } catch (error, stackTrace) {
+        // The dialog stays open, so confirming again is the retry.
+        feedback.report(
+          SessionAction.startSession,
+          error,
+          stackTrace: stackTrace,
+        );
+        return;
+      }
       if (started && mounted) Navigator.of(context).pop();
     } finally {
       if (mounted && !started) setState(() => _actionCount = null);

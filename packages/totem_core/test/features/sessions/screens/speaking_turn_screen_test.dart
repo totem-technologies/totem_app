@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -33,6 +35,7 @@ import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
 import '../media/test_participants.dart';
+import '../presentation/action_feedback_host.dart';
 import '../session_test_fixtures.dart';
 import '../session_test_mocks.dart';
 
@@ -186,6 +189,7 @@ void main() {
 
     when(() => session.room).thenReturn(room);
     when(() => session.keeper).thenReturn(keeper);
+    when(() => keeper.silenceIfNoLongerSpeaking()).thenAnswer((_) async {});
     when(() => session.devices).thenReturn(devices);
     when(() => session.messaging).thenReturn(messaging);
     when(() => session.options).thenReturn(testSessionOptions);
@@ -261,9 +265,11 @@ void main() {
           selfViewSettingsProvider.overrideWith(SelfViewSettings.new),
         ],
         child: MaterialApp(
-          home: SessionKeyboardShortcuts(
-            child: Scaffold(
-              body: SpeakingTurnScreen(session: _createTestSession()),
+          home: ActionFeedbackHost(
+            child: SessionKeyboardShortcuts(
+              child: Scaffold(
+                body: SpeakingTurnScreen(session: _createTestSession()),
+              ),
             ),
           ),
         ),
@@ -475,22 +481,21 @@ void main() {
       ),
     );
 
-    for (final committed in [false, true]) {
+    for (final (kind, title, passed) in [
+      (SessionCommandFailureKind.conflict, "Couldn't pass the totem", false),
+      (
+        SessionCommandFailureKind.unknownOutcome,
+        'Still passing the totem',
+        false,
+      ),
+      (SessionCommandFailureKind.partialSuccess, 'Totem passed', true),
+    ]) {
       testWidgets(
-        committed
-            ? 'a committed pass warns about microphone failure'
-            : 'a rejected pass has no success cue',
+        'a ${kind.name} pass shows "$title" and ${passed ? 'keeps the success cue' : 'lets the speaker swipe again'}',
         (tester) async {
           final cues = _TestSessionCuesService();
           when(() => keeper.passTotem()).thenThrow(
-            SessionCommandException(
-              committed
-                  ? SessionCommandFailureKind.partialSuccess
-                  : SessionCommandFailureKind.conflict,
-              committed
-                  ? 'Mute the microphone or leave the session.'
-                  : 'The pass was rejected.',
-            ),
+            SessionCommandException(kind, 'Developer detail for logs.'),
           );
           await pumpSpeakingTurn(
             tester,
@@ -502,18 +507,27 @@ void main() {
             isKeeper: false,
             cuesService: cues,
           );
-          await tester.drag(
-            find.byKey(ActionSlider.thumbKey),
-            const Offset(800, 0),
-          );
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 300));
+          Future<void> swipe() async {
+            await tester.drag(
+              find.byKey(ActionSlider.thumbKey),
+              const Offset(800, 0),
+            );
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 300));
+          }
+
+          await swipe();
           verify(() => keeper.passTotem()).called(1);
-          check(cues.swipePulseCount).equals(committed ? 1 : 0);
-          if (committed) {
-            check(
-              find.text('Mute the microphone or leave the session.').evaluate(),
-            ).isNotEmpty();
+          check(find.text(title).evaluate()).isNotEmpty();
+          check(find.text('Developer detail for logs.').evaluate()).isEmpty();
+          check(cues.swipePulseCount).equals(passed ? 1 : 0);
+
+          await swipe();
+          // A handed-off totem keeps the slider busy; a failure resets it.
+          if (passed) {
+            verifyNever(() => keeper.passTotem());
+          } else {
+            verify(() => keeper.passTotem()).called(1);
           }
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
@@ -523,6 +537,62 @@ void main() {
         ),
       );
     }
+
+    testWidgets(
+      'an unconfirmed pass shows no banner once room state shows the totem moved',
+      (tester) async {
+        final cues = _TestSessionCuesService();
+        final pendingPass = Completer<void>();
+        when(() => keeper.passTotem()).thenAnswer((_) => pendingPass.future);
+        final speaking = _buildState(
+          keeper: 'keeper-1',
+          currentSpeaker: 'user-1',
+          nextSpeaker: 'user-2',
+        );
+        await pumpSpeakingTurn(
+          tester,
+          sessionState: speaking,
+          isKeeper: false,
+          cuesService: cues,
+        );
+        await tester.drag(
+          find.byKey(ActionSlider.thumbKey),
+          const Offset(800, 0),
+        );
+        await tester.pump();
+
+        // The pass reaches the room before its response does.
+        await pumpSpeakingTurn(
+          tester,
+          sessionState: _buildState(
+            keeper: 'keeper-1',
+            currentSpeaker: 'user-1',
+            nextSpeaker: 'user-2',
+            turnState: TurnState.passing,
+          ),
+          isKeeper: false,
+          cuesService: cues,
+        );
+        pendingPass.completeError(
+          SessionCommandException(
+            SessionCommandFailureKind.unknownOutcome,
+            'Timed out.',
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        check(find.text('Still passing the totem').evaluate()).isEmpty();
+        check(find.text("Couldn't pass the totem").evaluate()).isEmpty();
+        check(cues.swipePulseCount).equals(1);
+        verify(() => keeper.silenceIfNoLongerSpeaking()).called(1);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
 
     const longPrompt =
         'Think of a moment this week when you felt truly heard by someone, '

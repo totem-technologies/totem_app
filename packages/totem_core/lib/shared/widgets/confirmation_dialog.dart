@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
@@ -235,19 +237,22 @@ class _ConfirmationDialogButtonState extends State<ConfirmationDialogButton> {
     try {
       final action = widget.onConfirm();
       final timeout = widget.actionTimeout;
-      if (timeout == null) {
-        await action;
-      } else {
-        await action.timeout(
-          timeout,
-          onTimeout: () {
-            if (mounted) {
-              ErrorHandler.showErrorDialog(
-                context,
-                message: 'Something went wrong. Please try again.',
-              );
-            }
-          },
+      // A timed-out action may still be running, so it is a failure rather
+      // than a completed confirmation.
+      await (timeout == null ? action : action.timeout(timeout));
+    } catch (error, stackTrace) {
+      // Last resort: actions should report their own failures.
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Confirmation action failed',
+      );
+      if (mounted) {
+        unawaited(
+          ErrorHandler.showErrorDialog(
+            context,
+            message: 'Something went wrong. Please try again.',
+          ),
         );
       }
     } finally {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/permissions/media_control.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
@@ -34,6 +36,62 @@ class SessionTurnService {
   final void Function() flagMicrophoneProblem;
   final SessionCommandGate _commands;
   SessionCommandFailure? get lastFailure => _commands.lastFailure;
+
+  /// How long a turn command may wait for the backend before its outcome is
+  /// reported as unknown.
+  static const turnCommandTimeout = Duration(seconds: 10);
+
+  /// The backend may still apply a timed-out turn command, so a timeout is an
+  /// unknown outcome rather than a definite failure.
+  /// Waits [turnCommandTimeout] for [request]. A timeout becomes an unknown
+  /// outcome, unless room state already shows the command was applied, in
+  /// which case this returns null so the caller can run side effects and
+  /// skip committing a late HTTP response.
+  Future<RoomState?> _awaitTurnCommand(
+    Future<RoomState> request, {
+    required bool Function() applied,
+  }) async {
+    try {
+      return await request.timeout(turnCommandTimeout);
+    } on TimeoutException catch (error) {
+      if (applied()) return null;
+      throw SessionCommandException(
+        SessionCommandFailureKind.unknownOutcome,
+        'The turn command timed out and may still be applied. Check the room state before retrying.',
+        cause: error,
+      );
+    }
+  }
+
+  Future<void> _silenceAfterPass(bool Function() current) async {
+    if (!current()) return;
+    try {
+      await disableMicrophone();
+      if (current() && microphoneEnabled()) {
+        throw StateError('Microphone remains enabled');
+      }
+    } catch (error) {
+      if (current()) {
+        throw SessionCommandException(
+          SessionCommandFailureKind.partialSuccess,
+          'Your turn was passed, but the microphone could not be muted. Mute it or leave the session.',
+          cause: error,
+        );
+      }
+    }
+  }
+
+  /// Mutes the local microphone if this participant is no longer speaking.
+  ///
+  /// Used when a pass is confirmed by room state after the HTTP request
+  /// timed out, including when that confirmation arrives after the service
+  /// has already thrown an unknown outcome.
+  Future<void> silenceIfNoLongerSpeaking() async {
+    if (state().amSpeaking(localIdentity())) return;
+    try {
+      await disableMicrophone();
+    } catch (_) {}
+  }
 
   void _requireKeeper() {
     if (!isKeeper()) {
@@ -74,52 +132,41 @@ class SessionTurnService {
     applyState(response);
   }
 
-  Future<void> passTotem({
-    String? customPrompt,
-    int? sessionPromptId,
-  }) => _commands.run((current) async {
-    if (!state().amSpeaking(localIdentity()) || !state().hasKeeper) {
-      throw SessionCommandException(
-        SessionCommandFailureKind.invalidState,
-        'It is not your turn or the Keeper is away',
-      );
-    }
-    if (customPrompt != null && sessionPromptId != null) {
-      throw ArgumentError('Choose one prompt');
-    }
-    if (customPrompt != null || sessionPromptId != null) _requireKeeper();
-    final version = state().roomState.version;
-    final response = await backend.pass(
-      version,
-      customPrompt: customPrompt,
-      sessionPromptId: sessionPromptId,
-    );
-    _commit(response, current, commandVersion: version);
-    // A committed pass hands off the microphone even while room state is in
-    // the passing transition and still names the previous current speaker.
-    if (current()) {
-      try {
-        await disableMicrophone();
-        if (current() && microphoneEnabled()) {
-          throw StateError('Microphone remains enabled');
-        }
-      } catch (error) {
-        if (current()) {
+  Future<void> passTotem({String? customPrompt, int? sessionPromptId}) =>
+      _commands.run((current) async {
+        if (!state().amSpeaking(localIdentity()) || !state().hasKeeper) {
           throw SessionCommandException(
-            SessionCommandFailureKind.partialSuccess,
-            'Your turn was passed, but the microphone could not be muted. Mute it or leave the session.',
-            cause: error,
+            SessionCommandFailureKind.invalidState,
+            'It is not your turn or the Keeper is away',
           );
         }
-      }
-    }
-    if (!current()) {
-      throw SessionCommandException(
-        SessionCommandFailureKind.superseded,
-        'This session connection has ended',
-      );
-    }
-  });
+        if (customPrompt != null && sessionPromptId != null) {
+          throw ArgumentError('Choose one prompt');
+        }
+        if (customPrompt != null || sessionPromptId != null) _requireKeeper();
+        final version = state().roomState.version;
+        final before = state().roomState;
+        final response = await _awaitTurnCommand(
+          backend.pass(
+            version,
+            customPrompt: customPrompt,
+            sessionPromptId: sessionPromptId,
+          ),
+          applied: () => sessionPassApplied(before, state(), localIdentity()),
+        );
+        if (response != null) {
+          _commit(response, current, commandVersion: version);
+        }
+        // A committed pass hands off the microphone even while room state is in
+        // the passing transition and still names the previous current speaker.
+        await _silenceAfterPass(current);
+        if (!current()) {
+          throw SessionCommandException(
+            SessionCommandFailureKind.superseded,
+            'This session connection has ended',
+          );
+        }
+      });
 
   Future<TurnAcceptance> acceptTotem() => _commands.run((current) async {
     if (!state().amNext(localIdentity()) || !state().hasKeeper) {
@@ -129,8 +176,14 @@ class SessionTurnService {
       );
     }
     final revision = microphoneRevision();
-    final response = await backend.accept(state().roomState.version);
-    _commit(response, current);
+    final before = state().roomState;
+    final response = await _awaitTurnCommand(
+      backend.accept(state().roomState.version),
+      applied: () => sessionAcceptApplied(before, state(), localIdentity()),
+    );
+    if (response != null) {
+      _commit(response, current);
+    }
     // Respect an explicit device decision made while the backend was pending.
     if (!current() ||
         !state().amSpeaking(localIdentity()) ||
@@ -159,7 +212,14 @@ class SessionTurnService {
   });
   Future<void> forcePassTotem() => _commands.run((current) async {
     _requireKeeper();
-    _commit(await backend.forcePass(state().roomState.version), current);
+    final before = state().roomState;
+    final response = await _awaitTurnCommand(
+      backend.forcePass(state().roomState.version),
+      applied: () => sessionForcePassApplied(before, state()),
+    );
+    if (response != null) {
+      _commit(response, current);
+    }
   });
   Future<void> start({String? prompt}) => _commands.run((current) async {
     _requireKeeper();
@@ -204,4 +264,41 @@ class SessionTurnService {
     );
   });
   void dispose() => _commands.dispose();
+}
+
+/// Whether [after] shows that a pass already left this participant's turn.
+///
+/// A committed pass may still name the previous current speaker while the
+/// turn is in the passing transition, so [TurnState.passing] also counts.
+bool sessionPassApplied(
+  RoomState before,
+  SessionRoomState after,
+  String? localIdentity,
+) {
+  final next = after.turn.roomState;
+  if (next.turnState == TurnState.passing &&
+      before.turnState != TurnState.passing) {
+    return true;
+  }
+  return !after.amSpeaking(localIdentity) &&
+      (before.currentSpeaker.value == localIdentity ||
+          next.currentSpeaker.value != before.currentSpeaker.value);
+}
+
+/// Whether [after] shows this participant is now the speaker after an accept.
+bool sessionAcceptApplied(
+  RoomState before,
+  SessionRoomState after,
+  String? localIdentity,
+) {
+  return after.amSpeaking(localIdentity) &&
+      before.currentSpeaker.value != localIdentity;
+}
+
+/// Whether [after] shows a force pass already moved the turn.
+bool sessionForcePassApplied(RoomState before, SessionRoomState after) {
+  final next = after.turn.roomState;
+  return next.currentSpeaker.value != before.currentSpeaker.value ||
+      next.nextSpeaker.value != before.nextSpeaker.value ||
+      next.turnState != before.turnState;
 }

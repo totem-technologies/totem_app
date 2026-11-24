@@ -8,9 +8,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_prompts_controller.dart';
+import 'package:totem_core/features/sessions/presentation/session_action_feedback.dart';
 import 'package:totem_core/features/sessions/providers/session_cues_provider.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/services/session_commands.dart';
@@ -64,7 +64,8 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
     if (shouldPass) {
       if (session == null || !mounted) return false;
       final cues = ref.read(sessionCuesServiceProvider);
-      final messenger = ScaffoldMessenger.maybeOf(context);
+      final feedback = ref.read(sessionActionFeedbackProvider.notifier);
+      final turnBefore = feedback.turnSnapshot();
       try {
         if (clearPrompt) {
           await session.keeper.setPrompt(clearPrompt: true);
@@ -75,32 +76,25 @@ class _SpeakingTurnState extends ConsumerState<SpeakingTurnScreen> {
         );
         cues.pulseSwipeCompletion();
         return true;
-      } on SessionCommandException catch (error) {
-        if (error.kind == SessionCommandFailureKind.partialSuccess) {
+      } catch (error, stackTrace) {
+        // Room state already shows an unconfirmed pass, so nothing failed.
+        if (feedback.turnAppliedDespite(
+          error,
+          turnBefore,
+          action: SessionAction.passTotem,
+          localIdentity: session.transport?.localIdentity,
+        )) {
+          await session.keeper.silenceIfNoLongerSpeaking();
           cues.pulseSwipeCompletion();
-          if (messenger != null && messenger.mounted) {
-            messenger
-              ..clearSnackBars()
-              ..showSnackBar(SnackBar(content: Text(error.message)));
-          }
           return true;
         }
-        if (mounted && error.kind != SessionCommandFailureKind.superseded) {
-          ErrorHandler.handleApiError(
-            sessionNavigatorContext(context),
-            error,
-            useRootNavigator: false,
-          );
-        }
-        return false;
-      } catch (error) {
-        if (!mounted) return false;
-        ErrorHandler.handleApiError(
-          sessionNavigatorContext(context),
-          error,
-          useRootNavigator: false,
-        );
-        return false;
+        feedback.report(SessionAction.passTotem, error, stackTrace: stackTrace);
+        // The turn was handed off; only muting the microphone failed.
+        final passed =
+            SessionCommandFailure.from(error).kind ==
+            SessionCommandFailureKind.partialSuccess;
+        if (passed) cues.pulseSwipeCompletion();
+        return passed;
       }
     }
 

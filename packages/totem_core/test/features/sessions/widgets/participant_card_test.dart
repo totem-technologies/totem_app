@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
@@ -14,6 +15,7 @@ import 'package:totem_core/features/sessions/media/participant_info.dart';
 import 'package:totem_core/features/sessions/media/room_media.dart';
 import 'package:totem_core/features/sessions/media/room_media_providers.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
+import 'package:totem_core/features/sessions/services/session_commands.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/participant_control_button.dart';
 import 'package:totem_core/features/sessions/widgets/participant_overlay_metrics.dart';
@@ -27,6 +29,7 @@ import '../../../auth/controllers/auth_controller_mock.dart';
 import '../controllers/core/session_controller_mock.dart';
 import '../media/fake_room_media.dart';
 import '../media/test_participants.dart';
+import '../presentation/action_feedback_host.dart';
 import '../session_test_fixtures.dart';
 
 class _PendingRemovalKeeper extends Fake implements SessionKeeperController {
@@ -657,6 +660,55 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       },
+    );
+    testWidgets(
+      'an unknown removal outcome closes the dialog and warns without developer detail',
+      (tester) async {
+        final keeper = _PendingRemovalKeeper();
+        final session = _PendingRemovalSession(keeper);
+        await pumpWidget(
+          tester,
+          authState: AuthState.unauthenticated(),
+          overrides: [currentSessionProvider.overrideWith((ref) => session)],
+          child: ActionFeedbackHost(
+            child: _MenuCloseTestWrapper(participant: remoteParticipant),
+          ),
+        );
+        await tester.tap(find.byType(ParticipantControlButton));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Remove'));
+        await tester.pumpAndSettle();
+        await tester.tapAt(tester.getCenter(find.text('Remove')));
+        await tester.pump();
+
+        const developerDetail =
+            'Removal outcome is unknown. Do not remove again.';
+        keeper.completion.completeError(
+          SessionCommandException(
+            SessionCommandFailureKind.unknownOutcome,
+            developerDetail,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        check(
+          find.text('Are you sure you want to remove John Doe?').evaluate(),
+        ).isEmpty();
+        check(
+          find.text("We're not sure John Doe was removed").evaluate(),
+        ).isNotEmpty();
+        check(
+          find.text('Give it a moment before trying again.').evaluate(),
+        ).isNotEmpty();
+        check(find.text(developerDetail).evaluate()).isEmpty();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+      // auto_size_text's notification banner does not dispose its TextPainters.
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
     );
     testWidgets('updates mute action when participant audio changes', (
       tester,

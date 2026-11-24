@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_prompts_controller.dart';
+import 'package:totem_core/features/sessions/presentation/session_action_feedback.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
@@ -133,19 +133,14 @@ class _SessionPromptsModalState extends ConsumerState<SessionPromptsModal> {
       sessionPromptsControllerProvider(widget.sessionSlug),
     );
     if (session == null || prompts.mutating) return;
+    final feedback = ref.read(sessionActionFeedbackProvider.notifier);
     try {
       await session.keeper.setPrompt(
         customPrompt: customPrompt,
         sessionPromptId: sessionPromptId,
       );
     } catch (error, stackTrace) {
-      if (!mounted) return;
-      await ErrorHandler.handleApiError(
-        sessionNavigatorContext(context),
-        error,
-        useRootNavigator: false,
-        stackTrace: stackTrace,
-      );
+      feedback.report(SessionAction.setPrompt, error, stackTrace: stackTrace);
     }
   }
 
