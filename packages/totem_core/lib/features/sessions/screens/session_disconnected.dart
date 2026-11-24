@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
@@ -178,6 +180,16 @@ class _SessionDisconnectedScreenState
     TotemRouter.instance.toHome();
   }
 
+  void _rejoin() {
+    final session = widget.session;
+    if (session == null) return;
+    if (kIsWeb) {
+      unawaited(launchUrl(Uri.base, webOnlyWindowName: '_self'));
+    } else {
+      context.go(RouteNames.session(session.slug));
+    }
+  }
+
   /// The space's next session, or a recommended session when the space has
   /// none scheduled.
   NextSessionPromo? _resolveNextSession() {
@@ -281,6 +293,7 @@ class _SessionDisconnectedScreenState
               ? (message) => _sendDislike(session, message)
               : null,
           onGoHome: _goHome,
+          onRejoin: session == null ? null : _rejoin,
         ),
       ),
     );
@@ -314,6 +327,7 @@ class SessionDisconnectedView extends StatefulWidget {
   const SessionDisconnectedView({
     required this.reason,
     required this.onGoHome,
+    this.onRejoin,
     this.nextSession,
     this.onLike,
     this.onDislike,
@@ -338,6 +352,7 @@ class SessionDisconnectedView extends StatefulWidget {
   /// Leaves the screen for home: the close button and "See all upcoming
   /// sessions".
   final VoidCallback onGoHome;
+  final VoidCallback? onRejoin;
 
   @override
   State<SessionDisconnectedView> createState() =>
@@ -355,6 +370,14 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
     final onLike = widget.onLike;
     final onDislike = widget.onDislike;
     final onGoHome = widget.onGoHome;
+    final (action, onPressed) = switch (reason) {
+      SessionDisconnectedReason.movedToAnotherDevice => (
+        _DisconnectedAction.rejoin,
+        widget.onRejoin,
+      ),
+      _ => (_DisconnectedAction.upcomingSessions, onGoHome),
+    };
+    final actions = _ActionButtons(action: action, onPressed: onPressed);
     final feedback = onLike != null && onDislike != null
         ? _InteractiveFeedbackWidget(
             key: _feedbackKey,
@@ -395,12 +418,14 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
                   feedback: feedback,
                   nextSession: nextSession,
                   onGoHome: onGoHome,
+                  actions: actions,
                 ),
                 ViewportKind.smallLandscape => _TwoColumnLayout(
                   reason: reason,
                   feedback: feedback,
                   nextSession: nextSession,
                   onGoHome: onGoHome,
+                  actions: actions,
                   compact: true,
                 ),
                 ViewportKind.mediumSmall || ViewportKind.mediumPlus
@@ -412,6 +437,7 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
                     feedback: feedback,
                     nextSession: nextSession,
                     onGoHome: onGoHome,
+                    actions: actions,
                     compact: false,
                   ),
                 ViewportKind.mediumSmall => _MediumSmallLayout(
@@ -419,12 +445,14 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
                   feedback: feedback,
                   nextSession: nextSession,
                   onGoHome: onGoHome,
+                  actions: actions,
                 ),
                 ViewportKind.mediumPlus => _MediumPlusLayout(
                   reason: reason,
                   feedback: feedback,
                   nextSession: nextSession,
                   onGoHome: onGoHome,
+                  actions: actions,
                 ),
               };
             },
@@ -531,12 +559,14 @@ class _PortraitLayout extends StatelessWidget {
     required this.feedback,
     required this.nextSession,
     required this.onGoHome,
+    required this.actions,
   });
 
   final SessionDisconnectedReason reason;
   final Widget? feedback;
   final NextSessionPromo? nextSession;
   final VoidCallback onGoHome;
+  final Widget actions;
 
   @override
   Widget build(BuildContext context) {
@@ -556,7 +586,7 @@ class _PortraitLayout extends StatelessWidget {
             _SessionSubheader(reason: reason),
             ?feedback,
             if (nextSession != null) _NextSessionsSection(promo: nextSession),
-            _ActionButtons(onPressed: onGoHome),
+            actions,
           ],
         ),
       ),
@@ -573,6 +603,7 @@ class _TwoColumnLayout extends StatelessWidget {
     required this.feedback,
     required this.nextSession,
     required this.onGoHome,
+    required this.actions,
     required this.compact,
   });
 
@@ -592,6 +623,7 @@ class _TwoColumnLayout extends StatelessWidget {
   final Widget? feedback;
   final NextSessionPromo? nextSession;
   final VoidCallback onGoHome;
+  final Widget actions;
 
   /// Phone landscape: no status icon or close button, and the actions sit
   /// under the feedback so the card keeps the full column height.
@@ -601,7 +633,6 @@ class _TwoColumnLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final feedback = this.feedback;
     final nextSession = this.nextSession;
-    final actions = _ActionButtons(onPressed: onGoHome);
 
     final content = LayoutBuilder(
       builder: (context, constraints) {
@@ -677,6 +708,7 @@ class _MediumSmallLayout extends StatelessWidget {
     required this.feedback,
     required this.nextSession,
     required this.onGoHome,
+    required this.actions,
   });
 
   /// Vertical space the layout reserves around its content.
@@ -692,6 +724,7 @@ class _MediumSmallLayout extends StatelessWidget {
   final Widget? feedback;
   final NextSessionPromo? nextSession;
   final VoidCallback onGoHome;
+  final Widget actions;
 
   Widget _wrapConstrained(Widget child) {
     return FractionallySizedBox(widthFactor: _widthFactor, child: child);
@@ -728,7 +761,7 @@ class _MediumSmallLayout extends StatelessWidget {
                         ),
                         child: _NextSessionsSection(promo: nextSession),
                       ),
-                    _ActionButtons(onPressed: onGoHome),
+                    actions,
                   ],
                 ),
               ),
@@ -751,6 +784,7 @@ class _MediumPlusLayout extends StatelessWidget {
     required this.feedback,
     required this.nextSession,
     required this.onGoHome,
+    required this.actions,
   });
 
   /// Vertical space the layout reserves below its content.
@@ -766,6 +800,7 @@ class _MediumPlusLayout extends StatelessWidget {
   final Widget? feedback;
   final NextSessionPromo? nextSession;
   final VoidCallback onGoHome;
+  final Widget actions;
 
   Widget _wrapConstrained(Widget child) {
     return FractionallySizedBox(widthFactor: _widthFactor, child: child);
@@ -804,7 +839,7 @@ class _MediumPlusLayout extends StatelessWidget {
                       ),
                       child: _NextSessionsSection(promo: nextSession),
                     ),
-                  _ActionButtons(onPressed: onGoHome),
+                  actions,
                 ],
               ),
             ),
@@ -1131,19 +1166,26 @@ class _NextSessionsSection extends StatelessWidget {
   }
 }
 
+enum _DisconnectedAction {
+  rejoin('Rejoin Here'),
+  upcomingSessions('See all upcoming sessions');
+
+  const _DisconnectedAction(this.label);
+  final String label;
+}
+
 class _ActionButtons extends StatelessWidget {
-  const _ActionButtons({required this.onPressed});
+  const _ActionButtons({required this.action, required this.onPressed});
 
-  final VoidCallback onPressed;
-
-  static const String _label = 'See all upcoming sessions';
+  final _DisconnectedAction action;
+  final VoidCallback? onPressed;
   static const double _horizontalPadding = 58;
 
   /// Estimated height of the button laid out in [maxWidth].
   static double height(BuildContext context, double maxWidth) {
     final textHeight = _measureTextHeight(
       context,
-      _label,
+      _DisconnectedAction.upcomingSessions.label,
       Theme.of(context).textTheme.labelLarge,
       math.max(0, maxWidth - 2 * _horizontalPadding),
     );
@@ -1161,7 +1203,7 @@ class _ActionButtons extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       onPressed: onPressed,
-      child: const Text(_label, style: TextStyle(fontFeatures: [])),
+      child: Text(action.label, style: const TextStyle(fontFeatures: [])),
     );
   }
 }

@@ -531,6 +531,61 @@ void main() {
 
       setUp(() => TotemRouter.instance = FakeTotemRouter());
 
+      testWidgets('rejoin action calls onRejoin on a phone layout', (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = const Size(390, 844)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        var rejoins = 0;
+        var goesHome = 0;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SessionDisconnectedView(
+                reason: SessionDisconnectedReason.movedToAnotherDevice,
+                onRejoin: () => rejoins++,
+                onGoHome: () => goesHome++,
+              ),
+            ),
+          ),
+        );
+
+        final rejoin = find.text('Rejoin Here');
+        check(rejoin.evaluate()).isNotEmpty();
+        check(seeAllSessions.evaluate()).isEmpty();
+        await tester.tap(rejoin);
+        check(rejoins).equals(1);
+        check(goesHome).equals(0);
+      });
+
+      testWidgets('other reasons keep the upcoming sessions action', (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = const Size(1280, 800)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        var goesHome = 0;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SessionDisconnectedView(
+                reason: SessionDisconnectedReason.keeperEnded,
+                onGoHome: () => goesHome++,
+              ),
+            ),
+          ),
+        );
+
+        check(seeAllSessions.evaluate()).isNotEmpty();
+        await tester.tap(seeAllSessions);
+        check(goesHome).equals(1);
+      });
+
       // Phone portrait, the reported desktop (TOT-1439), a laptop, a tall
       // desktop, and the short desktop, short tablet and landscape windows
       // from review.
@@ -653,7 +708,11 @@ void main() {
               );
 
               check(_isKeeperFullyVisible(tester, keeper)).isTrue();
-              check(_isFullyVisible(tester, seeAllSessions)).isTrue();
+              final action =
+                  reason == SessionDisconnectedReason.movedToAnotherDevice
+                  ? find.text('Rejoin Here')
+                  : seeAllSessions;
+              check(_isFullyVisible(tester, action)).isTrue();
               check(_hasScrollableContent(tester)).isFalse();
             },
           );
