@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
@@ -15,6 +16,7 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/shared/router.dart';
 
 UserSchema _testUser({String? slug, String? name}) => UserSchema(
@@ -74,6 +76,7 @@ Future<GoRouter> _pumpRouter(
   WidgetTester tester, {
   required AuthState authState,
   required bool hasSeenWelcome,
+  Future<SessionDetailSchema>? sessionData,
 }) async {
   final authController = _FakeMobileAuthController(authState);
   final routerOwner = AppTotemRouter();
@@ -90,6 +93,8 @@ Future<GoRouter> _pumpRouter(
         spacesSummaryProvider.overrideWith(
           (ref) async => throw StateError('not part of this routing test'),
         ),
+        if (sessionData != null)
+          sessionProvider('session-1').overrideWith((ref) => sessionData),
       ],
       child: Consumer(
         builder: (context, ref, child) {
@@ -204,6 +209,44 @@ void main() {
       check(router.state.uri.path).equals(RouteNames.home);
     });
   });
+
+  testWidgets(
+    'rejoining the same session creates fresh pre-join state',
+    (tester) async {
+      final router = await _pumpRouter(
+        tester,
+        authState: AuthState.authenticated(
+          user: _testUser(slug: 'user', name: 'Alex'),
+        ),
+        hasSeenWelcome: true,
+        sessionData: Completer<SessionDetailSchema>().future,
+      );
+      router.go(RouteNames.session('session-1'));
+      await tester.pump();
+      await tester.pump();
+
+      final screen = find.byType(PreJoinScreen);
+      final previousState = tester.state(screen);
+      final operation = (TotemRouter.instance as AppTotemRouter).rejoinSession(
+        tester.element(screen),
+        'session-1',
+      );
+      await tester.pump();
+      await operation;
+      await tester.pump(const Duration(milliseconds: 500));
+
+      check(router.state.uri.path).equals(RouteNames.session('session-1'));
+      check(tester.widgetList(screen).length).equals(1);
+      check(identical(previousState, tester.state(screen))).equals(false);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    },
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      // auto_size_text 3.0.0 does not dispose TextPainters created while sizing.
+      classes: <String>['TextPainter'],
+    ),
+  );
 
   testWidgets(
     'invalid participant deep links show a recoverable error screen',

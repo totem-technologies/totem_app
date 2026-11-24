@@ -33,10 +33,14 @@ class _FakeBrowserEnvironment implements BrowserEnvironment {
   Uri? get entrypointBaseUri => Uri.parse('https://cdn.totem.org/web/1234/');
 
   String? title;
+  bool reloaded = false;
   bool tabCloseConfirmationEnabled = false;
 
   @override
   void setDocumentTitle(String title) => this.title = title;
+
+  @override
+  void reload() => reloaded = true;
 
   @override
   void setTabCloseConfirmationEnabled(bool enabled) {
@@ -216,6 +220,24 @@ void main() {
         router.buildHomeUrl(HomeRoutes.profile),
       ).equals('https://totem.org/users/profile/');
     });
+  });
+
+  testWidgets('rejoining a session reloads the browser page', (tester) async {
+    final browser = _FakeBrowserEnvironment();
+    final router = WebTotemRouter(browser: browser);
+    late BuildContext context;
+    await tester.pumpWidget(
+      Builder(
+        builder: (buildContext) {
+          context = buildContext;
+          return const SizedBox.shrink();
+        },
+      ),
+    );
+
+    await router.rejoinSession(context, 'session');
+
+    check(browser.reloaded).isTrue();
   });
 
   test('tab-close confirmation follows the requested state', () {

@@ -79,6 +79,7 @@ SessionDetailSchema _sessionWithNextEvent({
   String keeperName = 'Keeper Ada',
   String spaceTitle = 'Evening Circle',
   String nextTitle = 'Week Two',
+  bool ended = true,
 }) {
   final next = NextSessionSchema(
     slug: 'next-session',
@@ -125,7 +126,7 @@ SessionDetailSchema _sessionWithNextEvent({
     started: true,
     cancelled: false,
     joinable: true,
-    ended: true,
+    ended: ended,
     rsvpUrl: '',
     joinUrl: null,
     subscribeUrl: '',
@@ -161,7 +162,8 @@ Future<void> _pumpDisconnectedScreen(
   WidgetTester tester, {
   required Size size,
   required SessionDetailSchema? session,
-  SessionDisconnectedReason reason = SessionDisconnectedReason.keeperEnded,
+  SessionDisconnectedReason? reason = SessionDisconnectedReason.keeperEnded,
+  DisconnectReason? disconnectReason,
   double textScale = 1,
   List<SessionDetailSchema> recommended = const [],
   TextDirection textDirection = TextDirection.ltr,
@@ -203,6 +205,7 @@ Future<void> _pumpDisconnectedScreen(
                 status: RoomStatus.ended,
                 child: SessionDisconnectedScreen(
                   session: session,
+                  disconnectReason: disconnectReason,
                   sessionDisconnectedReason: reason,
                 ),
               ),
@@ -265,19 +268,34 @@ bool _hasScrollableContent(WidgetTester tester) {
 void main() {
   group('SessionDisconnectedScreen', () {
     group('Reason Resolution (Unit Tests)', () {
-      test('returns movedToAnotherDevice when duplicateIdentity', () {
+      test(
+        'returns movedToAnotherDevice when duplicateIdentity in active room',
+        () {
+          final result = resolveDisconnectedReason(
+            disconnectReason: DisconnectReason.duplicateIdentity,
+            sessionState: _createEndedState(status: RoomStatus.active),
+          );
+
+          check(result).equals(SessionDisconnectedReason.movedToAnotherDevice);
+        },
+      );
+
+      test('ended room status takes priority over duplicateIdentity', () {
         final result = resolveDisconnectedReason(
           disconnectReason: DisconnectReason.duplicateIdentity,
-          sessionState: _createEndedState(),
+          sessionState: _createEndedState(endReason: EndReason.keeperAbsent),
         );
 
-        check(result).equals(SessionDisconnectedReason.movedToAnotherDevice);
+        check(result).equals(SessionDisconnectedReason.keeperAbsent);
       });
 
-      test('duplicateIdentity takes priority over removed', () {
+      test('duplicateIdentity takes priority over removed in active room', () {
         final result = resolveDisconnectedReason(
           disconnectReason: DisconnectReason.duplicateIdentity,
-          sessionState: _createEndedState(removed: true),
+          sessionState: _createEndedState(
+            status: RoomStatus.active,
+            removed: true,
+          ),
         );
 
         check(result).equals(SessionDisconnectedReason.movedToAnotherDevice);
@@ -531,34 +549,63 @@ void main() {
 
       setUp(() => TotemRouter.instance = FakeTotemRouter());
 
-      testWidgets('rejoin action calls onRejoin on a phone layout', (
+      for (final size in const [Size(390, 844), Size(906, 339)]) {
+        testWidgets(
+          'rejoin action works at ${size.width.toInt()}x${size.height.toInt()}',
+          (tester) async {
+            tester.view
+              ..physicalSize = size
+              ..devicePixelRatio = 1;
+            addTearDown(tester.view.reset);
+            var rejoins = 0;
+            var goesHome = 0;
+
+            await tester.pumpWidget(
+              MaterialApp(
+                home: Scaffold(
+                  body: SessionDisconnectedView(
+                    reason: SessionDisconnectedReason.movedToAnotherDevice,
+                    onRejoin: () => rejoins++,
+                    onGoHome: () => goesHome++,
+                  ),
+                ),
+              ),
+            );
+
+            final rejoin = find.text('Rejoin Here');
+            check(rejoin.evaluate()).isNotEmpty();
+            await tester.ensureVisible(rejoin);
+            await tester.tap(rejoin);
+            check(rejoins).equals(1);
+            check(goesHome).equals(0);
+            await tester.ensureVisible(seeAllSessions);
+            await tester.tap(seeAllSessions);
+            check(goesHome).equals(1);
+          },
+        );
+      }
+
+      testWidgets('movedToAnotherDevice upcoming sessions action goes home', (
         tester,
       ) async {
         tester.view
           ..physicalSize = const Size(390, 844)
           ..devicePixelRatio = 1;
         addTearDown(tester.view.reset);
-        var rejoins = 0;
         var goesHome = 0;
-
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: SessionDisconnectedView(
                 reason: SessionDisconnectedReason.movedToAnotherDevice,
-                onRejoin: () => rejoins++,
                 onGoHome: () => goesHome++,
               ),
             ),
           ),
         );
-
-        final rejoin = find.text('Rejoin Here');
-        check(rejoin.evaluate()).isNotEmpty();
-        check(seeAllSessions.evaluate()).isEmpty();
-        await tester.tap(rejoin);
-        check(rejoins).equals(1);
-        check(goesHome).equals(0);
+        check(seeAllSessions.evaluate()).isNotEmpty();
+        await tester.tap(seeAllSessions);
+        check(goesHome).equals(1);
       });
 
       testWidgets('other reasons keep the upcoming sessions action', (
@@ -585,6 +632,25 @@ void main() {
         await tester.tap(seeAllSessions);
         check(goesHome).equals(1);
       });
+
+      testWidgets(
+        'ended session with duplicateIdentity shows ended screen and home action',
+        (tester) async {
+          await _pumpDisconnectedScreen(
+            tester,
+            size: const Size(390, 844),
+            session: _sessionWithNextEvent(),
+            reason: null,
+            disconnectReason: DisconnectReason.duplicateIdentity,
+          );
+
+          check(find.text('Session Ended').evaluate()).isNotEmpty();
+          check(find.text('Rejoin Here').evaluate()).isEmpty();
+          final homeAction = find.text('See all upcoming sessions');
+          check(homeAction.evaluate()).isNotEmpty();
+          await tester.tap(homeAction);
+        },
+      );
 
       // Phone portrait, the reported desktop (TOT-1439), a laptop, a tall
       // desktop, and the short desktop, short tablet and landscape windows
@@ -704,7 +770,11 @@ void main() {
                 tester,
                 size: size,
                 reason: reason,
-                session: _sessionWithNextEvent(keeperName: keeper),
+                session: _sessionWithNextEvent(
+                  keeperName: keeper,
+                  ended:
+                      reason != SessionDisconnectedReason.movedToAnotherDevice,
+                ),
               );
 
               check(_isKeeperFullyVisible(tester, keeper)).isTrue();

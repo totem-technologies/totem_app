@@ -23,6 +23,11 @@ class _WebBrowserEnvironment implements BrowserEnvironment {
     web.document.title = title;
   }
 
+  @override
+  void reload() {
+    web.window.location.reload();
+  }
+
   static void _beforeUnloadListener(web.Event event) {
     final beforeUnloadEvent = event as web.BeforeUnloadEvent;
     beforeUnloadEvent.returnValue = 'Are you sure you want to leave?';

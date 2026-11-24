@@ -17,6 +17,7 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/testing/fake_totem_router.dart';
 
 final class _FakeAuthController extends AuthController {
   @override
@@ -41,35 +42,9 @@ final class _FakeAuthController extends AuthController {
   UserSchema? get user => null;
 }
 
-final class _TestRouter extends TotemRouter {
-  @override
-  final navigatorKey = GlobalKey<NavigatorState>();
-
-  @override
-  Uri get baseUri => Uri.parse('https://test.example.com/');
-
+final class _TestRouter extends FakeTotemRouter {
   @override
   void popOrHome([BuildContext? context]) => context?.pop();
-
-  @override
-  void toHome([HomeRoutes route = HomeRoutes.initialRoute]) {}
-
-  @override
-  Future<void> toKeeperProfile(BuildContext context, String userSlug) async {}
-
-  @override
-  Future<void> toSpaceSession(
-    BuildContext context,
-    String spaceSlug,
-    String? sessionSlug, [
-    bool replacement = false,
-  ]) async {}
-
-  @override
-  GoRouter createRouter(WidgetRef ref) => throw UnsupportedError('test');
-
-  @override
-  void setTabCloseConfirmationEnabled(bool enabled) {}
 }
 
 BlogPostListSchema _post(String slug, String title) => BlogPostListSchema(

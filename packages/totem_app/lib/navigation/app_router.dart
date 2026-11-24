@@ -11,7 +11,10 @@ import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
+import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/shared/logger.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/totem_icons.dart';
@@ -162,6 +165,8 @@ class BottomNavScaffold extends ConsumerWidget {
   }
 }
 
+class _RejoinRouteMarker {}
+
 class AppTotemRouter extends TotemRouter {
   final _navigatorKey = GlobalKey<NavigatorState>();
   GoRouterRefreshStream? _refreshStream;
@@ -201,6 +206,34 @@ class AppTotemRouter extends TotemRouter {
     } else if (navigatorKey.currentContext != null) {
       navigatorKey.currentContext!.pushReplacement(RouteNames.welcome);
     }
+  }
+
+  @override
+  Future<void> rejoinSession(BuildContext context, String slug) async {
+    final container = ProviderScope.containerOf(context);
+    final mediaProvider = preJoinMediaControllerProvider(slug);
+
+    // If invoked from an active room, disconnect it before releasing or
+    // reacquiring mobile capture devices.
+    if (container.read(currentSessionProvider.exists)) {
+      final session = container.read(currentSessionProvider);
+      if (session != null) await session.leave();
+    }
+
+    // Wait for preview capture teardown before invalidation can create a fresh
+    // controller and start another capture (notably important on mobile).
+    if (container.read(mediaProvider.exists)) {
+      await container.read(mediaProvider.notifier).releaseForTerminalOutcome();
+    }
+
+    if (!context.mounted) return;
+    container
+      ..invalidate(preJoinFlowControllerProvider(slug))
+      ..invalidate(mediaProvider);
+    context.pushReplacement(
+      RouteNames.session(slug),
+      extra: _RejoinRouteMarker(),
+    );
   }
 
   @override
@@ -560,7 +593,13 @@ class AppTotemRouter extends TotemRouter {
           name: RouteNames.session(':slug'),
           builder: (context, state) {
             final slug = state.pathParameters['slug'] ?? '';
-            return SentryDisplayWidget(child: PreJoinScreen(sessionSlug: slug));
+            final key = switch (state.extra) {
+              final _RejoinRouteMarker marker => ObjectKey(marker),
+              _ => null,
+            };
+            return SentryDisplayWidget(
+              child: PreJoinScreen(key: key, sessionSlug: slug),
+            );
           },
         ),
       ],

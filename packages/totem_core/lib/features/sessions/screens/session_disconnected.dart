@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
@@ -37,7 +37,8 @@ SessionDisconnectedReason resolveDisconnectedReason({
   DisconnectReason? disconnectReason,
   SessionRoomState? sessionState,
 }) {
-  if (disconnectReason == DisconnectReason.duplicateIdentity) {
+  if (disconnectReason == DisconnectReason.duplicateIdentity &&
+      sessionState?.roomState.status != RoomStatus.ended) {
     return SessionDisconnectedReason.movedToAnotherDevice;
   }
 
@@ -183,11 +184,7 @@ class _SessionDisconnectedScreenState
   void _rejoin() {
     final session = widget.session;
     if (session == null) return;
-    if (kIsWeb) {
-      unawaited(launchUrl(Uri.base, webOnlyWindowName: '_self'));
-    } else {
-      context.go(RouteNames.session(session.slug));
-    }
+    unawaited(TotemRouter.instance.rejoinSession(context, session.slug));
   }
 
   /// The space's next session, or a recommended session when the space has
@@ -262,7 +259,7 @@ class _SessionDisconnectedScreenState
 
   @override
   Widget build(BuildContext context) {
-    final sessionReason =
+    final resolvedReason =
         widget.sessionDisconnectedReason ??
         ref.watch(
           currentSessionStateProvider.select(
@@ -275,6 +272,11 @@ class _SessionDisconnectedScreenState
         )!;
 
     final session = widget.session;
+    final sessionReason =
+        session?.ended == true &&
+            resolvedReason == SessionDisconnectedReason.movedToAnotherDevice
+        ? SessionDisconnectedReason.keeperEnded
+        : resolvedReason;
     final canGiveFeedback =
         session != null &&
         sessionReason == SessionDisconnectedReason.keeperEnded;
@@ -377,7 +379,11 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
       ),
       _ => (_DisconnectedAction.upcomingSessions, onGoHome),
     };
-    final actions = _ActionButtons(action: action, onPressed: onPressed);
+    final actions = _ActionButtons(
+      action: action,
+      onPressed: onPressed,
+      onGoHome: onGoHome,
+    );
     final feedback = onLike != null && onDislike != null
         ? _InteractiveFeedbackWidget(
             key: _feedbackKey,
@@ -406,6 +412,7 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
             };
             return constraints.maxHeight >=
                 stackedContentHeight +
+                    actions.extraHeight(context, copyWidth) +
                     _extraCopyHeight(context, reason, copyWidth) +
                     verticalChrome;
           }
@@ -623,7 +630,7 @@ class _TwoColumnLayout extends StatelessWidget {
   final Widget? feedback;
   final NextSessionPromo? nextSession;
   final VoidCallback onGoHome;
-  final Widget actions;
+  final _ActionButtons actions;
 
   /// Phone landscape: no status icon or close button, and the actions sit
   /// under the feedback so the card keeps the full column height.
@@ -1091,7 +1098,7 @@ class _NextSessionsSection extends StatelessWidget {
   final bool fitHeight;
 
   /// Shown below the card in the fitted layout.
-  final Widget? footer;
+  final _ActionButtons? footer;
 
   /// Max width of the section in layouts wider than a phone in portrait.
   static const double maxWidth = 320;
@@ -1142,9 +1149,7 @@ class _NextSessionsSection extends StatelessWidget {
             _measureTextHeight(context, title, titleStyle, width) +
             _spacing +
             minCardHeight +
-            (footer != null
-                ? _spacing + _ActionButtons.height(context, width)
-                : 0);
+            (footer != null ? _spacing + footer.height(context, width) : 0);
         return SingleChildScrollView(
           primary: false,
           child: SizedBox(
@@ -1175,14 +1180,19 @@ enum _DisconnectedAction {
 }
 
 class _ActionButtons extends StatelessWidget {
-  const _ActionButtons({required this.action, required this.onPressed});
+  const _ActionButtons({
+    required this.action,
+    required this.onPressed,
+    required this.onGoHome,
+  });
 
   final _DisconnectedAction action;
   final VoidCallback? onPressed;
+  final VoidCallback onGoHome;
   static const double _horizontalPadding = 58;
 
   /// Estimated height of the button laid out in [maxWidth].
-  static double height(BuildContext context, double maxWidth) {
+  static double _buttonHeight(BuildContext context, double maxWidth) {
     final textHeight = _measureTextHeight(
       context,
       _DisconnectedAction.upcomingSessions.label,
@@ -1192,18 +1202,39 @@ class _ActionButtons extends StatelessWidget {
     return math.max(kMinInteractiveDimension, textHeight + 16);
   }
 
+  double extraHeight(BuildContext context, double maxWidth) =>
+      action == _DisconnectedAction.rejoin
+      ? _buttonHeight(context, maxWidth)
+      : 0;
+
+  double height(BuildContext context, double maxWidth) =>
+      _buttonHeight(context, maxWidth) + extraHeight(context, maxWidth);
+
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      style: TextButton.styleFrom(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: _horizontalPadding,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-        foregroundColor: Colors.white,
-      ),
-      onPressed: onPressed,
-      child: Text(action.label, style: const TextStyle(fontFeatures: [])),
+    Widget button(_DisconnectedAction action, VoidCallback? callback) =>
+        TextButton(
+          style: TextButton.styleFrom(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: _horizontalPadding,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(26),
+            ),
+            foregroundColor: Colors.white,
+          ),
+          onPressed: callback,
+          child: Text(action.label, style: const TextStyle(fontFeatures: [])),
+        );
+
+    if (action != _DisconnectedAction.rejoin) return button(action, onPressed);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 8,
+      children: [
+        button(action, onPressed),
+        button(_DisconnectedAction.upcomingSessions, onGoHome),
+      ],
     );
   }
 }

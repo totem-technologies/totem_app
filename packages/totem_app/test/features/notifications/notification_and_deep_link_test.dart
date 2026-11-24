@@ -1,7 +1,7 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,42 +10,14 @@ import 'package:totem_app/features/spaces/screens/session_deep_link_screen.dart'
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/error_screen.dart';
+import 'package:totem_core/testing/fake_totem_router.dart';
 
-class _RouterFake extends TotemRouter {
-  _RouterFake();
-
-  final key = GlobalKey<NavigatorState>();
+class _RouterFake extends FakeTotemRouter {
   HomeRoutes? homeRoute;
-
-  @override
-  GlobalKey<NavigatorState> get navigatorKey => key;
-
-  @override
-  Uri get baseUri => Uri.parse('https://test.example');
-
-  @override
-  void popOrHome([BuildContext? context]) {}
 
   @override
   void toHome([HomeRoutes route = HomeRoutes.initialRoute]) =>
       homeRoute = route;
-
-  @override
-  Future<void> toKeeperProfile(BuildContext context, String userSlug) async {}
-
-  @override
-  Future<void> toSpaceSession(
-    BuildContext context,
-    String spaceSlug,
-    String? sessionSlug, [
-    bool replacement = false,
-  ]) async {}
-
-  @override
-  GoRouter createRouter(WidgetRef ref) => throw UnimplementedError();
-
-  @override
-  void setTabCloseConfirmationEnabled(bool enabled) {}
 }
 
 void main() {

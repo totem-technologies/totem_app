@@ -15,6 +15,8 @@ abstract interface class BrowserEnvironment {
 
   void setDocumentTitle(String title);
 
+  void reload();
+
   void setTabCloseConfirmationEnabled(bool enabled);
 
   /// Runs [onExit] on `pagehide`, once the page is actually unloading. That
