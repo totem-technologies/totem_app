@@ -51,7 +51,7 @@ Components/
   Feedback/    EmptyIndicator, ErrorScreen, InfoText, LoadingIndicator, LoadingScreen, NotificationBanner
   Navigation/  PageIndicator, SheetDragHandle
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
-  Sessions/    SessionCard, SessionControls, JoinTransitionCard, ParticipantCard, SessionWaitingQueueButton
+  Sessions/    SessionCard, SessionControls, JoinTransitionCard, GroundingMarquee, ParticipantCard, SessionWaitingQueueButton
 Screens/
   auth                AuthFlow (18 states)
   session/:slug       PreJoinView (ready and waiting states using production views)

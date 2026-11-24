@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
-
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
@@ -25,6 +24,7 @@ import 'package:totem_core/features/sessions/screens/speaking_turn_screen.dart';
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/action_slider_button.dart';
 import 'package:totem_core/features/sessions/widgets/emoji_bar.dart';
+import 'package:totem_core/features/sessions/widgets/grounding_marquee.dart';
 import 'package:totem_core/features/sessions/widgets/participant_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_keyboard_shortcuts.dart';
 
@@ -650,6 +650,43 @@ void main() {
           tester.widgetList(find.text('Your session is about to start')),
         ).length.equals(1);
       });
+
+      testWidgets('fits grounding tips above the controls on a small '
+          'landscape phone', (tester) async {
+        const size = Size(667, 375);
+
+        await pumpListeningTurn(
+          tester,
+          sessionState: _buildState(status: RoomStatus.waitingRoom),
+          viewportSize: size,
+        );
+
+        check(tester.takeException()).isNull();
+        final tip = find.bySemanticsLabel(RegExp('^Tip: '));
+        check(tip.evaluate()).length.equals(1);
+        final tipRect = tester.getRect(tip);
+        final controls = tester.getRect(find.byType(SessionActionBar));
+        for (final rect in [tipRect, controls]) {
+          check(rect.top >= 0 && rect.bottom <= size.height).isTrue();
+        }
+        check(tipRect.overlaps(controls)).isFalse();
+      });
+
+      testWidgets('drops grounding tips instead of overflowing on a small '
+          'landscape phone at large text', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+        await pumpListeningTurn(
+          tester,
+          sessionState: _buildState(status: RoomStatus.waitingRoom),
+          viewportSize: const Size(667, 375),
+        );
+
+        check(tester.takeException()).isNull();
+        check(find.byType(GroundingMarquee).evaluate()).isEmpty();
+        check(find.byType(SessionActionBar).evaluate()).length.equals(1);
+      });
     });
 
     group('session action bar', () {
@@ -683,6 +720,65 @@ void main() {
         await tester.tap(find.bySemanticsLabel('Camera off'));
         await tester.pump();
         check(session.mockLocalMedia.cameraCommands).deepEquals([true]);
+      });
+
+      testWidgets('unmute confirmation returns when the keeper returns', (
+        tester,
+      ) async {
+        final away = _buildState(
+          participants: [
+            _mockRemote('user-1', 'User One'),
+            _mockRemote('speaker-1', 'Speaker One'),
+          ],
+        );
+        final returned = _buildState();
+        final mutable =
+            NotifierProvider<_MutableSessionState, SessionRoomState>(
+              () => _MutableSessionState(away),
+            );
+        await pumpListeningTurn(
+          tester,
+          sessionState: away,
+          mutableState: mutable,
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ListeningTurnScreen)),
+        );
+
+        try {
+          await tester.tap(find.bySemanticsLabel('Microphone off'));
+          await tester.pump();
+          check(tester.widgetList(find.text('Unmute Anyway'))).isEmpty();
+          check(session.mockLocalMedia.microphoneCommands).deepEquals([true]);
+
+          await tester.tap(find.bySemanticsLabel('Microphone on'));
+          await tester.pump();
+          check(
+            session.mockLocalMedia.microphoneCommands,
+          ).deepEquals([true, false]);
+
+          when(() => session.state).thenReturn(returned);
+          container.read(mutable.notifier).value = returned;
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel('Microphone off'));
+          await tester.pumpAndSettle();
+          check(tester.widgetList(find.text('Unmute Anyway'))).length.equals(1);
+          check(
+            session.mockLocalMedia.microphoneCommands,
+          ).deepEquals([true, false]);
+          await tester.tap(find.text('Unmute Anyway'));
+          await tester.pumpAndSettle();
+          check(
+            session.mockLocalMedia.microphoneCommands,
+          ).deepEquals([true, false, true]);
+        } finally {
+          if (find.text('Stay Muted').evaluate().isNotEmpty) {
+            await tester.tap(find.text('Stay Muted'));
+            await tester.pumpAndSettle();
+          }
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
       });
 
       testWidgets('X13: a refused unmute explains the fix', (tester) async {

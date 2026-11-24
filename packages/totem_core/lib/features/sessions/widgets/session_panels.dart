@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -48,11 +50,8 @@ class _SessionPanelRouteObserver extends NavigatorObserver {
   }
 }
 
-class _DockedSessionPanelsRail extends ConsumerWidget {
-  const _DockedSessionPanelsRail({
-    required this.sessionSlug,
-    required this.panel,
-  });
+class _DockedSessionPanels extends ConsumerWidget {
+  const _DockedSessionPanels({required this.sessionSlug, required this.panel});
   final SessionPanel panel;
 
   final String sessionSlug;
@@ -73,8 +72,21 @@ class _DockedSessionPanelsRail extends ConsumerWidget {
       (false, false, false) => null,
     };
 
-    return DockedSessionSidePanel(open: panel != null, child: panel);
+    return DockedSessionSidePanel(
+      open: panel != null,
+      onDismiss: () => closeDockedSessionPanel(ref),
+      child: panel,
+    );
   }
+}
+
+/// Closes the open session panel. Returns whether one was open.
+bool closeDockedSessionPanel(WidgetRef ref) {
+  if (ref.read(sessionPresentationProvider).panel == SessionPanel.none) {
+    return false;
+  }
+  ref.read(sessionPresentationProvider.notifier).closePanel();
+  return true;
 }
 
 /// Owns the room's nested routes and responsive panel presentation.
@@ -227,6 +239,8 @@ class _SessionPanelsState extends ConsumerState<SessionPanels>
         sessionSlug: widget.sessionSlug,
         child: SessionKeyboardShortcuts(
           navigatorKey: _roomNavigatorKey,
+          onEscape: () =>
+              shouldDockSessionChat(context) && closeDockedSessionPanel(ref),
           enableEmojiReactions: widget.enableEmojiReactions,
           child: RoomBackground(
             status: roomStatus,
@@ -240,39 +254,41 @@ class _SessionPanelsState extends ConsumerState<SessionPanels>
                   child: Stack(
                     children: [
                       Positioned.fill(
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: RepaintBoundary(
-                                child: PopScope(
-                                  canPop: false,
-                                  onPopInvokedWithResult:
-                                      (didPop, result) async {
-                                        if (!didPop) {
-                                          await _handleBackNavigation(
-                                            session,
-                                            connectionState,
-                                          );
-                                        }
-                                      },
-                                  child: widget.child,
-                                ),
+                        child: RepaintBoundary(
+                          child: PopScope(
+                            canPop: false,
+                            onPopInvokedWithResult: (didPop, result) async {
+                              if (!didPop) {
+                                await _handleBackNavigation(
+                                  session,
+                                  connectionState,
+                                );
+                              }
+                            },
+                            // Read before the docked panel.
+                            child: Semantics(
+                              container: true,
+                              explicitChildNodes: true,
+                              sortKey: const OrdinalSortKey(0),
+                              // Escape from a focused room control. A focused
+                              // popup handles it first.
+                              child: Focus(
+                                canRequestFocus: false,
+                                skipTraversal: true,
+                                onKeyEvent: (node, event) {
+                                  if (event is KeyDownEvent &&
+                                      event.logicalKey ==
+                                          LogicalKeyboardKey.escape &&
+                                      shouldDockSessionChat(context) &&
+                                      closeDockedSessionPanel(ref)) {
+                                    return KeyEventResult.handled;
+                                  }
+                                  return KeyEventResult.ignored;
+                                },
+                                child: widget.child,
                               ),
                             ),
-                            if (dockChatSlot &&
-                                !_roomNavigatorObserver.panelRoutes.any(
-                                  (route) => route.isActive,
-                                ))
-                              ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: MediaQuery.sizeOf(context).width,
-                                ),
-                                child: _DockedSessionPanelsRail(
-                                  sessionSlug: widget.sessionSlug,
-                                  panel: _renderedPanel,
-                                ),
-                              ),
-                          ],
+                          ),
                         ),
                       ),
                       Positioned.fill(
@@ -280,6 +296,18 @@ class _SessionPanelsState extends ConsumerState<SessionPanels>
                           child: Overlay(key: EmojiReactions.emojiOverlayKey),
                         ),
                       ),
+                      // The panel floats over the full-width room, inside the
+                      // page so the room's dialogs, menus and notifications
+                      // draw over it and their barriers block it. Kept
+                      // mounted while closed for its exit animation.
+                      if (dockChatSlot &&
+                          !_roomNavigatorObserver.panelRoutes.any(
+                            (route) => route.isActive,
+                          ))
+                        _DockedSessionPanels(
+                          sessionSlug: widget.sessionSlug,
+                          panel: _renderedPanel,
+                        ),
                       if (widget.orientationBuilder case final builder?)
                         builder(context, dockChatSlot),
                     ],
@@ -446,6 +474,11 @@ class _SessionPanelsState extends ConsumerState<SessionPanels>
     final navigator = _roomNavigatorKey.currentState;
     if (navigator?.canPop() ?? false) {
       navigator?.pop();
+      return;
+    }
+
+    // Back closes a docked panel before offering to leave.
+    if (shouldDockSessionChat(context) && closeDockedSessionPanel(ref)) {
       return;
     }
 

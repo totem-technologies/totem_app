@@ -401,20 +401,20 @@ class _SessionChatPanelState extends ConsumerState<SessionChatPanel>
                       null;
                 },
               ),
-            MessageInputBar(
-              enabled: canCompose,
-              // A fresh State per thread, so a private draft can
-              // never be sent to Everyone after a thread switch.
-              key: ValueKey(threadTarget),
-              hintText: _composerHint(
-                isPrivateThread: isPrivateThread,
-                threadTarget: threadTarget,
-                participants: participants,
-                keeperIdentity: keeperIdentity,
+            if (canCompose)
+              MessageInputBar(
+                // A fresh State per thread, so a private draft can
+                // never be sent to Everyone after a thread switch.
+                key: ValueKey(threadTarget),
+                hintText: _composerHint(
+                  isPrivateThread: isPrivateThread,
+                  threadTarget: threadTarget,
+                  participants: participants,
+                  keeperIdentity: keeperIdentity,
+                ),
+                autofocus: autofocus,
+                onSend: send,
               ),
-              autofocus: autofocus,
-              onSend: send,
-            ),
           ],
         ),
       ),

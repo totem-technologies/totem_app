@@ -17,6 +17,10 @@ import 'package:totem_core/shared/widgets/viewport_resolver.dart';
 
 // TODO(totem): Refactor this screen declaration
 //              A lot of the code is redundant and a lot of this could be suggared
+/// Height the grid and tips share before the tips are dropped on a short
+/// landscape phone, so the participant grid keeps usable room.
+const double _minLandscapeGridHeight = 180;
+
 class ListeningTurnScreen extends ConsumerWidget {
   const ListeningTurnScreen({required this.session, super.key});
 
@@ -82,8 +86,10 @@ class ListeningTurnScreen extends ConsumerWidget {
           speakingNow: activeSpeaker?.identity,
         );
 
+        // The room's layout doesn't scroll, so long tips are cut at two
+        // lines rather than squeezing the participant grid at large text.
         final Widget? marquee = roomStatus == RoomStatus.waitingRoom
-            ? const GroundingMarquee()
+            ? const GroundingMarquee(maxLines: 2)
             : null;
 
         switch (viewportKind) {
@@ -148,15 +154,35 @@ class ListeningTurnScreen extends ConsumerWidget {
                             children: [
                               nextUpText,
                               Expanded(
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsetsDirectional.symmetric(
-                                        vertical: 8,
-                                      ),
-                                  child: participantGrid,
+                                // On a short landscape phone (large text in
+                                // particular) the tips give way to the
+                                // participant grid instead of overflowing.
+                                child: LayoutBuilder(
+                                  builder: (context, box) {
+                                    final showTips =
+                                        marquee != null &&
+                                        box.maxHeight >=
+                                            _minLandscapeGridHeight;
+                                    return Column(
+                                      spacing: 16,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Expanded(
+                                          child: Padding(
+                                            padding:
+                                                const EdgeInsetsDirectional.symmetric(
+                                                  vertical: 8,
+                                                ),
+                                            child: participantGrid,
+                                          ),
+                                        ),
+                                        if (showTips) marquee,
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
-                              ?marquee,
                               const Center(child: SessionActionBar()),
                             ],
                           ),

@@ -159,7 +159,7 @@ void main() {
       await tester.pump(const Duration(seconds: 8));
       await tester.pump(const Duration(milliseconds: 700));
       devices.attention.add(MediaKind.camera);
-      devices.blocked.add((MediaKind.camera, TurnOnBlocker.keeperAway));
+      devices.blocked.add((MediaKind.camera, TurnOnBlocker.connection));
       await tester.pump();
       check(find.byType(NotificationBanner).evaluate()).isEmpty();
       check(tester.takeException()).isNull();
@@ -223,7 +223,7 @@ void main() {
     check(nextDevices.attention.active).equals(0);
     check(nextDevices.blocked.active).equals(0);
     nextDevices.attention.add(MediaKind.camera);
-    nextDevices.blocked.add((MediaKind.camera, TurnOnBlocker.keeperAway));
+    nextDevices.blocked.add((MediaKind.camera, TurnOnBlocker.connection));
     await tester.pump();
     check(tester.takeException()).isNull();
     container.dispose();

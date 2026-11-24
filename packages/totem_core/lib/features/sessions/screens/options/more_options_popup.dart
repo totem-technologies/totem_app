@@ -179,6 +179,33 @@ class MoreOptions extends ConsumerWidget {
                   color: theme.colorScheme.onSurface,
                 ),
               ),
+              if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
+                MoreOptionsTile<void>(
+                  title: 'Start session',
+                  icon: TotemIcons.arrowForward,
+                  type: MoreOptionsTileType.destructive,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _onStartSession(context, currentSession);
+                  },
+                ),
+              if (state.roomState.status != mobile_api.RoomStatus.ended)
+                MoreOptionsTile<void>(
+                  title: 'Manage Prompts',
+                  icon: TotemIcons.edit,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    showSessionPromptsModal(context, sessionSlug: session.slug);
+                  },
+                ),
+              MoreOptionsTile<void>(
+                title: 'Reorder Participants',
+                icon: TotemIcons.reorder,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showParticipantReorderModals(context);
+                },
+              ),
               MoreOptionsTile<void>(
                 title: 'Require approval to join',
                 icon: TotemIcons.community,
@@ -195,11 +222,30 @@ class MoreOptions extends ConsumerWidget {
                 },
               ),
               MoreOptionsTile<void>(
-                title: 'Reorder Participants',
-                icon: TotemIcons.reorder,
+                title: 'Mute everyone',
+                icon: TotemIcons.microphoneOff,
+                type: MoreOptionsTileType.destructive,
                 onTap: () {
+                  // The popup closes first, so capture the room-level reporter.
+                  final feedback = ref.read(
+                    sessionActionFeedbackProvider.notifier,
+                  );
                   Navigator.of(context).pop();
-                  showParticipantReorderModals(context);
+                  unawaited(_onMuteEveryone(currentSession, feedback));
+                },
+              ),
+              MoreOptionsTile<void>(
+                title:
+                    'Declined Participants'
+                    '${declinedParticipantsCount > 0 ? ' ($declinedParticipantsCount)' : ''}',
+                icon: TotemIcons.removePerson,
+                onTap: () {
+                  final navigator = Navigator.of(context)..pop();
+                  showDeclinedParticipantsModal(
+                    navigator.context,
+                    sessionSlug: session.slug,
+                    keeperIdentity: state.roomState.keeper,
+                  );
                 },
               ),
               MoreOptionsTile<void>(
@@ -217,42 +263,6 @@ class MoreOptions extends ConsumerWidget {
                       sessionState,
                     );
                   }
-                },
-              ),
-              MoreOptionsTile<void>(
-                title:
-                    'Declined Participants'
-                    '${declinedParticipantsCount > 0 ? ' ($declinedParticipantsCount)' : ''}',
-                icon: TotemIcons.removePerson,
-                onTap: () {
-                  final navigator = Navigator.of(context)..pop();
-                  showDeclinedParticipantsModal(
-                    navigator.context,
-                    sessionSlug: session.slug,
-                    keeperIdentity: state.roomState.keeper,
-                  );
-                },
-              ),
-              if (state.roomState.status != mobile_api.RoomStatus.ended)
-                MoreOptionsTile<void>(
-                  title: 'Manage Prompts',
-                  icon: TotemIcons.edit,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    showSessionPromptsModal(context, sessionSlug: session.slug);
-                  },
-                ),
-              MoreOptionsTile<void>(
-                title: 'Mute everyone',
-                icon: TotemIcons.microphoneOff,
-                type: MoreOptionsTileType.destructive,
-                onTap: () {
-                  // The popup closes first, so capture the room-level reporter.
-                  final feedback = ref.read(
-                    sessionActionFeedbackProvider.notifier,
-                  );
-                  Navigator.of(context).pop();
-                  unawaited(_onMuteEveryone(currentSession, feedback));
                 },
               ),
               if (state.roomState.status == mobile_api.RoomStatus.active)
@@ -292,17 +302,8 @@ class MoreOptions extends ConsumerWidget {
                     );
                   },
                 ),
-              if (state.roomState.status == mobile_api.RoomStatus.waitingRoom)
-                MoreOptionsTile<void>(
-                  title: 'Start session',
-                  icon: TotemIcons.arrowForward,
-                  type: MoreOptionsTileType.destructive,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _onStartSession(context, currentSession);
-                  },
-                )
-              else if (state.roomState.status != mobile_api.RoomStatus.ended)
+              if (state.roomState.status != mobile_api.RoomStatus.waitingRoom &&
+                  state.roomState.status != mobile_api.RoomStatus.ended)
                 MoreOptionsTile<void>(
                   title: 'End session',
                   icon: TotemIcons.cameraOff,

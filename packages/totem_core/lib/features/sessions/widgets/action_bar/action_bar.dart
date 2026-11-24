@@ -614,7 +614,11 @@ class SessionActionBar extends ConsumerWidget {
       currentSessionStateProvider.select(
         (state) => state == null
             ? null
-            : (status: state.roomState.status, speaker: state.speakingNow),
+            : (
+                status: state.roomState.status,
+                speaker: state.speakingNow,
+                hasKeeper: state.hasKeeper,
+              ),
       ),
     );
 
@@ -639,6 +643,7 @@ class SessionActionBar extends ConsumerWidget {
         isMicOn: deviceState.isMicrophoneOn,
         requiresUnmuteConfirmation:
             totemState?.status == RoomStatus.active &&
+            totemState?.hasKeeper == true &&
             totemState?.speaker != localIdentity,
         needsAttention: needsAttention(
           ref.watch(mediaPermissionControllerProvider)?.microphone,
