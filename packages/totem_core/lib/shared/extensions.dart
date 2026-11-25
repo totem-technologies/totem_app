@@ -29,6 +29,12 @@ extension SessionDetailSchemaExtension on SessionDetailSchema {
     final end = start.add(Duration(minutes: duration));
     return start.isBefore(now.add(joinBeforeTime)) && end.isAfter(now);
   }
+
+  /// Whether this Session is over: the server ended it, or its scheduled end
+  /// has passed.
+  bool hasEnded([DateTime? now]) =>
+      ended ||
+      start.add(Duration(minutes: duration)).isBefore(now ?? DateTime.now());
 }
 
 extension MobileSpaceDetailSchemaExtension on MobileSpaceDetailSchema {

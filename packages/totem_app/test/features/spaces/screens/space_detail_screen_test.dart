@@ -74,6 +74,9 @@ SessionDetailSchema _session({
   required String title,
   required MobileSpaceDetailSchema space,
   required bool attending,
+  DateTime? start,
+  bool joinable = false,
+  bool ended = false,
 }) {
   return SessionDetailSchema(
     slug: slug,
@@ -82,13 +85,13 @@ SessionDetailSchema _session({
     content: '',
     seatsLeft: 5,
     duration: 60,
-    start: DateTime.now().add(const Duration(days: 7)),
+    start: start ?? DateTime.now().add(const Duration(days: 7)),
     attending: attending,
     open: true,
     started: false,
     cancelled: false,
-    joinable: false,
-    ended: false,
+    joinable: joinable,
+    ended: ended,
     rsvpUrl: '/rsvp/$slug',
     joinUrl: null,
     subscribeUrl: '/subscribe/$slug',
@@ -372,6 +375,58 @@ void main() {
 
     check((spaceLoads, eventLoads, summaryLoads)).equals((2, 2, 2));
     check(tester.widgetList(find.text('Attend'))).length.equals(1);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await const AssetImage(
+      TotemImageAssets.genericBackground,
+      package: 'totem_core',
+    ).evict();
+    tester.binding.imageCache.clearLiveImages();
+    tester.binding.imageCache.clear();
+  });
+
+  testWidgets('Join Now on a session that has just ended shows the dialog', (
+    tester,
+  ) async {
+    final start = DateTime.now().subtract(const Duration(minutes: 5));
+    final space = _space('live-space', 'Live Space');
+    var current = _session(
+      slug: 'live-session',
+      title: 'Live session',
+      space: space,
+      attending: true,
+      start: start,
+      joinable: true,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_FakeAuthController.new),
+          spaceProvider(space.slug).overrideWith((_) async => space),
+          sessionProvider(current.slug).overrideWith((_) async => current),
+          spacesSummaryProvider.overrideWith((_) async => _emptySummary),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: SpaceDetailScreen(slug: space.slug, sessionSlug: current.slug),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    check(find.text('Join Now').evaluate()).isNotEmpty();
+
+    current = current.copyWith(ended: true, joinable: false);
+    await tester.tap(find.text('Join Now'));
+    await tester.pumpAndSettle();
+
+    check(
+      find.text('This session is no longer available to join.').evaluate(),
+    ).isNotEmpty();
+    check(find.text('View other sessions').evaluate()).isNotEmpty();
+    check(find.text('Cancel').evaluate()).isNotEmpty();
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();

@@ -15,6 +15,7 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/analytics_service.dart';
 import 'package:totem_core/features/keeper/screens/meet_user_card.dart';
+import 'package:totem_core/features/sessions/widgets/session_ended_join_dialog.dart';
 import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart';
 import 'package:totem_core/shared/date.dart';
 import 'package:totem_core/shared/extensions.dart';
@@ -564,14 +565,9 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     SessionDetailSchema session,
     UserSchema? user,
   ) {
-    final ended =
-        session.ended ||
-        session.start
-            .add(Duration(minutes: session.duration))
-            .isBefore(DateTime.now());
     return switch (session) {
       _ when session.cancelled => SpaceJoinCardState.cancelled,
-      _ when ended => SpaceJoinCardState.ended,
+      _ when session.hasEnded() => SpaceJoinCardState.ended,
       _ when _joined || (session.canJoinNow(user) && session.joinable) =>
         SpaceJoinCardState.joinable,
       _ when _attending => SpaceJoinCardState.attending,
@@ -654,8 +650,7 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
                   onAttend: () => _attend(session),
                   onGiveUpSpot: () => _giveUpSpot(session),
                   onAddToCalendar: () => addSessionToCalendar(context, session),
-                  onJoinLivekit: () => _joinLivekit(session),
-                  onJoinGoogleMeet: () => _joinGoogleMeet(session),
+                  onJoin: () => _join(session),
                   onExplore: () =>
                       TotemRouter.instance.toHome(HomeRoutes.spaces),
                 );
@@ -795,18 +790,41 @@ class _SessionInfoCardState extends ConsumerState<_SessionInfoCard> {
     }
   }
 
-  void _joinLivekit(SessionDetailSchema session) {
-    logger.d('Joining livekit session: ${session.slug}');
-    if (mounted) setState(() => _joined = true);
-    context.go(RouteNames.session(session.slug));
-  }
+  /// Join Now may be stale: the Session can end (a Keeper no-show, a late
+  /// cancellation) while this page is open. Confirm with a fresh fetch, and
+  /// explain instead of opening the join flow when it is over.
+  Future<void> _join(SessionDetailSchema session) async {
+    if (_loading || !mounted) return;
+    setState(() => _loading = true);
+    var latest = session;
+    try {
+      latest = await ref.refresh(sessionProvider(session.slug).future);
+    } catch (error, stackTrace) {
+      // The join flow fetches the Session again and explains failures.
+      logger.w(
+        'Could not refresh session ${session.slug} before joining',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+    if (!mounted) return;
+    setState(() => _loading = false);
 
-  Future<void> _joinGoogleMeet(SessionDetailSchema session) async {
-    setState(() => _joined = true);
-    await launchUrl(
-      Uri.parse(getFullUrl(session.calLink)),
-      mode: LaunchMode.externalApplication,
-    );
+    if (latest.hasEnded()) {
+      await showSessionEndedJoinDialog(context, session: latest);
+      return;
+    }
+    if (latest.meetingProvider == MeetingProviderEnum.livekit) {
+      logger.d('Joining livekit session: ${latest.slug}');
+      setState(() => _joined = true);
+      context.go(RouteNames.session(latest.slug));
+    } else {
+      setState(() => _joined = true);
+      await launchUrl(
+        Uri.parse(getFullUrl(latest.calLink)),
+        mode: LaunchMode.externalApplication,
+      );
+    }
   }
 
   Future<void> _refresh(SessionDetailSchema session) async {
@@ -833,8 +851,7 @@ class _DateAttendRow extends StatelessWidget {
     required this.onAttend,
     required this.onGiveUpSpot,
     required this.onAddToCalendar,
-    required this.onJoinLivekit,
-    required this.onJoinGoogleMeet,
+    required this.onJoin,
     required this.onExplore,
   });
 
@@ -845,8 +862,7 @@ class _DateAttendRow extends StatelessWidget {
   final VoidCallback onAttend;
   final VoidCallback onGiveUpSpot;
   final VoidCallback onAddToCalendar;
-  final VoidCallback onJoinLivekit;
-  final VoidCallback onJoinGoogleMeet;
+  final VoidCallback onJoin;
   final VoidCallback onExplore;
 
   @override
@@ -957,10 +973,7 @@ class _DateAttendRow extends StatelessWidget {
       SpaceJoinCardState.cancelled ||
       SpaceJoinCardState.closed ||
       SpaceJoinCardState.full => onExplore(),
-      SpaceJoinCardState.joinable =>
-        session.meetingProvider == MeetingProviderEnum.livekit
-            ? onJoinLivekit()
-            : onJoinGoogleMeet(),
+      SpaceJoinCardState.joinable => onJoin(),
       SpaceJoinCardState.notJoined => onAttend(),
       SpaceJoinCardState.attending => onAddToCalendar(),
     };
