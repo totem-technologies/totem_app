@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:totem_core/core/api/api_client/api_client.dart'
+    show Participant;
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
-import 'package:totem_core/core/repositories/user_repository.dart';
-import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/widgets/session_navigator_scope.dart';
 import 'package:totem_core/shared/totem_icons.dart';
-import 'package:totem_core/shared/widgets/error_screen.dart';
 import 'package:totem_core/shared/widgets/responsive_modal.dart';
 import 'package:totem_core/shared/widgets/session_button_style.dart';
 import 'package:totem_core/shared/widgets/sheet_drag_handle.dart';
@@ -53,20 +53,11 @@ class DeclinedParticipants extends ConsumerStatefulWidget {
 }
 
 class _DeclinedParticipantsState extends ConsumerState<DeclinedParticipants> {
-  final _restoringIdentities = <String>{};
-  Set<String>? _knownIdentities;
-
-  DeclinedSessionParticipantsProvider get _provider =>
-      declinedSessionParticipantsProvider(
-        widget.sessionSlug,
-        widget.keeperIdentity,
-      );
-
-  Future<void> _allow(String identity, String? name) async {
-    if (_restoringIdentities.isNotEmpty) return;
-    setState(() => _restoringIdentities.add(identity));
+  Future<void> _allow(Participant participant) async {
+    final service = ref.read(currentSessionProvider)?.admission;
+    if (service?.mounted != true || service!.busy) return;
     try {
-      await ref.read(_provider.notifier).allow(identity);
+      await service.allow(participant);
     } catch (error, stackTrace) {
       ErrorHandler.report(
         error,
@@ -77,147 +68,160 @@ class _DeclinedParticipantsState extends ConsumerState<DeclinedParticipants> {
         await ErrorHandler.showErrorDialog(
           sessionNavigatorContext(context),
           useRootNavigator: false,
-          message: 'Failed to allow ${name ?? identity}',
+          message:
+              'Failed to allow ${participant.user.name.value ?? participant.identity}',
         );
       }
-    } finally {
-      if (mounted) setState(() => _restoringIdentities.remove(identity));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final declined = ref.watch(_provider);
-    final identities = switch (declined) {
-      AsyncData<Set<String>>(:final value) => _knownIdentities = value,
-      AsyncError<Set<String>>() => _knownIdentities,
-      AsyncLoading<Set<String>>() => null,
-    };
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SheetDragHandle(),
-        Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: 20,
-            end: 20,
-            bottom: 6,
-          ),
-          child: Stack(
-            children: [
-              Center(
+    final service = ref.watch(currentSessionProvider)?.admission;
+    if (service == null || !service.mounted) {
+      return const Center(child: Text('Admission controls unavailable'));
+    }
+    return ListenableBuilder(
+      listenable: service,
+      builder: (context, _) {
+        final theme = Theme.of(context);
+        final participants = service.declined;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SheetDragHandle(),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(
+                start: 20,
+                end: 20,
+                bottom: 6,
+              ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Text(
+                      'Declined Participants',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: IconButton(
+                      key: const Key('close-declined-participants-modal'),
+                      icon: const TotemIcon(
+                        TotemIcons.x,
+                        size: 20,
+                        color: Colors.black,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (service.error case final error?)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: Text(
-                  'Declined Participants',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                  textAlign: TextAlign.center,
+                  error,
+                  style: TextStyle(color: theme.colorScheme.error),
                 ),
               ),
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: IconButton(
-                  key: const Key('close-declined-participants-modal'),
-                  icon: const TotemIcon(
-                    TotemIcons.x,
-                    size: 20,
-                    color: Colors.black,
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Flexible(
-          child: identities == null
-              ? declined.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator.adaptive()),
-                  error: (error, stackTrace) => ErrorScreen(
-                    hideAppBar: true,
-                    showHomeButton: false,
-                    title: 'Failed to load declined participants',
-                    onRetry: () async => ref.invalidate(_provider),
-                  ),
-                  data: (_) => const SizedBox.shrink(),
-                )
-              : Builder(
-                  builder: (context) {
-                    final participants = identities.toList()..sort();
-                    return CustomScrollView(
-                      shrinkWrap: true,
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsetsDirectional.only(
-                              start: 20,
-                              end: 20,
-                              bottom: 20,
+            Flexible(
+              child: service.snapshot == null
+                  ? service.error != null
+                        ? Center(
+                            child: TextButton(
+                              onPressed: service.sync,
+                              child: const Text('Retry'),
                             ),
-                            child: Text(
-                              participants.isEmpty
-                                  ? 'No participants have been declined'
-                                  : 'Tap Allow to remove a declined participant',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: Colors.black,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                        if (participants.isNotEmpty)
-                          SliverPadding(
-                            padding: const EdgeInsetsDirectional.symmetric(
-                              horizontal: 20,
-                            ),
-                            sliver: SliverList.builder(
-                              itemCount: participants.length,
-                              itemBuilder: (context, index) =>
-                                  _DeclinedParticipantItem(
-                                    key: ValueKey(participants[index]),
-                                    identity: participants[index],
-                                    disabled: _restoringIdentities.isNotEmpty,
-                                    onAllow: _allow,
+                          )
+                        : const Center(
+                            child: CircularProgressIndicator.adaptive(),
+                          )
+                  : Builder(
+                      builder: (context) {
+                        return CustomScrollView(
+                          shrinkWrap: true,
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                  start: 20,
+                                  end: 20,
+                                  bottom: 20,
+                                ),
+                                child: Text(
+                                  participants.isEmpty
+                                      ? 'No participants have been declined'
+                                      : 'Tap Allow to remove a declined participant',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: Colors.black,
                                   ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                             ),
-                          ),
-                        const SliverSafeArea(
-                          top: false,
-                          bottom: true,
-                          sliver: SliverToBoxAdapter(),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-        ),
-      ],
+                            if (participants.isNotEmpty)
+                              SliverPadding(
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 20,
+                                ),
+                                sliver: SliverList.builder(
+                                  itemCount: participants.length,
+                                  itemBuilder: (context, index) =>
+                                      _DeclinedParticipantItem(
+                                        key: ValueKey(
+                                          participants[index].identity,
+                                        ),
+                                        participant: participants[index],
+                                        disabled: service.busy,
+                                        onAllow: _allow,
+                                      ),
+                                ),
+                              ),
+                            const SliverSafeArea(
+                              top: false,
+                              bottom: true,
+                              sliver: SliverToBoxAdapter(),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
-class _DeclinedParticipantItem extends ConsumerWidget {
+class _DeclinedParticipantItem extends StatelessWidget {
   const _DeclinedParticipantItem({
-    required this.identity,
+    required this.participant,
     required this.disabled,
     required this.onAllow,
     super.key,
   });
 
-  final String identity;
+  final Participant participant;
   final bool disabled;
-  final Future<void> Function(String identity, String? name) onAllow;
+  final Future<void> Function(Participant) onAllow;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final user = ref.watch(userProfileProvider(identity));
-    final name = user.value?.name.value;
+    final identity = participant.identity;
+    final name = participant.user.name.value;
 
     return Container(
       margin: const EdgeInsetsDirectional.only(bottom: 8),
@@ -261,7 +265,7 @@ class _DeclinedParticipantItem extends ConsumerWidget {
                 foregroundColor: theme.colorScheme.onSurface,
                 side: BorderSide(color: theme.colorScheme.outline),
               ),
-              onPressed: disabled ? null : () => onAllow(identity, name),
+              onPressed: disabled ? null : () => onAllow(participant),
               child: const Text('Allow'),
             ),
           ),

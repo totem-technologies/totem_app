@@ -24,6 +24,7 @@ class SessionChatService extends ChangeNotifier {
     required this.transport,
     required this.keeperIdentity,
     required this.isKeeper,
+    required this.broadcastRecipients,
     DateTime Function()? now,
     String Function()? createId,
   }) : _now = now ?? DateTime.now,
@@ -32,6 +33,9 @@ class SessionChatService extends ChangeNotifier {
   final SessionTransport? Function() transport;
   final String Function() keeperIdentity;
   final bool Function() isKeeper;
+
+  /// Returns the current trusted roster, or null when authority is unavailable.
+  final Iterable<String>? Function() broadcastRecipients;
   final DateTime Function() _now;
   final String Function() _createId;
   final Set<String> _ids = {};
@@ -120,13 +124,31 @@ class SessionChatService extends ChangeNotifier {
       recipientIdentity: recipient,
     );
     try {
+      var recipients = recipient == null ? <String>[] : [recipient];
+      final roster = broadcastRecipients();
+      if (roster == null) return ChatSendOutcome.failed;
+      if (recipient != null) {
+        if (!roster.contains(recipient)) {
+          return ChatSendOutcome.invalidRecipient;
+        }
+      } else {
+        recipients = roster
+            .where((identity) => identity.isNotEmpty && identity != local)
+            .toSet()
+            .toList();
+        if (recipients.isEmpty) {
+          lastError = null;
+          add(message);
+          return ChatSendOutcome.sent;
+        }
+      }
       await connection
           .publish(
             SessionTransportPacket(
               bytes: utf8.encode(message.toJson()),
               topic: SessionCommunicationTopics.chat.topic,
               reliable: true,
-              recipients: recipient == null ? const [] : [recipient],
+              recipients: recipients,
             ),
           )
           .timeout(const Duration(seconds: 5));

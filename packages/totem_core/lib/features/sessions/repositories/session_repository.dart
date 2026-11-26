@@ -4,6 +4,8 @@ import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/services/repository_utils.dart';
 
+import 'package:uuid/uuid.dart';
+
 part 'session_repository.g.dart';
 
 const _shortTimeoutDuration = Duration(seconds: 10);
@@ -126,16 +128,51 @@ Future<RoomState> _postEvent({
 }
 
 @riverpod
-Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) {
+JoinOperation joinOperation(Ref ref, String sessionSlug) => JoinOperation();
+
+class JoinOperation {
+  String id = const Uuid().v4();
+  bool fresh = false;
+
+  void reset({bool fresh = false}) {
+    id = const Uuid().v4();
+    this.fresh = fresh;
+  }
+}
+
+@riverpod
+Future<JoinResponse> sessionToken(Ref ref, String sessionSlug) async {
   final apiService = ref.read(apiServiceProvider);
-  return RepositoryUtils.handleApiCall<JoinResponse>(
-    apiCall: () =>
-        apiService.rooms.totemRoomsApiJoinRoom(sessionSlug: sessionSlug),
+  final operation = ref.watch(joinOperationProvider(sessionSlug));
+  final attempt = JoinRoomRequest(
+    operationId: Omittable(operation.id),
+    fresh: operation.fresh,
+  );
+  final response = await RepositoryUtils.handleApiCall<JoinResponse>(
+    apiCall: () => apiService.rooms.totemRoomsApiJoinRoom(
+      sessionSlug: sessionSlug,
+      body: attempt,
+    ),
     operationName: 'join session',
     timeout: _shortTimeoutDuration,
     diagnostics: {'session_slug': sessionSlug},
     shouldReport: (error) => !isTerminalSessionJoinError(error),
   );
+  final admission = response.admission.isPresent
+      ? response.admission.value
+      : null;
+  if (admission == null ||
+      admission.permissions.isUnknown ||
+      admission.readiness.state.isUnknown ||
+      (admission.readiness.reason.value?.isUnknown ?? false) ||
+      (admission.status != AdmissionJoinStateStatus.pending &&
+          admission.status != AdmissionJoinStateStatus.granting &&
+          admission.status != AdmissionJoinStateStatus.admitted) ||
+      admission.requestId.isEmpty ||
+      admission.attemptId.isEmpty) {
+    throw StateError('Server admission is unavailable or unsupported');
+  }
+  return response;
 }
 
 @riverpod

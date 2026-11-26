@@ -183,6 +183,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
   String? admissionPrompt,
   bool isCurrentUserKeeper = false,
   List<Object?> extraOverrides = const [],
+  Future<void> Function()? onReturnToPreJoin,
 }) async {
   final p1 = testParticipant('user-1');
   final p2 = testParticipant('user-2');
@@ -267,6 +268,7 @@ Future<void> _pumpRoomScreenForResolvedScreen(
           child: VideoSessionScreen(
             sessionSlug: 'test-session',
             loadingScreen: const SizedBox(key: ValueKey('loading-screen')),
+            onReturnToPreJoin: onReturnToPreJoin,
             showAdmissionOrientation: showAdmissionOrientation,
             admissionReady: admissionReady,
             isReturningParticipant: isReturningParticipant,
@@ -674,51 +676,28 @@ void main() {
       },
     );
 
-    testWidgets(
-      'retrying a connection error waits for joining before returning to the room',
-      (tester) async {
-        final response = Completer<SessionJoinResult>();
-        final screenProvider =
-            NotifierProvider<_RoomScreenOverrideNotifier, RoomScreen>(
-              () => _RoomScreenOverrideNotifier(RoomScreen.error),
-            );
-        late ProviderContainer container;
-        var joinCalls = 0;
-        when(() => session.join()).thenAnswer((_) async {
-          joinCalls++;
-          final result = await response.future;
-          if (result == SessionJoinResult.success) {
-            container.read(screenProvider.notifier).set(RoomScreen.listening);
-          }
-          return result;
-        });
+    for (final screen in [RoomScreen.error, RoomScreen.disconnected]) {
+      testWidgets('retry from $screen returns to pre-join', (tester) async {
+        var preJoinCalls = 0;
         await _pumpRoomScreenForResolvedScreen(
           tester,
           session: session,
           event: _createSessionEventWithElapsed(_testNow(tester)),
-          screen: RoomScreen.error,
-          roomScreenProvider: screenProvider,
+          screen: screen,
+          connectionState: RoomConnectionState.disconnected,
+          disconnectReason: DisconnectReason.reconnectAttemptsExceeded,
+          onReturnToPreJoin: () async {
+            preJoinCalls++;
+          },
         );
-        container = ProviderScope.containerOf(
-          tester.element(find.byType(VideoSessionScreen)),
-          listen: false,
-        );
+
+        check(preJoinCalls).equals(0);
+        check(find.text('Try Joining Again').evaluate()).length.equals(1);
         await tester.tap(find.text('Try Joining Again'));
         await tester.pump();
-        check(joinCalls).equals(1);
-        check(container.read(screenProvider)).equals(RoomScreen.error);
-        // The retry action is unavailable until the active attempt completes.
-        check(find.text('Try Joining Again').evaluate()).isEmpty();
-        response.complete(SessionJoinResult.success);
-        await tester.pumpAndSettle();
-        check(find.text('Try Joining Again').evaluate()).isEmpty();
-        check(
-          find.bySemanticsLabel('Chat').hitTestable().evaluate(),
-        ).length.equals(1);
-        check(container.read(screenProvider)).equals(RoomScreen.listening);
-        await _unmountRoomScreen(tester);
-      },
-    );
+        check(preJoinCalls).equals(1);
+      });
+    }
 
     testWidgets('closes session sheets stacked above chat on disconnect', (
       tester,

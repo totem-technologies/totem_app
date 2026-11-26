@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:totem_core/features/sessions/admission/server_participant_admission.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_poll_scheduler.dart';
@@ -67,7 +68,25 @@ class SessionRuntime {
   Object? lastFailure;
   final media = JoinMediaOwner();
   final polling = SessionPollScheduler();
-  SessionAdmissionService? admission;
+  // Server-backed session projection and keeper commands, retained across retries.
+  SessionAdmissionService? admissionService;
+  // The joining participant's admission and its connection, disposed on cleanup.
+  ServerParticipantAdmission? serverAdmission;
+  StreamSubscription<AdmissionStatus>? _serverAdmissionEvents;
+
+  void attachServerAdmission(
+    ServerParticipantAdmission value,
+    void Function(AdmissionStatus) onStatus,
+  ) {
+    if (serverAdmission != null && !identical(serverAdmission, value)) {
+      throw StateError('Another admission already owns this session');
+    }
+    serverAdmission = value;
+    _serverAdmissionEvents ??= value.changes.listen((status) {
+      if (acceptsEvents && identical(serverAdmission, value)) onStatus(status);
+    });
+  }
+
   SessionTransport? _transport;
   SessionTransport? get transport => _transport;
   // Cancelled and cleared by _cleanup before the transport is disposed.
@@ -81,6 +100,7 @@ class SessionRuntime {
   int get generation => _generation;
   SessionAttempt? _attempt;
   Future<SessionJoinResult>? _joining;
+  SessionJoinMedia? _joiningMedia;
   Future<void>? _leaving;
   Future<void>? _cleaning;
   Future<void>? _disposing;
@@ -208,17 +228,31 @@ class SessionRuntime {
       });
     }
     final current = _joining;
+    // The initial tracks are reserved even while prior cleanup is pending.
+    final extraMedia = current != null && media != null
+        ? SessionJoinMedia(
+            cameraTrack:
+                identical(media.cameraTrack, _joiningMedia?.cameraTrack)
+                ? null
+                : media.cameraTrack,
+            microphoneTrack:
+                identical(media.microphoneTrack, _joiningMedia?.microphoneTrack)
+                ? null
+                : media.microphoneTrack,
+            onBeforeDispose: media.onBeforeDispose,
+          )
+        : media;
     if (current != null &&
         offer != null &&
         !identical(offer.identity, _offer?.identity) &&
         !identical(offer.identity, _transport)) {
-      return this.media.retain(media).dispose().then((_) async {
+      return this.media.retain(extraMedia).dispose().then((_) async {
         await offer.dispose();
         return SessionJoinResult.retryableFailure;
       });
     }
     if (current != null) {
-      return this.media.retain(media).dispose().then((_) => current);
+      return this.media.retain(extraMedia).dispose().then((_) => current);
     }
     if ((phase == SessionRuntimePhase.connected ||
             phase == SessionRuntimePhase.reconnecting) &&
@@ -246,6 +280,7 @@ class SessionRuntime {
     _offer = offer;
     final completion = Completer<SessionJoinResult>();
     _joining = completion.future;
+    _joiningMedia = media;
     unawaited(
       _run(
         operation,
@@ -284,7 +319,7 @@ class SessionRuntime {
       // A new entry after leaving cannot inherit callbacks from the old one.
       if (_entryEnded) {
         _entryIdentity = Object();
-        admission = null;
+        admissionService = null;
         _entryEnded = false;
       }
       _releaseEntry ??= retainEntry();
@@ -329,6 +364,7 @@ class SessionRuntime {
       // Do not clear a newer operation after a cancelled attempt finishes.
       if (identical(_joining, flight)) {
         _joining = null;
+        _joiningMedia = null;
         _releaseEntry?.call();
         _releaseEntry = null;
       }
@@ -345,7 +381,10 @@ class SessionRuntime {
     final completion = Completer<void>();
     _cleaning = completion.future;
     // Leave already cancelled its attempt; preserve any join queued behind it.
-    if (!isLeaving) _joining = null;
+    if (!isLeaving) {
+      _joining = null;
+      _joiningMedia = null;
+    }
     _invalidate();
     if (!isLeaving &&
         !_disposed &&
@@ -398,7 +437,14 @@ class SessionRuntime {
         onCleanup,
         () => deactivateInfrastructure(owner),
         () async {
-          await admission?.disconnect();
+          await admissionService?.disconnect();
+        },
+        () async {
+          await _serverAdmissionEvents?.cancel();
+          _serverAdmissionEvents = null;
+          final current = serverAdmission;
+          serverAdmission = null;
+          await current?.dispose();
         },
         () async {
           try {
@@ -420,6 +466,7 @@ class SessionRuntime {
     final pending = _offer;
     _offer = null;
     _joining = null;
+    _joiningMedia = null;
     final completion = Completer<void>();
     _leaving = completion.future;
     _phase(SessionRuntimePhase.leaving);
@@ -442,7 +489,7 @@ class SessionRuntime {
           await pending?.dispose();
         },
         () async {
-          await admission?.close();
+          await admissionService?.close();
         },
         media.waitForPublications,
         disconnect,

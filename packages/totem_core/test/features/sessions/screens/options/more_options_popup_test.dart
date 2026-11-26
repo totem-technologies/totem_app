@@ -10,7 +10,6 @@ import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
-import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
 import 'package:totem_core/features/sessions/media/local_media.dart';
@@ -23,6 +22,7 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
 import '../../../../auth/controllers/auth_controller_mock.dart';
 import '../../../../setup.dart';
+import '../../admission/admission_ui_test_support.dart';
 import '../../controllers/core/session_controller_mock.dart';
 import '../../controllers/features/session_device_controller_mock.dart';
 import '../../media/fake_local_media.dart';
@@ -38,15 +38,10 @@ class _ObservedRouter extends FakeTotemRouter {
   }
 }
 
-class _FakeSessionAdmissionPreferences implements SessionAdmissionPreferences {
+class _OptionsSession extends MockSessionController {
+  final AdmissionUiService _admission = AdmissionUiService(admissionSnapshot());
   @override
-  String? getString(String key) => null;
-
-  @override
-  Future<bool> setString(String key, String value) async => true;
-
-  @override
-  Future<bool> remove(String key) async => true;
+  AdmissionUiService get admission => _admission;
 }
 
 class _TestSessionDeviceController extends SessionDeviceController {
@@ -98,9 +93,6 @@ Future<void> _pumpMoreOptions(
         ),
         currentSessionProvider.overrideWith((ref) => session),
         currentSessionStateProvider.overrideWithValue(state),
-        sessionAdmissionPreferencesProvider.overrideWith(
-          (ref) async => _FakeSessionAdmissionPreferences(),
-        ),
         admittedSessionParticipantIdentitiesProvider.overrideWith(
           () => TestAdmittedSessionParticipantIdentities({
             state.roomState.keeper,
@@ -188,7 +180,8 @@ void main() {
   });
 
   setUp(() {
-    session = MockSessionController();
+    session = _OptionsSession();
+    addTearDown(session.admission.dispose);
     devices = MockSessionDeviceController();
     keeper = MockSessionKeeperController();
     deviceController = _TestSessionDeviceController();
@@ -232,6 +225,26 @@ void main() {
         matching: find.byType(ListTile),
       );
       check(tester.widgetList(admissionTile)).length.equals(1);
+      final service = session.admission as AdmissionUiService;
+      await tester.tap(find.text('Require approval to join'));
+      await tester.pump();
+      check(service.settingCommands).deepEquals([false]);
+      check(
+        tester
+            .widget<Switch>(
+              find.descendant(of: admissionTile, matching: find.byType(Switch)),
+            )
+            .value,
+      ).isTrue();
+      service.update(admissionSnapshot(approvalRequired: false));
+      await tester.pump();
+      check(
+        tester
+            .widget<Switch>(
+              find.descendant(of: admissionTile, matching: find.byType(Switch)),
+            )
+            .value,
+      ).isFalse();
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
     });
@@ -259,15 +272,17 @@ void main() {
         deviceController: deviceController,
       );
 
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(MoreOptions)),
+      (session.admission as AdmissionUiService).update(
+        admissionSnapshot(
+          participants: [
+            admissionParticipant(
+              'user-1',
+              name: 'User user-1',
+              state: 'permanently_declined',
+            ),
+          ],
+        ),
       );
-      final provider = declinedSessionParticipantsProvider(
-        'test-session',
-        'keeper-1',
-      );
-      await container.read(provider.future);
-      await container.read(provider.notifier).decline('user-1');
       await tester.pump();
 
       check(

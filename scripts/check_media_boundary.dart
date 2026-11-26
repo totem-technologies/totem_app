@@ -29,7 +29,7 @@ const _existingSdkConsumers = {
   'pre_join/pre_join_media_controller.dart',
   'pre_join/pre_join_state.dart',
   'pre_join/pre_join_preview_card.dart',
-  'admission/admission_transport.dart',
+
   'providers/session_scope_provider.dart',
   'screens/room_screen.dart',
   'screens/session_disconnected.dart',

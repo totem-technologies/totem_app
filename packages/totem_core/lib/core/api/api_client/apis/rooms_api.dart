@@ -2,13 +2,27 @@
 
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:degenerate_runtime/degenerate_runtime.dart';
+
+import '../models/admission_command_response.dart';
+import '../models/admission_me_snapshot.dart';
+import '../models/admission_request_input.dart';
+import '../models/admission_snapshot.dart';
+import '../models/attempt_receipt_input.dart';
+import '../models/batch_command_input.dart';
+import '../models/decline_input.dart';
+import '../models/error_schema.dart';
 import '../models/event_request.dart';
 import '../models/join_response.dart';
+import '../models/join_room_request.dart';
+import '../models/keeper_decision_input.dart';
+import '../models/membership_command_input.dart';
 import '../models/remove_participant_payload.dart';
 import '../models/remove_reason.dart';
 import '../models/room_error_response.dart';
 import '../models/room_state.dart';
+import '../models/settings_command_input.dart';
 
 /// RoomsApi operations.
 ///
@@ -141,15 +155,18 @@ final class RoomsApi with ApiExecutor {
   /// `POST /api/mobile/protected/rooms/{session_slug}/join`
   Future<ApiResult<JoinResponse, RoomErrorResponse>> totemRoomsApiJoinRoom({
     required String sessionSlug,
+    JoinRoomRequest? body,
     RequestOptions? options,
   }) async {
     final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
 
     final request = ApiRequest(
       method: 'POST',
       path:
           '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/join',
       headers: headers,
+      body: jsonEncode(body?.toJson()),
       options: options,
     );
 
@@ -318,6 +335,433 @@ final class RoomsApi with ApiExecutor {
           case 400 || 403 || 404 || 409 || 500:
             final json = jsonDecode(response.body);
             return RoomErrorResponse.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
+      },
+    );
+  }
+
+  /// Request Admission
+  ///
+  /// `POST /api/mobile/protected/rooms/{session_slug}/admission/request`
+  Future<ApiResult<AdmissionMeSnapshot, ErrorSchema>>
+  totemRoomsAdmissionApiRequestAdmission({
+    required String sessionSlug,
+    required AdmissionRequestInput body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/admission/request',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return AdmissionMeSnapshot.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 400 || 403 || 404 || 409 || 503 || 504:
+            final json = jsonDecode(response.body);
+            return ErrorSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
+      },
+    );
+  }
+
+  /// Get Admission
+  ///
+  /// `GET /api/mobile/protected/rooms/{session_slug}/admission`
+  Future<ApiResult<AdmissionSnapshot, ErrorSchema>>
+  totemRoomsAdmissionApiGetAdmission({
+    required String sessionSlug,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+
+    final request = ApiRequest(
+      method: 'GET',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/admission',
+      headers: headers,
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return AdmissionSnapshot.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 400 || 403 || 404 || 409 || 503 || 504:
+            final json = jsonDecode(response.body);
+            return ErrorSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
+      },
+    );
+  }
+
+  /// Get My Admission
+  ///
+  /// `GET /api/mobile/protected/rooms/{session_slug}/admission/me`
+  Future<ApiResult<AdmissionMeSnapshot, ErrorSchema>>
+  totemRoomsAdmissionApiGetMyAdmission({
+    required String sessionSlug,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+
+    final request = ApiRequest(
+      method: 'GET',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/admission/me',
+      headers: headers,
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return AdmissionMeSnapshot.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 400 || 403 || 404 || 409 || 503 || 504:
+            final json = jsonDecode(response.body);
+            return ErrorSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
+      },
+    );
+  }
+
+  /// Admit All
+  ///
+  /// `POST /api/mobile/protected/rooms/{session_slug}/admission/admit-all`
+  Future<ApiResult<AdmissionCommandResponse, ErrorSchema>>
+  totemRoomsAdmissionApiAdmitAll({
+    required String sessionSlug,
+    required BatchCommandInput body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/admission/admit-all',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return AdmissionCommandResponse.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 400 || 403 || 404 || 409 || 503 || 504:
+            final json = jsonDecode(response.body);
+            return ErrorSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
+      },
+    );
+  }
+
+  /// Activate Admission
+  ///
+  /// `POST /api/mobile/protected/rooms/{session_slug}/admission/activated`
+  Future<ApiResult<AdmissionMeSnapshot, ErrorSchema>>
+  totemRoomsAdmissionApiActivateAdmission({
+    required String sessionSlug,
+    required AttemptReceiptInput body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/admission/activated',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return AdmissionMeSnapshot.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 400 || 403 || 404 || 409 || 503 || 504:
+            final json = jsonDecode(response.body);
+            return ErrorSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
+      },
+    );
+  }
+
+  /// Cancel Admission
+  ///
+  /// `POST /api/mobile/protected/rooms/{session_slug}/admission/cancel`
+  Future<ApiResult<AdmissionMeSnapshot, ErrorSchema>>
+  totemRoomsAdmissionApiCancelAdmission({
+    required String sessionSlug,
+    required AttemptReceiptInput body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/admission/cancel',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return AdmissionMeSnapshot.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 400 || 403 || 404 || 409 || 503 || 504:
+            final json = jsonDecode(response.body);
+            return ErrorSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
+      },
+    );
+  }
+
+  /// Update Settings
+  ///
+  /// `PATCH /api/mobile/protected/rooms/{session_slug}/admission/settings`
+  Future<ApiResult<AdmissionCommandResponse, ErrorSchema>>
+  totemRoomsAdmissionApiUpdateSettings({
+    required String sessionSlug,
+    required SettingsCommandInput body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'PATCH',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/admission/settings',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return AdmissionCommandResponse.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 400 || 403 || 404 || 409 || 503 || 504:
+            final json = jsonDecode(response.body);
+            return ErrorSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
+      },
+    );
+  }
+
+  /// Approve
+  ///
+  /// `POST /api/mobile/protected/rooms/{session_slug}/admission/{identity}/approve`
+  Future<ApiResult<AdmissionCommandResponse, ErrorSchema>>
+  totemRoomsAdmissionApiApprove({
+    required String sessionSlug,
+    required String identity,
+    required KeeperDecisionInput body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/admission/${Uri.encodeComponent(identity)}/approve',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return AdmissionCommandResponse.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 400 || 403 || 404 || 409 || 503 || 504:
+            final json = jsonDecode(response.body);
+            return ErrorSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
+      },
+    );
+  }
+
+  /// Decline
+  ///
+  /// `POST /api/mobile/protected/rooms/{session_slug}/admission/{identity}/decline`
+  Future<ApiResult<AdmissionCommandResponse, ErrorSchema>>
+  totemRoomsAdmissionApiDecline({
+    required String sessionSlug,
+    required String identity,
+    required DeclineInput body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/admission/${Uri.encodeComponent(identity)}/decline',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return AdmissionCommandResponse.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 400 || 403 || 404 || 409 || 503 || 504:
+            final json = jsonDecode(response.body);
+            return ErrorSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
+      },
+    );
+  }
+
+  /// Allow
+  ///
+  /// `POST /api/mobile/protected/rooms/{session_slug}/admission/{identity}/allow`
+  Future<ApiResult<AdmissionCommandResponse, ErrorSchema>>
+  totemRoomsAdmissionApiAllow({
+    required String sessionSlug,
+    required String identity,
+    required MembershipCommandInput body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/admission/${Uri.encodeComponent(identity)}/allow',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return AdmissionCommandResponse.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 400 || 403 || 404 || 409 || 503 || 504:
+            final json = jsonDecode(response.body);
+            return ErrorSchema.fromJson(json as Map<String, dynamic>);
+          default:
+            return null;
+        }
+      },
+    );
+  }
+
+  /// Revoke
+  ///
+  /// `POST /api/mobile/protected/rooms/{session_slug}/admission/{identity}/revoke`
+  Future<ApiResult<AdmissionCommandResponse, ErrorSchema>>
+  totemRoomsAdmissionApiRevoke({
+    required String sessionSlug,
+    required String identity,
+    required MembershipCommandInput body,
+    RequestOptions? options,
+  }) async {
+    final headers = <String, String>{...apiConfig.defaultHeaders};
+    headers['Content-Type'] = 'application/json';
+
+    final request = ApiRequest(
+      method: 'POST',
+      path:
+          '/api/mobile/protected/rooms/${Uri.encodeComponent(sessionSlug)}/admission/${Uri.encodeComponent(identity)}/revoke',
+      headers: headers,
+      body: jsonEncode(body.toJson()),
+      options: options,
+    );
+
+    return await execute(
+      request,
+      onSuccess: (response) {
+        final json = jsonDecode(response.body);
+        return AdmissionCommandResponse.fromJson(json as Map<String, dynamic>);
+      },
+      onError: (response) {
+        switch (response.statusCode) {
+          case 400 || 403 || 404 || 409 || 503 || 504:
+            final json = jsonDecode(response.body);
+            return ErrorSchema.fromJson(json as Map<String, dynamic>);
           default:
             return null;
         }

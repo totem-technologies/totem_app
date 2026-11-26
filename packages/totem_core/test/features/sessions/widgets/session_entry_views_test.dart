@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
-import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
+
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_list.dart';
 import 'package:totem_core/features/sessions/admission/session_waiting_queue_button.dart';
@@ -12,6 +12,8 @@ import 'package:totem_core/features/sessions/widgets/session_declined_view.dart'
 import 'package:totem_core/features/sessions/widgets/session_entry_info_card.dart';
 import 'package:totem_core/features/sessions/widgets/session_entry_notice.dart';
 import 'package:totem_core/features/sessions/widgets/session_waiting_view.dart';
+
+import '../admission/admission_ui_test_support.dart';
 
 void main() {
   testWidgets('entry card shows supplied facts and delegates Join', (
@@ -78,13 +80,7 @@ void main() {
   testWidgets('Keeper declines only after confirming the request', (
     tester,
   ) async {
-    final request = AdmissionRequest(
-      id: 'request-7',
-      senderIdentity: 'guest-7',
-      recipientIdentity: 'keeper',
-      expiresAt: DateTime.utc(2030),
-      displayName: 'Sara',
-    );
+    final request = admissionParticipant('guest-7', name: 'Sara');
     var declines = 0;
     await tester.pumpWidget(
       ProviderScope(

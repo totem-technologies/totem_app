@@ -18,7 +18,7 @@ import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/permissions/policy.dart';
 import 'package:totem_core/features/permissions/ui/priming_sheet.dart';
 import 'package:totem_core/features/permissions/ui/recovery.dart';
-import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
+import 'package:totem_core/features/sessions/admission/admission_status.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
@@ -40,18 +40,27 @@ import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-Future<bool> showAlreadyPresentDialog(BuildContext context) async {
+Future<bool> showAlreadyPresentDialog(BuildContext context) =>
+    _showJoinConfirmationDialog(context, newAttempt: false);
+
+Future<bool> _showJoinConfirmationDialog(
+  BuildContext context, {
+  required bool newAttempt,
+}) async {
   try {
     return await showDialog<bool>(
           context: sessionNavigatorContext(context),
           useRootNavigator: false,
           builder: (context) => ConfirmationDialog(
-            title: "You're already in this session",
-            content:
-                'You are already in this session on another device. Do you want to leave the other session and join on this device?',
+            title: newAttempt
+                ? 'Start a new request?'
+                : "You're already in this session",
+            content: newAttempt
+                ? 'Your previous request can no longer be used. Start a new request? This may replace an existing connection to this session.'
+                : 'You are already in this session on another device. Do you want to leave the other session and join on this device?',
             icon: TotemIcons.questionMarkCircle,
             iconSize: 60,
-            confirmButtonText: 'Join Here',
+            confirmButtonText: newAttempt ? 'Start New Request' : 'Join Here',
             onConfirm: () async => Navigator.of(context).pop(true),
             type: ConfirmationDialogType.standard,
           ),
@@ -190,21 +199,26 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
         .requestJoin(replaceExistingSession: replaceExistingSession);
     if (!mounted) return false;
     if (outcome == PreJoinJoinOutcome.confirmationRequired) {
-      await _promptAlreadyPresent();
+      await _promptJoinConfirmation(newAttempt: false);
+    } else if (outcome == PreJoinJoinOutcome.newAttemptConfirmationRequired) {
+      await _promptJoinConfirmation(newAttempt: true);
     }
     return ref.read(preJoinFlowControllerProvider(widget.sessionSlug)).phase ==
         PreJoinFlowPhase.joined;
   }
 
-  Future<void> _promptAlreadyPresent() async {
+  Future<void> _promptJoinConfirmation({required bool newAttempt}) async {
     if (_showingAlreadyPresentDialog || !mounted) return;
     _showingAlreadyPresentDialog = true;
-    final join = await showAlreadyPresentDialog(context);
+    final join = await _showJoinConfirmationDialog(
+      context,
+      newAttempt: newAttempt,
+    );
     _showingAlreadyPresentDialog = false;
     if (!mounted) return;
     if (join) {
       await _requestJoin(replaceExistingSession: true);
-    } else if (context.canPop()) {
+    } else if (!newAttempt && context.canPop()) {
       context.pop();
     }
   }
@@ -569,6 +583,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen>
       child: VideoSessionScreen(
         sessionSlug: widget.sessionSlug,
         loadingScreen: preJoinView,
+        onReturnToPreJoin: ref
+            .read(preJoinFlowControllerProvider(widget.sessionSlug).notifier)
+            .returnToPreJoin,
         showAdmissionOrientation:
             flow.admissionStatus == AdmissionStatus.approved,
         admissionReady: flow.phase == PreJoinFlowPhase.joined,

@@ -6,29 +6,23 @@ part 'session_admission_settings.g.dart';
 
 @Riverpod(dependencies: [sessionScope, currentSession])
 class SessionAdmissionSettings extends _$SessionAdmissionSettings {
-  String? _sessionSlug;
-  bool? _enabledOverride;
-
   @override
   bool build() {
-    final sessionSlug = ref.watch(sessionScopeProvider)?.sessionSlug;
-    if (_sessionSlug != sessionSlug) {
-      _sessionSlug = sessionSlug;
-      _enabledOverride = null;
-    }
-
     final candidate = ref.watch(currentSessionProvider)?.admission;
     final service = candidate?.mounted == true ? candidate : null;
-    final enabled = _enabledOverride ?? service?.approvalRequired ?? true;
-    return enabled;
+    if (service != null) {
+      void changed() {
+        if (ref.mounted && service.mounted) state = service.approvalRequired;
+      }
+
+      service.addListener(changed);
+      ref.onDispose(() => service.removeListener(changed));
+    }
+    return service?.approvalRequired ?? true;
   }
 
-  void setEnabled(bool enabled) {
-    _enabledOverride = enabled;
-    state = enabled;
-    final candidate = ref.read(currentSessionProvider)?.admission;
-    if (candidate?.mounted == true) {
-      candidate!.setApprovalRequired(enabled);
-    }
+  Future<void> setEnabled(bool enabled) async {
+    final service = ref.read(currentSessionProvider)?.admission;
+    if (service?.mounted == true) await service!.setApprovalRequired(enabled);
   }
 }

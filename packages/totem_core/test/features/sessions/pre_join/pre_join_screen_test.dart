@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
@@ -19,14 +20,21 @@ import 'package:totem_core/features/permissions/model.dart';
 import 'package:totem_core/features/permissions/platform_info.dart';
 import 'package:totem_core/features/permissions/ui/priming_sheet.dart';
 import 'package:totem_core/features/permissions/ui/recovery.dart';
-import 'package:totem_core/features/sessions/admission/admission_controllers.dart';
+import 'package:totem_core/features/sessions/admission/admission_status.dart';
+import 'package:totem_core/features/sessions/admission/server_participant_admission.dart'
+    show
+        ServerAdmissionConnection,
+        ServerAdmissionConnectionEvent,
+        ServerParticipantAdmission;
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_flow_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_media_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_preview_card.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_state.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_view.dart';
+import 'package:totem_core/features/sessions/repositories/participant_admission_repository.dart';
 import 'package:totem_core/features/sessions/repositories/session_repository.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/room_screen.dart';
@@ -166,6 +174,23 @@ class _RecordingTotemRouter extends FakeTotemRouter {
   }
 }
 
+class _NewAttemptFlowController extends PreJoinFlowController {
+  final calls = <bool>[];
+
+  @override
+  PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState();
+
+  @override
+  Future<PreJoinJoinOutcome> requestJoin({
+    bool replaceExistingSession = false,
+  }) async {
+    calls.add(replaceExistingSession);
+    return replaceExistingSession
+        ? PreJoinJoinOutcome.retryableFailure
+        : PreJoinJoinOutcome.newAttemptConfirmationRequired;
+  }
+}
+
 class _MutableFlowController extends PreJoinFlowController {
   @override
   PreJoinFlowState build(String sessionSlug) => const PreJoinFlowState();
@@ -186,24 +211,184 @@ class _TerminalAdmissionFlowController extends PreJoinFlowController {
       PreJoinFlowState(admissionStatus: status, error: error);
 }
 
+final _admissionInitial = AdmissionJoinState.fromJson(const {
+  'request_id': 'request',
+  'attempt_id': 'attempt',
+  'status': 'pending',
+  'durable_state': 'none',
+  'approval_required': true,
+  'expires_at': '2099-01-01T00:00:00Z',
+  'permissions': 'admitted',
+  'permission_sync': 'applied',
+  'revision': 1,
+  'observed_at': '2026-01-01T00:00:00Z',
+  'readiness': {'state': 'waiting_for_approval'},
+});
+
+final _approvedSnapshot = AdmissionMeSnapshot.fromJson({
+  'session_slug': _slug,
+  'keeper': 'keeper',
+  'room_version': 1,
+  'room_state': _sessionState.turn.roomState.toJson(),
+  'room_status': 'active',
+  'approval_required': true,
+  'settings_revision': 1,
+  'version': 1,
+  'observed_at': '2026-01-01T00:00:00Z',
+  'admitted_count': 0,
+  'activated_count': 0,
+  'pending_count': 0,
+  'readiness': const {'state': 'ready_to_activate'},
+  'me': const {
+    'identity': 'keeper',
+    'user': {
+      'profile_avatar_type': 'boring',
+      'date_created': '2024-01-01T00:00:00Z',
+    },
+    'admission_state': 'admitted',
+    'admission_version': 1,
+    'request_id': 'request',
+    'attempt_id': 'attempt',
+    'attempt_version': 1,
+    'status': 'approved',
+    'connection_state': 'connected',
+    'eligible': true,
+    'returning': false,
+    'session_started': false,
+    'late_arrival': false,
+    'permission_status': 'applied',
+    'permission_revision': 1,
+    'applied_permission_revision': 1,
+  },
+});
+
+class _AdmissionRepository implements ParticipantAdmissionRepository {
+  int activations = 0;
+  bool approved = false;
+  @override
+  Future<AdmissionMeSnapshot> request({
+    required String sessionSlug,
+    required String requestId,
+    required String attemptId,
+    bool connected = false,
+  }) async {
+    if (approved) return _approvedSnapshot;
+    final json = _approvedSnapshot.toJson();
+    final me = Map<String, dynamic>.from(json['me'] as Map);
+    me['status'] = 'pending';
+    me['admission_state'] = 'none';
+    json['readiness'] = {'state': 'waiting_for_approval'};
+    json['me'] = me;
+    return AdmissionMeSnapshot.fromJson(json);
+  }
+
+  @override
+  Future<AdmissionMeSnapshot> me({required String sessionSlug}) async =>
+      _approvedSnapshot;
+
+  @override
+  Future<AdmissionMeSnapshot> activated({
+    required String sessionSlug,
+    required AttemptReceiptInput receipt,
+  }) async {
+    activations++;
+    final json = _approvedSnapshot.toJson();
+    json['readiness'] = {'state': 'activated'};
+    return AdmissionMeSnapshot.fromJson(json);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _AdmissionConnection implements ServerAdmissionConnection {
+  final events = StreamController<ServerAdmissionConnectionEvent>.broadcast(
+    sync: true,
+  );
+  @override
+  bool get isConnected => true;
+  @override
+  bool get hasMediaPermissions => true;
+  @override
+  String get localSid => 'sid';
+  @override
+  bool isPresent(String identity) => true;
+  @override
+  Stream<ServerAdmissionConnectionEvent> get admissionEvents => events.stream;
+  @override
+  Future<void> dispose() => events.close();
+}
+
+class _AdmissionRoom extends Fake implements Room {
+  @override
+  Future<void> disconnect() async {}
+  @override
+  Future<bool> dispose() async => true;
+}
+
+class _ServerFlow extends PreJoinFlowController {
+  final repository = _AdmissionRepository();
+  final connection = _AdmissionConnection();
+  ServerParticipantAdmission? admission;
+  Room? room;
+  @override
+  Room createAdmissionRoom() => room = _AdmissionRoom();
+  @override
+  Future<void> connectAdmissionRoom(Room room, String token) async {}
+  @override
+  ServerParticipantAdmission createServerAdmission(
+    Room room,
+    AdmissionJoinState initial,
+  ) => admission = ServerParticipantAdmission(
+    repository: repository,
+    sessionSlug: _slug,
+    initial: initial,
+    connection: connection,
+  );
+}
+
+class _RuntimeOwnership extends Mock implements SessionRuntime {
+  ServerParticipantAdmission? admission;
+
+  @override
+  ServerParticipantAdmission? get serverAdmission => admission;
+}
+
 class _SuccessfulSessionController extends SessionController {
+  final _RuntimeOwnership ownership = _RuntimeOwnership();
+
+  @override
+  SessionRuntime get runtime => ownership;
+
   @override
   SessionRoomState build(SessionOptions options) => _sessionState;
 
   @override
-  Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) async =>
-      SessionJoinResult.success;
+  Future<SessionJoinResult> activateConnectedRoom({
+    required Room room,
+    SessionJoinMedia? joinMedia,
+    ServerParticipantAdmission? serverAdmission,
+  }) async {
+    ownership.admission = serverAdmission;
+    return SessionJoinResult.success;
+  }
 }
 
-class _PendingSessionController extends SessionController {
+class _PendingSessionController extends _SuccessfulSessionController {
   static Completer<SessionJoinResult>? joinCompleter;
 
   @override
   SessionRoomState build(SessionOptions options) => _sessionState;
 
   @override
-  Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) =>
-      joinCompleter!.future;
+  Future<SessionJoinResult> activateConnectedRoom({
+    required Room room,
+    SessionJoinMedia? joinMedia,
+    ServerParticipantAdmission? serverAdmission,
+  }) {
+    ownership.admission = serverAdmission;
+    return joinCompleter!.future;
+  }
 }
 
 SessionDetailSchema _event({
@@ -281,10 +466,20 @@ void main() {
     silenceLogger();
     setupMockFlutterForegroundTask();
     restoreWebRtcChannels = stubFlutterWebRtcChannels();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('FlutterWebRTC.Event'),
+          (_) async => null,
+        );
   });
 
   tearDownAll(() {
     restoreWebRtcChannels();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('FlutterWebRTC.Event'),
+          null,
+        );
     clearMockFlutterForegroundTask();
   });
 
@@ -312,6 +507,13 @@ void main() {
     FakeMediaPermissionAdapter? adapter,
     PlatformInfo platform = const IosApp(),
   }) async {
+    final serverFlow = successfulJoin || pendingJoin ? _ServerFlow() : null;
+    if (serverFlow != null) {
+      addTearDown(() async {
+        await serverFlow.admission?.dispose();
+        await serverFlow.room?.dispose();
+      });
+    }
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -351,7 +553,13 @@ void main() {
             // ignore: only_throw_errors
             if (tokenError != null) throw tokenError;
             return Future.value(
-              JoinResponse(token: 'token', isAlreadyPresent: alreadyPresent),
+              JoinResponse(
+                token: 'token',
+                isAlreadyPresent: alreadyPresent,
+                admission: serverFlow == null
+                    ? const Omittable.absent()
+                    : Omittable(_admissionInitial),
+              ),
             );
           }),
           sessionProvider(_slug).overrideWith(
@@ -377,7 +585,9 @@ void main() {
               ),
             ),
           if (flowController != null)
-            preJoinFlowControllerProvider(_slug).overrideWith(flowController),
+            preJoinFlowControllerProvider(_slug).overrideWith(flowController)
+          else if (serverFlow != null)
+            preJoinFlowControllerProvider(_slug).overrideWith(() => serverFlow),
 
           if (successfulJoin)
             sessionControllerProvider(
@@ -398,6 +608,25 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
+  }
+
+  Future<void> approveAdmission(WidgetTester tester) async {
+    for (var i = 0; i < 3; i++) {
+      await tester.pump();
+    }
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(PreJoinScreen)),
+    );
+    final flow =
+        container.read(preJoinFlowControllerProvider(_slug).notifier)
+            as _ServerFlow;
+
+    flow.repository.approved = true;
+    flow.connection.events.add(ServerAdmissionConnectionEvent.notification);
+    await tester.runAsync(() async {
+      await pumpEventQueue();
+    });
+    await tester.pump();
   }
 
   for (final isKeeper in [true, false]) {
@@ -588,41 +817,46 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('Keeper can join directly before the participant window', (
-    tester,
-  ) async {
-    final now = DateTime(2030, 1, 1, 12);
-    var tokenRequests = 0;
-    await pumpScreen(
-      tester,
-      successfulJoin: true,
-      now: () => now,
-      getSession: () async => _event(start: now.add(const Duration(hours: 1))),
-      getSessionToken: () async {
-        tokenRequests++;
-        return const JoinResponse(token: 'token', isAlreadyPresent: false);
-      },
-    );
+  testWidgets(
+    'Keeper can join through server admission before the participant window',
+    (tester) async {
+      final now = DateTime(2030, 1, 1, 12);
+      var tokenRequests = 0;
+      await pumpScreen(
+        tester,
+        successfulJoin: true,
+        now: () => now,
+        getSession: () async =>
+            _event(start: now.add(const Duration(hours: 1))),
+        getSessionToken: () async {
+          tokenRequests++;
+          return JoinResponse(
+            token: 'token',
+            isAlreadyPresent: false,
+            admission: Omittable(_admissionInitial),
+          );
+        },
+      );
 
-    check(
-      tester
-          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
-          .enabled,
-    ).isTrue();
-    check(find.byType(SessionWaitingView).evaluate()).isEmpty();
-    check(tokenRequests).equals(0);
-    unawaited(
-      tester
-          .widget<ActionSliderButton>(find.byType(ActionSliderButton))
-          .onActionCompleted(),
-    );
-    await tester.pump();
-    await tester.pump();
+      check(
+        tester
+            .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+            .enabled,
+      ).isTrue();
+      check(find.byType(SessionWaitingView).evaluate()).isEmpty();
+      check(tokenRequests).equals(0);
+      unawaited(
+        tester
+            .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+            .onActionCompleted(),
+      );
+      await approveAdmission(tester);
 
-    check(tokenRequests).equals(1);
-    check(find.byType(VideoSessionScreen).evaluate()).isNotEmpty();
-    check(find.byType(SessionWaitingView).evaluate()).isEmpty();
-  });
+      check(tokenRequests).equals(1);
+      check(find.byType(VideoSessionScreen).evaluate()).isNotEmpty();
+      check(find.byType(SessionWaitingView).evaluate()).isEmpty();
+    },
+  );
 
   for (final leaveControl in <({String name, Finder Function() finder})>[
     (name: 'waiting room card', finder: () => find.text('Leave waiting room')),
@@ -1448,13 +1682,11 @@ void main() {
           .widget<ActionSliderButton>(find.byType(ActionSliderButton))
           .onActionCompleted(),
     );
-    await tester.pump();
-    await tester.pump();
-
+    await approveAdmission(tester);
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
   });
 
-  testWidgets('transitions while the room connection is still pending', (
+  testWidgets('transitions while approved room activation is still pending', (
     tester,
   ) async {
     _PendingSessionController.joinCompleter = Completer<SessionJoinResult>();
@@ -1467,8 +1699,7 @@ void main() {
           .widget<ActionSliderButton>(find.byType(ActionSliderButton))
           .onActionCompleted(),
     );
-    await tester.pump();
-    await tester.pump();
+    await approveAdmission(tester);
 
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
     check(find.byType(VideoTrackRenderer).evaluate()).isNotEmpty();
@@ -1507,12 +1738,50 @@ void main() {
     await tester.tap(find.text('Join Here'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
+    await approveAdmission(tester);
 
     check(
       tester.widgetList(find.text("You're already in this session")),
     ).length.equals(0);
     check(tester.widgetList(find.byType(VideoSessionScreen))).length.equals(1);
   });
+
+  for (final confirm in [false, true]) {
+    testWidgets(
+      'new request confirmation ${confirm ? 'confirms' : 'cancels'} without claiming another device is connected',
+      (tester) async {
+        final flow = _NewAttemptFlowController();
+        await pumpScreen(tester, flowController: () => flow);
+        await tester.pump(const Duration(milliseconds: 300));
+        unawaited(
+          tester
+              .widget<ActionSliderButton>(find.byType(ActionSliderButton))
+              .onActionCompleted(),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        check(flow.calls).deepEquals([false]);
+        check(
+          tester.widgetList(find.text('Start a new request?')),
+        ).length.equals(1);
+        check(
+          tester.widgetList(
+            find.text(
+              'Your previous request can no longer be used. Start a new request? This may replace an existing connection to this session.',
+            ),
+          ),
+        ).length.equals(1);
+        check(
+          tester.widgetList(find.text("You're already in this session")),
+        ).length.equals(0);
+        await tester.tap(find.text(confirm ? 'Start New Request' : 'Cancel'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        check(flow.calls).deepEquals(confirm ? [false, true] : [false]);
+        check(tester.widgetList(find.byType(PreJoinScreen))).length.equals(1);
+      },
+    );
+  }
 
   testWidgets('already-present dialog returns true on confirm', (tester) async {
     late BuildContext context;

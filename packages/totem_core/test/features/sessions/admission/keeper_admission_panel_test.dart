@@ -5,10 +5,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
-import 'package:totem_core/features/sessions/admission/admission_protocol.dart';
 import 'package:totem_core/features/sessions/admission/keeper_admission_panel.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_list.dart';
 import 'package:totem_core/features/sessions/widgets/background.dart';
+
+import 'admission_ui_test_support.dart';
 
 void main() {
   for (final count in [1, 8]) {
@@ -21,20 +22,14 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       final requests = List.generate(
         count,
-        (index) => AdmissionRequest(
-          id: 'request-$index',
-          senderIdentity: 'guest-$index',
-          recipientIdentity: 'keeper',
-          expiresAt: DateTime.utc(2030),
-          displayName: 'Guest $index',
-        ),
+        (index) => admissionParticipant('guest-$index', name: 'Guest $index'),
       );
       String? admitted;
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             for (final request in requests)
-              userProfileProvider(request.senderIdentity).overrideWith(
+              userProfileProvider(request.identity).overrideWith(
                 (ref) => PublicUserSchema(
                   profileAvatarType: ProfileAvatarTypeEnum.td,
                   dateCreated: DateTime.utc(2024),
@@ -48,7 +43,7 @@ void main() {
                 child: KeeperAdmissionPanel(
                   requests: requests,
                   onDecision: (request, approve) async {
-                    if (approve) admitted = request.id;
+                    if (approve) admitted = request.identity;
                   },
                   onAdmitAll: () {},
                   onClose: () {},
@@ -65,7 +60,7 @@ void main() {
       ).isLessThan(640 * 0.36);
       await tester.ensureVisible(find.text('Admit').last);
       await tester.tap(find.text('Admit').last);
-      check(admitted).equals(requests.last.id);
+      check(admitted).equals(requests.last.identity);
       check(tester.takeException()).isNull();
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -75,17 +70,11 @@ void main() {
   testWidgets(
     'embedded panel fills its rail with readable text in active Session',
     (tester) async {
-      final request = AdmissionRequest(
-        id: 'request',
-        senderIdentity: 'guest',
-        recipientIdentity: 'keeper',
-        expiresAt: DateTime.utc(2030),
-        displayName: 'Guest',
-      );
+      final request = admissionParticipant('guest', name: 'Guest');
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            userProfileProvider(request.senderIdentity).overrideWith(
+            userProfileProvider(request.identity).overrideWith(
               (ref) => PublicUserSchema(
                 profileAvatarType: ProfileAvatarTypeEnum.td,
                 dateCreated: DateTime.utc(2024),
@@ -136,14 +125,8 @@ void main() {
   testWidgets('ignores actions for a request removed before the tap', (
     tester,
   ) async {
-    final request = AdmissionRequest(
-      id: 'request',
-      senderIdentity: 'guest',
-      recipientIdentity: 'keeper',
-      expiresAt: DateTime.utc(2030),
-      displayName: 'Guest',
-    );
-    final requests = ValueNotifier<List<AdmissionRequest>>([request]);
+    final request = admissionParticipant('guest', name: 'Guest');
+    final requests = ValueNotifier<List<Participant>>([request]);
     addTearDown(requests.dispose);
     var decisions = 0;
     await tester.pumpWidget(
@@ -158,7 +141,7 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: ValueListenableBuilder<List<AdmissionRequest>>(
+            body: ValueListenableBuilder<List<Participant>>(
               valueListenable: requests,
               builder: (context, current, child) => KeeperAdmissionPanel(
                 requests: current,
@@ -178,8 +161,8 @@ void main() {
     );
     requests.value = [];
     await tester.pump();
-    staleActions.onAdmit!('request');
-    staleActions.onDecline!('request');
+    staleActions.onAdmit!('guest');
+    staleActions.onDecline!('guest');
     await tester.pump();
     check(decisions).equals(0);
     check(tester.takeException()).isNull();
@@ -191,20 +174,8 @@ void main() {
     tester,
   ) async {
     final requests = [
-      AdmissionRequest(
-        id: 'one',
-        senderIdentity: 'alice',
-        recipientIdentity: 'keeper',
-        expiresAt: DateTime.utc(2026, 10, 19, 12, 2),
-        displayName: 'Alice',
-      ),
-      AdmissionRequest(
-        id: 'two',
-        senderIdentity: 'bob',
-        recipientIdentity: 'keeper',
-        expiresAt: DateTime.utc(2026, 10, 19, 12, 3),
-        displayName: 'Bob',
-      ),
+      admissionParticipant('alice', name: 'Alice'),
+      admissionParticipant('bob', name: 'Bob'),
     ];
     final decisions = <String>[];
     var admittedAll = false;
@@ -213,7 +184,7 @@ void main() {
       ProviderScope(
         overrides: [
           for (final request in requests)
-            userProfileProvider(request.senderIdentity).overrideWith(
+            userProfileProvider(request.identity).overrideWith(
               (ref) => PublicUserSchema(
                 profileAvatarType: ProfileAvatarTypeEnum.td,
                 dateCreated: DateTime.utc(2024),
@@ -225,7 +196,7 @@ void main() {
             body: KeeperAdmissionPanel(
               requests: requests,
               onDecision: (request, approve) async {
-                decisions.add('${request.id}:$approve');
+                decisions.add('${request.identity}:$approve');
               },
               onAdmitAll: () => admittedAll = true,
               onClose: () => dismissed = true,
@@ -242,15 +213,102 @@ void main() {
     await tester.ensureVisible(find.text('Decline').last);
     await tester.tap(find.text('Decline').last);
     await tester.pumpAndSettle();
-    check(decisions).deepEquals(['one:true']);
+    check(decisions).deepEquals(['alice:true']);
     await tester.tap(find.text('Decline').last);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Admit all'));
     await tester.tap(find.text('Admit all'));
     await tester.tap(find.byTooltip('Close admission'));
-    check(decisions).deepEquals(['one:true', 'two:false']);
+    check(decisions).deepEquals(['alice:true', 'bob:false']);
     check(admittedAll).isTrue();
     check(dismissed).isTrue();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets('does not decline a replacement request after confirmation', (
+    tester,
+  ) async {
+    final original = admissionParticipant('alice', name: 'Alice');
+    final replacement = original.copyWith(
+      attemptId: const Omittable('new-attempt'),
+    );
+    final requests = ValueNotifier<List<Participant>>([original]);
+    addTearDown(requests.dispose);
+    var decisions = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userProfileProvider('alice').overrideWith(
+            (ref) async => PublicUserSchema(
+              profileAvatarType: ProfileAvatarTypeEnum.td,
+              dateCreated: DateTime.utc(2024),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: ValueListenableBuilder<List<Participant>>(
+              valueListenable: requests,
+              builder: (context, current, _) => KeeperAdmissionPanel(
+                requests: current,
+                busy: false,
+                desktop: true,
+                onDecision: (_, _) async {
+                  decisions++;
+                },
+                onAdmitAll: () {},
+                onClose: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Decline'));
+    await tester.pumpAndSettle();
+    requests.value = [replacement];
+    await tester.pump();
+    await tester.tap(find.text('Decline').last);
+    await tester.pumpAndSettle();
+    check(decisions).equals(0);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('permanent decline forwards the selected participant', (
+    tester,
+  ) async {
+    final request = admissionParticipant('alice', name: 'Alice');
+    Participant? declined;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userProfileProvider('alice').overrideWith(
+            (ref) async => PublicUserSchema(
+              profileAvatarType: ProfileAvatarTypeEnum.td,
+              dateCreated: DateTime.utc(2024),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: KeeperAdmissionPanel(
+              requests: [request],
+              busy: false,
+              desktop: true,
+              onDecision: (_, _) async {},
+              onDeclinePermanently: (participant) async =>
+                  declined = participant,
+              onAdmitAll: () {},
+              onClose: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Decline'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Decline Permanently'));
+    await tester.pumpAndSettle();
+    check(declined).equals(request);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

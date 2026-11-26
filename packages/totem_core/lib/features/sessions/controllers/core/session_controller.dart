@@ -6,10 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
-import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/sessions/admission/server_participant_admission.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_service.dart';
 import 'package:totem_core/features/sessions/controllers/core/join_media_owner.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_runtime.dart';
@@ -100,7 +100,7 @@ class SessionController extends _$SessionController {
   SessionRuntime get runtime =>
       _runtime ?? (throw StateError('Session runtime is not initialized'));
   SessionAdmissionService get admission =>
-      runtime.admission ??= SessionAdmissionService(ref, this);
+      runtime.admissionService ??= SessionAdmissionService(ref, this);
   SessionTransport? get _transport => _runtime?.transport;
   set _transport(SessionTransport? value) {
     if (value != null) runtime.installCompatibilityTransport(value);
@@ -127,8 +127,7 @@ class SessionController extends _$SessionController {
   LocalMedia get localMedia => _transportFactory.localMedia;
   RoomMedia get roomMedia => _transportFactory.roomMedia;
   Set<String>? _admittedMediaRecipients;
-  Set<String>? _appliedMediaRecipients;
-  bool? _appliedAllParticipantsAllowed;
+  SessionTransport? _permissionsTransport;
 
   JoinMediaOwner get _joinMediaOwner => runtime.media;
 
@@ -211,15 +210,13 @@ class SessionController extends _$SessionController {
     _updateRoomState(roomState);
   }
 
-  /// Limits local media subscriptions to the keeper and admitted recipients.
+  /// Updates the admitted roster used to reconcile participant connections.
   ///
-  /// Until this method receives a roster, Keeper media remains available to
-  /// avoid a local recovery failure silencing the Session. Other publishers
-  /// fail closed while retaining access for the Keeper when known.
+  /// Media subscription permissions remain open; LiveKit denies waiting
+  /// participants subscription permission until the server admits them.
   void updateAdmittedMediaRecipients(Set<String> identities) {
     final newlyAdmitted = identities.difference(_admittedMediaRecipients ?? {});
     _admittedMediaRecipients = Set.unmodifiable(identities);
-    _applyMediaSubscriptionPermissions();
 
     final remoteParticipants = _transport?.participants
         .where((p) => !p.isLocal)
@@ -244,6 +241,7 @@ class SessionController extends _$SessionController {
       transport: () => transport,
       keeperIdentity: () => state.roomState.keeper,
       isKeeper: isCurrentUserKeeper,
+      broadcastRecipients: () => admission.serverDataRecipients,
     );
     final ownedReactionBuffer = _reactionBuffer = SessionReactionBuffer(
       now: ref.read(emojiReactionClockProvider),
@@ -251,6 +249,7 @@ class SessionController extends _$SessionController {
     _reactions = SessionReactionsService(
       transport: () => transport,
       hasKeeper: () => state.hasKeeper,
+      broadcastRecipients: () => admission.serverDataRecipients,
       emit: ownedReactionBuffer.emitIncomingReaction,
       onError: (error, stack) => ErrorHandler.logError(
         error,
@@ -329,6 +328,7 @@ class SessionController extends _$SessionController {
     SessionTransport? observedAdmissionTransport;
     (RoomConnectionState, RoomStatus, String, bool?, String?, bool)?
     admissionInputs;
+    Set<String>? observedAdmissionParticipants;
     listenSelf((_, next) {
       devices.syncWithSession();
       final connection = transport;
@@ -340,16 +340,19 @@ class SessionController extends _$SessionController {
         connection?.localIdentity,
         runtime.acceptsEvents,
       );
+      final participants = next.roomState.talkingOrder.toSet();
       if (inputs == admissionInputs &&
-          identical(connection, observedAdmissionTransport)) {
+          identical(connection, observedAdmissionTransport) &&
+          setEquals(participants, observedAdmissionParticipants)) {
         return;
       }
       admissionInputs = inputs;
       observedAdmissionTransport = connection;
+      observedAdmissionParticipants = participants;
       if (runtime.acceptsEvents) {
         admission.sync();
       } else {
-        runtime.admission?.sync();
+        runtime.admissionService?.sync();
       }
     });
 
@@ -462,10 +465,6 @@ class SessionController extends _$SessionController {
     _cleanUpInBackground('Failed to clean up disconnected session');
   }
 
-  void _onError(SessionTransportFailure error) {
-    _dispatch(SessionErrorChanged(compatibility.legacyCompatibleError(error)));
-  }
-
   void _updateRoomState([RoomState? newSessionState]) {
     bool handleStateChange(RoomState nextState) {
       final currentState = state.roomState;
@@ -475,7 +474,6 @@ class SessionController extends _$SessionController {
       final previous = state;
       _dispatch(RoomStateChanged(nextState, observedAt: DateTime.now()));
       if (identical(state, previous)) return false;
-      _applyMediaSubscriptionPermissions();
       return isEnding;
     }
 
@@ -606,13 +604,20 @@ class SessionController extends _$SessionController {
     }
   }
 
-  bool get _canPublishInitialMedia =>
-      ref.mounted &&
-      state.roomState.status != RoomStatus.ended &&
-      switch (state.connectionState) {
-        RoomConnectionState.connecting || RoomConnectionState.connected => true,
-        _ => false,
-      };
+  bool get _canPublishInitialMedia {
+    if (!ref.mounted) return false;
+    final admission = runtime.serverAdmission;
+    return admission != null &&
+        admission.status == AdmissionStatus.approved &&
+        admission.connection.isConnected &&
+        admission.connection.hasMediaPermissions &&
+        state.roomState.status != RoomStatus.ended &&
+        switch (state.connectionState) {
+          RoomConnectionState.connecting ||
+          RoomConnectionState.connected => true,
+          _ => false,
+        };
+  }
 
   Future<bool> _initializeSessionInfrastructure() async {
     final owner = runtime;
@@ -665,7 +670,7 @@ class SessionController extends _$SessionController {
             defaultVideoPublishOptions,
           ),
         );
-        if (!accepted || !ref.mounted || !attempt.isCurrent) {
+        if (!accepted || !attempt.isCurrent || !_canPublishInitialMedia) {
           return SessionJoinResult.retryableFailure;
         }
       } else if (initialCameraTrack != null) {
@@ -684,7 +689,7 @@ class SessionController extends _$SessionController {
             muted: !shouldEnableMicrophone(),
           ),
         );
-        if (!accepted || !ref.mounted || !attempt.isCurrent) {
+        if (!accepted || !attempt.isCurrent || !_canPublishInitialMedia) {
           return SessionJoinResult.retryableFailure;
         }
       }
@@ -693,7 +698,7 @@ class SessionController extends _$SessionController {
         return SessionJoinResult.retryableFailure;
       }
       await _applyJoinMediaState();
-      if (!ref.mounted || !attempt.isCurrent) {
+      if (!attempt.isCurrent || !_canPublishInitialMedia) {
         return SessionJoinResult.retryableFailure;
       }
 
@@ -703,75 +708,6 @@ class SessionController extends _$SessionController {
         error,
         stackTrace: stackTrace,
         message: 'Error publishing initial session media',
-      );
-      return SessionJoinResult.retryableFailure;
-    }
-  }
-
-  Future<SessionJoinResult> join({SessionJoinMedia? joinMedia}) => runtime.join(
-    media: joinMedia,
-    operation: (attempt) => _join(attempt, joinMedia),
-  );
-
-  Future<SessionJoinResult> _join(
-    SessionAttempt attempt,
-    SessionJoinMedia? joinMedia,
-  ) async {
-    _dispatch(
-      const ConnectionChanged(
-        RoomConnectionState.connecting,
-        SessionPhase.connecting,
-      ),
-    );
-
-    try {
-      await initializeConnection(
-        attempt: attempt,
-        roomOptions: sessionRoomOptions(
-          cameraOptions: options.cameraOptions,
-          speakerEnabled: options.speakerEnabled,
-        ),
-        url: AppConfig.instance.liveKitUrl,
-        token: options.token,
-      );
-      if (!ref.mounted ||
-          !attempt.isCurrent ||
-          !await _initializeSessionInfrastructure()) {
-        return SessionJoinResult.retryableFailure;
-      }
-
-      attempt.requireCurrent();
-      await _transport!.connect(AppConfig.instance.liveKitUrl, options.token);
-      if (!ref.mounted || !attempt.isCurrent) {
-        return SessionJoinResult.retryableFailure;
-      }
-
-      if (!localMedia.isAvailable) {
-        throw StateError('Room connected without a local participant');
-      }
-
-      return await _publishInitialMedia(joinMedia, attempt);
-    } on SessionTransportFailure catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Session transport connection failed',
-      );
-      if (error.connectionFailure ==
-              SessionTransportConnectionFailure.timeout ||
-          error.kind == SessionTransportFailureKind.mediaConnection) {
-        return SessionJoinResult.retryableFailure;
-      }
-      if (error.kind == SessionTransportFailureKind.unexpected) {
-        return SessionJoinResult.retryableFailure;
-      }
-      if (attempt.isCurrent) _onError(error);
-      return SessionJoinResult.fatalFailure;
-    } catch (error, stackTrace) {
-      ErrorHandler.logError(
-        error,
-        stackTrace: stackTrace,
-        message: 'Unexpected error occurred',
       );
       return SessionJoinResult.retryableFailure;
     }
@@ -843,8 +779,7 @@ class SessionController extends _$SessionController {
     logger.d('Disposing SessionService and closing connections.');
 
     _admittedMediaRecipients = null;
-    _appliedMediaRecipients = null;
-    _appliedAllParticipantsAllowed = null;
+    _permissionsTransport = null;
 
     if (ref.mounted && identical(runtime, owner)) {
       try {
@@ -869,14 +804,19 @@ class SessionController extends _$SessionController {
 
   Future<SessionJoinResult> activateConnectedRoom({
     required compatibility.LegacySessionRoom room,
+    required ServerParticipantAdmission serverAdmission,
     SessionJoinMedia? joinMedia,
   }) {
-    if (identical(this.room, room) && runtime.isJoining) {
-      return join(joinMedia: joinMedia);
-    }
     if (identical(this.room, room) &&
-        runtime.phase == SessionRuntimePhase.connected) {
-      return join(joinMedia: joinMedia);
+        (runtime.isJoining || runtime.phase == SessionRuntimePhase.connected)) {
+      if (!identical(runtime.serverAdmission, serverAdmission) ||
+          (!runtime.isJoining && !_canPublishInitialMedia)) {
+        return _rejectAdmissionOffer(serverAdmission, joinMedia);
+      }
+      return runtime.join(
+        media: joinMedia,
+        operation: (_) async => SessionJoinResult.retryableFailure,
+      );
     }
     // The offer checks connectivity before ownership can be accepted.
     try {
@@ -886,11 +826,18 @@ class SessionController extends _$SessionController {
         roomMedia: roomMedia,
         cameraOptions: options.cameraOptions,
       );
-      return adoptConnectedSession(lease, joinMedia: joinMedia);
+      return adoptConnectedSession(
+        lease,
+        joinMedia: joinMedia,
+        serverAdmission: serverAdmission,
+      );
     } catch (error, stack) {
       return () async {
         await compatibility.releaseRejectedLegacyRoom(room);
         await runtime.media.retain(joinMedia).dispose();
+        if (!identical(runtime.serverAdmission, serverAdmission)) {
+          await serverAdmission.dispose();
+        }
         ErrorHandler.logError(
           error,
           stackTrace: stack,
@@ -901,40 +848,101 @@ class SessionController extends _$SessionController {
     }
   }
 
+  Future<SessionJoinResult> _rejectAdmissionOffer(
+    ServerParticipantAdmission serverAdmission,
+    SessionJoinMedia? joinMedia, [
+    ConnectedSessionLease? lease,
+  ]) async {
+    await runtime.media.retain(joinMedia).dispose();
+    if (lease != null &&
+        !identical(lease.identity, _transport) &&
+        !identical(lease.identity, room)) {
+      await lease.dispose();
+    }
+    if (!identical(runtime.serverAdmission, serverAdmission)) {
+      await serverAdmission.dispose();
+    }
+    return SessionJoinResult.retryableFailure;
+  }
+
   Future<SessionJoinResult> adoptConnectedSession(
     ConnectedSessionLease lease, {
+    required ServerParticipantAdmission serverAdmission,
     SessionJoinMedia? joinMedia,
-  }) => runtime.join(
-    media: joinMedia,
-    offer: lease,
-    operation: (attempt) async {
-      _dispatch(
-        const ConnectionChanged(
-          RoomConnectionState.connecting,
-          SessionPhase.connecting,
-        ),
-      );
-      if (!await _initializeSessionInfrastructure() || !attempt.isCurrent) {
-        return SessionJoinResult.retryableFailure;
-      }
-      if (_transport?.connectionState !=
-              SessionTransportConnectionState.connected ||
-          !localMedia.isAvailable) {
-        return SessionJoinResult.retryableFailure;
-      }
-      _onConnected();
-      final result = await _publishInitialMedia(joinMedia, attempt);
-      if (!attempt.isCurrent ||
-          _transport?.connectionState !=
-              SessionTransportConnectionState.connected) {
-        return SessionJoinResult.retryableFailure;
-      }
-      if (result == SessionJoinResult.success) {
-        unawaited(_subscribeRemoteMedia());
-      }
-      return result;
-    },
-  );
+  }) {
+    final current = runtime.serverAdmission;
+    if (current != null &&
+        !runtime.isLeaving &&
+        (!identical(current, serverAdmission) ||
+            (!runtime.isJoining && !_canPublishInitialMedia))) {
+      return _rejectAdmissionOffer(serverAdmission, joinMedia, lease);
+    }
+    return runtime
+        .join(
+          media: joinMedia,
+          offer: lease,
+          operation: (attempt) async {
+            void handleAdmissionStatus(AdmissionStatus status) {
+              if (status == AdmissionStatus.ended) {
+                unawaited(_onSessionEnd());
+              } else if (status == AdmissionStatus.denied ||
+                  status == AdmissionStatus.expired ||
+                  status == AdmissionStatus.cancelled) {
+                markParticipantRemoved(RemoveReason.remove);
+                unawaited(leave());
+              } else if (status == AdmissionStatus.failed) {
+                unawaited(leave());
+              }
+            }
+
+            runtime.attachServerAdmission(
+              serverAdmission,
+              handleAdmissionStatus,
+            );
+            // The broadcast stream does not replay changes made before handoff.
+            final status = serverAdmission.status;
+            if (status != AdmissionStatus.approved) {
+              handleAdmissionStatus(status);
+              return SessionJoinResult.retryableFailure;
+            }
+            _dispatch(
+              const ConnectionChanged(
+                RoomConnectionState.connecting,
+                SessionPhase.connecting,
+              ),
+            );
+            if (!await _initializeSessionInfrastructure() ||
+                !attempt.isCurrent) {
+              return SessionJoinResult.retryableFailure;
+            }
+            if (_transport?.connectionState !=
+                    SessionTransportConnectionState.connected ||
+                !localMedia.isAvailable ||
+                serverAdmission.status != AdmissionStatus.approved ||
+                !serverAdmission.connection.isConnected ||
+                !serverAdmission.connection.hasMediaPermissions) {
+              return SessionJoinResult.retryableFailure;
+            }
+            _onConnected();
+            final result = await _publishInitialMedia(joinMedia, attempt);
+            if (!attempt.isCurrent ||
+                !_canPublishInitialMedia ||
+                _transport?.connectionState !=
+                    SessionTransportConnectionState.connected) {
+              return SessionJoinResult.retryableFailure;
+            }
+            if (result == SessionJoinResult.success) {
+              unawaited(_subscribeRemoteMedia());
+            }
+            return result;
+          },
+        )
+        .whenComplete(() async {
+          if (!identical(runtime.serverAdmission, serverAdmission)) {
+            await serverAdmission.dispose();
+          }
+        });
+  }
 
   @visibleForTesting
   Future<SessionTransport> initializeConnection({
@@ -1024,38 +1032,17 @@ class SessionController extends _$SessionController {
     }
   }
 
-  bool get _isLocalUserKeeper {
-    final keeperIdentity = state.roomState.keeper;
-    return keeperIdentity.isNotEmpty &&
-        _transport?.localIdentity == keeperIdentity;
-  }
-
   void _applyMediaSubscriptionPermissions({bool force = false}) {
-    final localIdentity = _transport?.localIdentity;
-    if (!ref.mounted || localIdentity == null) return;
-
-    final isKeeper = _isLocalUserKeeper;
-    final allParticipantsAllowed = isKeeper && _admittedMediaRecipients == null;
-    final recipients = <String>{...?_admittedMediaRecipients};
-    final keeperIdentity = state.roomState.keeper;
-    if (!isKeeper && keeperIdentity.isNotEmpty) {
-      recipients.add(keeperIdentity);
-    }
-    recipients.remove(localIdentity);
-    if (!force &&
-        _appliedAllParticipantsAllowed == allParticipantsAllowed &&
-        _appliedMediaRecipients != null &&
-        setEquals(_appliedMediaRecipients, recipients)) {
-      return;
-    }
+    final transport = _transport;
+    if (!ref.mounted || transport?.localIdentity == null) return;
+    if (!force && identical(_permissionsTransport, transport)) return;
 
     try {
-      _transport!.setSubscriptionPermissions(
-        allowEveryone: allParticipantsAllowed,
-        recipients: recipients,
+      transport!.setSubscriptionPermissions(
+        allowEveryone: true,
+        recipients: const {},
       );
-      _appliedMediaRecipients = Set.unmodifiable(recipients);
-      _appliedAllParticipantsAllowed = allParticipantsAllowed;
+      _permissionsTransport = transport;
     } catch (error, stackTrace) {
       ErrorHandler.logError(
         error,

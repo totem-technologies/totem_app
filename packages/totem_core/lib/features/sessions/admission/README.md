@@ -1,68 +1,137 @@
-# Client-side Session admission
+# Session admission
 
-This is cooperative client-side admission, **not server-enforced authorization**. The existing `/rooms/{session_slug}/join` endpoint records attendance when it issues a token, before the Keeper admits anyone. Its token allows connection to the actual LiveKit room. Pending clients occupy one of the room's 10 LiveKit slots, and an old or modified client can bypass this flow. The backend's speaking-order reconciliation also sees pending LiveKit connections; client presentation filtering cannot repair the server's `talking_order`. The Keeper's client avoids requesting a reconciliation solely because an unknown participant connected, but other server events can still include them. The backend remains the authority on join timing (including its earlier first-join cutoff); the UI cannot promise T+15 access.
+## Authority and deployment
 
-## Mixed-version compatibility and release cutover
+The Flutter admission implementation is server-only. Django owns Session policy,
+requests, decisions, membership and activation; LiveKit permissions are applied
+by server reconciliation. Clients display authenticated snapshots and send
+commands, not independent decisions. Do not add a hidden client enforcement
+toggle or fall back to a local roster, journal or cooperative protocol when the
+server response is missing, disabled, stale or unavailable. Fail closed: do not
+activate or publish without verified admission and effective permissions.
 
-**Mixed-version Sessions are unsupported. This change requires a coordinated cutover, not a gradual rollout into shared rooms.** An updated participant cannot complete admission with a Keeper that does not implement `totem.admission.v1`. A legacy participant joins directly without a joined receipt, so it is excluded from normal roster-restricted media subscriptions and updated clients do not display it. The Keeper-only recovery fallback described below does not make mixed-version Sessions compatible. Turning off Keeper approval does not make legacy clients compatible: automatic approval still requires the admission exchange and readiness receipt.
+The server rollout checklist is **NOT READY**. The current Django flag
+`SERVER_ENFORCED_ADMISSION` defaults off, and admission endpoints return
+`404 feature_disabled` while it is off. Removing the gate and verifying mandatory
+enforcement are prerequisites for cutover; the flag is not a client toggle or a
+documented rollback mechanism. Compatible Keeper and participant clients, an
+effective upgrade gate and the other checklist blockers must be addressed first.
+Existing client-local approvals are not imported. Drain legacy rooms and account
+for old tokens before cutover; follow `totem/rooms/ADMISSION_ROLLOUT.md` in the
+server repository for deployment and rollback.
 
-This repository has no minimum-client-version gate, and the join endpoint currently issues ordinary room tokens without an admission-capability check. Do not treat room presence, published tracks, or a missing Hello as permission to bypass admission. A client-only fallback would silently defeat Keeper approval and cannot distinguish a legacy client from a delayed or disconnected client.
+## Connection and reconnection
 
-Before release:
+1. Fetch `/admission/me` and resume an active attempt's request and attempt IDs,
+   or generate new IDs for `/join`. Use the canonical IDs returned by the server.
+2. Obtain a token via `/join` with those IDs and connect once. Pre-join owns the
+   waiting room and preview tracks; `ServerParticipantAdmission` observes the
+   connection but does not own it. Confirm presence using `/admission/request`
+   with `connected: true` and the same IDs. Presence does not mean approval.
+3. Fetch `/admission/me` after relevant notifications or permission changes.
+   Require server readiness `ready_to_activate` or `activated` with no reason,
+   confirmation of the current SID and effective local LiveKit permissions.
+   Transfer the **same connected room**, observer and preview tracks to
+   `SessionRuntime`; do not request another token or reconnect for approval.
+4. After successful local activation, send `/admission/activated` with the
+   request ID, attempt ID and current attempt version. Pre-join reports joined
+   only after the response acknowledges `activated`; pending recovery waits for
+   reconfirmation and retries without transferring media again. Waiting, approval
+   and activation are separate;
+   neither a token nor signaling presence records attendance or turn eligibility.
+   The Keeper follows the same confirmation and activation sequence without
+   waiting for manual approval. Runtime owns the adopted room and disposes the
+   observer before the room.
 
-1. Deploy admission-compatible web clients and require compatible mobile builds for **both Keepers and participants** before starting admission-enabled Sessions. Set the required build versions in the deployment's update policy; the data-channel protocol name is not an enforced version gate.
-2. End in-progress legacy Sessions before cutover. Do not introduce an updated Keeper or participant into a Session still using older clients.
-3. If all clients cannot be upgraded together, block broad rollout until a backend minimum-version/capability gate rejects unsupported clients **before issuing a LiveKit token**, with an actionable update-required response. This enforcement is not implemented here.
-4. Validate the supported-client smoke test below and verify that unsupported Keeper and participant builds cannot enter admission-enabled Sessions through the chosen rollout gate. For rollback, stop new Sessions and drain active ones before reverting clients; mixing old and new clients is not a safe rollback strategy.
+On reconnect, fetch the authoritative snapshot and reconfirm a pending/granting
+attempt with its existing IDs. A changed SID after activation uses a fresh
+`/join` operation to obtain canonical request and attempt IDs, confirmed on the
+existing reconnected room without another connection; durable
+admission makes it a returning request. A temporary decline is terminal for its
+IDs; a new intentional request needs new IDs. A missing participant or failed
+confirmation is not approval. Notifications on `totem.admission.v2`, SDK events
+and metadata are refresh hints only. Fetch on attachment, reconnect, relevant
+events and after commands; retry transient failures with bounded backoff instead
+of permanent short-interval polling.
 
-## Connection and admission
+## Keeper API and settings
 
-The participant obtains one existing Session token and connects once to a normal-configured LiveKit `Room` with `autoSubscribe: false`. Pending users publish no microphone or camera tracks and have only a local pre-join preview. The request is a reliable targeted packet on `totem.admission.v1`. Its ID remains stable on presence/reconnection retransmission. Pending requests remain actionable while the participant is connected and the Session is open, until the Keeper decides, the participant cancels, or the waiting deadline: 20 minutes after the later of the scheduled Session start and the admission attempt (`max(now, start) + 20m`). This bounds waiting rather than closing entry after the Session starts, so returning participants can still request admission during a longer Session. There is no visible countdown. At that deadline, the waiting connection and preview media are released and the participant can return to the Session schedule. An attempt whose deadline has already elapsed is rejected before creating a waiting room connection. The waiting deadline applies only while admission is pending and is separate from the packet's 24-hour protocol safety limit. An approval received before the waiting deadline cancels that timer and preserves the Keeper's separate two-minute post-approval confirmation window, even if room activation and the joined receipt complete after waiting would have expired. On approval, admission listeners are removed and ownership of the **connected room** moves from pre-join to `SessionController.activateConnectedRoom`; no second token request, `prepareConnection`, `Room.connect`, or deliberate disconnect occurs. The Session controller registers its listeners, synchronously applies any valid newer LiveKit room metadata and current participants, starts normal infrastructure and remote subscriptions (existing and future publications), transfers and publishes the same pre-join media tracks, and only then reports activation success. It also starts an asynchronous server-state refresh; that refresh need not complete before activation succeeds. Missing or unusable metadata can therefore leave the initial `waitingRoom` fallback in place until the refresh completes. It owns subsequent room teardown. Keeper direct joining retains its normal join path.
+All paths below are relative to `/api/mobile/protected/rooms/{session_slug}`;
+use existing JWT authentication or Django session authentication with CSRF on
+web. Only the current `Room.keeper` can access the full snapshot and issue
+Keeper commands. Identities are authenticated public user slugs, not names or
+client-supplied LiveKit attributes.
 
-The Keeper's **Require approval to join** option defaults on in every Session status. An explicit Keeper choice overrides the default for the current Session. With approval off, the Keeper client automatically approves valid requests, including people already waiting; with approval on, new participants need a Keeper decision, while identities already admitted to this Session rejoin automatically unless permanently declined. Removing a participant revokes their stored admission, so their next request follows the current approval setting. Removal is unavailable until admission recovery is ready; ordinary departures do not revoke admission. This setting is process-local and requires the Keeper client to be connected; it does not bypass backend join timing, bans, or capacity limits. Switching modes does not eject admitted participants or revoke decisions already sent.
+| Method and path | Purpose |
+|---|---|
+| `POST /join` | Obtain a connection token, optionally creating the request with its IDs. |
+| `POST /admission/request` | Create or confirm the attendee's attempt. |
+| `GET /admission/me` | Own admission, effective policy and aggregate counts. |
+| `GET /admission` | Keeper snapshot: queue, membership and recent outcomes. |
+| `POST /admission/{identity}/approve` | Approve a specific attempt. |
+| `POST /admission/{identity}/decline` | Decline an attempt, optionally permanently. |
+| `POST /admission/admit-all` | Decide the current captured queue. |
+| `PATCH /admission/settings` | Set the Session's `approval_required` policy. |
+| `POST /admission/{identity}/allow` | Clear a permanent exclusion; does not admit an old attempt or unban. |
+| `POST /admission/{identity}/revoke` | Revoke returning-member privileges. |
+| `POST /admission/activated` | Confirm successful local activation. |
+| `POST /admission/cancel` | Cancel the owner's attempt without erasing prior durable admission. |
 
-When someone who completed admission leaves and returns, their new request removes them from the visible roster and announces that change to connected clients. The Keeper automatically approves the authenticated identity using its stored admission history; they return to the visible roster only after connection activation and a fresh `admission.joined` receipt. Approval packets optionally include `returning: true` for these confirmed members, allowing their client to skip the late-arrival orientation. This field affects presentation only, not admission authority; older packets omit it and default to first-time entry. Approval packets also optionally include `sessionStarted`, sampled from the Keeper's current Session state when approval is sent. This entry-time snapshot, rather than a later rendered room state, determines late-arrival orientation eligibility. Someone approved before the Session starts is not shown a notice when it starts or when they return to a browser tab, and reconnects do not show it again. For legacy approvals without `sessionStarted`, the client falls back to the first activated connection's room status, without waiting for the loading UI to finish. That status is not necessarily authoritative if LiveKit metadata was unavailable; the entry-time guarantee requires the Keeper's `sessionStarted` snapshot. The newly activated participant sends `admission.joined` with the original request ID on the same connection. The Keeper checks the authenticated LiveKit sender, approved request, ID and expiry before marking the attempt joined. Failed activation never broadcasts admission; if the room is lost before a failure packet is possible, the Keeper reports a timeout after the separate, two-minute post-approval confirmation window and the participant can retry. If no Keeper-announced admitted roster arrives, one timed receipt retry is scheduled after two seconds. Keeper presence, hello and room connection events may trigger additional best-effort retries until a roster confirms admission or the receipt expires. This is not polling or durable delivery.
+Approval required is a server-side per-Session policy controlled by the current
+Keeper, not a hidden enforcement switch. Turning it off processes eligible pending
+requests and auto-approves eligible newcomers; turning it on preserves existing
+approvals. Bans and permanent exclusions take precedence, and revoked members
+require explicit reapproval even with approval off. Ordinary departure retains
+returning privileges.
 
-## Clock validation
+Keeper commands use a new `command_id` for each intentional action and the
+relevant snapshot versions. Retry an unknown outcome with the same ID and
+identical payload; stale versions or conflicting reuse return 409. Snapshot
+`room_version` supplies `expected_room_version`, `settings_revision` supplies
+settings `expected_revision`, and participant attempt or admission versions
+supply the appropriate `expected_version`. HTTP success acknowledges the
+command, not necessarily applied permissions or activation: inspect per-result
+errors, `partial_failure` and permission status, then refresh. See the server's
+`totem/rooms/ADMISSION_API.md` for complete payloads, authorization, counts,
+capacity, errors and retry semantics.
 
-The decoder allows five minutes of additional clock skew when checking whether a packet is implausibly far in the future. This allowance is separate from the one-second retry-timestamp headroom and applies to both request-family packets (including decisions and joined receipts) and short-lived roster packets. It does not modify `expiresAt`, local timers, or request/receipt correlation: packets at or past their expiry according to the receiver clock are still rejected. This fixes ordinary sender-ahead clock differences without extending expired attempts or assuming synchronized clocks in tests.
+Admission snapshots include room state and room version read with admission data
+under the server room lock. Admission `version` orders admission changes;
+`room_version` orders room state independently, and `observed_at` orders presence
+observations when versions are equal. Neither version tracks presence. `/me`
+contains the caller's state and readiness, not the Keeper's queue or roster.
 
-## Waiting diagnostics
+Snapshots also include the server's connected, activated recipient projection. The client intersects recipients
+with its current transport presence; a missing projection or presence error
+fails closed until the next successful refresh. Presence is a point-in-time
+observation and is not an atomic guarantee with the room state.
 
-While a participant is waiting, the client distinguishes an absent Keeper from a present Keeper whose admission support has not responded. A present Keeper gets a ten-second response window. A targeted Hello from the authenticated current Keeper confirms responsiveness; updated Keepers also send it when first recording a request, covering an initial Hello lost before the applicant subscribed. Duplicate requests do not generate another acknowledgement, avoiding a Hello/request loop.
+## API generation
 
-If the Keeper is absent, the waiting view says so. If no trusted response arrives within ten seconds, it asks the participant to have the Keeper reconnect or update Totem, and keeps **Leave waiting room** available. This is a diagnostic, not definitive version detection: packet loss or a paused client can look the same as an old build. A late response clears the warning. No diagnostic timeout approves, rejects, or publishes media for an applicant; the existing admission decision and receipt are still required.
+Generate from the checked-out local Django mobile OpenAPI schema, not production:
+`make generate_api_models`; use `make check_api_models` to compare without
+modifying the client. The default server checkout is `../totem-server`; set
+`TOTEM_SERVER_DIR` for another checkout. The script uses a one-off Docker Compose
+Django container with the server mounted read-only, Python 3 and the project's
+locked `degenerate` tool. It includes uncommitted server changes and refuses to
+overwrite differing uncommitted generated API changes. Record the server revision
+and relevant working-tree changes, and do not edit generated API files by hand.
+See the client root README for prerequisites and details.
 
-## Keeper disconnect recovery
+## Security limitations and verification
 
-A Keeper disconnect does not itself deny a pending applicant. While the applicant keeps their waiting page and room connection alive, their client retains the same request and retransmits it when the Keeper returns. The Keeper advertises an authenticated `hello` after reconnect/controller reattachment; the applicant replies even if LiveKit has not yet updated its local participant map. Cancellations are replayed instead of requests when the applicant canceled during the outage. The returning Keeper can reconstruct the queue without preserving its old controller.
+Waiting connections can receive LiveKit broadcasts even with media subscription
+disabled. Targeting chat and reactions from an up-to-date client projection is
+best effort, not a server-enforced confidentiality boundary; stale, old or
+modified clients can broadcast. Do not claim private data is fully protected.
+Old/full-permission tokens and existing connections are not instantly revoked by
+a flag change. Token replay, LiveKit outages and identity-addressed permission
+races limit revocation; verify the actual deployment's invalidation behavior.
 
-This is best-effort client-side recovery, not durable queuing: it requires the applicant to stay connected, the Session to remain open, and packets to be delivered. Session-ended metadata still terminates waiting, and terminal loss of the applicant's own room connection still reports failure. Persisting requests after the applicant closes/reloads their page, or coordinating independent Keeper devices reliably, requires backend-owned storage.
-
-## Permanent declines
-
-The Keeper can choose **Decline Permanently** in the decline confirmation. The decline is saved before sending the current denial. Later requests from that authenticated identity are automatically denied, even when **Require approval to join** is off, without reopening the manual queue. The Keeper can remove an identity from **More options → Declined Participants → Allow**. Removal lets the participant make a new request under the current approval policy; it does not approve an old denied request or automatically join them.
-
-Permanent declines are stored in local preferences, keyed by Session and Keeper identity, and survive reopening the app on that device while the Session is open. The key is removed when the Keeper's active admission controller observes the Session end or the Keeper allows the last declined participant. They do not sync between Keeper devices and are not backend bans. The Keeper waits for the stored list to load before processing admissions; a load failure pauses admission with a retry action rather than failing open. A failed save leaves the previous durable list intact and reports the error.
-
-## Admission UI
-
-The admission owner remains mounted around the room's video, controls, navigator, and side-panel rail. It does not position controls or a floating queue over the video. The Keeper opens the live queue from the Session controls: wide layouts share the layout-reserving rail with Chat and Prompts, intermediate tablet layouts use the same trailing drawer as Chat, and phones use the responsive bottom sheet. Opening one docked panel closes the others. Dismissing a panel leaves admission transport, readiness filtering, and queued requests intact; disconnecting closes the admission route along with the other Session panels.
-
-## Presentation roster
-
-The admission topic also carries targeted `roster.request`, correlated `roster.snapshot`, and revisioned `roster.updated` packets. A requesting identity not yet admitted receives a correlated **empty** snapshot so its client can process a subsequent roster update without seeing existing participants while waiting; full snapshots and updates are sent only to admitted identities. The Keeper broadcasts a new roster only after validating a joined receipt. Each updated client starts with only the authoritative Keeper identity visible, asks the Keeper for a snapshot, re-requests a snapshot if an authenticated roster update arrives before its first snapshot, rejects packets from non-Keepers, wrong sessions, expired or stale revisions and unmatched snapshot requests, and fails closed if its roster cannot be established. Only admitted identities are shown in participant tiles, counts, speaker/next-speaker presentation and reorder controls. The canonical backend room state and LiveKit presence are unchanged. The applicant stays on the loading surface until the existing Session controller activates the connected room and its initial media. Receipt delivery is best-effort and does not hold the activated applicant on pre-join; the Keeper-announced roster still controls which identities other clients display.
-
-Updated clients restrict subscriptions to their published tracks via the pinned LiveKit SDK's `setTrackSubscriptionPermissions`. Once admission authority is available, Keeper media is limited to admitted identities; other publishers allow the Keeper and roster members. An explicitly empty roster remains restrictive.
-
-Before admission authority loads, the authoritative Keeper's own tracks allow all subscribers so a local preferences load failure cannot silence the Keeper. This Keeper-only fallback remains active if storage recovery fails, and is replaced by roster restrictions as soon as recovery succeeds. Admission decisions and participant visibility still fail closed; no one is added to the roster by this fallback. Updated pending clients keep remote subscriptions disabled, but legacy or modified clients already connected to the room may receive the Keeper's media during recovery. This is an intentional availability tradeoff, not server-enforced admission. Non-Keeper media permissions never use this fallback. On activation, an admitted participant manually subscribes to existing and subsequently published tracks.
-
-The Keeper persists the roster generation, revision, admitted members, and readiness state in local preferences keyed by Session and Keeper identity. This restores the same admission authority after a reload, app restart, or reopening the Session on that device, including participants who are not publishing media. Recovery must finish before the Keeper controller advertises a roster; malformed or unavailable state pauses admission instead of publishing an authoritative empty roster. When the Keeper's active admission controller observes the Session end, it removes the persisted roster and declined-participant keys; leaving or reconnecting does not. If that controller is detached before the end event, local data cannot be pruned reliably without a later end notification or backend-owned lifecycle tracking.
-
-This persistence is local to one Keeper device and does not synchronize independent devices or recover state when local storage is cleared. Authoritative multi-device durability still requires backend-owned storage. The client never treats LiveKit presence, publishing media, attendance, or a token as proof of admission, so pending applicants are not inferred as admitted. Correlated snapshots and roster resynchronization do not turn LiveKit data packets into persistent storage. No backend room metadata or participant attributes are used as admission authority.
-
-## Four-device smoke test and performance capture
-
-Use a real Keeper (A), two already-admitted participants (B, C), and an applicant (D). In LiveKit/Flutter DevTools record explicit room `connect`/`disconnect` calls and Flutter frame timings around the `session_admission_room_connect` and `session_admission_room_activation` Timeline tasks, including queue-update transitions. On a successful D admission, verify one explicit connect, zero approval-time disconnects/reconnects, one room instance, and no second token request. Compare frame times against the previous build before claiming a performance gain. Verify the same preview track persists through waiting and that neither D's local media nor remote subscription is active before approval. B and C must never show D, even for one frame after D connects; D should appear on A/B/C only after Keeper processes `admission.joined` and sends a roster update. Check local media publication, audio playback, and media-track permissions after activation.
-
-Repeat with camera off, microphone off, both off, Keeper disconnect/reconnect, applicant cancellation, simultaneous applicants, and near the 10-person room limit. Run in desktop Safari, mobile Safari, Chrome, iOS and Android where supported; verify no duplicated camera capture or Safari platform-view flicker. This checklist requires real LiveKit connections and is not proven by unit/widget tests.
+Before cutover, verify Keeper and participant flows, enforce
+a compatible-client upgrade gate, and run real LiveKit staging tests with at
+least four users including Safari. Cover settings, decisions, reconnect and
+replacement SID, cancellation, partial permission failures, outages, capacity,
+revocation and rollback. Mocked tests do not prove real-device behavior or data
+confidentiality. The server rollout checklist contains the authoritative
+operational prerequisites and drain procedure.

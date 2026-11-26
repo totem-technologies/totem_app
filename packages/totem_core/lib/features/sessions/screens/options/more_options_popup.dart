@@ -9,7 +9,6 @@ import 'package:totem_core/core/api/api_client/api_client.dart'
     show RoomStatus, SessionDetailSchema, TurnState;
 import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/features/sessions/admission/declined_participants_modal.dart';
-import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/admission/session_admission_settings.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/controllers/features/session_device_controller.dart';
@@ -94,20 +93,9 @@ class MoreOptions extends ConsumerWidget {
     final isSelfViewEnabled = ref.watch(
       selfViewSettingsProvider.select((s) => s.enabled),
     );
-    final isAdmissionEnabled = ref.watch(sessionAdmissionSettingsProvider);
 
     final isKeeper = currentSession.isCurrentUserKeeper();
-    final declinedParticipants = isKeeper
-        ? ref.watch(
-            declinedSessionParticipantsProvider(
-              session.slug,
-              state.roomState.keeper,
-            ),
-          )
-        : null;
-    final declinedParticipantsCount = declinedParticipants?.hasValue == true
-        ? declinedParticipants!.value!.length
-        : 0;
+    final admission = currentSession.admission;
 
     Widget buildContent([ScrollController? scrollController]) {
       final cameraTile = MoreOptionsTile.camera(deviceState.cameraFacing, () {
@@ -205,20 +193,25 @@ class MoreOptions extends ConsumerWidget {
                   showParticipantReorderModals(context);
                 },
               ),
-              MoreOptionsTile<void>(
-                title: 'Require approval to join',
-                icon: TotemIcons.community,
-                trailing: IgnorePointer(
-                  child: Switch.adaptive(
-                    value: isAdmissionEnabled,
-                    onChanged: (value) {},
+              ListenableBuilder(
+                listenable: admission,
+                builder: (context, _) => MoreOptionsTile<void>(
+                  title: 'Require approval to join',
+                  icon: TotemIcons.community,
+                  trailing: IgnorePointer(
+                    child: Switch.adaptive(
+                      value: admission.approvalRequired,
+                      onChanged: (value) {},
+                    ),
                   ),
+                  onTap: admission.busy || admission.snapshot == null
+                      ? null
+                      : () async {
+                          await ref
+                              .read(sessionAdmissionSettingsProvider.notifier)
+                              .setEnabled(!admission.approvalRequired);
+                        },
                 ),
-                onTap: () {
-                  ref
-                      .read(sessionAdmissionSettingsProvider.notifier)
-                      .setEnabled(!isAdmissionEnabled);
-                },
               ),
               MoreOptionsTile<void>(
                 title: 'Mute everyone',
@@ -229,17 +222,23 @@ class MoreOptions extends ConsumerWidget {
                   _onMuteEveryone(currentSession);
                 },
               ),
-              MoreOptionsTile<void>(
-                title:
-                    'Declined Participants'
-                    '${declinedParticipantsCount > 0 ? ' ($declinedParticipantsCount)' : ''}',
-                icon: TotemIcons.removePerson,
-                onTap: () {
-                  final navigator = Navigator.of(context)..pop();
-                  showDeclinedParticipantsModal(
-                    navigator.context,
-                    sessionSlug: session.slug,
-                    keeperIdentity: state.roomState.keeper,
+              ListenableBuilder(
+                listenable: admission,
+                builder: (context, _) {
+                  final declinedParticipantsCount = admission.declined.length;
+                  return MoreOptionsTile<void>(
+                    title:
+                        'Declined Participants'
+                        '${declinedParticipantsCount > 0 ? ' ($declinedParticipantsCount)' : ''}',
+                    icon: TotemIcons.removePerson,
+                    onTap: () {
+                      final navigator = Navigator.of(context)..pop();
+                      showDeclinedParticipantsModal(
+                        navigator.context,
+                        sessionSlug: session.slug,
+                        keeperIdentity: state.roomState.keeper,
+                      );
+                    },
                   );
                 },
               ),

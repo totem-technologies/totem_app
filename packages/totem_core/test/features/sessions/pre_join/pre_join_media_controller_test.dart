@@ -92,6 +92,20 @@ class _DelayedMicrophoneFactory extends _PreviewTrackFactory {
   }
 }
 
+class _DelayedResetMicrophoneFactory extends _PreviewTrackFactory {
+  final resetRequested = Completer<void>();
+  final gate = Completer<void>();
+
+  @override
+  Future<LocalAudioTrack?> createAudioTrack() async {
+    if (audioTracks.isNotEmpty) {
+      resetRequested.complete();
+      await gate.future;
+    }
+    return await super.createAudioTrack();
+  }
+}
+
 class _UnavailableCameraFactory extends _PreviewTrackFactory {
   @override
   Future<LocalVideoTrack?> createVideoTrack(
@@ -831,6 +845,90 @@ void main() {
     await media.cameraTrack?.dispose();
     await media.microphoneTrack?.dispose();
   });
+
+  test('concurrent failed join resets share one fresh capture pair', () async {
+    final factory = _DelayedResetMicrophoneFactory();
+    final container = _createContainer(factory);
+    addTearDown(container.dispose);
+    await _waitUntilInitialized(container);
+    final controller = container.read(
+      preJoinMediaControllerProvider(_sessionSlug).notifier,
+    );
+    await controller.takeForJoin();
+
+    final first = controller.resetAfterFailedJoin();
+    await factory.resetRequested.future;
+    final second = controller.resetAfterFailedJoin();
+    factory.gate.complete();
+    await Future.wait([first, second]);
+
+    final media = await controller.takeForJoin();
+    check(factory.videoTracks).length.equals(2);
+    check(factory.audioTracks).length.equals(2);
+    check(media.cameraTrack).identicalTo(factory.videoTracks.last);
+    check(media.microphoneTrack).identicalTo(factory.audioTracks.last);
+  });
+
+  test(
+    'provider disposal during reset capture releases the late track',
+    () async {
+      final factory = _DelayedResetMicrophoneFactory();
+      final container = _createContainer(factory);
+      await _waitUntilInitialized(container);
+      final controller = container.read(
+        preJoinMediaControllerProvider(_sessionSlug).notifier,
+      );
+      await controller.takeForJoin();
+      final reset = controller.resetAfterFailedJoin();
+      await factory.resetRequested.future;
+      container.dispose();
+      factory.gate.complete();
+      await reset;
+
+      check(factory.videoTracks).length.equals(1);
+      check(factory.audioTracks).length.equals(2);
+      verify(factory.audioTracks.last.dispose).called(1);
+    },
+  );
+
+  test('terminal release during reset does not restart capture', () async {
+    final factory = _DelayedMicrophoneFactory();
+    final container = _createContainer(factory);
+    addTearDown(container.dispose);
+    await pumpEventQueue();
+    final controller = container.read(
+      preJoinMediaControllerProvider(_sessionSlug).notifier,
+    );
+    final reset = controller.resetAfterFailedJoin();
+    final release = controller.releaseForTerminalOutcome();
+    factory.gate.complete();
+    await reset;
+    await release;
+
+    check(factory.videoTracks).isEmpty();
+    check(factory.audioTracks).length.equals(1);
+    verify(factory.audioTracks.single.dispose).called(1);
+  });
+
+  test(
+    'provider disposal during reset completes without restarting capture',
+    () async {
+      final factory = _DelayedMicrophoneFactory();
+      final container = _createContainer(factory);
+      await pumpEventQueue();
+      final controller = container.read(
+        preJoinMediaControllerProvider(_sessionSlug).notifier,
+      );
+      final reset = controller.resetAfterFailedJoin();
+      container.dispose();
+      factory.gate.complete();
+      await reset;
+
+      check(factory.videoTracks).isEmpty();
+      check(factory.audioTracks).length.equals(1);
+      verify(factory.audioTracks.single.dispose).called(1);
+    },
+  );
 
   test('failed join reset creates a fresh sequential capture pair', () async {
     final factory = _PreviewTrackFactory();
