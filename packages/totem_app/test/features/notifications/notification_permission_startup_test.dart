@@ -1,12 +1,15 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_app/features/auth/controllers/auth_controller.dart';
+import 'package:totem_app/features/auth/services/notifications_service.dart';
 import 'package:totem_app/main.dart';
+import 'package:totem_app/navigation/app_router.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -14,10 +17,16 @@ import 'package:totem_core/features/permissions/notification_permissions.dart';
 import 'package:totem_core/shared/router.dart';
 
 class _CountingNotificationPermissions implements NotificationPermissions {
+  _CountingNotificationPermissions({this.requestCompletion});
+
+  final Completer<void>? requestCompletion;
   int requests = 0;
 
   @override
-  Future<void> request() async => requests++;
+  Future<void> request() async {
+    requests++;
+    if (requestCompletion case final completion?) await completion.future;
+  }
 }
 
 /// Signed in and onboarded, so the app skips onboarding image precaching.
@@ -45,7 +54,7 @@ class _SignedInAuthController extends MobileAuthController {
   bool get isOnboardingCompleted => true;
 }
 
-class _BlankRouter extends TotemRouter {
+class _BlankRouter extends AppTotemRouter {
   final key = GlobalKey<NavigatorState>();
 
   @override
@@ -84,18 +93,39 @@ class _BlankRouter extends TotemRouter {
 void main() {
   testWidgets('N1: notifications are asked for at app start', (tester) async {
     TotemRouter.instance = _BlankRouter();
-    final notifications = _CountingNotificationPermissions();
+    final requestCompletion = Completer<void>();
+    final permissions = _CountingNotificationPermissions(
+      requestCompletion: requestCompletion,
+    );
+    var permissionChecks = 0;
+    final notificationService = NotificationsService.forTesting(
+      permissionReader: () async {
+        permissionChecks++;
+        return AuthorizationStatus.authorized;
+      },
+      errorReporter: (_, _, _) {},
+    );
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authControllerProvider.overrideWith(_SignedInAuthController.new),
-          notificationPermissionsProvider.overrideWithValue(notifications),
+          notificationPermissionsProvider.overrideWithValue(permissions),
+          notificationsProvider.overrideWithValue(notificationService),
         ],
         child: const TotemApp(),
       ),
     );
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
     await tester.pump();
-    check(notifications.requests).equals(1);
+    check(permissions.requests).equals(1);
+    check(permissionChecks).equals(0);
+
+    requestCompletion.complete();
+    await tester.pump();
+    check(permissionChecks).equals(1);
   });
 }

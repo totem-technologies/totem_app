@@ -124,6 +124,8 @@ class _SessionPanelsState extends ConsumerState<SessionPanels>
   final _roomNavigatorObserver = _SessionPanelRouteObserver();
   bool _dismissedForDisconnect = false;
   bool _overlayPresenting = false;
+  bool _handlingLeaveRequest = false;
+  String? _registeredNotificationSessionSlug;
 
   /// Supersedes old presentation futures during layout handover or disconnect.
   int _presentationGeneration = 0;
@@ -142,8 +144,8 @@ class _SessionPanelsState extends ConsumerState<SessionPanels>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _roomNavigatorObserver.onRoutesChanged = _schedulePresentationSync;
+    _syncNotificationHandler();
     ref.listenManual(resolveCurrentScreenProvider, (previous, next) {
       if (next != RoomScreen.disconnected) {
         _dismissedForDisconnect = false;
@@ -160,6 +162,50 @@ class _SessionPanelsState extends ConsumerState<SessionPanels>
     ref.listenManual(roomStatusProvider, (previous, next) {
       if (next == RoomStatus.ended) _dismissSessionPresentation();
     });
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didUpdateWidget(covariant SessionPanels oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncNotificationHandler();
+  }
+
+  bool get _canHandleSessionNotifications =>
+      widget.session != null &&
+      (_handlingLeaveRequest ||
+          widget.connectionState == RoomConnectionState.connecting ||
+          widget.connectionState == RoomConnectionState.connected);
+
+  void _syncNotificationHandler() {
+    final nextSlug = _canHandleSessionNotifications ? widget.sessionSlug : null;
+    final previousSlug = _registeredNotificationSessionSlug;
+    if (previousSlug == nextSlug) return;
+    if (previousSlug != null) {
+      TotemRouter.instance.clearActiveSessionNotificationHandlerForSession(
+        previousSlug,
+        _handleActiveSessionNotification,
+      );
+    }
+    _registeredNotificationSessionSlug = nextSlug;
+    if (nextSlug != null) {
+      TotemRouter.instance.setActiveSessionNotificationHandlerForSession(
+        nextSlug,
+        _handleActiveSessionNotification,
+      );
+    }
+  }
+
+  @override
+  void deactivate() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   int _presentationTier(Size size) => size.shortestSide <= 600
@@ -186,6 +232,14 @@ class _SessionPanelsState extends ConsumerState<SessionPanels>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _roomNavigatorObserver.onRoutesChanged = null;
+    final registeredSlug = _registeredNotificationSessionSlug;
+    if (registeredSlug != null) {
+      TotemRouter.instance.clearActiveSessionNotificationHandlerForSession(
+        registeredSlug,
+        _handleActiveSessionNotification,
+      );
+    }
+    _registeredNotificationSessionSlug = null;
     super.dispose();
   }
 
@@ -462,6 +516,31 @@ class _SessionPanelsState extends ConsumerState<SessionPanels>
       _roomNavigatorObserver.transientRoutes,
     ).reversed) {
       if (route.isActive) navigator?.removeRoute(route);
+    }
+  }
+
+  Future<bool> _handleActiveSessionNotification() async {
+    if (_handlingLeaveRequest || !mounted) return false;
+    final session = widget.session;
+    if (session == null) return false;
+    _handlingLeaveRequest = true;
+    try {
+      final shouldLeave =
+          await MoreOptions.showLeaveDialog(
+            _roomNavigatorKey.currentContext ?? context,
+          ) ??
+          false;
+      if (!mounted ||
+          !shouldLeave ||
+          widget.session != session ||
+          widget.sessionSlug != _registeredNotificationSessionSlug) {
+        return false;
+      }
+      await session.leave();
+      return true;
+    } finally {
+      _handlingLeaveRequest = false;
+      if (mounted) _syncNotificationHandler();
     }
   }
 

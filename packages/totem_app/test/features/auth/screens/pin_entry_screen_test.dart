@@ -36,40 +36,38 @@ void main() {
     await disposeAuthScreenTest(tester, router);
   });
 
-  testWidgets(
-    'prevents duplicate verification while the first attempt is pending',
-    (tester) async {
-      final verification = Completer<void>();
-      final auth = TestMobileAuthController()
-        ..onVerifyPin = (_) => verification.future;
-      final router = await pumpAuthScreen(
-        tester,
-        screen: const PinEntryScreen(email: 'person@example.com'),
-        initialPath: RouteNames.pinEntry,
-        overrides: [
-          authControllerProvider.overrideWith(() => TestMobileAuthController()),
-          mobileAuthControllerProvider.overrideWith((ref) => auth),
-        ],
-      );
+  testWidgets('leaves post-verification navigation to the router', (
+    tester,
+  ) async {
+    final verification = Completer<void>();
+    final auth = TestMobileAuthController()
+      ..onVerifyPin = (_) => verification.future;
+    final router = await pumpAuthScreen(
+      tester,
+      screen: const PinEntryScreen(email: 'person@example.com'),
+      initialPath: RouteNames.pinEntry,
+      overrides: [
+        authControllerProvider.overrideWith(() => TestMobileAuthController()),
+        mobileAuthControllerProvider.overrideWith((ref) => auth),
+      ],
+    );
 
-      await tester.enterText(find.byType(Pinput), '123456');
-      await tester.pump();
-      check(auth.verifyPinCalls).equals(1);
-      check(
-        tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
-      ).isNull();
+    await tester.enterText(find.byType(Pinput), '123456');
+    await tester.pump();
+    check(auth.verifyPinCalls).equals(1);
+    check(
+      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
+    ).isNull();
 
-      await tester.tap(find.byType(ElevatedButton));
-      await tester.pump();
-      check(auth.verifyPinCalls).equals(1);
+    await tester.tap(find.byType(ElevatedButton));
+    await tester.pump();
+    check(auth.verifyPinCalls).equals(1);
 
-      verification.complete();
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 2));
-      check(router.state.uri.path).equals('/');
-      await disposeAuthScreenTest(tester, router);
-    },
-  );
+    verification.complete();
+    await tester.pump();
+    check(router.state.uri.path).equals(RouteNames.pinEntry);
+    await disposeAuthScreenTest(tester, router);
+  });
 
   testWidgets('shows a failed verification as a retryable attempt', (
     tester,

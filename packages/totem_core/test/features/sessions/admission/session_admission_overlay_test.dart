@@ -33,6 +33,7 @@ import 'package:totem_core/features/sessions/services/session_moderation_service
 import 'package:totem_core/features/sessions/widgets/action_bar/action_bar.dart';
 import 'package:totem_core/features/sessions/widgets/session_panels.dart';
 import 'package:totem_core/features/sessions/widgets/session_side_panel.dart';
+import 'package:totem_core/shared/router.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/notifications.dart';
 
@@ -363,6 +364,12 @@ class _AdmissionHarness {
 }
 
 void main() {
+  setUp(() {
+    setupAppConfig();
+    TotemRouter.instance = FakeTotemRouter();
+    addTearDown(() => TotemRouter.instance = FakeTotemRouter());
+  });
+
   const removalRosterKey = 'session_admission_keeper_roster:session:keeper';
   const removalJournalKey =
       'session_admission_revocations:["session","keeper"]';

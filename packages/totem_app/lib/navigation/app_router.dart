@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import 'package:totem_app/features/auth/controllers/auth_controller.dart';
 import 'package:totem_app/features/auth/controllers/user_profile_controller.dart';
 import 'package:totem_app/widgets/offline_indicator.dart';
 import 'package:totem_core/core/config/app_config.dart';
+import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/keeper/screens/keeper_profile_screen.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/messages/models/conversation.dart';
@@ -162,8 +165,46 @@ class BottomNavScaffold extends ConsumerWidget {
   }
 }
 
+String? _safeNextRoute(String? candidate) {
+  if (candidate == null ||
+      !candidate.startsWith('/') ||
+      candidate.startsWith('//')) {
+    return null;
+  }
+  final uri = Uri.tryParse(candidate);
+  if (uri == null ||
+      uri.hasScheme ||
+      uri.hasAuthority ||
+      !uri.path.startsWith('/')) {
+    return null;
+  }
+  if (uri.path == RouteNames.welcome ||
+      uri.path == RouteNames.onboarding ||
+      uri.path.startsWith('/auth')) {
+    return null;
+  }
+  return uri.toString();
+}
+
+String _loginWithNext(String? next) {
+  final safeNext = _safeNextRoute(next);
+  return safeNext == null
+      ? RouteNames.login
+      : Uri(
+          path: RouteNames.login,
+          queryParameters: {'next': safeNext},
+        ).toString();
+}
+
 class AppTotemRouter extends TotemRouter {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  GoRouter? _router;
+  String? _deferredNotificationLocation;
+  Future<bool> Function()? _activeSessionNotificationHandler;
+  String? _activeSessionNotificationSlug;
+  bool _sessionNotificationRequiresConfirmation = false;
+  bool _sessionNotificationConfirmationPending = false;
+  int _sessionNotificationGeneration = 0;
   GoRouterRefreshStream? _refreshStream;
 
   final shellNavigatorKey = GlobalKey<StatefulNavigationShellState>();
@@ -231,8 +272,162 @@ class AppTotemRouter extends TotemRouter {
 
   @override
   void dispose() {
+    _router?.routerDelegate.removeListener(_onRouteChanged);
+    _router = null;
     _refreshStream?.dispose();
     _refreshStream = null;
+    _deferredNotificationLocation = null;
+    _sessionNotificationRequiresConfirmation = false;
+    _sessionNotificationConfirmationPending = false;
+    _sessionNotificationGeneration++;
+  }
+
+  @override
+  void setActiveSessionNotificationHandlerForSession(
+    String sessionSlug,
+    Future<bool> Function() handler,
+  ) {
+    if (_activeSessionNotificationHandler != handler &&
+        _sessionNotificationConfirmationPending) {
+      _sessionNotificationGeneration++;
+      _sessionNotificationConfirmationPending = false;
+    }
+    _activeSessionNotificationHandler = handler;
+    _activeSessionNotificationSlug = sessionSlug;
+    if (_deferredNotificationLocation != null && _hasActiveSessionPanels) {
+      _sessionNotificationRequiresConfirmation = true;
+      _confirmDeferredSessionNotification();
+    }
+  }
+
+  @override
+  void clearActiveSessionNotificationHandlerForSession(
+    String sessionSlug,
+    Future<bool> Function() handler,
+  ) {
+    if (_activeSessionNotificationHandler == handler &&
+        _activeSessionNotificationSlug == sessionSlug) {
+      _activeSessionNotificationHandler = null;
+      _activeSessionNotificationSlug = null;
+      if (!_sessionNotificationConfirmationPending) {
+        _deferredNotificationLocation = null;
+        _sessionNotificationRequiresConfirmation = false;
+        _sessionNotificationGeneration++;
+      }
+    }
+  }
+
+  void handleSessionNotification(SessionNotificationPayload payload) {
+    final location = RouteNames.spaceSession(
+      payload.spaceSlug,
+      payload.sessionSlug,
+    );
+    final router = _router;
+    if (router == null || router.routerDelegate.currentConfiguration.isEmpty) {
+      _deferredNotificationLocation = location;
+      return;
+    }
+    if (router.state.uri.path == location) return;
+
+    if (_sessionNotificationConfirmationPending && !_hasActiveSessionPanels) {
+      _deferredNotificationLocation = location;
+      return;
+    }
+
+    if (_hasActiveSessionPanels &&
+        _activeSessionNotificationSlug == payload.sessionSlug) {
+      return;
+    }
+
+    if (_hasActiveSessionPanels) {
+      _deferredNotificationLocation = location;
+      _sessionNotificationRequiresConfirmation = true;
+      _confirmDeferredSessionNotification();
+      return;
+    }
+
+    _goToNotificationLocation(router, location);
+  }
+
+  bool get _hasActiveSessionPanels =>
+      _activeSessionNotificationHandler != null &&
+      _activeSessionNotificationSlug != null;
+
+  void _confirmDeferredSessionNotification() {
+    if (_deferredNotificationLocation == null ||
+        _sessionNotificationConfirmationPending ||
+        !_hasActiveSessionPanels ||
+        _activeSessionNotificationHandler == null) {
+      return;
+    }
+    unawaited(_confirmSessionNotification());
+  }
+
+  Future<void> _confirmSessionNotification() async {
+    final handler = _activeSessionNotificationHandler;
+    if (handler == null || _sessionNotificationConfirmationPending) return;
+    _sessionNotificationConfirmationPending = true;
+    final generation = ++_sessionNotificationGeneration;
+    try {
+      final confirmed = await handler();
+      if (generation != _sessionNotificationGeneration) return;
+      final location = _deferredNotificationLocation;
+      final router = _router;
+      _deferredNotificationLocation = null;
+      _sessionNotificationRequiresConfirmation = false;
+      if (confirmed && location != null && router != null) {
+        _goToNotificationLocation(router, location);
+      }
+    } catch (error, stackTrace) {
+      if (generation == _sessionNotificationGeneration) {
+        _deferredNotificationLocation = null;
+        _sessionNotificationRequiresConfirmation = false;
+      }
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to handle a session notification while in a room',
+      );
+    } finally {
+      if (generation == _sessionNotificationGeneration) {
+        _sessionNotificationConfirmationPending = false;
+      }
+    }
+  }
+
+  void _onRouteChanged() {
+    final router = _router;
+    final location = _deferredNotificationLocation;
+    if (router == null ||
+        location == null ||
+        router.routerDelegate.currentConfiguration.isEmpty) {
+      return;
+    }
+    if (_sessionNotificationRequiresConfirmation ||
+        _sessionNotificationConfirmationPending ||
+        _hasActiveSessionPanels) {
+      return;
+    }
+    if (router.state.uri.path == location) {
+      _deferredNotificationLocation = null;
+      return;
+    }
+
+    _deferredNotificationLocation = null;
+    _goToNotificationLocation(router, location);
+  }
+
+  void _goToNotificationLocation(GoRouter router, String location) {
+    try {
+      router.go(location);
+    } catch (error, stackTrace) {
+      _deferredNotificationLocation = location;
+      ErrorHandler.logError(
+        error,
+        stackTrace: stackTrace,
+        message: 'Failed to navigate to a notification destination',
+      );
+    }
   }
 
   @override
@@ -242,7 +437,7 @@ class AppTotemRouter extends TotemRouter {
     _refreshStream = GoRouterRefreshStream(authController.authStateChanges);
     final profileController = ref.read(userProfileControllerProvider.notifier);
 
-    return GoRouter(
+    final router = GoRouter(
       navigatorKey: navigatorKey,
       initialLocation: '/',
       debugLogDiagnostics: true,
@@ -251,13 +446,26 @@ class AppTotemRouter extends TotemRouter {
       redirect: (context, state) async {
         logger.i('🛻 Router State Change: ${state.fullPath}');
 
-        final isLoggedIn = authController.isAuthenticated;
-        final isOnboardingCompleted = authController.isOnboardingCompleted;
         final isAuthRoute = state.matchedLocation.startsWith('/auth');
         final isOnboardingRoute =
             state.matchedLocation == RouteNames.onboarding;
         final isWelcomeRoute =
             state.matchedLocation == RouteNames.welcome; // '/'
+        final nextRoute = _safeNextRoute(state.uri.queryParameters['next']);
+
+        if (!authController.isAuthStateResolved) {
+          if (isAuthRoute || isWelcomeRoute) return null;
+          final pendingRoute =
+              nextRoute ??
+              (isOnboardingRoute ? null : _safeNextRoute(state.uri.toString()));
+          return Uri(
+            path: RouteNames.welcome,
+            queryParameters: {'next': ?pendingRoute},
+          ).toString();
+        }
+
+        final isLoggedIn = authController.isAuthenticated;
+        final isOnboardingCompleted = authController.isOnboardingCompleted;
 
         // Unauthenticated flow
         if (!isLoggedIn) {
@@ -266,25 +474,37 @@ class AppTotemRouter extends TotemRouter {
 
           if (isWelcomeRoute) {
             // First-time users stay on welcome; returning users go to login
-            return hasSeenWelcomeOnboarding ? RouteNames.login : null;
+            return hasSeenWelcomeOnboarding ? _loginWithNext(nextRoute) : null;
           }
 
           // Auth pages are allowed when logged out
           if (isAuthRoute) return null;
 
           // Any other route requires auth
-          return RouteNames.login;
+          return _loginWithNext(nextRoute ?? state.uri.toString());
         }
 
         // Logged-in flow
         if (!isOnboardingCompleted) {
           // Force onboarding until completed
-          return isOnboardingRoute ? null : RouteNames.onboarding;
+          return isOnboardingRoute
+              ? null
+              : Uri(
+                  path: RouteNames.onboarding,
+                  queryParameters: {
+                    'next':
+                        ?(nextRoute ??
+                        (!isAuthRoute && !isWelcomeRoute
+                            ? state.uri.toString()
+                            : null)),
+                  },
+                ).toString();
         }
 
-        // Logged-in and onboarded: keep them off auth/welcome routes
-        if (isAuthRoute || isWelcomeRoute) {
-          return RouteNames.home;
+        // Logged-in and onboarded: keep them off incomplete onboarding and
+        // authentication routes, honoring the safe destination when present.
+        if (isOnboardingRoute || isAuthRoute || isWelcomeRoute) {
+          return nextRoute ?? RouteNames.home;
         }
 
         return null;
@@ -293,14 +513,16 @@ class AppTotemRouter extends TotemRouter {
         GoRoute(
           path: RouteNames.welcome,
           name: RouteNames.welcome,
-          builder: (context, state) => const OnboardingScreen(),
+          builder: (context, state) => OnboardingScreen(
+            nextRoute: _safeNextRoute(state.uri.queryParameters['next']),
+          ),
         ),
         // Auth routes (no bottom nav)
         GoRoute(
           path: RouteNames.login,
           name: RouteNames.login,
           builder: (context, state) {
-            final nextRoute = state.uri.queryParameters['next'];
+            final nextRoute = _safeNextRoute(state.uri.queryParameters['next']);
             return LoginScreen(nextRoute: nextRoute);
           },
         ),
@@ -312,9 +534,10 @@ class AppTotemRouter extends TotemRouter {
                 (state.uri.queryParameters['email']) ??
                 ((state.extra as Map?)?['email'] as String?) ??
                 '';
-            final nextRoute =
-                state.uri.queryParameters['next'] ??
-                ((state.extra as Map?)?['nextRoute'] as String?);
+            final nextRoute = _safeNextRoute(
+              state.uri.queryParameters['next'] ??
+                  ((state.extra as Map?)?['nextRoute'] as String?),
+            );
             return PinEntryScreen(email: email, nextRoute: nextRoute);
           },
         ),
@@ -566,6 +789,10 @@ class AppTotemRouter extends TotemRouter {
       ],
       errorBuilder: (context, state) => const ErrorScreen(),
     );
+    _router = router;
+    router.routerDelegate.addListener(_onRouteChanged);
+    _onRouteChanged();
+    return router;
   }
 
   @override

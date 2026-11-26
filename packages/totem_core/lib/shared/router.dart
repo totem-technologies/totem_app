@@ -104,6 +104,16 @@ abstract class TotemRouter {
 
   void setTabCloseConfirmationEnabled(bool enabled);
 
+  void setActiveSessionNotificationHandlerForSession(
+    String sessionSlug,
+    Future<bool> Function() handler,
+  ) {}
+
+  void clearActiveSessionNotificationHandlerForSession(
+    String sessionSlug,
+    Future<bool> Function() handler,
+  ) {}
+
   /// Runs [onExit] when the page is being unloaded, such as when the user
   /// closes the tab. Null removes the handler. Only browsers unload pages.
   void setPageExitHandler(VoidCallback? onExit) {}

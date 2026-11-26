@@ -13,7 +13,7 @@ const _module = 'lib/features/permissions';
 
 const _firebaseNotificationPermissions =
     '../totem_app/lib/features/auth/services/'
-    'firebase_notification_permissions.dart';
+    'firebase_messaging_service.dart';
 
 Map<String, String> _sources() => {
   for (final root in _roots)
@@ -111,7 +111,7 @@ void main() {
   test('2: notification permission has a single owner', () {
     check(
       _violations(
-        RegExp(r'requestPermission\(|NotificationPermission\b'),
+        RegExp(r'\brequestPermission\s*\(|\bNotificationPermission\b'),
         allowed: {_firebaseNotificationPermissions},
       ),
     ).isEmpty();

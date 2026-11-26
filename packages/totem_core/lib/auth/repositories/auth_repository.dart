@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+
 import 'package:totem_core/core/services/api_service.dart';
 import 'package:totem_core/core/services/repository_utils.dart';
 
@@ -76,21 +77,22 @@ class AuthRepository {
     }
   }
 
-  Future<void> updateFcmToken(String fcmToken) {
-    return RepositoryUtils.handleApiCall(
-      apiCall: () => apiService.$default.totemApiMobileApiRegisterFcmToken(
-        body: FcmTokenRegisterSchema(token: fcmToken),
+  Future<void> registerFid(String fid) async {
+    await RepositoryUtils.handleApiCall(
+      apiCall: () => apiService.$default.totemApiMobileApiRegisterFcmFid(
+        body: FcmfidRegisterSchema(fid: fid),
       ),
-      operationName: 'update FCM token',
+      operationName: 'register FCM installation',
+      shouldReport: (_) => false,
     );
   }
 
-  Future<void> unregisterFcmToken(String fcmToken) {
+  Future<void> unregisterFid(String fid) {
     return RepositoryUtils.handleApiCall(
-      apiCall: () => apiService.$default.totemApiMobileApiUnregisterFcmToken(
-        token: fcmToken,
-      ),
-      operationName: 'unregister FCM token',
+      apiCall: () =>
+          apiService.$default.totemApiMobileApiUnregisterFcmFid(fid: fid),
+      operationName: 'unregister FCM installation',
+      shouldReport: (_) => false,
     );
   }
 }

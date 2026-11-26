@@ -69,11 +69,8 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
       await ref
           .read(mobileAuthControllerProvider)
           .verifyPin(_pinController.text.trim());
-      Future<void>.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          context.go(widget.nextRoute ?? '/');
-        }
-      });
+      // Auth-state changes trigger the router's redirect synchronously; the
+      // router decides whether onboarding or the requested destination follows.
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -96,11 +93,7 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
         if (_attempts >= _maxAttempts) {
           Future<void>.delayed(const Duration(seconds: 2), () {
             if (mounted) {
-              context.go(
-                widget.nextRoute == null
-                    ? RouteNames.login
-                    : '${RouteNames.login}?next=${Uri.encodeComponent(widget.nextRoute!)}',
-              );
+              context.go(_loginLocation);
             }
           });
         }
@@ -108,12 +101,15 @@ class _PinEntryScreenState extends ConsumerState<PinEntryScreen> {
     }
   }
 
+  String get _loginLocation => widget.nextRoute == null
+      ? RouteNames.login
+      : Uri(
+          path: RouteNames.login,
+          queryParameters: {'next': widget.nextRoute},
+        ).toString();
+
   void _requestNewPin() {
-    context.go(
-      widget.nextRoute == null
-          ? RouteNames.login
-          : '${RouteNames.login}?next=${Uri.encodeComponent(widget.nextRoute!)}',
-    );
+    context.go(_loginLocation);
   }
 
   @override

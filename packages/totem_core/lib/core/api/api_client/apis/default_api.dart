@@ -4,8 +4,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:degenerate_runtime/degenerate_runtime.dart';
 import '../models/error_response.dart';
-import '../models/fcm_token_register_schema.dart';
-import '../models/fcm_token_response_schema.dart';
+import '../models/fcmfid_register_schema.dart';
+import '../models/fcmfid_response_schema.dart';
 import '../models/message_response.dart';
 import '../models/onboard_schema.dart';
 import '../models/pin_request_schema.dart';
@@ -23,14 +23,14 @@ final class DefaultApi with ApiExecutor {
   @override
   final ApiConfig apiConfig;
 
-  /// Register Fcm Token
+  /// Register Fcm Fid
   ///
-  /// Register or update an FCM token for the current user
+  /// Register or update a Firebase Installation ID for the current user.
   ///
   /// `POST /api/mobile/protected/fcm/register`
-  Future<ApiResult<FcmTokenResponseSchema, Never>>
-  totemApiMobileApiRegisterFcmToken({
-    required FcmTokenRegisterSchema body,
+  Future<ApiResult<FcmfidResponseSchema, Never>>
+  totemApiMobileApiRegisterFcmFid({
+    required FcmfidRegisterSchema body,
     RequestOptions? options,
   }) async {
     final headers = <String, String>{...apiConfig.defaultHeaders};
@@ -48,26 +48,25 @@ final class DefaultApi with ApiExecutor {
       request,
       onSuccess: (response) {
         final json = jsonDecode(response.body);
-        return FcmTokenResponseSchema.fromJson(json as Map<String, dynamic>);
+        return FcmfidResponseSchema.fromJson(json as Map<String, dynamic>);
       },
     );
   }
 
-  /// Unregister Fcm Token
+  /// Unregister Fcm Fid
   ///
-  /// Delete an FCM token for the current user
+  /// Delete an installation registered to the current user.
   ///
-  /// `DELETE /api/mobile/protected/fcm/unregister/{token}`
-  Future<ApiResult<void, Never>> totemApiMobileApiUnregisterFcmToken({
-    required String token,
+  /// `DELETE /api/mobile/protected/fcm/unregister/{fid}`
+  Future<ApiResult<void, Never>> totemApiMobileApiUnregisterFcmFid({
+    required String fid,
     RequestOptions? options,
   }) async {
     final headers = <String, String>{...apiConfig.defaultHeaders};
 
     final request = ApiRequest(
       method: 'DELETE',
-      path:
-          '/api/mobile/protected/fcm/unregister/${Uri.encodeComponent(token)}',
+      path: '/api/mobile/protected/fcm/unregister/${Uri.encodeComponent(fid)}',
       headers: headers,
       options: options,
     );
