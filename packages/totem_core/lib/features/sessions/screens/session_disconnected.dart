@@ -134,6 +134,7 @@ class _SessionDisconnectedScreenState
     extends ConsumerState<SessionDisconnectedScreen> {
   Timer? _confettiTimer;
   Timer? _spacesSummaryRefreshTimer;
+  bool _rejoining = false;
 
   @override
   void initState() {
@@ -183,8 +184,15 @@ class _SessionDisconnectedScreenState
 
   void _rejoin() {
     final session = widget.session;
-    if (session == null) return;
-    unawaited(TotemRouter.instance.rejoinSession(context, session.slug));
+    if (session == null || _rejoining) return;
+    setState(() => _rejoining = true);
+    unawaited(
+      TotemRouter.instance.rejoinSession(context, session.slug).whenComplete(
+        () {
+          if (mounted) setState(() => _rejoining = false);
+        },
+      ),
+    );
   }
 
   /// The space's next session, or a recommended session when the space has
@@ -272,6 +280,9 @@ class _SessionDisconnectedScreenState
         )!;
 
     final session = widget.session;
+    // The room state may be unavailable or stale here, and explicit reasons
+    // bypass resolveDisconnectedReason, so the session detail is a second
+    // guard against offering rejoin after the event has ended.
     final sessionReason =
         session?.ended == true &&
             resolvedReason == SessionDisconnectedReason.movedToAnotherDevice
@@ -295,7 +306,7 @@ class _SessionDisconnectedScreenState
               ? (message) => _sendDislike(session, message)
               : null,
           onGoHome: _goHome,
-          onRejoin: session == null ? null : _rejoin,
+          onRejoin: session == null || _rejoining ? null : _rejoin,
         ),
       ),
     );
@@ -424,7 +435,6 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
                   reason: reason,
                   feedback: feedback,
                   nextSession: nextSession,
-                  onGoHome: onGoHome,
                   actions: actions,
                 ),
                 ViewportKind.smallLandscape => _TwoColumnLayout(
@@ -565,14 +575,12 @@ class _PortraitLayout extends StatelessWidget {
     required this.reason,
     required this.feedback,
     required this.nextSession,
-    required this.onGoHome,
     required this.actions,
   });
 
   final SessionDisconnectedReason reason;
   final Widget? feedback;
   final NextSessionPromo? nextSession;
-  final VoidCallback onGoHome;
   final Widget actions;
 
   @override
@@ -1190,6 +1198,7 @@ class _ActionButtons extends StatelessWidget {
   final VoidCallback? onPressed;
   final VoidCallback onGoHome;
   static const double _horizontalPadding = 58;
+  static const double _spacing = 8;
 
   /// Estimated height of the button laid out in [maxWidth].
   static double _buttonHeight(BuildContext context, double maxWidth) {
@@ -1204,7 +1213,7 @@ class _ActionButtons extends StatelessWidget {
 
   double extraHeight(BuildContext context, double maxWidth) =>
       action == _DisconnectedAction.rejoin
-      ? _buttonHeight(context, maxWidth)
+      ? _buttonHeight(context, maxWidth) + _spacing
       : 0;
 
   double height(BuildContext context, double maxWidth) =>
@@ -1230,7 +1239,7 @@ class _ActionButtons extends StatelessWidget {
     if (action != _DisconnectedAction.rejoin) return button(action, onPressed);
     return Column(
       mainAxisSize: MainAxisSize.min,
-      spacing: 8,
+      spacing: _spacing,
       children: [
         button(action, onPressed),
         button(_DisconnectedAction.upcomingSessions, onGoHome),

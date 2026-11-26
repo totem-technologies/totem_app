@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +30,17 @@ import '../../../setup.dart';
 class MockSharedPreferences extends Mock implements SharedPreferences {}
 
 class MockInAppReview extends Mock implements InAppReview {}
+
+class _DelayedRejoinRouter extends FakeTotemRouter {
+  final completer = Completer<void>();
+  int rejoinCount = 0;
+
+  @override
+  Future<void> rejoinSession(BuildContext context, String sessionSlug) {
+    rejoinCount++;
+    return completer.future;
+  }
+}
 
 SessionRoomState _createEndedState({
   RoomStatus status = RoomStatus.ended,
@@ -548,6 +561,39 @@ void main() {
       final seeAllSessions = find.text('See all upcoming sessions');
 
       setUp(() => TotemRouter.instance = FakeTotemRouter());
+
+      testWidgets(
+        'ignores another rejoin tap while the first is pending',
+        (tester) async {
+          final router = _DelayedRejoinRouter();
+          TotemRouter.instance = router;
+          await _pumpDisconnectedScreen(
+            tester,
+            size: const Size(390, 844),
+            reason: SessionDisconnectedReason.movedToAnotherDevice,
+            session: _sessionWithNextEvent(ended: false),
+          );
+
+          final rejoin = find.text('Rejoin Here');
+          await tester.ensureVisible(rejoin);
+          await tester.tap(rejoin);
+          await tester.pump();
+          check(router.rejoinCount).equals(1);
+          final button = tester.widget<TextButton>(
+            find.ancestor(of: rejoin, matching: find.byType(TextButton)).first,
+          );
+          check(button.onPressed).isNull();
+
+          await tester.tap(rejoin);
+          check(router.rejoinCount).equals(1);
+          router.completer.complete();
+          await tester.pump();
+          await tester.pump();
+        },
+        experimentalLeakTesting: LeakTesting.settings.withIgnored(
+          classes: <String>['TextPainter'],
+        ),
+      );
 
       for (final size in const [Size(390, 844), Size(906, 339)]) {
         testWidgets(

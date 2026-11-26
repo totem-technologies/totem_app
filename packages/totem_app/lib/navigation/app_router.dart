@@ -210,15 +210,14 @@ class AppTotemRouter extends TotemRouter {
 
   @override
   Future<void> rejoinSession(BuildContext context, String slug) async {
+    final router = GoRouter.of(context);
     final container = ProviderScope.containerOf(context);
     final mediaProvider = preJoinMediaControllerProvider(slug);
 
     // If invoked from an active room, disconnect it before releasing or
     // reacquiring mobile capture devices.
-    if (container.read(currentSessionProvider.exists)) {
-      final session = container.read(currentSessionProvider);
-      if (session != null) await session.leave();
-    }
+    final session = container.read(currentSessionProvider);
+    if (session != null) await session.leave();
 
     // Wait for preview capture teardown before invalidation can create a fresh
     // controller and start another capture (notably important on mobile).
@@ -226,11 +225,10 @@ class AppTotemRouter extends TotemRouter {
       await container.read(mediaProvider.notifier).releaseForTerminalOutcome();
     }
 
-    if (!context.mounted) return;
     container
       ..invalidate(preJoinFlowControllerProvider(slug))
       ..invalidate(mediaProvider);
-    context.pushReplacement(
+    router.pushReplacement(
       RouteNames.session(slug),
       extra: _RejoinRouteMarker(),
     );

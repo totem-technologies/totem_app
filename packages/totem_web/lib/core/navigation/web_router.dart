@@ -139,6 +139,7 @@ class WebTotemRouter extends TotemRouter {
 
   @override
   Future<void> rejoinSession(BuildContext context, String slug) async {
+    _browser.setTabCloseConfirmationEnabled(false);
     _browser.reload();
   }
 

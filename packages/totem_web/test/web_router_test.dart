@@ -225,6 +225,7 @@ void main() {
   testWidgets('rejoining a session reloads the browser page', (tester) async {
     final browser = _FakeBrowserEnvironment();
     final router = WebTotemRouter(browser: browser);
+    router.setTabCloseConfirmationEnabled(true);
     late BuildContext context;
     await tester.pumpWidget(
       Builder(
@@ -237,6 +238,7 @@ void main() {
 
     await router.rejoinSession(context, 'session');
 
+    check(browser.tabCloseConfirmationEnabled).isFalse();
     check(browser.reloaded).isTrue();
   });
 

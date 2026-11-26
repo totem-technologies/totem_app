@@ -16,7 +16,9 @@ import 'package:totem_core/core/api/api_client/api_client.dart';
 
 import 'package:totem_core/core/config/app_config.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/pre_join/pre_join_screen.dart';
+import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/shared/router.dart';
 
 UserSchema _testUser({String? slug, String? name}) => UserSchema(
@@ -60,6 +62,15 @@ class _FakeMobileAuthController extends MobileAuthController {
   }
 }
 
+class _LeavingSessionController extends SessionController {
+  _LeavingSessionController(this.onLeave);
+
+  final Future<void> Function() onLeave;
+
+  @override
+  Future<void> leave() => onLeave();
+}
+
 class _FakeUserProfileController extends UserProfileController {
   _FakeUserProfileController(this._hasSeenWelcome);
 
@@ -77,6 +88,7 @@ Future<GoRouter> _pumpRouter(
   required AuthState authState,
   required bool hasSeenWelcome,
   Future<SessionDetailSchema>? sessionData,
+  SessionController? currentSession,
 }) async {
   final authController = _FakeMobileAuthController(authState);
   final routerOwner = AppTotemRouter();
@@ -95,6 +107,8 @@ Future<GoRouter> _pumpRouter(
         ),
         if (sessionData != null)
           sessionProvider('session-1').overrideWith((ref) => sessionData),
+        if (currentSession != null)
+          currentSessionProvider.overrideWith((ref) => currentSession),
       ],
       child: Consumer(
         builder: (context, ref, child) {
@@ -244,6 +258,50 @@ void main() {
     },
     experimentalLeakTesting: LeakTesting.settings.withIgnored(
       // auto_size_text 3.0.0 does not dispose TextPainters created while sizing.
+      classes: <String>['TextPainter'],
+    ),
+  );
+
+  testWidgets(
+    'rejoining waits for an active session to leave before navigating',
+    (tester) async {
+      final leave = Completer<void>();
+      var leaveCalled = false;
+      final currentSession = _LeavingSessionController(() {
+        leaveCalled = true;
+        return leave.future;
+      });
+      final router = await _pumpRouter(
+        tester,
+        authState: AuthState.authenticated(
+          user: _testUser(slug: 'user', name: 'Alex'),
+        ),
+        hasSeenWelcome: true,
+        sessionData: Completer<SessionDetailSchema>().future,
+        currentSession: currentSession,
+      );
+      router.go(RouteNames.session('session-1'));
+      await tester.pump();
+      await tester.pump();
+
+      final screen = find.byType(PreJoinScreen);
+      final operation = (TotemRouter.instance as AppTotemRouter).rejoinSession(
+        tester.element(screen),
+        'session-1',
+      );
+      await tester.pump();
+      check(leaveCalled).equals(true);
+      leave.complete();
+      await operation;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      check(router.state.uri.path).equals(RouteNames.session('session-1'));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    },
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
       classes: <String>['TextPainter'],
     ),
   );
