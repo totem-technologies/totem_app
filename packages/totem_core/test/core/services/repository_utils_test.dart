@@ -275,6 +275,27 @@ void main() {
       });
     });
 
+    for (final (type, code) in <(DioExceptionType, String)>[
+      (DioExceptionType.connectionError, 'NO_CONNECTION'),
+      (DioExceptionType.unknown, 'NETWORK_ERROR'),
+    ]) {
+      test('marks ${type.name} failures as retryable network errors', () async {
+        check(
+          RepositoryUtils.handleApiCall<String>(
+            apiCall: () async {
+              throw DioException(
+                requestOptions: RequestOptions(path: '/auth/request-pin'),
+                type: type,
+              );
+            },
+            operationName: 'request PIN',
+          ),
+        ).throws<AppNetworkException>((error) {
+          error.has((it) => it.code, 'code').equals(code);
+        });
+      });
+    }
+
     test('reports a non-retried failure exactly once', () async {
       final failure = StateError('boom');
       var attempts = 0;

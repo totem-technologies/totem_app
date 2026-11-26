@@ -226,6 +226,14 @@ class RepositoryUtils {
       return AppNetworkException.serverError(statusCode, details: details);
     }
 
+    final message = error.message;
+    final safeMessage =
+        message != null &&
+            _redactRequestPath(error.requestOptions.path) !=
+                error.requestOptions.path
+        ? _redactRequestPath(message)
+        : message;
+
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
@@ -233,6 +241,12 @@ class RepositoryUtils {
         return AppNetworkException(
           'Request timed out',
           code: 'TIMEOUT',
+          details: details,
+        );
+      case DioExceptionType.connectionError:
+        return AppNetworkException(
+          'Network error during $operationName: $safeMessage',
+          code: 'NO_CONNECTION',
           details: details,
         );
       case DioExceptionType.unknown:
@@ -246,16 +260,10 @@ class RepositoryUtils {
         }
         return AppNetworkException(
           'Network error during $operationName',
+          code: 'NETWORK_ERROR',
           details: details,
         );
       default:
-        final message = error.message;
-        final safeMessage =
-            message != null &&
-                _redactRequestPath(error.requestOptions.path) !=
-                    error.requestOptions.path
-            ? _redactRequestPath(message)
-            : message;
         return AppNetworkException(
           'Network error during $operationName: $safeMessage',
           details: details,

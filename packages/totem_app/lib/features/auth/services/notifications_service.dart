@@ -100,9 +100,7 @@ void _reportUnexpectedNotificationError(
 class NotificationsService with WidgetsBindingObserver {
   NotificationsService._internal()
     : _readNotificationPermission = _readFirebaseNotificationPermission,
-      _reportUnexpectedError = _reportUnexpectedNotificationError {
-    WidgetsBinding.instance.addObserver(this);
-  }
+      _reportUnexpectedError = _reportUnexpectedNotificationError;
 
   @visibleForTesting
   NotificationsService.forTesting({
@@ -120,6 +118,7 @@ class NotificationsService with WidgetsBindingObserver {
   final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
+  bool _lifecycleObserverRegistered = false;
   bool _firebaseInitialized = false;
   bool _localNotificationsReady = false;
   bool _localInitializationAttempted = false;
@@ -156,6 +155,10 @@ class NotificationsService with WidgetsBindingObserver {
 
   Future<void> initialize() {
     if (_initialized) return Future.value();
+    if (!_lifecycleObserverRegistered) {
+      WidgetsBinding.instance.addObserver(this);
+      _lifecycleObserverRegistered = true;
+    }
     return _initialization ??= _initialize().whenComplete(() {
       _initialization = null;
     });
