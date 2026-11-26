@@ -1,10 +1,12 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' show ClientException;
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_events.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_state_reducer.dart';
+import 'package:totem_core/features/sessions/transport/session_transport.dart';
 
 import '../../media/test_participants.dart';
 
@@ -41,6 +43,51 @@ void main() {
     const reducer = SessionStateReducer();
 
     group('ConnectionState', () {
+      group('ReconnectingChanged event', () {
+        SessionRoomState connected() => SessionRoomState(
+          connection: const ConnectionState(
+            phase: SessionPhase.connected,
+            state: RoomConnectionState.connected,
+          ),
+          participants: const ParticipantsState(),
+          turn: SessionTurnState(roomState: _roomState()),
+        );
+
+        test('marks a connected session as reconnecting and back', () {
+          final reconnecting = reducer.reduceState(
+            connected(),
+            const ReconnectingChanged(isReconnecting: true),
+          );
+          check(reconnecting.connection.isReconnecting).isTrue();
+          check(
+            reconnecting.connection.state,
+          ).equals(RoomConnectionState.connected);
+
+          final recovered = reducer.reduceState(
+            reconnecting,
+            const ReconnectingChanged(isReconnecting: false),
+          );
+          check(recovered.connection.isReconnecting).isFalse();
+        });
+
+        test('a disconnect ends the reconnect attempt', () {
+          final reconnecting = reducer.reduceState(
+            connected(),
+            const ReconnectingChanged(isReconnecting: true),
+          );
+
+          final next = reducer.reduceState(
+            reconnecting,
+            const ConnectionChanged(
+              RoomConnectionState.disconnected,
+              SessionPhase.disconnected,
+            ),
+          );
+
+          check(next.connection.isReconnecting).isFalse();
+        });
+      });
+
       group('ConnectionChanged event', () {
         test('resets removed and clears error when connected', () {
           final current = _initialState();
@@ -119,6 +166,47 @@ void main() {
           check(next.connection.error).equals(error);
           check(next.connection.state).equals(RoomConnectionState.error);
           check(next.phase).equals(SessionPhase.error);
+        });
+
+        test('a transport failure without a LiveKit cause is an error too', () {
+          // A failed rejoin on web: LiveKit's validate request couldn't fetch.
+          final error = RoomTransportError(
+            SessionTransportFailure(
+              SessionTransportFailureKind.unexpected,
+              'Failed to fetch',
+              cause: ClientException('Failed to fetch'),
+              stackTrace: StackTrace.empty,
+            ),
+          );
+
+          final next = reducer.reduceState(
+            _initialState(),
+            SessionErrorChanged(error),
+          );
+
+          check(next.connection.error).equals(error);
+          check(next.connection.state).equals(RoomConnectionState.error);
+          check(next.phase).equals(SessionPhase.error);
+        });
+
+        test('an error ends a reconnect attempt', () {
+          final reconnecting = SessionRoomState(
+            connection: const ConnectionState(
+              phase: SessionPhase.connected,
+              state: RoomConnectionState.connected,
+              isReconnecting: true,
+            ),
+            participants: const ParticipantsState(),
+            turn: SessionTurnState(roomState: _roomState()),
+          );
+
+          final next = reducer.reduceState(
+            reconnecting,
+            SessionErrorChanged(RoomLiveKitError(MediaConnectException())),
+          );
+
+          check(next.connection.state).equals(RoomConnectionState.error);
+          check(next.connection.isReconnecting).isFalse();
         });
 
         test('preserves state for non-livekit errors', () {

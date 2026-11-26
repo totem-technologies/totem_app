@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
@@ -15,6 +16,7 @@ import 'package:totem_core/features/sessions/screens/options/leave_session_confi
 import 'package:totem_core/shared/router.dart';
 
 import '../../../../setup.dart';
+import '../../presentation/action_feedback_host.dart';
 
 class _Session extends Mock implements SessionController {}
 
@@ -56,25 +58,27 @@ Future<Completer<bool?>> _pumpConfirmation(
         isCurrentUserKeeperProvider.overrideWithValue(true),
       ],
       child: MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: TextButton(
-              onPressed: () async {
-                final result = await showDialog<bool>(
-                  context: context,
-                  useRootNavigator: false,
-                  builder: (_) => leaveAfterEnd
-                      ? const LeaveSessionConfirmationDialog()
-                      : EndSessionConfirmationDialog(session: session),
-                );
-                dialogCompleted.complete(result);
-                // Mirrors the caller's leave contract: the dialog must
-                // return true before connection cleanup is requested.
-                if (leaveAfterEnd && result == true) {
-                  await session.leave();
-                }
-              },
-              child: const Text('Open confirmation'),
+        home: ActionFeedbackHost(
+          child: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () async {
+                  final result = await showDialog<bool>(
+                    context: context,
+                    useRootNavigator: false,
+                    builder: (_) => leaveAfterEnd
+                        ? const LeaveSessionConfirmationDialog()
+                        : EndSessionConfirmationDialog(session: session),
+                  );
+                  dialogCompleted.complete(result);
+                  // Mirrors the caller's leave contract: the dialog must
+                  // return true before connection cleanup is requested.
+                  if (leaveAfterEnd && result == true) {
+                    await session.leave();
+                  }
+                },
+                child: const Text('Open confirmation'),
+              ),
             ),
           ),
         ),
@@ -111,16 +115,20 @@ void main() {
         final action = leaveAfterEnd ? 'End session and Leave' : 'End session';
         await tester.tap(find.text(action).last);
         await tester.pump();
+        // Ending owns its deadline, so a slow end is not shown as a failure.
+        await tester.pump(const Duration(seconds: 11));
+        check(find.text('Something Went Wrong').evaluate()).isEmpty();
         check(dialogCompleted.isCompleted).isFalse();
         pendingEnd.completeError(AppNetworkException.noConnection());
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
-        check(find.text('Retry').evaluate()).length.equals(1);
-        // Dismiss only the error recovery route; the session confirmation must
-        // remain available instead of treating a handled failure as success.
-        await tester.tap(find.text('Cancel').last);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
+        check(find.text("Couldn't end the session").evaluate()).isNotEmpty();
+        check(
+          find
+              .text('The session is still running. Please try again.')
+              .evaluate(),
+        ).isNotEmpty();
+        // The confirmation stays open, so confirming again is the retry.
         check(dialogCompleted.isCompleted).isFalse();
         verifyNever(session.leave);
         check(find.text(action).evaluate()).isNotEmpty();
@@ -139,63 +147,10 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       },
-    );
-  }
-
-  for (final retrySucceeds in [false, true]) {
-    testWidgets(
-      '${retrySucceeds ? 'successful' : 'failed'} explicit retry waits for its backend outcome before leaving',
-      (tester) async {
-        final session = _Session();
-        final keeper = _Keeper();
-        final firstEnd = Completer<bool>();
-        final retriedEnd = Completer<bool>();
-        var requests = 0;
-        when(() => session.keeper).thenReturn(keeper);
-        when(keeper.endSession).thenAnswer((_) {
-          requests++;
-          return requests == 1 ? firstEnd.future : retriedEnd.future;
-        });
-        when(session.leave).thenAnswer((_) async {});
-        final dialogCompleted = await _pumpConfirmation(
-          tester,
-          session: session,
-          leaveAfterEnd: true,
-        );
-        await tester.tap(find.text('Open confirmation'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('End session and Leave'));
-        await tester.pump();
-        firstEnd.completeError(AppNetworkException.noConnection());
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.tap(find.text('Retry'));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
-        check(requests).equals(2);
-        check(dialogCompleted.isCompleted).isFalse();
-        verifyNever(session.leave);
-        if (retrySucceeds) {
-          retriedEnd.complete(true);
-        } else {
-          retriedEnd.completeError(AppNetworkException.noConnection());
-        }
-        await tester.pumpAndSettle();
-        if (retrySucceeds) {
-          check(dialogCompleted.isCompleted).isTrue();
-          check(await dialogCompleted.future).equals(true);
-          verify(session.leave).called(1);
-        } else {
-          check(dialogCompleted.isCompleted).isFalse();
-          verifyNever(session.leave);
-          await tester.tap(find.text('Cancel').last);
-          await tester.pumpAndSettle();
-          check(await dialogCompleted.future).isNull();
-          verifyNever(session.leave);
-        }
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump();
-      },
+      // auto_size_text's notification banner does not dispose its TextPainters.
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
     );
   }
 }

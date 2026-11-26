@@ -8,7 +8,14 @@ import 'package:totem_core/core/config/theme.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 import 'package:totem_core/shared/widgets/loading_indicator.dart';
 
+import '../../setup.dart';
+
 void main() {
+  setUp(() {
+    setupAppConfig();
+    silenceLogger();
+  });
+
   Future<void> pumpDialog(
     WidgetTester tester, {
     required ConfirmationDialog dialog,
@@ -150,29 +157,70 @@ void main() {
       check(tester.widgetList(find.byType(AlertDialog))).length.equals(0);
     });
 
-    testWidgets('shows timeout error dialog when confirm exceeds 10 seconds', (
-      tester,
-    ) async {
-      final neverCompletes = Completer<void>();
+    testWidgets(
+      'treats a confirm exceeding its timeout as a failure and re-enables it',
+      (tester) async {
+        final neverCompletes = Completer<void>();
 
-      await pumpDialog(
-        tester,
-        dialog: ConfirmationDialog(
-          content: 'This will time out',
-          confirmButtonText: 'Proceed',
-          onConfirm: () => neverCompletes.future,
-        ),
-      );
+        await pumpDialog(
+          tester,
+          dialog: ConfirmationDialog(
+            content: 'This will time out',
+            confirmButtonText: 'Proceed',
+            onConfirm: () => neverCompletes.future,
+          ),
+        );
 
-      await tester.tap(find.text('Proceed'));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 10));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Proceed'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 10));
+        await tester.pumpAndSettle();
 
-      check(
-        tester.widgetList(find.text('Something Went Wrong')),
-      ).length.equals(1);
-      check(tester.widgetList(find.text('OK'))).length.equals(1);
-    });
+        check(
+          tester.widgetList(find.text('Something Went Wrong')),
+        ).length.equals(1);
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+        // The confirmation stays open and can be confirmed again.
+        check(tester.widgetList(find.byType(LoadingIndicator))).isEmpty();
+        check(tester.widgetList(find.text('Proceed'))).length.equals(1);
+      },
+    );
+
+    testWidgets(
+      'shows one error for a throwing confirm instead of escaping or timing out',
+      (tester) async {
+        var calls = 0;
+
+        await pumpDialog(
+          tester,
+          dialog: ConfirmationDialog(
+            content: 'This will fail',
+            confirmButtonText: 'Proceed',
+            onConfirm: () async {
+              calls++;
+              throw StateError('confirm failed');
+            },
+          ),
+        );
+
+        await tester.tap(find.text('Proceed'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 10));
+        await tester.pumpAndSettle();
+
+        check(tester.takeException()).isNull();
+        check(
+          tester.widgetList(find.text('Something Went Wrong')),
+        ).length.equals(1);
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Proceed'));
+        await tester.pumpAndSettle();
+        check(calls).equals(2);
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+      },
+    );
   });
 }

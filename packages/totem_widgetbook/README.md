@@ -48,7 +48,7 @@ The catalog has exactly two roots:
 Components/
   Buttons/     CircleIconButton, Button
   Dialogs/     ConfirmationDialog, ErrorDialog, UpdateAvailableDialog
-  Feedback/    EmptyIndicator, ErrorScreen, InfoText, LoadingIndicator, LoadingScreen
+  Feedback/    EmptyIndicator, ErrorScreen, InfoText, LoadingIndicator, LoadingScreen, NotificationBanner
   Navigation/  PageIndicator, SheetDragHandle
   Brand/       TotemIcon, TotemIconLogo, TotemLogo
   Sessions/    SessionCard, SessionControls, JoinTransitionCard, GroundingMarquee, ParticipantCard, SessionWaitingQueueButton

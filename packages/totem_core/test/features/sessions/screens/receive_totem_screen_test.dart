@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/permissions/media_control.dart';
 import 'package:totem_core/features/permissions/model.dart';
@@ -30,6 +31,7 @@ import '../controllers/core/session_controller_mock.dart';
 import '../controllers/features/session_device_controller_mock.dart';
 import '../livekit_mocks.dart';
 import '../media/test_participants.dart';
+import '../presentation/action_feedback_host.dart';
 import '../session_test_fixtures.dart';
 import '../session_test_mocks.dart';
 
@@ -195,8 +197,10 @@ void main() {
           ),
         ],
         child: const MaterialApp(
-          home: SessionKeyboardShortcuts(
-            child: Scaffold(body: ReceiveTotemScreen()),
+          home: ActionFeedbackHost(
+            child: SessionKeyboardShortcuts(
+              child: Scaffold(body: ReceiveTotemScreen()),
+            ),
           ),
         ),
       ),
@@ -370,53 +374,51 @@ void main() {
       check(card.participant.identity).equals('user-1');
     });
 
-    testWidgets('a failed receive swipe explains failure and allows retry', (
-      tester,
-    ) async {
-      var callCount = 0;
-      when(() => keeper.acceptTotem()).thenAnswer((_) async {
-        callCount += 1;
-        if (callCount == 1) throw Exception('accept failed once');
-      });
-      final feedbackService = _TestSessionCuesService();
-      await pumpReceiveTotem(tester, feedbackService: feedbackService);
+    testWidgets(
+      'a failed receive swipe shows a room banner without a success pulse and allows retry',
+      (tester) async {
+        var callCount = 0;
+        when(() => keeper.acceptTotem()).thenAnswer((_) async {
+          callCount += 1;
+          if (callCount == 1) throw AppNetworkException.noConnection();
+        });
+        final feedbackService = _TestSessionCuesService();
+        await pumpReceiveTotem(tester, feedbackService: feedbackService);
 
-      await tester.drag(
-        find.byKey(ActionSlider.thumbKey),
-        const Offset(800, 0),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      check(callCount).equals(1);
-      check(
-        find
-            .text('We were unable to accept the totem. Please try again.')
-            .evaluate(),
-      ).isNotEmpty();
-      check(feedbackService.swipePulseCount).equals(1);
+        await tester.drag(
+          find.byKey(ActionSlider.thumbKey),
+          const Offset(800, 0),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        check(callCount).equals(1);
+        check(find.text("Couldn't receive the totem").evaluate()).isNotEmpty();
+        check(
+          find
+              .text('We were unable to accept the totem. Please try again.')
+              .evaluate(),
+        ).isNotEmpty();
+        check(feedbackService.swipePulseCount).equals(0);
 
-      await tester.drag(
-        find.byKey(ActionSlider.thumbKey),
-        const Offset(800, 0),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      check(callCount).equals(2);
-      check(feedbackService.swipePulseCount).equals(2);
-      // The successful attempt stays busy until authoritative turn state changes.
-      await tester.drag(
-        find.byKey(ActionSlider.thumbKey),
-        const Offset(800, 0),
-      );
-      await tester.pump();
-      check(callCount).equals(2);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      check(
-        find
-            .text('We were unable to accept the totem. Please try again.')
-            .evaluate(),
-      ).isEmpty();
-    });
+        await tester.drag(
+          find.byKey(ActionSlider.thumbKey),
+          const Offset(800, 0),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        check(callCount).equals(2);
+        check(feedbackService.swipePulseCount).equals(1);
+        // The successful attempt stays busy until authoritative turn state changes.
+        await tester.drag(
+          find.byKey(ActionSlider.thumbKey),
+          const Offset(800, 0),
+        );
+        await tester.pump();
+        check(callCount).equals(2);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        check(find.text("Couldn't receive the totem").evaluate()).isEmpty();
+      },
+    );
   });
 }

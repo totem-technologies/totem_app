@@ -1,6 +1,7 @@
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -14,6 +15,7 @@ import 'package:totem_core/features/sessions/widgets/session_prompts_modal.dart'
 
 import '../../../setup.dart';
 import '../controllers/core/session_controller_mock.dart';
+import '../presentation/action_feedback_host.dart';
 import '../session_test_mocks.dart';
 
 SessionRoomState _sessionState() => const SessionRoomState(
@@ -40,62 +42,72 @@ SessionRoomState _sessionState() => const SessionRoomState(
 void main() {
   setUpAll(setupAppConfig);
 
-  testWidgets('reports a failed prepared prompt selection', (tester) async {
-    final session = MockSessionController();
-    final keeper = MockSessionKeeperController();
-    when(() => session.keeper).thenReturn(keeper);
-    when(
-      () => keeper.setPrompt(
-        customPrompt: null,
-        sessionPromptId: 1,
-        clearPrompt: false,
-      ),
-    ).thenThrow(Exception('selection failed'));
+  testWidgets(
+    'reports a failed prepared prompt selection as a room banner',
+    (tester) async {
+      final session = MockSessionController();
+      final keeper = MockSessionKeeperController();
+      when(() => session.keeper).thenReturn(keeper);
+      when(
+        () => keeper.setPrompt(
+          customPrompt: null,
+          sessionPromptId: 1,
+          clearPrompt: false,
+        ),
+      ).thenThrow(Exception('selection failed'));
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentSessionProvider.overrideWithValue(session),
-          currentSessionStateProvider.overrideWithValue(_sessionState()),
-          sessionPromptsControllerProvider('test-session').overrideWithValue(
-            const SessionPromptsState(
-              snapshot: SessionPromptsSchema(
-                revision: 1,
-                prompts: [
-                  SessionPromptSchema(
-                    id: 1,
-                    prompt: 'A prepared prompt',
-                    position: 0,
-                    consumedRoundNumbers: [],
-                  ),
-                ],
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentSessionProvider.overrideWithValue(session),
+            currentSessionStateProvider.overrideWithValue(_sessionState()),
+            sessionPromptsControllerProvider('test-session').overrideWithValue(
+              const SessionPromptsState(
+                snapshot: SessionPromptsSchema(
+                  revision: 1,
+                  prompts: [
+                    SessionPromptSchema(
+                      id: 1,
+                      prompt: 'A prepared prompt',
+                      position: 0,
+                      consumedRoundNumbers: [],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          child: const MaterialApp(
+            home: ActionFeedbackHost(
+              child: Scaffold(
+                body: SessionPromptsModal(sessionSlug: 'test-session'),
               ),
             ),
           ),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: SessionPromptsModal(sessionSlug: 'test-session'),
-          ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('Use now'));
-    await tester.pump();
+      await tester.tap(find.text('Use now'));
+      await tester.pump();
 
-    check(
-      tester.widgetList(find.text('Oops! Something went wrong.')),
-    ).length.equals(1);
-    verify(
-      () => keeper.setPrompt(
-        customPrompt: null,
-        sessionPromptId: 1,
-        clearPrompt: false,
-      ),
-    ).called(1);
+      check(
+        tester.widgetList(find.text("Couldn't update the prompt")),
+      ).length.equals(1);
+      check(find.text('Please try again.').evaluate()).isNotEmpty();
+      verify(
+        () => keeper.setPrompt(
+          customPrompt: null,
+          sessionPromptId: 1,
+          clearPrompt: false,
+        ),
+      ).called(1);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+    // auto_size_text's notification banner does not dispose its TextPainters.
+    experimentalLeakTesting: LeakTesting.settings.withIgnored(
+      classes: <String>['TextPainter'],
+    ),
+  );
 }

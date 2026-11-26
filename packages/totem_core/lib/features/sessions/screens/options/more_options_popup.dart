@@ -16,6 +16,7 @@ import 'package:totem_core/features/sessions/controllers/features/session_device
 import 'package:totem_core/features/sessions/media/local_media.dart';
 import 'package:totem_core/features/sessions/media/media_devices_provider.dart';
 import 'package:totem_core/features/sessions/media/media_platform.dart';
+import 'package:totem_core/features/sessions/presentation/session_action_feedback.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/options/end_session_confirmation_dialog.dart';
 import 'package:totem_core/features/sessions/screens/options/force_pass_confirmation_dialog.dart';
@@ -225,8 +226,12 @@ class MoreOptions extends ConsumerWidget {
                 icon: TotemIcons.microphoneOff,
                 type: MoreOptionsTileType.destructive,
                 onTap: () {
+                  // The popup closes first, so capture the room-level reporter.
+                  final feedback = ref.read(
+                    sessionActionFeedbackProvider.notifier,
+                  );
                   Navigator.of(context).pop();
-                  _onMuteEveryone(currentSession);
+                  unawaited(_onMuteEveryone(currentSession, feedback));
                 },
               ),
               MoreOptionsTile<void>(
@@ -391,8 +396,20 @@ class MoreOptions extends ConsumerWidget {
     );
   }
 
-  Future<void> _onMuteEveryone(SessionController session) =>
-      session.keeper.muteEveryone();
+  Future<void> _onMuteEveryone(
+    SessionController session,
+    SessionActionFeedback feedback,
+  ) async {
+    try {
+      await session.keeper.muteEveryone();
+    } catch (error, stackTrace) {
+      feedback.report(
+        SessionAction.muteEveryone,
+        error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   @visibleForTesting
   Future<void> onForcePass(

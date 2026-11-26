@@ -22,6 +22,8 @@ class LeaveSessionConfirmationDialog extends ConsumerWidget {
     return ConfirmationDialog(
       content: 'Are you sure you want to leave the session?',
       confirmButtonText: 'Leave session',
+      // Ending owns its backend deadline; a dialog timeout would race it.
+      actionTimeout: null,
       onConfirm: () async {
         TotemRouter.instance.setTabCloseConfirmationEnabled(false);
         Navigator.of(context).pop(true);

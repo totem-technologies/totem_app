@@ -229,6 +229,10 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     final connectionState = ref.watch(connectionStateProvider);
     final roomStatus = ref.watch(roomStatusProvider);
     final disconnectReason = ref.watch(disconnectionReasonProvider);
+    final sessionError = ref.watch(sessionErrorProvider);
+    final wasRemoved = ref.watch(
+      currentSessionStateProvider.select((state) => state?.removed ?? false),
+    );
 
     // Early transient join recovery check: keep showing the loading screen
     // when a join attempt failed transiently (e.g. signaling hiccup). This
@@ -304,7 +308,9 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
         waitingForAdmission ? RoomScreen.loading : currentRoomScreen,
         currentSessionEvent,
         disconnectReason,
+        sessionError: sessionError,
         isOffline: isOffline,
+        wasRemoved: wasRemoved,
       ),
     );
   }
@@ -314,12 +320,18 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     RoomScreen screen,
     SessionDetailSchema sessionEvent,
     DisconnectReason? disconnectReason, {
+    required RoomError? sessionError,
     required bool isOffline,
+    required bool wasRemoved,
   }) {
     final isInternetDisconnect =
         isInternetDisconnectReason(disconnectReason) ||
         (isOffline &&
             canOfflineStateOverrideDisconnectReason(disconnectReason));
+    // A network, media, or server failure leaves the session running, so offer
+    // a way back in instead of saying the session ended.
+    final isTechnicalDisconnect =
+        !wasRemoved && isTechnicalDisconnectReason(disconnectReason);
     final disconnectionError = disconnectReason == null
         ? null
         : RoomDisconnectionError(disconnectReason);
@@ -327,15 +339,15 @@ class _VideoSessionScreenState extends ConsumerState<VideoSessionScreen> {
     switch (screen) {
       case RoomScreen.error:
         return SessionErrorScreen(
-          onRetry: session.join,
-          error: disconnectionError,
+          onRetry: session.rejoin,
+          error: sessionError ?? disconnectionError,
         );
       case RoomScreen.loading:
         return widget.loadingScreen;
       case RoomScreen.disconnected:
-        if (isInternetDisconnect) {
+        if (isInternetDisconnect || isTechnicalDisconnect) {
           return SessionErrorScreen(
-            onRetry: session.join,
+            onRetry: session.rejoin,
             error: disconnectionError,
           );
         }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/errors/app_exceptions.dart';
@@ -167,6 +168,143 @@ void main() {
       check(h.room.currentSpeaker.value).equals('participant');
       check(h.microphoneOn).isFalse();
       check(h.service.lastFailure).isNull();
+    },
+  );
+
+  for (final (command, accepting) in [
+    ('pass', false),
+    ('accept', true),
+    ('forcePass', false),
+  ]) {
+    test(
+      'a $command without a backend response in 10 seconds is an unknown outcome that leaves the turn unchanged',
+      () {
+        fakeAsync((async) {
+          final h = _Harness(accepting: accepting)..keeper = true;
+          final pending = Completer<RoomState>();
+          h.perform = (_, _) => pending.future;
+          final previous = h.room;
+          Object? failure;
+          final Future<Object?> run = switch (command) {
+            'pass' => h.service.passTotem(),
+            'accept' => h.service.acceptTotem(),
+            _ => h.service.forcePassTotem(),
+          };
+          unawaited(
+            run.then<void>((_) {}, onError: (Object error) => failure = error),
+          );
+
+          async.elapse(const Duration(seconds: 9));
+          check(failure).isNull();
+          async.elapse(const Duration(seconds: 1));
+          check(failure)
+              .isA<SessionCommandException>()
+              .has((error) => error.kind, 'kind')
+              .equals(SessionCommandFailureKind.unknownOutcome);
+          check(
+            h.service.lastFailure?.kind,
+          ).equals(SessionCommandFailureKind.unknownOutcome);
+
+          // Room state, not the late response, confirms what happened.
+          pending.complete(h.response);
+          async.flushMicrotasks();
+          check(h.room).identicalTo(previous);
+          check(h.commits).isEmpty();
+          check(h.microphoneOn).isTrue();
+          check(h.effects).deepEquals(['backend:$command']);
+          h.service.dispose();
+        });
+      },
+    );
+  }
+
+  test(
+    'a pass that times out after room state shows the handoff mutes the microphone',
+    () {
+      fakeAsync((async) {
+        final h = _Harness();
+        final pending = Completer<RoomState>();
+        h.perform = (_, _) => pending.future;
+        Object? failure;
+        var completed = false;
+        unawaited(
+          h.service.passTotem().then(
+            (_) => completed = true,
+            onError: (Object error) => failure = error,
+          ),
+        );
+
+        async.elapse(const Duration(seconds: 5));
+        check(completed).isFalse();
+        h.room = h.room.copyWith(turnState: TurnState.passing);
+        async.elapse(const Duration(seconds: 5));
+
+        check(failure).isNull();
+        check(completed).isTrue();
+        check(h.microphoneOn).isFalse();
+        check(h.commits).isEmpty();
+        check(h.effects).deepEquals(['backend:pass', 'disable']);
+        check(h.service.lastFailure).isNull();
+        h.service.dispose();
+      });
+    },
+  );
+
+  test(
+    'an accept that times out after this participant is speaking enables the microphone',
+    () {
+      fakeAsync((async) {
+        final h = _Harness(accepting: true);
+        final pending = Completer<RoomState>();
+        h.perform = (_, _) => pending.future;
+        Object? failure;
+        TurnAcceptance? result;
+        unawaited(
+          h.service.acceptTotem().then(
+            (value) => result = value,
+            onError: (Object error) => failure = error,
+          ),
+        );
+
+        async.elapse(const Duration(seconds: 5));
+        h.room = _room(version: 11);
+        async.elapse(const Duration(seconds: 5));
+
+        check(failure).isNull();
+        check(result).equals(TurnAcceptance.accepted);
+        check(h.commits).isEmpty();
+        check(h.effects).deepEquals(['backend:accept', 'enable']);
+        h.service.dispose();
+      });
+    },
+  );
+
+  test(
+    'a force pass that times out after the turn moved completes without error',
+    () {
+      fakeAsync((async) {
+        final h = _Harness()..keeper = true;
+        final pending = Completer<RoomState>();
+        h.perform = (_, _) => pending.future;
+        Object? failure;
+        var completed = false;
+        unawaited(
+          h.service.forcePassTotem().then(
+            (_) => completed = true,
+            onError: (Object error) => failure = error,
+          ),
+        );
+
+        async.elapse(const Duration(seconds: 5));
+        h.room = _room(version: 11, speaker: 'other', next: 'participant');
+        async.elapse(const Duration(seconds: 5));
+
+        check(failure).isNull();
+        check(completed).isTrue();
+        check(h.commits).isEmpty();
+        check(h.effects).deepEquals(['backend:forcePass']);
+        h.service.dispose();
+      });
     },
   );
 

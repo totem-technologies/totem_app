@@ -63,7 +63,7 @@ final class SessionKeeperControllerProvider
 }
 
 String _$sessionKeeperControllerHash() =>
-    r'24a99323a717fca444d13a7cb36254f60d18ed2c';
+    r'645026eaefe2eae943f313440f6e3f666385e2b8';
 
 /// Compatibility facade and composition boundary. Services own feature logic.
 

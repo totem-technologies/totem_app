@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:checks/checks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 import 'package:livekit_client/livekit_client.dart' hide ConnectionState;
 import 'package:material_ui/material_ui.dart' hide ConnectionState;
 import 'package:mocktail/mocktail.dart';
 import 'package:totem_core/auth/controllers/auth_controller.dart';
 import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
+import 'package:totem_core/core/errors/app_exceptions.dart';
 import 'package:totem_core/core/repositories/user_repository.dart';
 import 'package:totem_core/features/sessions/admission/declined_session_participants.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
@@ -27,6 +29,7 @@ import '../../controllers/core/session_controller_mock.dart';
 import '../../controllers/features/session_device_controller_mock.dart';
 import '../../media/fake_local_media.dart';
 import '../../media/test_participants.dart';
+import '../../presentation/action_feedback_host.dart';
 import '../../session_test_fixtures.dart';
 import '../../session_test_mocks.dart';
 
@@ -81,12 +84,51 @@ SessionRoomState _sessionState({
   );
 }
 
+final _sessionDetail = SessionDetailSchema(
+  slug: 'test-session',
+  title: 'Test session',
+  space: MobileSpaceDetailSchema(
+    slug: 'test-space',
+    title: 'Test Space',
+    imageLink: null,
+    shortDescription: '',
+    content: '',
+    author: PublicUserSchema(
+      profileAvatarType: ProfileAvatarTypeEnum.td,
+      dateCreated: DateTime(2024),
+    ),
+    category: null,
+    subscribers: 0,
+    recurring: null,
+    price: 0,
+    nextEvents: const [],
+  ),
+  content: '',
+  seatsLeft: 10,
+  duration: 60,
+  start: DateTime(2024),
+  attending: true,
+  open: true,
+  started: true,
+  cancelled: false,
+  joinable: true,
+  ended: false,
+  rsvpUrl: '',
+  joinUrl: null,
+  subscribeUrl: '',
+  calLink: '',
+  subscribed: false,
+  userTimezone: null,
+  meetingProvider: MeetingProviderEnum.livekit,
+);
+
 Future<void> _pumpMoreOptions(
   WidgetTester tester, {
   required MockSessionController session,
   required SessionRoomState state,
   required _TestSessionDeviceController deviceController,
   List<MediaDeviceInfo> audioOutputs = const [],
+  bool openAsPopup = false,
 }) async {
   await tester.binding.setSurfaceSize(const Size(800, 800));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -128,46 +170,17 @@ Future<void> _pumpMoreOptions(
         ),
       ],
       child: MaterialApp(
-        home: Scaffold(
-          body: MoreOptions(
-            session: SessionDetailSchema(
-              slug: 'test-session',
-              title: 'Test session',
-              space: MobileSpaceDetailSchema(
-                slug: 'test-space',
-                title: 'Test Space',
-                imageLink: null,
-                shortDescription: '',
-                content: '',
-                author: PublicUserSchema(
-                  profileAvatarType: ProfileAvatarTypeEnum.td,
-                  dateCreated: DateTime(2024),
-                ),
-                category: null,
-                subscribers: 0,
-                recurring: null,
-                price: 0,
-                nextEvents: const [],
-              ),
-              content: '',
-              seatsLeft: 10,
-              duration: 60,
-              start: DateTime(2024),
-              attending: true,
-              open: true,
-              started: true,
-              cancelled: false,
-              joinable: true,
-              ended: false,
-              rsvpUrl: '',
-              joinUrl: null,
-              subscribeUrl: '',
-              calLink: '',
-              subscribed: false,
-              userTimezone: null,
-              meetingProvider: MeetingProviderEnum.livekit,
-            ),
-            isDialog: true,
+        home: ActionFeedbackHost(
+          child: Scaffold(
+            body: openAsPopup
+                ? Builder(
+                    builder: (context) => TextButton(
+                      onPressed: () =>
+                          showOptionsSheet(context, state, _sessionDetail),
+                      child: const Text('Open options'),
+                    ),
+                  )
+                : MoreOptions(session: _sessionDetail, isDialog: true),
           ),
         ),
       ),
@@ -569,47 +582,69 @@ void main() {
 
     // ── Confirm action: success ────────────────────────────────────
 
-    testWidgets('confirm calls forcePassTotem and closes dialog', (
-      tester,
-    ) async {
-      final state = _sessionState(
-        roomState: const RoomState(
-          keeper: 'keeper-1',
-          nextSpeaker: Omittable('user-2'),
-          currentSpeaker: Omittable('user-1'),
-          status: RoomStatus.active,
-          turnState: TurnState.speaking,
-          sessionSlug: 'test-session',
-          statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
-          talkingOrder: ['user-1', 'user-2'],
-          version: 1,
-          roundNumber: 1,
-        ),
-        participants: [
-          testParticipant('user-1', isLocal: true),
-          testParticipant('user-2', isLocal: true),
-        ],
-      );
+    testWidgets(
+      'a failed force pass keeps the dialog open with a banner, and confirming again passes',
+      (tester) async {
+        final state = _sessionState(
+          roomState: const RoomState(
+            keeper: 'keeper-1',
+            nextSpeaker: Omittable('user-2'),
+            currentSpeaker: Omittable('user-1'),
+            status: RoomStatus.active,
+            turnState: TurnState.speaking,
+            sessionSlug: 'test-session',
+            statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+            talkingOrder: ['user-1', 'user-2'],
+            version: 1,
+            roundNumber: 1,
+          ),
+          participants: [
+            testParticipant('user-1', name: 'p1'),
+            testParticipant('user-2', name: 'p2'),
+          ],
+        );
+        var attempts = 0;
+        when(() => keeper.forcePassTotem()).thenAnswer((_) async {
+          attempts++;
+          if (attempts == 1) throw AppNetworkException.noConnection();
+        });
 
-      await _pumpMoreOptions(
-        tester,
-        session: session,
-        state: state,
-        deviceController: deviceController,
-      );
+        await _pumpMoreOptions(
+          tester,
+          session: session,
+          state: state,
+          deviceController: deviceController,
+          openAsPopup: true,
+        );
+        await tester.tap(find.text('Open options'));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('Force pass'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.textContaining('Force pass'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Force pass'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Force pass'));
-      await tester.pumpAndSettle();
+        check(find.text("Couldn't pass to p2").evaluate()).isNotEmpty();
+        check(
+          find.text("The totem hasn't moved. Please try again.").evaluate(),
+        ).isNotEmpty();
+        check(
+          tester.widgetList(find.byType(ConfirmationDialog)),
+        ).length.equals(1);
 
-      verify(() => keeper.forcePassTotem()).called(1);
-      // Dialog should be closed
-      check(
-        tester.widgetList(find.byType(ConfirmationDialog)),
-      ).length.equals(0);
-    });
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Force pass'));
+        await tester.pumpAndSettle();
+        check(attempts).equals(2);
+        check(tester.widgetList(find.byType(ConfirmationDialog))).isEmpty();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+      // auto_size_text's notification banner does not dispose its TextPainters.
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
 
     // ── Early return ───────────────────────────────────────────────
 
@@ -649,6 +684,57 @@ void main() {
       ).length.equals(0);
       verifyNever(() => keeper.forcePassTotem());
     });
+  });
+
+  group('mute everyone', () {
+    testWidgets(
+      'a failure after the options popup closes still shows a room banner',
+      (tester) async {
+        final pendingMute = Completer<void>();
+        when(() => keeper.muteEveryone()).thenAnswer((_) => pendingMute.future);
+        await _pumpMoreOptions(
+          tester,
+          session: session,
+          state: _sessionState(
+            roomState: const RoomState(
+              keeper: 'keeper-1',
+              nextSpeaker: Omittable('user-2'),
+              currentSpeaker: Omittable('user-1'),
+              status: RoomStatus.active,
+              turnState: TurnState.speaking,
+              sessionSlug: 'test-session',
+              statusDetail: RoomStateStatusDetailActive(ActiveDetail()),
+              talkingOrder: ['user-1', 'user-2'],
+              version: 1,
+              roundNumber: 1,
+            ),
+          ),
+          deviceController: deviceController,
+          openAsPopup: true,
+        );
+        await tester.tap(find.text('Open options'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Mute everyone'));
+        await tester.pumpAndSettle();
+        check(find.byType(MoreOptions).evaluate()).isEmpty();
+        verify(() => keeper.muteEveryone()).called(1);
+
+        pendingMute.completeError(AppNetworkException.noConnection());
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        check(find.text("Couldn't mute everyone").evaluate()).isNotEmpty();
+        check(
+          find.text('Please check your connection and try again.').evaluate(),
+        ).isNotEmpty();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+      // auto_size_text's notification banner does not dispose its TextPainters.
+      experimentalLeakTesting: LeakTesting.settings.withIgnored(
+        classes: <String>['TextPainter'],
+      ),
+    );
   });
 
   group('audio output', () {

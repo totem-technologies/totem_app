@@ -1,9 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:totem_core/core/errors/error_handler.dart';
 import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
+import 'package:totem_core/features/sessions/presentation/session_action_feedback.dart';
+import 'package:totem_core/features/sessions/services/session_commands.dart';
 import 'package:totem_core/shared/widgets/confirmation_dialog.dart';
 
-class ForcePassConfirmationDialog extends StatelessWidget {
+class ForcePassConfirmationDialog extends ConsumerWidget {
   const ForcePassConfirmationDialog({
     required this.session,
     required this.nextParticipantName,
@@ -14,7 +16,7 @@ class ForcePassConfirmationDialog extends StatelessWidget {
   final String? nextParticipantName;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return ConfirmationDialog(
       title: 'Are you sure?',
@@ -25,21 +27,35 @@ class ForcePassConfirmationDialog extends StatelessWidget {
         color: theme.colorScheme.onSurface,
       ),
       type: ConfirmationDialogType.standard,
+      // The turn service owns the deadline and reports a timeout as unknown.
+      actionTimeout: null,
       onConfirm: () async {
+        final feedback = ref.read(sessionActionFeedbackProvider.notifier);
+        final turnBefore = feedback.turnSnapshot();
         try {
           await session.keeper.forcePassTotem();
-        } catch (error) {
-          if (context.mounted) {
-            ErrorHandler.showErrorSnackBar(
-              context,
-              'Failed to perform next totem action',
+        } catch (error, stackTrace) {
+          final applied = feedback.turnAppliedDespite(
+            error,
+            turnBefore,
+            action: SessionAction.forcePass,
+          );
+          if (!applied) {
+            feedback.report(
+              SessionAction.forcePass,
+              error,
+              subject: nextParticipantName,
+              stackTrace: stackTrace,
             );
           }
-        } finally {
-          if (context.mounted) {
-            Navigator.of(context).pop();
-          }
+          // Close on success, on an unconfirmed request, or when room state
+          // already shows the pass, so a retry cannot skip the next person.
+          final unknown =
+              SessionCommandFailure.from(error).kind ==
+              SessionCommandFailureKind.unknownOutcome;
+          if (!applied && !unknown) return;
         }
+        if (context.mounted) Navigator.of(context).pop();
       },
     );
   }

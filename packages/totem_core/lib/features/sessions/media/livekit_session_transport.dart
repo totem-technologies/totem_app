@@ -48,6 +48,13 @@ class LiveKitSessionTransport implements SessionTransport {
       ..on<sdk.RoomReconnectingEvent>(
         (_) => _connection(SessionTransportConnectionState.reconnecting),
       )
+      // A signal resume doesn't emit RoomReconnectingEvent. Its first attempt
+      // is usually sub-second, so report reconnecting once LiveKit retries.
+      ..on<sdk.RoomAttemptReconnectEvent>((event) {
+        if (event.attempt > 1) {
+          _connection(SessionTransportConnectionState.reconnecting);
+        }
+      })
       ..on<sdk.RoomReconnectedEvent>(
         (_) => _connection(
           SessionTransportConnectionState.connected,

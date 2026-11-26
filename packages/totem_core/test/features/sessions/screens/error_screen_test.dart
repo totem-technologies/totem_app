@@ -4,10 +4,17 @@ import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:livekit_client/livekit_client.dart'
+    show
+        ConnectException,
+        ConnectionErrorReason,
+        DisconnectReason,
+        MediaConnectException;
 import 'package:material_ui/material_ui.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/core/repositories/space_repository.dart';
 import 'package:totem_core/core/services/connectivity_service.dart';
+import 'package:totem_core/features/sessions/controllers/core/session_controller.dart';
 import 'package:totem_core/features/sessions/providers/session_scope_provider.dart';
 import 'package:totem_core/features/sessions/screens/error_screen.dart';
 import 'package:totem_core/features/sessions/screens/session_disconnected.dart';
@@ -163,6 +170,64 @@ void main() {
         await tester.pump();
 
         check(retryCount).equals(1);
+      });
+    });
+
+    group('technical failures while online', () {
+      for (final (label, error, kind)
+          in <(String, Object, SessionErrorCategory)>[
+            (
+              'a dropped connection',
+              const RoomDisconnectionError(DisconnectReason.mediaFailure),
+              SessionErrorCategory.connectionLost,
+            ),
+            (
+              'an unreachable video server',
+              RoomLiveKitError(MediaConnectException()),
+              SessionErrorCategory.serverUnreachable,
+            ),
+          ]) {
+        testWidgets('explains $label and offers a retry', (tester) async {
+          var retryCount = 0;
+          await pumpErrorScreen(
+            tester,
+            onRetry: () async => retryCount++,
+            error: error,
+          );
+
+          check(tester.widgetList(find.text(kind.title))).length.equals(1);
+          check(tester.widgetList(find.text(kind.message))).length.equals(1);
+          check(tester.widgetList(find.text("You're Offline"))).isEmpty();
+
+          await tester.tap(find.text('Try Joining Again'));
+          await tester.pump();
+          check(retryCount).equals(1);
+        });
+      }
+
+      testWidgets('sends the user back instead of retrying a refused token', (
+        tester,
+      ) async {
+        var retryCount = 0;
+        await pumpErrorScreen(
+          tester,
+          onRetry: () async => retryCount++,
+          error: ConnectException(
+            'denied',
+            reason: ConnectionErrorReason.NotAllowed,
+          ),
+        );
+
+        check(
+          tester.widgetList(
+            find.text(SessionErrorCategory.accessDenied.message),
+          ),
+        ).length.equals(1);
+        check(tester.widgetList(find.text('Try Joining Again'))).isEmpty();
+        check(
+          tester.widgetList(find.text('Go back to session details')),
+        ).length.equals(1);
+        check(retryCount).equals(0);
       });
     });
 
