@@ -549,11 +549,16 @@ class _PageExitRecordingRouter extends FakeTotemRouter {
   }
 
   @override
-  void setActiveSessionNotificationHandler(Future<bool> Function()? handler) =>
-      activeSessionNotificationHandler = handler;
+  void setActiveSessionNotificationHandlerForSession(
+    String sessionSlug,
+    Future<bool> Function() handler,
+  ) => activeSessionNotificationHandler = handler;
 
   @override
-  void clearActiveSessionNotificationHandler(Future<bool> Function() handler) {
+  void clearActiveSessionNotificationHandlerForSession(
+    String sessionSlug,
+    Future<bool> Function() handler,
+  ) {
     if (activeSessionNotificationHandler == handler) {
       activeSessionNotificationHandler = null;
     }
@@ -668,6 +673,33 @@ void main() {
         await duplicateRequest;
         check(router.popOrHomeCalls).equals(0);
         await _unmountRoomScreen(tester);
+      },
+    );
+
+    testWidgets(
+      'approved notification leave completes after the room unmounts',
+      (tester) async {
+        final router = _PageExitRecordingRouter();
+        TotemRouter.instance = router;
+        addTearDown(() => TotemRouter.instance = FakeTotemRouter());
+        final leaveCompleter = Completer<void>();
+        when(session.leave).thenAnswer((_) => leaveCompleter.future);
+
+        await _pumpRoomScreenForResolvedScreen(
+          tester,
+          session: session,
+          event: _createSessionEventWithElapsed(_testNow(tester)),
+          screen: RoomScreen.loading,
+        );
+        final requestLeave = router.activeSessionNotificationHandler!;
+        final leaveRequest = requestLeave();
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Leave session'));
+        await tester.pump();
+
+        await _unmountRoomScreen(tester);
+        leaveCompleter.complete();
+        check(await leaveRequest).isTrue();
       },
     );
 

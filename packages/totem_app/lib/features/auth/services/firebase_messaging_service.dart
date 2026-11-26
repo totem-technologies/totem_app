@@ -114,7 +114,6 @@ class FirebaseMessagingService implements NotificationPermissions {
   int _sessionGeneration = 0;
   bool _endingSession = false;
   bool _disposed = false;
-  bool _sessionAuthenticated = false;
   bool Function()? _isAuthenticated;
 
   void _handleFidError(
@@ -217,7 +216,6 @@ class FirebaseMessagingService implements NotificationPermissions {
 
   void beginSession() {
     if (_disposed) return;
-    _sessionAuthenticated = true;
     _endingSession = false;
     _registrationRetries = 0;
     _fidRetries = 0;
@@ -361,7 +359,7 @@ class FirebaseMessagingService implements NotificationPermissions {
     final fid = _registeredFid;
     _registeredFid = null;
     _pendingFid = null;
-    if (fid != null && _sessionAuthenticated) {
+    if (fid != null) {
       try {
         await authRepository
             .unregisterFid(fid)
@@ -440,7 +438,6 @@ class FirebaseMessagingService implements NotificationPermissions {
         if (generation != _sessionGeneration || _endingSession) {
           if (_endingSession &&
               generation + 1 == _sessionGeneration &&
-              _sessionAuthenticated &&
               _latestFid == fid) {
             _registeredFid = fid;
           }

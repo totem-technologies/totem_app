@@ -173,7 +173,8 @@ class _SessionPanelsState extends ConsumerState<SessionPanels>
 
   bool get _canHandleSessionNotifications =>
       widget.session != null &&
-      (widget.connectionState == RoomConnectionState.connecting ||
+      (_handlingLeaveRequest ||
+          widget.connectionState == RoomConnectionState.connecting ||
           widget.connectionState == RoomConnectionState.connected);
 
   void _syncNotificationHandler() {
@@ -529,11 +530,17 @@ class _SessionPanelsState extends ConsumerState<SessionPanels>
             _roomNavigatorKey.currentContext ?? context,
           ) ??
           false;
-      if (!mounted || !shouldLeave) return false;
+      if (!mounted ||
+          !shouldLeave ||
+          widget.session != session ||
+          widget.sessionSlug != _registeredNotificationSessionSlug) {
+        return false;
+      }
       await session.leave();
-      return mounted;
+      return true;
     } finally {
       _handlingLeaveRequest = false;
+      if (mounted) _syncNotificationHandler();
     }
   }
 

@@ -143,6 +143,7 @@ Future<GoRouter> _pumpRouter(
   required AuthState authState,
   required bool hasSeenWelcome,
   void Function(_FakeMobileAuthController authController)? onAuthController,
+  void Function(AppTotemRouter router)? afterRouterCreation,
   List<Override> extraOverrides = const [],
 }) async {
   final authController = _FakeMobileAuthController(authState);
@@ -165,7 +166,10 @@ Future<GoRouter> _pumpRouter(
       ],
       child: Consumer(
         builder: (context, ref, child) {
-          router ??= routerOwner.createRouter(ref);
+          if (router == null) {
+            router = routerOwner.createRouter(ref);
+            afterRouterCreation?.call(routerOwner);
+          }
           return MaterialApp.router(routerConfig: router!);
         },
       ),
@@ -474,6 +478,25 @@ void main() {
       sessionSlug: 'gathering',
     );
 
+    testWidgets('queued notification delivered on handler attach navigates', (
+      tester,
+    ) async {
+      final router = await _pumpRouter(
+        tester,
+        authState: AuthState.authenticated(
+          user: _testUser(slug: 'user', name: 'Alex'),
+        ),
+        hasSeenWelcome: true,
+        extraOverrides: _notificationRouteOverrides(),
+        afterRouterCreation: (owner) =>
+            owner.handleSessionNotification(payload),
+      );
+
+      check(
+        router.state.uri.path,
+      ).equals(RouteNames.spaceSession('garden', 'gathering'));
+    });
+
     testWidgets('same active session notification needs no confirmation', (
       tester,
     ) async {
@@ -530,6 +553,44 @@ void main() {
         router.state.uri.path,
       ).equals(RouteNames.spaceSession('garden', 'gathering'));
     });
+
+    for (final confirmed in [true, false]) {
+      testWidgets(
+        'clearing handler while confirmation is pending honors $confirmed',
+        (tester) async {
+          final router = await _pumpRouter(
+            tester,
+            authState: AuthState.authenticated(
+              user: _testUser(slug: 'user', name: 'Alex'),
+            ),
+            hasSeenWelcome: true,
+            extraOverrides: _notificationRouteOverrides(),
+          );
+          final owner = TotemRouter.instance as AppTotemRouter;
+          final confirmation = Completer<bool>();
+          Future<bool> handler() => confirmation.future;
+          owner.setActiveSessionNotificationHandlerForSession(
+            'another-session',
+            handler,
+          );
+          const currentLocation = RouteNames.home;
+
+          owner.handleSessionNotification(payload);
+          owner.clearActiveSessionNotificationHandlerForSession(
+            'another-session',
+            handler,
+          );
+          confirmation.complete(confirmed);
+          await tester.pumpAndSettle();
+
+          check(router.state.uri.path).equals(
+            confirmed
+                ? RouteNames.spaceSession('garden', 'gathering')
+                : currentLocation,
+          );
+        },
+      );
+    }
 
     testWidgets('notification during prejoin navigates without a handler', (
       tester,

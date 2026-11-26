@@ -309,10 +309,11 @@ class AppTotemRouter extends TotemRouter {
         _activeSessionNotificationSlug == sessionSlug) {
       _activeSessionNotificationHandler = null;
       _activeSessionNotificationSlug = null;
-      _deferredNotificationLocation = null;
-      _sessionNotificationRequiresConfirmation = false;
-      _sessionNotificationGeneration++;
-      _sessionNotificationConfirmationPending = false;
+      if (!_sessionNotificationConfirmationPending) {
+        _deferredNotificationLocation = null;
+        _sessionNotificationRequiresConfirmation = false;
+        _sessionNotificationGeneration++;
+      }
     }
   }
 
@@ -322,11 +323,16 @@ class AppTotemRouter extends TotemRouter {
       payload.sessionSlug,
     );
     final router = _router;
-    if (router == null) {
+    if (router == null || router.routerDelegate.currentConfiguration.isEmpty) {
       _deferredNotificationLocation = location;
       return;
     }
     if (router.state.uri.path == location) return;
+
+    if (_sessionNotificationConfirmationPending && !_hasActiveSessionPanels) {
+      _deferredNotificationLocation = location;
+      return;
+    }
 
     if (_hasActiveSessionPanels &&
         _activeSessionNotificationSlug == payload.sessionSlug) {
@@ -392,7 +398,11 @@ class AppTotemRouter extends TotemRouter {
   void _onRouteChanged() {
     final router = _router;
     final location = _deferredNotificationLocation;
-    if (router == null || location == null) return;
+    if (router == null ||
+        location == null ||
+        router.routerDelegate.currentConfiguration.isEmpty) {
+      return;
+    }
     if (_sessionNotificationRequiresConfirmation ||
         _sessionNotificationConfirmationPending ||
         _hasActiveSessionPanels) {
@@ -471,9 +481,7 @@ class AppTotemRouter extends TotemRouter {
           if (isAuthRoute) return null;
 
           // Any other route requires auth
-          return _loginWithNext(
-            nextRoute ?? (isWelcomeRoute ? null : state.uri.toString()),
-          );
+          return _loginWithNext(nextRoute ?? state.uri.toString());
         }
 
         // Logged-in flow
