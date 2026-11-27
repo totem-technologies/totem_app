@@ -11,8 +11,7 @@ import 'package:totem_core/shared/widgets/session_button_style.dart';
 
 typedef OnActionPerformed = AsyncValueGetter<bool>;
 
-/// Centered chevron for the ActionSlider thumb. Do not reuse
-/// [TotemIcons.arrowForward] here — that glyph is right-heavy in its viewBox.
+/// Stroke chevron for the ActionSlider thumb, sized to the handle.
 const _sliderChevron = '''
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M9.5 6.5L15.5 12L9.5 17.5" stroke="#262F37" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
