@@ -91,6 +91,8 @@ abstract class TotemRouter {
 
   Future<void> toKeeperProfile(BuildContext context, String userSlug);
 
+  Future<void> rejoinSession(BuildContext context, String sessionSlug);
+
   Future<void> toSpaceSession(
     BuildContext context,
     String spaceSlug,

@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:auto_size_text/auto_size_text.dart';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:in_app_review/in_app_review.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:material_ui/material_ui.dart';
@@ -35,7 +37,8 @@ SessionDisconnectedReason resolveDisconnectedReason({
   DisconnectReason? disconnectReason,
   SessionRoomState? sessionState,
 }) {
-  if (disconnectReason == DisconnectReason.duplicateIdentity) {
+  if (disconnectReason == DisconnectReason.duplicateIdentity &&
+      sessionState?.roomState.status != RoomStatus.ended) {
     return SessionDisconnectedReason.movedToAnotherDevice;
   }
 
@@ -131,6 +134,7 @@ class _SessionDisconnectedScreenState
     extends ConsumerState<SessionDisconnectedScreen> {
   Timer? _confettiTimer;
   Timer? _spacesSummaryRefreshTimer;
+  bool _rejoining = false;
 
   @override
   void initState() {
@@ -176,6 +180,19 @@ class _SessionDisconnectedScreenState
   void _goHome() {
     _refreshHome();
     TotemRouter.instance.toHome();
+  }
+
+  void _rejoin() {
+    final session = widget.session;
+    if (session == null || _rejoining) return;
+    setState(() => _rejoining = true);
+    unawaited(
+      TotemRouter.instance.rejoinSession(context, session.slug).whenComplete(
+        () {
+          if (mounted) setState(() => _rejoining = false);
+        },
+      ),
+    );
   }
 
   /// The space's next session, or a recommended session when the space has
@@ -250,7 +267,7 @@ class _SessionDisconnectedScreenState
 
   @override
   Widget build(BuildContext context) {
-    final sessionReason =
+    final resolvedReason =
         widget.sessionDisconnectedReason ??
         ref.watch(
           currentSessionStateProvider.select(
@@ -263,6 +280,14 @@ class _SessionDisconnectedScreenState
         )!;
 
     final session = widget.session;
+    // The room state may be unavailable or stale here, and explicit reasons
+    // bypass resolveDisconnectedReason, so the session detail is a second
+    // guard against offering rejoin after the event has ended.
+    final sessionReason =
+        session?.ended == true &&
+            resolvedReason == SessionDisconnectedReason.movedToAnotherDevice
+        ? SessionDisconnectedReason.keeperEnded
+        : resolvedReason;
     final canGiveFeedback =
         session != null &&
         sessionReason == SessionDisconnectedReason.keeperEnded;
@@ -281,6 +306,7 @@ class _SessionDisconnectedScreenState
               ? (message) => _sendDislike(session, message)
               : null,
           onGoHome: _goHome,
+          onRejoin: session == null || _rejoining ? null : _rejoin,
         ),
       ),
     );
@@ -314,6 +340,7 @@ class SessionDisconnectedView extends StatefulWidget {
   const SessionDisconnectedView({
     required this.reason,
     required this.onGoHome,
+    this.onRejoin,
     this.nextSession,
     this.onLike,
     this.onDislike,
@@ -338,6 +365,7 @@ class SessionDisconnectedView extends StatefulWidget {
   /// Leaves the screen for home: the close button and "See all upcoming
   /// sessions".
   final VoidCallback onGoHome;
+  final VoidCallback? onRejoin;
 
   @override
   State<SessionDisconnectedView> createState() =>
@@ -355,6 +383,18 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
     final onLike = widget.onLike;
     final onDislike = widget.onDislike;
     final onGoHome = widget.onGoHome;
+    final (action, onPressed) = switch (reason) {
+      SessionDisconnectedReason.movedToAnotherDevice => (
+        _DisconnectedAction.rejoin,
+        widget.onRejoin,
+      ),
+      _ => (_DisconnectedAction.upcomingSessions, onGoHome),
+    };
+    final actions = _ActionButtons(
+      action: action,
+      onPressed: onPressed,
+      onGoHome: onGoHome,
+    );
     final feedback = onLike != null && onDislike != null
         ? _InteractiveFeedbackWidget(
             key: _feedbackKey,
@@ -383,6 +423,7 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
             };
             return constraints.maxHeight >=
                 stackedContentHeight +
+                    actions.extraHeight(context, copyWidth) +
                     _extraCopyHeight(context, reason, copyWidth) +
                     verticalChrome;
           }
@@ -394,13 +435,14 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
                   reason: reason,
                   feedback: feedback,
                   nextSession: nextSession,
-                  onGoHome: onGoHome,
+                  actions: actions,
                 ),
                 ViewportKind.smallLandscape => _TwoColumnLayout(
                   reason: reason,
                   feedback: feedback,
                   nextSession: nextSession,
                   onGoHome: onGoHome,
+                  actions: actions,
                   compact: true,
                 ),
                 ViewportKind.mediumSmall || ViewportKind.mediumPlus
@@ -412,6 +454,7 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
                     feedback: feedback,
                     nextSession: nextSession,
                     onGoHome: onGoHome,
+                    actions: actions,
                     compact: false,
                   ),
                 ViewportKind.mediumSmall => _MediumSmallLayout(
@@ -419,12 +462,14 @@ class _SessionDisconnectedViewState extends State<SessionDisconnectedView> {
                   feedback: feedback,
                   nextSession: nextSession,
                   onGoHome: onGoHome,
+                  actions: actions,
                 ),
                 ViewportKind.mediumPlus => _MediumPlusLayout(
                   reason: reason,
                   feedback: feedback,
                   nextSession: nextSession,
                   onGoHome: onGoHome,
+                  actions: actions,
                 ),
               };
             },
@@ -530,13 +575,13 @@ class _PortraitLayout extends StatelessWidget {
     required this.reason,
     required this.feedback,
     required this.nextSession,
-    required this.onGoHome,
+    required this.actions,
   });
 
   final SessionDisconnectedReason reason;
   final Widget? feedback;
   final NextSessionPromo? nextSession;
-  final VoidCallback onGoHome;
+  final Widget actions;
 
   @override
   Widget build(BuildContext context) {
@@ -556,7 +601,7 @@ class _PortraitLayout extends StatelessWidget {
             _SessionSubheader(reason: reason),
             ?feedback,
             if (nextSession != null) _NextSessionsSection(promo: nextSession),
-            _ActionButtons(onPressed: onGoHome),
+            actions,
           ],
         ),
       ),
@@ -573,6 +618,7 @@ class _TwoColumnLayout extends StatelessWidget {
     required this.feedback,
     required this.nextSession,
     required this.onGoHome,
+    required this.actions,
     required this.compact,
   });
 
@@ -592,6 +638,7 @@ class _TwoColumnLayout extends StatelessWidget {
   final Widget? feedback;
   final NextSessionPromo? nextSession;
   final VoidCallback onGoHome;
+  final _ActionButtons actions;
 
   /// Phone landscape: no status icon or close button, and the actions sit
   /// under the feedback so the card keeps the full column height.
@@ -601,7 +648,6 @@ class _TwoColumnLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final feedback = this.feedback;
     final nextSession = this.nextSession;
-    final actions = _ActionButtons(onPressed: onGoHome);
 
     final content = LayoutBuilder(
       builder: (context, constraints) {
@@ -677,6 +723,7 @@ class _MediumSmallLayout extends StatelessWidget {
     required this.feedback,
     required this.nextSession,
     required this.onGoHome,
+    required this.actions,
   });
 
   /// Vertical space the layout reserves around its content.
@@ -692,6 +739,7 @@ class _MediumSmallLayout extends StatelessWidget {
   final Widget? feedback;
   final NextSessionPromo? nextSession;
   final VoidCallback onGoHome;
+  final Widget actions;
 
   Widget _wrapConstrained(Widget child) {
     return FractionallySizedBox(widthFactor: _widthFactor, child: child);
@@ -728,7 +776,7 @@ class _MediumSmallLayout extends StatelessWidget {
                         ),
                         child: _NextSessionsSection(promo: nextSession),
                       ),
-                    _ActionButtons(onPressed: onGoHome),
+                    actions,
                   ],
                 ),
               ),
@@ -751,6 +799,7 @@ class _MediumPlusLayout extends StatelessWidget {
     required this.feedback,
     required this.nextSession,
     required this.onGoHome,
+    required this.actions,
   });
 
   /// Vertical space the layout reserves below its content.
@@ -766,6 +815,7 @@ class _MediumPlusLayout extends StatelessWidget {
   final Widget? feedback;
   final NextSessionPromo? nextSession;
   final VoidCallback onGoHome;
+  final Widget actions;
 
   Widget _wrapConstrained(Widget child) {
     return FractionallySizedBox(widthFactor: _widthFactor, child: child);
@@ -804,7 +854,7 @@ class _MediumPlusLayout extends StatelessWidget {
                       ),
                       child: _NextSessionsSection(promo: nextSession),
                     ),
-                  _ActionButtons(onPressed: onGoHome),
+                  actions,
                 ],
               ),
             ),
@@ -1056,7 +1106,7 @@ class _NextSessionsSection extends StatelessWidget {
   final bool fitHeight;
 
   /// Shown below the card in the fitted layout.
-  final Widget? footer;
+  final _ActionButtons? footer;
 
   /// Max width of the section in layouts wider than a phone in portrait.
   static const double maxWidth = 320;
@@ -1107,9 +1157,7 @@ class _NextSessionsSection extends StatelessWidget {
             _measureTextHeight(context, title, titleStyle, width) +
             _spacing +
             minCardHeight +
-            (footer != null
-                ? _spacing + _ActionButtons.height(context, width)
-                : 0);
+            (footer != null ? _spacing + footer.height(context, width) : 0);
         return SingleChildScrollView(
           primary: false,
           child: SizedBox(
@@ -1131,37 +1179,71 @@ class _NextSessionsSection extends StatelessWidget {
   }
 }
 
+enum _DisconnectedAction {
+  rejoin('Rejoin Here'),
+  upcomingSessions('See all upcoming sessions');
+
+  const _DisconnectedAction(this.label);
+  final String label;
+}
+
 class _ActionButtons extends StatelessWidget {
-  const _ActionButtons({required this.onPressed});
+  const _ActionButtons({
+    required this.action,
+    required this.onPressed,
+    required this.onGoHome,
+  });
 
-  final VoidCallback onPressed;
-
-  static const String _label = 'See all upcoming sessions';
+  final _DisconnectedAction action;
+  final VoidCallback? onPressed;
+  final VoidCallback onGoHome;
   static const double _horizontalPadding = 58;
+  static const double _spacing = 8;
 
   /// Estimated height of the button laid out in [maxWidth].
-  static double height(BuildContext context, double maxWidth) {
+  static double _buttonHeight(BuildContext context, double maxWidth) {
     final textHeight = _measureTextHeight(
       context,
-      _label,
+      _DisconnectedAction.upcomingSessions.label,
       Theme.of(context).textTheme.labelLarge,
       math.max(0, maxWidth - 2 * _horizontalPadding),
     );
     return math.max(kMinInteractiveDimension, textHeight + 16);
   }
 
+  double extraHeight(BuildContext context, double maxWidth) =>
+      action == _DisconnectedAction.rejoin
+      ? _buttonHeight(context, maxWidth) + _spacing
+      : 0;
+
+  double height(BuildContext context, double maxWidth) =>
+      _buttonHeight(context, maxWidth) + extraHeight(context, maxWidth);
+
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      style: TextButton.styleFrom(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: _horizontalPadding,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-        foregroundColor: Colors.white,
-      ),
-      onPressed: onPressed,
-      child: const Text(_label, style: TextStyle(fontFeatures: [])),
+    Widget button(_DisconnectedAction action, VoidCallback? callback) =>
+        TextButton(
+          style: TextButton.styleFrom(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: _horizontalPadding,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(26),
+            ),
+            foregroundColor: Colors.white,
+          ),
+          onPressed: callback,
+          child: Text(action.label, style: const TextStyle(fontFeatures: [])),
+        );
+
+    if (action != _DisconnectedAction.rejoin) return button(action, onPressed);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: _spacing,
+      children: [
+        button(action, onPressed),
+        button(_DisconnectedAction.upcomingSessions, onGoHome),
+      ],
     );
   }
 }

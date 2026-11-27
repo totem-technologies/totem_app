@@ -12,6 +12,7 @@ import 'package:totem_core/auth/models/auth_state.dart';
 import 'package:totem_core/core/api/api_client/api_client.dart';
 import 'package:totem_core/features/permissions/notification_permissions.dart';
 import 'package:totem_core/shared/router.dart';
+import 'package:totem_core/testing/fake_totem_router.dart';
 
 class _CountingNotificationPermissions implements NotificationPermissions {
   int requests = 0;
@@ -45,40 +46,12 @@ class _SignedInAuthController extends MobileAuthController {
   bool get isOnboardingCompleted => true;
 }
 
-class _BlankRouter extends TotemRouter {
-  final key = GlobalKey<NavigatorState>();
-
-  @override
-  GlobalKey<NavigatorState> get navigatorKey => key;
-
-  @override
-  Uri get baseUri => Uri.parse('https://test.example');
-
-  @override
-  void popOrHome([BuildContext? context]) {}
-
-  @override
-  void toHome([HomeRoutes route = HomeRoutes.initialRoute]) {}
-
-  @override
-  Future<void> toKeeperProfile(BuildContext context, String userSlug) async {}
-
-  @override
-  Future<void> toSpaceSession(
-    BuildContext context,
-    String spaceSlug,
-    String? sessionSlug, [
-    bool replacement = false,
-  ]) async {}
-
+class _BlankRouter extends FakeTotemRouter {
   @override
   GoRouter createRouter(WidgetRef ref) => GoRouter(
-    navigatorKey: key,
+    navigatorKey: navigatorKey,
     routes: [GoRoute(path: '/', builder: (_, _) => const SizedBox.shrink())],
   );
-
-  @override
-  void setTabCloseConfirmationEnabled(bool enabled) {}
 }
 
 void main() {
